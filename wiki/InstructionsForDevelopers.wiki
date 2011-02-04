@@ -1,4 +1,5 @@
-#summary Introduction to Include What You Use for developers
+#summary Introduction to Include What You Use for developers and bug-fixers
+#labels Featured,Phase-Implementation
 
 = Submitting Patches =
 
