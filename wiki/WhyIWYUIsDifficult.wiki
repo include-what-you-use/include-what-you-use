@@ -1,4 +1,4 @@
-#summary Some of the Challenges in an Include What You Use Implementation
+#summary Some of the challenges in an include what you use implementation
 #labels Phase-Design
 
 = Why Include What You Use Is Difficult =
