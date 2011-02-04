@@ -1,4 +1,4 @@
-#summary Instructions for users
+#summary How to install and run include what you use
 #labels Featured,Phase-Deploy
 
 = Include What You Use  =
