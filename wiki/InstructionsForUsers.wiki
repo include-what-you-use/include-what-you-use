@@ -1,4 +1,5 @@
 #summary Instructions for users
+#labels Featured,Phase-Deploy
 
 = Include What You Use  =
 
