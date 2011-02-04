@@ -74,10 +74,10 @@ alpha-quality software!  Here's how to use it (requires python):
    python fix_includes.py < /tmp/iwyu.out
 }}}
 If you don't like the way fix_includes.py munges your #include lines,
-you can control its behavior via flags. fix_includes.py --help will
+you can control its behavior via flags. `fix_includes.py --help` will
 give a full list, but these are some common ones:
-    * -b: Put blank lines between system and Google #includes
-    * --nocomments: Don't add the 'why' comments next to #includes
+    * `-b`: Put blank lines between system and Google #includes
+    * `--nocomments`: Don't add the 'why' comments next to #includes
 
 WARNING: include-what-you-use only analyzes .cc (or .cpp) files built
 by `make`, along with their corresponding .h files.  If your project
