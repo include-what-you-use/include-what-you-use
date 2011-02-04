@@ -44,7 +44,7 @@ Then [http://code.google.com/p/include-what-you-use/downloads/list download] the
    llvm/tools/clang/tools$ tar xfz include-what-you-use-<version>.tar.gz
 }}}
 Or, alternately, get the project directly from
-[svn http://code.google.com/p/include-what-you-use/source/checkout]:
+[http://code.google.com/p/include-what-you-use/source/checkout svn]:
 {{{
    llvm/tools/clang/tools$ svn co http://include-what-you-use.googlecode.com/svn/trunk/ include-what-you-use
 }}}
