@@ -41,7 +41,11 @@ You will need the clang and llvm trees on your system, such as by
 Then [http://code.google.com/p/include-what-you-use/downloads/list download] the include-what-you-use tarball and unpack it your
 /path/to/llvm/tools/clang/tools directory:
 {{{
-   llvm/tools/clang/tools$ tar xfz include-what-you-use-<whatever>.tar.gz
+   llvm/tools/clang/tools$ tar xfz include-what-you-use-<version>.tar.gz
+}}}
+Or, alternately, get the project directly from svn:
+{{{
+   llvm/tools/clang/tools$ svn co http://include-what-you-use.googlecode.com/svn/trunk/ include-what-you-use
 }}}
 
 Then `cd` into the include-what-you-use directory (under tools) and type
