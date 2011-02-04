@@ -1,0 +1,94 @@
+#summary Instructions for users
+
+= Include What You Use  =
+
+"Include what you use" means this: for every symbol (type, function,
+variable, or macro) that you use in foo.cc (or foo.cpp), either foo.cc
+or foo.h should #include a .h file that exports the declaration of
+that symbol. (Similarly, for foo_test.cc, either foo_test.cc or foo.h
+should do the #including.)  Obviously symbols defined in foo.cc itself
+are excluded from this requirement.
+
+This puts us in a state where every file includes the headers it needs
+to declare the symbols that it uses.  When every file includes what it
+uses, then it is possible to edit any file and remove unused headers,
+without fear of accidentally breaking the upwards dependencies of that
+file.  It also becomes easy to automatically track and update
+dependencies in the source code.
+
+= CAVEAT =
+
+This is alpha quality software -- at best
+(as of February 2011).  It was written to work
+specifically in the Google source tree, and may make assumptions, or
+have gaps, that are immediately and embarrassingly evident in other
+types of code.  For instance, we only run this on C++ code, not C or
+Objective C.  Even for Google code, the tool still makes a lot of
+mistakes.
+
+While we work to get IWYU quality up, we will be stinting new
+features, and will prioritize reported bugs along with the many
+existing, known bugs.  The best chance of getting a problem fixed is
+to submit a patch that fixes it (along with a unittest case that
+verifies the fix)!
+
+= How to Build =
+
+You will need the clang and llvm trees on your system, such as by
+[http://clang.llvm.org/get_started.html checking out] their SVN trees.
+   
+Then [http://code.google.com/p/include-what-you-use/downloads/list download] the include-what-you-use tarball and unpack it your
+/path/to/llvm/tools/clang/tools directory:
+{{{
+   llvm/tools/clang/tools$ tar xfz include-what-you-use-<whatever>.tar.gz
+}}}
+
+Then `cd` into the include-what-you-use directory (under tools) and type
+`make`.
+
+Include what you use makes heavy use of clang internals, and will
+occasionally break when clang is updated.  For best results, download
+clang as of the same revision number of the last include-what-you-use
+release.  You can find this revision number in comments at the top
+of the include-what-you-use Makefile.
+
+= How to Run =
+
+The easiest way to run IWYU over your codebase is to run
+{{{
+   make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use
+}}}
+or
+{{{
+   make -k CXX=/path/to/llvm/Release/bin/include-what-you-use
+}}}
+
+(include-what-you-use always exits with an error code, so the build
+system knows it didn't build a .o file.  Hence the need for `-k`.)
+
+We also include, in this directory, a tool that automatically fixes up
+your source files based on the iwyu recommendations.  This is also
+alpha-quality software!  Here's how to use it (requires python):
+{{{
+   make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use > /tmp/iwyu.out
+   python fix_includes.py < /tmp/iwyu.out
+}}}
+If you don't like the way fix_includes.py munges your #include lines,
+you can control its behavior via flags. fix_includes.py --help will
+give a full list, but these are some common ones:
+    * -b: Put blank lines between system and Google #includes
+    * --nocomments: Don't add the 'why' comments next to #includes
+
+WARNING: include-what-you-use only analyzes .cc (or .cpp) files built
+by `make`, along with their corresponding .h files.  If your project
+has a .h file with no corresponding .cc file, iwyu will ignore it.
+include-what-you-use supports the `AddGlobToReportIWYUViolationsFor()`
+function which can be used to indicate other files to analyze, but
+it's not currently exposed to the user in any way.
+
+= How to Correct IWYU Mistakes =
+
+   # If fix_includes.py has removed an #include you actually need, add it back in with the comment // NOLINT(iwyu) at the end of the #include line.  Note that the comment is case-sensitive.
+   # If fix_includes has added an #include you don't need, just take it out.  We hope to come up with a more permanent way of fixing later.
+   # If fix_includes has wrongly added or removed a forward-declare, just fix it up manually.
+   # If fix_includes has suggested a private header file (such as `<bits/stl_vector.h>`) instead of the proper public header file (`<vector>`), you can fix this by inserting a specially crafted comment near the top of the public file (assuming you can write to it).  These so-called 'iwyu pragma' comments are still being designed (as of February 2011), and the actual syntax is in flux.  We should be keeping documentation at the top of `iwyu_preprocessor.h`, but beware the syntax may change over time.
