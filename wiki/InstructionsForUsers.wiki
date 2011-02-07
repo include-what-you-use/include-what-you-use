@@ -52,6 +52,8 @@ Or, alternately, get the project directly from
 Then `cd` into the include-what-you-use directory (under tools) and type
 `make`.
 
+(Advanced user tip: if 'make' fails because your source and build directories differ, you can instead edit `tools/clang/tools/Makefile` and add `include-what-you-use` to the `DIRS` variable.  That should allow you to call `make` from the `tools` directory.)
+
 Include what you use makes heavy use of clang internals, and will
 occasionally break when clang is updated.  For best results, download
 clang as of the same revision number of the last include-what-you-use
