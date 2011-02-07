@@ -134,6 +134,17 @@ When fixing fix_includes.py, add a test case to fix_includes_test.py
 and run
    python fix_includes_test.py
 
+=========
+Debugging
+=========
+
+It's possible to run include-what-you-use in gdb, to debug that way.
+Another useful tool -- especially in combination with gdb -- is to get
+the verbose include-what-you-use output.  See iwyu_output.h for a
+description of the verbose levels.  Level 7 is very verbose -- it
+dumps basically the entire AST as it's being traversed, along with
+iwyu decisions made as it goes -- but very useful for that:
+   env IWYU_VERBOSE=7 make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use 2>&1 > /tmp/iwyu.verbose
 
 ===============
 Developer Notes
