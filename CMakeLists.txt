@@ -5,15 +5,15 @@ if( MSVC )
 endif()
 
 set(LLVM_USED_LIBS
+  clangFrontend
+  clangSerialization
+  clangDriver
+  clangSema
   clangAnalysis
   clangAST
-  clangBasic
-  clangDriver
-  clangFrontend
-  clangLex
   clangParse
-  clangSema
-  clangSerialization
+  clangLex
+  clangBasic
 )
 
 set(LLVM_LINK_COMPONENTS
