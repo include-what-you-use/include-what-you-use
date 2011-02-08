@@ -42,6 +42,7 @@
 
 #include <string.h>
 #include <string>
+#include "port.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/AST/Stmt.h"

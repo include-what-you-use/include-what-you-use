@@ -14,8 +14,13 @@
 
 #include <limits.h>  // for PATH_MAX
 #include <string.h>
+#if defined(_MSC_VER)
+#include <direct.h>
+#else
 #include <unistd.h>  // for getcwd()
+#endif
 #include <string>
+#include "port.h"
 #include "iwyu_string_util.h"
 
 namespace include_what_you_use {

@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "port.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Token.h"
 

@@ -23,6 +23,7 @@
 #include <utility>  // for pair
 #include <vector>
 
+#include "port.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"

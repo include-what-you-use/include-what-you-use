@@ -15,6 +15,7 @@
 #include <set>
 #include <string>
 
+#include "port.h"
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"

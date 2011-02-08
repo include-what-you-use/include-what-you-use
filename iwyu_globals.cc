@@ -7,8 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "port.h"
 #include "iwyu_globals.h"
+#ifndef _MSC_VER      // _MSC_VER gets its own fnmatch from ./port.h
 #include <fnmatch.h>
+#endif
 #include <set>
 #include <string>
 #include "iwyu_include_picker.h"
