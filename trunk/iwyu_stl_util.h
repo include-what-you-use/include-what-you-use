@@ -18,6 +18,7 @@
 #include <set>
 #include <utility>  // for pair<>
 #include <vector>
+#include "port.h"
 
 namespace include_what_you_use {
 

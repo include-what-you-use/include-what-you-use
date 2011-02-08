@@ -88,11 +88,15 @@
 //     #include bar.h, unless it already does so.
 
 #include <assert.h>
+#if defined(_MSC_VER)
+#include <direct.h>
+#else
 #include <getopt.h>
+#include <unistd.h>
+#endif
 #include <stdio.h>   // for snprintf
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include <algorithm>
 #include <map>
@@ -131,7 +135,11 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "clang/Sema/Sema.h"
+#if defined(_MSC_VER)
+#include <tuple>
+#else
 #include <tr1/tuple>
+#endif
 
 namespace include_what_you_use {
 

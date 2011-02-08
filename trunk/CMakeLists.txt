@@ -1,5 +1,9 @@
 project(include-what-you-use)
 
+if( MSVC )
+   add_definitions( /D_POSIX_=1 )
+endif()
+
 set(LLVM_USED_LIBS
   clangAnalysis
   clangAST

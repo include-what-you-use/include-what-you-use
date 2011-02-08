@@ -42,6 +42,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include "port.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/PPCallbacks.h"
