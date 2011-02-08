@@ -15,10 +15,6 @@
 
 # define NOMINMAX
 # include <windows.h>
-// FIXME: This undef is necessary to prevent conflicts between llvm
-//        and Windows headers.  Eventually fnmatch functionality
-//        should be wrapped inside llvm's PathV2 library.
-# undef interface
 
 # define getcwd _getcwd
 # define snprintf _snprintf
@@ -27,6 +23,11 @@
 # include "Shlwapi.h"  // For PathMatchSpec
 # pragma comment(lib, "Shlwapi.lib")
 # define fnmatch(pattern, filepath, flags)  (!PathMatchSpec(filepath, pattern))
+
+// FIXME: This undef is necessary to prevent conflicts between llvm
+//        and Windows headers.  Eventually fnmatch functionality
+//        should be wrapped inside llvm's PathV2 library.
+# undef interface    // used in Shlwapi.h
 
 #endif  // #if defined(_MSC_VER)
 
