@@ -72,6 +72,12 @@ class IncludePicker {
   void AddPrivateToPublicMapping(const string& quoted_private_header,
                                  const string& public_header);
 
+  // TODO(csilvers): add PublicToPublic and PrivateToPrivate as well.
+  // Implement private-to-private by having the map-value be unquoted.
+  // Implement public-to-public by adding a from->to mapping, and also
+  // a from->from mapping.  Also support allowing both <> and ""
+  // includes.
+
   // Call this after iwyu preprocessing is done.  No more calls to
   // AddDirectInclude() or AddPrivateToPublicMapping() are allowed
   // after this.
@@ -140,7 +146,8 @@ class IncludePicker {
 
  private:
   bool IsMapForSystemHeader(const IncludeMap* include_map) const {
-    return include_map == &cpp_include_map_ || include_map == &c_include_map_;
+    return (include_map == &cpp_include_multimap_ ||
+            include_map == &c_include_multimap_);
   }
 
   // Removes uninteresting prefix from the given header path to make
@@ -150,12 +157,12 @@ class IncludePicker {
       string* path, const IncludeMap** include_map) const;
 
   // Maps for system headers.
-  const IncludeMap cpp_include_map_;
-  const IncludeMap c_include_map_;
+  const IncludeMap cpp_include_multimap_;
+  const IncludeMap c_include_multimap_;
 
   // Maps for user headers.
-  const IncludeMap google_include_map_;
-  const IncludeMap third_party_include_map_;
+  const IncludeMap google_include_multimap_;
+  const IncludeMap third_party_include_multimap_;
 
   // A map that is constructed at runtime based on the #includes
   // actually seen while processing a source file.  It includes, for
@@ -169,10 +176,13 @@ class IncludePicker {
   // whether a file is public or private from its name (which we do in
   // AddDirectInclude).  It's a fallback map when other maps come up
   // empty.
-  IncludeMap dynamic_private_to_public_include_map_;
+  IncludeMap dynamic_private_to_public_include_multimap_;
 
   // Maps from qualified symbols to headers.
-  const IncludeMap symbol_include_map_;
+  const IncludeMap symbol_include_multimap_;
+
+  // Make sure we don't do any non-const operations after finalizing.
+  bool has_called_finalize_added_include_lines_;
 };  // class IncludePicker
 
 }  // namespace include_what_you_use

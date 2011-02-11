@@ -34,16 +34,29 @@ using iwyu::FindArgumentsToDefined;
 
 namespace {
 
+// Hack. Work around the fact that only SourceManagers can create
+// non-trivial SourceLocations.
+SourceLocation CreateSourceLocationFromOffset(SourceLocation begin_loc,
+                                              unsigned offset) {
+  return SourceLocation::getFromRawEncoding(begin_loc.getRawEncoding()
+                                            + offset);
+}
+
 class StringCharacterDataGetter : public CharacterDataGetterInterface {
  public:
   StringCharacterDataGetter(const string& str)
-      : str_(str) {
+      : str_("unused" + str) {
   }
 
   virtual const char* GetCharacterData(SourceLocation loc) const {
     unsigned offset = loc.getRawEncoding();
     CHECK_LE(offset, str_.size());
     return str_.c_str() + offset;
+  }
+
+  SourceLocation BeginningOfString() {
+    // Returns an index into str that skips over the "unused" set in the ctor.
+    return CreateSourceLocationFromOffset(SourceLocation(), strlen("unused"));
   }
 
  private:
@@ -65,21 +78,12 @@ TEST(LexerTest, ClangLexer) {
   }
 }
 
-// Hack. Work around the fact that only SourceManagers can create
-// non-trivial SourceLocations.
-SourceLocation CreateSourceLocationFromOffset(SourceLocation begin_loc,
-                                              unsigned offset) {
-  SourceLocation ret;
-  *reinterpret_cast<unsigned*>(&ret) = begin_loc.getRawEncoding() + offset;
-  return ret;
-}
-
 // Common test code for testing FindArgumentsToDefined. The symbols
 // should be the arguments to defined() in order.
 void TestFindArgumentsToDefinedWithText(const string& text,
                                         const vector<string>& symbols) {
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation end_loc =
       CreateSourceLocationFromOffset(begin_loc, text.size());
 
@@ -122,7 +126,7 @@ TEST(FindArgumentsToDefined, MultipleArgs) {
 TEST(GetSourceTextUntilEndOfLine, FullLine) {
   const char text[] = "This is the full line.\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   EXPECT_EQ("This is the full line.",
             GetSourceTextUntilEndOfLine(begin_loc, data_getter));
 }
@@ -130,7 +134,7 @@ TEST(GetSourceTextUntilEndOfLine, FullLine) {
 TEST(GetSourceTextUntilEndOfLine, MultipleLines) {
   const char text[] = "This is the full line.\nThis line should be ignored.\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   EXPECT_EQ("This is the full line.",
             GetSourceTextUntilEndOfLine(begin_loc, data_getter));
 }
@@ -138,7 +142,7 @@ TEST(GetSourceTextUntilEndOfLine, MultipleLines) {
 TEST(GetSourceTextUntilEndOfLine, PartialLine) {
   const char text[] = "This is the full line.\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation middle_loc = CreateSourceLocationFromOffset(begin_loc, 5);
   EXPECT_EQ("is the full line.",
             GetSourceTextUntilEndOfLine(middle_loc, data_getter));
@@ -147,7 +151,7 @@ TEST(GetSourceTextUntilEndOfLine, PartialLine) {
 TEST(GetSourceTextUntilEndOfLine, MiddleLine) {
   const char text[] = "This is the full line.\nThis is the winning line.\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation middle_loc = CreateSourceLocationFromOffset(begin_loc, 35);
   EXPECT_EQ("winning line.",
             GetSourceTextUntilEndOfLine(middle_loc, data_getter));
@@ -156,7 +160,7 @@ TEST(GetSourceTextUntilEndOfLine, MiddleLine) {
 TEST(GetSourceTextUntilEndOfLine, NoNewline) {
   const char text[] = "This is the full line.";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   EXPECT_EQ("This is the full line.",
             GetSourceTextUntilEndOfLine(begin_loc, data_getter));
 }
@@ -164,7 +168,7 @@ TEST(GetSourceTextUntilEndOfLine, NoNewline) {
 TEST(GetLocationAfter, FullLine) {
   const char text[] = "This is the full line.\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation after_loc = GetLocationAfter(begin_loc, "is the", data_getter);
   EXPECT_TRUE(after_loc.isValid());
   // We can't explore after_loc directly (it's opaque), so we use
@@ -175,7 +179,7 @@ TEST(GetLocationAfter, FullLine) {
 TEST(GetLocationAfter, FirstOfManyOccurrences) {
   const char text[] = "This is the full line.\nThis is the full line too.\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation after_loc = GetLocationAfter(begin_loc, "is the", data_getter);
   EXPECT_TRUE(after_loc.isValid());
   EXPECT_EQ(" full line.", GetSourceTextUntilEndOfLine(after_loc, data_getter));
@@ -184,7 +188,7 @@ TEST(GetLocationAfter, FirstOfManyOccurrences) {
 TEST(GetLocationAfter, SecondOfManyOccurrences) {
   const char text[] = "This is the full line.\nThis is the full line too.\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation after_loc = GetLocationAfter(begin_loc, "is the", data_getter);
   EXPECT_TRUE(after_loc.isValid());
   after_loc = GetLocationAfter(after_loc, "is the", data_getter);
@@ -196,7 +200,7 @@ TEST(GetLocationAfter, SecondOfManyOccurrences) {
 TEST(GetLocationAfter, NeedleNotFound) {
   const char text[] = "This is the full line.\nThis is the full line too.\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation after_loc = GetLocationAfter(begin_loc, "isthe", data_getter);
   EXPECT_FALSE(after_loc.isValid());
 }
@@ -204,17 +208,38 @@ TEST(GetLocationAfter, NeedleNotFound) {
 TEST(GetLocationAfter, NeedleNotFoundTwice) {
   const char text[] = "This is the full line.\nThis is the full line too.\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation after_loc = GetLocationAfter(begin_loc, "line.", data_getter);
   EXPECT_TRUE(after_loc.isValid());
   after_loc = GetLocationAfter(after_loc, "line.", data_getter);
   EXPECT_FALSE(after_loc.isValid());
 }
 
+TEST(GetLocationAfter, EmptyNeedle) {
+  const char text[] = "This is the full line.";
+  StringCharacterDataGetter data_getter(text);
+  SourceLocation begin_loc = data_getter.BeginningOfString();
+  SourceLocation after_loc = GetLocationAfter(begin_loc, "", data_getter);
+  EXPECT_TRUE(after_loc.isValid());
+  EXPECT_EQ("This is the full line.",
+            GetSourceTextUntilEndOfLine(after_loc, data_getter));
+}
+
+TEST(GetLocationAfter, BeginAfterStartOfText) {
+  const char text[] = "This is the full line.  This is the second 'this'.";
+  StringCharacterDataGetter data_getter(text);
+  SourceLocation begin_loc = data_getter.BeginningOfString();
+  begin_loc = CreateSourceLocationFromOffset(begin_loc, 1);
+  SourceLocation after_loc = GetLocationAfter(begin_loc, "This", data_getter);
+  EXPECT_TRUE(after_loc.isValid());
+  EXPECT_EQ(" is the second 'this'.",
+            GetSourceTextUntilEndOfLine(after_loc, data_getter));
+}
+
 TEST(GetIncludeNameAsTyped, SystemInclude) {
   const char text[] = "#include <stdio.h>\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation inc_loc = CreateSourceLocationFromOffset(begin_loc, 9);
   EXPECT_EQ("<stdio.h>",
             GetIncludeNameAsTyped(inc_loc, data_getter));
@@ -223,7 +248,7 @@ TEST(GetIncludeNameAsTyped, SystemInclude) {
 TEST(GetIncludeNameAsTyped, NonsysytemInclude) {
   const char text[] = "#include \"ads/util.h\"\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation inc_loc = CreateSourceLocationFromOffset(begin_loc, 9);
   EXPECT_EQ("\"ads/util.h\"",
             GetIncludeNameAsTyped(inc_loc, data_getter));
@@ -232,7 +257,7 @@ TEST(GetIncludeNameAsTyped, NonsysytemInclude) {
 TEST(GetIncludeNameAsTyped, WithComments) {
   const char text[] = "#include <stdio.h>  // for printf\n";
   StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc;
+  SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation inc_loc = CreateSourceLocationFromOffset(begin_loc, 9);
   EXPECT_EQ("<stdio.h>",
             GetIncludeNameAsTyped(inc_loc, data_getter));

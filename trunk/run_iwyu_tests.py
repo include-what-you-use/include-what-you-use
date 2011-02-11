@@ -40,6 +40,7 @@ class IwyuTests(unittest.TestCase):
                      for filename in FLAGS.test_files]
     if not files_to_test:
       files_to_test = glob.glob(os.path.join(TEST_ROOTDIR, '*.cc'))
+    assert files_to_test, "Must have at least one file to test!"
     failed_tests = []
     for filename in files_to_test:
       logging.info('Testing iwyu on %s', filename)

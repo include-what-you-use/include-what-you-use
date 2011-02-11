@@ -53,8 +53,9 @@ string GetSourceTextUntilEndOfLine(
 
 // Returns the location right *after* the first occurrence of needle
 // after start_loc, if any.  (If none, returns an invalid source-loc.)
+// start_loc must be a valid source location.
 clang::SourceLocation GetLocationAfter(
-    clang::SourceLocation start_loc, const char* needle,
+    clang::SourceLocation start_loc, const string& needle,
     const CharacterDataGetterInterface& data_getter);
 
 // Returns the include-name as typed, including <>'s and ""'s.

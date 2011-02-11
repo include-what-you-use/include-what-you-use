@@ -75,9 +75,13 @@ string UnquoteHeader(const string& quoted_include) {
   assert(!quoted_include.empty() && "Should never have an empty #include");
   string retval = quoted_include;
   if (retval[0] == '<') {
+    assert(retval.length() > 2);   // <x> is the smallest #include
+    assert(retval[retval.length() - 1] == '>');
     StripLeft(&retval, "<");
     StripRight(&retval, ">");
-  } else {
+  } else if (retval[0] == '"') {
+    assert(retval.length() > 2);   // "x" is the smallest #include
+    assert(retval[retval.length() - 1] == '"');
     StripLeft(&retval, "\"");
     StripRight(&retval, "\"");
   }
@@ -901,15 +905,16 @@ string NormalizeSystemSpecificPath(string path) {
 }  // namespace
 
 IncludePicker::IncludePicker()
-    : cpp_include_map_(MakeCppIncludeMap()),
-      c_include_map_(MakeCIncludeMap()),
-      google_include_map_(MakeGoogleIncludeMap()),
-      third_party_include_map_(MakeThirdPartyIncludeMap()),
-      dynamic_private_to_public_include_map_(),
-      symbol_include_map_(MakeSymbolIncludeMap()) {
+    : cpp_include_multimap_(MakeCppIncludeMap()),
+      c_include_multimap_(MakeCIncludeMap()),
+      google_include_multimap_(MakeGoogleIncludeMap()),
+      third_party_include_multimap_(MakeThirdPartyIncludeMap()),
+      dynamic_private_to_public_include_multimap_(),
+      symbol_include_multimap_(MakeSymbolIncludeMap()),
+      has_called_finalize_added_include_lines_(false) {
 }
 
-// Updates dynamic_private_to_public_include_map_ based on the include
+// Updates dynamic_private_to_public_include_multimap_ based on the include
 // seen during this iwyu run.  It includes, for instance, mappings
 // from 'project/internal/foo.h' to 'project/public/foo_public.h' in
 // google code (Google hides private headers in /internal/, much like
@@ -920,6 +925,7 @@ IncludePicker::IncludePicker()
 // maps come up empty.
 void IncludePicker::AddDirectInclude(const string& includer,
                                      const string& include_name_as_typed) {
+  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
   // Note: the includer may be a .cc file, which is unnecessary to add
   // to our map, but harmless.
   const string quoted_includer = GetQuotedIncludeFor(includer);
@@ -929,13 +935,13 @@ void IncludePicker::AddDirectInclude(const string& includer,
       // TODO(csilvers): would be better if key kept the quotes (<> or "")
       // but we take them out to be consistent with the other maps.  That
       // lets us use helper routines such as MakeTransitiveIncludeMap().
-      dynamic_private_to_public_include_map_.insert(
+      dynamic_private_to_public_include_multimap_.insert(
           make_pair(UnquoteHeader(include_name_as_typed), quoted_includer));
     } else {
       // A private-to-private mapping, which we need to store so we can
       // do transitive mappings.  Like always, we strip the "" and <>
       // from the map-value, to indicate the value is a private header.
-      dynamic_private_to_public_include_map_.insert(
+      dynamic_private_to_public_include_multimap_.insert(
           make_pair(UnquoteHeader(include_name_as_typed),
                     UnquoteHeader(quoted_includer)));
     }
@@ -944,17 +950,20 @@ void IncludePicker::AddDirectInclude(const string& includer,
 
 void IncludePicker::AddPrivateToPublicMapping(
     const string& quoted_private_header, const string& public_header) {
+  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
   const string quoted_public_header = GetQuotedIncludeFor(public_header);
-  dynamic_private_to_public_include_map_.insert(
+  dynamic_private_to_public_include_multimap_.insert(
       make_pair(UnquoteHeader(quoted_private_header), quoted_public_header));
 }
 
-// Make dynamic_private_to_public_include_map_ transitive, so for an
+// Make dynamic_private_to_public_include_multimap_ transitive, so for an
 // #include-path like 'public/foo.h -> private/bar.h -> private/baz.h",
 // we correctly map private/baz.h back to public/foo.h.
 void IncludePicker::FinalizeAddedIncludes() {
-  dynamic_private_to_public_include_map_ =
-      MakeTransitiveIncludeMap(dynamic_private_to_public_include_map_);
+  assert(!has_called_finalize_added_include_lines_ && "Can't call FAI twice");
+  dynamic_private_to_public_include_multimap_ =
+      MakeTransitiveIncludeMap(dynamic_private_to_public_include_multimap_);
+  has_called_finalize_added_include_lines_ = true;
 }
 
 
@@ -965,28 +974,28 @@ void IncludePicker::StripPathPrefixAndGetAssociatedIncludeMap(
   // Case 1: a local (non-system) include.
 if (!StartsWith(*path, "/")) {  // A relative path
     *include_map = StartsWith(*path, "third_party/") ?
-        &third_party_include_map_ : &google_include_map_;
+        &third_party_include_multimap_ : &google_include_multimap_;
   } else if (StripPast(path, "/c++/") && StripPast(path, "/")) {
     // Case 2: a c++ filename.  It's in a c++/<version#>/include dir.
     // (Or, possibly, c++/<version>/include/x86_64-unknown-linux-gnu/...")
     *path = NormalizeSystemSpecificPath(*path);
-    *include_map = &cpp_include_map_;
+    *include_map = &cpp_include_multimap_;
   } else if (StripPast(path, "third_party/stl/gcc") && StripPast(path, "/")) {
     // Case 2b: some c++ files live in third_party/stl/gcc#/
     *path = NormalizeSystemSpecificPath(*path);
-    *include_map = &cpp_include_map_;
+    *include_map = &cpp_include_multimap_;
   } else {
     // Case 3: a C filename.  It can be in many locations.
     // TODO(csilvers): get a full list of include dirs from the compiler.
     StripPast(path, "/include/");
     *path = NormalizeAsm(*path);     // Fix up C includes in <asm-ARCH/foo.h>
-    *include_map = &c_include_map_;
+    *include_map = &c_include_multimap_;
   }
 }
 
 vector<string> IncludePicker::GetPublicHeadersForSymbol(
     const string& symbol) const {
-  return FindInMultiMap(symbol_include_map_, symbol);
+  return FindInMultiMap(symbol_include_multimap_, symbol);
 }
 
 vector<string> IncludePicker::GetPublicHeadersForPrivateHeader(
@@ -994,7 +1003,7 @@ vector<string> IncludePicker::GetPublicHeadersForPrivateHeader(
   const IncludeMap* include_map;
   StripPathPrefixAndGetAssociatedIncludeMap(&private_header, &include_map);
   vector<string> retval;
-  if (include_map == &third_party_include_map_) {
+  if (include_map == &third_party_include_multimap_) {
     // We use prefix matching instead of the normal exact matching for
     // third-party map.
     for (Each<string, string> it(include_map); !it.AtEnd(); ++it) {
@@ -1008,7 +1017,7 @@ vector<string> IncludePicker::GetPublicHeadersForPrivateHeader(
 
   if (retval.empty()) {
     // As a last-ditch effort, see if the dynamic map has anything.
-    retval = FindInMultiMap(dynamic_private_to_public_include_map_,
+    retval = FindInMultiMap(dynamic_private_to_public_include_multimap_,
                             private_header);
   }
 
