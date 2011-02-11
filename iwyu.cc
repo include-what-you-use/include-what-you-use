@@ -135,11 +135,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "clang/Sema/Sema.h"
-#if defined(_MSC_VER)
-#include <tuple>
-#else
-#include <tr1/tuple>
-#endif
 
 namespace include_what_you_use {
 
@@ -148,7 +143,6 @@ namespace include_what_you_use {
 using clang::ASTConsumer;
 using clang::ASTContext;
 using clang::ASTFrontendAction;
-using clang::BlockPointerType;
 using clang::CallExpr;
 using clang::ClassTemplateDecl;
 using clang::ClassTemplateSpecializationDecl;
@@ -168,26 +162,22 @@ using clang::DeclRefExpr;
 using clang::ElaboratedType;
 using clang::Expr;
 using clang::FileEntry;
-using clang::FileID;
 using clang::FriendDecl;
 using clang::FriendTemplateDecl;
 using clang::FullSourceLoc;
 using clang::FunctionDecl;
-using clang::FunctionTemplateDecl;
 using clang::FunctionProtoType;
-using clang::IdentifierInfo;
+using clang::FunctionTemplateDecl;
+using clang::FunctionType;
 using clang::ImplicitCastExpr;
 using clang::LinkageSpecDecl;
 using clang::LValueReferenceType;
 using clang::MacroInfo;
 using clang::MemberExpr;
-using clang::MemberPointerType;
 using clang::NamedDecl;
 using clang::NestedNameSpecifier;
 using clang::OverloadExpr;
 using clang::PointerType;
-using clang::PreprocessorFrontendAction;
-using clang::PresumedLoc;
 using clang::PPCallbacks;
 using clang::QualType;
 using clang::QualifiedTypeLoc;
@@ -197,7 +187,6 @@ using clang::ReferenceType;
 using clang::SizeOfAlignOfExpr;
 using clang::SourceLocation;
 using clang::SourceManager;
-using clang::SourceRange;
 using clang::Stmt;
 using clang::SubstTemplateTypeParmType;
 using clang::TemplateArgument;
@@ -226,7 +215,6 @@ using std::make_pair;
 using std::map;
 using std::set;
 using std::string;
-using std::tr1::tuple;
 using std::vector;
 
 // An all-mode assertion.
@@ -255,8 +243,15 @@ namespace {
 
 class WarningLessThan {
  public:
-  // The tuple fields are file, line number, column number, message, and count.
-  typedef tuple<string, int, int, string, int> Warning;
+  struct Warning {
+    Warning(const string& f, int ln, int cn, const string& m, int c)
+        : filename(f), line_num(ln), column_num(cn), message(m), count(c) { }
+    const string filename;
+    const int line_num;
+    const int column_num;
+    const string message;
+    const int count;
+  };
 
   static Warning ParseWarning(const pair<string, int>& warning_and_count) {
     // Lines look like file:lineno:colno: text.
@@ -268,7 +263,13 @@ class WarningLessThan {
 
   bool operator()(const pair<string, int>& a,
                   const pair<string, int>& b) const {
-    return ParseWarning(a) < ParseWarning(b);
+    const Warning& w1 = ParseWarning(a);
+    const Warning& w2 = ParseWarning(b);
+    if (w1.filename != w2.filename)  return w1.filename < w2.filename;
+    if (w1.line_num != w2.line_num)  return w1.line_num < w2.line_num;
+    if (w1.column_num != w2.column_num)  return w1.column_num < w2.column_num;
+    if (w1.message != w2.message)  return w1.message < w2.message;
+    return w1.count < w2.count;
   }
 };
 
@@ -320,7 +321,7 @@ string IntToString(int i) {
 // chosen to explicitly instantiate the methods of this decl.  This
 // makes sure we don't try to instantiate twice.  Required by (5).
 // TODO(csilvers): should clear this when (if) the AST ever changes.
-static set<const Decl*> g_performed_explicit_method_instantiations;
+static set<const Decl*> g_explicitly_instantiated_classes;
 
 template <class Derived>
 class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
@@ -774,14 +775,13 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       if (spec_kind != clang::TSK_ExplicitInstantiationDeclaration &&
           spec_kind != clang::TSK_ExplicitInstantiationDefinition &&
           spec_kind != clang::TSK_ExplicitSpecialization &&
-          !Contains(g_performed_explicit_method_instantiations,
-                    specialization_decl)) {
+          !Contains(g_explicitly_instantiated_classes, specialization_decl)) {
         // TODO(csilvers): this can emit warnings in badinc.cc.  Figure out why.
         compiler_->getSema().InstantiateClassTemplateSpecializationMembers(
             CurrentLoc(),
             const_cast<ClassTemplateSpecializationDecl*>(specialization_decl),
             clang::TSK_ExplicitInstantiationDefinition);
-        g_performed_explicit_method_instantiations.insert(specialization_decl);
+        g_explicitly_instantiated_classes.insert(specialization_decl);
       }
     }
     // We want to do all this instantiation before traversing the
@@ -1704,21 +1704,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // since it requires other checks as well.
   bool VisitCallExpr(clang::CallExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
-    // Figuring out the function type is non-trivial because the callee
-    // may be a function pointer.  This code is based on clang's Expr.cpp.
-    const Type* callee_type = expr->getCallee()->getType().getTypePtr();
-    if (const PointerType* ptr_type = callee_type->getAs<PointerType>()) {
-      callee_type = ptr_type->getPointeeType().getTypePtr();
-    } else if (const BlockPointerType* bptr_type
-               = callee_type->getAs<BlockPointerType>()) {
-      callee_type = bptr_type->getPointeeType().getTypePtr();
-    } else if (const MemberPointerType* mptr_type
-               = callee_type->getAs<MemberPointerType>()) {
-      callee_type = mptr_type->getPointeeType().getTypePtr();
-    }
-    const FunctionProtoType* fn_type = callee_type->getAs<FunctionProtoType>();
-
-    ReportIfReferenceVararg(expr->getArgs(), expr->getNumArgs(), fn_type);
+    // Nothing to do if the called function is an old K&R-style function.
+    const FunctionType* fn_type = GetCalleeFunctionType(expr);
+    if (const FunctionProtoType* fn_proto = DynCastFrom(fn_type))
+      ReportIfReferenceVararg(expr->getArgs(), expr->getNumArgs(), fn_proto);
     return true;
   }
 
@@ -2786,7 +2775,7 @@ class IwyuAstConsumer
   bool VisitClassTemplateSpecializationDecl(
       clang::ClassTemplateSpecializationDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
-    clang::ClassTemplateDecl* specialized_decl = decl->getSpecializedTemplate();
+    ClassTemplateDecl* specialized_decl = decl->getSpecializedTemplate();
     if (GetDefinitionForClass(specialized_decl) == NULL)
       ReportDeclForwardDeclareUse(CurrentLoc(), specialized_decl);
     return Base::VisitClassTemplateSpecializationDecl(decl);
@@ -2964,6 +2953,8 @@ class IwyuAction : public ASTFrontendAction {
                                          llvm::StringRef /* dummy */) {
     // Do this first thing after getting our hands on a CompilerInstance.
     InitGlobals(&compiler.getSourceManager());
+    // Also init the globals that are local to this file.
+    g_explicitly_instantiated_classes.clear();
 
     IwyuPreprocessorInfo* const preprocessor_consumer
         = new IwyuPreprocessorInfo();

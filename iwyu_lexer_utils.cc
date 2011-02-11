@@ -58,13 +58,14 @@ string GetSourceTextUntilEndOfLine(
 }
 
 SourceLocation GetLocationAfter(
-    SourceLocation start_loc, const char* needle,
+    SourceLocation start_loc, const string& needle,
     const CharacterDataGetterInterface& data_getter) {
+  assert(start_loc.isValid() && "GetLocationAfter takes only valid locations");
   const char* data = data_getter.GetCharacterData(start_loc);
-  const char* needle_loc = strstr(data, needle);
+  const char* needle_loc = strstr(data, needle.c_str());
   if (!needle_loc)
     return SourceLocation();   // invalid source location
-  return start_loc.getFileLocWithOffset(needle_loc - data + strlen(needle));
+  return start_loc.getFileLocWithOffset(needle_loc - data + needle.length());
 }
 
 string GetIncludeNameAsTyped(SourceLocation include_loc,

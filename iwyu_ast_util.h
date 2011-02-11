@@ -662,11 +662,15 @@ inline internal::DynCastPtr<T> DynCastFrom(T* ptr) {
 inline void AddTypelikeTemplateArgTo(const clang::TemplateArgument& tpl_arg,
                                      set<const clang::Type*>* argset) {
   if (tpl_arg.getKind() == clang::TemplateArgument::Type) {
+    // Holds all types seen in tpl_arg (may be more than one if tpl_arg
+    // is a function prototype, with argument-types and a return-type).
     set<const clang::Type*> argtypes;
     argtypes.insert(tpl_arg.getAsType().getTypePtr());
     // If the type is a function (a rare case, but happens in code like
-    // TplClass<char(int, int, int)> c), then the parameters are types
+    // TplClass<char(int, int, int)>), then the parameters are types
     // we have to consider as well.
+    // TODO(csilvers): also check a fn pointer and a fn taking a fn ptr:
+    // TplClass<char(*)(int, int, int)>, TplClass<char(char(*)(int, int))>
     if (const clang::FunctionProtoType* fn_type
         = DynCastFrom(tpl_arg.getAsType().getTypePtr())) {
       argtypes.insert(fn_type->getResultType().getTypePtr());
@@ -1216,6 +1220,24 @@ inline const clang::CXXDestructorDecl* GetSiblingDestructorFor(
 inline const clang::CXXDestructorDecl* GetSiblingDestructorFor(
     const clang::CXXConstructExpr* ctor_expr) {
   return GetSiblingDestructorFor(ctor_expr->getConstructor());
+}
+
+// Figuring out the function type is non-trivial because the callee
+// may be a function pointer.  This code is based on clang's Expr.cpp.
+// Should never return NULL.
+inline const clang::FunctionType* GetCalleeFunctionType(clang::CallExpr* expr) {
+  const clang::Type* callee_type = expr->getCallee()->getType().getTypePtr();
+  if (const clang::PointerType* ptr_type
+      = callee_type->getAs<clang::PointerType>()) {
+    callee_type = ptr_type->getPointeeType().getTypePtr();
+  } else if (const clang::BlockPointerType* bptr_type
+             = callee_type->getAs<clang::BlockPointerType>()) {
+    callee_type = bptr_type->getPointeeType().getTypePtr();
+  } else if (const clang::MemberPointerType* mptr_type
+             = callee_type->getAs<clang::MemberPointerType>()) {
+    callee_type = mptr_type->getPointeeType().getTypePtr();
+  }
+  return callee_type->getAs<clang::FunctionType>();
 }
 
 // Figuring out whether the to-type is a reference or not is different

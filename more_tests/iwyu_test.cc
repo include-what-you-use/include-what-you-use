@@ -180,7 +180,7 @@ TEST(IncludePicker, DynamicMapping_MultipleTransitiveMapping) {
 TEST(IncludePicker, DynamicMapping_PrivateToPublicMapping) {
   IncludePicker p;
   // These names are not the public/internal names that AddInclude looks at.
-  p.AddPrivateToPublicMapping("\"project/private/foo.h",
+  p.AddPrivateToPublicMapping("\"project/private/foo.h\"",
                               "project/not_private/bar.h");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
