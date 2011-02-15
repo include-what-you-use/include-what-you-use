@@ -12,7 +12,30 @@
 
 #include <stddef.h>
 #include "tests/direct.h"
-#include "tests/sizeof_reference-d1.h"
+
+template <typename T> struct IndirectTemplateStruct {
+  T value;   // require full type information for t;
+};
+
+template <typename T> struct SizeofTakingStruct {
+  char value[sizeof(T)];
+};
+
+template <typename T> struct SizeofTakingStructRef {
+  char value[sizeof(T&)];
+};
+
+template <typename T> struct SizeofTakingStructTpl {
+  char value[sizeof(IndirectTemplateStruct<T>)];
+};
+
+template <typename T> struct SizeofTakingStructTplRef {
+  char value[sizeof(IndirectTemplateStruct<T&>)];
+};
+
+template <typename T> struct SizeofTakingStructTplRef2 {
+  char value5[sizeof(IndirectTemplateStruct<T>&)];
+};
 
 // IWYU: IndirectClass is...*indirect.h
 // IWYU: IndirectClass needs a declaration
@@ -21,20 +44,16 @@ size_t s = sizeof(IndirectClass&);
 // This needs the full type of IndirectTemplateStruct, but also
 // IndirectClass, which is used in the IndirectTemplateStruct
 // instantiation.
-// IWYU: IndirectTemplateStruct is...*sizeof_reference-i1.h
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectTemplateStruct needs a declaration
 // IWYU: IndirectClass needs a declaration
 size_t s2 = sizeof(IndirectTemplateStruct<IndirectClass>&);
 
 // This does not need the full type information for IndirectClass.
-// IWYU: IndirectTemplateStruct is...*sizeof_reference-i1.h
 // IWYU: IndirectClass needs a declaration
 size_t s3 = sizeof(IndirectTemplateStruct<IndirectClass&>);
 
 // This needs the full type information of IndirectClass because the
 // subclass takes the sizeof().
-// IWYU: SizeofTakingStruct is...*sizeof_reference-i1.h
 // IWYU: IndirectClass is...*indirect.h
 // IWYU: IndirectClass needs a declaration
 size_t s4 = sizeof(SizeofTakingStruct<IndirectClass&>);
@@ -47,24 +66,41 @@ IndirectClass& ref = dummy;
 // IWYU: IndirectClass is...*indirect.h
 size_t s5 = sizeof(dummy);
 
-// IWYU: SizeofTakingStruct is...*sizeof_reference-i1.h
 // IWYU: IndirectClass is...*indirect.h
 // IWYU: IndirectClass needs a declaration
-SizeofTakingStruct<IndirectClass&> sizeof_taking_struct;
+SizeofTakingStruct<IndirectClass&> sizeof_taking_struct1;
+
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass needs a declaration
+SizeofTakingStructRef<IndirectClass> sizeof_taking_struct2;
+
+// Not sure why, but C++ doesn't require full type of IndirectClass here.
+// IWYU: IndirectClass needs a declaration
+SizeofTakingStructTpl<IndirectClass&> sizeof_taking_struct3;
+
+// Not sure why, but C++ doesn't require full type of IndirectClass here.
+// IWYU: IndirectClass needs a declaration
+SizeofTakingStructTplRef<IndirectClass> sizeof_taking_struct4;
+
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass needs a declaration
+SizeofTakingStructTplRef2<IndirectClass> sizeof_taking_struct5;
+
+// Not sure why, but C++ doesn't require full type of IndirectClass here.
+// IWYU: IndirectClass needs a declaration
+SizeofTakingStructTplRef2<IndirectClass&> sizeof_taking_struct6;
+
 
 /**** IWYU_SUMMARY
 
 tests/sizeof_reference.cc should add these lines:
 #include "tests/indirect.h"
-#include "tests/sizeof_reference-i1.h"
 
 tests/sizeof_reference.cc should remove these lines:
 - #include "tests/direct.h"  // lines XX-XX
-- #include "tests/sizeof_reference-d1.h"  // lines XX-XX
 
 The full include-list for tests/sizeof_reference.cc:
 #include <stddef.h>  // for size_t
 #include "tests/indirect.h"  // for IndirectClass
-#include "tests/sizeof_reference-i1.h"  // for IndirectTemplateStruct, SizeofTakingStruct
 
 ***** IWYU_SUMMARY */

@@ -1077,11 +1077,15 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   }
   bool TraverseImplicitDestructorCall(clang::CXXDestructorDecl* decl,
                                       const Type* type) {
+    VERRS(7) << "[Uninstantiated template AST-node] [implicit dtor] "
+             << (decl ? PrintableDecl(decl) : "NULL") << "\n";
     AddAstNode(decl);
     return Base::TraverseImplicitDestructorCall(decl, type);
   }
   bool HandleFunctionCall(clang::FunctionDecl* callee,
                           const clang::Type* parent_type) {
+    VERRS(7) << "[Uninstantiated template AST-node] [function call] "
+             << (callee ? PrintableDecl(callee) : "NULL") << "\n";
     AddAstNode(callee);
     return Base::HandleFunctionCall(callee, parent_type);
   }
@@ -1090,12 +1094,17 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   // Class logic.
 
   void AddAstNode(const void* node) {
-    VERRS(7) << "[Uninstantiated template AST-node] " << node << "\n";
     seen_nodes_.insert(node);
   }
 
   void AddCurrentAstNode() {
-    // TODO(csilvers): deal with TypeLoc and TemlpateName which are
+    if (ShouldPrint(7)) {
+      errs() << "[Uninstantiated template AST-node] "
+             << current_ast_node()->GetAs<void>() << " ";
+      PrintASTNode(current_ast_node());
+      errs() << "\n";
+    }
+    // TODO(csilvers): deal with TypeLoc and TemplateName which are
     // pointers to temporaries.
     AddAstNode(current_ast_node()->GetAs<void>());
   }
