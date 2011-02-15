@@ -602,6 +602,40 @@ inline string PrintableTemplateArgumentLoc(
       &arg, 1, DefaultPrintPolicy());
 }
 
+// This prints to errs().  It's useful for debugging (e.g. inside gdb).
+inline void PrintASTNode(const ASTNode* node) {
+  if (const clang::Decl* decl = node->GetAs<clang::Decl>()) {
+    llvm::errs() << "[" << decl->getDeclKindName() << "Decl] "
+                 << PrintableDecl(decl) << "\n";
+  } else if (const clang::Stmt* stmt = node->GetAs<clang::Stmt>()) {
+    llvm::errs() << "[" << stmt->getStmtClassName() << "] ";
+    PrintStmt(stmt);
+    llvm::errs() << "\n";
+  } else if (const clang::Type* type = node->GetAs<clang::Type>()) { // +typeloc
+    llvm::errs() << "[" << type->getTypeClassName()
+                 << (node->IsA<clang::TypeLoc>() ? "TypeLoc" : "Type") << "] "
+                 << PrintableType(type) << "\n";
+  } else if (const clang::NestedNameSpecifier* nns
+             = node->GetAs<clang::NestedNameSpecifier>()) {
+    llvm::errs() << "[NestedNameSpecifier] "
+                 << PrintableNestedNameSpecifier(nns) << "\n";
+  } else if (const clang::TemplateName* tpl_name
+             = node->GetAs<clang::TemplateName>()) {
+    llvm::errs() << "[TemplateName] "
+                 << PrintableTemplateName(*tpl_name) << "\n";
+  } else if (const clang::TemplateArgumentLoc* tpl_argloc
+             = node->GetAs<clang::TemplateArgumentLoc>()) {
+    llvm::errs() << "[TemplateArgumentLoc] "
+                 << PrintableTemplateArgumentLoc(*tpl_argloc) << "\n";
+  } else if (const clang::TemplateArgument* tpl_arg
+             = node->GetAs<clang::TemplateArgument>()) {
+    llvm::errs() << "[TemplateArgument] "
+                 << PrintableTemplateArgument(*tpl_arg) << "\n";
+  } else {
+    assert(!"Unknown kind for ASTNode");
+  }
+}
+
 
 // --- Type conversion utilities.
 

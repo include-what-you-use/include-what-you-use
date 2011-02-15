@@ -30,6 +30,8 @@ int main() {
   Function(1, 2, ref);
   // IWYU: IndirectClass is...*indirect.h
   (*function_p)(1, 2, ref);
+  // IWYU: IndirectClass is...*indirect.h
+  (*function_p)(1, 2, 3, 4, 5, ref);
 }
 
 /**** IWYU_SUMMARY

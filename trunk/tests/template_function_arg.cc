@@ -25,8 +25,13 @@ template <typename R, typename A1> struct Function<R(A1)> {
 int main() {
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
-  Function<char(IndirectClass&)> f;
-  (void)f;
+  Function<char(IndirectClass&)> f1;
+  (void)f1;
+
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  Function<IndirectClass(char)> f2;
+  (void)f2;
 }
 
 /**** IWYU_SUMMARY
