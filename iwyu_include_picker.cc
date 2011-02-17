@@ -55,6 +55,7 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_output.h" // for VERRS
+#include "llvm/Support/Path.h"
 
 using std::map;
 using std::pair;
@@ -971,8 +972,8 @@ void IncludePicker::StripPathPrefixAndGetAssociatedIncludeMap(
     string* path, const IncludeMap** include_map) const {
   *path = NormalizeFilePath(*path);
 
-  // Case 1: a local (non-system) include.
-if (!StartsWith(*path, "/")) {  // A relative path
+  if (llvm::sys::path::is_relative(*path)) {  // A relative path
+    // Case 1: a local (non-system) include.
     *include_map = StartsWith(*path, "third_party/") ?
         &third_party_include_multimap_ : &google_include_multimap_;
   } else if (StripPast(path, "/c++/") && StripPast(path, "/")) {
