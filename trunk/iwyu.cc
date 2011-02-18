@@ -3095,7 +3095,6 @@ int main(int argc, const char **argv) {
 
   // Create a compiler instance to handle the actual work.
   CompilerInstance compiler;
-  compiler.setLLVMContext(new LLVMContext);
   compiler.setInvocation(invocation.take());
 
   // Create the compilers actual diagnostics engine.
@@ -3121,4 +3120,3 @@ int main(int argc, const char **argv) {
   // given.
   return 1;
 }
-
