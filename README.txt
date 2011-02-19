@@ -93,8 +93,8 @@ How to Correct IWYU Mistakes
 ============================
 
 1) If fix_includes.py has removed an #include you actually need, add
-   it back in with the comment // NOLINT(iwyu) at the end of the
-   #include line.  Note that the comment is case-sensitive.
+   it back in with the comment '// IWYU pragma: keep' at the end of
+   the #include line.  Note that the comment is case-sensitive.
 
 2) If fix_includes has added an #include you don't need, just take it
    out.  We hope to come up with a more permanent way of fixing later.
@@ -104,12 +104,11 @@ How to Correct IWYU Mistakes
 
 4) If fix_includes has suggested a private header file (such as
    <bits/stl_vector.h>) instead of the proper public header file
-   (<vector>), you can fix this by inserting a specially crafted
-   comment near the top of the public file (assuming you can write to
-   it).  These so-called 'iwyu pragma' comments are still being
-   designed, and the actual syntax is in flux.  We should be keeping
-   documentation at the top of iwyu_preprocessor.h, but beware the
-   syntax may change over time.
+   (<vector>), you can fix this by inserting this comment near the
+   top of the private file (assuming you can write to it):
+      // IWYU pragma: private, include "the/public/file.h"
+   The full list of 'iwyu pragma' comments are at the top of
+   iwyu_preprocessor.h.
 
 =================
 Running the Tests
