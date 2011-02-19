@@ -7,29 +7,39 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Given a symbol, and a file-path where the symbol is defined (or
-// possibly just declared), return the best quoted include path to
-// get that symbol.  A "quoted include path" is something that can
-// be used with an #include, including surrounding ""'s or <>'s.
+// The include-picker provides a list of candidate #include-lines
+// that iwyu can suggest in order to include a particular symbol
+// or file.
 //
-// Picking the best #include has several steps:
-// 1) Normalizing the path to get rid of /usr/include/ prefixes and the
-//    like, and adding ""s or <>'s.
-// 2) Mapping internal-only header files to the public header file that
-//    should be used instead.  For instance, this will map
-//    /usr/include/.../bits/stl_vector.h to <vector>.
-// 3) For internal-only header files that could come from a number
-//    of public header files, picking the best header file to return
-//    (based on lists of "preferred" includes the client provides).
-// 4) For symbols that could come from a number of public header files
-//    -- for instance, sigset_t can come either from sys/select.h or
-//    sys/epoll.h -- pick the best header file to return (again
-//    based on lists of "preferred" includes the client provides).
+// It seems like the 'file' case would be easy ("to include
+// /usr/include/math.h, say '#include <math.h>"), but it's
+// not because many header files are private, and should not
+// be included by users directly.  A private header will have
+// one or (occassionally) more public headers that it maps to.
+// The include-picker keeps track of these mappings.
 //
-// We also make public some of the helper routines, for instance
-// SanitizePath() which just does steps 1-3 but doesn't require
-// a symbol name, and IsSystemIncludeFile(), which does enough
-// of step 1 to determine if we'll be adding ""'s or <>'s.
+// It's also possible for a public file to have an include-picker
+// mapping.  This means: "it's ok to #include this file directly, but
+// you can also get the contents of this file by #including this other
+// file as well."  One example is that <ostream> maps to both
+// <ostream> and <iostream>.  Other parts of iwyu can decide which
+// #include to suggest based on its own heuristics (whether the file
+// already needs to #include <iostream> for some other reason, for
+// instance).
+//
+// Some of these mappings are hard-coded, based on my own examination
+// of gcc headers on ubuntu.  Some mappings are determined at runtime,
+// based on #pragmas or other writeup in the source files themselves.
+//
+// Mapping a symbol to a file has the same issues.  In most cases, a
+// symbol maps to the file that defines it, and iwyu_include_picker
+// has nothing useful to say.  But some symbols -- which we hard-code
+// -- can be provided by several files.  NULL is a canonical example
+// of this.
+//
+// The include-picker also provides some helper functions for
+// converting from file-paths to #include paths, including, routines to
+// normalize a file-path to get rid of /usr/include/ prefixes.
 
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_INCLUDE_PICKER_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_INCLUDE_PICKER_H_
@@ -43,79 +53,74 @@
 namespace include_what_you_use {
 
 using std::map;
-using std::multimap;
 using std::set;
 using std::string;
 using std::vector;
 
 
+// Below, we talk 'quoted' includes.  A quoted include is something
+// that would be written on an #include line, complete with the <> or
+// "".  In the line '#include <time.h>', "<time.h>" is the quoted
+// include.
+
+// Converts a file-path, such as /usr/include/stdio.h, to a
+// quoted include, such as <stdio.h>.
+string ConvertToQuotedInclude(const string& filepath);
+
+// Returns whether this is a system (as opposed to user) include
+// file, based on where it lives.
+bool IsSystemIncludeFile(const string& filepath);
+
 class IncludePicker {
  public:
-  // The key is 'name' below, and the value is 'path'.
-  typedef multimap<string, string> IncludeMap;
-  struct IncludeMapEntry {   // A POD so we can make the input static
-    const char* name;        // An unquoted but normalized input include loc
-    const char* path;        // A quoted output include loc, e.g. "<string>"
+  enum Visibility { kUnusedVisibility, kPublic, kPrivate };
+
+  // If we map from A to B, it means that every time we need a
+  // symbol from A, we can also get it from B.  Another way
+  // to think about it is that map_to "re-exports" all the
+  // symbols from map_from.
+  struct IncludeMapEntry {      // A POD so we can make the input static
+    const char* map_from;       // A quoted-include
+    Visibility from_visibility;
+    const char* map_to;         // A quoted-include
+    Visibility to_visibility;
   };
 
+  // For every from-include, we need to know all its associated
+  // to-includes (that is, everyone that 're-exports' the
+  // from-include).  For simplicity, we just put map-to in every
+  // value, which wastes space but doesn't require another struct.
+  // I don't think space is an issue here.
+  struct IncludeMapValue {
+    string map_to;
+    Visibility from_visibility;
+    Visibility to_visibility;
+  };
+  typedef map<string, vector<IncludeMapValue> > IncludeMap;  // key is map_from
+
   IncludePicker();
+
+  // ----- Routines to dynamically modify the include-picker
 
   // Call this for every #include seen during iwyu analysis.  The
   // include-picker can use this data to better suggest #includes,
   // perhaps.  include_name_as_typed includes the <> or "".
-  void AddDirectInclude(const string& includer,
+  void AddDirectInclude(const string& includer_filepath,
                         const string& include_name_as_typed);
 
-  // Used to register mappings from private header files to public
-  // header files at runtime.  This is intended to be used when
-  // files advertise these mappings via a #pragma or some such.
-  void AddPrivateToPublicMapping(const string& quoted_private_header,
-                                 const string& public_header);
-
-  // TODO(csilvers): add PublicToPublic and PrivateToPrivate as well.
-  // Implement private-to-private by having the map-value be unquoted.
-  // Implement public-to-public by adding a from->to mapping, and also
-  // a from->from mapping.  Also support allowing both <> and ""
-  // includes.
+  // Add this to say "map_to re-exports everything in file map_from".
+  // Both map_to and map_from should be quoted includes.
+  void AddMapping(const string& map_from, Visibility from_visibility,
+                  const string& map_to, Visibility to_visibility);
 
   // Call this after iwyu preprocessing is done.  No more calls to
-  // AddDirectInclude() or AddPrivateToPublicMapping() are allowed
-  // after this.
+  // AddDirectInclude() or AddMapping() are allowed after this.
   void FinalizeAddedIncludes();
 
-  // Removes uninteresting prefix from the given header path to make
-  // it like what a user would write on a #include line; returns the
-  // unquoted, stripped path.  This is a helper function for
-  // GetBestIncludeForSymbol, and probably will rarely need to be
-  // called directly.
-  // Note: 'string' rather than 'const string&' since this fn munges the arg.
-  string StripPathPrefix(string path) const {
-    const IncludeMap* dummy;
-    StripPathPrefixAndGetAssociatedIncludeMap(&path, &dummy);
-    return path;
-  }
+  // ----- Include-picking API
 
-  // Returns whether this is a system (as opposed to user) include
-  // file, based on where it lives.
-  // Note: 'string' rather than 'const string&' since this fn munges the arg.
-  bool IsSystemIncludeFile(string path) const {
-    const IncludeMap* include_map;
-    StripPathPrefixAndGetAssociatedIncludeMap(&path, &include_map);
-    return IsMapForSystemHeader(include_map);
-  }
-
-  // Combines the above two to convert a path into an #include argument
-  // that returns that path.  For instance, turns '/usr/include/stdio.h'
-  // into '<stdio.h>'.
-  // Note: 'string' rather than 'const string&' since this fn munges the arg.
-  string GetQuotedIncludeFor(string path) const {
-    const IncludeMap* include_map;
-    StripPathPrefixAndGetAssociatedIncludeMap(&path, &include_map);
-    return IsMapForSystemHeader(include_map) ? "<"+path+">" : "\""+path+"\"";
-  }
-
-  // Returns the set of all public header files that a given symbol
-  // would map to.  For instance, NULL can map to stddef.h, stdlib.h,
+  // Returns the set of all public header files that 'provide' the
+  // given symbol.  For instance, NULL can map to stddef.h, stdlib.h,
   // etc.  Most symbols don't have pre-defined headers they map to,
   // and we return the empty vector in that case.  Ordering is
   // important (which is why we return a vector, not a set): all else
@@ -124,62 +129,33 @@ class IncludePicker {
   vector<string> GetPublicHeadersForSymbol(const string& symbol) const;
 
   // Returns the set of all public header files that a given header
-  // file -- specified as a full path -- would map to.  This set
-  // contains just the input header file (now quoted) if the given
-  // header file is not a private header file.  The entries of the set
-  // are quoted includes, such as '<stdio.h>'.  Ordering is important
+  // file -- specified as a full path -- would map to, as a set of
+  // quoted includes such as '<stdio.h>'.  If the include-picker has
+  // no mapping information for this file, the return vector has just
+  // the input file (now include-quoted).  Ordering is important
   // (which is why we return a vector, not a set): all else being
   // equal, the first element of the vector is the "best" (or most
-  // standard) header for the private header.
-  // Note: 'string' rather than 'const string&' since this fn munges the arg.
-  vector<string> GetPublicHeadersForPrivateHeader(string private_header) const;
+  // standard) header for the input header.
+  vector<string> GetPublicHeadersForFilepath(const string& filepath) const;
 
-  // Returns true iff there is evidence that the includer means to
-  // re-export the includee.  Right now, the only evidence we have is
-  // if there's an include-picker mapping from includee_path to
-  // includer_path (each converted from a path to an include-name
-  // first, of course).  Note that, due to lack of evidence, this
-  // function may return false in some cases where the includer means
-  // to re-export some or all symbols from the includee.
-  // Note: 'string' rather than 'const string&' since this fn munges the arg.
-  bool PathReexportsInclude(string includer_path, string includee_path) const;
+  // Returns true if there is a mapping (possibly indirect) from
+  // map_from to map_to.  This means that to_file 're-exports' all the
+  // symbols from from_file.  Both map_from_filepath and
+  // map_to_filepath should be full file-paths.
+  bool HasMapping(const string& map_from_filepath,
+                  const string& map_to_filepath) const;
 
  private:
-  bool IsMapForSystemHeader(const IncludeMap* include_map) const {
-    return (include_map == &cpp_include_multimap_ ||
-            include_map == &c_include_multimap_);
-  }
+  // Given a map whose keys may have globs (* or [] or ?), expand the
+  // globs by matching them against all #includes seen by iwyu.
+  void ExpandGlobs();
 
-  // Removes uninteresting prefix from the given header path to make
-  // it like what a user would write on a #include line, and sets
-  // *include_map to the IncludeMap associated with the header.
-  void StripPathPrefixAndGetAssociatedIncludeMap(
-      string* path, const IncludeMap** include_map) const;
+  // One map from symbols to includes, one from filepaths to includes.
+  IncludeMap symbol_include_map_;
+  IncludeMap filepath_include_map_;
 
-  // Maps for system headers.
-  const IncludeMap cpp_include_multimap_;
-  const IncludeMap c_include_multimap_;
-
-  // Maps for user headers.
-  const IncludeMap google_include_multimap_;
-  const IncludeMap third_party_include_multimap_;
-
-  // A map that is constructed at runtime based on the #includes
-  // actually seen while processing a source file.  It includes, for
-  // instance, mappings from 'project/internal/foo.h' to
-  // 'project/public/foo_public.h' in google code (Google hides
-  // private headers in /internal/, much like glibc hides them in
-  // /bits/.)  This dynamic mapping is not as good as the hard-coded
-  // mappings, since it has incomplete information (only what is seen
-  // during this compile run) and has to do a best-effort guess at the
-  // mapping.  And we still have to hard-code in some rules to tell
-  // whether a file is public or private from its name (which we do in
-  // AddDirectInclude).  It's a fallback map when other maps come up
-  // empty.
-  IncludeMap dynamic_private_to_public_include_multimap_;
-
-  // Maps from qualified symbols to headers.
-  const IncludeMap symbol_include_multimap_;
+  // All the includes we've seen so far, to help with globbing.
+  set<string> all_quoted_includes_;
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;

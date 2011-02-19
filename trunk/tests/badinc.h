@@ -400,13 +400,13 @@ tests/badinc.h should remove these lines:
 The full include-list for tests/badinc.h:
 #include <errno.h>  // for errno
 #include <stdio.h>  // for NULL, printf
-#include <queue>  // for std::queue
-#include <set>  // for std::set
-#include <string>  // for std::string
-#include <utility>  // for std::pair
-#include <vector>  // for std::vector
+#include <queue>  // for queue
+#include <set>  // for set
+#include <string>  // for string
+#include <utility>  // for pair
+#include <vector>  // for vector
 #include "tests/badinc-d3.h"  // for D3_Enum, D3_Enum::D31
-#include "tests/badinc-i2-inl.h"  // for I2_Class::I2_Class, I2_Class::InlFileFn, I2_Class::InlFileStaticFn, I2_Class::InlFileTemplateFn, I2_Class::~I2_Class, I2_TemplateClass::I2_TemplateClass, I2_TemplateClass::InlFileTemplateClassFn, I2_TemplateClass::~I2_TemplateClass
+#include "tests/badinc-i2-inl.h"  // for I2_Class::I2_Class, I2_Class::InlFileFn, I2_Class::InlFileStaticFn, I2_Class::InlFileTemplateFn, I2_Class::~I2_Class, I2_TemplateClass::I2_TemplateClass<FOO>, I2_TemplateClass::InlFileTemplateClassFn, I2_TemplateClass::~I2_TemplateClass<FOO>
 #include "tests/badinc-i2.h"  // for I2_Class, I2_Enum, I2_Enum::I21, I2_Enum::I22, I2_Enum::I23, I2_EnumForTypedefs, I2_MACRO, I2_Struct, I2_TemplateClass, I2_Typedef, I2_TypedefOnly_Class, TemplateForHClassTplFn (ptr only)
 class Cc_Class;  // lines XX-XX
 // TODO(csilvers): this should change to struct Cc_Struct.

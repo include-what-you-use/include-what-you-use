@@ -30,6 +30,7 @@
 namespace include_what_you_use {
 
 using clang::ClassTemplateDecl;
+using clang::ClassTemplateSpecializationDecl;
 using clang::CXXMethodDecl;
 using clang::CXXRecordDecl;
 using clang::Decl;
@@ -71,21 +72,123 @@ bool ShouldPrintSymbolFromFile(const FileEntry* file) {
   } else if (GetVerboseLevel() < 10) {
     return ShouldReportIWYUViolationsFor(file);
   } else if (GetVerboseLevel() < 11) {
-    return !GlobalIncludePicker().IsSystemIncludeFile(GetFilePath(file));
+    return !IsSystemIncludeFile(GetFilePath(file));
   } else {
     return true;
   }
 }
 
+namespace internal {
+
+namespace {
+
+// A map that effectively allows us to dynamic cast from a NamedDecl
+// to a FakeNamedDecl. When a FakeNamedDecl is created, it will be
+// inserted into the map with itself as the key (implicitly casted to
+// a NamedDecl).
+std::map<const clang::NamedDecl*, const FakeNamedDecl*>
+g_fake_named_decl_map;
+
+// Since dynamic casting is not an option, this method is provided to
+// determine if a decl is actually a FakeNamedDecl.
+const FakeNamedDecl* FakeNamedDeclIfItIsOne(const clang::NamedDecl* decl) {
+  return GetOrDefault(g_fake_named_decl_map, decl, NULL);
+}
+
+}  // namespace
+
+FakeNamedDecl::FakeNamedDecl(const string& kind_name, const string& qual_name,
+                             const string& decl_filepath, int decl_linenum)
+    : clang::NamedDecl(clang::Decl::Record, NULL, clang::SourceLocation(),
+                       clang::DeclarationName()),
+      kind_name_(kind_name),
+      qual_name_(qual_name),
+      decl_filepath_(decl_filepath), decl_linenum_(decl_linenum) {
+  g_fake_named_decl_map[this] = this;
+}
+
+// When testing IWYU, we provide a fake object (FakeNamedDecl) that
+// needs to provide its own version of NamedDecl::getKindName() and
+// NamedDecl::getQualifiedNameAsString().  Unfortunately they aren't
+// virtual.  Hence we define the following helpers to dispatch the
+// call ourselves.
+
+string GetKindName(const clang::TagDecl* tag_decl) {
+  const clang::NamedDecl* const named_decl = tag_decl;
+  if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
+    return fake->kind_name();
+  }
+  return tag_decl->getKindName();
+}
+
+string GetQualifiedNameAsString(const clang::NamedDecl* named_decl) {
+  if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
+    return fake->qual_name();
+  }
+  return named_decl->getQualifiedNameAsString();
+}
+
+// Name we put in the comments next to an #include.
+string GetShortNameAsString(const clang::NamedDecl* named_decl) {
+  if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
+    return fake->qual_name();
+  }
+
+  // This is modified from NamedDecl::getQualifiedNameAsString:
+  // http://clang.llvm.org/doxygen/Decl_8cpp_source.html#l00742
+  const DeclContext *decl_context = named_decl->getDeclContext();
+  if (decl_context->isFunctionOrMethod())
+    return named_decl->getNameAsString();
+
+  vector<const DeclContext*> contexts;
+  while (decl_context && isa<NamedDecl>(decl_context)) {
+    contexts.push_back(decl_context);
+    decl_context = decl_context->getParent();
+  };
+
+  std::string retval;
+  raw_string_ostream ostream(retval);
+
+  for (vector<const DeclContext*>::reverse_iterator it = contexts.rbegin();
+       it != contexts.rend(); ++it) {
+    if (const ClassTemplateSpecializationDecl* tpl_decl = DynCastFrom(*it)) {
+      ostream << tpl_decl->getName() << "<>::";
+    } else if (isa<NamespaceDecl>(*it)) {
+      // We don't want to include namespaces in our shortname.
+    } else if (const RecordDecl *record_decl = DynCastFrom(*it)) {
+      if (!record_decl->getIdentifier())
+        ostream << "<anonymous " << record_decl->getKindName() << ">::";
+      else
+        ostream << record_decl << "::";
+    } else if (const FunctionDecl *function_decl = DynCastFrom(*it)) {
+      ostream << function_decl << "::";   // could also add in '<< "()"'
+    } else {
+      ostream << cast<NamedDecl>(*it) << "::";
+    }
+  }
+  // Due to the way DeclarationNameInfo::printName() is written, this
+  // will show template arguments for templated constructors and
+  // destructors.  Since iwyu only shows these when they're defined in
+  // a -inl.h file, I'm not going to worry about it.
+  if (named_decl->getDeclName())
+    ostream << named_decl;
+  else
+    ostream << "<anonymous>";
+
+  return ostream.str();
+}
+
+}  // namespace internal
 
 // Holds information about a single full or fwd-decl use of a symbol.
 OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
                OneUse::UseKind use_kind)
-    : symbol_name_(GetQualifiedNameAsString(decl)),
+    : symbol_name_(internal::GetQualifiedNameAsString(decl)),
+      short_symbol_name_(internal::GetShortNameAsString(decl)),
       decl_(decl),
       decl_filepath_(GetFilePath(decl)),
       use_loc_(use_loc),
-      use_kind_(use_kind),
+      use_kind_(use_kind),             // full use or fwd-declare use
       public_headers_(),
       suggested_header_(),             // figure that out later
       ignore_use_(false),
@@ -96,6 +199,7 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
 OneUse::OneUse(const string& symbol_name, const string& dfn_filepath,
                SourceLocation use_loc)
     : symbol_name_(symbol_name),
+      short_symbol_name_(symbol_name),
       decl_(NULL),
       decl_filepath_(dfn_filepath),
       use_loc_(use_loc),
@@ -125,9 +229,9 @@ void OneUse::SetPublicHeaders() {
   // If the symbol has a special mapping, use it, otherwise map its file.
   public_headers_ = picker.GetPublicHeadersForSymbol(symbol_name_);
   if (public_headers_.empty())
-    public_headers_ = picker.GetPublicHeadersForPrivateHeader(decl_filepath_);
+    public_headers_ = picker.GetPublicHeadersForFilepath(decl_filepath_);
   if (public_headers_.empty())
-    public_headers_.push_back(picker.GetQuotedIncludeFor(decl_filepath_));
+    public_headers_.push_back(ConvertToQuotedInclude(decl_filepath_));
 }
 
 const vector<string>& OneUse::public_headers() {
@@ -169,6 +273,10 @@ namespace internal {
 // <typename T> struct"), returns its forward declaration line.
 string PrintForwardDeclare(const NamedDecl* decl,
                            const string& tpl_params_and_kind) {
+  // We need to short-circuit the logic for testing.
+  if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(decl)) {
+    return tpl_params_and_kind + " " + fake->qual_name() + ";";
+  }
 
   assert((isa<RecordDecl>(decl) || isa<TemplateDecl>(decl)) &&
          "IWYU only allows forward declaring (possibly template) record types");
@@ -291,7 +399,7 @@ string OneIncludeOrForwardDeclareLine::LineNumberString() const {
 
 IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file)
   : file_(this_file),
-    quoted_file_(GlobalIncludePicker().GetQuotedIncludeFor(GetFilePath(file_))),
+    quoted_file_(ConvertToQuotedInclude(GetFilePath(file_))),
     internal_headers_(),
     symbol_uses_(),
     lines_(),
@@ -327,7 +435,7 @@ void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl) {
   direct_forward_declares_.insert(fwd_decl);   // store in another way as well
   VERRS(6) << "Marked found forward-declare: "
            << GetFilePath(file_) << ":" << lines_.back().LineNumberString()
-           << ": " << GetQualifiedNameAsString(fwd_decl) << "\n";
+           << ": " << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
 }
 
 static void LogSymbolUse(const string& prefix, const OneUse& use) {
@@ -442,11 +550,15 @@ namespace internal {
 bool DeclIsVisibleToUseInSameFile(const Decl* decl, const OneUse& use) {
   if (GetFileEntry(decl) != GetFileEntry(use.use_loc()))
     return false;
+
+  // If the decl comes before the use, it's visible to it.  It can
+  // even be visible if the decl comes after, if they're both
+  // syntactically (not just semantically) inside the class definition.
   // TODO(csilvers): better than comparing line numbers would be to
   // call SourceManager::getDecomposedLoc() and compare offsets.
   return ((GetInstantiationLineNumber(use.use_loc()) >=
            GetInstantiationLineNumber(GetLocation(decl))) ||
-          DeclsAreInSameClass(decl, use.decl()));
+          (DeclsAreInSameClass(decl, use.decl()) && !decl->isOutOfLine()));
 }
 
 
@@ -481,11 +593,9 @@ set<string> CalculateMinimalIncludes(
     // Special case #2: if the dfn-file maps to the use-file, then
     // this is a file that the use-file is re-exporting symbols for,
     // and we should keep the #include as-is.
-    const string use_file = GlobalIncludePicker().GetQuotedIncludeFor(
-        GetFilePath(it->use_loc()));
+    const string use_file = ConvertToQuotedInclude(GetFilePath(it->use_loc()));
     if (it->PublicHeadersContain(use_file)) {
-      it->set_suggested_header(
-          GlobalIncludePicker().GetQuotedIncludeFor(it->decl_filepath()));
+      it->set_suggested_header(ConvertToQuotedInclude(it->decl_filepath()));
       desired_headers.insert(it->suggested_header());
       LogIncludeMapping("private header", *it);
     } else if (it->public_headers().size() == 1) {
@@ -730,8 +840,7 @@ void ProcessFullUse(OneUse* use) {
       return;
     }
     const string dfn_file = GetFilePath(fn_decl);
-    if (IsDefaultNewOrDelete(
-            fn_decl, GlobalIncludePicker().GetQuotedIncludeFor(dfn_file))) {
+    if (IsDefaultNewOrDelete(fn_decl, ConvertToQuotedInclude(dfn_file))) {
       VERRS(6) << "Ignoring use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "): built-in new/delete\n";
       use->set_ignore_use();
@@ -775,9 +884,9 @@ void ProcessFullUse(OneUse* use) {
     // will pick later).  TODO(csilvers): figure out that case too.
     const IncludePicker& picker = GlobalIncludePicker();
     const vector<string>& method_dfn_files
-        = picker.GetPublicHeadersForPrivateHeader(GetFilePath(method_dfn));
+        = picker.GetPublicHeadersForFilepath(GetFilePath(method_dfn));
     const vector<string>& parent_dfn_files
-        = picker.GetPublicHeadersForPrivateHeader(GetFilePath(parent_dfn));
+        = picker.GetPublicHeadersForFilepath(GetFilePath(parent_dfn));
     bool same_file;
     if (method_dfn_files.size() == 1 && parent_dfn_files.size() == 1) {
       same_file = (method_dfn_files[0] == parent_dfn_files[0]);
@@ -829,7 +938,7 @@ void CalculateIwyuForForwardDeclareUse(OneUse* use,
   for (Each<const RecordDecl*> it(&redecls); !it.AtEnd(); ++it) {
     const string file = GetFilePath(*it);
     vector<string> headers
-        = GlobalIncludePicker().GetPublicHeadersForPrivateHeader(file);
+        = GlobalIncludePicker().GetPublicHeadersForFilepath(file);
     for (Each<string> header(&headers); !header.AtEnd(); ++header)
       files_providing_decl[*header] = *it;
   }
@@ -883,7 +992,7 @@ void CalculateIwyuForForwardDeclareUse(OneUse* use,
     // If we get this fwd-decl from an #include file, mark that.
     if (desired_include_decl) {
       const string file = GetFilePath(desired_include_decl);
-      const string quoted_hdr = GlobalIncludePicker().GetQuotedIncludeFor(file);
+      const string quoted_hdr = ConvertToQuotedInclude(file);
       use->set_suggested_header(quoted_hdr);
     }
   }
@@ -1015,27 +1124,6 @@ int IwyuFileInfo::EmitWarningMessages(const vector<OneUse>& uses) {
 }
 
 namespace internal {
-// Produces a short, sanitized version of what can be a long symbol/type name.
-// Currently, we just remove template arguments that appear in the name.
-string SanitizeSymbol(string name) {
-  // Elide template arguments.  We go from back to front, eliding
-  // matched <...>.
-  // TODO(csilvers): what about 'template<bool B = (5>3)> class T {}'?
-  for (int i = static_cast<int>(name.length()) - 1,
-           bracket_nesting = 0, bracket_end = -1;
-       i >= 0; i--) {
-    if (name[i] == '>' && ++bracket_nesting == 1) {  // ending an out-most <>
-      bracket_end = i;
-    } else if (name[i] == '<' && --bracket_nesting == 0) {
-      // starting an out-most <>
-      assert(bracket_end > i && "Unexpected bracket_end value.");
-      name.erase(i, bracket_end - i + 1);
-    }
-  }
-  // TODO(csilvers): Now get rid of namespace prefixes.
-  return name;
-}
-
 void CalculateDesiredIncludesAndForwardDeclares(
     const vector<OneUse>& uses,
     const set<string>& associated_desired_includes,
@@ -1066,8 +1154,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
       }
       const int index = include_map[use->suggested_header()];
       (*lines)[index].set_desired();
-      (*lines)[index].AddSymbolUse(
-          internal::SanitizeSymbol(use->symbol_name()));
+      (*lines)[index].AddSymbolUse(use->short_symbol_name());
 
     // Forward-declare uses that are already satisfied by an #include
     // have that as their suggested_header.  For the rest, we need to
@@ -1092,7 +1179,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
   for (Each<OneUse> use(&uses); !use.AtEnd(); ++use) {
     if (!use->ignore_use() && !use->is_full_use() && use->has_suggested_header()
         && Contains(include_map, use->suggested_header())) {
-      const string symbol_name = internal::SanitizeSymbol(use->symbol_name());
+      const string symbol_name = use->short_symbol_name();
       const int index = include_map[use->suggested_header()];
       if (!(*lines)[index].HasSymbolUse(symbol_name))
         (*lines)[index].AddSymbolUse(symbol_name + " (ptr only)");

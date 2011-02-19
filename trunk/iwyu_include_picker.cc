@@ -7,54 +7,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Ported from csilvers@'s Javascript version in
-// sanitize.js and include_what_you_use_systemmap.js.
-
-// Sanitizes a header file path, yielding something that can be used with
-// an #include (including surrounding ""'s or <>'s).  The input
-// might be a system header file:
-//    /usr/grte/v1//include/stdio.h
-//    /usr/local/google/crosstool/v13-nightly-31840/gcc-4.4.0-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.0/../../../../x86_64-unknown-linux-gnu/include/c++/4.4.0/bits/stl_vector.h
-//    ./tests/badinc-i2.h
-//
-// The output for these would be
-//    <stdio.h>
-//    <vector>
-//    "tests/badinc-i2.h"
-//
-// Sometimes this sanitizing is just path-munging: for instance, for
-// stdio.h or badinc-i2.h above. But other times we need to map from
-// internal-only header files to the externally visible header files
-// that users should be #including (for instance, for stl_vector.h).
-//
-// This mapping can be a bit complicated in the case an internal-only
-// header file is exposed via several public header files, such as
-// bits/hashtable.h being exposed through both <unordered_map> and
-// <unordered_set>. In that case, we list both public header files as
-// a possible mapping from hashtable.h, and at runtime decide which is
-// better. The basic algorithm is: if the user has already #included
-// one or the other in the relevant source file, that one is the
-// better mapping. If not, look at the other iwyu error messages
-// we're planning on giving for this source file. If any these error
-// messages mention <unordered_map> (in this example) -- that is,
-// we're going to iwyu-warn about <unordered_map> anyway -- map
-// hashtable.h to <unordered_map>. Likewise if any existing warning
-// mentions <unordered_set>. If neither of these techniques yields a
-// good mapping, we just pick one arbitrarily.
-
+#include "port.h"
 #include "iwyu_include_picker.h"
 
 #include <assert.h>
-
-#include <map>
+#ifndef _MSC_VER      // _MSC_VER gets its own fnmatch from ./port.h
+#include <fnmatch.h>
+#endif
+#include <map>  // not hash_map: it's not as portable and needs hash<string>
 #include <string>
 #include <utility>
 #include <vector>
-
+#include "iwyu_globals.h"
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
-#include "iwyu_output.h" // for VERRS
 #include "llvm/Support/Path.h"
 
 using std::map;
@@ -66,808 +33,752 @@ namespace include_what_you_use {
 
 namespace {
 
-enum HeaderKind { kUserHeader, kSystemHeader };
+// For ease of maintenance, we split up the hard-coded filepath mappings
+// into sections: one for C++ mappings, one for C mappings, one for
+// Google-specific mappings, one for third-party/ mappings (which is
+// actually treated specially), etc.  They will all get inserted into
+// the same data structure, though.
+//
+// The entries below support limited globbing: '*' will match any
+// range of characters, *including slash* (unlike shell globbing).
+// So "bits/*" means "every file under bits, including bits/a/foo.h".
+// We support all the globbing metacharacters that fnmatch supports.
+//
+// Array entries below may be prefixed by a comment saying what shell
+// command I ran to produce the data.  I often would manually sanitize
+// the data afterwards, though.
 
-string QuoteHeader(const string& path, HeaderKind kind) {
-  return (kind == kSystemHeader) ? ("<" + path + ">") : ("\"" + path + "\"");
+// Shorter nicknames.
+const IncludePicker::Visibility kPrivate = IncludePicker::kPrivate;
+const IncludePicker::Visibility kPublic = IncludePicker::kPublic;
+
+// For library symbols that can be defined in more than one header
+// file, maps from symbol-name to legitimate header files.
+// This list was generated via
+// grep -R '__.*_defined' /usr/include | perl -nle 'm,/usr/include/([^:]*):#\s*\S+ __(.*)_defined, and print qq@    { "$2", kPublic, "<$1>", kPublic },@' | sort -u
+// I ignored all entries that only appeared once on the list (eg uint32_t).
+// I then added in NULL, which according to [diff.null] C.2.2.3, can
+// be defined in <clocale>, <cstddef>, <cstdio>, <cstdlib>,
+// <cstring>, <ctime>, or <cwchar>.  We also allow their C
+// equivalents.
+// In each case, I ordered them so <sys/types.h> was first, if it was
+// an option for this type.  That's the preferred #include all else
+// equal.  The visibility on the symbol-name isn't meaningful, but
+// must be kPrivate for some helper routines below.
+const IncludePicker::IncludeMapEntry symbol_include_map[] = {
+  { "blksize_t", kPrivate, "<sys/types.h>", kPublic },
+  { "blkcnt_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "blkcnt_t", kPrivate, "<sys/types.h>", kPublic },
+  { "blksize_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "daddr_t", kPrivate, "<sys/types.h>", kPublic },
+  { "daddr_t", kPrivate, "<rpc/types.h>", kPublic },
+  { "dev_t", kPrivate, "<sys/types.h>", kPublic },
+  { "dev_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "error_t", kPrivate, "<errno.h>", kPublic },
+  { "error_t", kPrivate, "<argp.h>", kPublic },
+  { "error_t", kPrivate, "<argz.h>", kPublic },
+  { "fsblkcnt_t", kPrivate, "<sys/types.h>", kPublic },
+  { "fsblkcnt_t", kPrivate, "<sys/statvfs.h>", kPublic },
+  { "fsfilcnt_t", kPrivate, "<sys/types.h>", kPublic },
+  { "fsfilcnt_t", kPrivate, "<sys/statvfs.h>", kPublic },
+  { "gid_t", kPrivate, "<sys/types.h>", kPublic },
+  { "gid_t", kPrivate, "<grp.h>", kPublic },
+  { "gid_t", kPrivate, "<pwd.h>", kPublic },
+  { "gid_t", kPrivate, "<stropts.h>", kPublic },
+  { "gid_t", kPrivate, "<sys/ipc.h>", kPublic },
+  { "gid_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "gid_t", kPrivate, "<unistd.h>", kPublic },
+  { "id_t", kPrivate, "<sys/types.h>", kPublic },
+  { "id_t", kPrivate, "<sys/resource.h>", kPublic },
+  { "ino64_t", kPrivate, "<sys/types.h>", kPublic },
+  { "ino64_t", kPrivate, "<dirent.h>", kPublic },
+  { "ino_t", kPrivate, "<sys/types.h>", kPublic },
+  { "ino_t", kPrivate, "<dirent.h>", kPublic },
+  { "ino_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "int8_t", kPrivate, "<sys/types.h>", kPublic },
+  { "int8_t", kPrivate, "<stdint.h>", kPublic },
+  { "intptr_t", kPrivate, "<stdint.h>", kPublic },
+  { "intptr_t", kPrivate, "<unistd.h>", kPublic },
+  { "key_t", kPrivate, "<sys/types.h>", kPublic },
+  { "key_t", kPrivate, "<sys/ipc.h>", kPublic },
+  { "mode_t", kPrivate, "<sys/types.h>", kPublic },
+  { "mode_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "mode_t", kPrivate, "<sys/ipc.h>", kPublic },
+  { "mode_t", kPrivate, "<sys/mman.h>", kPublic },
+  { "nlink_t", kPrivate, "<sys/types.h>", kPublic },
+  { "nlink_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "off64_t", kPrivate, "<sys/types.h>", kPublic },
+  { "off64_t", kPrivate, "<unistd.h>", kPublic },
+  { "off_t", kPrivate, "<sys/types.h>", kPublic },
+  { "off_t", kPrivate, "<unistd.h>", kPublic },
+  { "off_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "off_t", kPrivate, "<sys/mman.h>", kPublic },
+  { "pid_t", kPrivate, "<sys/types.h>", kPublic },
+  { "pid_t", kPrivate, "<unistd.h>", kPublic },
+  { "pid_t", kPrivate, "<signal.h>", kPublic },
+  { "pid_t", kPrivate, "<sys/msg.h>", kPublic },
+  { "pid_t", kPrivate, "<sys/shm.h>", kPublic },
+  { "pid_t", kPrivate, "<termios.h>", kPublic },
+  { "pid_t", kPrivate, "<time.h>", kPublic },
+  { "pid_t", kPrivate, "<utmpx.h>", kPublic },
+  { "sigset_t", kPrivate, "<signal.h>", kPublic },
+  { "sigset_t", kPrivate, "<sys/epoll.h>", kPublic },
+  { "sigset_t", kPrivate, "<sys/select.h>", kPublic },
+  { "socklen_t", kPrivate, "<bits/socket.h>", kPrivate },
+  { "socklen_t", kPrivate, "<unistd.h>", kPublic },
+  { "socklen_t", kPrivate, "<arpa/inet.h>", kPublic },
+  { "ssize_t", kPrivate, "<sys/types.h>", kPublic },
+  { "ssize_t", kPrivate, "<unistd.h>", kPublic },
+  { "ssize_t", kPrivate, "<monetary.h>", kPublic },
+  { "ssize_t", kPrivate, "<sys/msg.h>", kPublic },
+  { "suseconds_t", kPrivate, "<sys/types.h>", kPublic },
+  { "suseconds_t", kPrivate, "<sys/time.h>", kPublic },
+  { "suseconds_t", kPrivate, "<sys/select.h>", kPublic },
+  { "u_char", kPrivate, "<sys/types.h>", kPublic },
+  { "u_char", kPrivate, "<rpc/types.h>", kPublic },
+  { "uid_t", kPrivate, "<sys/types.h>", kPublic },
+  { "uid_t", kPrivate, "<unistd.h>", kPublic },
+  { "uid_t", kPrivate, "<pwd.h>", kPublic },
+  { "uid_t", kPrivate, "<signal.h>", kPublic },
+  { "uid_t", kPrivate, "<stropts.h>", kPublic },
+  { "uid_t", kPrivate, "<sys/ipc.h>", kPublic },
+  { "uid_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "useconds_t", kPrivate, "<sys/types.h>", kPublic },
+  { "useconds_t", kPrivate, "<unistd.h>", kPublic },
+  // Macros that can be defined in more than one file, don't have the
+  // same __foo_defined guard that other types do, so the grep above
+  // doesn't discover them.  Until I figure out a better way, I just
+  // add them in by hand as I discover them.
+  { "EOF", kPrivate, "<stdio.h>", kPublic },
+  { "EOF", kPrivate, "<libio.h>", kPublic },
+  // Entries for NULL
+  { "NULL", kPrivate, "<stddef.h>", kPublic },   // 'canonical' location for NULL
+  { "NULL", kPrivate, "<clocale>", kPublic },
+  { "NULL", kPrivate, "<cstddef>", kPublic },
+  { "NULL", kPrivate, "<cstdio>", kPublic },
+  { "NULL", kPrivate, "<cstdlib>", kPublic },
+  { "NULL", kPrivate, "<cstring>", kPublic },
+  { "NULL", kPrivate, "<ctime>", kPublic },
+  { "NULL", kPrivate, "<cwchar>", kPublic },
+  { "NULL", kPrivate, "<locale.h>", kPublic },
+  { "NULL", kPrivate, "<stdio.h>", kPublic },
+  { "NULL", kPrivate, "<stdlib.h>", kPublic },
+  { "NULL", kPrivate, "<string.h>", kPublic },
+  { "NULL", kPrivate, "<time.h>", kPublic },
+  { "NULL", kPrivate, "<wchar.h>", kPublic },
+  // These are c++ symbol maps that handle the forwarding headers
+  // that define classes as typedefs.  Because gcc uses typedefs for
+  // these, we are tricked into thinking the classes are defined
+  // there, rather than just declared there.  This maps each symbol
+  // to where it's defined (I had to fix up ios manually, and add in
+  // iostream and string which are defined unusually in gcc headers):
+  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1; find . -name '*fwd*' | xargs grep -oh 'typedef basic_[^ <]*' | sort -u | sed "s/typedef basic_//" | while read class; do echo -n "$class "; grep -lR "^ *class basic_$class " *; echo | head -n1; done | grep . | perl -lane 'print qq@    { "std::$F[0]", kPrivate, "<$F[1]>", kPublic },@;' )
+  { "std::filebuf", kPrivate, "<fstream>", kPublic },
+  { "std::fstream", kPrivate, "<fstream>", kPublic },
+  { "std::ifstream", kPrivate, "<fstream>", kPublic },
+  { "std::ios", kPrivate, "<ios>", kPublic },
+  { "std::iostream", kPrivate, "<iostream>", kPublic },
+  { "std::istream", kPrivate, "<istream>", kPublic },
+  { "std::istringstream", kPrivate, "<sstream>", kPublic },
+  { "std::ofstream", kPrivate, "<fstream>", kPublic },
+  { "std::ostream", kPrivate, "<ostream>", kPublic },
+  { "std::ostringstream", kPrivate, "<sstream>", kPublic },
+  { "std::streambuf", kPrivate, "<streambuf>", kPublic },
+  { "std::string", kPrivate, "<string>", kPublic },
+  { "std::stringbuf", kPrivate, "<sstream>", kPublic },
+  { "std::stringstream", kPrivate, "<sstream>", kPublic },
+  // Kludge time: almost all STL types take an allocator, but they
+  // almost always use the default value.  Usually we detect that
+  // and don't try to do IWYU, but sometimes it passes through.
+  // For instance, when adding two strings, we end up calling
+  //    template<_CharT,_Traits,_Alloc> ... operator+(
+  //       basic_string<_CharT,_Traits,_Alloc>, ...)
+  // These look like normal template args to us, so we see they're
+  // used and declare an iwyu dependency, even though we don't need
+  // to #include the traits or alloc type ourselves.  The surest way
+  // to deal with this is to just say that everyone provides
+  // std::allocator.  We can add more here at need.
+  { "std::allocator", kPrivate, "<memory>", kPublic },
+  { "std::allocator", kPrivate, "<string>", kPublic },
+  { "std::allocator", kPrivate, "<vector>", kPublic },
+  { "std::allocator", kPrivate, "<map>", kPublic },
+  { "std::allocator", kPrivate, "<set>", kPublic },
+};
+
+const IncludePicker::IncludeMapEntry c_include_map[] = {
+  // ( cd /usr/include && grep '^ *# *include' {sys/,net/,}* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { "<$2>", kPrivate, "<$1>", kPublic },@' | grep bits/ | sort )
+  // When I saw more than one mapping for these, I typically picked
+  // what I thought was the "best" one.
+  { "<bits/a.out.h>", kPrivate, "<a.out.h>", kPublic },
+  { "<bits/byteswap.h>", kPrivate, "<byteswap.h>", kPublic },
+  { "<bits/cmathcalls.h>", kPrivate, "<complex.h>", kPublic },
+  { "<bits/confname.h>", kPrivate, "<unistd.h>", kPublic },
+  { "<bits/dirent.h>", kPrivate, "<dirent.h>", kPublic },
+  { "<bits/dlfcn.h>", kPrivate, "<dlfcn.h>", kPublic },
+  { "<bits/elfclass.h>", kPrivate, "<link.h>", kPublic },
+  { "<bits/endian.h>", kPrivate, "<endian.h>", kPublic },
+  { "<bits/environments.h>", kPrivate, "<unistd.h>", kPublic },
+  { "<bits/errno.h>", kPrivate, "<errno.h>", kPublic },
+  { "<bits/error.h>", kPrivate, "<error.h>", kPublic },
+  { "<bits/fcntl.h>", kPrivate, "<fcntl.h>", kPublic },
+  { "<bits/fcntl2.h>", kPrivate, "<fcntl.h>", kPublic },
+  { "<bits/fenv.h>", kPrivate, "<fenv.h>", kPublic },
+  { "<bits/fenvinline.h>", kPrivate, "<fenv.h>", kPublic },
+  { "<bits/huge_val.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/huge_valf.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/huge_vall.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/ioctl-types.h>", kPrivate, "<sys/ioctl.h>", kPublic },
+  { "<bits/ioctls.h>", kPrivate, "<sys/ioctl.h>", kPublic },
+  { "<bits/ipc.h>", kPrivate, "<sys/ipc.h>", kPublic },
+  { "<bits/ipctypes.h>", kPrivate, "<sys/ipc.h>", kPublic },
+  { "<bits/libio-ldbl.h>", kPrivate, "<libio.h>", kPublic },
+  { "<bits/link.h>", kPrivate, "<link.h>", kPublic },
+  { "<bits/locale.h>", kPrivate, "<locale.h>", kPublic },
+  { "<bits/mathcalls.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/mathdef.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/mman.h>", kPrivate, "<sys/mman.h>", kPublic },
+  { "<bits/monetary-ldbl.h>", kPrivate, "<monetary.h>", kPublic },
+  { "<bits/mqueue.h>", kPrivate, "<mqueue.h>", kPublic },
+  { "<bits/mqueue2.h>", kPrivate, "<mqueue.h>", kPublic },
+  { "<bits/msq.h>", kPrivate, "<sys/msg.h>", kPublic },
+  { "<bits/nan.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/netdb.h>", kPrivate, "<netdb.h>", kPublic },
+  { "<bits/poll.h>", kPrivate, "<sys/poll.h>", kPublic },
+  { "<bits/posix1_lim.h>", kPrivate, "<limits.h>", kPublic },
+  { "<bits/posix2_lim.h>", kPrivate, "<limits.h>", kPublic },
+  { "<bits/posix_opt.h>", kPrivate, "<unistd.h>", kPublic },
+  { "<bits/printf-ldbl.h>", kPrivate, "<printf.h>", kPublic },
+  { "<bits/pthreadtypes.h>", kPrivate, "<pthread.h>", kPublic },
+  { "<bits/resource.h>", kPrivate, "<sys/resource.h>", kPublic },
+  { "<bits/sched.h>", kPrivate, "<sched.h>", kPublic },
+  { "<bits/select.h>", kPrivate, "<sys/select.h>", kPublic },
+  { "<bits/sem.h>", kPrivate, "<sys/sem.h>", kPublic },
+  { "<bits/semaphore.h>", kPrivate, "<semaphore.h>", kPublic },
+  { "<bits/setjmp.h>", kPrivate, "<setjmp.h>", kPublic },
+  { "<bits/shm.h>", kPrivate, "<sys/shm.h>", kPublic },
+  { "<bits/sigaction.h>", kPrivate, "<signal.h>", kPublic },
+  { "<bits/sigcontext.h>", kPrivate, "<signal.h>", kPublic },
+  { "<bits/siginfo.h>", kPrivate, "<signal.h>", kPublic },
+  { "<bits/signum.h>", kPrivate, "<signal.h>", kPublic },
+  { "<bits/sigset.h>", kPrivate, "<signal.h>", kPublic },
+  { "<bits/sigstack.h>", kPrivate, "<signal.h>", kPublic },
+  { "<bits/sigthread.h>", kPrivate, "<signal.h>", kPublic },
+  { "<bits/sockaddr.h>", kPrivate, "<sys/un.h>", kPublic },
+  { "<bits/socket.h>", kPrivate, "<sys/socket.h>", kPublic },
+  { "<bits/stab.def>", kPrivate, "<stab.h>", kPublic },
+  { "<bits/stat.h>", kPrivate, "<sys/stat.h>", kPublic },
+  { "<bits/statfs.h>", kPrivate, "<sys/statfs.h>", kPublic },
+  { "<bits/statvfs.h>", kPrivate, "<sys/statvfs.h>", kPublic },
+  { "<bits/stdio-ldbl.h>", kPrivate, "<stdio.h>", kPublic },
+  { "<bits/stdio-lock.h>", kPrivate, "<libio.h>", kPublic },
+  { "<bits/stdio.h>", kPrivate, "<stdio.h>", kPublic },
+  { "<bits/stdio2.h>", kPrivate, "<stdio.h>", kPublic },
+  { "<bits/stdio_lim.h>", kPrivate, "<stdio.h>", kPublic },
+  { "<bits/stdlib-ldbl.h>", kPrivate, "<stdlib.h>", kPublic },
+  { "<bits/stdlib.h>", kPrivate, "<stdlib.h>", kPublic },
+  { "<bits/string.h>", kPrivate, "<string.h>", kPublic },
+  { "<bits/string2.h>", kPrivate, "<string.h>", kPublic },
+  { "<bits/string3.h>", kPrivate, "<string.h>", kPublic },
+  { "<bits/stropts.h>", kPrivate, "<stropts.h>", kPublic },
+  { "<bits/sys_errlist.h>", kPrivate, "<stdio.h>", kPublic },
+  { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPublic },
+  { "<bits/syslog-ldbl.h>", kPrivate, "<sys/syslog.h>", kPublic },
+  { "<bits/syslog-path.h>", kPrivate, "<sys/syslog.h>", kPublic },
+  { "<bits/syslog.h>", kPrivate, "<sys/syslog.h>", kPublic },
+  { "<bits/termios.h>", kPrivate, "<termios.h>", kPublic },
+  { "<bits/time.h>", kPrivate, "<sys/time.h>", kPublic },
+  { "<bits/types.h>", kPrivate, "<sys/types.h>", kPublic },
+  { "<bits/uio.h>", kPrivate, "<sys/uio.h>", kPublic },
+  { "<bits/unistd.h>", kPrivate, "<unistd.h>", kPublic },
+  { "<bits/ustat.h>", kPrivate, "<sys/ustat.h>", kPublic },
+  { "<bits/utmp.h>", kPrivate, "<utmp.h>", kPublic },
+  { "<bits/utmpx.h>", kPrivate, "<utmpx.h>", kPublic },
+  { "<bits/utsname.h>", kPrivate, "<sys/utsname.h>", kPublic },
+  { "<bits/waitflags.h>", kPrivate, "<sys/wait.h>", kPublic },
+  { "<bits/waitstatus.h>", kPrivate, "<sys/wait.h>", kPublic },
+  { "<bits/wchar-ldbl.h>", kPrivate, "<wchar.h>", kPublic },
+  { "<bits/wchar.h>", kPrivate, "<wchar.h>", kPublic },
+  { "<bits/wchar2.h>", kPrivate, "<wchar.h>", kPublic },
+  { "<bits/xopen_lim.h>", kPrivate, "<limits.h>", kPublic },
+  { "<bits/xtitypes.h>", kPrivate, "<stropts.h>", kPublic },
+  // Sometimes libc tells you what mapping to do via an '#error':
+  // # error "Never use <bits/dlfcn.h> directly; include <dlfcn.h> instead."
+  // ( cd /usr/include && grep -R '^ *# *error "Never use' * | perl -nle 'm/<([^>]+).*<([^>]+)/ && print qq@    { "<$1>", kPrivate, "<$2>", kPublic },@' | sort )
+  { "<bits/a.out.h>", kPrivate, "<a.out.h>", kPublic },
+  { "<bits/byteswap.h>", kPrivate, "<byteswap.h>", kPublic },
+  { "<bits/cmathcalls.h>", kPrivate, "<complex.h>", kPublic },
+  { "<bits/confname.h>", kPrivate, "<unistd.h>", kPublic },
+  { "<bits/dirent.h>", kPrivate, "<dirent.h>", kPublic },
+  { "<bits/dlfcn.h>", kPrivate, "<dlfcn.h>", kPublic },
+  { "<bits/elfclass.h>", kPrivate, "<link.h>", kPublic },
+  { "<bits/endian.h>", kPrivate, "<endian.h>", kPublic },
+  { "<bits/fcntl.h>", kPrivate, "<fcntl.h>", kPublic },
+  { "<bits/fenv.h>", kPrivate, "<fenv.h>", kPublic },
+  { "<bits/huge_val.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/huge_valf.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/huge_vall.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/in.h>", kPrivate, "<netinet/in.h>", kPublic },
+  { "<bits/inf.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/ioctl-types.h>", kPrivate, "<sys/ioctl.h>", kPublic },
+  { "<bits/ioctls.h>", kPrivate, "<sys/ioctl.h>", kPublic },
+  { "<bits/ipc.h>", kPrivate, "<sys/ipc.h>", kPublic },
+  { "<bits/locale.h>", kPrivate, "<locale.h>", kPublic },
+  { "<bits/mathdef.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/mathinline.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/mman.h>", kPrivate, "<sys/mman.h>", kPublic },
+  { "<bits/mqueue.h>", kPrivate, "<mqueue.h>", kPublic },
+  { "<bits/msq.h>", kPrivate, "<sys/msg.h>", kPublic },
+  { "<bits/nan.h>", kPrivate, "<math.h>", kPublic },
+  { "<bits/poll.h>", kPrivate, "<sys/poll.h>", kPublic },
+  { "<bits/predefs.h>", kPrivate, "<features.h>", kPublic },
+  { "<bits/resource.h>", kPrivate, "<sys/resource.h>", kPublic },
+  { "<bits/select.h>", kPrivate, "<sys/select.h>", kPublic },
+  { "<bits/semaphore.h>", kPrivate, "<semaphore.h>", kPublic },
+  { "<bits/sigcontext.h>", kPrivate, "<signal.h>", kPublic },
+  { "<bits/string.h>", kPrivate, "<string.h>", kPublic },
+  { "<bits/string2.h>", kPrivate, "<string.h>", kPublic },
+  { "<bits/string3.h>", kPrivate, "<string.h>", kPublic },
+  { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPublic },
+  // Top-level #includes that just forward to another file:
+  // $ for i in /usr/include/*; do [ -f $i ] && [ `wc -l < $i` = 1 ] && echo $i; done
+  // (poll.h, syscall.h, syslog.h, ustat.h, wait.h).
+  // For each file, I looked at the list of canonical header files --
+  // http://www.opengroup.org/onlinepubs/9699919799/idx/head.html --
+  // to decide which of the two files is canonical.  If neither is
+  // on the POSIX.1 1998 list, I just choose the top-level one.
+  { "<sys/poll.h>", kPrivate, "<poll.h>", kPublic },
+  { "<sys/syscall.h>", kPrivate, "<syscall.h>", kPublic },
+  { "<sys/syslog.h>", kPrivate, "<syslog.h>", kPublic },
+  { "<sys/ustat.h>", kPrivate, "<ustat.h>", kPublic },
+  { "<wait.h>", kPrivate, "<sys/wait.h>", kPublic },
+  // These are all files in bits/ that delegate to asm/ and linux/ to
+  // do all (or lots) of the work.  Note these are private->private.
+  // $ for i in /usr/include/bits/*; do for dir in asm linux; do grep -H -e $dir/`basename $i` $i; done; done
+  { "<linux/errno.h>", kPrivate, "<bits/errno.h>", kPrivate },
+  { "<asm/ioctls.h>", kPrivate, "<bits/ioctls.h>", kPrivate },
+  { "<asm/socket.h>", kPrivate, "<bits/socket.h>", kPrivate },
+  { "<linux/socket.h>", kPrivate, "<bits/socket.h>", kPrivate },
+  // Some asm files have 32- and 64-bit variants:
+  // $ ls /usr/include/asm/*_{32,64}.h
+  { "<asm/posix_types_32.h>", kPrivate, "<asm/posix_types.h>", kPublic },
+  { "<asm/posix_types_64.h>", kPrivate, "<asm/posix_types.h>", kPublic },
+  { "<asm/unistd_32.h>", kPrivate, "<asm/unistd.h>", kPrivate },
+  { "<asm/unistd_64.h>", kPrivate, "<asm/unistd.h>", kPrivate },
+  // I don't know what grep would have found these.  I found them
+  // via user report.
+  { "<asm/errno.h>", kPrivate, "<errno.h>", kPublic },
+  { "<asm/errno-base.h>", kPrivate, "<errno.h>", kPublic },
+  { "<asm/ptrace-abi.h>", kPrivate, "<asm/ptrace.h>", kPublic },
+  { "<asm/unistd.h>", kPrivate, "<syscall.h>", kPublic },
+  { "<linux/limits.h>", kPrivate, "<limits.h>", kPublic },   // PATH_MAX
+  { "<linux/prctl.h>", kPrivate, "<sys/prctl.h>", kPublic },
+  { "<sys/ucontext.h>", kPrivate, "<ucontext.h>", kPublic },
+  // Allow the C++ wrappers around C files.  Without these mappings,
+  // if you #include <cstdio>, iwyu will tell you to replace it with
+  // <stdio.h>, which is where the symbols are actually defined.  We
+  // inhibit that behavior to keep the <cstdio> alone.  Note this is a
+  // public-to-public mapping: we don't want to *replace* <assert.h>
+  // with <cassert>, we just want to avoid suggesting changing
+  // <cassert> back to <assert.h>.  (If you *did* want to replace
+  // assert.h with cassert, you'd change it to a public->private
+  // mapping.)  Here is how I identified the files to map:
+  // $ for i in /usr/include/c++/4.4/c* ; do ls /usr/include/`basename $i | cut -b2-`.h 2>/dev/null ; done
+  { "<assert.h>", kPublic, "<cassert>", kPublic },
+  { "<complex.h>", kPublic, "<ccomplex>", kPublic },
+  { "<ctype.h>", kPublic, "<cctype>", kPublic },
+  { "<errno.h>", kPublic, "<cerrno>", kPublic },
+  { "<fenv.h>", kPublic, "<cfenv>", kPublic },
+  { "<inttypes.h>", kPublic, "<cinttypes>", kPublic },
+  { "<limits.h>", kPublic, "<climits>", kPublic },
+  { "<locale.h>", kPublic, "<clocale>", kPublic },
+  { "<math.h>", kPublic, "<cmath>", kPublic },
+  { "<setjmp.h>", kPublic, "<csetjmp>", kPublic },
+  { "<signal.h>", kPublic, "<csignal>", kPublic },
+  { "<stdint.h>", kPublic, "<cstdint>", kPublic },
+  { "<stdio.h>", kPublic, "<cstdio>", kPublic },
+  { "<stdlib.h>", kPublic, "<cstdlib>", kPublic },
+  { "<string.h>", kPublic, "<cstring>", kPublic },
+  { "<tgmath.h>", kPublic, "<ctgmath>", kPublic },
+  { "<time.h>", kPublic, "<ctime>", kPublic },
+  { "<wchar.h>", kPublic, "<cwchar>", kPublic },
+  { "<wctype.h>", kPublic, "<cwctype>", kPublic },
+};
+
+const IncludePicker::IncludeMapEntry cpp_include_map[] = {
+  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep '^ *# *include' {ext/,tr1/,}* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { "<$2>", kPrivate, "<$1>", kPublic },@' | grep -e bits/ -e tr1_impl/ | sort -u)
+  // I removed a lot of 'meaningless' dependencies -- for instance,
+  // <functional> #includes <bits/stringfwd.h>, but if someone is
+  // using strings, <functional> isn't enough to satisfy iwyu.
+  // We may need to add other dirs in future versions of gcc.
+  { "<bits/algorithmfwd.h>", kPrivate, "<algorithm>", kPublic },
+  { "<bits/allocator.h>", kPrivate, "<memory>", kPublic },
+  { "<bits/atomic_word.h>", kPrivate, "<ext/atomicity.h>", kPublic },
+  { "<bits/basic_file.h>", kPrivate, "<fstream>", kPublic },
+  { "<bits/basic_ios.h>", kPrivate, "<ios>", kPublic },
+  { "<bits/basic_string.h>", kPrivate, "<string>", kPublic },
+  { "<bits/basic_string.tcc>", kPrivate, "<string>", kPublic },
+  { "<bits/boost_sp_shared_count.h>", kPrivate, "<memory>", kPublic },
+  { "<bits/c++io.h>", kPrivate, "<ext/stdio_sync_filebuf.h>", kPublic },
+  { "<bits/c++config.h>", kPrivate, "<cstddef>", kPublic },
+  { "<bits/char_traits.h>", kPrivate, "<string>", kPublic },
+  { "<bits/cmath.tcc>", kPrivate, "<cmath>", kPublic },
+  { "<bits/codecvt.h>", kPrivate, "<fstream>", kPublic },
+  { "<bits/cxxabi_tweaks.h>", kPrivate, "<cxxabi.h>", kPublic },
+  { "<bits/deque.tcc>", kPrivate, "<deque>", kPublic },
+  { "<bits/fstream.tcc>", kPrivate, "<fstream>", kPublic },
+  { "<bits/functional_hash.h>", kPrivate, "<unordered_map>", kPublic },
+  { "<bits/gslice.h>", kPrivate, "<valarray>", kPublic },
+  { "<bits/gslice_array.h>", kPrivate, "<valarray>", kPublic },
+  { "<bits/hashtable.h>", kPrivate, "<unordered_map>", kPublic },
+  { "<bits/hashtable.h>", kPrivate, "<unordered_set>", kPublic },
+  { "<bits/indirect_array.h>", kPrivate, "<valarray>", kPublic },
+  { "<bits/ios_base.h>", kPrivate, "<iostream>", kPublic },
+  { "<bits/ios_base.h>", kPrivate, "<ios>", kPublic },
+  { "<bits/ios_base.h>", kPrivate, "<iomanip>", kPublic },
+  { "<bits/locale_classes.h>", kPrivate, "<locale>", kPublic },
+  { "<bits/locale_facets.h>", kPrivate, "<locale>", kPublic },
+  { "<bits/locale_facets_nonio.h>", kPrivate, "<locale>", kPublic },
+  { "<bits/localefwd.h>", kPrivate, "<locale>", kPublic },
+  { "<bits/mask_array.h>", kPrivate, "<valarray>", kPublic },
+  { "<bits/ostream.tcc>", kPrivate, "<ostream>", kPublic },
+  { "<bits/ostream_insert.h>", kPrivate, "<ostream>", kPublic },
+  { "<bits/postypes.h>", kPrivate, "<iostream>", kPublic },
+  { "<bits/slice_array.h>", kPrivate, "<valarray>", kPublic },
+  { "<bits/stl_algo.h>", kPrivate, "<algorithm>", kPublic },
+  { "<bits/stl_algobase.h>", kPrivate, "<algorithm>", kPublic },
+  { "<bits/stl_bvector.h>", kPrivate, "<vector>", kPublic },
+  { "<bits/stl_construct.h>", kPrivate, "<memory>", kPublic },
+  { "<bits/stl_deque.h>", kPrivate, "<deque>", kPublic },
+  { "<bits/stl_function.h>", kPrivate, "<functional>", kPublic },
+  { "<bits/stl_heap.h>", kPrivate, "<queue>", kPublic },
+  { "<bits/stl_iterator.h>", kPrivate, "<iterator>", kPublic },
+  { "<bits/stl_iterator_base_funcs.h>", kPrivate, "<iterator>", kPublic },
+  { "<bits/stl_iterator_base_types.h>", kPrivate, "<iterator>", kPublic },
+  { "<bits/stl_list.h>", kPrivate, "<list>", kPublic },
+  { "<bits/stl_map.h>", kPrivate, "<map>", kPublic },
+  { "<bits/stl_multimap.h>", kPrivate, "<map>", kPublic },
+  { "<bits/stl_multiset.h>", kPrivate, "<set>", kPublic },
+  { "<bits/stl_numeric.h>", kPrivate, "<numeric>", kPublic },
+  { "<bits/stl_pair.h>", kPrivate, "<utility>", kPublic },
+  { "<bits/stl_pair.h>", kPrivate, "<tr1/utility>", kPublic },
+  { "<bits/stl_queue.h>", kPrivate, "<queue>", kPublic },
+  { "<bits/stl_raw_storage_iter.h>", kPrivate, "<memory>", kPublic },
+  { "<bits/stl_relops.h>", kPrivate, "<utility>", kPublic },
+  { "<bits/stl_set.h>", kPrivate, "<set>", kPublic },
+  { "<bits/stl_stack.h>", kPrivate, "<stack>", kPublic },
+  { "<bits/stl_tempbuf.h>", kPrivate, "<memory>", kPublic },
+  { "<bits/stl_tree.h>", kPrivate, "<map>", kPublic },
+  { "<bits/stl_tree.h>", kPrivate, "<set>", kPublic },
+  { "<bits/stl_uninitialized.h>", kPrivate, "<memory>", kPublic },
+  { "<bits/stl_vector.h>", kPrivate, "<vector>", kPublic },
+  { "<bits/stream_iterator.h>", kPrivate, "<iterator>", kPublic },
+  { "<bits/streambuf.tcc>", kPrivate, "<streambuf>", kPublic },
+  { "<bits/streambuf_iterator.h>", kPrivate, "<iterator>", kPublic },
+  { "<bits/stringfwd.h>", kPrivate, "<string>", kPublic },
+  { "<bits/valarray_array.h>", kPrivate, "<valarray>", kPublic },
+  { "<bits/valarray_before.h>", kPrivate, "<valarray>", kPublic },
+  { "<bits/vector.tcc>", kPrivate, "<vector>", kPublic },
+  { "<tr1_impl/array>", kPrivate, "<array>", kPublic },
+  { "<tr1_impl/array>", kPrivate, "<tr1/array>", kPublic },
+  { "<tr1_impl/boost_shared_ptr.h>", kPrivate, "<memory>", kPublic },
+  { "<tr1_impl/boost_shared_ptr.h>", kPrivate, "<tr1/memory>", kPublic },
+  { "<tr1_impl/boost_sp_counted_base.h>", kPrivate, "<memory>", kPublic },
+  { "<tr1_impl/boost_sp_counted_base.h>", kPrivate, "<tr1/memory>", kPublic },
+  { "<tr1_impl/cctype>", kPrivate, "<cctype>", kPublic },
+  { "<tr1_impl/cctype>", kPrivate, "<tr1/cctype>", kPublic },
+  { "<tr1_impl/cfenv>", kPrivate, "<cfenv>", kPublic },
+  { "<tr1_impl/cfenv>", kPrivate, "<tr1/cfenv>", kPublic },
+  { "<tr1_impl/cinttypes>", kPrivate, "<cinttypes>", kPublic },
+  { "<tr1_impl/cinttypes>", kPrivate, "<tr1/cinttypes>", kPublic },
+  { "<tr1_impl/cmath>", kPrivate, "<cmath>", kPublic },
+  { "<tr1_impl/cmath>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1_impl/complex>", kPrivate, "<complex>", kPublic },
+  { "<tr1_impl/complex>", kPrivate, "<tr1/complex>", kPublic },
+  { "<tr1_impl/cstdint>", kPrivate, "<cstdint>", kPublic },
+  { "<tr1_impl/cstdint>", kPrivate, "<tr1/cstdint>", kPublic },
+  { "<tr1_impl/cstdio>", kPrivate, "<cstdio>", kPublic },
+  { "<tr1_impl/cstdio>", kPrivate, "<tr1/cstdio>", kPublic },
+  { "<tr1_impl/cstdlib>", kPrivate, "<cstdlib>", kPublic },
+  { "<tr1_impl/cstdlib>", kPrivate, "<tr1/cstdlib>", kPublic },
+  { "<tr1_impl/cwchar>", kPrivate, "<cwchar>", kPublic },
+  { "<tr1_impl/cwchar>", kPrivate, "<tr1/cwchar>", kPublic },
+  { "<tr1_impl/cwctype>", kPrivate, "<cwctype>", kPublic },
+  { "<tr1_impl/cwctype>", kPrivate, "<tr1/cwctype>", kPublic },
+  { "<tr1_impl/functional>", kPrivate, "<functional>", kPublic },
+  { "<tr1_impl/functional>", kPrivate, "<tr1/functional>", kPublic },
+  { "<tr1_impl/functional_hash.h>", kPrivate,
+    "<tr1/functional_hash.h>", kPublic },
+  { "<tr1_impl/hashtable>", kPrivate, "<tr1/hashtable.h>", kPublic },
+  { "<tr1_impl/random>", kPrivate, "<random>", kPublic },
+  { "<tr1_impl/random>", kPrivate, "<tr1/random>", kPublic },
+  { "<tr1_impl/regex>", kPrivate, "<regex>", kPublic },
+  { "<tr1_impl/regex>", kPrivate, "<tr1/regex>", kPublic },
+  { "<tr1_impl/type_traits>", kPrivate, "<tr1/type_traits>", kPublic },
+  { "<tr1_impl/type_traits>", kPrivate, "<type_traits>", kPublic },
+  { "<tr1_impl/unordered_map>", kPrivate, "<tr1/unordered_map>", kPublic },
+  { "<tr1_impl/unordered_map>", kPrivate, "<unordered_map>", kPublic },
+  { "<tr1_impl/unordered_set>", kPrivate, "<tr1/unordered_set>", kPublic },
+  { "<tr1_impl/unordered_set>", kPrivate, "<unordered_set>", kPublic },
+  { "<tr1_impl/utility>", kPrivate, "<tr1/utility>", kPublic },
+  { "<tr1_impl/utility>", kPrivate, "<utility>", kPublic },
+  // This didn't come from the grep, but seems to be where swap()
+  // is defined?
+  { "<bits/move.h>", kPrivate, "<algorithm>", kPublic },   // for swap<>()
+  // All .tcc files are gcc internal-include files.  We get them from
+  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep -R '^ *# *include.*tcc' * | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ && print qq@    { "<$2>", kPrivate, "<$1>", kPublic },@' | sort )
+  // I had to manually edit some of the entries to say the map-to is private.
+  { "<bits/basic_ios.tcc>", kPrivate, "<bits/basic_ios.h>", kPrivate },
+  { "<bits/basic_string.tcc>", kPrivate, "<string>", kPublic },
+  { "<bits/cmath.tcc>", kPrivate, "<cmath>", kPublic },
+  { "<bits/deque.tcc>", kPrivate, "<deque>", kPublic },
+  { "<bits/fstream.tcc>", kPrivate, "<fstream>", kPublic },
+  { "<bits/istream.tcc>", kPrivate, "<istream>", kPublic },
+  { "<bits/list.tcc>", kPrivate, "<list>", kPublic },
+  { "<bits/locale_classes.tcc>", kPrivate, "<bits/locale_classes.h>", kPrivate },
+  { "<bits/locale_facets.tcc>", kPrivate, "<bits/locale_facets.h>", kPrivate },
+  { "<bits/locale_facets_nonio.tcc>", kPrivate,
+    "<bits/locale_facets_nonio.h>", kPrivate },
+  { "<bits/ostream.tcc>", kPrivate, "<ostream>", kPublic },
+  { "<bits/sstream.tcc>", kPrivate, "<sstream>", kPublic },
+  { "<bits/streambuf.tcc>", kPrivate, "<streambuf>", kPublic },
+  { "<bits/valarray_array.tcc>", kPrivate, "<bits/valarray_array.h>", kPrivate },
+  { "<bits/vector.tcc>", kPrivate, "<vector>", kPublic },
+  { "<debug/safe_iterator.tcc>", kPrivate, "<debug/safe_iterator.h>", kPublic },
+  { "<tr1/bessel_function.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1/beta_function.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1/ell_integral.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1/exp_integral.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1/gamma.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1/hypergeometric.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1/legendre_function.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1/modified_bessel_func.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1/poly_hermite.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1/poly_laguerre.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1/riemann_zeta.tcc>", kPrivate, "<tr1/cmath>", kPublic },
+  { "<tr1_impl/random.tcc>", kPrivate, "<tr1_impl/random>", kPrivate },
+  // Some bits->bits #includes: A few files in bits re-export
+  // symbols from other files in bits.
+  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep '^ *# *include.*bits/' bits/* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { "<$2>", kPrivate, "<$1>", kPrivate },@' | grep bits/ | sort -u)
+  // and carefully picked reasonable-looking results (algorithm
+  // *uses* pair but doesn't *re-export* pair, for instance).
+  { "<bits/boost_concept_check.h>", kPrivate,
+    "<bits/concept_check.h>", kPrivate },
+  { "<bits/c++allocator.h>", kPrivate, "<bits/allocator.h>", kPrivate },
+  { "<bits/codecvt.h>", kPrivate, "<bits/locale_facets_nonio.h>", kPrivate },
+  { "<bits/functexcept.h>", kPrivate, "<bits/stl_algobase.h>", kPrivate },
+  { "<bits/locale_classes.h>", kPrivate, "<bits/basic_ios.h>", kPrivate },
+  { "<bits/locale_facets.h>", kPrivate, "<bits/basic_ios.h>", kPrivate },
+  { "<bits/messages_members.h>", kPrivate,
+    "<bits/locale_facets_nonio.h>", kPrivate },
+  { "<bits/postypes.h>", kPrivate, "<bits/char_traits.h>", kPrivate },
+  { "<bits/slice_array.h>", kPrivate, "<bits/valarray_before.h>", kPrivate },
+  { "<bits/stl_construct.h>", kPrivate, "<bits/stl_tempbuf.h>", kPrivate },
+  { "<bits/stl_move.h>", kPrivate, "<bits/stl_algobase.h>", kPrivate },
+  { "<bits/stl_uninitialized.h>", kPrivate, "<bits/stl_tempbuf.h>", kPrivate },
+  { "<bits/stl_vector.h>", kPrivate, "<bits/stl_bvector.h>", kPrivate },
+  { "<bits/streambuf_iterator.h>", kPrivate, "<bits/basic_ios.h>", kPrivate },
+  // I don't think we want to be having people move to 'backward/'
+  // yet.  (These hold deprecated STL classes that we still use
+  // actively.)  These are the ones that turned up in an analysis of
+  { "<backward/binders.h>", kPrivate, "<functional>", kPublic },
+  { "<backward/hash_fun.h>", kPrivate, "<hash_map>", kPublic },
+  { "<backward/hash_fun.h>", kPrivate, "<hash_set>", kPublic },
+  { "<backward/hashtable.h>", kPrivate, "<hash_map>", kPublic },
+  { "<backward/hashtable.h>", kPrivate, "<hash_set>", kPublic },
+  { "<backward/strstream>", kPrivate, "<strstream>", kPublic },
+  // We do our own string implementation, which needs some mappings.
+  { "<ext/vstring_fwd.h>", kPrivate, "<string>", kPublic },
+  { "<ext/vstring.h>", kPrivate, "<string>", kPublic },
+  { "<ext/vstring.tcc>", kPrivate, "<string>", kPublic },
+  // (This one should perhaps be found automatically somehow.)
+  { "<ext/sso_string_base.h>", kPrivate, "<string>", kPublic },
+  // The iostream .h files are confusing.  Lots of private headers,
+  // which are handled above, but we also have public headers
+  // #including each other (eg <iostream> #includes <istream>).  We
+  // are pretty forgiving: if a user specifies any public header, we
+  // generally don't require the others.
+  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && egrep '^ *# *include <(istream|ostream|iostream|fstream|sstream|streambuf|ios)>' *stream* ios | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ and print qq@    { "<$2>", kPublic, "<$1>", kPublic },@' | sort -u )
+  { "<ios>", kPublic, "<istream>", kPublic },
+  { "<ios>", kPublic, "<ostream>", kPublic },
+  { "<istream>", kPublic, "<fstream>", kPublic },
+  { "<istream>", kPublic, "<iostream>", kPublic },
+  { "<istream>", kPublic, "<sstream>", kPublic },
+  { "<ostream>", kPublic, "<fstream>", kPublic },
+  { "<ostream>", kPublic, "<iostream>", kPublic },
+  { "<ostream>", kPublic, "<istream>", kPublic },
+  { "<ostream>", kPublic, "<sstream>", kPublic },
+  { "<streambuf>", kPublic, "<ios>", kPublic },
+};
+
+const IncludePicker::IncludeMapEntry google_include_map[] = {
+  // These two are here just for unittesting.
+  { "\"tests/badinc-private.h\"",
+    kPrivate,
+    "\"tests/badinc-inl.h\"",
+    kPublic
+  },
+  { "\"tests/badinc-private2.h\"",
+    kPrivate,
+    "\"tests/badinc-inl.h\"",
+    kPublic
+  },
+};
+
+
+// It's very common for third-party libraries to just expose one
+// header file.  So this map takes advantage of glob functionality.
+const IncludePicker::IncludeMapEntry third_party_include_map[] = {
+  { "\"third_party/dynamic_annotations/*\"", kPrivate,
+    "\"base/dynamic_annotations.h\"", kPublic
+  },
+  { "\"third_party/gmock/include/gmock/*\"", kPrivate,
+    "\"testing/base/public/gmock.h\"", kPublic
+  },
+  { "\"third_party/gtest/include/gtest/*\"", kPrivate,
+    "\"testing/base/public/gunit.h\"", kPublic
+  },
+  { "\"third_party/python2_4_3/*\"", kPrivate, "<Python.h>", kPublic },
+  { "third_party/icu/include/unicode/umachine.h", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/uversion.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/uconfig.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/udraft.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/udeprctd.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/uobslete.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/uintrnal.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/usystem.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/urename.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/platform.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/ptypes.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+  { "\"third_party/icu/include/unicode/uvernum.h\"", kPrivate,
+    "\"third_party/icu/include/unicode/utypes.h\"", kPublic
+  },
+};
+
+// Whew!  Done.
+
+inline bool IsQuotedInclude(const string& s) {
+  return ((StartsWith(s, "<") && EndsWith(s, ">")) ||
+          (StartsWith(s, "\"") && EndsWith(s, "\"")));
 }
 
-string UnquoteHeader(const string& quoted_include) {
-  assert(!quoted_include.empty() && "Should never have an empty #include");
-  string retval = quoted_include;
-  if (retval[0] == '<') {
-    assert(retval.length() > 2);   // <x> is the smallest #include
-    assert(retval[retval.length() - 1] == '>');
-    StripLeft(&retval, "<");
-    StripRight(&retval, ">");
-  } else if (retval[0] == '"') {
-    assert(retval.length() > 2);   // "x" is the smallest #include
-    assert(retval[retval.length() - 1] == '"');
-    StripLeft(&retval, "\"");
-    StripRight(&retval, "\"");
+void InsertInto(const string& map_from, IncludePicker::Visibility from_vis,
+                const string& map_to, IncludePicker::Visibility to_vis,
+                IncludePicker::IncludeMap* include_map) {
+  // Verify that the key/value starts with < or " when it's a
+  // quoted-include.  Not all keys are quoted-includes (they may also
+  // be symbols), but all public keys are: symbols are always marked
+  // private, by convention.  Values are always quoted-includes.
+  if (from_vis == kPublic)
+    assert(IsQuotedInclude(map_from)
+           && "All public map keys must be quoted includes");
+  assert(IsQuotedInclude(map_to) && "All map values must be quoted includes");
+  const IncludePicker::IncludeMapValue value = { map_to, from_vis, to_vis };
+  (*include_map)[map_from].push_back(value);
+}
+
+void InsertInto(const IncludePicker::IncludeMapEntry& e,
+                IncludePicker::IncludeMap* map) {
+  InsertInto(e.map_from, e.from_visibility, e.map_to, e.to_visibility, map);
+}
+
+// For the given key, return the vector of values associated with that
+// key, or an empty vector if the key does not exist in the map.
+// *However*, we filter out all values that have private visibility
+// before returning the vector.  *Also*, if the key is public in
+// the map, we insert the key as the first of the returned values,
+// this is an implicit "self-map."
+vector<string> GetPublicValues(const IncludePicker::IncludeMap& map,
+                               const string& key) {
+  vector<string> retval;
+  const vector<IncludePicker::IncludeMapValue>* values = FindInMap(&map, key);
+  if (!values || values->empty())
+    return retval;
+
+  if (values->begin()->from_visibility == kPublic)   // we can map to ourself!
+    retval.push_back(key);
+  for (Each<IncludePicker::IncludeMapValue> it(values); !it.AtEnd(); ++it) {
+    if (it->to_visibility != kPrivate)
+      retval.push_back(it->map_to);
   }
   return retval;
 }
 
-// For simple cases -- the third-party map, the symbol map -- making an
-// include-map is just a matter of converting an array of <key,value>
-// pairs into a multimap.  (Note we preserve the ordering, since when
-// one key maps to multiple values, when all else is equal we'll
-// prefer the first key.)
-//
-// However, for some maps, the values can also be keys: when a header
-// could be #included by a user directly, or could be exported via
-// another header (for instance, a user can #include <istream>, but if
-// they #include <iostream>, they should get <istream> for free.  So
-// we recurse, and add all those new entries in place: wherever we see
-// a foo -> <istream> mapping, we replace it with two mappings:
-//    foo -> <istream>
-//    foo -> <iostream>    // because <istream> maps to <iostream>
-// (If the value has no <> or "" around it (a mapping 'foo -> istream'),
-// it means the value is a private header, and should be entirely
-// replaced, not just added to.  In that case, we just insert
-// foo -> <iostream>, and not foo -> <istream>.)
-// We have a MakeTransitiveIncludeMap for these maps.
-template <size_t kCount>
-IncludePicker::IncludeMap MakeIncludeMap(
-    const IncludePicker::IncludeMapEntry (&entries)[kCount]) {
-  IncludePicker::IncludeMap include_map;
-  for (size_t i = 0; i < kCount; i++) {
-    include_map.insert(pair<string,string>(entries[i].name, entries[i].path));
-  }
-  return include_map;
-}
 
-// Does DFS for a single key/value pair, recursing whenever the value
-// is itself a key in the map, and putting the results in a vector of
-// all values seen.  original_key is the root of the dfs tree,
-// key_value is our current position.
+// If the filepath map maps a.h to b.h, and also b.h to c.h, then
+// there's a transitive mapping of a.h to c.h.  We want to add that
+// into the filepath map as well, to make lookups easier.  We do this
+// by doing a depth-first search for a single mapping, recursing
+// whenever the value is itself a key in the map, and putting the
+// results in a vector of all values seen.
 void AugmentValuesForKey(
     const IncludePicker::IncludeMap& m,
-    const string& original_key,
-    const IncludePicker::IncludeMap::value_type& key_value,
-    const set<string>& seen_keys,     // used to avoid recursion
-    vector<string>* all_values) {
-  assert(!Contains(seen_keys, key_value.first) && "Cycle in include-mapping");
-  const string new_key = UnquoteHeader(key_value.second);
-  if (new_key != key_value.second) {  // not mapping to a private header
-    all_values->push_back(key_value.second);
-  }
-  if (new_key != key_value.first) {   // not a self-mapping ("set -> <set>")
-    set<string> new_seen_keys(seen_keys);
-    new_seen_keys.insert(key_value.first);    // update the stack
-    for (IncludePicker::IncludeMap::const_iterator it = m.lower_bound(new_key);
-         it != m.upper_bound(new_key); ++it) {
-      AugmentValuesForKey(m, original_key, *it, new_seen_keys, all_values);
-    }
+    const string& key, const IncludePicker::IncludeMapValue& value,
+    set<string> seen_keys,            // used to avoid recursion
+    vector<IncludePicker::IncludeMapValue>* all_values) {
+  assert(!Contains(seen_keys, key) && "Cycle in include-mapping");
+  assert(key != value.map_to && "Self-mapping in include-mapping");
+  all_values->push_back(value);
+
+  const string new_key = value.map_to;
+  const vector<IncludePicker::IncludeMapValue>* values = FindInMap(&m, new_key);
+  if (!values)     // no need to recurse
+    return;
+  seen_keys.insert(key);              // update the stack with the old key
+  for (Each<IncludePicker::IncludeMapValue> it(values); !it.AtEnd(); ++it) {
+    AugmentValuesForKey(m, new_key, *it, seen_keys, all_values);
   }
 }
 
+// This updates the values in include_map based on the transitive
+// mappings seen in filename_map.  It's ok if the two are the same.
 // This could be made much more efficient, but I don't see a need yet.
-IncludePicker::IncludeMap MakeTransitiveIncludeMap(
-    const IncludePicker::IncludeMap& basic_include_map) {
-  IncludePicker::IncludeMap retval;
-  vector<string> all_values_for_current_key;
-  set<string> stack_of_keys_seen;
-  for (IncludePicker::IncludeMap::const_iterator it = basic_include_map.begin();
-       it != basic_include_map.end(); ) {
-    const string current_key = it->first;
-    AugmentValuesForKey(basic_include_map, current_key, *it, stack_of_keys_seen,
-                        &all_values_for_current_key);
-    ++it;
-    if (it == basic_include_map.end() || it->first != current_key) {
-      all_values_for_current_key = GetUniqueEntries(all_values_for_current_key);
-      // Next key is going to be different, so finish processing this key.
-      for (Each<string> v(&all_values_for_current_key); !v.AtEnd(); ++v)
-        retval.insert(IncludePicker::IncludeMap::value_type(current_key, *v));
-      all_values_for_current_key.clear();
-      stack_of_keys_seen.clear();
+void MakeMapTransitive(const IncludePicker::IncludeMap& filename_map,
+                       IncludePicker::IncludeMap* include_map) {
+  // We can't use Each<>() because we need a non-const iterator.
+  for (IncludePicker::IncludeMap::iterator it = include_map->begin();
+       it != include_map->end(); ++it) {
+    vector<IncludePicker::IncludeMapValue> all_values_for_current_key;
+    for (Each<IncludePicker::IncludeMapValue> value(&it->second);
+         !value.AtEnd(); ++value) {
+      const string key = it->first;
+      AugmentValuesForKey(filename_map, key, *value, set<string>(),
+                          &all_values_for_current_key);
+    }
+    // Copy all_values_for_current_key into it->second, uniquifying as we go.
+    it->second.clear();
+    set<string> seen_values;
+    for (Each<IncludePicker::IncludeMapValue> value(&all_values_for_current_key);
+         !value.AtEnd(); ++value) {
+      if (!Contains(seen_values, value->map_to)) {
+        it->second.push_back(*value);
+        seen_values.insert(value->map_to);
+      }
     }
   }
-  return retval;
 }
 
-IncludePicker::IncludeMap MakeCppIncludeMap() {
-  // One 'internal' header can map to several public headers; iwyu is
-  // free to choose any of them.  All else being equal, iwyu will
-  // choose the first mapping for a header.  If one private header
-  // maps to another, iwyu will follow the chain, and logically
-  // replace the mapped-to header in the map with all the public
-  // headers it eventually maps to.
-  // Note the value has the <> or "" as appropriate, but the key
-  // does not.  If the value is missing a <> or "", it means it's
-  // a private header and should be re-mapped as described above.
-  static const IncludePicker::IncludeMapEntry cpp_include_map[] = {
-    // Generated by running
-    //    ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep '^ *# *include' {ext/,tr1/,}* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { "$2", "<$1>" },@' | grep -e bits/ -e tr1_impl/ | sort -u)
-    // and then taking the 'meaningful' dependencies -- for instance,
-    // <functional> #includes <bits/stringfwd.h>, but if someone is
-    // using strings, <functional> isn't enough to satisfy iwyu.
-    // It may be that for future libc versions, we will want dirs
-    // other than bits/.
-    { "bits/algorithmfwd.h", "<algorithm>" },
-    { "bits/allocator.h", "<memory>" },
-    { "bits/atomic_word.h", "<ext/atomicity.h>" },
-    { "bits/basic_file.h", "<fstream>" },
-    { "bits/basic_ios.h", "<ios>" },
-    { "bits/basic_string.h", "<string>" },
-    { "bits/basic_string.tcc", "<string>" },
-    { "bits/boost_sp_shared_count.h", "<memory>" },
-    { "bits/c++io.h", "<ext/stdio_sync_filebuf.h>" },
-    { "bits/c++config.h", "<cstddef>" },
-    { "bits/char_traits.h", "<string>" },
-    { "bits/cmath.tcc", "<cmath>" },
-    { "bits/codecvt.h", "<fstream>" },
-    { "bits/cxxabi_tweaks.h", "<cxxabi.h>" },
-    { "bits/deque.tcc", "<deque>" },
-    { "bits/fstream.tcc", "<fstream>" },
-    { "bits/functional_hash.h", "<unordered_map>" },
-    { "bits/gslice.h", "<valarray>" },
-    { "bits/gslice_array.h", "<valarray>" },
-    { "bits/hashtable.h", "<unordered_map>" },
-    { "bits/hashtable.h", "<unordered_set>" },
-    { "bits/indirect_array.h", "<valarray>" },
-    { "bits/ios_base.h", "<iostream>" },
-    { "bits/ios_base.h", "<ios>" },
-    { "bits/ios_base.h", "<iomanip>" },
-    { "bits/locale_classes.h", "<locale>" },
-    { "bits/locale_facets.h", "<locale>" },
-    { "bits/locale_facets_nonio.h", "<locale>" },
-    { "bits/localefwd.h", "<locale>" },
-    { "bits/mask_array.h", "<valarray>" },
-    { "bits/ostream.tcc", "<ostream>" },
-    { "bits/ostream_insert.h", "<ostream>" },
-    { "bits/postypes.h", "<iostream>" },
-    { "bits/slice_array.h", "<valarray>" },
-    { "bits/stl_algo.h", "<algorithm>" },
-    { "bits/stl_algobase.h", "<algorithm>" },
-    { "bits/stl_bvector.h", "<vector>" },
-    { "bits/stl_construct.h", "<memory>" },
-    { "bits/stl_deque.h", "<deque>" },
-    { "bits/stl_function.h", "<functional>" },
-    { "bits/stl_heap.h", "<queue>" },
-    { "bits/stl_iterator.h", "<iterator>" },
-    { "bits/stl_iterator_base_funcs.h", "<iterator>" },
-    { "bits/stl_iterator_base_types.h", "<iterator>" },
-    { "bits/stl_list.h", "<list>" },
-    { "bits/stl_map.h", "<map>" },
-    { "bits/stl_multimap.h", "<map>" },
-    { "bits/stl_multiset.h", "<set>" },
-    { "bits/stl_numeric.h", "<numeric>" },
-    { "bits/stl_pair.h", "<utility>"},
-    { "bits/stl_pair.h", "<tr1/utility>" },
-    { "bits/stl_queue.h", "<queue>" },
-    { "bits/stl_raw_storage_iter.h", "<memory>" },
-    { "bits/stl_relops.h", "<utility>" },
-    { "bits/stl_set.h", "<set>" },
-    { "bits/stl_stack.h", "<stack>" },
-    { "bits/stl_tempbuf.h", "<memory>" },
-    { "bits/stl_tree.h", "<map>" },
-    { "bits/stl_tree.h", "<set>" },
-    { "bits/stl_uninitialized.h", "<memory>" },
-    { "bits/stl_vector.h", "<vector>" },
-    { "bits/stream_iterator.h", "<iterator>" },
-    { "bits/streambuf.tcc", "<streambuf>" },
-    { "bits/streambuf_iterator.h", "<iterator>" },
-    { "bits/stringfwd.h", "<string>" },
-    { "bits/valarray_array.h", "<valarray>" },
-    { "bits/valarray_before.h", "<valarray>" },
-    { "bits/vector.tcc", "<vector>" },
-    { "tr1_impl/array", "<array>" },
-    { "tr1_impl/array", "<tr1/array>" },
-    { "tr1_impl/boost_shared_ptr.h", "<memory>" },
-    { "tr1_impl/boost_shared_ptr.h", "<tr1/memory>" },
-    { "tr1_impl/boost_sp_counted_base.h", "<memory>" },
-    { "tr1_impl/boost_sp_counted_base.h", "<tr1/memory>" },
-    { "tr1_impl/cctype", "<cctype>" },
-    { "tr1_impl/cctype", "<tr1/cctype>" },
-    { "tr1_impl/cfenv", "<cfenv>" },
-    { "tr1_impl/cfenv", "<tr1/cfenv>" },
-    { "tr1_impl/cinttypes", "<cinttypes>" },
-    { "tr1_impl/cinttypes", "<tr1/cinttypes>" },
-    { "tr1_impl/cmath", "<cmath>" },
-    { "tr1_impl/cmath", "<tr1/cmath>" },
-    { "tr1_impl/complex", "<complex>" },
-    { "tr1_impl/complex", "<tr1/complex>" },
-    { "tr1_impl/cstdint", "<cstdint>" },
-    { "tr1_impl/cstdint", "<tr1/cstdint>" },
-    { "tr1_impl/cstdio", "<cstdio>" },
-    { "tr1_impl/cstdio", "<tr1/cstdio>" },
-    { "tr1_impl/cstdlib", "<cstdlib>" },
-    { "tr1_impl/cstdlib", "<tr1/cstdlib>" },
-    { "tr1_impl/cwchar", "<cwchar>" },
-    { "tr1_impl/cwchar", "<tr1/cwchar>" },
-    { "tr1_impl/cwctype", "<cwctype>" },
-    { "tr1_impl/cwctype", "<tr1/cwctype>" },
-    { "tr1_impl/functional", "<functional>" },
-    { "tr1_impl/functional", "<tr1/functional>" },
-    { "tr1_impl/functional_hash.h", "<tr1/functional_hash.h>" },
-    { "tr1_impl/hashtable", "<tr1/hashtable.h>" },
-    { "tr1_impl/random", "<random>" },
-    { "tr1_impl/random", "<tr1/random>" },
-    { "tr1_impl/regex", "<regex>" },
-    { "tr1_impl/regex", "<tr1/regex>" },
-    { "tr1_impl/type_traits", "<tr1/type_traits>" },
-    { "tr1_impl/type_traits", "<type_traits>" },
-    { "tr1_impl/unordered_map", "<tr1/unordered_map>" },
-    { "tr1_impl/unordered_map", "<unordered_map>" },
-    { "tr1_impl/unordered_set", "<tr1/unordered_set>" },
-    { "tr1_impl/unordered_set", "<unordered_set>" },
-    { "tr1_impl/utility", "<tr1/utility>" },
-    { "tr1_impl/utility", "<utility>" },
-    // This didn't come from the grep, but seems to be where swap()
-    // is defined?
-    { "bits/move.h", "<algorithm>" },   // for swap<>()
-    // All .tcc files are gcc internal-include files.  We get them from
-    // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep -R '^ *# *include.*tcc' * | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ && print qq@    { "$2", "<$1>" },@' | sort )
-    // Note some of the mapped-to values are themselves private headers,
-    // so I had to manually edit them to remove the <>'s around them.
-    { "bits/basic_ios.tcc", "bits/basic_ios.h" },
-    { "bits/basic_string.tcc", "<string>" },
-    { "bits/cmath.tcc", "<cmath>" },
-    { "bits/deque.tcc", "<deque>" },
-    { "bits/fstream.tcc", "<fstream>" },
-    { "bits/istream.tcc", "<istream>" },
-    { "bits/list.tcc", "<list>" },
-    { "bits/locale_classes.tcc", "bits/locale_classes.h" },  // private->private
-    { "bits/locale_facets.tcc", "bits/locale_facets.h" },
-    { "bits/locale_facets_nonio.tcc", "bits/locale_facets_nonio.h" },
-    { "bits/ostream.tcc", "<ostream>" },
-    { "bits/sstream.tcc", "<sstream>" },
-    { "bits/streambuf.tcc", "<streambuf>" },
-    { "bits/valarray_array.tcc", "bits/valarray_array.h" },
-    { "bits/vector.tcc", "<vector>" },
-    { "debug/safe_iterator.tcc", "<debug/safe_iterator.h>" },
-    { "tr1/bessel_function.tcc", "<tr1/cmath>" },
-    { "tr1/beta_function.tcc", "<tr1/cmath>" },
-    { "tr1/ell_integral.tcc", "<tr1/cmath>" },
-    { "tr1/exp_integral.tcc", "<tr1/cmath>" },
-    { "tr1/gamma.tcc", "<tr1/cmath>" },
-    { "tr1/hypergeometric.tcc", "<tr1/cmath>" },
-    { "tr1/legendre_function.tcc", "<tr1/cmath>" },
-    { "tr1/modified_bessel_func.tcc", "<tr1/cmath>" },
-    { "tr1/poly_hermite.tcc", "<tr1/cmath>" },
-    { "tr1/poly_laguerre.tcc", "<tr1/cmath>" },
-    { "tr1/riemann_zeta.tcc", "<tr1/cmath>" },
-    { "tr1_impl/random.tcc", "tr1_impl/random" },
-    // Some bits->bits #includes.  A few files in bits re-export
-    // symbols from other files in bits.  To find these, I ran
-    // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep '^ *# *include.*bits/' bits/* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { "$2", "$1" },@' | grep bits/ | sort -u)
-    // and carefully picked reasonable-looking results (algorithm
-    // *uses* pair but doesn't *re-export* pair, for instance).
-    { "bits/boost_concept_check.h", "bits/concept_check.h" },
-    { "bits/c++allocator.h", "bits/allocator.h" },
-    { "bits/codecvt.h", "bits/locale_facets_nonio.h" },
-    { "bits/functexcept.h", "bits/stl_algobase.h" },
-    { "bits/locale_classes.h", "bits/basic_ios.h" },
-    { "bits/locale_facets.h", "bits/basic_ios.h" },
-    { "bits/messages_members.h", "bits/locale_facets_nonio.h" },
-    { "bits/postypes.h", "bits/char_traits.h" },
-    { "bits/slice_array.h", "bits/valarray_before.h" },
-    { "bits/stl_construct.h", "bits/stl_tempbuf.h" },
-    { "bits/stl_move.h", "bits/stl_algobase.h" },
-    { "bits/stl_uninitialized.h", "bits/stl_tempbuf.h" },
-    { "bits/stl_vector.h", "bits/stl_bvector.h" },
-    { "bits/streambuf_iterator.h", "bits/basic_ios.h" },
-    // I don't think we want to be having people move to 'backward/'
-    // yet.  (These hold deprecated STL classes that we still use
-    // actively.)  These are the ones that turned up in an analysis of
-    { "backward/binders.h", "<functional>" },
-    { "backward/hash_fun.h", "<hash_map>" },
-    { "backward/hash_fun.h", "<hash_set>" },
-    { "backward/hashtable.h", "<hash_map>" },
-    { "backward/hashtable.h", "<hash_set>" },
-    { "backward/strstream", "<strstream>" },
-    // We do our own string implementation, which needs some mappings.
-    { "ext/vstring_fwd.h", "<string>" },
-    { "ext/vstring.h", "<string>" },
-    { "ext/vstring.tcc", "<string>" },
-    // (This one should perhaps be found automatically somehow.)
-    { "ext/sso_string_base.h", "<string>" },
-    { "ext/hash_set", "<hash_set>" },
-    { "ext/hash_map", "<hash_map>" },
-    { "ext/slist", "<slist>" },
-    // The iostream .h files are confusing.  Lots of private headers,
-    // which are handled above, but we also have public headers
-    // #including each other (eg <iostream> #includes <istream>).  We
-    // are pretty forgiving: if a user specifies any public header, we
-    // generally don't require the others.  Do those mappings here.
-    // Note that since these are all public headers we're mapping, we
-    // need to map them to themselves to say they're ok as they are.
-    // We also need self-mappings to tell iwyu: "if the user #included
-    // <ios>, you don't *need* to map it to something else if you
-    // don't want to."  I got these via
-    // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && egrep '^ *# *include <(istream|ostream|iostream|fstream|sstream|streambuf|ios)>' *stream* ios | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ and print qq@    { "$2", "<$1>" },@ and print qq@    { "$2", "<$2>" },@' | sort -u )
-    { "ios", "<ios>" },
-    { "ios", "<istream>" },
-    { "ios", "<ostream>" },
-    { "istream", "<fstream>" },
-    { "istream", "<iostream>" },
-    { "istream", "<istream>" },
-    { "istream", "<sstream>" },
-    { "ostream", "<fstream>" },
-    { "ostream", "<iostream>" },
-    { "ostream", "<istream>" },
-    { "ostream", "<ostream>" },
-    { "ostream", "<sstream>" },
-    { "streambuf", "<ios>" },
-    { "streambuf", "<streambuf>" },
-    // When you use logging.h, you also typically use << to emit a log
-    // message.  But you don't need to bring in ostream or string
-    // yourself to use <<.  logging.h gives it to you.  So if you
-    // #include base/logging.h, don't complain you also need ostream.
-    // (This is low in the list because we prefer iwyu use the ostream
-    // mappings above if it can -- this mapping may be wrong at times.)
-    { "ostream", "\"base/logging.h\"" },
-  };
-
-  return MakeTransitiveIncludeMap(MakeIncludeMap(cpp_include_map));
-}
-
-IncludePicker::IncludeMap MakeCIncludeMap() {
-  // For C includes, we can use the same idea we used for C++ includes.  For
-  // this one, we ran
-  //   ( cd /usr/include && grep '^ *# *include' {sys/,net/,}* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { "$2", "<$1>" },@' | grep bits/ | sort )
-  const IncludePicker::IncludeMapEntry c_include_map[] = {
-    { "bits/a.out.h", "<a.out.h>" },
-    { "bits/byteswap.h", "<byteswap.h>" },
-    { "bits/cmathcalls.h", "<complex.h>" },
-    { "bits/confname.h", "<unistd.h>" },
-    { "bits/dirent.h", "<dirent.h>" },
-    { "bits/dlfcn.h", "<dlfcn.h>" },
-    { "bits/elfclass.h", "<link.h>" },
-    { "bits/endian.h", "<endian.h>" },
-    { "bits/environments.h", "<unistd.h>" },
-    { "bits/errno.h", "<errno.h>" },
-    { "bits/error.h", "<error.h>" },
-    { "bits/fcntl.h", "<fcntl.h>" },
-    { "bits/fcntl2.h", "<fcntl.h>" },
-    { "bits/fenv.h", "<fenv.h>" },
-    { "bits/fenvinline.h", "<fenv.h>" },
-    { "bits/huge_val.h", "<math.h>" },
-    { "bits/huge_valf.h", "<math.h>" },
-    { "bits/huge_vall.h", "<math.h>" },
-    { "bits/ioctl-types.h", "<sys/ioctl.h>" },
-    { "bits/ioctls.h", "<sys/ioctl.h>" },
-    { "bits/ipc.h", "<sys/ipc.h>" },
-    { "bits/ipctypes.h", "<sys/ipc.h>" },
-    { "bits/libio-ldbl.h", "<libio.h>" },
-    { "bits/link.h", "<link.h>" },
-    { "bits/locale.h", "<locale.h>" },
-    { "bits/mathcalls.h", "<math.h>" },
-    { "bits/mathdef.h", "<math.h>" },
-    { "bits/mman.h", "<sys/mman.h>" },
-    { "bits/monetary-ldbl.h", "<monetary.h>" },
-    { "bits/mqueue.h", "<mqueue.h>" },
-    { "bits/mqueue2.h", "<mqueue.h>" },
-    { "bits/msq.h", "<sys/msg.h>" },
-    { "bits/nan.h", "<math.h>" },
-    { "bits/netdb.h", "<netdb.h>" },
-    { "bits/poll.h", "<sys/poll.h>" },
-    { "bits/posix1_lim.h", "<limits.h>" },
-    { "bits/posix2_lim.h", "<limits.h>" },
-    { "bits/posix_opt.h", "<unistd.h>" },
-    { "bits/printf-ldbl.h", "<printf.h>" },
-    { "bits/pthreadtypes.h", "<pthread.h>" },
-    { "bits/resource.h", "<sys/resource.h>" },
-    { "bits/sched.h", "<sched.h>" },
-    { "bits/select.h", "<sys/select.h>" },
-    { "bits/sem.h", "<sys/sem.h>" },
-    { "bits/semaphore.h", "<semaphore.h>" },
-    { "bits/setjmp.h", "<setjmp.h>" },
-    { "bits/shm.h", "<sys/shm.h>" },
-    { "bits/sigaction.h", "<signal.h>" },
-    { "bits/sigcontext.h", "<signal.h>" },
-    { "bits/siginfo.h", "<signal.h>" },
-    { "bits/signum.h", "<signal.h>" },
-    { "bits/sigset.h", "<signal.h>" },
-    { "bits/sigstack.h", "<signal.h>" },
-    { "bits/sigthread.h", "<signal.h>" },
-    { "bits/sockaddr.h", "<sys/un.h>" },
-    { "bits/socket.h", "<sys/socket.h>" },
-    { "bits/stab.def", "<stab.h>" },
-    { "bits/stat.h", "<sys/stat.h>" },
-    { "bits/statfs.h", "<sys/statfs.h>" },
-    { "bits/statvfs.h", "<sys/statvfs.h>" },
-    { "bits/stdio-ldbl.h", "<stdio.h>" },
-    { "bits/stdio-lock.h", "<libio.h>" },
-    { "bits/stdio.h", "<stdio.h>" },
-    { "bits/stdio2.h", "<stdio.h>" },
-    { "bits/stdio_lim.h", "<stdio.h>" },
-    { "bits/stdlib-ldbl.h", "<stdlib.h>" },
-    { "bits/stdlib.h", "<stdlib.h>" },
-    { "bits/string.h", "<string.h>" },
-    { "bits/string2.h", "<string.h>" },
-    { "bits/string3.h", "<string.h>" },
-    { "bits/stropts.h", "<stropts.h>" },
-    { "bits/sys_errlist.h", "<stdio.h>" },
-    { "bits/syscall.h", "<sys/syscall.h>" },
-    { "bits/syslog-ldbl.h", "<sys/syslog.h>" },
-    { "bits/syslog-path.h", "<sys/syslog.h>" },
-    { "bits/syslog.h", "<sys/syslog.h>" },
-    { "bits/termios.h", "<termios.h>" },
-    { "bits/time.h", "<sys/time.h>" },
-    { "bits/types.h", "<sys/types.h>" },
-    { "bits/uio.h", "<sys/uio.h>" },
-    { "bits/unistd.h", "<unistd.h>" },
-    { "bits/ustat.h", "<sys/ustat.h>" },
-    { "bits/utmp.h", "<utmp.h>" },
-    { "bits/utmpx.h", "<utmpx.h>" },
-    { "bits/utsname.h", "<sys/utsname.h>" },
-    { "bits/waitflags.h", "<sys/wait.h>" },
-    { "bits/waitstatus.h", "<sys/wait.h>" },
-    { "bits/wchar-ldbl.h", "<wchar.h>" },
-    { "bits/wchar.h", "<wchar.h>" },
-    { "bits/wchar2.h", "<wchar.h>" },
-    { "bits/xopen_lim.h", "<limits.h>" },
-    { "bits/xtitypes.h", "<stropts.h>" },
-    // Sometimes libc tells you what mapping to do via an '#error':
-    // # error "Never use <bits/dlfcn.h> directly; include <dlfcn.h> instead."
-    //    ( cd /usr/include && grep -R '^ *# *error "Never use' * | perl -nle 'm/<([^>]+).*<([^>]+)/ && print qq@    { "$1", "<$2>" },@' | sort )
-    { "bits/a.out.h", "<a.out.h>" },
-    { "bits/byteswap.h", "<byteswap.h>" },
-    { "bits/cmathcalls.h", "<complex.h>" },
-    { "bits/confname.h", "<unistd.h>" },
-    { "bits/dirent.h", "<dirent.h>" },
-    { "bits/dlfcn.h", "<dlfcn.h>" },
-    { "bits/elfclass.h", "<link.h>" },
-    { "bits/endian.h", "<endian.h>" },
-    { "bits/fcntl.h", "<fcntl.h>" },
-    { "bits/fenv.h", "<fenv.h>" },
-    { "bits/huge_val.h", "<math.h>" },
-    { "bits/huge_valf.h", "<math.h>" },
-    { "bits/huge_vall.h", "<math.h>" },
-    { "bits/in.h", "<netinet/in.h>" },
-    { "bits/inf.h", "<math.h>" },
-    { "bits/ioctl-types.h", "<sys/ioctl.h>" },
-    { "bits/ioctls.h", "<sys/ioctl.h>" },
-    { "bits/ipc.h", "<sys/ipc.h>" },
-    { "bits/locale.h", "<locale.h>" },
-    { "bits/mathdef.h", "<math.h>" },
-    { "bits/mathinline.h", "<math.h>" },
-    { "bits/mman.h", "<sys/mman.h>" },
-    { "bits/mqueue.h", "<mqueue.h>" },
-    { "bits/msq.h", "<sys/msg.h>" },
-    { "bits/nan.h", "<math.h>" },
-    { "bits/poll.h", "<sys/poll.h>" },
-    { "bits/predefs.h", "<features.h>" },
-    { "bits/resource.h", "<sys/resource.h>" },
-    { "bits/select.h", "<sys/select.h>" },
-    { "bits/semaphore.h", "<semaphore.h>" },
-    { "bits/sigcontext.h", "<signal.h>" },
-    { "bits/string.h", "<string.h>" },
-    { "bits/string2.h", "<string.h>" },
-    { "bits/string3.h", "<string.h>" },
-    { "bits/syscall.h", "<sys/syscall.h>" },
-    // Here are the top-level #includes that just forward to another
-    // file:
-    //    $ for i in /usr/include/*; do [ -f $i ] && [ `wc -l < $i` = 1 ] && echo $i; done
-    // (poll.h, syscall.h, syslog.h, ustat.h, wait.h).
-    // For each file, I looked at the list of canonical header files --
-    // http://www.opengroup.org/onlinepubs/9699919799/idx/head.html --
-    // to decide which of the two files is canonical.  If neither is
-    // on the POSIX.1 1998 list, I just choose the top-level one.
-    { "sys/poll.h", "<poll.h>" },
-    { "sys/syscall.h", "<syscall.h>" },
-    { "sys/syslog.h", "<syslog.h>" },
-    { "sys/ustat.h", "<ustat.h>" },
-    { "wait.h", "<sys/wait.h>" },
-    // These are all files in bits/ that delegate to asm/ and linux/ to
-    // do all (or lots) of the work.
-    // $ for i in /usr/include/bits/*; do for dir in asm linux; do grep -H -e $dir/`basename $i` $i; done; done
-    { "linux/errno.h", "bits/errno.h" },   // map to a private header file
-    { "asm/ioctls.h", "bits/ioctls.h" },
-    { "asm/socket.h", "bits/socket.h" },
-    { "linux/socket.h", "bits/socket.h" },
-    // Some asm files have 32- and 64-bit variants:
-    // $ ls /usr/include/asm/*_{32,64}.h
-    { "asm/posix_types_32.h", "<asm/posix_types.h>" },
-    { "asm/posix_types_64.h", "<asm/posix_types.h>" },
-    { "asm/unistd_32.h", "asm/unistd.h" },
-    { "asm/unistd_64.h", "asm/unistd.h" },
-    // I don't know what grep would have found these.  I found them
-    // via user report.
-    { "asm/errno.h", "<errno.h>" },       // also captures asm-generic/errno.h
-    { "asm/errno-base.h", "<errno.h>" },  // actually asm-generic/errno-base.h
-    { "asm/ptrace-abi.h", "<asm/ptrace.h>" },
-    { "asm/unistd.h", "<syscall.h>" },
-    { "linux/limits.h", "<limits.h>" },   // where PATH_MAX is defined
-    { "linux/prctl.h", "<sys/prctl.h>" },
-    { "sys/ucontext.h", "<ucontext.h>" },
-    // Allow the C++ wrappers around C files.  Without these mappings,
-    // if you #include <cstdio>, iwyu will tell you to replace it with
-    // <stdio.h>, which is where the symbols are actually defined.  We
-    // inhibit that behavior to keep the <cstdio> alone.  Note we do a
-    // self-mapping first, because we prefer keeping the #include at
-    // <stdio.h> rather than mapping to it <cstdio>, all else being
-    // equal.  Here is how I identified the files to map:
-    // $ for i in /usr/include/c++/4.4/c* ; do ls /usr/include/`basename $i | cut -b2-`.h 2>/dev/null ; done
-    { "assert.h", "<assert.h>" },
-    { "assert.h", "<cassert>" },
-    { "complex.h", "<complex.h>" },
-    { "complex.h", "<ccomplex>" },
-    { "ctype.h", "<ctype.h>" },
-    { "ctype.h", "<cctype>" },
-    { "errno.h", "<errno.h>" },
-    { "errno.h", "<cerrno>" },
-    { "fenv.h", "<fenv.h>" },
-    { "fenv.h", "<cfenv>" },
-    { "inttypes.h", "<inttypes.h>" },
-    { "inttypes.h", "<cinttypes>" },
-    { "limits.h", "<limits.h>" },
-    { "limits.h", "<climits>" },
-    { "locale.h", "<locale.h>" },
-    { "locale.h", "<clocale>" },
-    { "math.h", "<math.h>" },
-    { "math.h", "<cmath>" },
-    { "setjmp.h", "<setjmp.h>" },
-    { "setjmp.h", "<csetjmp>" },
-    { "signal.h", "<signal.h>" },
-    { "signal.h", "<csignal>" },
-    { "stdint.h", "<stdint.h>" },
-    { "stdint.h", "<cstdint>" },
-    { "stdio.h", "<stdio.h>" },
-    { "stdio.h", "<cstdio>" },
-    { "stdlib.h", "<stdlib.h>" },
-    { "stdlib.h", "<cstdlib>" },
-    { "string.h", "<string.h>" },
-    { "string.h", "<cstring>" },
-    { "tgmath.h", "<tgmath.h>" },
-    { "tgmath.h", "<ctgmath>" },
-    { "time.h", "<time.h>" },
-    { "time.h", "<ctime>" },
-    { "wchar.h", "<wchar.h>" },
-    { "wchar.h", "<cwchar>" },
-    { "wctype.h", "<wctype.h>" },
-    { "wctype.h", "<cwctype>" },
-    { "ieee754.h", "\"base/port_ieee.h\"" },
-    // TODO(csilvers): map portable stuff to port.h (or rewrite port.h?)
-    // eg bswap_16/32/64, strtoq/uq/ll,ull, atoll, etc.
-  };
-
-  return MakeTransitiveIncludeMap(MakeIncludeMap(c_include_map));
-}
-
-IncludePicker::IncludeMap MakeGoogleIncludeMap() {
-  // The same idea for C++ includes can be used for the occasional
-  const IncludePicker::IncludeMapEntry google_include_map[] = {
-    // These two are here just for unittesting.
-    { "tests/badinc-private.h",
-      "\"tests/badinc-inl.h\"" },
-    { "tests/badinc-private2.h",
-      "\"tests/badinc-inl.h\"" },
-    { "base/atomicops-internals-macosx.h", "\"base/atomicops.h\"" },
-    { "base/atomicops-internals-x86-msvc.h", "\"base/atomicops.h\"" },
-    { "base/atomicops-internals-x86.h", "\"base/atomicops.h\"" },
-    { "base/callback-specializations.h", "\"base/callback.h\"" },
-    // We prefer callback-types.h to callback.h, if we're told to add
-    // one or the other, but if we need callback.h for some other
-    // reason, we don't need to then add callback-types.h on top of that.
-    { "base/callback-types.h", "\"base/callback-types.h\"" },
-    { "base/callback-types.h", "\"base/callback.h\"" },
-    { "i18n/encodings/proto/encodings.pb.h",
-      "\"i18n/encodings/public/encodings.h\"" },
-    { "i18n/languages/proto/languages.pb.h",
-      "\"i18n/languages/public/languages.h\"" },
-    { "net/proto/proto-array-internal.h",
-      "\"net/proto/proto-array.h\"" },
-    { "testing/base/public/gmock_utils/protocol-buffer-matchers.h",
-      "\"testing/base/public/gmock.h\"" },
-    { "util/gtl/container_literal_generated.h",
-      "\"util/gtl/container_literal.h\"" },
-    { "util/bits/bits-internal-unknown.h", "\"util/bits/bits.h\"" },
-    { "util/bits/bits-internal-windows.h", "\"util/bits/bits.h\"" },
-    { "util/bits/bits-internal-x86.h", "\"util/bits/bits.h\"" },
-    // These are .h files that aren't private, but are subsumed by
-    // another .h.  For instance, logging.h and raw_logging.h
-    // re-export all of log_severity's symbols.  So if someone
-    // #includes logging.h, they don't need to #include log_severity.h
-    // as well.  But it's ok if they do, and it's ok to #include
-    // log_severity.h without #including logging.h.
-    { "base/log_severity.h", "\"base/log_severity.h\"" },
-    { "base/log_severity.h", "\"base/logging.h\"" },
-    { "base/log_severity.h", "\"base/raw_logging.h\"" },
-    { "base/vlog_is_on.h", "\"base/vlog_is_on.h\"" },
-    { "base/vlog_is_on.h", "\"base/logging.h\"" },
-    { "base/vlog_is_on.h", "\"base/raw_logging.h\"" },
-    { "stats/io/public/ev_doc.h", "\"stats/io/public/ev_doc.h\"" },
-    { "stats/io/public/ev_doc.h", "\"stats/io/public/expvar.h\"" },
-    { "stats/io/public/ev_doc.h", "\"stats/io/public/stats.h\"" },
-    { "stats/io/public/ev_doc.h", "\"stats/io/public/exporter.h\"" },
-  };
-
-  return MakeTransitiveIncludeMap(MakeIncludeMap(google_include_map));
-}
-
-IncludePicker::IncludeMap MakeSymbolIncludeMap() {
-  // For library symbols that can be defined in more than one header
-  // file, maps from symbol-name to legitimate header files.
-  // This list was generated via
-  //    grep -R '__.*_defined' /usr/include | perl -nle 'm,/usr/include/([^:]*):#\s*\S+ __(.*)_defined, and print qq@    { "$2", "<$1>" },@' | sort -u
-  // I ignored all entries that only appeared once on the list (eg uint32_t).
-  // I then added in NULL, which according to [diff.null] C.2.2.3, can
-  // be defined in <clocale>, <cstddef>, <cstdio>, <cstdlib>,
-  // <cstring>, <ctime>, or <cwchar>.  We also allow their C
-  // equivalents.
-  // In each case, I ordered them so <sys/types.h> was first, if it was
-  // an option for this type.  That's the preferred #include all else equal.
-  const IncludePicker::IncludeMapEntry symbol_include_map[] = {
-    { "blksize_t", "<sys/types.h>" },
-    { "blkcnt_t", "<sys/stat.h>" },
-    { "blkcnt_t", "<sys/types.h>" },
-    { "blksize_t", "<sys/stat.h>" },
-    { "daddr_t", "<sys/types.h>" },
-    { "daddr_t", "<rpc/types.h>" },
-    { "dev_t", "<sys/types.h>" },
-    { "dev_t", "<sys/stat.h>" },
-    { "error_t", "<errno.h>" },
-    { "error_t", "<argp.h>" },
-    { "error_t", "<argz.h>" },
-    { "fsblkcnt_t", "<sys/types.h>" },
-    { "fsblkcnt_t", "<sys/statvfs.h>" },
-    { "fsfilcnt_t", "<sys/types.h>" },
-    { "fsfilcnt_t", "<sys/statvfs.h>" },
-    { "gid_t", "<sys/types.h>" },
-    { "gid_t", "<grp.h>" },
-    { "gid_t", "<pwd.h>" },
-    { "gid_t", "<stropts.h>" },
-    { "gid_t", "<sys/ipc.h>" },
-    { "gid_t", "<sys/stat.h>" },
-    { "gid_t", "<unistd.h>" },
-    { "id_t", "<sys/types.h>" },
-    { "id_t", "<sys/resource.h>" },
-    { "ino64_t", "<sys/types.h>" },
-    { "ino64_t", "<dirent.h>" },
-    { "ino_t", "<sys/types.h>" },
-    { "ino_t", "<dirent.h>" },
-    { "ino_t", "<sys/stat.h>" },
-    { "int8_t", "<sys/types.h>" },
-    { "int8_t", "<stdint.h>" },
-    { "intptr_t", "<stdint.h>" },
-    { "intptr_t", "<unistd.h>" },
-    { "key_t", "<sys/types.h>" },
-    { "key_t", "<sys/ipc.h>" },
-    { "mode_t", "<sys/types.h>" },
-    { "mode_t", "<sys/stat.h>" },
-    { "mode_t", "<sys/ipc.h>" },
-    { "mode_t", "<sys/mman.h>" },
-    { "nlink_t", "<sys/types.h>" },
-    { "nlink_t", "<sys/stat.h>" },
-    { "off64_t", "<sys/types.h>" },
-    { "off64_t", "<unistd.h>" },
-    { "off_t", "<sys/types.h>" },
-    { "off_t", "<unistd.h>" },
-    { "off_t", "<sys/stat.h>" },
-    { "off_t", "<sys/mman.h>" },
-    { "pid_t", "<sys/types.h>" },
-    { "pid_t", "<unistd.h>" },
-    { "pid_t", "<signal.h>" },
-    { "pid_t", "<sys/msg.h>" },
-    { "pid_t", "<sys/shm.h>" },
-    { "pid_t", "<termios.h>" },
-    { "pid_t", "<time.h>" },
-    { "pid_t", "<utmpx.h>" },
-    { "sigset_t", "<signal.h>" },
-    { "sigset_t", "<sys/epoll.h>" },
-    { "sigset_t", "<sys/select.h>" },
-    { "socklen_t", "<sys/socket.h>" },    // manually mapped from bits/socket.h
-    { "socklen_t", "<unistd.h>" },
-    { "socklen_t", "<arpa/inet.h>" },
-    { "ssize_t", "<sys/types.h>" },
-    { "ssize_t", "<unistd.h>" },
-    { "ssize_t", "<monetary.h>" },
-    { "ssize_t", "<sys/msg.h>" },
-    { "suseconds_t", "<sys/types.h>" },
-    { "suseconds_t", "<sys/time.h>" },
-    { "suseconds_t", "<sys/select.h>" },
-    { "u_char", "<sys/types.h>" },
-    { "u_char", "<rpc/types.h>" },
-    { "uid_t", "<sys/types.h>" },
-    { "uid_t", "<unistd.h>" },
-    { "uid_t", "<pwd.h>" },
-    { "uid_t", "<signal.h>" },
-    { "uid_t", "<stropts.h>" },
-    { "uid_t", "<sys/ipc.h>" },
-    { "uid_t", "<sys/stat.h>" },
-    { "useconds_t", "<sys/types.h>" },
-    { "useconds_t", "<unistd.h>" },
-    // Macros that can be defined in more than one file, don't have
-    // the same __foo_defined guard that other types do, so the grep
-    // above doesn't discover them.  Until I figure out a better way,
-    // I just add them in by hand as I discover them.
-    { "EOF", "<stdio.h>" },
-    { "EOF", "<libio.h>" },
-    // Entries for NULL
-    { "NULL", "<stddef.h>" },   // 'canonical' location to get NULL from
-    { "NULL", "<clocale>" },
-    { "NULL", "<cstddef>" },
-    { "NULL", "<cstdio>" },
-    { "NULL", "<cstdlib>" },
-    { "NULL", "<cstring>" },
-    { "NULL", "<ctime>" },
-    { "NULL", "<cwchar>" },
-    { "NULL", "<locale.h>" },
-    { "NULL", "<stdio.h>" },
-    { "NULL", "<stdlib.h>" },
-    { "NULL", "<string.h>" },
-    { "NULL", "<time.h>" },
-    { "NULL", "<wchar.h>" },
-    // These are c++ symbol maps that handle the forwarding headers
-    // that define classes as typedefs.  Because gcc uses typedefs for
-    // these, we are tricked into thinking the classes are defined
-    // there, rather than just declared there.  This maps each symbol
-    // to where it's defined (I had to fix up ios manually, and add in
-    // iostream and string which are defined unusually in gcc headers):
-    //    ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1; find . -name '*fwd*' | xargs grep -oh 'typedef basic_[^ <]*' | sort -u | sed "s/typedef basic_//" | while read class; do echo -n "$class "; grep -lR "^ *class basic_$class " *; echo | head -n1; done | grep . | perl -lane 'print qq@    { "std::$F[0]", "<$F[1]>" },@;' )
-    { "std::filebuf", "<fstream>" },
-    { "std::fstream", "<fstream>" },
-    { "std::ifstream", "<fstream>" },
-    { "std::ios", "<ios>" },
-    { "std::iostream", "<iostream>" },
-    { "std::istream", "<istream>" },
-    { "std::istringstream", "<sstream>" },
-    { "std::ofstream", "<fstream>" },
-    { "std::ostream", "<ostream>" },
-    { "std::ostringstream", "<sstream>" },
-    { "std::streambuf", "<streambuf>" },
-    { "std::string", "<string>" },
-    { "std::stringbuf", "<sstream>" },
-    { "std::stringstream", "<sstream>" },
-    // Kludge time: almost all STL types take an allocator, but they
-    // almost always use the default value.  Usually we detect that
-    // and don't try to do IWYU, but sometimes it passes through.
-    // For instance, when adding two strings, we end up calling
-    //    template<_CharT,_Traits,_Alloc> ... operator+(
-    //       basic_string<_CharT,_Traits,_Alloc>, ...)
-    // These look like normal template args to us, so we see they're
-    // used and declare an iwyu dependency, even though we don't need
-    // to #include the traits or alloc type ourselves.  The surest way
-    // to deal with this is to just say that everyone provides
-    // std::allocator.  We can add more here at need.
-    { "std::allocator", "<memory>" },
-    { "std::allocator", "<string>" },
-    { "std::allocator", "<vector>" },
-    { "std::allocator", "<map>" },
-    { "std::allocator", "<set>" },
-  };
-
-  // We can't make this map transitive, since the keys and values are
-  // different: the values are files, but the keys are symbols.
-  return MakeIncludeMap(symbol_include_map);
-}
-
-IncludePicker::IncludeMap MakeThirdPartyIncludeMap() {
-  const char kIcuUtypesHeader[] = "\"third_party/icu/include/unicode/utypes.h\"";
-
-  // It's very common for third-party libraries to just expose one
-  // header file.  We use prefix-matching here: the idea is that
-  // everything in third_party/foo/... maps to third_party/foo/foo.h, or
-  // whatever.  Note this is *not* a transitive include-map, so
-  // wherever we map to here, those are the final locations iwyu
-  // will return.
-  const IncludePicker::IncludeMapEntry third_party_include_map[] = {
-    { "third_party/dynamic_annotations/", "\"base/dynamic_annotations.h\"" },
-    { "third_party/gmock/include/gmock/", "\"testing/base/public/gmock.h\"" },
-    { "third_party/gtest/include/gtest/", "\"testing/base/public/gunit.h\"" },
-    { "third_party/python2_4_3/", "<Python.h>" },
-    { "third_party/icu/include/unicode/umachine.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/uversion.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/uconfig.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/udraft.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/udeprctd.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/uobslete.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/uintrnal.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/usystem.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/urename.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/platform.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/ptypes.h", kIcuUtypesHeader },
-    { "third_party/icu/include/unicode/uvernum.h", kIcuUtypesHeader },
-    // One day we'll use the system tr1.  But for now it's in third_party
-    { "third_party/tr1/tuple_iterate.h", "\"third_party/tr1/tuple\"" },
-  };
-
-  return MakeIncludeMap(third_party_include_map);
-}
 
 // In linux/gcc, we often see the pattern that there will be
 // <asm/foo.h> which just forwards to <asm-ARCH/foo.h>, which will
@@ -905,146 +816,172 @@ string NormalizeSystemSpecificPath(string path) {
 
 }  // namespace
 
-IncludePicker::IncludePicker()
-    : cpp_include_multimap_(MakeCppIncludeMap()),
-      c_include_multimap_(MakeCIncludeMap()),
-      google_include_multimap_(MakeGoogleIncludeMap()),
-      third_party_include_multimap_(MakeThirdPartyIncludeMap()),
-      dynamic_private_to_public_include_multimap_(),
-      symbol_include_multimap_(MakeSymbolIncludeMap()),
-      has_called_finalize_added_include_lines_(false) {
+// Converts a file-path, such as /usr/include/stdio.h, to a
+// quoted include, such as <stdio.h>.
+string ConvertToQuotedInclude(const string& filepath) {
+  // First, get rid of leading ./'s and the like.
+  string path = NormalizeFilePath(filepath);
+
+  // Case 1: a local (non-system) include.
+if (llvm::sys::path::is_relative(path)) {        // A relative path
+    return "\"" + path + "\"";
+  }
+
+  // Case 2: a c++ filename.  It's in a c++/<version#>/include dir.
+  // (Or, possibly, c++/<version>/include/x86_64-unknown-linux-gnu/...")
+  if (StripPast(&path, "/c++/") && StripPast(&path, "/")) {
+    path = NormalizeSystemSpecificPath(path);
+    return "<" + path + ">";
+  }
+
+
+  // Case 3: a C filename.  It can be in many locations.
+  // TODO(csilvers): get a full list of include dirs from the compiler.
+  StripPast(&path, "/include/");
+  path = NormalizeAsm(path);     // Fix up C includes in <asm-ARCH/foo.h>
+  return "<" + path + ">";
 }
 
-// Updates dynamic_private_to_public_include_multimap_ based on the include
-// seen during this iwyu run.  It includes, for instance, mappings
-// from 'project/internal/foo.h' to 'project/public/foo_public.h' in
-// google code (Google hides private headers in /internal/, much like
-// glibc hides them in /bits/.)  This dynamic mapping is not as good
-// as the hard-coded mappings, since it has incomplete information
-// (only what is seen during this compile run) and has to do a
-// best-effort guess at the mapping.  It's a fallback map when other
-// maps come up empty.
-void IncludePicker::AddDirectInclude(const string& includer,
+// Returns whether this is a system (as opposed to user) include file,
+// based on where it lives.
+bool IsSystemIncludeFile(const string& filepath) {
+  return ConvertToQuotedInclude(filepath)[0] == '<';
+}
+
+#define ARRAYSIZE(ar)  (sizeof(ar) / sizeof(*(ar)))
+
+IncludePicker::IncludePicker()
+    : symbol_include_map_(),
+      filepath_include_map_(),
+      all_quoted_includes_(),
+      has_called_finalize_added_include_lines_(false) {
+  // Parse our hard-coded mappings into a data structure.
+  for (size_t i = 0; i < ARRAYSIZE(symbol_include_map); ++i) {
+    InsertInto(symbol_include_map[i], &symbol_include_map_);
+  }
+  for (size_t i = 0; i < ARRAYSIZE(c_include_map); ++i) {
+    InsertInto(c_include_map[i], &filepath_include_map_);
+  }
+  for (size_t i = 0; i < ARRAYSIZE(cpp_include_map); ++i) {
+    InsertInto(cpp_include_map[i], &filepath_include_map_);
+  }
+  for (size_t i = 0; i < ARRAYSIZE(google_include_map); ++i) {
+    InsertInto(google_include_map[i], &filepath_include_map_);
+  }
+  for (size_t i = 0; i < ARRAYSIZE(third_party_include_map); ++i) {
+    InsertInto(third_party_include_map[i], &filepath_include_map_);
+  }
+}
+
+// AddDirectInclude lets us use some hard-coded rules to add filepath
+// mappings at runtime.  It includes, for instance, mappings from
+// 'project/internal/foo.h' to 'project/public/foo_public.h' in google
+// code (Google hides private headers in /internal/, much like glibc
+// hides them in /bits/.)
+void IncludePicker::AddDirectInclude(const string& includer_filepath,
                                      const string& include_name_as_typed) {
   assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+
+  all_quoted_includes_.insert(include_name_as_typed);
+
   // Note: the includer may be a .cc file, which is unnecessary to add
   // to our map, but harmless.
-  const string quoted_includer = GetQuotedIncludeFor(includer);
+  const string quoted_includer = ConvertToQuotedInclude(includer_filepath);
   if (include_name_as_typed.find("/internal/") != string::npos) {
-    if (quoted_includer.find("/internal/") == string::npos) {
-      // Add this mapping that crosses the public/private barrier.
-      // TODO(csilvers): would be better if key kept the quotes (<> or "")
-      // but we take them out to be consistent with the other maps.  That
-      // lets us use helper routines such as MakeTransitiveIncludeMap().
-      dynamic_private_to_public_include_multimap_.insert(
-          make_pair(UnquoteHeader(include_name_as_typed), quoted_includer));
-    } else {
-      // A private-to-private mapping, which we need to store so we can
-      // do transitive mappings.  Like always, we strip the "" and <>
-      // from the map-value, to indicate the value is a private header.
-      dynamic_private_to_public_include_multimap_.insert(
-          make_pair(UnquoteHeader(include_name_as_typed),
-                    UnquoteHeader(quoted_includer)));
+    const Visibility to_visibility =
+        quoted_includer.find("/internal/") != string::npos ? kPrivate : kPublic;
+    AddMapping(include_name_as_typed, kPrivate, quoted_includer, to_visibility);
+  }
+}
+
+void IncludePicker::AddMapping(
+    const string& map_from, Visibility from_visibility,
+    const string& map_to, Visibility to_visibility) {
+  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  InsertInto(map_from, from_visibility, map_to, to_visibility,
+             &filepath_include_map_);
+}
+
+// Given a map whose keys may have globs (* or [] or ?), expand the
+// globs by matching them against all #includes seen by iwyu.  For
+// each include that matches the glob, we add it to the map by copying
+// the glob entry and replacing the key with the seen #include.
+void IncludePicker::ExpandGlobs() {
+  // First, get the glob entries.
+  set<string> glob_keys;
+  for (Each<IncludeMap::value_type> it(&filepath_include_map_);
+       !it.AtEnd(); ++it) {
+    if (it->first.find_first_of("*[?") != string::npos)
+      glob_keys.insert(it->first);
+  }
+
+  // Then, go through all #includes to see if they match the globs.
+  for (Each<string> hdr(&all_quoted_includes_); !hdr.AtEnd(); ++hdr) {
+    for (Each<string> glob_key(&glob_keys); !glob_key.AtEnd(); ++glob_key) {
+      if (fnmatch(glob_key->c_str(), hdr->c_str(), 0) == 0) {
+        // We could easily just merge them if this is ever an actual issue.
+        assert(!Contains(filepath_include_map_, *hdr)
+               && "Conflict between a glob entry and non-glob entry");
+        filepath_include_map_[*hdr] = filepath_include_map_[*glob_key];
+      }
     }
   }
 }
 
-void IncludePicker::AddPrivateToPublicMapping(
-    const string& quoted_private_header, const string& public_header) {
-  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
-  const string quoted_public_header = GetQuotedIncludeFor(public_header);
-  dynamic_private_to_public_include_multimap_.insert(
-      make_pair(UnquoteHeader(quoted_private_header), quoted_public_header));
-}
-
-// Make dynamic_private_to_public_include_multimap_ transitive, so for an
-// #include-path like 'public/foo.h -> private/bar.h -> private/baz.h",
-// we correctly map private/baz.h back to public/foo.h.
+// Handle work that's best done after we've seen all the mappings
+// (including dynamically-added ones) and all the include files.
+// For instance, we can now expand all the globs we've seen in
+// the mapping-keys, since we have the full list of #includes to
+// match them again.  We also transitively-close the maps.
 void IncludePicker::FinalizeAddedIncludes() {
   assert(!has_called_finalize_added_include_lines_ && "Can't call FAI twice");
-  dynamic_private_to_public_include_multimap_ =
-      MakeTransitiveIncludeMap(dynamic_private_to_public_include_multimap_);
+
+  // The map keys may have *'s in them.  Match those to seen #includes now.
+  ExpandGlobs();
+
+  // If a.h maps to b.h maps to c.h, we'd like an entry from a.h to c.h too.
+  MakeMapTransitive(filepath_include_map_, &filepath_include_map_);
+  MakeMapTransitive(filepath_include_map_, &symbol_include_map_);
+
   has_called_finalize_added_include_lines_ = true;
-}
-
-
-void IncludePicker::StripPathPrefixAndGetAssociatedIncludeMap(
-    string* path, const IncludeMap** include_map) const {
-  *path = NormalizeFilePath(*path);
-
-  if (llvm::sys::path::is_relative(*path)) {  // A relative path
-    // Case 1: a local (non-system) include.
-    *include_map = StartsWith(*path, "third_party/") ?
-        &third_party_include_multimap_ : &google_include_multimap_;
-  } else if (StripPast(path, "/c++/") && StripPast(path, "/")) {
-    // Case 2: a c++ filename.  It's in a c++/<version#>/include dir.
-    // (Or, possibly, c++/<version>/include/x86_64-unknown-linux-gnu/...")
-    *path = NormalizeSystemSpecificPath(*path);
-    *include_map = &cpp_include_multimap_;
-  } else if (StripPast(path, "third_party/stl/gcc") && StripPast(path, "/")) {
-    // Case 2b: some c++ files live in third_party/stl/gcc#/
-    *path = NormalizeSystemSpecificPath(*path);
-    *include_map = &cpp_include_multimap_;
-  } else {
-    // Case 3: a C filename.  It can be in many locations.
-    // TODO(csilvers): get a full list of include dirs from the compiler.
-    StripPast(path, "/include/");
-    *path = NormalizeAsm(*path);     // Fix up C includes in <asm-ARCH/foo.h>
-    *include_map = &c_include_multimap_;
-  }
 }
 
 vector<string> IncludePicker::GetPublicHeadersForSymbol(
     const string& symbol) const {
-  return FindInMultiMap(symbol_include_multimap_, symbol);
+  assert(has_called_finalize_added_include_lines_ && "Must finalize includes");
+  return GetPublicValues(symbol_include_map_, symbol);
 }
 
-vector<string> IncludePicker::GetPublicHeadersForPrivateHeader(
-    string private_header) const {
-  const IncludeMap* include_map;
-  StripPathPrefixAndGetAssociatedIncludeMap(&private_header, &include_map);
-  vector<string> retval;
-  if (include_map == &third_party_include_multimap_) {
-    // We use prefix matching instead of the normal exact matching for
-    // third-party map.
-    for (Each<string, string> it(include_map); !it.AtEnd(); ++it) {
-      if (StartsWith(private_header, it->first)) {
-        retval.push_back(it->second);
-      }
-    }
-  } else {
-    retval = FindInMultiMap(*include_map, private_header);
-  }
-
+vector<string> IncludePicker::GetPublicHeadersForFilepath(
+    const string& filepath) const {
+  assert(has_called_finalize_added_include_lines_ && "Must finalize includes");
+  const string quoted_header = ConvertToQuotedInclude(filepath);
+  vector<string> retval = GetPublicValues(filepath_include_map_, quoted_header);
   if (retval.empty()) {
-    // As a last-ditch effort, see if the dynamic map has anything.
-    retval = FindInMultiMap(dynamic_private_to_public_include_multimap_,
-                            private_header);
+    // the filepath isn't in include_map, so just quote and return it.
+    retval.push_back(quoted_header);
   }
-
-  if (retval.empty()) {
-    // private_header isn't in include_map, so we just quote and return it.
-    const HeaderKind kind =
-        IsMapForSystemHeader(include_map) ? kSystemHeader : kUserHeader;
-    retval.push_back(QuoteHeader(private_header, kind));
-  }
-
   return retval;
 }
 
-bool IncludePicker::PathReexportsInclude(string includer_path,
-                                         string includee_path) const {
-  const IncludeMap* dummy;
-  StripPathPrefixAndGetAssociatedIncludeMap(&includer_path, &dummy);
-  const vector<string> candidates =
-      GetPublicHeadersForPrivateHeader(includee_path);
-  // The candidate-list entries are quoted, but includer_path is not,
-  // so we need to unquote to get a fair comparison.
-  for (Each<string> it(&candidates); !it.AtEnd(); ++it) {
-    if (includer_path == UnquoteHeader(*it))
-      return true;
+bool IncludePicker::HasMapping(const string& map_from_filepath,
+                               const string& map_to_filepath) const {
+  // Since HasMapping is typically used to test for direct mappings, we
+  // won't require finalize_added_include_lines_ be set here.  But
+  // better would be to move the HasMapping() call in iwyu_preprocessor.cc
+  const string quoted_from = ConvertToQuotedInclude(map_from_filepath);
+  const string quoted_to = ConvertToQuotedInclude(map_to_filepath);
+  // We can't use GetPublicHeadersForFilepath since includer might be private.
+  const vector<IncludePicker::IncludeMapValue>* all_mappers
+      = FindInMap(&filepath_include_map_, quoted_from);
+  if (all_mappers) {
+    for (Each<IncludePicker::IncludeMapValue> it(all_mappers);
+         !it.AtEnd(); ++it) {
+      if (it->map_to == quoted_to)
+        return true;
+    }
   }
-  return false;
+  return quoted_to == quoted_from;   // indentity mapping, why not?
 }
 
 }  // namespace include_what_you_use

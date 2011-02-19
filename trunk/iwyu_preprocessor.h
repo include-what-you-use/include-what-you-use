@@ -23,7 +23,13 @@
 // 3) Process iwyu pragma-like constructs.  (Fow now, we encode these
 // constructs in comments; an actual #pragma might be better.)  Here
 // are the constructs we look for:
-//    a) // IWYU pragma: export symbols from "foo/bar/baz.h"
+// Full-line constructs:
+//    a) // IWYU pragma: private, include "foo/bar/baz.h"
+//    b) // IWYU pragma: begin_exports
+//    c) // IWYU pragma: end_exports
+// 'Annotation' constructs:
+//    d) // #include "foo/bar/baz.h"  // IWYU pragma: export
+//    e) // #include "foo/bar/baz.h"  // IWYU pragma: keep
 //
 // This class finishes its processing before the 'main' iwyu
 // processing is done, so other iwyu consumers can access the main
@@ -41,6 +47,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 #include "port.h"
 #include "clang/Basic/SourceLocation.h"
@@ -60,6 +67,7 @@ class MacroInfo;
 namespace include_what_you_use {
 
 using std::map;
+using std::pair;
 using std::set;
 using std::string;
 using std::vector;
@@ -174,10 +182,22 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
                            const clang::FileEntry* includee,
                            const string& include_name_as_typed);
 
+  // Returns true if the include line is inside a
+  // "begin_exports"/"end_exports" pragma pair.
+  bool IncludeLineIsInExportedRange(clang::SourceLocation includer_loc) const;
+
   // Called whenever an #include is seen in the preprocessor output.
   void AddDirectInclude(clang::SourceLocation includer_loc,
                         const clang::FileEntry* includee,
                         const string& include_name_as_typed);
+
+  // Report a "begin_exports"/"end_exports" pragma pair.
+  // begin_line is first line, end_line is just after the last line.
+  void AddExportedRange(const clang::FileEntry* file,
+                        int begin_line, int end_line);
+
+  // Process IWYU whole-line pragmas in a file.
+  void ProcessPragmasInFile(clang::SourceLocation file_beginning);
 
   // Checks whether it's OK to use the given macro defined in file defined_in.
   void ReportMacroUse(const string& name,
@@ -235,6 +255,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   // of the public/private system.
   map<const clang::FileEntry*,
       set<const clang::FileEntry*> > intends_to_provide_map_;
+
+  // Set of (file, line number) pairs that are enclosed by the pair of
+  // directives "IWYU pragma: begin exports" and "IWYU pragma: end
+  // exports".
+  set<pair<const clang::FileEntry*, int> > exported_lines_set_;
 
   // TODO(csilvers): remove this once we can report iwyu violations from here.
   vector<MacroUseInfo> macro_use_info_;
