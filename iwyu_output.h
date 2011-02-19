@@ -93,6 +93,7 @@ class OneUse {
          clang::SourceLocation use_loc);
 
   const string& symbol_name() const { return symbol_name_; }
+  const string& short_symbol_name() const { return short_symbol_name_; }
   const clang::NamedDecl* decl() const  { return decl_; }
   const string& decl_filepath() const { return decl_filepath_; }
   clang::SourceLocation use_loc() const { return use_loc_; }
@@ -122,6 +123,7 @@ class OneUse {
   void SetPublicHeaders();         // sets based on decl_filepath_
 
   string symbol_name_;             // the symbol being used
+  string short_symbol_name_;       // 'short' form of the symbol being used
   const clang::NamedDecl* decl_;   // decl of the symbol, if we know it
   string decl_filepath_;           // filepath where the symbol lives
   clang::SourceLocation use_loc_;  // where the symbol is used from
@@ -290,24 +292,13 @@ class IwyuFileInfo {
 
 
 // Helpers for testing.
-//
-// When testing IWYU, we need to override the behavior of a decl's
-// getKindName() and getQualifiedNameAsString() methods.
-// Unfortunately they aren't virtual.  Hence we define the following
-// helpers to dispatch the call ourselves.
 
 namespace internal {
 
-// Useful for testing.
 class FakeNamedDecl : public clang::NamedDecl {
  public:
   FakeNamedDecl(const string& kind_name, const string& qual_name,
-                const string& decl_filepath, int decl_linenum)
-      : clang::NamedDecl(clang::Decl::Record, NULL, clang::SourceLocation(),
-                         clang::DeclarationName()),
-        kind_name_(kind_name),
-        qual_name_(qual_name),
-        decl_filepath_(decl_filepath), decl_linenum_(decl_linenum) {}
+                const string& decl_filepath, int decl_linenum);
 
   string kind_name() const { return kind_name_; }
   string qual_name() const { return qual_name_; }
@@ -322,14 +313,6 @@ class FakeNamedDecl : public clang::NamedDecl {
 };
 
 }  // namespace internal
-
-inline string GetKindName(const clang::TagDecl* tag_decl) {
-  return tag_decl->getKindName();
-}
-
-inline string GetQualifiedNameAsString(const clang::NamedDecl* named_decl) {
-  return named_decl->getQualifiedNameAsString();
-}
 
 }  // namespace include_what_you_use
 

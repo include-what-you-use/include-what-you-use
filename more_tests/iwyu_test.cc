@@ -90,44 +90,30 @@ TEST(GetCanonicalName, MapsInternalToPublic) {
   EXPECT_EQ("path/internal_impl", GetCanonicalName("path/internal_impl.cc"));
 }
 
-TEST(IncludePicker, StripPathPrefix) {
-  IncludePicker p;
-  EXPECT_EQ("foo.h",
-            p.StripPathPrefix("foo.h"));
-  EXPECT_EQ("third_party/ICU/io.h",
-            p.StripPathPrefix("third_party/ICU/io.h"));
-  EXPECT_EQ("string.h", p.StripPathPrefix("/usr/include/string.h"));
-  EXPECT_EQ("bits/stl_vector.h",
-            p.StripPathPrefix("/usr/include/c++/4.3/bits/stl_vector.h"));
-}
-
 TEST(IncludePicker, IsSystemIncludeFile) {
-  IncludePicker p;
-  EXPECT_FALSE(p.IsSystemIncludeFile("foo.h"));
-  EXPECT_FALSE(p.IsSystemIncludeFile("third_party/ICU/icu.h"));
-  EXPECT_TRUE(p.IsSystemIncludeFile("/usr/include/string.h"));
-  EXPECT_TRUE(p.IsSystemIncludeFile("/usr/include/c++/4.3/bits/stl_vector.h"));
+  EXPECT_FALSE(IsSystemIncludeFile("foo.h"));
+  EXPECT_FALSE(IsSystemIncludeFile("third_party/ICU/icu.h"));
+  EXPECT_TRUE(IsSystemIncludeFile("/usr/include/string.h"));
+  EXPECT_TRUE(IsSystemIncludeFile("/usr/include/c++/4.3/bits/stl_vector.h"));
 }
 
-TEST(IncludePicker, GetQuotedIncludeFor) {
-  IncludePicker p;
-  EXPECT_EQ("\"foo.h\"", p.GetQuotedIncludeFor("foo.h"));
+TEST(IncludePicker, ConvertToQuotedInclude) {
+  EXPECT_EQ("\"foo.h\"", ConvertToQuotedInclude("foo.h"));
   EXPECT_EQ("\"third_party/ICU/icu.h\"",
-            p.GetQuotedIncludeFor("third_party/ICU/icu.h"));
-  EXPECT_EQ("<string.h>", p.GetQuotedIncludeFor("/usr/include/string.h"));
+            ConvertToQuotedInclude("third_party/ICU/icu.h"));
+  EXPECT_EQ("<string.h>", ConvertToQuotedInclude("/usr/include/string.h"));
   EXPECT_EQ("<bits/stl_vector.h>",
-            p.GetQuotedIncludeFor("/usr/include/c++/4.3/bits/stl_vector.h"));
+            ConvertToQuotedInclude("/usr/include/c++/4.3/bits/stl_vector.h"));
 }
 
 TEST(IncludePicker, GetQuotedIncludeFor_NormalizesAsm) {
-  IncludePicker p;
   EXPECT_EQ("<asm/posix_types.h>",
-            p.GetQuotedIncludeFor("/usr/src/linux-headers-2.6.24-gg23/"
-                                  "include/asm-cris/posix_types.h"));
+            ConvertToQuotedInclude("/usr/src/linux-headers-2.6.24-gg23/"
+                                   "include/asm-cris/posix_types.h"));
   // This isn't an asm, so should be left alone.
   EXPECT_EQ("<linux/ioctl.h>",
-            p.GetQuotedIncludeFor("/usr/src/linux-headers-2.6.24-gg23/"
-                                  "include/linux/ioctl.h"));
+            ConvertToQuotedInclude("/usr/src/linux-headers-2.6.24-gg23/"
+                                   "include/linux/ioctl.h"));
 }
 
 TEST(IncludePicker, DynamicMapping_DoesMapping) {
@@ -135,7 +121,7 @@ TEST(IncludePicker, DynamicMapping_DoesMapping) {
   p.AddDirectInclude("project/public/foo.h", "\"project/internal/private.h\"");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("project/internal/private.h"),
+      p.GetPublicHeadersForFilepath("project/internal/private.h"),
       "\"project/public/foo.h\"");
 }
 
@@ -146,7 +132,7 @@ TEST(IncludePicker, DynamicMapping_MultiplePublicFiles) {
   p.AddDirectInclude("project/public/bar.h", "\"project/internal/other.h\"");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("project/internal/private.h"),
+      p.GetPublicHeadersForFilepath("project/internal/private.h"),
       "\"project/public/foo.h\"", "\"project/public/bar.h\"");
 }
 
@@ -157,7 +143,7 @@ TEST(IncludePicker, DynamicMapping_TransitiveMapping) {
                      "\"project/internal/other.h\"");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("project/internal/other.h"),
+      p.GetPublicHeadersForFilepath("project/internal/other.h"),
       "\"project/public/foo.h\"");
 }
 
@@ -172,7 +158,7 @@ TEST(IncludePicker, DynamicMapping_MultipleTransitiveMapping) {
                      "\"project/internal/other.h\"");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("project/internal/other.h"),
+      p.GetPublicHeadersForFilepath("project/internal/other.h"),
       "\"project/public/foo.h\"", "\"project/public/bar.h\"",
       "\"project/public/baz.h\"");
 }
@@ -180,16 +166,17 @@ TEST(IncludePicker, DynamicMapping_MultipleTransitiveMapping) {
 TEST(IncludePicker, DynamicMapping_PrivateToPublicMapping) {
   IncludePicker p;
   // These names are not the public/internal names that AddInclude looks at.
-  p.AddPrivateToPublicMapping("\"project/private/foo.h\"",
-                              "project/not_private/bar.h");
+  p.AddMapping("\"project/private/foo.h\"", IncludePicker::kPrivate,
+               "\"project/not_private/bar.h\"", IncludePicker::kPublic);
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("project/private/foo.h"),
+      p.GetPublicHeadersForFilepath("project/private/foo.h"),
       "\"project/not_private/bar.h\"");
 }
 
 TEST(IncludePicker, GetPublicHeadersForSymbol) {
   IncludePicker p;
+  p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(p.GetPublicHeadersForSymbol("dev_t"),
                       "<sys/types.h>", "<sys/stat.h>");
   EXPECT_VECTOR_STREQ(p.GetPublicHeadersForSymbol("NULL"),
@@ -197,125 +184,138 @@ TEST(IncludePicker, GetPublicHeadersForSymbol) {
                       "<cstdlib>", "<cstring>", "<ctime>", "<cwchar>",
                       "<locale.h>", "<stdio.h>", "<stdlib.h>", "<string.h>",
                       "<time.h>", "<wchar.h>");
-  EXPECT_VECTOR_STREQ(p.GetPublicHeadersForSymbol("std::ios"), "<ios>");
+  EXPECT_VECTOR_STREQ(p.GetPublicHeadersForSymbol("std::ios"),
+                      "<ios>", "<istream>", "<fstream>", "<iostream>",
+                      "<sstream>", "<ostream>", "\"base/logging.h\"");
   EXPECT_EQ(0, p.GetPublicHeadersForSymbol("foo").size());
 }
 
-TEST(IncludePicker, GetPublicHeadersForPrivateHeader_C) {
+TEST(IncludePicker, GetPublicHeadersForFilepath_C) {
   IncludePicker p;
+  p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("/usr/include/bits/dlfcn.h"),
+      p.GetPublicHeadersForFilepath("/usr/include/bits/dlfcn.h"),
       "<dlfcn.h>");
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("third_party/grte/v2/release/include/"
-                                         "bits/mathcalls.h"),
+      p.GetPublicHeadersForFilepath("third_party/grte/v2/release/include/"
+                                    "bits/mathcalls.h"),
       "<math.h>", "<cmath>");
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("/usr/grte/v1/include/assert.h"),
+      p.GetPublicHeadersForFilepath("/usr/grte/v1/include/assert.h"),
       "<assert.h>", "<cassert>");
 }
 
-TEST(IncludePicker, GetPublicHeadersForPrivateHeader_CXX) {
+TEST(IncludePicker, GetPublicHeadersForFilepath_CXX) {
   IncludePicker p;
+  p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("/usr/include/c++/4.2/"
-                                         "bits/allocator.h"),
+      p.GetPublicHeadersForFilepath("/usr/include/c++/4.2/bits/allocator.h"),
       "<memory>");
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader(
+      p.GetPublicHeadersForFilepath(
           "third_party/llvm/crosstool/gcc-4.4.0-glibc-2.3.6-grte/x86/"
           "include/c++/4.4.0/backward/hash_fun.h"),
       "<hash_map>", "<hash_set>");
 }
 
-TEST(IncludePicker, GetPublicHeadersForPrivateHeader_ThirdParty) {
+TEST(IncludePicker, GetPublicHeadersForFilepath_ThirdParty) {
   IncludePicker p;
+  // For globs to work, we need to have actually seen the includes.
+  p.AddDirectInclude("\"a.h\"", "\"third_party/dynamic_annotations/d.h\"");
+  p.AddDirectInclude("\"b.h\"", "\"third_party/dynamic_annotations/a/b/c.h\"");
+  p.AddDirectInclude("\"c.h\"", "\"third_party/python2_4_3/includes/py.h\"");
+  p.AddDirectInclude("\"d.h\"", "\"third_party/isu/include/unicode/udraft.h\"");
+  p.AddDirectInclude("\"e.h\"", "\"third_party/isu/include/unicode/ukeep.h\"");
+  p.FinalizeAddedIncludes();
+
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("third_party/dynamic_annotations/d.h"),
+      p.GetPublicHeadersForFilepath("third_party/dynamic_annotations/d.h"),
       "\"base/dynamic_annotations.h\"");
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("third_party/dynamic_annotations/"
-                                         "a/b/c.h"),
+      p.GetPublicHeadersForFilepath("third_party/dynamic_annotations/a/b/c.h"),
       "\"base/dynamic_annotations.h\"");
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("third_party/python2_4_3/includes/"
-                                         "py.h"),
+      p.GetPublicHeadersForFilepath("third_party/python2_4_3/includes/py.h"),
       "<Python.h>");
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("third_party/icu/include/unicode/"
-                                         "udraft.h"),
+      p.GetPublicHeadersForFilepath("third_party/icu/include/unicode/udraft.h"),
       "\"third_party/icu/include/unicode/utypes.h\"");
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("third_party/icu/include/unicode/"
-                                         "ukeep.h"),
+      p.GetPublicHeadersForFilepath("third_party/icu/include/unicode/ukeep.h"),
       "\"third_party/icu/include/unicode/ukeep.h\"");
 }
 
-TEST(IncludePicker, GetPublicHeadersForPrivateHeader_NotInAnyMap) {
+TEST(IncludePicker, GetPublicHeadersForFilepath_NotInAnyMap) {
   IncludePicker p;
+  p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("/usr/grte/v1/include/poll.h"),
+      p.GetPublicHeadersForFilepath("/usr/grte/v1/include/poll.h"),
       "<poll.h>");
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("third_party/llvm/crosstool/"
-                                         "gcc-4.4.0-glibc-2.3.6-grte/x86/"
-                                         "include/c++/4.4.0/vector"),
+      p.GetPublicHeadersForFilepath("third_party/llvm/crosstool/"
+                                    "gcc-4.4.0-glibc-2.3.6-grte/x86/"
+                                    "include/c++/4.4.0/vector"),
       "<vector>");
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("././././my/dot.h"),
+      p.GetPublicHeadersForFilepath("././././my/dot.h"),
       "\"my/dot.h\"");
 }
 
-TEST(IncludePicker, GetPublicHeadersForPrivateHeader_IncludeRecursion) {
+TEST(IncludePicker, GetPublicHeadersForFilepath_IncludeRecursion) {
   IncludePicker p;
+  p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("/usr/include/c++/4.2/"
-                                         "bits/istream.tcc"),
+      p.GetPublicHeadersForFilepath("/usr/include/c++/4.2/bits/istream.tcc"),
       "<istream>", "<fstream>", "<iostream>", "<sstream>");
 }
 
-TEST(IncludePicker, GetPublicHeadersForPrivateHeader_PrivateValueInRecursion) {
+TEST(IncludePicker, GetPublicHeadersForFilepath_PrivateValueInRecursion) {
   IncludePicker p;
+  p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
-      p.GetPublicHeadersForPrivateHeader("/usr/include/linux/errno.h"),
+      p.GetPublicHeadersForFilepath("/usr/include/linux/errno.h"),
       "<errno.h>", "<cerrno>");
 }
 
-TEST(IncludePicker, PathReexportsIncludeMatch) {
+TEST(IncludePicker, HasMappingIncludeMatch) {
   IncludePicker p;
-  EXPECT_TRUE(p.PathReexportsInclude("/usr/include/c++/4.2/cstdio",
-                                     "/usr/include/stdio.h"));
-  EXPECT_TRUE(p.PathReexportsInclude("/usr/include/c++/4.2/deque",
-                                     "/usr/include/c++/4.2/bits/stl_deque.h"));
-  EXPECT_TRUE(p.PathReexportsInclude("/usr/include/sys/stat.h",
-                                     "/usr/include/bits/stat.h"));
-  EXPECT_FALSE(p.PathReexportsInclude("/usr/include/sys/stat.h",
-                                      "/usr/include/bits/syscall.h"));
+  p.FinalizeAddedIncludes();
+  EXPECT_TRUE(p.HasMapping("/usr/include/stdio.h",
+                           "/usr/include/c++/4.2/cstdio"));
+  EXPECT_TRUE(p.HasMapping("/usr/include/c++/4.2/bits/stl_deque.h",
+                           "/usr/include/c++/4.2/deque"));
+  EXPECT_TRUE(p.HasMapping("/usr/include/bits/stat.h",
+                           "/usr/include/sys/stat.h"));
+  EXPECT_FALSE(p.HasMapping("/usr/include/bits/syscall.h",
+                            "/usr/include/sys/stat.h"));
 }
 
-TEST(IncludePicker, PathReexportsIncludeMatchIndirectly) {
+TEST(IncludePicker, HasMappingIncludeMatchIndirectly) {
   IncludePicker p;
-  EXPECT_TRUE(p.PathReexportsInclude("/usr/include/c++/4.2/iostream",
-                                     "/usr/include/c++/4.2/ios"));
-  EXPECT_TRUE(p.PathReexportsInclude("/usr/include/errno.h",
-                                     "/usr/include/linux/errno.h"));
+  p.FinalizeAddedIncludes();
+  EXPECT_TRUE(p.HasMapping("/usr/include/c++/4.2/ios",
+                           "/usr/include/c++/4.2/iostream"));
+  EXPECT_TRUE(p.HasMapping("/usr/include/linux/errno.h",
+                           "/usr/include/errno.h"));
 }
 
-TEST(IncludePicker, PathReexportsIncludeMatchDifferentMaps) {
+TEST(IncludePicker, HasMappingIncludeMatchDifferentMaps) {
   IncludePicker p;
+  p.FinalizeAddedIncludes();
   // Testing when a google path re-exports a c++ system #include.
-  EXPECT_TRUE(p.PathReexportsInclude("base/logging.h",
-                                     "/usr/include/c++/4.2/ostream"));
+  EXPECT_TRUE(p.HasMapping("/usr/include/c++/4.2/ostream", "base/logging.h"));
    // Do some indirect checking too.
-  EXPECT_TRUE(p.PathReexportsInclude("base/logging.h",
-                                     "/usr/include/c++/4.2/ios"));
+  EXPECT_TRUE(p.HasMapping("/usr/include/c++/4.2/ios", "base/logging.h"));
 }
 
-TEST(IncludePicker, PathReexportsIncludeForThirdParty) {
+TEST(IncludePicker, HasMappingIncludeForThirdParty) {
   IncludePicker p;
-  EXPECT_TRUE(p.PathReexportsInclude(
-      "base/dynamic_annotations.h",
-      "third_party/dynamic_annotations/foo/bar.h"));
+  // For globs to work, we need to have actually seen the includes.
+  p.AddDirectInclude("\"base/dynamic_annotations.h\"",
+                     "\"third_party/dynamic_annotations/foo/bar.h\"");
+  p.FinalizeAddedIncludes();
+  EXPECT_TRUE(p.HasMapping("third_party/dynamic_annotations/foo/bar.h",
+                           "base/dynamic_annotations.h"));
 }
 
 }  // namespace

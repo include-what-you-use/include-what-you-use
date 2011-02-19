@@ -51,8 +51,6 @@ void CalculateIwyuForFullUse(OneUse* use,
                              const set<string>& actual_includes,
                              const set<string>& desired_includes);
 
-string SanitizeSymbol(string name);
-
 void CalculateDesiredIncludesAndForwardDeclares(
     const vector<OneUse>& uses,
     const set<string> associated_desired_includes,
@@ -224,26 +222,11 @@ TEST(CalculateIwyuForFullUse, E1) {
 }
 
 TEST(SanitizeSymbolTest, Works) {
-  // Simple name with no template arguments.
-  EXPECT_EQ("int", internal::SanitizeSymbol("int"));
-
-  // Name with one template argument.
-  EXPECT_EQ("Foo", internal::SanitizeSymbol("Foo<int>"));
-
-  // Name with multiple template arguments.
-  EXPECT_EQ("map", internal::SanitizeSymbol("map<int, string>"));
-
-  // Name with nested template arguments.
-  EXPECT_EQ("basic_string",
-            internal::SanitizeSymbol("basic_string<char, allocator<char> >"));
-
-  // Type with more than one pair of out-most <>.
-  EXPECT_EQ("int(Foo, Bar)",
-            internal::SanitizeSymbol("int(Foo<bool>, Bar<double>)"));
+  // TODO(csilvers): Do this when we can create non-trivial test decls.
 }
 
 TEST(CalculateDesiredIncludesAndForwardDeclaresTest, Works) {
-  // TODO(csilvers): implement
+  // TODO(csilvers): Implement.
 }
 
 // This test fixture automatically saves/restores the verbose level

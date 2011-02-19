@@ -12,6 +12,7 @@
 #include <utility>
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
+#include "iwyu_include_picker.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
@@ -87,7 +88,7 @@ IwyuFileInfo* IwyuPreprocessorInfo::GetFromFileInfoMap(const FileEntry* file) {
 
 // Sometimes, we can tell just by looking at an #include line
 // that iwyu should never recommend removing the #include.  For
-// instance, if it has a NOLINT comment saying to keep it.
+// instance, if it has an IWYU pragma saying to keep it.
 void IwyuPreprocessorInfo::MaybeProtectInclude(
     SourceLocation includer_loc, const FileEntry* includee,
     const string& include_name_as_typed) {
@@ -96,9 +97,18 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     return;
 
   string protect_reason;
-  // We always keep lines with NOLINT: '#include <foo>  // NOLINT(iwyu)'.
-  if (IncludeLineHasText(includer_loc, "NOLINT(iwyu)")) {
-    protect_reason = "nolint";
+  // We always keep lines with pragmas "keep" or "export".
+  if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep")) {
+    protect_reason = "pragma_keep";
+
+  } else if (IncludeLineHasText(includer_loc, "// IWYU pragma: export") ||
+             IncludeLineIsInExportedRange(includer_loc)) {
+    protect_reason = "pragma_export";
+    const string quoted_includer = ConvertToQuotedInclude(GetFilePath(includer));
+    // TODO(csilvers): determine better public/private values.
+    MutableGlobalIncludePicker()->AddMapping(
+        include_name_as_typed, IncludePicker::kPrivate,
+        quoted_includer, IncludePicker::kPublic);
 
   // We also always keep #includes of .c files: iwyu doesn't touch those.
   // TODO(csilvers): instead of IsHeaderFile, check if the file has
@@ -108,8 +118,8 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
 
   // We also keep the #include if we say that our file re-exports it.
   // (A decision to re-export an #include counts as a "use" of it.)
-  } else if (GlobalIncludePicker().PathReexportsInclude(
-      GetFilePath(includer), GetFilePath(includee))) {
+  } else if (GlobalIncludePicker().HasMapping(
+      GetFilePath(includee), GetFilePath(includer))) {
     protect_reason = "private header";
   }
 
@@ -119,6 +129,94 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     ERRSYM(includer) << "Marked dep: " << GetFilePath(includer)
                      << " needs to keep " << include_name_as_typed
                      << " (reason: " << protect_reason << ")\n";
+  }
+}
+
+bool IwyuPreprocessorInfo::IncludeLineIsInExportedRange(
+    clang::SourceLocation includer_loc) const {
+  return Contains(exported_lines_set_, make_pair(GetFileEntry(includer_loc),
+                                                 GetLineNumber(includer_loc)));
+}
+
+void IwyuPreprocessorInfo::AddExportedRange(const clang::FileEntry* file,
+                                            int begin_line, int end_line) {
+  // Crude algorithm - add every line in the range to a set.
+  for (int line_number = begin_line; line_number < end_line; ++line_number) {
+    exported_lines_set_.insert(make_pair(file, line_number));
+  }
+}
+
+namespace {
+// TODO(user): Perhaps make this method accessible iwyu-wide.
+// At first blush, iwyu_output is the place to put it, but that would
+// introduce a circular dependency between iwyu_output and
+// iwyu_ast_util.
+void Warn(SourceLocation loc, const string& message) {
+  errs() << PrintableLoc(loc) << ": warning: " << message << "\n";
+}
+}  // namespace
+
+// IWYU pragma processing.
+void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
+  SourceLocation current_loc = file_beginning;
+  SourceLocation begin_exports_location;
+
+  while (true) {
+    current_loc = GetLocationAfter(current_loc,
+                                   "// IWYU pragma: ",
+                                   DefaultDataGetter());
+    if (!current_loc.isValid()) {
+      break;
+    }
+
+    string pragma_text = GetSourceTextUntilEndOfLine(current_loc,
+                                                     DefaultDataGetter());
+    // TODO(user): Strip white space from end and maybe beginning.
+
+    if (begin_exports_location.isValid()) {
+      if (pragma_text == "end_exports") {
+        AddExportedRange(GetFileEntry(file_beginning),
+                         GetLineNumber(begin_exports_location) + 1,
+                         GetLineNumber(current_loc));
+        begin_exports_location = SourceLocation();  // Invalidate it.
+      } else {
+        // No pragma allowed within "begin_exports" - "end_exports"
+        Warn(current_loc, "Expected end_exports pragma");
+      }
+      continue;
+    }
+
+    if (pragma_text == "begin_exports") {
+      begin_exports_location = current_loc;
+      continue;
+    }
+
+    if (pragma_text == "end_exports") {
+      Warn(current_loc, "end_exports without a begin_exports");
+      continue;
+    }
+
+    if (StripLeft(&pragma_text, "private, include ")) {
+      // pragma_text should be a quoted header.
+      // TODO(csilvers): figure out if the included file is public or private
+      MutableGlobalIncludePicker()->AddMapping(
+          ConvertToQuotedInclude(GetFilePath(current_loc)),
+          IncludePicker::kPrivate,
+          pragma_text,
+          IncludePicker::kPublic);
+      continue;
+    }
+
+    // "keep" and "export" are handled in MaybeProtectInclude.
+    if (pragma_text != "keep" && pragma_text != "export") {
+      Warn(current_loc, "Unknown or malformed pragma (" + pragma_text + ")");
+      continue;
+    }
+  }
+
+  if (begin_exports_location.isValid()) {
+    Warn(begin_exports_location,
+         "begin_exports without an end_exports");
   }
 }
 
@@ -318,30 +416,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   if (IsBuiltinOrCommandLineFile(new_file))
     return;
 
-  // Check to see if this new file has any pragma-style info encoded
-  // in its comments.  (We don't get any callbacks for comments, so
-  // we just need to analyze the whole file when we encounter it.)
-  // The only comment we look for currently is
-  //   // IWYU pragma: export symbols from "foo/bar/baz.h"
-  // TODO(csilvers): also do 'export symbols from "foo/bar/*.h"'?
-  // TODO(csilvers): also do 'export symbol SOME_SYMBOL'.
-  // which means that "foo/bar/baz.h" is a private header file, and
-  // this is a public header file that exposes its symbols.  Note
-  // the text must match exactly: no extra spaces, trailing periods, etc.
-  SourceLocation current_loc = file_beginning;
-  while (current_loc.isValid()) {
-    current_loc = GetLocationAfter(current_loc,
-                                   "// IWYU pragma: export symbols from ",
-                                   DefaultDataGetter());
-    if (!current_loc.isValid())
-      break;
-    assert(GetFileEntry(current_loc) == GetFileEntry(file_beginning)
-           && "GetLocationAfter should stay within a single file!");
-    const string private_header = GetSourceTextUntilEndOfLine(
-        current_loc, DefaultDataGetter());
-    MutableGlobalIncludePicker()->AddPrivateToPublicMapping(
-        private_header, GetFilePath(current_loc));
-  }
+  ProcessPragmasInFile(file_beginning);
 
   // The first non-special file entered is the main file.
   if (main_file_ == NULL)
@@ -441,7 +516,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
        !it.AtEnd(); ++it) {
     const FileEntry* header = it->first;
     const vector<string> public_headers_for_header =
-        GlobalIncludePicker().GetPublicHeadersForPrivateHeader(
+        GlobalIncludePicker().GetPublicHeadersForFilepath(
             GetFilePath(header));
     for (Each<string> pub(&public_headers_for_header); !pub.AtEnd(); ++pub) {
       if (const FileEntry* public_file
@@ -473,8 +548,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
        !it.AtEnd(); ++it) {
     const FileEntry* file = it->first;
     // See if a round-trip to string and back ends up at a different file.
-    const string quoted_include
-        = GlobalIncludePicker().GetQuotedIncludeFor(GetFilePath(file));
+    const string quoted_include = ConvertToQuotedInclude(GetFilePath(file));
     const FileEntry* other_file
         = GetOrDefault(include_to_fileentry_map_, quoted_include, file);
     if (other_file != file) {
@@ -534,8 +608,8 @@ void IwyuPreprocessorInfo::HandlePreprocessingDone() {
   }
 
   // Other post-processing steps.
-  PopulateIntendsToProvideMap();
   MutableGlobalIncludePicker()->FinalizeAddedIncludes();
+  PopulateIntendsToProvideMap();
 }
 
 bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(const FileEntry* file)

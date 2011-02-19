@@ -7,16 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This file has no content itself, except a pragma-like comment
-// saying it re-exports all the symbols in "indirect.h"
-
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_I1_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_I1_H_
 
-// We add in another pragma so the 'real' one, for indirect, isn't first.
-// IWYU pragma: export symbols from "tests/non-existent-file.h"
-// IWYU pragma: export symbols from "tests/indirect.h"
+// Include a private file that declares us as the file to include.
+#include "tests/comment_pragmas-i2.h"
 
+// Re-export some files.
+#include "tests/comment_pragmas-i3.h"  // IWYU pragma: export
+// IWYU pragma: begin_exports
+#include "tests/comment_pragmas-i4.h"
+#include "tests/comment_pragmas-i5.h"
+// IWYU pragma: end_exports
+
+// Include a file after 'end_exports' that we don't re-export.
 #include "tests/indirect.h"
 
 #endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_I1_H_
