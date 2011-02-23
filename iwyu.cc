@@ -2994,7 +2994,9 @@ class IwyuAction : public ASTFrontendAction {
 #include "llvm/LLVMContext.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/system_error.h"
 
 using clang::ASTFrontendAction;
 using clang::CompilerInstance;
@@ -3013,6 +3015,8 @@ using llvm::LLVMContext;
 using llvm::OwningPtr;
 using llvm::SmallString;
 using llvm::SmallVector;
+using llvm::SmallVectorImpl;
+using llvm::MemoryBuffer;
 using llvm::StringRef;
 using llvm::errs;
 using llvm::llvm_shutdown;
@@ -3021,6 +3025,8 @@ using llvm::sys::getHostTriple;
 using llvm::sys::Path;
 using include_what_you_use::IwyuAction;
 using include_what_you_use::StartsWith;
+using std::set;
+using std::string;
 
 // This function isn't referenced outside its translation unit, but it
 // can't use the "static" keyword because its address is used for
@@ -3032,6 +3038,83 @@ Path GetExecutablePath(const char *Argv0) {
   // allow taking the address of ::main however.
   void *main_addr = (void*) (intptr_t) GetExecutablePath;
   return Path::GetMainExecutable(Argv0, main_addr);
+}
+
+static const char *SaveStringInSet(std::set<std::string> &SavedStrings,
+                                   StringRef S) {
+  return SavedStrings.insert(S).first->c_str();
+}
+
+static void ExpandArgsFromBuf(const char *Arg,
+                              SmallVectorImpl<const char*> &ArgVector,
+                              set<string> &SavedStrings) {
+  const char *FName = Arg + 1;
+  OwningPtr<MemoryBuffer> MemBuf;
+  if (MemoryBuffer::getFile(FName, MemBuf)) {
+    ArgVector.push_back(SaveStringInSet(SavedStrings, Arg));
+    return;
+  }
+
+  const char *Buf = MemBuf->getBufferStart();
+  char InQuote = ' ';
+  string CurArg;
+
+  for (const char *P = Buf; ; ++P) {
+    if (*P == '\0' || (isspace(*P) && InQuote == ' ')) {
+      if (!CurArg.empty()) {
+
+        if (CurArg[0] != '@') {
+          ArgVector.push_back(SaveStringInSet(SavedStrings, CurArg));
+        } else {
+          ExpandArgsFromBuf(CurArg.c_str(), ArgVector, SavedStrings);
+        }
+
+        CurArg = "";
+      }
+      if (*P == '\0')
+        break;
+      else
+        continue;
+    }
+
+    if (isspace(*P)) {
+      if (InQuote != ' ')
+        CurArg.push_back(*P);
+      continue;
+    }
+
+    if (*P == '"' || *P == '\'') {
+      if (InQuote == *P)
+        InQuote = ' ';
+      else if (InQuote == ' ')
+        InQuote = *P;
+      else
+        CurArg.push_back(*P);
+      continue;
+    }
+
+    if (*P == '\\') {
+      ++P;
+      if (*P != '\0')
+        CurArg.push_back(*P);
+      continue;
+    }
+    CurArg.push_back(*P);
+  }
+}
+
+static void ExpandArgv(int argc, const char **argv,
+                       SmallVectorImpl<const char*> &ArgVector,
+                       set<string> &SavedStrings) {
+  for (int i = 0; i < argc; ++i) {
+    const char *Arg = argv[i];
+    if (Arg[0] != '@') {
+      ArgVector.push_back(SaveStringInSet(SavedStrings, string(Arg)));
+      continue;
+    }
+
+    ExpandArgsFromBuf(Arg, ArgVector, SavedStrings);
+  }
 }
 
 int main(int argc, const char **argv) {
@@ -3046,10 +3129,15 @@ int main(int argc, const char **argv) {
                 false, false, diagnostics);
   driver.setTitle("include what you use");
 
+  // Expand out any response files passed on the command line
+  set<string> SavedStrings;
+  SmallVector<const char*, 256> args;
+
+  ExpandArgv(argc, argv, args, SavedStrings);
+
   // FIXME: This is a hack to try to force the driver to do something we can
   // recognize. We need to extend the driver library to support this use model
   // (basically, exactly one input, and the operation mode is hard wired).
-  SmallVector<const char*, 16> args(argv, argv + argc);
   args.push_back("-fsyntax-only");
   OwningPtr<Compilation> compilation(driver.BuildCompilation(args.size(),
                                                              args.data()));
