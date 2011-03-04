@@ -152,17 +152,20 @@ class ASTNode {
   // decl/typeloc/etc as the one you pass in.  For Decl/Stmt/Type, the
   // pointer is canonical (every instance of type X has the same
   // clang::Type*).  But for most, the value is canonical (each type
-  // has the same QualType but not QualType*).
+  // has the same QualType but not QualType*).  The IsA<> checks are
+  // needed to avoid false matches when target_node is NULL.
   bool ContentIs(const clang::Decl* target_node) const {
-    return GetAs<clang::Decl>() == target_node;
+    return IsA<clang::Decl>() && GetAs<clang::Decl>() == target_node;
   }
   bool ContentIs(const clang::Stmt* target_node) const {
-    return GetAs<clang::Stmt>() == target_node;
+    return IsA<clang::Stmt>() && GetAs<clang::Stmt>() == target_node;
   }
   bool ContentIs(const clang::Type* target_node) const {
-    return GetAs<clang::Type>() == target_node;
+    return IsA<clang::Type>() && GetAs<clang::Type>() == target_node;
   }
   bool ContentIs(const clang::TypeLoc* target_node) const {
+    if (!IsA<clang::TypeLoc>())
+      return false;
     const clang::TypeLoc* type_loc = GetAs<clang::TypeLoc>();
     if (type_loc == NULL || target_node == NULL)
       return type_loc == target_node;
