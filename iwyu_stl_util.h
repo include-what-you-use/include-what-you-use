@@ -96,6 +96,14 @@ void InsertAllInto(const SourceContainer& source, TargetContainer* target) {
   target->insert(source.begin(), source.end());
 }
 
+// Appends all elements from source to the end of target.  The target
+// type must support inserting a range at the end, which probably
+// means it's a vector.
+template <class TargetContainer, class SourceContainer>
+void Extend(TargetContainer* target, const SourceContainer& source) {
+  target->insert(target->end(), source.begin(), source.end());
+}
+
 // Returns the union of the two given sets.
 template <typename T>
 set<T> Union(const set<T>& lhs, const set<T>& rhs) {
