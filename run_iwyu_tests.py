@@ -36,8 +36,14 @@ class OneIwyuTest(unittest.TestCase):
     # Iwyu flags for specific tests.
     # Map from filename to flag list. If any test requires special
     # iwyu flags to run properly, add an entry to the map with
-    # key=filename (starting with TEST_ROOTDIR), value=list of flags.
-    self._iwyu_flags_map = {}
+    # key=cc-filename (relative to TEST_ROOTDIR), value=list of flags.
+    flags_map = {
+      'check_also.cc': ['--check_also="%s"'
+                        % os.path.join(TEST_ROOTDIR, '*-d1*')],
+    }
+    # Internally, we like it when the paths start with TEST_ROOTDIR.
+    self._iwyu_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
+                                for (k,v) in flags_map.items())
 
   def RunOneTest(self, filename):
     logging.info('Testing iwyu on %s', filename)
@@ -51,15 +57,15 @@ class OneIwyuTest(unittest.TestCase):
       files_to_check.append(h_file)
     files_to_check.append(filename)
 
-    iwyu_flags = None
-    if filename in self._iwyu_flags_map:
-      iwyu_flags = self._iwyu_flags_map[filename]
+    iwyu_flags = self._iwyu_flags_map.get(filename, None)
+    if iwyu_flags:
       logging.info('%s: Using iwyu flags %s', filename, str(iwyu_flags))
 
-    iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check)
+    iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
+                                          iwyu_flags, verbose=True)
 
 
-def setUp():
+def RegisterFilesForTesting():
   """Create a test-class for every .cc file in TEST_ROOTDIR."""
   module = sys.modules[__name__]
   for filename in glob.glob(os.path.join(TEST_ROOTDIR, '*.cc')):
@@ -71,12 +77,14 @@ def setUp():
       class_name += '2'                    # just append a suffix :-)
 
     logging.info('Registering %s to test %s', class_name, filename)
-    test_class = type(class_name,          # <-- class name
-                      (OneIwyuTest,),      # <-- superclass, v-- methods
+    test_class = type(class_name,          # class name
+                      (OneIwyuTest,),      # superclass
+                      # and methods.  f=filename is required for proper scoping
                       {'runTest': lambda self, f=filename: self.RunOneTest(f)})
     setattr(module, test_class.__name__, test_class)
 
 
 if __name__ == '__main__':
 
+  RegisterFilesForTesting()
   unittest.main()
