@@ -91,7 +91,7 @@ tests/comment_pragmas.cc should add these lines:
 #include "tests/comment_pragmas-i7.h"
 #include "tests/comment_pragmas-i8.h"
 #include "tests/indirect.h"
-#include "no_such_file.h"
+#include "tests/no_such_file.h"
 
 tests/comment_pragmas.cc should remove these lines:
 - #include "tests/comment_pragmas-d1.h"  // lines XX-XX
@@ -108,6 +108,6 @@ The full include-list for tests/comment_pragmas.cc:
 #include "tests/comment_pragmas-i7.h"  // for CommentPragmasD4
 #include "tests/comment_pragmas-i8.h"  // for CommentPragmasI8
 #include "tests/indirect.h"  // for IndirectClass
-#include "no_such_file.h"  // for CommentPragmasD2
+#include "tests/no_such_file.h"  // for CommentPragmasD2
 
 ***** IWYU_SUMMARY */
