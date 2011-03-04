@@ -191,7 +191,7 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
 
     const string quoted_private_include
         = ConvertToQuotedInclude(GetFilePath(current_loc));
-    for (int i = 0; i < public_includes.size(); ++i) {
+    for (string::size_type i = 0; i < public_includes.size(); ++i) {
       StripWhiteSpace(&public_includes[i]);
       const string quoted_header_name = "<" + public_includes[i] + ">";
       MutableGlobalIncludePicker()->AddMapping(quoted_private_include,

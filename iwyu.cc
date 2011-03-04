@@ -215,6 +215,7 @@ using std::make_pair;
 using std::map;
 using std::set;
 using std::string;
+using std::swap;
 using std::vector;
 
 // The default value for the --howtodebug flag.  Indicates that the
