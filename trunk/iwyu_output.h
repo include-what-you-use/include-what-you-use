@@ -106,8 +106,8 @@ class OneUse {
   bool is_iwyu_violation() const { return is_iwyu_violation_; }
   bool has_suggested_header() const { return !suggested_header_.empty(); }
   const string& suggested_header() const {
-    assert(has_suggested_header() && "Must assign suggested_header first");
-    assert(!ignore_use() && "Ignored uses have no suggested header");
+    CHECK_(has_suggested_header() && "Must assign suggested_header first");
+    CHECK_(!ignore_use() && "Ignored uses have no suggested header");
     return suggested_header_;
   }
 
@@ -151,13 +151,13 @@ class OneIncludeOrForwardDeclareLine {
   bool is_present() const { return is_present_; }
   const map<string, int>& symbol_counts() const { return symbol_counts_; }
   string quoted_include() const {
-    assert(IsIncludeLine() && "Must call quoted_include() on include lines");
-    assert(!fwd_decl_ && "quoted_include and fwd_decl are mutually exclusive");
+    CHECK_(IsIncludeLine() && "Must call quoted_include() on include lines");
+    CHECK_(!fwd_decl_ && "quoted_include and fwd_decl are mutually exclusive");
     return quoted_include_;
   }
   const clang::NamedDecl* fwd_decl() const {
-    assert(!IsIncludeLine() && "Must call fwd_decl() on forward-declare lines");
-    assert(quoted_include_.empty() && "quoted_include and fwd_decl don't mix");
+    CHECK_(!IsIncludeLine() && "Must call fwd_decl() on forward-declare lines");
+    CHECK_(quoted_include_.empty() && "quoted_include and fwd_decl don't mix");
     return fwd_decl_;
   }
 
@@ -254,7 +254,7 @@ class IwyuFileInfo {
  private:
   const set<string>& direct_includes() const { return direct_includes_; }
   const set<string>& desired_includes() const {
-    assert(desired_includes_have_been_calculated_ &&
+    CHECK_(desired_includes_have_been_calculated_ &&
            "Must calculate desired includes before calling desired_includes()");
     return desired_includes_;
   }

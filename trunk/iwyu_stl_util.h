@@ -12,8 +12,6 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 
-#include <assert.h>
-
 #include <map>
 #include <set>
 #include <utility>  // for pair<>

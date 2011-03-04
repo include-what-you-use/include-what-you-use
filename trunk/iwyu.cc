@@ -87,7 +87,6 @@
 //     already get it via foo.h, IWYU won't recommend foo.cc to
 //     #include bar.h, unless it already does so.
 
-#include <assert.h>
 #if defined(_MSC_VER)
 #include <direct.h>
 #else
@@ -218,16 +217,6 @@ using std::set;
 using std::string;
 using std::vector;
 
-// An all-mode assertion.
-#define ASSERT(cond)                                                    \
-  do {                                                                  \
-    if (!(cond)) {                                                      \
-      ::llvm::errs() << "\n" << __FILE__ << ":" << __LINE__ << ": " #cond; \
-      ::abort();                                                        \
-    }                                                                   \
-  } while (false)
-
-
 // The default value for the --howtodebug flag.  Indicates that the
 // flag isn't present.  It's a special, reserved value, and a user
 // isn't expected to type it directly.
@@ -257,7 +246,7 @@ class WarningLessThan {
   static Warning ParseWarning(const pair<string, int>& warning_and_count) {
     // Lines look like file:lineno:colno: text.
     const vector<string> segs = Split(warning_and_count.first, ":", 4);
-    assert(segs.size() == 4);
+    CHECK_(segs.size() == 4);
     return Warning(segs[0], atoi(segs[1].c_str()), atoi(segs[2].c_str()),
                    segs[3], warning_and_count.second);
   }
@@ -451,7 +440,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // (2) Provide functions related to the current location.
 
   SourceLocation CurrentLoc() const {
-    assert(current_ast_node_ && "Call CurrentLoc within Visit* or Traverse*");
+    CHECK_(current_ast_node_ && "Call CurrentLoc within Visit* or Traverse*");
     const SourceLocation loc = current_ast_node_->GetLocation();
     if (!loc.isValid())
       return loc;
@@ -685,7 +674,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // RAV.h's TraverseDecl() ignores implicit nodes, so we lie a bit.
   // TODO(csilvers): figure out a more principled way.
   bool TraverseImplicitDeclHelper(clang::FunctionDecl* decl) {
-    assert(decl->isImplicit() && "TraverseImplicitDecl is for implicit decls");
+    CHECK_(decl->isImplicit() && "TraverseImplicitDecl is for implicit decls");
     decl->setImplicit(false);
     SetTypeSourceInfoForImplicitMethodIfNeeded(decl);
     bool retval = this->getDerived().TraverseDecl(decl);
@@ -1106,7 +1095,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   explicit AstFlattenerVisitor(CompilerInstance* compiler) : Base(compiler) { }
 
   const NodeSet& GetNodesBelow(Decl* decl) {
-    assert(seen_nodes_.empty() && "Nodes should be clear before GetNodesBelow");
+    CHECK_(seen_nodes_.empty() && "Nodes should be clear before GetNodesBelow");
     NodeSet* node_set = &nodeset_decl_cache_[decl];
     if (node_set->empty()) {
       if (decl->isImplicit()) {
@@ -1285,10 +1274,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // This requires the above function to have been called on decl, first.
   const Type* GetTplTypeArg(const Decl* decl, size_t type_arg_idx) const {
     const ClassTemplateSpecializationDecl* tpl_decl = DynCastFrom(decl);
-    assert(tpl_decl && "Must call DeclIsTemplateWithNameAndNumArgsAndTypeArg");
+    CHECK_(tpl_decl && "Must call DeclIsTemplateWithNameAndNumArgsAndTypeArg");
     const TemplateArgumentList& tpl_args = tpl_decl->getTemplateArgs();
-    assert(tpl_args.size() > type_arg_idx && "Invalid type_arg_idx");
-    assert(tpl_args.get(type_arg_idx).getKind() == TemplateArgument::Type);
+    CHECK_(tpl_args.size() > type_arg_idx && "Invalid type_arg_idx");
+    CHECK_(tpl_args.get(type_arg_idx).getKind() == TemplateArgument::Type);
     return tpl_args.get(type_arg_idx).getAsType().getTypePtr();
   }
 
@@ -1612,7 +1601,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_GetObjCProperty:
       case clang::CK_ObjCObjectLValueCast:
       case clang::CK_VectorSplat:
-        assert(false && "TODO(csilvers): for objc and clang lang extensions");
+        CHECK_(false && "TODO(csilvers): for objc and clang lang extensions");
         break;
 
       // Kinds for reinterpret_cast and const_cast, which need no full types.
@@ -1667,7 +1656,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     const Expr* base_expr = expr->getBase()->IgnoreParenImpCasts();
     const Type* base_type = GetTypeOf(base_expr);
-    assert(base_type && "Member's base does not have a type?");
+    CHECK_(base_type && "Member's base does not have a type?");
     const Type* deref_base_type      // For myvar->a, base-type will have a *
         = expr->isArrow() ? RemovePointerFromType(base_type) : base_type;
     if (CanIgnoreType(base_type) && CanIgnoreType(deref_base_type))
@@ -1791,7 +1780,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (callee) {
       const FunctionProtoType* callee_type =
           DynCastFrom(callee->getType().getTypePtr());
-      assert(callee_type &&
+      CHECK_(callee_type &&
              "The type of a FunctionDecl must be a FunctionProtoType.");
       ReportIfReferenceVararg(args, num_args, callee_type);
     }
@@ -2024,7 +2013,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // I1_TemplateClass<std::vector<I1_Class> > i1_nested_templateclass(...)
   void DetermineForwardDeclareStatusForTemplateArg(ASTNode* ast_node) {
     const TemplateArgument* arg = ast_node->GetAs<TemplateArgument>();
-    assert(arg && "Should only pass in a template arg to DFDSFTA");
+    CHECK_(arg && "Should only pass in a template arg to DFDSFTA");
 
     if (!IsDefaultTemplateTemplateArg(ast_node)) {
       ast_node->set_in_forward_declare_context(true);
@@ -2062,7 +2051,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // can be forward-declared or not.
 
   bool CanForwardDeclareTemplateName(const ASTNode* ast_node) const {
-    assert(ast_node->IsA<TemplateName>());
+    CHECK_(ast_node->IsA<TemplateName>());
     // If we're a template template arg (A in template<template<class
     // T> class A>), we may be forward-declarable, or we may not.
     // Unfortunately, it's a lot of machinery to check, and we almost
@@ -2093,7 +2082,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   bool CanForwardDeclareType(const ASTNode* ast_node) const {
-    assert(ast_node->IsA<Type>());
+    CHECK_(ast_node->IsA<Type>());
     // If we're in a forward-declare context, well then, there you have it.
     if (ast_node->in_forward_declare_context())
       return true;
@@ -2589,7 +2578,7 @@ class InstantiatedTemplateVisitor
     //    template<class T> struct C { typedef typename T::a t; };
     //    class S; int main() { C<S> c; }
     if (isa<CXXConstructorDecl>(fn_decl)) {
-      assert(parent_type && "How can a constructor have no parent?");
+      CHECK_(parent_type && "How can a constructor have no parent?");
       if (!TraverseDataAndTypeMembersOfClassHelper(
               dyn_cast<TemplateSpecializationType>(parent_type)))
         return false;
@@ -2609,7 +2598,7 @@ class InstantiatedTemplateVisitor
 
     const ClassTemplateSpecializationDecl* class_decl
         = DynCastFrom(TypeToDeclAsWritten(type));
-    assert(class_decl && "TemplateSpecializationType is not a TplSpecDecl?");
+    CHECK_(class_decl && "TemplateSpecializationType is not a TplSpecDecl?");
     if (Contains(traversed_decls_, class_decl))
       return true;   // avoid recursion & repetition
     traversed_decls_.insert(class_decl);
@@ -2664,7 +2653,7 @@ class InstantiatedTemplateVisitor
   // Returns true iff we did appropriate reporting for this type.
   bool ReplayClassMemberUsesFromPrecomputedList(
       const TemplateSpecializationType* tpl_type) {
-    assert(!tpl_type->isDependentType() && "Replay only instantiated types");
+    CHECK_(!tpl_type->isDependentType() && "Replay only instantiated types");
     if (current_ast_node() && current_ast_node()->in_forward_declare_context())
       return true;   // never depend on any types if a fwd-decl
 
@@ -2798,11 +2787,11 @@ class IwyuAstConsumer
          !file.AtEnd(); ++file) {
       if (*file == main_file)
         continue;
-      assert(preprocessor_info().FileInfoFor(*file));
+      CHECK_(preprocessor_info().FileInfoFor(*file));
       preprocessor_info().FileInfoFor(*file)
           ->CalculateAndReportIwyuViolations();
     }
-    assert(preprocessor_info().FileInfoFor(main_file));
+    CHECK_(preprocessor_info().FileInfoFor(main_file));
     preprocessor_info().FileInfoFor(main_file)
         ->CalculateAndReportIwyuViolations();
 

@@ -91,14 +91,14 @@ class FullUseCache {
   const set<const clang::Type*>& GetFullUseTypes(
       const void* key, const set<const clang::Type*>& types_of_interest) const {
     const Value* value = FindInMap(&cache_, Key(key, types_of_interest));
-    assert(value && "Must call Contains() before calling GetFullUseTypes()");
+    CHECK_(value && "Must call Contains() before calling GetFullUseTypes()");
     return value->first;
   }
 
   const set<const clang::NamedDecl*>& GetFullUseDecls(
       const void* key, const set<const clang::Type*>& types_of_interest) const {
     const Value* value = FindInMap(&cache_, Key(key, types_of_interest));
-    assert(value && "Must call Contains() before calling GetFullUseDecls()");
+    CHECK_(value && "Must call Contains() before calling GetFullUseDecls()");
     return value->second;
   }
 

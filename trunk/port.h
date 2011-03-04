@@ -11,6 +11,9 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
 
+#include <assert.h>
+#define CHECK_(x)  assert(x)
+
 #if defined(_MSC_VER)
 
 # define NOMINMAX

@@ -38,17 +38,17 @@ void InitGlobals(clang::SourceManager* sm) {
 }
 
 clang::SourceManager* GlobalSourceManager() {
-  assert(source_manager && "Must call InitGlobals() before calling this");
+  CHECK_(source_manager && "Must call InitGlobals() before calling this");
   return source_manager;
 }
 
 const IncludePicker& GlobalIncludePicker() {
-  assert(include_picker && "Must call InitGlobals() before calling this");
+  CHECK_(include_picker && "Must call InitGlobals() before calling this");
   return *include_picker;
 }
 
 IncludePicker* MutableGlobalIncludePicker() {
-  assert(include_picker && "Must call InitGlobals() before calling this");
+  CHECK_(include_picker && "Must call InitGlobals() before calling this");
   return include_picker;
 }
 
@@ -57,7 +57,7 @@ const clang::PrintingPolicy& DefaultPrintPolicy() {
 }
 
 const SourceManagerCharacterDataGetter& DefaultDataGetter() {
-  assert(data_getter && "Must call InitGlobals() before calling this");
+  CHECK_(data_getter && "Must call InitGlobals() before calling this");
   return *data_getter;
 }
 
