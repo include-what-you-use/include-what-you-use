@@ -1365,7 +1365,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     type = MapPrivateTypeToPublicType(type);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, type);
+        used_loc, type, IsNodeInsideCXXMethodBody(current_ast_node()));
   }
 
   virtual void ReportTypesUse(SourceLocation used_loc,
@@ -1381,7 +1381,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     type = MapPrivateTypeToPublicType(type);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, type);
+        used_loc, type, IsNodeInsideCXXMethodBody(current_ast_node()));
   }
 
   virtual void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl) {
@@ -1391,7 +1391,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return;
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, decl);
+        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()));
   }
 
   virtual void ReportDeclsUse(SourceLocation used_loc,
@@ -1407,7 +1407,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return;
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, decl);
+        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()));
   }
 
   //------------------------------------------------------------
@@ -2851,16 +2851,40 @@ class IwyuAstConsumer
           decl_to_fwd_declare = cxx_decl->getDescribedClassTemplate();
       preprocessor_info().FileInfoFor(CurrentFileEntry())->AddForwardDeclare(
           decl_to_fwd_declare);
-      // If we're a nested class ("class A { class SubA; };"), then we
-      // can't necessarily be removed, since we're part of the public
-      // API of the enclosing class.  Likewise, if we have a linkage
-      // spec ('extern "C"') or have gcc-style __attributes__, then we
-      // can't be removed, since that information probably isn't
-      // encoded anywhere else.  So say we're required.
-      if (current_ast_node()->ParentIsA<CXXRecordDecl>() ||
-          current_ast_node()->ParentIsA<LinkageSpecDecl>() ||
-          decl->hasAttrs()) {
+
+      // A forward declaration is not a "use" of a forward-declaration
+      // (a "use" is when you use a decl, not when you declare it), so
+      // we don't need to report this.  However, there are some
+      // situations where we don't want to remove the forward
+      // declaration, even if it's not used anywhere.  If the
+      // forward-decl has a linkage spec ('extern "C"') or has
+      // gcc-style __attributes__, then it can't be removed, since
+      // that information probably isn't encoded anywhere else.  To
+      // make sure iwyu doesn't remove this decl, we claim it's used.
+      // This is a bit of a hack; better would be to have an API that
+      // says, "don't remove this decl even if it's not used."
+      if (current_ast_node()->ParentIsA<LinkageSpecDecl>() || decl->hasAttrs())
         ReportDeclForwardDeclareUse(CurrentLoc(), decl);
+
+      // If we're a nested class ("class A { class SubA; };"), then we
+      // can't necessary be removed either, since we're part of the
+      // public API of the enclosing class.  So again, fake a use.
+      // However, multiple declarations of the nested class aren't
+      // needed.  So we only need to 'fake' the use of one of them; we
+      // prefer the one that's actually the definition, if present.
+      // TODO(csilvers): repeat this logic in VisitClassTemplateDecl().
+      if (current_ast_node()->ParentIsA<CXXRecordDecl>()) {
+        // Prefer the definition if present -- but only if it's
+        // defined inside the class, like we are.
+        const clang::NamedDecl* canonical_decl = decl->getDefinition();
+        if (!canonical_decl || canonical_decl->isOutOfLine()) {
+          // If not, just take an arbitrary, but fixed, redecl (that
+          // is, every redecl will map to the same place).  Note these
+          // must be inline (only definitions can be out of line).
+          canonical_decl = GetNonfriendClassRedecl(decl);
+        }
+        if (decl == canonical_decl)  // we're the redecl iwyu should keep!
+          ReportDeclForwardDeclareUse(CurrentLoc(), decl);
       }
     }
     return Base::VisitTagDecl(decl);
