@@ -13,6 +13,7 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
 
+#include <ctype.h>
 #include <string>
 #include <vector>
 #include "port.h"
@@ -67,6 +68,36 @@ inline bool StripPast(string* str, const string& substr) {
 
   *str = str->substr(pos + substr.length());
   return true;
+}
+
+// Removes leading whitespace.
+inline void StripWhiteSpaceLeft(string* str) {
+  for (int i = 0; i < str->size(); ++i) {
+    if (!isspace((*str)[i])) {
+      *str = str->substr(i);
+      return;
+    }
+  }
+  // Everything is whitespace. Return with an empty string.
+  str->clear();
+}
+
+// Removes trailing whitespace.
+inline void StripWhiteSpaceRight(string* str) {
+  for (int i = str->size() - 1; i >= 0; --i) {
+    if (!isspace((*str)[i])) {
+      *str = str->substr(0, i + 1);
+      return;
+    }
+  }
+  // Everything is whitespace. Return with an empty string.
+  str->clear();
+}
+
+// Removes both leading and trailing whitespace.
+inline void StripWhiteSpace(string* str) {
+  StripWhiteSpaceLeft(str);
+  StripWhiteSpaceRight(str);
 }
 
 // This is the same as split() in Python.  If max_segs is 0, there's
