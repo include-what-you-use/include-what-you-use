@@ -72,7 +72,7 @@ inline bool StripPast(string* str, const string& substr) {
 
 // Removes leading whitespace.
 inline void StripWhiteSpaceLeft(string* str) {
-  for (int i = 0; i < str->size(); ++i) {
+  for (string::size_type i = 0; i < str->size(); ++i) {
     if (!isspace((*str)[i])) {
       *str = str->substr(i);
       return;
@@ -84,9 +84,10 @@ inline void StripWhiteSpaceLeft(string* str) {
 
 // Removes trailing whitespace.
 inline void StripWhiteSpaceRight(string* str) {
-  for (int i = str->size() - 1; i >= 0; --i) {
-    if (!isspace((*str)[i])) {
-      *str = str->substr(0, i + 1);
+  for (string::size_type end_of_string = str->size();
+       end_of_string > 0; --end_of_string) {
+    if (!isspace((*str)[end_of_string - 1])) {
+      *str = str->substr(0, end_of_string);
       return;
     }
   }
