@@ -42,8 +42,8 @@ const char* SourceManagerCharacterDataGetter::GetCharacterData(
     SourceLocation loc) const {
   bool invalid;
   const char* data = source_manager_.getCharacterData(loc, &invalid);
-  assert(!invalid);
-  assert(data);
+  CHECK_(!invalid);
+  CHECK_(data);
   return data;
 }
 
@@ -60,7 +60,7 @@ string GetSourceTextUntilEndOfLine(
 SourceLocation GetLocationAfter(
     SourceLocation start_loc, const string& needle,
     const CharacterDataGetterInterface& data_getter) {
-  assert(start_loc.isValid() && "GetLocationAfter takes only valid locations");
+  CHECK_(start_loc.isValid() && "GetLocationAfter takes only valid locations");
   const char* data = data_getter.GetCharacterData(start_loc);
   const char* needle_loc = strstr(data, needle.c_str());
   if (!needle_loc)
@@ -79,9 +79,9 @@ string GetIncludeNameAsTyped(SourceLocation include_loc,
   } else if (data[0] == '"') {
     endpos = data.find('"', 1);
   } else {
-    assert(false && "Unexpected token being #included");
+    CHECK_(false && "Unexpected token being #included");
   }
-  assert(endpos != string::npos && "No end-character found for #include");
+  CHECK_(endpos != string::npos && "No end-character found for #include");
   return data.substr(0, endpos+1);
 }
 
@@ -135,7 +135,7 @@ vector<Token> FindArgumentsToDefined(
         }
         // Fall through.
       case kExpectingDefinedIdentifier:
-        assert(token.getKind() == clang::tok::raw_identifier);
+        CHECK_(token.getKind() == clang::tok::raw_identifier);
         ret.push_back(token);
         state = kLookingForDefined;
         break;

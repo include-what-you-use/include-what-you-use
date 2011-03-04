@@ -213,7 +213,7 @@ OneUse::OneUse(const string& symbol_name, const string& dfn_filepath,
   // Sometimes dfn_filepath is actually a fully quoted include.  In
   // that case, we take that as an unchangable mapping that we
   // should never remove, so we make it the suggested header.
-  assert(!decl_filepath_.empty() && "Must pass a real filepath to OneUse");
+  CHECK_(!decl_filepath_.empty() && "Must pass a real filepath to OneUse");
   if (decl_filepath_[0] == '"' || decl_filepath_[0] == '<')
     suggested_header_ = decl_filepath_;
 }
@@ -239,7 +239,7 @@ void OneUse::SetPublicHeaders() {
 const vector<string>& OneUse::public_headers() {
   if (public_headers_.empty()) {
     SetPublicHeaders();
-    assert(!public_headers_.empty() && "Should always have at least one hdr");
+    CHECK_(!public_headers_.empty() && "Should always have at least one hdr");
   }
   return public_headers_;
 }
@@ -280,7 +280,7 @@ string PrintForwardDeclare(const NamedDecl* decl,
     return tpl_params_and_kind + " " + fake->qual_name() + ";";
   }
 
-  assert((isa<RecordDecl>(decl) || isa<TemplateDecl>(decl)) &&
+  CHECK_((isa<RecordDecl>(decl) || isa<TemplateDecl>(decl)) &&
          "IWYU only allows forward declaring (possibly template) record types");
 
   std::string fwd_decl = std::string(decl->getName()) + ";";
@@ -302,7 +302,7 @@ string PrintForwardDeclare(const NamedDecl* decl,
       // A local class (class defined inside a function).
       fwd_decl = std::string(fn->getName()) + "::" + fwd_decl;
     } else {
-      assert(false && "Unexpected decoration for type");
+      CHECK_(false && "Unexpected decoration for type");
     }
   }
 
@@ -343,7 +343,7 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   // by its fully-qualified form.  Apparently rfind's endpos
   // argument is inclusive, so substract one to get past the end-space.
   const string::size_type name = line.rfind(' ', endpos - 1);
-  assert(name != string::npos && "Unexpected printable template-type");
+  CHECK_(name != string::npos && "Unexpected printable template-type");
   return PrintForwardDeclare(decl, line.substr(0, name));
 }
 
@@ -352,7 +352,7 @@ string MungedForwardDeclareLine(const NamedDecl* decl) {
     return MungedForwardDeclareLineForNontemplates(rec_decl);
   else if (const TemplateDecl* template_decl = DynCastFrom(decl))
     return MungedForwardDeclareLineForTemplates(template_decl);
-  assert(false && "Unexpected decl type for MungedForwardDeclareLine");
+  CHECK_(false && "Unexpected decl type for MungedForwardDeclareLine");
   return "<error>";
 }
 
@@ -431,7 +431,7 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
 }
 
 void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl) {
-  assert(fwd_decl && "forward_declare_decl unexpectedly NULL");
+  CHECK_(fwd_decl && "forward_declare_decl unexpectedly NULL");
   lines_.push_back(OneIncludeOrForwardDeclareLine(fwd_decl));
   lines_.back().set_present();
   direct_forward_declares_.insert(fwd_decl);   // store in another way as well
@@ -683,7 +683,7 @@ set<string> CalculateMinimalIncludes(
   while (!unmapped_uses.empty()) {
     map<string, pair<int,int> > header_counts;   // total appearances, 1st's
     for (Each<OneUse*> use(&unmapped_uses); !use.AtEnd(); ++use) {
-      assert(!(*use)->has_suggested_header());
+      CHECK_(!(*use)->has_suggested_header());
       const vector<string>& public_headers = (*use)->public_headers();
       for (Each<string> choice(&public_headers);
            !(*use)->has_suggested_header() && !choice.AtEnd(); ++choice) {
@@ -771,8 +771,8 @@ set<string> CalculateMinimalIncludes(
 //     current includes, mark as an iwyu violation.
 
 void ProcessForwardDeclare(OneUse* use) {
-  assert(use->decl() && "Must call ProcessForwardDeclare on a decl");
-  assert(!use->is_full_use() && "Must call ProcessForwardDeclare on fwd-decl");
+  CHECK_(use->decl() && "Must call ProcessForwardDeclare on a decl");
+  CHECK_(!use->is_full_use() && "Must call ProcessForwardDeclare on fwd-decl");
   if (use->ignore_use())   // we're already ignoring it
     return;
 
@@ -830,8 +830,8 @@ void ProcessForwardDeclare(OneUse* use) {
 }
 
 void ProcessFullUse(OneUse* use) {
-  assert(use->decl() && "Must call ProcessFullUse on a decl");
-  assert(use->is_full_use() && "Must not call ProcessFullUse on fwd-decl");
+  CHECK_(use->decl() && "Must call ProcessFullUse on a decl");
+  CHECK_(use->is_full_use() && "Must not call ProcessFullUse on fwd-decl");
   if (use->ignore_use())   // we're already ignoring it
     return;
 
@@ -953,9 +953,9 @@ void CalculateIwyuForForwardDeclareUse(
     const set<string>& actual_includes,
     const set<string>& desired_includes,
     const set<const FileEntry*>& associated_includes) {
-  assert(!use->ignore_use() && "Trying to calculate on an ignored use");
-  assert(use->decl() && "CalculateIwyuForForwardDeclareUse takes a fwd-decl");
-  assert(!use->is_full_use() && "ForwardDeclareUse are not full uses");
+  CHECK_(!use->ignore_use() && "Trying to calculate on an ignored use");
+  CHECK_(use->decl() && "CalculateIwyuForForwardDeclareUse takes a fwd-decl");
+  CHECK_(!use->is_full_use() && "ForwardDeclareUse are not full uses");
 
   // If this record is defined in one of the desired_includes, mark that
   // fact.  Also if it's defined in one of the actual_includes.
@@ -980,7 +980,7 @@ void CalculateIwyuForForwardDeclareUse(
   const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
   if (tpl_decl)
     record_decl = tpl_decl->getTemplatedDecl();
-  assert(record_decl && "Non-records should have been handled already");
+  CHECK_(record_decl && "Non-records should have been handled already");
   const set<const RecordDecl*>& redecls = GetClassRedecls(record_decl);
   for (Each<const RecordDecl*> it(&redecls); !it.AtEnd(); ++it) {
     if (DeclIsVisibleToUseInSameFile(*it, *use)) {
@@ -1025,7 +1025,7 @@ void CalculateIwyuForForwardDeclareUse(
     // Change decl_ to point to this "better" redecl.  Be sure to store
     // as a TemplateClassDecl if that's what decl_ was originally.
     if (tpl_decl) {
-      assert(isa<CXXRecordDecl>(providing_decl) &&
+      CHECK_(isa<CXXRecordDecl>(providing_decl) &&
              cast<CXXRecordDecl>(providing_decl)->getDescribedClassTemplate());
       const CXXRecordDecl* cxx_decl = cast<CXXRecordDecl>(providing_decl);
       use->reset_decl(cxx_decl->getDescribedClassTemplate());
@@ -1051,9 +1051,9 @@ void CalculateIwyuForForwardDeclareUse(
 void CalculateIwyuForFullUse(OneUse* use,
                              const set<string>& actual_includes,
                              const set<string>& desired_includes) {
-  assert(!use->ignore_use() && "Trying to calculate on an ignored use");
-  assert(use->is_full_use() && "CalculateIwyuForFullUse requires a full use");
-  assert(use->has_suggested_header() && "All full uses must have a header");
+  CHECK_(!use->ignore_use() && "Trying to calculate on an ignored use");
+  CHECK_(use->is_full_use() && "CalculateIwyuForFullUse requires a full use");
+  CHECK_(use->has_suggested_header() && "All full uses must have a header");
 
   // (E1) Mark iwyu violation unless in a current #include.
   if (Contains(actual_includes, use->suggested_header())) {
@@ -1186,7 +1186,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
       continue;
     // Update the appropriate map depending on the type of use.
     if (use->is_full_use()) {
-      assert(use->has_suggested_header() && "Full uses should have #includes");
+      CHECK_(use->has_suggested_header() && "Full uses should have #includes");
       if (!Contains(include_map, use->suggested_header())) {  // must be added
         lines->push_back(OneIncludeOrForwardDeclareLine(use->suggested_header(),
                                                         -1));
@@ -1277,7 +1277,7 @@ string PrintableIncludeOrForwardDeclareLine(
     return line.line() + "\n";   // if not present, doesn't have a line #
   }
   if (line.symbol_counts().empty() || !line.is_desired()) {
-    assert(!StartsWith(line.LineNumberString(), "-"));
+    CHECK_(!StartsWith(line.LineNumberString(), "-"));
     return line.line() + "  // lines " + line.LineNumberString() + "\n";
   }
   // We don't need to explain why foo.cc #includes foo.h

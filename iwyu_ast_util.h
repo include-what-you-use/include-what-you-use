@@ -303,7 +303,7 @@ class ASTNode {
       case kTemplateNameKind:  return as_template_name_;
       case kTemplateArgumentKind:  return as_template_arg_;
       case kTemplateArgumentLocKind:  return as_template_argloc_;
-      default: assert(false && "Unknown kind"); return NULL;
+      default: CHECK_(false && "Unknown kind"); return NULL;
     }
   }
 
@@ -330,7 +330,7 @@ class ASTNode {
       case kTemplateArgumentKind:
         return false;
       default:
-        assert(false && "Unexpected kind of ASTNode");
+        CHECK_(false && "Unexpected kind of ASTNode");
         return false;
     }
   }
@@ -468,7 +468,7 @@ inline bool IsCXXConstructExprInInitializer(const ASTNode* ast_node) {
   if (!ast_node->IsA<clang::CXXConstructExpr>())
     return false;
 
-  assert(ast_node->parent() && "Constructor should not be a top-level node!");
+  CHECK_(ast_node->parent() && "Constructor should not be a top-level node!");
 
   // Typically, you can tell an initializer because its parent is a
   // constructor decl.  But sometimes -- I'm not exactly sure when --
@@ -649,7 +649,7 @@ inline void PrintASTNode(const ASTNode* node) {
     llvm::errs() << "[TemplateArgument] "
                  << PrintableTemplateArgument(*tpl_arg) << "\n";
   } else {
-    assert(!"Unknown kind for ASTNode");
+    CHECK_(!"Unknown kind for ASTNode");
   }
 }
 
@@ -801,7 +801,7 @@ inline clang::SourceRange GetSourceRangeOfClassDecl(const clang::Decl* decl) {
     return tag_decl->getSourceRange();
   if (const clang::TemplateDecl* tpl_decl = DynCastFrom(decl))
     return tpl_decl->getSourceRange();
-  assert(!"Cannot get source range for this decl type");
+  CHECK_(!"Cannot get source range for this decl type");
   return clang::SourceRange();
 }
 
@@ -975,11 +975,11 @@ inline const clang::NamedDecl* GetNonfriendClassRedecl(
     return decl;
 
   const set<const clang::RecordDecl*> redecls = GetClassRedecls(record_decl);
-  assert(!redecls.empty() && "Should be at least once 'real' decl");
+  CHECK_(!redecls.empty() && "Should be at least once 'real' decl");
   const clang::RecordDecl* retval = *redecls.begin();  // arbitrary choice
 
   if (tpl_decl) {   // need to convert back to a ClassTemplateDecl
-    assert(isa<clang::CXXRecordDecl>(retval) &&
+    CHECK_(isa<clang::CXXRecordDecl>(retval) &&
            cast<clang::CXXRecordDecl>(retval)->getDescribedClassTemplate());
     const clang::CXXRecordDecl* cxx_decl = cast<clang::CXXRecordDecl>(retval);
     return cxx_decl->getDescribedClassTemplate();
@@ -1121,7 +1121,7 @@ inline const clang::NamedDecl* TypeToDeclAsWritten(const clang::Type* type) {
   // 'T MyFn<T>() {...}; MyFn<X>.a', the type of MyFn<X> will be a Subst.
   type = RemoveSubstTemplateTypeParm(type);
 
-  assert(!isa<clang::ObjCObjectType>(type) &&
+  CHECK_(!isa<clang::ObjCObjectType>(type) &&
          "IWYU doesn't support Objective-C");
 
   // We have to be a bit careful about the order, because we want
@@ -1301,7 +1301,7 @@ inline bool IsCastToReferenceType(const clang::CastExpr* expr) {
   } else if (const clang::ImplicitCastExpr* implicit_cast = DynCastFrom(expr)) {
     return implicit_cast->getValueKind() == clang::VK_LValue;
   } else {
-    assert(false && "Unexpected type of cast expression");
+    CHECK_(false && "Unexpected type of cast expression");
     return false;
   }
 }

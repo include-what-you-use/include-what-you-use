@@ -66,7 +66,7 @@ set<const Type*> FullUseCache::GetPrecomputedUnsugaredFullUseTypes(
   // typedefs/etc, which we'll have to undo.)
   const ClassTemplateSpecializationDecl* tpl_decl
       = DynCastFrom(TypeToDeclAsWritten(tpl_type));
-  assert(tpl_decl && "tpl-type decl is not a tpl specialization?");
+  CHECK_(tpl_decl && "tpl-type decl is not a tpl specialization?");
   if (!include_what_you_use::Contains(
           fulluse_types, tpl_decl->getQualifiedNameAsString()))
     return set<const Type*>();
@@ -77,7 +77,7 @@ set<const Type*> FullUseCache::GetPrecomputedUnsugaredFullUseTypes(
   // of the types in kFullUseTypes should have those.  Just verify.
   const TemplateArgumentList& all_tpl_args = tpl_decl->getTemplateArgs();
   for (unsigned i = 0; i < all_tpl_args.size(); ++i) {
-    assert((all_tpl_args.get(i).getKind() == TemplateArgument::Type)
+    CHECK_((all_tpl_args.get(i).getKind() == TemplateArgument::Type)
            && "kFullUseType types must contain only 'type' template args");
   }
 

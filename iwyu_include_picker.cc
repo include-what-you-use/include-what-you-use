@@ -10,7 +10,6 @@
 #include "port.h"
 #include "iwyu_include_picker.h"
 
-#include <assert.h>
 #ifndef _MSC_VER      // _MSC_VER gets its own fnmatch from ./port.h
 #include <fnmatch.h>
 #endif
@@ -694,8 +693,8 @@ void AugmentValuesForKey(
     const string& key, const string& value,
     set<string> seen_keys,            // used to avoid recursion
     vector<string>* all_values) {
-  assert(!Contains(seen_keys, key) && "Cycle in include-mapping");
-  assert(key != value && "Self-mapping in include-mapping");
+  CHECK_(!Contains(seen_keys, key) && "Cycle in include-mapping");
+  CHECK_(key != value && "Self-mapping in include-mapping");
   all_values->push_back(value);
 
   const string new_key = value;
@@ -832,26 +831,27 @@ IncludePicker::IncludePicker()
 
 void IncludePicker::MarkVisibility(const string& quoted_include,
                                    IncludePicker::Visibility vis) {
-  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   // insert() leaves any old value alone, and only inserts if the key is new.
   filepath_visibility_map_.insert(make_pair(quoted_include, vis));
-  assert(filepath_visibility_map_[quoted_include] == vis &&
+  CHECK_(filepath_visibility_map_[quoted_include] == vis &&
          "Same file seen with two different visibilities");
 }
 
 void IncludePicker::InsertInto(const IncludePicker::IncludeMapEntry& e,
                                IncludePicker::IncludeMap* include_map) {
-  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   // Verify that the key/value starts with < or " when it's a
   // quoted-include.  Not all keys are quoted-includes (they may also
   // be symbols), but all public keys are: symbols are always marked
   // private, by convention.  Values are always quoted-includes.
-  if (e.from_visibility == kPublic)
-    assert(IsQuotedInclude(e.map_from)
+  if (e.from_visibility == kPublic) {
+    CHECK_(IsQuotedInclude(e.map_from)
            && "All public map keys must be quoted includes");
-  assert(IsQuotedInclude(e.map_to) && "All map values must be quoted includes");
+  }
+  CHECK_(IsQuotedInclude(e.map_to) && "All map values must be quoted includes");
   (*include_map)[e.map_from].push_back(e.map_to);
   // Marking the visibility of symbols is meaningless but also harmless,
   // so we don't bother to check if map_from is a filepath or a symbol-name.
@@ -866,7 +866,7 @@ void IncludePicker::InsertInto(const IncludePicker::IncludeMapEntry& e,
 // hides them in /bits/.)
 void IncludePicker::AddDirectInclude(const string& includer_filepath,
                                      const string& include_name_as_typed) {
-  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   all_quoted_includes_.insert(include_name_as_typed);
 
@@ -882,15 +882,15 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
 }
 
 void IncludePicker::AddMapping(const string& map_from, const string& map_to) {
-  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
-  assert(IsQuotedInclude(map_from) && "All map keys must be quoted includes");
-  assert(IsQuotedInclude(map_to) && "All map values must be quoted includes");
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  CHECK_(IsQuotedInclude(map_from) && "All map keys must be quoted includes");
+  CHECK_(IsQuotedInclude(map_to) && "All map values must be quoted includes");
   filepath_include_map_[map_from].push_back(map_to);
 }
 
 void IncludePicker::MarkIncludeAsPrivate(const string& quoted_include) {
-  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
-  assert(IsQuotedInclude(quoted_include) && "MIAP takes a quoted_include");
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  CHECK_(IsQuotedInclude(quoted_include) && "MIAP takes a quoted_include");
   MarkVisibility(quoted_include, kPrivate);
 }
 
@@ -912,7 +912,7 @@ void IncludePicker::ExpandGlobs() {
     for (Each<string> glob_key(&glob_keys); !glob_key.AtEnd(); ++glob_key) {
       if (fnmatch(glob_key->c_str(), hdr->c_str(), 0) == 0) {
         // We could easily just merge them if this is ever an actual issue.
-        assert(!Contains(filepath_include_map_, *hdr)
+        CHECK_(!Contains(filepath_include_map_, *hdr)
                && "Conflict between a glob entry and non-glob entry");
         filepath_include_map_[*hdr] = filepath_include_map_[*glob_key];
         MarkVisibility(*hdr, filepath_visibility_map_[*glob_key]);
@@ -927,7 +927,7 @@ void IncludePicker::ExpandGlobs() {
 // the mapping-keys, since we have the full list of #includes to
 // match them again.  We also transitively-close the maps.
 void IncludePicker::FinalizeAddedIncludes() {
-  assert(!has_called_finalize_added_include_lines_ && "Can't call FAI twice");
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't call FAI twice");
 
   // The map keys may have *'s in them.  Match those to seen #includes now.
   ExpandGlobs();
@@ -963,13 +963,13 @@ vector<string> IncludePicker::GetPublicValues(
 
 vector<string> IncludePicker::GetPublicHeadersForSymbol(
     const string& symbol) const {
-  assert(has_called_finalize_added_include_lines_ && "Must finalize includes");
+  CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
   return GetPublicValues(symbol_include_map_, symbol);
 }
 
 vector<string> IncludePicker::GetPublicHeadersForFilepath(
     const string& filepath) const {
-  assert(has_called_finalize_added_include_lines_ && "Must finalize includes");
+  CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
   const string quoted_header = ConvertToQuotedInclude(filepath);
   vector<string> retval = GetPublicValues(filepath_include_map_, quoted_header);
   if (retval.empty()) {

@@ -13,7 +13,6 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
 
-#include <assert.h>
 #include <string>
 #include <vector>
 #include "port.h"
@@ -74,7 +73,7 @@ inline bool StripPast(string* str, const string& substr) {
 // no limit on the number of the generated segments.
 inline vector<string> Split(
     string str, const string& divider, size_t max_segs) {
-  assert(!divider.empty());
+  CHECK_(!divider.empty());
   vector<string> retval;
   size_t pos;
   // If max_segs is 0, the first part of the condition will always be true.

@@ -170,7 +170,7 @@ IwyuFileInfo* IwyuPreprocessorInfo::GetFromFileInfoMap(const FileEntry* file) {
   if (!iwyu_file_info) {
     iwyu_file_info_map_.insert(make_pair(file, IwyuFileInfo(file)));
     iwyu_file_info = FindInMap(&iwyu_file_info_map_, file);
-    assert(iwyu_file_info);   // should succeed this time!
+    CHECK_(iwyu_file_info);   // should succeed this time!
   }
   return iwyu_file_info;
 }
@@ -211,7 +211,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   }
 
   if (!protect_reason.empty()) {
-    assert(Contains(iwyu_file_info_map_, includer));
+    CHECK_(Contains(iwyu_file_info_map_, includer));
     GetFromFileInfoMap(includer)->ReportIncludeFileUse(include_name_as_typed);
     ERRSYM(includer) << "Marked dep: " << GetFilePath(includer)
                      << " needs to keep " << include_name_as_typed
@@ -240,8 +240,8 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   // don't care as much.
   const FileEntry* includer = GetFileEntry(includer_loc);
   if (ShouldReportIWYUViolationsFor(includer)) {
-    assert(includee != NULL);
-    assert(!include_name_as_typed.empty());
+    CHECK_(includee != NULL);
+    CHECK_(!include_name_as_typed.empty());
   }
 
   GetFromFileInfoMap(includer)->AddInclude(
@@ -373,7 +373,7 @@ void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
       FileChanged_SystemHeaderPragma(loc);
       break;
     default:
-      assert(!"Unknown file change reason");
+      CHECK_(!"Unknown file change reason");
   }
 }
 
@@ -518,7 +518,7 @@ void IwyuPreprocessorInfo::AddAllIncludesAsFileEntries(
 }
 
 void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
-  assert(intends_to_provide_map_.empty() && "Should only call this fn once");
+  CHECK_(intends_to_provide_map_.empty() && "Should only call this fn once");
   // Figure out which of the header files we have are public.  We'll
   // map each one to a set of all private header files that map to it.
   map<const FileEntry*, set<const FileEntry*> > private_headers_behind;
@@ -531,7 +531,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
     for (Each<string> pub(&public_headers_for_header); !pub.AtEnd(); ++pub) {
       if (const FileEntry* public_file
           = GetOrDefault(include_to_fileentry_map_, *pub, NULL)) {
-        assert(Contains(iwyu_file_info_map_, public_file));
+        CHECK_(Contains(iwyu_file_info_map_, public_file));
         if (public_file != header)  // no credit for mapping to yourself :-)
           private_headers_behind[public_file].insert(header);
       }
@@ -597,7 +597,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
     for (Each<const FileEntry*> private_header_it(&it->second);
          !private_header_it.AtEnd(); ++private_header_it) {
       const FileEntry* private_header = *private_header_it;
-      assert(Contains(intends_to_provide_map_, private_header));
+      CHECK_(Contains(intends_to_provide_map_, private_header));
       InsertAllInto(intends_to_provide_map_[public_header],
                     &intends_to_provide_map_[private_header]);
     }
