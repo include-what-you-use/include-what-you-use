@@ -727,11 +727,12 @@ set<string> CalculateMinimalIncludes(
 // B2) Discard symbol uses for builtin symbols ('__builtin_memcmp') and
 //     for operator new and operator delete (excluding placement new),
 //     which are effectively built-in even though they're in <new>.
-// B3) Discard symbol uses of a .cc file from a .h file (sanity check).
+// B3) Discard .h-file uses of symbols defined in a .cc file (sanity check).
 // B4) Discard symbol uses for member functions that live in the same
 //     file as the class they're part of (the parent check suffices).
-// B5) Discard macro uses in the same file as the definition.
-//
+// B5) Discard macro uses in the same file as the definition (B1 redux).
+// B6) Discard .h-file uses of macros defined in a .cc file (B3 redux).
+
 // Determining 'desired' #includes:
 // C1) Get a list of 'effective' direct includes.  For most files, it's
 //     the same as the actual direct includes, but for the main .cc
@@ -850,7 +851,7 @@ void ProcessFullUse(OneUse* use) {
     }
   }
 
-  // (B3) Discard symbol uses of a .cc file from a .h file (sanity check).
+  // (B3) Discard uses of a symbol declared in a .cc and used in a .h.
   // Here's how it could happen:
   //   foo.h:  #define DEFINE_CLASS(classname) <backslash>
   //             struct classname { classname() { Init(); } void Init() {} };
@@ -864,8 +865,8 @@ void ProcessFullUse(OneUse* use) {
   // iwyu says foo.h needs to #include foo.cc.
   // TODO(csilvers): instead of checking file extensions, check if
   // defined_in is in the transitive closure of used_in's #includes.
-  if (IsHeaderFile(GetFilePath(use->use_loc())) &&
-      !IsHeaderFile(GetFilePath(use->decl()))) {
+  if (use->use_loc().isValid() && IsHeaderFile(GetFilePath(use->use_loc())) &&
+      !IsHeaderFile(use->decl_filepath())) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): .h #including .cc\n";
     use->set_ignore_use();
@@ -913,6 +914,21 @@ void ProcessSymbolUse(OneUse* use) {
   if (GetFilePath(use->use_loc()) == use->decl_filepath()) {
     VERRS(6) << "Ignoring symbol use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): defined in same file\n";
+    use->set_ignore_use();
+    return;
+  }
+
+  // (B6) Discard uses of a macro declared in a .cc and used in a .h.
+  // Here's how it could happen:
+  //   foo.h:  #ifdef FOO ...
+  //   foo-inl.cc: #define FOO
+  //   foo.cc: #include "foo-inl.cc"
+  //           #include "foo.h"
+  if (use->use_loc().isValid() && IsHeaderFile(GetFilePath(use->use_loc())) &&
+      !IsHeaderFile(use->decl_filepath())) {
+    VERRS(6) << "Ignoring symbol use of " << use->symbol_name()
+             << " (" << use->PrintableUseLoc() << "): "
+             << "avoid .h #including .cc\n";
     use->set_ignore_use();
     return;
   }
