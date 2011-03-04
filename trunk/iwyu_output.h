@@ -255,6 +255,13 @@ class IwyuFileInfo {
     return associated_quoted_includes;
   }
 
+  set<const clang::FileEntry*> AssociatedFileEntries() const {
+    set<const clang::FileEntry*> associated_file_entries;
+    for (Each<const IwyuFileInfo*> it(&internal_headers_); !it.AtEnd(); ++it)
+      associated_file_entries.insert((*it)->file_);
+    return associated_file_entries;
+  }
+
   // Populates uses with full data, including is_iwyu_violation_.
   void CalculateIwyuViolations(vector<OneUse>* uses);
   // Uses uses to emit warning messages (at high enough verbosity).
