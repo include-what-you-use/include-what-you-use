@@ -339,7 +339,7 @@ def _CompareExpectedAndActualSummaries(expected_summaries, actual_summaries):
 
 
 def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
-                           iwyu_flags=None):
+                           iwyu_flags=None, verbose=False):
   """Checks running IWYU on the given .cc file.
 
   Args:
@@ -355,9 +355,11 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
   iwyu_prefix = 'env IWYU_VERBOSE=3'
 
   # TODO(csilvers): verify that has exit-status 0.
-  output = _GetCommandOutput('%s %s %s -I . %s' %
-                             (iwyu_prefix, _IWYU_PATH, ' '.join(iwyu_flags),
-                              cc_file))
+  cmd = '%s %s %s -I . %s' % (iwyu_prefix, _IWYU_PATH, ' '.join(iwyu_flags),
+                              cc_file)
+  if verbose:
+    print '>>> Running %s' % cmd
+  output = _GetCommandOutput(cmd)
   print ''.join(output)
   sys.stdout.flush()      # don't commingle this output with the failure output
 
