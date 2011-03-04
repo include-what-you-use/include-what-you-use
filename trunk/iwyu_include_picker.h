@@ -80,23 +80,13 @@ class IncludePicker {
   // to think about it is that map_to "re-exports" all the
   // symbols from map_from.
   struct IncludeMapEntry {      // A POD so we can make the input static
-    const char* map_from;       // A quoted-include
+    const char* map_from;       // A quoted-include, or a symbol name
     Visibility from_visibility;
     const char* map_to;         // A quoted-include
     Visibility to_visibility;
   };
 
-  // For every from-include, we need to know all its associated
-  // to-includes (that is, everyone that 're-exports' the
-  // from-include).  For simplicity, we just put map-to in every
-  // value, which wastes space but doesn't require another struct.
-  // I don't think space is an issue here.
-  struct IncludeMapValue {
-    string map_to;
-    Visibility from_visibility;
-    Visibility to_visibility;
-  };
-  typedef map<string, vector<IncludeMapValue> > IncludeMap;  // key is map_from
+  typedef map<string, vector<string> > IncludeMap;  // map_from to <map_to,...>
 
   IncludePicker();
 
@@ -110,8 +100,12 @@ class IncludePicker {
 
   // Add this to say "map_to re-exports everything in file map_from".
   // Both map_to and map_from should be quoted includes.
-  void AddMapping(const string& map_from, Visibility from_visibility,
-                  const string& map_to, Visibility to_visibility);
+  void AddMapping(const string& map_from, const string& map_to);
+
+  // Indicate that the given quoted include should be considered
+  // a "private" include.  If possible, we use the include-picker
+  // mappings to map such includes to public (not-private) includs.
+  void MarkIncludeAsPrivate(const string& quoted_include);
 
   // Call this after iwyu preprocessing is done.  No more calls to
   // AddDirectInclude() or AddMapping() are allowed after this.
@@ -150,9 +144,26 @@ class IncludePicker {
   // globs by matching them against all #includes seen by iwyu.
   void ExpandGlobs();
 
+  // Helper routine to parse the internal, hard-coded mappings.
+  void InsertInto(const IncludePicker::IncludeMapEntry& e,
+                  IncludePicker::IncludeMap* include_map);
+
+  // Adds an entry to filepath_visibility_map_, with error checking.
+  void MarkVisibility(const string& quoted_include,
+                      IncludePicker::Visibility vis);
+
+  // For the given key, return the vector of values associated with
+  // that key, or an empty vector if the key does not exist in the
+  // map, filtering out private files.
+  vector<string> GetPublicValues(const IncludeMap& m, const string& key) const;
+
   // One map from symbols to includes, one from filepaths to includes.
   IncludeMap symbol_include_map_;
   IncludeMap filepath_include_map_;
+
+  // A map of all quoted-includes to whether they're public or private.
+  // Quoted-includes that are not present in this map are assumed public.
+  map<string, Visibility> filepath_visibility_map_;
 
   // All the includes we've seen so far, to help with globbing.
   set<string> all_quoted_includes_;
