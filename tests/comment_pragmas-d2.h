@@ -13,7 +13,7 @@
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D2_H_
 
 // Note: there is no file no_such_file.h. It isn't needed for this test.
-// IWYU pragma: private, include "no_such_file.h"
+// IWYU pragma: private, include "tests/no_such_file.h"
 
 class CommentPragmasD2 {};
 
