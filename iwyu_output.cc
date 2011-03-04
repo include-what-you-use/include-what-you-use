@@ -936,6 +936,8 @@ void ProcessSymbolUse(OneUse* use) {
   //   foo-inl.cc: #define FOO
   //   foo.cc: #include "foo-inl.cc"
   //           #include "foo.h"
+  // (Though this is arguably a bug in iwyu, and FOO should be treated as
+  // a 'soft' use here; see comments in iwyu_preprocessor.cc:ReportMacroUse.)
   if (use->use_loc().isValid() && IsHeaderFile(GetFilePath(use->use_loc())) &&
       !IsHeaderFile(use->decl_filepath())) {
     VERRS(6) << "Ignoring symbol use of " << use->symbol_name()
