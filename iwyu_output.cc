@@ -182,13 +182,14 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
 
 // Holds information about a single full or fwd-decl use of a symbol.
 OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
-               OneUse::UseKind use_kind)
+               OneUse::UseKind use_kind, bool in_cxx_method_body)
     : symbol_name_(internal::GetQualifiedNameAsString(decl)),
       short_symbol_name_(internal::GetShortNameAsString(decl)),
       decl_(decl),
       decl_filepath_(GetFilePath(decl)),
       use_loc_(use_loc),
       use_kind_(use_kind),             // full use or fwd-declare use
+      in_cxx_method_body_(in_cxx_method_body),
       public_headers_(),
       suggested_header_(),             // figure that out later
       ignore_use_(false),
@@ -204,6 +205,7 @@ OneUse::OneUse(const string& symbol_name, const string& dfn_filepath,
       decl_filepath_(dfn_filepath),
       use_loc_(use_loc),
       use_kind_(kFullUse),
+      in_cxx_method_body_(false),
       public_headers_(),
       suggested_header_(),
       ignore_use_(false),
@@ -450,18 +452,21 @@ static void LogSymbolUse(const string& prefix, const OneUse& use) {
 }
 
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
-                                       const NamedDecl* decl) {
+                                       const NamedDecl* decl,
+                                       bool in_cxx_method_body) {
   if (decl) {
     // Since we need the full symbol, we need the decl's definition-site.
     decl = GetDefinitionAsWritten(decl);
-    symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kFullUse));
+    symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kFullUse,
+                                  in_cxx_method_body));
     LogSymbolUse("Marked full-info use of decl", symbol_uses_.back());
   }
 }
 
 // Converts the type into a decl, and reports that.
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
-                                       const Type* type) {
+                                       const Type* type,
+                                       bool in_cxx_method_body) {
   if (!type)
     return;
   // The 'full info' for a pointer type can be satisfied by
@@ -470,14 +475,16 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
     type = RemovePointersAndReferencesAsWritten(type);
     const NamedDecl* decl = TypeToDeclAsWritten(type);
     if (decl) {
-      symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse));
+      symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse,
+                                    in_cxx_method_body));
       LogSymbolUse("Marked (fwd decl) use of pointer to", symbol_uses_.back());
     }
   } else {
     const NamedDecl* decl = TypeToDeclAsWritten(type);
     if (decl) {
       decl = GetDefinitionAsWritten(decl);
-      symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kFullUse));
+      symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kFullUse,
+                                    in_cxx_method_body));
       LogSymbolUse("Marked full-info use of type", symbol_uses_.back());
     }
   }
@@ -497,27 +504,31 @@ void IwyuFileInfo::ReportIncludeFileUse(const string& quoted_include) {
 
 
 void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
-                                           const NamedDecl* decl) {
+                                           const NamedDecl* decl,
+                                           bool in_cxx_method_body) {
   if (!decl)
     return;
   // Sometimes, a bug in clang (http://llvm.org/bugs/show_bug.cgi?id=8669)
   // combines friend decls with true forward-declare decls.  If that
   // happened here, replace the friend with a real fwd decl.
   decl = GetNonfriendClassRedecl(decl);
-  symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse));
+  symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse,
+                                in_cxx_method_body));
   LogSymbolUse("Marked fwd-decl use of decl", symbol_uses_.back());
 }
 
 // Converts the type into a decl, and reports that.
 void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
-                                           const Type* type) {
+                                           const Type* type,
+                                           bool in_cxx_method_body) {
   if (!type)
     return;
   type = RemovePointersAndReferencesAsWritten(type);   // just in case
   const NamedDecl* decl = TypeToDeclAsWritten(type);
   if (decl) {
     decl = GetNonfriendClassRedecl(decl);  // work around clang bug PR#8669
-    symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse));
+    symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse,
+                                  in_cxx_method_body));
     LogSymbolUse("Marked fwd-decl use of type", symbol_uses_.back());
   }
 }
@@ -552,13 +563,14 @@ bool DeclIsVisibleToUseInSameFile(const Decl* decl, const OneUse& use) {
     return false;
 
   // If the decl comes before the use, it's visible to it.  It can
-  // even be visible if the decl comes after, if they're both
-  // syntactically (not just semantically) inside the class definition.
+  // even be visible if the decl comes after, if the decl is inside
+  // the class definition and the use is in the body of a method.
   // TODO(csilvers): better than comparing line numbers would be to
   // call SourceManager::getDecomposedLoc() and compare offsets.
   return ((GetInstantiationLineNumber(use.use_loc()) >=
            GetInstantiationLineNumber(GetLocation(decl))) ||
-          (DeclsAreInSameClass(decl, use.decl()) && !decl->isOutOfLine()));
+          (DeclsAreInSameClass(decl, use.decl()) && !decl->isOutOfLine()
+           && use.in_cxx_method_body()));
 }
 
 

@@ -87,9 +87,12 @@ class OneUse {
  public:
   enum UseKind { kFullUse, kForwardDeclareUse };
 
-  OneUse(const clang::NamedDecl* decl, clang::SourceLocation use_loc,
-         UseKind use_kind);
-  OneUse(const string& symbol_name, const string& dfn_filepath,
+  OneUse(const clang::NamedDecl* decl,
+         clang::SourceLocation use_loc,
+         UseKind use_kind,
+         bool in_cxx_method_body);
+  OneUse(const string& symbol_name,
+         const string& dfn_filepath,
          clang::SourceLocation use_loc);
 
   const string& symbol_name() const { return symbol_name_; }
@@ -98,6 +101,7 @@ class OneUse {
   const string& decl_filepath() const { return decl_filepath_; }
   clang::SourceLocation use_loc() const { return use_loc_; }
   bool is_full_use() const { return use_kind_ == kFullUse; }
+  bool in_cxx_method_body() const { return in_cxx_method_body_; }
   bool ignore_use() const { return ignore_use_; }
   bool is_iwyu_violation() const { return is_iwyu_violation_; }
   bool has_suggested_header() const { return !suggested_header_.empty(); }
@@ -128,6 +132,7 @@ class OneUse {
   string decl_filepath_;           // filepath where the symbol lives
   clang::SourceLocation use_loc_;  // where the symbol is used from
   UseKind use_kind_;               // kFullUse or kForwardDeclareUse
+  bool in_cxx_method_body_;        // true if use is inside a C++ method body
   vector<string> public_headers_;  // header to #include if dfn hdr is private
   string suggested_header_;        // header that allows us to satisfy use
   bool ignore_use_;                // set to true if use is discarded
@@ -212,19 +217,24 @@ class IwyuFileInfo {
   // (via an #include), and one when forward-declaring is enough.
 
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
-                           const clang::NamedDecl* decl);
+                           const clang::NamedDecl* decl,
+                           bool in_cxx_method_body);
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
-                           const clang::Type* type);
+                           const clang::Type* type,
+                           bool in_cxx_method_body);
   // This will mostly be used for macro tokens.
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
                            const string& dfn_filepath,
                            const string& symbol);
+  // TODO(user): Can we determine in_cxx_method_body? Do we care?
 
   // We only allow forward-declaring of decls and types, not arbitrary symbols
   void ReportForwardDeclareUse(clang::SourceLocation use_loc,
-                               const clang::NamedDecl* decl);
+                               const clang::NamedDecl* decl,
+                               bool in_cxx_method_body);
   void ReportForwardDeclareUse(clang::SourceLocation use_loc,
-                               const clang::Type* type);
+                               const clang::Type* type,
+                               bool in_cxx_method_body);
 
   // This is used when we see a // NOLINT comment, for instance.  It says
   // '#include this header file as-is, without any public-header mapping.'

@@ -95,7 +95,7 @@ class ASTNode {
   const ASTNode* parent() const { return parent_; }
   void SetParent(const ASTNode* parent) {
     parent_ = parent;
-    if (parent)   // We inherit this from parent.
+    if (parent)  // We inherit this from parent.
       set_in_forward_declare_context(parent->in_forward_declare_context());
   }
 
@@ -432,6 +432,20 @@ inline bool IsDeclNodeInsideFriend(const ASTNode* ast_node) {
        ast_node->AncestorIsA<clang::FriendTemplateDecl>(2)))
     return true;
 
+  return false;
+}
+
+// Return true if the given ast_node is inside a C++ method body.  Do
+// this by walking up the AST tree until you find a CXXMethodDecl,
+// then see if the node just before you reached it is the body.
+inline bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
+  for (; ast_node != NULL; ast_node = ast_node->parent()) {
+    const clang::CXXMethodDecl* decl =
+        ast_node->GetParentAs<clang::CXXMethodDecl>();
+    if (decl != NULL) {
+      return ast_node->ContentIs(decl->getBody());
+    }
+  }
   return false;
 }
 

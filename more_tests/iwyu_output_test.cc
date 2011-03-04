@@ -19,7 +19,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 
 using clang::NamedDecl;
@@ -150,9 +149,9 @@ TEST(ProcessFullUseTest, B1) {
   FakeNamedDecl decl("class", "MyClass", "src/includes/myclass.h", 10);
   // Test the use being *before* the definition in the file (shouldn't matter)
   OneUse samefile_use(&decl, FakeSourceLocation("src/includes/myclass.h", 5),
-                      OneUse::kFullUse);
+                      OneUse::kFullUse, false);
   OneUse difffile_use(&decl, FakeSourceLocation("src/myclass.cc", 10),
-                      OneUse::kFullUse);
+                      OneUse::kFullUse, false);
   internal::ProcessFullUse(&samefile_use);
   internal::ProcessFullUse(&difffile_use);
   EXPECT_TRUE(samefile_use.ignore_use());
@@ -168,9 +167,9 @@ TEST(ProcessFullUseTest, B3) {
   FakeNamedDecl cc_decl("class", "MyClass", "src/myclass.cc", 10);
   // Test the use being *before* the definition in the file (shouldn't matter)
   OneUse h_use(&cc_decl, FakeSourceLocation("src/includes/myclass.h", 5),
-               OneUse::kFullUse);
+               OneUse::kFullUse, false);
   OneUse cc_use(&cc_decl, FakeSourceLocation("src/main.cc", 10),
-                OneUse::kFullUse);
+                OneUse::kFullUse, false);
   internal::ProcessFullUse(&h_use);
   internal::ProcessFullUse(&cc_use);
   EXPECT_TRUE(h_use.ignore_use());
