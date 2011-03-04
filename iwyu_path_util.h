@@ -57,12 +57,33 @@ inline string NormalizeFilePath(const string& path) {
   return result;
 }
 
+inline string CanonicalizeFilePath(const string& path) {
+  string result = path;
+
+#ifdef _MSC_VER
+  // canonicalise directory separators (forward slashes considered canonical)
+  for (size_t i = 0; i < result.size(); ++i) {
+    if (result[i] == '\\')
+      result[i] = '/';
+  }
+#endif
+
+  // We may also want to collapse ../ here.
+
+  return result;
+}
+
 // Strips uninteresting suffixes from the file name.
 inline string GetCanonicalName(string file_path) {
   // Get rid of any <> and "" in case file_path is really an #include line.
   StripLeft(&file_path, "\"") || StripLeft(&file_path, "<");
   StripRight(&file_path, "\"") || StripRight(&file_path, ">");
+
+  file_path = CanonicalizeFilePath(file_path);
+
   StripRight(&file_path, ".h")
+      || StripRight(&file_path, ".cxx")
+      || StripRight(&file_path, ".cpp")
       || StripRight(&file_path, ".cc")
       || StripRight(&file_path, ".c");
   StripRight(&file_path, "_unittest")
