@@ -105,10 +105,8 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
              IncludeLineIsInExportedRange(includer_loc)) {
     protect_reason = "pragma_export";
     const string quoted_includer = ConvertToQuotedInclude(GetFilePath(includer));
-    // TODO(csilvers): determine better public/private values.
-    MutableGlobalIncludePicker()->AddMapping(
-        include_name_as_typed, IncludePicker::kPrivate,
-        quoted_includer, IncludePicker::kPublic);
+    MutableGlobalIncludePicker()->AddMapping(include_name_as_typed,
+                                             quoted_includer);
 
   // We also always keep #includes of .c files: iwyu doesn't touch those.
   // TODO(csilvers): instead of IsHeaderFile, check if the file has
@@ -120,7 +118,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   // (A decision to re-export an #include counts as a "use" of it.)
   } else if (GlobalIncludePicker().HasMapping(
       GetFilePath(includee), GetFilePath(includer))) {
-    protect_reason = "private header";
+    protect_reason = "re_exporting header";
   }
 
   if (!protect_reason.empty()) {
@@ -198,12 +196,10 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
 
     if (StripLeft(&pragma_text, "private, include ")) {
       // pragma_text should be a quoted header.
-      // TODO(csilvers): figure out if the included file is public or private
-      MutableGlobalIncludePicker()->AddMapping(
-          ConvertToQuotedInclude(GetFilePath(current_loc)),
-          IncludePicker::kPrivate,
-          pragma_text,
-          IncludePicker::kPublic);
+      const string quoted_include
+          = ConvertToQuotedInclude(GetFilePath(current_loc));
+      MutableGlobalIncludePicker()->AddMapping(quoted_include, pragma_text);
+      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_include);
       continue;
     }
 

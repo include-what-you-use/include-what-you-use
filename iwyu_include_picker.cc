@@ -64,7 +64,7 @@ const IncludePicker::Visibility kPublic = IncludePicker::kPublic;
 // In each case, I ordered them so <sys/types.h> was first, if it was
 // an option for this type.  That's the preferred #include all else
 // equal.  The visibility on the symbol-name isn't meaningful, but
-// must be kPrivate for some helper routines below.
+// must be kPrivate (or GetPublicValues() will self-map them, below).
 const IncludePicker::IncludeMapEntry symbol_include_map[] = {
   { "blksize_t", kPrivate, "<sys/types.h>", kPublic },
   { "blkcnt_t", kPrivate, "<sys/stat.h>", kPublic },
@@ -243,7 +243,7 @@ const IncludePicker::IncludeMapEntry c_include_map[] = {
   { "<bits/msq.h>", kPrivate, "<sys/msg.h>", kPublic },
   { "<bits/nan.h>", kPrivate, "<math.h>", kPublic },
   { "<bits/netdb.h>", kPrivate, "<netdb.h>", kPublic },
-  { "<bits/poll.h>", kPrivate, "<sys/poll.h>", kPublic },
+  { "<bits/poll.h>", kPrivate, "<sys/poll.h>", kPrivate },
   { "<bits/posix1_lim.h>", kPrivate, "<limits.h>", kPublic },
   { "<bits/posix2_lim.h>", kPrivate, "<limits.h>", kPublic },
   { "<bits/posix_opt.h>", kPrivate, "<unistd.h>", kPublic },
@@ -281,16 +281,16 @@ const IncludePicker::IncludeMapEntry c_include_map[] = {
   { "<bits/string3.h>", kPrivate, "<string.h>", kPublic },
   { "<bits/stropts.h>", kPrivate, "<stropts.h>", kPublic },
   { "<bits/sys_errlist.h>", kPrivate, "<stdio.h>", kPublic },
-  { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPublic },
-  { "<bits/syslog-ldbl.h>", kPrivate, "<sys/syslog.h>", kPublic },
-  { "<bits/syslog-path.h>", kPrivate, "<sys/syslog.h>", kPublic },
-  { "<bits/syslog.h>", kPrivate, "<sys/syslog.h>", kPublic },
+  { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPrivate },
+  { "<bits/syslog-ldbl.h>", kPrivate, "<sys/syslog.h>", kPrivate },
+  { "<bits/syslog-path.h>", kPrivate, "<sys/syslog.h>", kPrivate },
+  { "<bits/syslog.h>", kPrivate, "<sys/syslog.h>", kPrivate },
   { "<bits/termios.h>", kPrivate, "<termios.h>", kPublic },
   { "<bits/time.h>", kPrivate, "<sys/time.h>", kPublic },
   { "<bits/types.h>", kPrivate, "<sys/types.h>", kPublic },
   { "<bits/uio.h>", kPrivate, "<sys/uio.h>", kPublic },
   { "<bits/unistd.h>", kPrivate, "<unistd.h>", kPublic },
-  { "<bits/ustat.h>", kPrivate, "<sys/ustat.h>", kPublic },
+  { "<bits/ustat.h>", kPrivate, "<sys/ustat.h>", kPrivate },
   { "<bits/utmp.h>", kPrivate, "<utmp.h>", kPublic },
   { "<bits/utmpx.h>", kPrivate, "<utmpx.h>", kPublic },
   { "<bits/utsname.h>", kPrivate, "<sys/utsname.h>", kPublic },
@@ -329,7 +329,7 @@ const IncludePicker::IncludeMapEntry c_include_map[] = {
   { "<bits/mqueue.h>", kPrivate, "<mqueue.h>", kPublic },
   { "<bits/msq.h>", kPrivate, "<sys/msg.h>", kPublic },
   { "<bits/nan.h>", kPrivate, "<math.h>", kPublic },
-  { "<bits/poll.h>", kPrivate, "<sys/poll.h>", kPublic },
+  { "<bits/poll.h>", kPrivate, "<sys/poll.h>", kPrivate },
   { "<bits/predefs.h>", kPrivate, "<features.h>", kPublic },
   { "<bits/resource.h>", kPrivate, "<sys/resource.h>", kPublic },
   { "<bits/select.h>", kPrivate, "<sys/select.h>", kPublic },
@@ -338,7 +338,7 @@ const IncludePicker::IncludeMapEntry c_include_map[] = {
   { "<bits/string.h>", kPrivate, "<string.h>", kPublic },
   { "<bits/string2.h>", kPrivate, "<string.h>", kPublic },
   { "<bits/string3.h>", kPrivate, "<string.h>", kPublic },
-  { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPublic },
+  { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPrivate },
   // Top-level #includes that just forward to another file:
   // $ for i in /usr/include/*; do [ -f $i ] && [ `wc -l < $i` = 1 ] && echo $i; done
   // (poll.h, syscall.h, syslog.h, ustat.h, wait.h).
@@ -683,49 +683,6 @@ inline bool IsQuotedInclude(const string& s) {
           (StartsWith(s, "\"") && EndsWith(s, "\"")));
 }
 
-void InsertInto(const string& map_from, IncludePicker::Visibility from_vis,
-                const string& map_to, IncludePicker::Visibility to_vis,
-                IncludePicker::IncludeMap* include_map) {
-  // Verify that the key/value starts with < or " when it's a
-  // quoted-include.  Not all keys are quoted-includes (they may also
-  // be symbols), but all public keys are: symbols are always marked
-  // private, by convention.  Values are always quoted-includes.
-  if (from_vis == kPublic)
-    assert(IsQuotedInclude(map_from)
-           && "All public map keys must be quoted includes");
-  assert(IsQuotedInclude(map_to) && "All map values must be quoted includes");
-  const IncludePicker::IncludeMapValue value = { map_to, from_vis, to_vis };
-  (*include_map)[map_from].push_back(value);
-}
-
-void InsertInto(const IncludePicker::IncludeMapEntry& e,
-                IncludePicker::IncludeMap* map) {
-  InsertInto(e.map_from, e.from_visibility, e.map_to, e.to_visibility, map);
-}
-
-// For the given key, return the vector of values associated with that
-// key, or an empty vector if the key does not exist in the map.
-// *However*, we filter out all values that have private visibility
-// before returning the vector.  *Also*, if the key is public in
-// the map, we insert the key as the first of the returned values,
-// this is an implicit "self-map."
-vector<string> GetPublicValues(const IncludePicker::IncludeMap& map,
-                               const string& key) {
-  vector<string> retval;
-  const vector<IncludePicker::IncludeMapValue>* values = FindInMap(&map, key);
-  if (!values || values->empty())
-    return retval;
-
-  if (values->begin()->from_visibility == kPublic)   // we can map to ourself!
-    retval.push_back(key);
-  for (Each<IncludePicker::IncludeMapValue> it(values); !it.AtEnd(); ++it) {
-    if (it->to_visibility != kPrivate)
-      retval.push_back(it->map_to);
-  }
-  return retval;
-}
-
-
 // If the filepath map maps a.h to b.h, and also b.h to c.h, then
 // there's a transitive mapping of a.h to c.h.  We want to add that
 // into the filepath map as well, to make lookups easier.  We do this
@@ -734,19 +691,19 @@ vector<string> GetPublicValues(const IncludePicker::IncludeMap& map,
 // results in a vector of all values seen.
 void AugmentValuesForKey(
     const IncludePicker::IncludeMap& m,
-    const string& key, const IncludePicker::IncludeMapValue& value,
+    const string& key, const string& value,
     set<string> seen_keys,            // used to avoid recursion
-    vector<IncludePicker::IncludeMapValue>* all_values) {
+    vector<string>* all_values) {
   assert(!Contains(seen_keys, key) && "Cycle in include-mapping");
-  assert(key != value.map_to && "Self-mapping in include-mapping");
+  assert(key != value && "Self-mapping in include-mapping");
   all_values->push_back(value);
 
-  const string new_key = value.map_to;
-  const vector<IncludePicker::IncludeMapValue>* values = FindInMap(&m, new_key);
+  const string new_key = value;
+  const vector<string>* values = FindInMap(&m, new_key);
   if (!values)     // no need to recurse
     return;
   seen_keys.insert(key);              // update the stack with the old key
-  for (Each<IncludePicker::IncludeMapValue> it(values); !it.AtEnd(); ++it) {
+  for (Each<string> it(values); !it.AtEnd(); ++it) {
     AugmentValuesForKey(m, new_key, *it, seen_keys, all_values);
   }
 }
@@ -759,9 +716,8 @@ void MakeMapTransitive(const IncludePicker::IncludeMap& filename_map,
   // We can't use Each<>() because we need a non-const iterator.
   for (IncludePicker::IncludeMap::iterator it = include_map->begin();
        it != include_map->end(); ++it) {
-    vector<IncludePicker::IncludeMapValue> all_values_for_current_key;
-    for (Each<IncludePicker::IncludeMapValue> value(&it->second);
-         !value.AtEnd(); ++value) {
+    vector<string> all_values_for_current_key;
+    for (Each<string> value(&it->second); !value.AtEnd(); ++value) {
       const string key = it->first;
       AugmentValuesForKey(filename_map, key, *value, set<string>(),
                           &all_values_for_current_key);
@@ -769,11 +725,11 @@ void MakeMapTransitive(const IncludePicker::IncludeMap& filename_map,
     // Copy all_values_for_current_key into it->second, uniquifying as we go.
     it->second.clear();
     set<string> seen_values;
-    for (Each<IncludePicker::IncludeMapValue> value(&all_values_for_current_key);
+    for (Each<string> value(&all_values_for_current_key);
          !value.AtEnd(); ++value) {
-      if (!Contains(seen_values, value->map_to)) {
+      if (!Contains(seen_values, *value)) {
         it->second.push_back(*value);
-        seen_values.insert(value->map_to);
+        seen_values.insert(*value);
       }
     }
   }
@@ -853,6 +809,7 @@ bool IsSystemIncludeFile(const string& filepath) {
 IncludePicker::IncludePicker()
     : symbol_include_map_(),
       filepath_include_map_(),
+      filepath_visibility_map_(),
       all_quoted_includes_(),
       has_called_finalize_added_include_lines_(false) {
   // Parse our hard-coded mappings into a data structure.
@@ -873,6 +830,35 @@ IncludePicker::IncludePicker()
   }
 }
 
+void IncludePicker::MarkVisibility(const string& quoted_include,
+                                   IncludePicker::Visibility vis) {
+  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+
+  // insert() leaves any old value alone, and only inserts if the key is new.
+  filepath_visibility_map_.insert(make_pair(quoted_include, vis));
+  assert(filepath_visibility_map_[quoted_include] == vis &&
+         "Same file seen with two different visibilities");
+}
+
+void IncludePicker::InsertInto(const IncludePicker::IncludeMapEntry& e,
+                               IncludePicker::IncludeMap* include_map) {
+  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+
+  // Verify that the key/value starts with < or " when it's a
+  // quoted-include.  Not all keys are quoted-includes (they may also
+  // be symbols), but all public keys are: symbols are always marked
+  // private, by convention.  Values are always quoted-includes.
+  if (e.from_visibility == kPublic)
+    assert(IsQuotedInclude(e.map_from)
+           && "All public map keys must be quoted includes");
+  assert(IsQuotedInclude(e.map_to) && "All map values must be quoted includes");
+  (*include_map)[e.map_from].push_back(e.map_to);
+  // Marking the visibility of symbols is meaningless but also harmless,
+  // so we don't bother to check if map_from is a filepath or a symbol-name.
+  MarkVisibility(e.map_from, e.from_visibility);
+  MarkVisibility(e.map_to, e.to_visibility);
+}
+
 // AddDirectInclude lets us use some hard-coded rules to add filepath
 // mappings at runtime.  It includes, for instance, mappings from
 // 'project/internal/foo.h' to 'project/public/foo_public.h' in google
@@ -888,18 +874,24 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   // to our map, but harmless.
   const string quoted_includer = ConvertToQuotedInclude(includer_filepath);
   if (include_name_as_typed.find("/internal/") != string::npos) {
-    const Visibility to_visibility =
-        quoted_includer.find("/internal/") != string::npos ? kPrivate : kPublic;
-    AddMapping(include_name_as_typed, kPrivate, quoted_includer, to_visibility);
+    AddMapping(include_name_as_typed, quoted_includer);
+    MarkIncludeAsPrivate(include_name_as_typed);
+    if (quoted_includer.find("/internal/") != string::npos)
+      MarkIncludeAsPrivate(quoted_includer);
   }
 }
 
-void IncludePicker::AddMapping(
-    const string& map_from, Visibility from_visibility,
-    const string& map_to, Visibility to_visibility) {
+void IncludePicker::AddMapping(const string& map_from, const string& map_to) {
   assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
-  InsertInto(map_from, from_visibility, map_to, to_visibility,
-             &filepath_include_map_);
+  assert(IsQuotedInclude(map_from) && "All map keys must be quoted includes");
+  assert(IsQuotedInclude(map_to) && "All map values must be quoted includes");
+  filepath_include_map_[map_from].push_back(map_to);
+}
+
+void IncludePicker::MarkIncludeAsPrivate(const string& quoted_include) {
+  assert(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  assert(IsQuotedInclude(quoted_include) && "MIAP takes a quoted_include");
+  MarkVisibility(quoted_include, kPrivate);
 }
 
 // Given a map whose keys may have globs (* or [] or ?), expand the
@@ -923,6 +915,7 @@ void IncludePicker::ExpandGlobs() {
         assert(!Contains(filepath_include_map_, *hdr)
                && "Conflict between a glob entry and non-glob entry");
         filepath_include_map_[*hdr] = filepath_include_map_[*glob_key];
+        MarkVisibility(*hdr, filepath_visibility_map_[*glob_key]);
       }
     }
   }
@@ -944,6 +937,28 @@ void IncludePicker::FinalizeAddedIncludes() {
   MakeMapTransitive(filepath_include_map_, &symbol_include_map_);
 
   has_called_finalize_added_include_lines_ = true;
+}
+
+// For the given key, return the vector of values associated with that
+// key, or an empty vector if the key does not exist in the map.
+// *However*, we filter out all values that have private visibility
+// before returning the vector.  *Also*, if the key is public in
+// the map, we insert the key as the first of the returned values,
+// this is an implicit "self-map."
+vector<string> IncludePicker::GetPublicValues(
+    const IncludePicker::IncludeMap& m, const string& key) const {
+  vector<string> retval;
+  const vector<string>* values = FindInMap(&m, key);
+  if (!values || values->empty())
+    return retval;
+
+  if (GetOrDefault(filepath_visibility_map_, key, kPublic) == kPublic)
+    retval.push_back(key);                // we can map to ourself!
+  for (Each<string> it(values); !it.AtEnd(); ++it) {
+    if (GetOrDefault(filepath_visibility_map_, *it, kPublic) == kPublic)
+      retval.push_back(*it);
+  }
+  return retval;
 }
 
 vector<string> IncludePicker::GetPublicHeadersForSymbol(
@@ -972,12 +987,11 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
   const string quoted_from = ConvertToQuotedInclude(map_from_filepath);
   const string quoted_to = ConvertToQuotedInclude(map_to_filepath);
   // We can't use GetPublicHeadersForFilepath since includer might be private.
-  const vector<IncludePicker::IncludeMapValue>* all_mappers
-      = FindInMap(&filepath_include_map_, quoted_from);
+  const vector<string>* all_mappers = FindInMap(&filepath_include_map_,
+                                                quoted_from);
   if (all_mappers) {
-    for (Each<IncludePicker::IncludeMapValue> it(all_mappers);
-         !it.AtEnd(); ++it) {
-      if (it->map_to == quoted_to)
+    for (Each<string> it(all_mappers); !it.AtEnd(); ++it) {
+      if (*it == quoted_to)
         return true;
     }
   }
