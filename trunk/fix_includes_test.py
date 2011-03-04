@@ -107,7 +107,8 @@ class FixIncludesBase(unittest.TestCase):
       self.before_map[filename] = before_contents
       self.expected_after_map[filename] = expected_after_contents
 
-  def ProcessAndTest(self, iwyu_output, cmdline_files=None, unedited_files=[]):
+  def ProcessAndTest(self, iwyu_output, cmdline_files=None, unedited_files=[],
+                     expected_num_modified_files=None):
     """For all files mentioned in iwyu_output, compare expected and actual.
 
     Arguments:
@@ -118,6 +119,8 @@ class FixIncludesBase(unittest.TestCase):
           These limit what files fix_includes chooses to edit.
        unedited_files: the list of files that are listed in iwyu_output,
           but fix_files has chosen not to edit for some reason.
+       expected_num_modified_files: what we expect ProcessIWYUOutput to
+          return.  If None, suppress this check.
     """
     filenames = re.findall('^(\S+) should add these lines:', iwyu_output, re.M)
     if not filenames:    # This is the other possible starting-line
@@ -129,10 +132,13 @@ class FixIncludesBase(unittest.TestCase):
         expected_after.extend(self.expected_after_map[filename])
 
     iwyu_output_as_file = cStringIO.StringIO(iwyu_output)
-    fix_includes.ProcessIWYUOutput(iwyu_output_as_file,
-                                   cmdline_files, self.flags)
+    num_modified_files = fix_includes.ProcessIWYUOutput(iwyu_output_as_file,
+                                                        cmdline_files,
+                                                        self.flags)
 
     self.assertListEqual(expected_after, self.actual_after_contents)
+    if expected_num_modified_files is not None:
+      self.assertEqual(expected_num_modified_files, num_modified_files)
 
   def MakeFilesUnwriteable(self):
     """Mock out OS writeability check to say all files are NOT writeable."""
@@ -169,7 +175,7 @@ The full include-list for simple:
 ---
 """
     self.RegisterFileContents({'simple': infile})
-    self.ProcessAndTest(iwyu_output)
+    self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
 
   def testNodiffOutput(self):
     """Tests handling of the '(<file> has correct #includes)' iwyu output."""
@@ -188,7 +194,32 @@ int main() { return 0; }
 """
     iwyu_output = "(nodiffs.h has correct #includes/fwd-decls)\n"
     self.RegisterFileContents({'nodiffs.h': infile})
-    self.ProcessAndTest(iwyu_output)
+    # We still say there's a modified file because we reordered the #includes
+    self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
+
+  def testNodiffOutputWithNoSorting(self):
+    """Tests 'correct #includes' iwyu output, but does not need reordering."""
+    infile = """\
+// Copyright 2010
+
+#include <ctype.h>
+#include <stdio.h>
+
+namespace Foo;
+
+namespace Bar;
+
+int main() { return 0; }
+"""
+    iwyu_output = "(nodiffs_nosorting.h has correct #includes/fwd-decls)\n"
+    self.RegisterFileContents({'nodiffs_nosorting.h': infile})
+    # fix_includes gives special output when there are no changes, so
+    # we can't use the normal ProcessAndTest.
+    iwyu_output_as_file = cStringIO.StringIO(iwyu_output)
+    num_modified_files = fix_includes.ProcessIWYUOutput(iwyu_output_as_file,
+                                                        None, self.flags)
+    self.assertListEqual([], self.actual_after_contents)  # 'no diffs'
+    self.assertEqual(0, num_modified_files)
 
   def testRemoveEmptyIfdef(self):
     """Tests we remove an #ifdef if we remove all #includes inside it."""
