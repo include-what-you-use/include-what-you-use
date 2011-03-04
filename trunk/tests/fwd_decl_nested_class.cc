@@ -17,10 +17,15 @@ class Foo {
   class NoUsageDefinedOutOfLine;  // Unnecessary -- second fwd declare.
   class UsedAsPtrInMethod;  // Unnecessary -- all uses see the later dfn.
   class UsedFullyInMethod;  // Unnecessary -- all uses see the later dfn.
+  class UsedFullyInInitializer;  // Unnecessary -- same as in a method.
+  class UsedImplicitlyInInitializer;  // Unnecessary -- same as explicit use.
   class UsedInTypedef;  // Necessary -- this use doesn't see the later dfn.
   class UsedAsPtrArg;  // Necessary -- this use doesn't see the later dfn.
   class UsedAsPtrReturn;  // Necessary -- this use doesn't see the later dfn.
-  class UsedAsPtrMember;
+  class UsedAsPtrMember;  // Necessary -- this use doesn't see the later dfn.
+
+  Foo() : init_(UsedFullyInInitializer()) { }
+  ~Foo() { }
 
   // If a nested class is used in a body of a method, no preceding
   // declaration/definition is needed.
@@ -45,9 +50,14 @@ class Foo {
   class NoUsage { };
   class UsedAsPtrInMethod { };
   class UsedFullyInMethod { };
+  class UsedFullyInInitializer { };
+  class UsedImplicitlyInInitializer { };
   class UsedAsPtrArg { };
   class UsedAsPtrReturn { };
   class UsedAsPtrMember { };
+
+  UsedFullyInInitializer init_;
+  UsedImplicitlyInInitializer implicit_;
 };
 
 class Foo::NoUsageDefinedOutOfLine {};
@@ -60,10 +70,15 @@ class Outer {
   template<typename T> class NoUsageDefinedOutOfLine;  // Unnecessary
   template<typename T> class UsedAsPtrInMethod;  // Unnecessary
   template<typename T> class UsedFullyInMethod;  // Unnecessary
+  template<typename T> class UsedFullyInInitializer;  // Unnecessary
+  template<typename T> class UsedImplicitlyInInitializer;  // Unnecessary
   template<typename T> class UsedInTypedef;  // Necessary
   template<typename T> class UsedAsPtrArg;  // Necessary
   template<typename T> class UsedAsPtrReturn;  // Necessary
   template<typename T> class UsedAsPtrMember;  // Necessary
+
+  Outer() : init_(UsedFullyInInitializer<int>()) { }
+  ~Outer() { }
 
   // If a nested class is used in a body of a method, no preceding
   // declaration/definition is needed.
@@ -88,9 +103,14 @@ class Outer {
   template<typename T> class NoUsage { };
   template<typename T> class UsedAsPtrInMethod { };
   template<typename T> class UsedFullyInMethod { };
+  template<typename T> class UsedFullyInInitializer { };
+  template<typename T> class UsedImplicitlyInInitializer { };
   template<typename T> class UsedAsPtrArg { };
   template<typename T> class UsedAsPtrReturn { };
   template<typename T> class UsedAsPtrMember { };
+
+  UsedFullyInInitializer<int> init_;
+  UsedImplicitlyInInitializer<int> implicit_;
 };
 
 template<typename T> class Outer::NoUsageDefinedOutOfLine {};
@@ -103,11 +123,15 @@ tests/fwd_decl_nested_class.cc should remove these lines:
 - class Foo::NoUsage;  // lines XX-XX
 - class Foo::NoUsageDefinedOutOfLine;  // lines XX-XX
 - class Foo::UsedAsPtrInMethod;  // lines XX-XX
+- class Foo::UsedFullyInInitializer;  // lines XX-XX
 - class Foo::UsedFullyInMethod;  // lines XX-XX
+- class Foo::UsedImplicitlyInInitializer;  // lines XX-XX
 - template <typename T> class Outer::NoUsage;  // lines XX-XX
 - template <typename T> class Outer::NoUsageDefinedOutOfLine;  // lines XX-XX
 - template <typename T> class Outer::UsedAsPtrInMethod;  // lines XX-XX
+- template <typename T> class Outer::UsedFullyInInitializer;  // lines XX-XX
 - template <typename T> class Outer::UsedFullyInMethod;  // lines XX-XX
+- template <typename T> class Outer::UsedImplicitlyInInitializer;  // lines XX-XX
 
 The full include-list for tests/fwd_decl_nested_class.cc:
 class Foo::NoUsageDefinedOutOfLine;  // lines XX-XX
