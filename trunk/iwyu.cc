@@ -1036,10 +1036,10 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
     bool Contains(const Decl* decl) const {
       return include_what_you_use::Contains(others, decl);
     }
-    bool Contains(const ASTNode* node) const {
-      if (const TypeLoc* tl = node->GetAs<TypeLoc>()) {
+    bool Contains(const ASTNode& node) const {
+      if (const TypeLoc* tl = node.GetAs<TypeLoc>()) {
         return find(typelocs.begin(), typelocs.end(), *tl) != typelocs.end();
-      } else if (const TemplateName* tn = node->GetAs<TemplateName>()) {
+      } else if (const TemplateName* tn = node.GetAs<TemplateName>()) {
         // The best we can do is to compare the associated decl
         if (tn->getAsTemplateDecl() == NULL)
           return false;    // be conservative if we can't compare decls
@@ -1048,29 +1048,25 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
             return true;
         }
         return false;
-      } else if (const TemplateArgument* ta = node->GetAs<TemplateArgument>()) {
+      } else if (const TemplateArgument* ta = node.GetAs<TemplateArgument>()) {
         // TODO(csilvers): figure out how to compare template arguments
         (void)ta;
         return false;
       } else if (const TemplateArgumentLoc* tal =
-                 node->GetAs<TemplateArgumentLoc>()) {
+                 node.GetAs<TemplateArgumentLoc>()) {
         // TODO(csilvers): figure out how to compare template argument-locs
         (void)tal;
         return false;
       } else {
-        return others.find(node->GetAs<void>()) != others.end();
+        return others.find(node.GetAs<void>()) != others.end();
       }
     }
 
     void AddAll(const NodeSet& that) {
-      typelocs.insert(typelocs.end(),
-                      that.typelocs.begin(), that.typelocs.end());
-      tpl_names.insert(tpl_names.end(),
-                       that.tpl_names.begin(), that.tpl_names.end());
-      tpl_args.insert(tpl_args.end(),
-                      that.tpl_args.begin(), that.tpl_args.end());
-      tpl_arglocs.insert(tpl_arglocs.end(),
-                         that.tpl_arglocs.begin(), that.tpl_arglocs.end());
+      Extend(&typelocs, that.typelocs);
+      Extend(&tpl_names, that.tpl_names);
+      Extend(&tpl_args, that.tpl_args);
+      Extend(&tpl_arglocs, that.tpl_arglocs);
       InsertAllInto(that.others, &others);
     }
 
@@ -1172,7 +1168,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   bool TraverseImplicitDestructorCall(clang::CXXDestructorDecl* decl,
                                       const Type* type) {
     VERRS(7) << GetSymbolAnnotation() << "[implicit dtor] "
-             << reinterpret_cast<void*>(decl)
+             << static_cast<void*>(decl)
              << (decl ? PrintableDecl(decl) : "NULL") << "\n";
     AddAstNodeAsPointer(decl);
     return Base::TraverseImplicitDestructorCall(decl, type);
@@ -1180,7 +1176,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   bool HandleFunctionCall(clang::FunctionDecl* callee,
                           const clang::Type* parent_type) {
     VERRS(7) << GetSymbolAnnotation() << "[function call] "
-             << reinterpret_cast<void*>(callee)
+             << static_cast<void*>(callee)
              << (callee ? PrintableDecl(callee) : "NULL") << "\n";
     AddAstNodeAsPointer(callee);
     return Base::HandleFunctionCall(callee, parent_type);
@@ -2249,7 +2245,7 @@ class InstantiatedTemplateVisitor
   // template definition is, so we never have any reason to ignore a
   // node.
   virtual bool CanIgnoreCurrentASTNode() const {
-    return nodes_to_ignore_.Contains(current_ast_node());
+    return nodes_to_ignore_.Contains(*current_ast_node());
   }
 
   // For template instantiations, we want to print the symbol even if
