@@ -144,6 +144,9 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
           = ConvertToQuotedInclude(GetFilePath(current_loc));
       MutableGlobalIncludePicker()->AddMapping(quoted_include, pragma_text);
       MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_include);
+      ERRSYM(GetFileEntry(current_loc)) << "Adding private pragma-mapping: "
+                                        << quoted_include << " -> "
+                                        << pragma_text << "\n";
       continue;
     }
 
@@ -195,6 +198,9 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
                                                quoted_header_name);
       MutableGlobalIncludePicker()->MarkIncludeAsPrivate(
           quoted_private_include);
+      ERRSYM(GetFileEntry(current_loc)) << "Adding @headername mapping: "
+                                        << quoted_private_include << "->"
+                                        << quoted_header_name << "\n";
     }
     break;  // No more than one @headername directive allowed.
   }
@@ -236,6 +242,9 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     const string quoted_includer = ConvertToQuotedInclude(GetFilePath(includer));
     MutableGlobalIncludePicker()->AddMapping(include_name_as_typed,
                                              quoted_includer);
+    ERRSYM(includer) << "Adding pragma-export mapping: "
+                     << include_name_as_typed << " -> " << quoted_includer
+                     << "\n";
 
   // We also always keep #includes of .c files: iwyu doesn't touch those.
   // TODO(csilvers): instead of IsHeaderFile, check if the file has
