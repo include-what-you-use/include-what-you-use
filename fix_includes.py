@@ -23,7 +23,8 @@ _USAGE = """\
     OR %prog -s [other options] <filename> ...
 
 %prog reads the output from the include-what-you-use
-script on stdin -- run with --v=1 (default) verbose or above -- and
+script on stdin -- run with --v=1 (default) verbose or above -- and,
+unless --sort_only or --dry_run is specified,
 modifies the files mentioned in the output, removing their old
 #include lines and replacing them with the lines given by the
 include_what_you_use script.  It also sorts the #include and
@@ -34,6 +35,10 @@ Only writable files (those opened for p4 edit) are modified (unless
 include-what-you-use script are modified, unless filenames are
 specified on the commandline, in which case only those files are
 modified.
+
+The exit code is the number of files that were modified (or that would
+be modified if --dry_run was specified) unless that number exceeds 100,
+in which case 100 is returned.
 """
 
 _COMMENT_RE = re.compile('\s*//.*')
@@ -1552,7 +1557,9 @@ def main(argv):
                           'do not add or remove any #includes'))
   parser.add_option('-n', '--dry_run', action='store_true',
                     help=('Do not actually edit any files; just print diffs. '
-                          'Return code is 0 if no changes are needed, 1 else.'))
+                          'Return code is 0 if no changes are needed, '
+                          'else min(the number of files that would be '
+                          'modified, 100)'))
   parser.add_option('--checkout_command',
                     help='A command, such as "p4 edit", to run on each '
                     'non-writeable file before modifying it.  The name of '
@@ -1573,6 +1580,7 @@ def main(argv):
   else:
     return ProcessIWYUOutput(sys.stdin, files_to_modify, flags)
 
+
 if __name__ == '__main__':
   num_files_fixed = main(sys.argv)
-  sys.exit(num_files_fixed and 1 or 0)
+  sys.exit(min(num_files_fixed, 100))
