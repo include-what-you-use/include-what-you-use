@@ -211,6 +211,7 @@ using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::raw_string_ostream;
+using std::find;
 using std::make_pair;
 using std::map;
 using std::set;
@@ -1018,7 +1019,90 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
  public:
   typedef BaseAstVisitor<AstFlattenerVisitor> Base;
-  typedef set<const void*> NodeSet;
+
+  // We divide our set of nodes into category by type.  For most AST
+  // nodes, we can store just a pointer to the node.  However, for
+  // some AST nodes we don't get a pointer into the AST, we get a
+  // temporary (stack-allocated) object, and have to store the full
+  // object ourselves and use its operator== to test for equality.
+  // These types each get their own set (or, usually, vector, since
+  // the objects tend not to support operator< or hash<>()).
+  class NodeSet {
+   public:
+    // We could add more versions, but these are the only useful ones so far.
+    bool Contains(const Type* type) const {
+      return include_what_you_use::Contains(others, type);
+    }
+    bool Contains(const Decl* decl) const {
+      return include_what_you_use::Contains(others, decl);
+    }
+    bool Contains(const ASTNode* node) const {
+      if (const TypeLoc* tl = node->GetAs<TypeLoc>()) {
+        return find(typelocs.begin(), typelocs.end(), *tl) != typelocs.end();
+      } else if (const TemplateName* tn = node->GetAs<TemplateName>()) {
+        // The best we can do is to compare the associated decl
+        if (tn->getAsTemplateDecl() == NULL)
+          return false;    // be conservative if we can't compare decls
+        for (Each<TemplateName> it(&tpl_names); it.AtEnd(); ++it) {
+          if (it->getAsTemplateDecl() == tn->getAsTemplateDecl())
+            return true;
+        }
+        return false;
+      } else if (const TemplateArgument* ta = node->GetAs<TemplateArgument>()) {
+        // TODO(csilvers): figure out how to compare template arguments
+        (void)ta;
+        return false;
+      } else if (const TemplateArgumentLoc* tal =
+                 node->GetAs<TemplateArgumentLoc>()) {
+        // TODO(csilvers): figure out how to compare template argument-locs
+        (void)tal;
+        return false;
+      } else {
+        return others.find(node->GetAs<void>()) != others.end();
+      }
+    }
+
+    void AddAll(const NodeSet& that) {
+      typelocs.insert(typelocs.end(),
+                      that.typelocs.begin(), that.typelocs.end());
+      tpl_names.insert(tpl_names.end(),
+                       that.tpl_names.begin(), that.tpl_names.end());
+      tpl_args.insert(tpl_args.end(),
+                      that.tpl_args.begin(), that.tpl_args.end());
+      tpl_arglocs.insert(tpl_arglocs.end(),
+                         that.tpl_arglocs.begin(), that.tpl_arglocs.end());
+      InsertAllInto(that.others, &others);
+    }
+
+    // Needed since we're treated like an stl-like object.
+    bool empty() const {
+      return (typelocs.empty() && tpl_names.empty() && tpl_args.empty() &&
+              tpl_arglocs.empty() && others.empty());
+    }
+    void clear() {
+      typelocs.clear();
+      tpl_names.clear();
+      tpl_args.clear();
+      tpl_arglocs.clear();
+      others.clear();
+    }
+
+   private:
+    friend class AstFlattenerVisitor;
+
+    // It's ok not to check for duplicates; we're just traversing the tree.
+    void Add(TypeLoc tl) { typelocs.push_back(tl); }
+    void Add(TemplateName tn) { tpl_names.push_back(tn); }
+    void Add(TemplateArgument ta) { tpl_args.push_back(ta); }
+    void Add(TemplateArgumentLoc tal) { tpl_arglocs.push_back(tal); }
+    void Add(const void* o) { others.insert(o); }
+
+    vector<TypeLoc> typelocs;
+    vector<TemplateName> tpl_names;
+    vector<TemplateArgument> tpl_args;
+    vector<TemplateArgumentLoc> tpl_arglocs;
+    set<const void*> others;
+  };
 
   //------------------------------------------------------------
   // Public interface:
@@ -1049,64 +1133,74 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
     return false;
   }
   virtual string GetSymbolAnnotation() const {
-    // This will never be called, so the value doesn't really matter.
-    return " in flattener";
+    return "[Uninstantiated template AST-node] ";
   }
 
   //------------------------------------------------------------
   // Top-level handlers that construct the tree.
 
-  bool VisitDecl(Decl*) { AddCurrentAstNode(); return true; }
-  bool VisitStmt(Stmt*) { AddCurrentAstNode(); return true; }
-  bool VisitType(Type*) { AddCurrentAstNode(); return true; }
+  bool VisitDecl(Decl*) { AddCurrentAstNodeAsPointer(); return true; }
+  bool VisitStmt(Stmt*) { AddCurrentAstNodeAsPointer(); return true; }
+  bool VisitType(Type*) { AddCurrentAstNodeAsPointer(); return true; }
+  bool VisitTypeLoc(TypeLoc typeloc) {
+    VERRS(7) << GetSymbolAnnotation() << PrintableTypeLoc(typeloc) << "\n";
+    seen_nodes_.Add(typeloc);
+    return true;
+  }
   bool VisitNestedNameSpecifier(NestedNameSpecifier*) {
-    AddCurrentAstNode();
+    AddCurrentAstNodeAsPointer();
     return true;
   }
-  bool VisitTemplateName(TemplateName) {
-    AddCurrentAstNode();
+  bool VisitTemplateName(TemplateName tpl_name) {
+    VERRS(7) << GetSymbolAnnotation()
+             << PrintableTemplateName(tpl_name) << "\n";
+    seen_nodes_.Add(tpl_name);
     return true;
   }
-  bool VisitTemplateArgument(const TemplateArgument&) {
-    AddCurrentAstNode();
+  bool VisitTemplateArgument(const TemplateArgument& tpl_arg) {
+    VERRS(7) << GetSymbolAnnotation()
+             << PrintableTemplateArgument(tpl_arg) << "\n";
+    seen_nodes_.Add(tpl_arg);
     return true;
   }
-  bool VisitTemplateArgumentLoc(const TemplateArgumentLoc&) {
-    AddCurrentAstNode();
+  bool VisitTemplateArgumentLoc(const TemplateArgumentLoc& tpl_argloc) {
+    VERRS(7) << GetSymbolAnnotation()
+             << PrintableTemplateArgumentLoc(tpl_argloc) << "\n";
+    seen_nodes_.Add(tpl_argloc);
     return true;
   }
   bool TraverseImplicitDestructorCall(clang::CXXDestructorDecl* decl,
                                       const Type* type) {
-    VERRS(7) << "[Uninstantiated template AST-node] [implicit dtor] "
+    VERRS(7) << GetSymbolAnnotation() << "[implicit dtor] "
+             << reinterpret_cast<void*>(decl)
              << (decl ? PrintableDecl(decl) : "NULL") << "\n";
-    AddAstNode(decl);
+    AddAstNodeAsPointer(decl);
     return Base::TraverseImplicitDestructorCall(decl, type);
   }
   bool HandleFunctionCall(clang::FunctionDecl* callee,
                           const clang::Type* parent_type) {
-    VERRS(7) << "[Uninstantiated template AST-node] [function call] "
+    VERRS(7) << GetSymbolAnnotation() << "[function call] "
+             << reinterpret_cast<void*>(callee)
              << (callee ? PrintableDecl(callee) : "NULL") << "\n";
-    AddAstNode(callee);
+    AddAstNodeAsPointer(callee);
     return Base::HandleFunctionCall(callee, parent_type);
   }
 
   //------------------------------------------------------------
   // Class logic.
 
-  void AddAstNode(const void* node) {
-    seen_nodes_.insert(node);
+  void AddAstNodeAsPointer(const void* node) {
+    seen_nodes_.Add(node);
   }
 
-  void AddCurrentAstNode() {
+  void AddCurrentAstNodeAsPointer() {
     if (ShouldPrint(7)) {
-      errs() << "[Uninstantiated template AST-node] "
-             << current_ast_node()->GetAs<void>() << " ";
+      errs() << GetSymbolAnnotation() << current_ast_node()->GetAs<void>()
+             << " ";
       PrintASTNode(current_ast_node());
       errs() << "\n";
     }
-    // TODO(csilvers): deal with TypeLoc and TemplateName which are
-    // pointers to temporaries.
-    AddAstNode(current_ast_node()->GetAs<void>());
+    AddAstNodeAsPointer(current_ast_node()->GetAs<void>());
   }
 
  private:
@@ -2155,7 +2249,7 @@ class InstantiatedTemplateVisitor
   // template definition is, so we never have any reason to ignore a
   // node.
   virtual bool CanIgnoreCurrentASTNode() const {
-    return Contains(nodes_to_ignore_, current_ast_node()->GetAs<void>());
+    return nodes_to_ignore_.Contains(current_ast_node());
   }
 
   // For template instantiations, we want to print the symbol even if
@@ -2169,7 +2263,7 @@ class InstantiatedTemplateVisitor
   // We only care about types that are Subst types, and also are in
   // tpl_type_args_of_interest_.
   virtual bool CanIgnoreType(const Type* type) const {
-    if (Contains(nodes_to_ignore_, type))
+    if (nodes_to_ignore_.Contains(type))
       return true;
     const SubstTemplateTypeParmType* subst_type = DynCastFrom(type);
     if (!subst_type)
@@ -2184,7 +2278,7 @@ class InstantiatedTemplateVisitor
   // instance, we're not responsible for a vector's call to
   // allocator::allocator(), because <vector> provides it for us).
   virtual bool CanIgnoreDecl(const Decl* decl) const {
-    return (Contains(nodes_to_ignore_, decl) ||
+    return (nodes_to_ignore_.Contains(decl) ||
             InstantiatedTemplateIntendsToProvide(decl));
   }
 
@@ -2466,7 +2560,7 @@ class InstantiatedTemplateVisitor
     }
     if (decl_as_written) {
       FunctionDecl* const daw = const_cast<FunctionDecl*>(decl_as_written);
-      InsertAllInto(nodeset_getter.GetNodesBelow(daw), &nodes_to_ignore_);
+      nodes_to_ignore_.AddAll(nodeset_getter.GetNodesBelow(daw));
     }
 
     // We need to iterate over the function.  We do so even if it's
