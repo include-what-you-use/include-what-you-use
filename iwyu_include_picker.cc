@@ -911,10 +911,7 @@ void IncludePicker::ExpandGlobs() {
   for (Each<string> hdr(&all_quoted_includes_); !hdr.AtEnd(); ++hdr) {
     for (Each<string> glob_key(&glob_keys); !glob_key.AtEnd(); ++glob_key) {
       if (fnmatch(glob_key->c_str(), hdr->c_str(), 0) == 0) {
-        // We could easily just merge them if this is ever an actual issue.
-        CHECK_(!Contains(filepath_include_map_, *hdr)
-               && "Conflict between a glob entry and non-glob entry");
-        filepath_include_map_[*hdr] = filepath_include_map_[*glob_key];
+        Extend(&filepath_include_map_[*hdr], filepath_include_map_[*glob_key]);
         MarkVisibility(*hdr, filepath_visibility_map_[*glob_key]);
       }
     }

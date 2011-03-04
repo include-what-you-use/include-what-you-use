@@ -247,6 +247,21 @@ TEST(IncludePicker, GetPublicHeadersForFilepath_ThirdParty) {
       "\"third_party/icu/include/unicode/ukeep.h\"");
 }
 
+TEST(IncludePicker, GetPublicHeadersForFilepath_GlobOverlap) {
+  IncludePicker p;
+  // It's ok if a header is specified in both a glob and non-glob rule.
+  // For globs to work, we need to have actually seen the includes.
+  p.AddDirectInclude("\"a.h\"", "\"third_party/dynamic_annotations/d.h\"");
+  p.AddMapping("\"third_party/dynamic_annotations/d.h\"",
+               "\"third_party/dynamic_annotations/public.h\"");
+  p.MarkIncludeAsPrivate("\"third_party/dynamic_annotations/d.h\"");
+  p.FinalizeAddedIncludes();
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("third_party/dynamic_annotations/d.h"),
+      "\"third_party/dynamic_annotations/public.h\"",
+      "\"base/dynamic_annotations.h\"");
+}
+
 TEST(IncludePicker, GetPublicHeadersForFilepath_NotInAnyMap) {
   IncludePicker p;
   p.FinalizeAddedIncludes();
