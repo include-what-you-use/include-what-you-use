@@ -166,8 +166,8 @@ TEST(IncludePicker, DynamicMapping_MultipleTransitiveMapping) {
 TEST(IncludePicker, DynamicMapping_PrivateToPublicMapping) {
   IncludePicker p;
   // These names are not the public/internal names that AddInclude looks at.
-  p.AddMapping("\"project/private/foo.h\"", IncludePicker::kPrivate,
-               "\"project/not_private/bar.h\"", IncludePicker::kPublic);
+  p.AddMapping("\"project/private/foo.h\"", "\"project/not_private/bar.h\"");
+  p.MarkIncludeAsPrivate("\"project/private/foo.h\"");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetPublicHeadersForFilepath("project/private/foo.h"),
