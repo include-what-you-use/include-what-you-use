@@ -1439,26 +1439,31 @@ def FixOneFile(iwyu_record, flags):
        file to disk, flags.checkout_command, which determines
        how we handle files that are not writable, and other flags
        indirectly.
+
+  Returns:
+    1 if the file needed to be fixed, or 0 if it was already all ok.
   """
   file_contents = _ReadWriteableFile(iwyu_record.filename,
                                      flags.dry_run or flags.checkout_command)
   if not file_contents:
     print '(skipping %s: not a writable file)' % iwyu_record.filename
-    return
+    return 0
   print ">>> Fixing #includes in '%s'" % iwyu_record.filename
   file_lines = ParseOneFile(file_contents, iwyu_record)
   old_lines = [fl.line for fl in file_lines
                if fl is not None and fl.line is not None]
   fixed_lines = FixFileLines(iwyu_record, file_lines, flags)
   fixed_lines = [line for line in fixed_lines if line is not None]
-  if flags.dry_run:
-    PrintFileDiff(old_lines, fixed_lines)
+  if old_lines == fixed_lines:
+    print "No changes in file", iwyu_record.filename
+    return 0
   else:
-    if old_lines == fixed_lines:
-      print "No changes in file", iwyu_record.filename
+    if flags.dry_run:
+      PrintFileDiff(old_lines, fixed_lines)
     else:
       _WriteFileContentsIfPossible(iwyu_record.filename, fixed_lines,
                                    flags.checkout_command)
+    return 1
 
 
 def ProcessIWYUOutput(f, files_to_process, flags):
@@ -1473,6 +1478,11 @@ def ProcessIWYUOutput(f, files_to_process, flags):
        ignore files mentioned in f that are not in files_to_process.
     flags: commandline flags, as parsed by optparse.  We do not use
        any flags directly, but pass them to other routines.
+
+  Returns:
+    The number of files that had to be modified (because they weren't
+    already all correct).  In dry_run mode, returns the number of
+    files that would have been modified.
   """
   # First collect all the iwyu data from stdin.
   iwyu_output_records = {}    # key is filename, value is an IWYUOutputRecord
@@ -1496,11 +1506,13 @@ def ProcessIWYUOutput(f, files_to_process, flags):
       iwyu_output_records[filename] = iwyu_record
 
   # Now do all the fixing.
+  num_fixes_made = 0
   for iwyu_record in iwyu_output_records.itervalues():
     try:
-      FixOneFile(iwyu_record, flags)
+      num_fixes_made += FixOneFile(iwyu_record, flags)
     except FixIncludesError, why:
       print 'ERROR: %s - skipping file %s' % (why, iwyu_record.filename)
+  return num_fixes_made
 
 
 def SortIncludesInFiles(files_to_process, flags):
@@ -1539,7 +1551,8 @@ def main(argv):
                     help=('Just sort #includes of files listed on cmdline; '
                           'do not add or remove any #includes'))
   parser.add_option('-n', '--dry_run', action='store_true',
-                    help='Do not actually edit any files; just print diffs')
+                    help=('Do not actually edit any files; just print diffs. '
+                          'Return code is 0 if no changes are needed, 1 else.'))
   parser.add_option('--checkout_command',
                     help='A command, such as "p4 edit", to run on each '
                     'non-writeable file before modifying it.  The name of '
@@ -1556,9 +1569,10 @@ def main(argv):
     if not files_to_modify:
       sys.exit('FATAL ERROR: -s flag requires a list of filenames')
     SortIncludesInFiles(files_to_modify, flags)
+    return 0
   else:
-    ProcessIWYUOutput(sys.stdin, files_to_modify, flags)
-
+    return ProcessIWYUOutput(sys.stdin, files_to_modify, flags)
 
 if __name__ == '__main__':
-  main(sys.argv)
+  num_files_fixed = main(sys.argv)
+  sys.exit(num_files_fixed and 1 or 0)
