@@ -40,6 +40,8 @@ class OneIwyuTest(unittest.TestCase):
     flags_map = {
       'check_also.cc': ['--check_also="%s"'
                         % os.path.join(TEST_ROOTDIR, '*-d1*')],
+      'overloaded_class.cc': ['--check_also="%s"'
+                              % os.path.join(TEST_ROOTDIR, '*-i1*')],
     }
     # Internally, we like it when the paths start with TEST_ROOTDIR.
     self._iwyu_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
