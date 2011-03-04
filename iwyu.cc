@@ -2071,10 +2071,23 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // If we're in a forward-declare context, we can forward declare.  Duh...
     if (ast_node->in_forward_declare_context())
       return true;
-    // If grandparent is a pointer (parent is
-    // TemplateSpecializationType), we can forward-declare this name.
+
+    // It may not be possible for the parent to be something other
+    // than a TemplateSpecializationType.  In any case, the remaining
+    // heuristics depend on that.
     if (!ast_node->ParentIsA<TemplateSpecializationType>())
       return false;
+
+    // Another place we disregard what the language allows: if we're
+    // a dependent type, in theory we can be forward-declared.  But
+    // we require the full definition anyway, so all the template
+    // callers don't have to provide it instead.  Thus we don't
+    // run the following commented-out code (left here for reference):
+    //if (ast_node->GetParentAs<TemplateSpecializationType>()->isDependentType())
+    //  return true;
+
+    // If grandparent is a pointer (parent is
+    // TemplateSpecializationType), we can forward-declare this name.
     if (!ast_node->AncestorIsA<PointerType>(2) &&
         !ast_node->AncestorIsA<LValueReferenceType>(2))
       return false;

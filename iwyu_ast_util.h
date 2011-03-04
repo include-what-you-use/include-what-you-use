@@ -437,13 +437,30 @@ inline bool IsDeclNodeInsideFriend(const ASTNode* ast_node) {
 
 // Return true if the given ast_node is inside a C++ method body.  Do
 // this by walking up the AST tree until you find a CXXMethodDecl,
-// then see if the node just before you reached it is the body.
+// then see if the node just before you reached it is the body.  We
+// also check if the node is in an initializer (either explicitly or
+// implicitly), or the implicit (non-body) code of a destructor.
 inline bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
+  // If we're a destructor, we're definitely part of a method body;
+  // destructors don't have any other parts to them.  This case is
+  // triggered when we see implicit destruction of member vars.
+  if (ast_node && ast_node->IsA<clang::CXXDestructorDecl>())
+    return true;
   for (; ast_node != NULL; ast_node = ast_node->parent()) {
-    const clang::CXXMethodDecl* decl =
-        ast_node->GetParentAs<clang::CXXMethodDecl>();
-    if (decl != NULL) {
-      return ast_node->ContentIs(decl->getBody());
+    // If we're a constructor, check if we're part of the
+    // initializers, which also count as 'the body' of the method.
+    if (const clang::CXXConstructorDecl* ctor =
+        ast_node->GetParentAs<clang::CXXConstructorDecl>()) {
+      for (clang::CXXConstructorDecl::init_const_iterator
+               it = ctor->init_begin(); it != ctor->init_end(); ++it) {
+        if (ast_node->ContentIs((*it)->getInit()))
+          return true;
+      }
+      // Now fall through to see if we're the body of the constructor.
+    }
+    if (const clang::CXXMethodDecl* method_decl =
+        ast_node->GetParentAs<clang::CXXMethodDecl>()) {
+      return ast_node->ContentIs(method_decl->getBody());
     }
   }
   return false;
@@ -888,6 +905,11 @@ inline const clang::NamedDecl* GetDefinitionAsWritten(
   }
   // Then, get to definition.
   if (const clang::RecordDecl* class_dfn = GetDefinitionForClass(decl)) {
+    // If we started this fn as a template, convert back to a template now.
+    if (const clang::CXXRecordDecl* cxx_class_dfn = DynCastFrom(class_dfn)) {
+      if (cxx_class_dfn->getDescribedClassTemplate())
+        return cxx_class_dfn->getDescribedClassTemplate();
+    }
     return class_dfn;
   } else if (const clang::FunctionDecl* fn_decl = DynCastFrom(decl)) {
     for (clang::FunctionDecl::redecl_iterator it = fn_decl->redecls_begin();

@@ -113,6 +113,7 @@ class OneUse {
 
   void reset_decl(const clang::NamedDecl* decl) { decl_ = decl; }
   void set_full_use() { use_kind_ = kFullUse; }
+  void set_forward_declare_use() { use_kind_ = kForwardDeclareUse; }
   void set_ignore_use() { ignore_use_ = true; }
   void set_is_iwyu_violation() { is_iwyu_violation_ = true; }
   void set_suggested_header(const string& fh) { suggested_header_ = fh; }

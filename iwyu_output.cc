@@ -553,6 +553,11 @@ static void LogIncludeMapping(const string& reason, const OneUse& use) {
 
 namespace internal {
 
+bool DeclCanBeForwardDeclared(const Decl* decl) {
+  // Only uses of classes or template classes can be forward-declared.
+  return isa<RecordDecl>(decl) || isa<ClassTemplateDecl>(decl);
+}
+
 // Helper to tell whether a forward-declare use is 'preceded' by a
 // declaration inside the same file.  'Preceded' is in quotes, because
 // it's actually ok if the declaration follows the use, inside a
@@ -735,15 +740,20 @@ set<string> CalculateMinimalIncludes(
 //     discard the forward-declare use.
 
 // Trimming symbol uses (1st pass):
-// B1) Discard symbol uses of a symbol defined in the same file it's used.
-// B2) Discard symbol uses for builtin symbols ('__builtin_memcmp') and
+// B1) If the definition of a full use comes after the use, change the
+//     full use to a forward-declare use that points to a fwd-decl
+//     that comes before the use.  (This is for cases like typedefs
+//     where iwyu demands a full use but the language allows a
+//     forward-declare.)
+// B2) Discard symbol uses of a symbol defined in the same file it's used.
+// B3) Discard symbol uses for builtin symbols ('__builtin_memcmp') and
 //     for operator new and operator delete (excluding placement new),
 //     which are effectively built-in even though they're in <new>.
-// B3) Discard .h-file uses of symbols defined in a .cc file (sanity check).
-// B4) Discard symbol uses for member functions that live in the same
+// B4) Discard .h-file uses of symbols defined in a .cc file (sanity check).
+// B5) Discard symbol uses for member functions that live in the same
 //     file as the class they're part of (the parent check suffices).
-// B5) Discard macro uses in the same file as the definition (B1 redux).
-// B6) Discard .h-file uses of macros defined in a .cc file (B3 redux).
+// B6) Discard macro uses in the same file as the definition (B2 redux).
+// B7) Discard .h-file uses of macros defined in a .cc file (B4 redux).
 
 // Determining 'desired' #includes:
 // C1) Get a list of 'effective' direct includes.  For most files, it's
@@ -777,16 +787,17 @@ void ProcessForwardDeclare(OneUse* use) {
     return;
 
   // (A1) If not a class or a templated class, recategorize as a full use.
-  const RecordDecl* record_decl = DynCastFrom(use->decl());
-  if (const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl()))
-    record_decl = tpl_decl->getTemplatedDecl();
-  if (!record_decl) {
+  if (!DeclCanBeForwardDeclared(use->decl())) {
     VERRS(6) << "Moving " << use->symbol_name()
              << " from fwd-decl use to full use: not a class"
              << " (" << use->PrintableUseLoc() << ")\n";
     use->set_full_use();
     return;
   }
+  // This is useful for the subsequent tests.
+  const RecordDecl* record_decl = DynCastFrom(use->decl());
+  if (const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl()))
+    record_decl = tpl_decl->getTemplatedDecl();
 
   // (A2) If it has default template parameters, recategorize as a full use.
   if (const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl())) {
@@ -835,7 +846,26 @@ void ProcessFullUse(OneUse* use) {
   if (use->ignore_use())   // we're already ignoring it
     return;
 
-  // (B1) Discard symbol uses of a symbol defined in the same file it's used.
+  // (B1) If the definition is after the use, re-point to a prior decl.
+  // If iwyu followed the language precisely, this wouldn't be
+  // necessary: code wouldn't compile if a full-use didn't have the
+  // definition handy yet.  But in fact, iwyu sometimes requires a full
+  // type when the language doesn't, notably with typedefs.  For code
+  // like 'struct f; typedef f g; struct f {};', iwyu will say the
+  // typedef requires a definition of f, and as a result will say the
+  // forward-decl is unnecessary (who cares about forward-decls when
+  // we need a definition?), when in fact it's crucial.
+  // For now, we assume a 'later' usage must be in the same file.
+  if (GetFileEntry(use->use_loc()) == GetFileEntry(use->decl()) &&
+      !DeclIsVisibleToUseInSameFile(use->decl(), *use) &&
+      DeclCanBeForwardDeclared(use->decl())) {
+    // Just change us to a forward-declare use.  Later, we'll decide
+    // which forward-declare is the best one to keep.
+    use->set_forward_declare_use();
+    return;
+  }
+
+  // (B2) Discard symbol uses of a symbol defined in the same file it's used.
   if (GetFileEntry(use->use_loc()) == GetFileEntry(use->decl())) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): definition is present: "
@@ -844,7 +874,7 @@ void ProcessFullUse(OneUse* use) {
     return;
   }
 
-  // (B2) Discard symbol uses for builtin symbols, including new/delete.
+  // (B3) Discard symbol uses for builtin symbols, including new/delete.
   // TODO(csilvers): we could use getBuiltinID(), but it returns
   // non-zero for things like malloc.  Figure out how to use it.
   if (const FunctionDecl* fn_decl = DynCastFrom(use->decl())) {
@@ -863,7 +893,7 @@ void ProcessFullUse(OneUse* use) {
     }
   }
 
-  // (B3) Discard uses of a symbol declared in a .cc and used in a .h.
+  // (B4) Discard uses of a symbol declared in a .cc and used in a .h.
   // Here's how it could happen:
   //   foo.h:  #define DEFINE_CLASS(classname) <backslash>
   //             struct classname { classname() { Init(); } void Init() {} };
@@ -885,7 +915,7 @@ void ProcessFullUse(OneUse* use) {
     return;
   }
 
-  // (B4) Discard symbol uses for member functions in the same file as parent.
+  // (B5) Discard symbol uses for member functions in the same file as parent.
   if (const CXXMethodDecl* method_dfn = DynCastFrom(use->decl())) {
     // See if we also recorded a use of the parent.
     const NamedDecl* parent_dfn
@@ -922,7 +952,7 @@ void ProcessSymbolUse(OneUse* use) {
   if (use->ignore_use())   // we're already ignoring it
     return;
 
-  // (B5) Discard symbol uses in the same file as their definition.
+  // (B6) Discard symbol uses in the same file as their definition.
   if (GetFilePath(use->use_loc()) == use->decl_filepath()) {
     VERRS(6) << "Ignoring symbol use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): defined in same file\n";
@@ -930,7 +960,7 @@ void ProcessSymbolUse(OneUse* use) {
     return;
   }
 
-  // (B6) Discard uses of a macro declared in a .cc and used in a .h.
+  // (B7) Discard uses of a macro declared in a .cc and used in a .h.
   // Here's how it could happen:
   //   foo.h:  #ifdef FOO ...
   //   foo-inl.cc: #define FOO
