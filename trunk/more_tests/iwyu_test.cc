@@ -64,6 +64,8 @@ template <size_t kCount> string VectorDiff(const string (&expected)[kCount],
 
 
 TEST(GetCanonicalName, StripsKnownSuffixes) {
+  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.cxx"));
+  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.cpp"));
   EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.cc"));
   EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.h"));
   EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo-inl.h"));
