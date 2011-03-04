@@ -144,7 +144,7 @@ using namespace i1_ns2;
 using i1_ns3::i1_int_global3;
 // IWYU: i1_ns4 is...*badinc-i1.h
 namespace cc_ns_alias = i1_ns4;
-// Not an iwyu violation: badinc-d1.h forward-declares for us.
+// IWYU: i1_ns::I1_NamespaceStruct needs a declaration
 using i1_ns::I1_NamespaceStruct;
 // IWYU: i1_ns::I1_NamespaceTemplateFn is...*badinc-i1.h
 using i1_ns::I1_NamespaceTemplateFn;
@@ -660,11 +660,13 @@ D1_TemplateClass<I2_Enum> &d1_templateclass_ref = d1_templateclass2;
 D1_TemplateStructWithDefaultParam<D1_Enum> d1_templatestructwithdefaultparam;
 int d1_fn = D1Function();
 
+// IWYU: D2_ForwardDeclareClass needs a declaration
 D2_ForwardDeclareClass* d2_forward_declare_class;   // badinc-d2.h
 D2_Subclass* d2_subclass_ptr_array[10];
 // The reinterpret-cast here should mean we don't need the full type.
 D2_Class& d2_classref = reinterpret_cast<D2_Class&>(*d2_subclass_ptr_array[0]);
 
+// IWYU: d3_namespace::D3_Struct needs a declaration
 d3_namespace::D3_Struct* d3_struct_ptr;   // badinc-d3.h
 
 // Now the expected errors: badinc-i1.h and badinc_i2.h
@@ -814,7 +816,7 @@ I1_TemplateMethodOnlyClass<I1_Class> i1_template_method_only_class;
 // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
 // IWYU: I1_Class needs a declaration
 I1_TemplateMethodOnlyClass<I2_TemplateClass<const I1_Class> > i1_tpl_tpl_class;
-// Not an iwyu violation because it's forward-declared in badinc-d2.h
+// IWYU: I1_TemplateClassFwdDeclaredInD2 needs a declaration
 I1_TemplateClassFwdDeclaredInD2<int, float>* i1_tpl_class_fwd_declared_in_d2;
 // IWYU: I1_Class needs a declaration
 // IWYU: I1_Class is...*badinc-i1.h
@@ -1983,6 +1985,8 @@ tests/badinc.cc should add these lines:
 class D2_Class;
 class D2_ForwardDeclareClass;
 class D2_Subclass;
+class I1_ForwardDeclareClass;
+namespace d3_namespace { struct D3_Struct; }
 namespace i3_ns1 { namespace i3_ns2 { namespace i3_ns3 { template <typename A, int B> struct I3_ForwardDeclareNamespaceTemplateStruct; } } }
 namespace i3_ns1 { namespace { struct I3_UnnamedNamespaceStruct; } }
 struct I3_ForwardDeclareStruct;
@@ -2014,15 +2018,17 @@ The full include-list for tests/badinc.cc:
 #include <typeinfo>  // for type_info
 #include "tests/badinc-d1.h"  // for D1CopyClassFn, D1Function, D1_Class, D1_CopyClass, D1_Enum, D1_Enum::D11, D1_I1_Typedef, D1_StructPtr, D1_Subclass, D1_TemplateClass, D1_TemplateStructWithDefaultParam, MACRO_CALLING_I4_FUNCTION
 #include "tests/badinc-d4.h"  // for D4_ClassForOperator, operator<<
-#include "tests/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_Class::NestedStruct, I1_ClassPtr, I1_Enum, I1_Enum::I11, I1_Enum::I12, I1_Enum::I13, I1_ForwardDeclareClass (ptr only), I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClass<>::I1_TemplateClass_int, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_TypedefOnly_Class<>::i, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_i1_classptr, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns4, kI1ConstInt, operator==
+#include "tests/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_Class::NestedStruct, I1_ClassPtr, I1_Enum, I1_Enum::I11, I1_Enum::I12, I1_Enum::I13, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClass<>::I1_TemplateClass_int, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_TypedefOnly_Class<>::i, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_i1_classptr, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns4, kI1ConstInt, operator==
 #include "tests/badinc2.c"
 class D2_Class;
 class D2_ForwardDeclareClass;
 class D2_Subclass;
 class ForwardDeclareOnlyClass;  // lines XX-XX
 class ForwardDeclareOnlyForTypedefClass;  // lines XX-XX
+class I1_ForwardDeclareClass;
 class I3_ForwardDeclareClass;  // lines XX-XX
 class MacroClass;  // lines XX-XX
+namespace d3_namespace { struct D3_Struct; }
 namespace i3_ns1 { namespace i3_ns2 { namespace i3_ns3 { struct I3_ForwardDeclareNamespaceStruct; } } }  // lines XX-XX
 namespace i3_ns1 { namespace i3_ns2 { namespace i3_ns3 { template <typename A, int B> struct I3_ForwardDeclareNamespaceTemplateStruct; } } }
 namespace i3_ns1 { namespace { struct I3_UnnamedNamespaceStruct; } }

@@ -744,12 +744,14 @@ set<string> CalculateMinimalIncludes(
 //     files in it as possible *that we are not already #including*.
 //
 // Calculate IWYU violations for forward-declares:
-// D1) If any redecl of the forward-declaration lives in a desired
-//     include, or in the current file (and earlier in the file),
-//     reassign decl_ to point to that redecl; if the decl is not
-//     in the current file, mark the filename the decl comes from.
-// D2) If no redecl is in current includes or in the current file
-//     (and earlier in the file), mark as an iwyu violation.
+// D1) If the definition of the forward-declaration lives in a desired
+//     include, or any redecl lives in the current file (and earlier
+//     in the file), reassign decl_ to point to that redecl; if the
+//     decl is not in the current file, mark the filename the decl
+//     comes from.
+// D2) If the definition is not in current includes, and no redecl is
+//     in the current file (and earlier in the file), mark as an iwyu
+//     violation.
 //
 // Calculate IWYU violations for full uses:
 // E1) If the desired include-file for this symbols is not in the
@@ -916,69 +918,80 @@ void ProcessSymbolUse(OneUse* use) {
   }
 }
 
-void CalculateIwyuForForwardDeclareUse(OneUse* use,
-                                       const set<string>& actual_includes,
-                                       const set<string>& desired_includes) {
+void CalculateIwyuForForwardDeclareUse(
+    OneUse* use,
+    const set<string>& actual_includes,
+    const set<string>& desired_includes,
+    const set<const FileEntry*>& associated_includes) {
   assert(!use->ignore_use() && "Trying to calculate on an ignored use");
   assert(use->decl() && "CalculateIwyuForForwardDeclareUse takes a fwd-decl");
   assert(!use->is_full_use() && "ForwardDeclareUse are not full uses");
 
+  // If this record is defined in one of the desired_includes, mark that
+  // fact.  Also if it's defined in one of the actual_includes.
+  const RecordDecl* dfn = GetDefinitionForClass(use->decl());
+  bool dfn_is_in_desired_includes = false;
+  bool dfn_is_in_actual_includes = false;
+  if (dfn) {
+    vector<string> headers
+        = GlobalIncludePicker().GetPublicHeadersForFilepath(GetFilePath(dfn));
+    for (Each<string> header(&headers); !header.AtEnd(); ++header) {
+      if (Contains(desired_includes, *header))
+        dfn_is_in_desired_includes = true;
+      if (Contains(actual_includes, *header))
+        dfn_is_in_actual_includes = true;
+    }
+  }
+
+  // We also want to know if *any* redecl of this record is defined
+  // in the same file as the use (and before it).
+  const NamedDecl* same_file_decl = NULL;
   const RecordDecl* record_decl = DynCastFrom(use->decl());
   const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
   if (tpl_decl)
     record_decl = tpl_decl->getTemplatedDecl();
   assert(record_decl && "Non-records should have been handled already");
   const set<const RecordDecl*>& redecls = GetClassRedecls(record_decl);
-
-  // Let's figure out all the #includes that will get us one of the
-  // redecls of this decl.  Any one would suffice to satisfy this
-  // fwd-decl use.  We have to map private includes to public.  This
-  // map maps a public includes to an arbitrary redecl provided by it.
-  map<string, const NamedDecl*> files_providing_decl;
-  for (Each<const RecordDecl*> it(&redecls); !it.AtEnd(); ++it) {
-    const string file = GetFilePath(*it);
-    vector<string> headers
-        = GlobalIncludePicker().GetPublicHeadersForFilepath(file);
-    for (Each<string> header(&headers); !header.AtEnd(); ++header)
-      files_providing_decl[*header] = *it;
-  }
-
-  const NamedDecl* desired_include_decl = NULL;
-  for (Each<string, const NamedDecl*> it(&files_providing_decl);
-       !it.AtEnd(); ++it) {
-    if (Contains(desired_includes, it->first)) {
-      desired_include_decl = it->second;
-      break;
-    }
-  }
-
-  const NamedDecl* actual_include_decl = NULL;
-  for (Each<string, const NamedDecl*> it(&files_providing_decl);
-       !it.AtEnd(); ++it) {
-    if (Contains(actual_includes, it->first)) {
-      actual_include_decl = it->second;
-      break;
-    }
-  }
-
-  const NamedDecl* same_file_decl = NULL;
   for (Each<const RecordDecl*> it(&redecls); !it.AtEnd(); ++it) {
     if (DeclIsVisibleToUseInSameFile(*it, *use)) {
       same_file_decl = *it;
       break;
     }
   }
+  // If there's no redecl in the .cc file, we'll accept a redecl in
+  // an associated .h file.  Since associated .h files are always
+  // desired includes, we don't need to check for that.
+  if (!same_file_decl) {
+    for (Each<const RecordDecl*> it(&redecls); !it.AtEnd(); ++it) {
+      if (Contains(associated_includes, GetFileEntry(*it))) {
+        same_file_decl = *it;
+        break;
+      }
+    }
+  }
 
-  // TODO(csilvers): add a new step D1: if *definition* is in
-  // desired_includes, prefer that as the suggested_header.
-
-  // (D1) Mark that the forward-declare is satisfied by an #include if it is.
-  if (desired_include_decl || same_file_decl) {
-    const NamedDecl* const providing_decl
-        = desired_include_decl ? desired_include_decl : same_file_decl;
+  // (D1) Mark that the fwd-declare is satisfied by dfn in desired include.
+  const NamedDecl* providing_decl = NULL;
+  if (dfn_is_in_desired_includes) {
     VERRS(6) << "Noting fwd-decl use of " << use->symbol_name()
-             << " (" << use->PrintableUseLoc() << ") is satisfied by "
+             << " (" << use->PrintableUseLoc() << ") is satisfied by dfn in "
              << PrintableLoc(GetLocation(providing_decl)) << "\n";
+    providing_decl = dfn;
+    // Mark that this use is another reason we want this header.
+    const string file = GetFilePath(dfn);
+    const string quoted_hdr = ConvertToQuotedInclude(file);
+    use->set_suggested_header(quoted_hdr);
+  } else if (same_file_decl) {
+    VERRS(6) << "Noting fwd-decl use of " << use->symbol_name()
+             << " (" << use->PrintableUseLoc() << ") is declared at "
+             << PrintableLoc(GetLocation(providing_decl)) << "\n";
+    providing_decl = same_file_decl;
+    // If same_file_decl is actually in an associated .h, mark our use
+    // of that.  No need to map-to-public for associated .h files.
+    if (GetFileEntry(same_file_decl) != GetFileEntry(use->use_loc()))
+      use->set_suggested_header(GetFilePath(same_file_decl));
+  }
+  if (providing_decl) {
     // Change decl_ to point to this "better" redecl.  Be sure to store
     // as a TemplateClassDecl if that's what decl_ was originally.
     if (tpl_decl) {
@@ -989,21 +1002,17 @@ void CalculateIwyuForForwardDeclareUse(OneUse* use,
     } else {
       use->reset_decl(providing_decl);
     }
-    // If we get this fwd-decl from an #include file, mark that.
-    if (desired_include_decl) {
-      const string file = GetFilePath(desired_include_decl);
-      const string quoted_hdr = ConvertToQuotedInclude(file);
-      use->set_suggested_header(quoted_hdr);
-    }
   }
 
-  // (D2) Mark iwyu violation unless in a current #include.
-  if (actual_include_decl || same_file_decl) {
-    const NamedDecl* const providing_decl
-        = same_file_decl ? same_file_decl : actual_include_decl;
+  // (D2) Mark iwyu violation unless defined in a current #include.
+  if (dfn_is_in_actual_includes) {
     VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name()
-             << " (" << use->PrintableUseLoc() << "): have fwd decl at "
-             << PrintableLoc(GetLocation(providing_decl)) << "\n";
+             << " (" << use->PrintableUseLoc() << "): have definition at "
+             << PrintableLoc(GetLocation(dfn)) << "\n";
+  } else if (same_file_decl) {
+    VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name()
+             << " (" << use->PrintableUseLoc() << "): have earlier fwd-decl at "
+             << PrintableLoc(GetLocation(same_file_decl)) << "\n";
   } else {
     use->set_is_iwyu_violation();
   }
@@ -1080,7 +1089,8 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
       // Do nothing, we're ignoring the use
     } else if (!it->is_full_use()) {
       internal::CalculateIwyuForForwardDeclareUse(
-          &*it, effective_direct_includes, effective_desired_includes);
+          &*it, effective_direct_includes, effective_desired_includes,
+          AssociatedFileEntries());
     } else {
       internal::CalculateIwyuForFullUse(
           &*it, effective_direct_includes, effective_desired_includes);
