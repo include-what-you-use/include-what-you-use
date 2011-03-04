@@ -2879,7 +2879,7 @@ class IwyuAstConsumer
       // This is a bit of a hack; better would be to have an API that
       // says, "don't remove this decl even if it's not used."
       if (current_ast_node()->ParentIsA<LinkageSpecDecl>() || decl->hasAttrs())
-        ReportDeclForwardDeclareUse(CurrentLoc(), decl);
+        ReportDeclForwardDeclareUse(CurrentLoc(), decl_to_fwd_declare);
 
       // If we're a nested class ("class A { class SubA; };"), then we
       // can't necessary be removed either, since we're part of the
@@ -2888,7 +2888,10 @@ class IwyuAstConsumer
       // needed.  So we only need to 'fake' the use of one of them; we
       // prefer the one that's actually the definition, if present.
       // TODO(csilvers): repeat this logic in VisitClassTemplateDecl().
-      if (current_ast_node()->ParentIsA<CXXRecordDecl>()) {
+      if (current_ast_node()->ParentIsA<CXXRecordDecl>() ||
+          // For templated nested-classes, a ClassTemplateDecl is interposed.
+          (current_ast_node()->ParentIsA<ClassTemplateDecl>() &&
+           current_ast_node()->AncestorIsA<CXXRecordDecl>(2))) {
         // Prefer the definition if present -- but only if it's
         // defined inside the class, like we are.
         const clang::NamedDecl* canonical_decl = decl->getDefinition();
@@ -2899,7 +2902,7 @@ class IwyuAstConsumer
           canonical_decl = GetNonfriendClassRedecl(decl);
         }
         if (decl == canonical_decl)  // we're the redecl iwyu should keep!
-          ReportDeclForwardDeclareUse(CurrentLoc(), decl);
+          ReportDeclForwardDeclareUse(CurrentLoc(), decl_to_fwd_declare);
       }
     }
     return Base::VisitTagDecl(decl);

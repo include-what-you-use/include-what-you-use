@@ -20,6 +20,7 @@ class Foo {
   class UsedInTypedef;  // Necessary -- this use doesn't see the later dfn.
   class UsedAsPtrArg;  // Necessary -- this use doesn't see the later dfn.
   class UsedAsPtrReturn;  // Necessary -- this use doesn't see the later dfn.
+  class UsedAsPtrMember;
 
   // If a nested class is used in a body of a method, no preceding
   // declaration/definition is needed.
@@ -39,16 +40,60 @@ class Foo {
   void Bar3(UsedAsPtrArg* p);
   UsedAsPtrReturn* Bar4();
 
+  UsedAsPtrMember* x_;
+
   class NoUsage { };
   class UsedAsPtrInMethod { };
   class UsedFullyInMethod { };
   class UsedAsPtrArg { };
   class UsedAsPtrReturn { };
+  class UsedAsPtrMember { };
 };
 
 class Foo::NoUsageDefinedOutOfLine {};
 
-// TODO(user,csilvers): Repeat the above with template types.
+// Now do the same thing again, but the nested classes are all templated.
+
+class Outer {
+  template<typename T> class NoUsage;  // Unnecessary
+  template<typename T> class NoUsageDefinedOutOfLine;  // Necessary
+  template<typename T> class NoUsageDefinedOutOfLine;  // Unnecessary
+  template<typename T> class UsedAsPtrInMethod;  // Unnecessary
+  template<typename T> class UsedFullyInMethod;  // Unnecessary
+  template<typename T> class UsedInTypedef;  // Necessary
+  template<typename T> class UsedAsPtrArg;  // Necessary
+  template<typename T> class UsedAsPtrReturn;  // Necessary
+  template<typename T> class UsedAsPtrMember;  // Necessary
+
+  // If a nested class is used in a body of a method, no preceding
+  // declaration/definition is needed.
+  void Bar1() {
+    UsedAsPtrInMethod<int>* x;
+  }
+  void Bar2() {
+    UsedFullyInMethod<int> x;
+  }
+
+  // If a nested class is used in a typedef, a preceding declaration
+  // is needed.
+  typedef UsedInTypedef<int> UsedInTypedefType;
+
+  // If a nested class is used in a method declaration, a preceding
+  // declaration is needed.
+  void Bar3(UsedAsPtrArg<int>* p);
+  UsedAsPtrReturn<int>* Bar4();
+
+  UsedAsPtrMember<int>* x_;
+
+  template<typename T> class NoUsage { };
+  template<typename T> class UsedAsPtrInMethod { };
+  template<typename T> class UsedFullyInMethod { };
+  template<typename T> class UsedAsPtrArg { };
+  template<typename T> class UsedAsPtrReturn { };
+  template<typename T> class UsedAsPtrMember { };
+};
+
+template<typename T> class Outer::NoUsageDefinedOutOfLine {};
 
 /**** IWYU_SUMMARY
 
@@ -59,11 +104,21 @@ tests/fwd_decl_nested_class.cc should remove these lines:
 - class Foo::NoUsageDefinedOutOfLine;  // lines XX-XX
 - class Foo::UsedAsPtrInMethod;  // lines XX-XX
 - class Foo::UsedFullyInMethod;  // lines XX-XX
+- template <typename T> class Outer::NoUsage;  // lines XX-XX
+- template <typename T> class Outer::NoUsageDefinedOutOfLine;  // lines XX-XX
+- template <typename T> class Outer::UsedAsPtrInMethod;  // lines XX-XX
+- template <typename T> class Outer::UsedFullyInMethod;  // lines XX-XX
 
 The full include-list for tests/fwd_decl_nested_class.cc:
 class Foo::NoUsageDefinedOutOfLine;  // lines XX-XX
 class Foo::UsedAsPtrArg;  // lines XX-XX
+class Foo::UsedAsPtrMember;  // lines XX-XX
 class Foo::UsedAsPtrReturn;  // lines XX-XX
 class Foo::UsedInTypedef;  // lines XX-XX
+template <typename T> class Outer::NoUsageDefinedOutOfLine;  // lines XX-XX
+template <typename T> class Outer::UsedAsPtrArg;  // lines XX-XX
+template <typename T> class Outer::UsedAsPtrMember;  // lines XX-XX
+template <typename T> class Outer::UsedAsPtrReturn;  // lines XX-XX
+template <typename T> class Outer::UsedInTypedef;  // lines XX-XX
 
 ***** IWYU_SUMMARY */
