@@ -160,6 +160,46 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
   }
 }
 
+void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
+    SourceLocation file_beginning) {
+  SourceLocation current_loc = file_beginning;
+  SourceLocation begin_exports_location;
+
+  while (true) {
+    // TODO(user): Maybe place restrictions on the
+    // placement. E.g., in a comment, before any code, or perhaps only
+    // when in the same comment as an @file directive.
+    current_loc = GetLocationAfter(current_loc,
+                                   "@headername{",
+                                   DefaultDataGetter());
+    if (!current_loc.isValid()) {
+      break;
+    }
+
+    string after_text = GetSourceTextUntilEndOfLine(current_loc,
+                                                    DefaultDataGetter());
+    const string::size_type close_brace_pos = after_text.find('}');
+    if (close_brace_pos == string::npos) {
+      Warn(current_loc, "@headername directive missing a closing brace");
+      continue;
+    }
+    after_text = after_text.substr(0, close_brace_pos);
+    vector<string> public_includes = Split(after_text, ",", 0);
+
+    const string quoted_private_include
+        = ConvertToQuotedInclude(GetFilePath(current_loc));
+    for (int i = 0; i < public_includes.size(); ++i) {
+      StripWhiteSpace(&public_includes[i]);
+      const string quoted_header_name = "<" + public_includes[i] + ">";
+      MutableGlobalIncludePicker()->AddMapping(quoted_private_include,
+                                               quoted_header_name);
+      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(
+          quoted_private_include);
+    }
+    break;  // No more than one @headername directive allowed.
+  }
+}
+
 //------------------------------------------------------------
 // Utilities for adding #includes.
 
@@ -416,6 +456,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
     return;
 
   ProcessPragmasInFile(file_beginning);
+  ProcessHeadernameDirectivesInFile(file_beginning);
 
   // The first non-special file entered is the main file.
   if (main_file_ == NULL)

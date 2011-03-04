@@ -39,6 +39,13 @@
 //     d7.h
 // 12. Unknown pragma => warning
 //     d7.h
+// 13. @headername{foo} directive (gcc and ?) => include <foo>.
+//     cp8 defined in d8.h which has @headername{some_system_header_file}
+// 14. @headername{foo, bar} directive (gcc and ?) => include <foo>.
+//     cp9 defined in d9.h which has
+//     @headername{some_system_header_file, some_other_header_file}
+// 15. Malformed @headername -> warning
+//     d7.h
 
 // TODO(user): Tests where both the defining public file and an
 // exporting public file are included, once it's clear what the policy
@@ -51,6 +58,8 @@
 #include "tests/comment_pragmas-d5.h"  // IWYU pragma: keep
 #include "tests/comment_pragmas-d6.h"  // IWYU pragma: keep
 #include "tests/comment_pragmas-d7.h"
+#include "tests/comment_pragmas-d8.h"
+#include "tests/comment_pragmas-d9.h"
 
 // The following classes are all defined in public files exported by i2.h.
 // IWYU: CommentPragmasI2 is...*comment_pragmas-i1.h
@@ -83,9 +92,16 @@ CommentPragmasI8 cpi8;
 // IWYU: IndirectClass is ...*indirect.h
 IndirectClass ic;
 
+// IWYU: CommentPragmasD8 is...*<some_system_header_file>
+CommentPragmasD8 cpd8;
+
+// IWYU: CommentPragmasD9 is...*<some_system_header_file>
+CommentPragmasD9 cpd9;
+
 /**** IWYU_SUMMARY
 
 tests/comment_pragmas.cc should add these lines:
+#include <some_system_header_file>
 #include "tests/comment_pragmas-i1.h"
 #include "tests/comment_pragmas-i6.h"
 #include "tests/comment_pragmas-i7.h"
@@ -99,8 +115,11 @@ tests/comment_pragmas.cc should remove these lines:
 - #include "tests/comment_pragmas-d3.h"  // lines XX-XX
 - #include "tests/comment_pragmas-d4.h"  // lines XX-XX
 - #include "tests/comment_pragmas-d7.h"  // lines XX-XX
+- #include "tests/comment_pragmas-d8.h"  // lines XX-XX
+- #include "tests/comment_pragmas-d9.h"  // lines XX-XX
 
 The full include-list for tests/comment_pragmas.cc:
+#include <some_system_header_file>  // for CommentPragmasD8, CommentPragmasD9
 #include "tests/comment_pragmas-d5.h"
 #include "tests/comment_pragmas-d6.h"
 #include "tests/comment_pragmas-i1.h"  // for CommentPragmasI2, CommentPragmasI3, CommentPragmasI4

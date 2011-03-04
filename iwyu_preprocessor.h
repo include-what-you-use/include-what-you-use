@@ -31,6 +31,13 @@
 //    d) // #include "foo/bar/baz.h"  // IWYU pragma: export
 //    e) // #include "foo/bar/baz.h"  // IWYU pragma: keep
 //
+// 4) Process doxygen @headername directives. In later versions of GCC,
+//    these directives are like IWYU pragma private directives:
+//    @headername{foo} means to include <foo> instead.
+//    The arguments are allowed to be a comma-separated list.
+//    See
+//    http://gcc.gnu.org/onlinedocs/libstdc++/manual/documentation_hacking.html
+//
 // This class finishes its processing before the 'main' iwyu
 // processing is done, so other iwyu consumers can access the main
 // outputs of this class:
@@ -196,8 +203,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   void AddExportedRange(const clang::FileEntry* file,
                         int begin_line, int end_line);
 
-  // Process IWYU whole-line pragmas in a file.
+  // Process IWYU pragmas in a file.
   void ProcessPragmasInFile(clang::SourceLocation file_beginning);
+
+  // Process @headername directives in a file.
+  void ProcessHeadernameDirectivesInFile(clang::SourceLocation file_beginning);
 
   // Checks whether it's OK to use the given macro defined in file defined_in.
   void ReportMacroUse(const string& name,
