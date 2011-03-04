@@ -20,6 +20,7 @@ using clang::SourceLocation;
 using clang::Decl;
 using clang::CXXMethodDecl;
 using clang::ClassTemplateSpecializationDecl;
+using clang::FunctionDecl;
 
 namespace include_what_you_use {
 
@@ -56,7 +57,10 @@ SourceLocation GetLocation(const Decl* decl) {
       decl = method_decl->getParent();
   }
   if (const ClassTemplateSpecializationDecl* spec = DynCastFrom(decl)) {
-    decl = GetDefinitionAsWritten(spec);
+    decl = GetDefinitionAsWritten(spec);             // templated class
+  } else if (const FunctionDecl* fn_decl = DynCastFrom(decl)) {
+    if (fn_decl->getTemplateInstantiationPattern())  // templated function
+      decl = GetDefinitionAsWritten(fn_decl);
   }
   return decl->getLocation();
 }

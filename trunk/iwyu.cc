@@ -1819,7 +1819,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   // An OverloadExpr is an overloaded function (or method) in an
   // uninstantiated template, that can't be resolved until the
-  // template is instantiated.  The simplest cast is something like:
+  // template is instantiated.  The simplest case is something like:
   //    void Foo(int) { ... }
   //    void Foo(float) { ... }
   //    template<typename T> Fn(T t) { Foo(t); }
@@ -2274,17 +2274,28 @@ class InstantiatedTemplateVisitor
   // instance, we're not responsible for a vector's call to
   // allocator::allocator(), because <vector> provides it for us).
   virtual bool CanIgnoreDecl(const Decl* decl) const {
-    return (nodes_to_ignore_.Contains(decl) ||
-            InstantiatedTemplateIntendsToProvide(decl));
+    return nodes_to_ignore_.Contains(decl);
   }
 
-  // We always attribute decl and type uses to the template instantiator.
+  // We always attribute type uses to the template instantiator.  For
+  // decls, we do unless it looks like the template "intends to
+  // provide" the decl, by #including the file that defines the decl
+  // (if templates call other templates, we have to find the right
+  // template).
   virtual void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl) {
-    // Let all the currently active types and decls know about this
-    // report, so they can update their cache entries.
-    for (Each<CacheStoringScope*> it(&cache_storers_); !it.AtEnd(); ++it)
-      (*it)->NoteReportedDecl(decl);
-    Base::ReportDeclUse(caller_loc_, decl);
+    const SourceLocation actual_used_loc = GetLocOfTemplateThatProvides(decl);
+    if (actual_used_loc.isValid()) {
+      // If a template is responsible for this decl, then we don't add
+      // it to the cache; the cache is only for decls that the
+      // original caller is responsible for.
+      Base::ReportDeclUse(actual_used_loc, decl);
+    } else {
+      // Let all the currently active types and decls know about this
+      // report, so they can update their cache entries.
+      for (Each<CacheStoringScope*> it(&cache_storers_); !it.AtEnd(); ++it)
+        (*it)->NoteReportedDecl(decl);
+      Base::ReportDeclUse(caller_loc_, decl);
+    }
   }
 
   virtual void ReportTypeUse(SourceLocation used_loc, const Type* type) {
@@ -2443,15 +2454,19 @@ class InstantiatedTemplateVisitor
   // templated class that #includes "foo.h" and has a scoped_ptr<Foo>,
   // we say the templated class provides Foo, even though it's
   // scoped_ptr.h that's actually trying to call Foo::Foo and ::~Foo.
-  bool InstantiatedTemplateIntendsToProvide(const Decl* decl) const {
+  SourceLocation GetLocOfTemplateThatProvides(const NamedDecl* decl) const {
     for (const ASTNode* ast_node = current_ast_node(); ast_node;
          ast_node = ast_node->parent()) {
       if (preprocessor_info().PublicHeaderIntendsToProvide(
               GetFileEntry(ast_node->GetLocation()),
               GetFileEntry(decl)))
-        return true;
+        return ast_node->GetLocation();
     }
-    return false;
+    return SourceLocation();   // an invalid source-loc
+  }
+
+  bool SomeInstantiatedTemplateIntendsToProvide(const NamedDecl* decl) const {
+    return GetLocOfTemplateThatProvides(decl).isValid();
   }
 
   // The type that gets substituted in SubstTemplateTypeParmTypeLoc is
@@ -2475,7 +2490,7 @@ class InstantiatedTemplateVisitor
     if (const RecordType* record_type = DynCastFrom(canonical_type)) {
       if (const ClassTemplateSpecializationDecl* tpl_decl =
           DynCastFrom(record_type->getDecl())) {
-        if (!InstantiatedTemplateIntendsToProvide(tpl_decl)) {
+        if (!SomeInstantiatedTemplateIntendsToProvide(tpl_decl)) {
           const TemplateArgumentList& tpl_args = tpl_decl->getTemplateArgs();
           for (unsigned i = 0; i < tpl_args.size(); ++i) {
             const TemplateArgument& arg = tpl_args[i];

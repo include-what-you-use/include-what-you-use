@@ -43,6 +43,16 @@ namespace SrcMgr = clang::SrcMgr;
 
 namespace include_what_you_use {
 
+namespace {
+// TODO(user): Perhaps make this method accessible iwyu-wide.
+// At first blush, iwyu_output is the place to put it, but that would
+// introduce a circular dependency between iwyu_output and
+// iwyu_ast_util.
+void Warn(SourceLocation loc, const string& message) {
+  errs() << PrintableLoc(loc) << ": warning: " << message << "\n";
+}
+}  // namespace
+
 //------------------------------------------------------------
 // Utilities for examining source files.
 
@@ -72,63 +82,7 @@ static string GetName(const Token& token) {
 }
 
 //------------------------------------------------------------
-// Utilities for adding #includes.
-
-// Helper function that returns iwyu_file_info_map_[file_entry] if
-// it already exists, or creates a new one and returns it otherwise.
-IwyuFileInfo* IwyuPreprocessorInfo::GetFromFileInfoMap(const FileEntry* file) {
-  IwyuFileInfo* iwyu_file_info = FindInMap(&iwyu_file_info_map_, file);
-  if (!iwyu_file_info) {
-    iwyu_file_info_map_.insert(make_pair(file, IwyuFileInfo(file)));
-    iwyu_file_info = FindInMap(&iwyu_file_info_map_, file);
-    assert(iwyu_file_info);   // should succeed this time!
-  }
-  return iwyu_file_info;
-}
-
-// Sometimes, we can tell just by looking at an #include line
-// that iwyu should never recommend removing the #include.  For
-// instance, if it has an IWYU pragma saying to keep it.
-void IwyuPreprocessorInfo::MaybeProtectInclude(
-    SourceLocation includer_loc, const FileEntry* includee,
-    const string& include_name_as_typed) {
-  const FileEntry* includer = GetFileEntry(includer_loc);
-  if (IsBuiltinOrCommandLineFile(includer))
-    return;
-
-  string protect_reason;
-  // We always keep lines with pragmas "keep" or "export".
-  if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep")) {
-    protect_reason = "pragma_keep";
-
-  } else if (IncludeLineHasText(includer_loc, "// IWYU pragma: export") ||
-             IncludeLineIsInExportedRange(includer_loc)) {
-    protect_reason = "pragma_export";
-    const string quoted_includer = ConvertToQuotedInclude(GetFilePath(includer));
-    MutableGlobalIncludePicker()->AddMapping(include_name_as_typed,
-                                             quoted_includer);
-
-  // We also always keep #includes of .c files: iwyu doesn't touch those.
-  // TODO(csilvers): instead of IsHeaderFile, check if the file has
-  // any "non-inlined" definitions.
-  } else if (!IsHeaderFile(GetFilePath(includee))) {
-    protect_reason = ".cc include";
-
-  // We also keep the #include if we say that our file re-exports it.
-  // (A decision to re-export an #include counts as a "use" of it.)
-  } else if (GlobalIncludePicker().HasMapping(
-      GetFilePath(includee), GetFilePath(includer))) {
-    protect_reason = "re_exporting header";
-  }
-
-  if (!protect_reason.empty()) {
-    assert(Contains(iwyu_file_info_map_, includer));
-    GetFromFileInfoMap(includer)->ReportIncludeFileUse(include_name_as_typed);
-    ERRSYM(includer) << "Marked dep: " << GetFilePath(includer)
-                     << " needs to keep " << include_name_as_typed
-                     << " (reason: " << protect_reason << ")\n";
-  }
-}
+// Utilities for handling iwyu-specific pragma comments.
 
 bool IwyuPreprocessorInfo::IncludeLineIsInExportedRange(
     clang::SourceLocation includer_loc) const {
@@ -143,16 +97,6 @@ void IwyuPreprocessorInfo::AddExportedRange(const clang::FileEntry* file,
     exported_lines_set_.insert(make_pair(file, line_number));
   }
 }
-
-namespace {
-// TODO(user): Perhaps make this method accessible iwyu-wide.
-// At first blush, iwyu_output is the place to put it, but that would
-// introduce a circular dependency between iwyu_output and
-// iwyu_ast_util.
-void Warn(SourceLocation loc, const string& message) {
-  errs() << PrintableLoc(loc) << ": warning: " << message << "\n";
-}
-}  // namespace
 
 // IWYU pragma processing.
 void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
@@ -213,6 +157,65 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
   if (begin_exports_location.isValid()) {
     Warn(begin_exports_location,
          "begin_exports without an end_exports");
+  }
+}
+
+//------------------------------------------------------------
+// Utilities for adding #includes.
+
+// Helper function that returns iwyu_file_info_map_[file_entry] if
+// it already exists, or creates a new one and returns it otherwise.
+IwyuFileInfo* IwyuPreprocessorInfo::GetFromFileInfoMap(const FileEntry* file) {
+  IwyuFileInfo* iwyu_file_info = FindInMap(&iwyu_file_info_map_, file);
+  if (!iwyu_file_info) {
+    iwyu_file_info_map_.insert(make_pair(file, IwyuFileInfo(file)));
+    iwyu_file_info = FindInMap(&iwyu_file_info_map_, file);
+    assert(iwyu_file_info);   // should succeed this time!
+  }
+  return iwyu_file_info;
+}
+
+// Sometimes, we can tell just by looking at an #include line
+// that iwyu should never recommend removing the #include.  For
+// instance, if it has an IWYU pragma saying to keep it.
+void IwyuPreprocessorInfo::MaybeProtectInclude(
+    SourceLocation includer_loc, const FileEntry* includee,
+    const string& include_name_as_typed) {
+  const FileEntry* includer = GetFileEntry(includer_loc);
+  if (IsBuiltinOrCommandLineFile(includer))
+    return;
+
+  string protect_reason;
+  // We always keep lines with pragmas "keep" or "export".
+  if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep")) {
+    protect_reason = "pragma_keep";
+
+  } else if (IncludeLineHasText(includer_loc, "// IWYU pragma: export") ||
+             IncludeLineIsInExportedRange(includer_loc)) {
+    protect_reason = "pragma_export";
+    const string quoted_includer = ConvertToQuotedInclude(GetFilePath(includer));
+    MutableGlobalIncludePicker()->AddMapping(include_name_as_typed,
+                                             quoted_includer);
+
+  // We also always keep #includes of .c files: iwyu doesn't touch those.
+  // TODO(csilvers): instead of IsHeaderFile, check if the file has
+  // any "non-inlined" definitions.
+  } else if (!IsHeaderFile(GetFilePath(includee))) {
+    protect_reason = ".cc include";
+
+  // We also keep the #include if we say that our file re-exports it.
+  // (A decision to re-export an #include counts as a "use" of it.)
+  } else if (GlobalIncludePicker().HasMapping(
+      GetFilePath(includee), GetFilePath(includer))) {
+    protect_reason = "re_exporting header";
+  }
+
+  if (!protect_reason.empty()) {
+    assert(Contains(iwyu_file_info_map_, includer));
+    GetFromFileInfoMap(includer)->ReportIncludeFileUse(include_name_as_typed);
+    ERRSYM(includer) << "Marked dep: " << GetFilePath(includer)
+                     << " needs to keep " << include_name_as_typed
+                     << " (reason: " << protect_reason << ")\n";
   }
 }
 
@@ -460,6 +463,17 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
   if (!dfn_location.isValid() || GetFilePath(dfn_location) == "<built-in>")
     return;
 
+  // TODO(csilvers): this isn't really a symbol use -- it may be ok
+  // that the symbol isn't defined.  For instance:
+  //    foo.h: #define FOO
+  //    bar.h: #ifdef FOO ... #else ... #endif
+  //    baz.cc: #include "foo.h"
+  //            #include "bar.h"
+  //    bang.cc: #include "bar.h"
+  // We don't want to say that bar.h 'uses' FOO, and thus needs to
+  // #include foo.h -- adding that #include could break bang.cc.
+  // I think the solution is to have a 'soft' use -- don't remove it
+  // if it's there, but don't add it if it's not.  Or something.
   GetFromFileInfoMap(used_in)->ReportFullSymbolUse(usage_location,
                                                    defined_path, name);
 }
@@ -524,17 +538,26 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
     }
   }
   // Everyone gets to provide from their direct includes.  Public
-  // headers gets to provide from *all* their includes.
+  // headers gets to provide from *all* their includes.  Likewise,
+  // when you bring in a public header (because it's one of your
+  // direct includes), you bring in all its includes as well.
+  // Basically, a public header is really an equivalence class of
+  // itself and all its direct includes.
   // TODO(csilvers): use AddInternalHeaders() to get includes here.
   for (Each<const FileEntry*, IwyuFileInfo> it(&iwyu_file_info_map_);
        !it.AtEnd(); ++it) {
     const FileEntry* file = it->first;
-    intends_to_provide_map_[file].insert(file);  // everyone provides itself!
-    if (Contains(private_headers_behind, file)) {
+    intends_to_provide_map_[file].insert(file);     // everyone provides itself!
+    if (Contains(private_headers_behind, file)) {   // means we're a public hdr
       AddAllIncludesAsFileEntries(file, &intends_to_provide_map_[file]);
     } else {
-      InsertAllInto(it->second.direct_includes_as_fileentries(),
-                    &intends_to_provide_map_[file]);
+      const set<const FileEntry*>& direct_includes
+          = it->second.direct_includes_as_fileentries();
+      for (Each<const FileEntry*> inc(&direct_includes); !inc.AtEnd(); ++inc) {
+        intends_to_provide_map_[file].insert(*inc);
+        if (Contains(private_headers_behind, *inc))
+          AddAllIncludesAsFileEntries(*inc, &intends_to_provide_map_[file]);
+      }
     }
   }
   // Ugh, we can have two files with the same name, using
