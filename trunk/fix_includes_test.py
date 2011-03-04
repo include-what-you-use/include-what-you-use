@@ -1954,10 +1954,30 @@ const int kInt2 = 6;
 int main() { return 0; }
 """
     self.RegisterFileContents({'sort': infile})
-    fix_includes.SortIncludesInFiles(['sort'], self.flags)
+    num_files_modified = fix_includes.SortIncludesInFiles(['sort'], self.flags)
     self.assertListEqual(expected_output.strip().split('\n'),
                          self.actual_after_contents)
+    self.assertEqual(1, num_files_modified)
 
+  def testSortingIncludesAlreadySorted(self):
+    """Tests sorting includes only, when includes are already sorted."""
+    infile = """\
+// Copyright 2010
+
+#include <ctype.h>
+#include <stdio.h>
+
+namespace Foo;   // fwd-decls are out of order, but sorter ignores them
+
+namespace Bar;
+
+int main() { return 0; }
+"""
+    self.RegisterFileContents({'sort_nosorting.h': infile})
+    num_files_modified = fix_includes.SortIncludesInFiles(['sort_nosorting.h'],
+                                                           self.flags)
+    self.assertListEqual([], self.actual_after_contents)
+    self.assertEqual(0, num_files_modified)
 
   def testAddingNewIncludesAfterRemovingOldOnes(self):
     infile = """\

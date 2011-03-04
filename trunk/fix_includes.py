@@ -9,6 +9,56 @@
 #
 ##===-----------------------------------------------------------------------===##
 
+"""Update files with the 'correct' #include and forward-declare lines.
+
+Given the output of include_what_you_use on stdin -- when run at the
+(default) --v=1 verbosity level or higher -- modify the files
+mentioned in the output, removing their old #include lines and
+replacing them with the lines given by the include_what_you_use
+script.
+
+We only edit files that are writeable (presumably open for p4 edit),
+unless the user supplies a command to make files writeable via the
+--checkout_command flag (eg '--checkout_command="p4 edit"').
+
+
+This script runs in four stages.  In the first, it groups physical
+lines together to form 'move spans'.  A 'move span' is the atomic unit
+for moving or deleting code.  A move span is either a) an #include
+line, along with any comment lines immediately preceding it; b) a
+forward-declare line -- or more if it's a multi-line forward declare
+-- along with preceding comments; c) any other single line.  Example:
+
+   // I really am glad I'm forward-declaring this class!
+   // If I didn't, I'd have to #include the entire world.
+   template<typename A, typename B, typename C, typename D>
+   class MyClass;
+
+Then, it groups move spans together into 'reorder spans'.  These are
+spans of code that consist entirely of #includes and forward-declares,
+maybe separated by blank lines and comments.  We assume that we can
+arbitrarily reorder #includes and forward-declares within a reorder
+span, without affecting correctness.  Things like #ifdefs, #defines,
+namespace declarations, static variable declarations, class
+definitions, etc -- just about anything -- break up reorder spans.
+
+In stage 3 it deletes all #include and forward-declare lines that iwyu
+says to delete.  iwyu includes line numbers for deletion, making this
+part easy.  If this step results in "empty" #ifdefs or namespaces
+(#ifdefs or namespaces with no code inside them), we delete those as
+well.  We recalculate the reorder spans, which may have gotten bigger
+due to the deleted code.
+
+In stage 4 it adds new iwyu-dictated #includes and forward-declares
+after the last existing #includes and forward-declares.  Then it
+reorders the #includes and forward-declares to match the order
+specified by iwyu.  It follows iwyu's instructions as much as
+possible, modulo the constraint that an #include or forward-declare
+cannot leave its current reorder span.
+
+All this moving messes up the blank lines, which we then need to fix
+up.  Then we're done!
+"""
 
 __author__ = 'csilvers@google.com (Craig Silverstein)'
 
@@ -1462,13 +1512,13 @@ def FixOneFile(iwyu_record, flags):
   if old_lines == fixed_lines:
     print "No changes in file", iwyu_record.filename
     return 0
+
+  if flags.dry_run:
+    PrintFileDiff(old_lines, fixed_lines)
   else:
-    if flags.dry_run:
-      PrintFileDiff(old_lines, fixed_lines)
-    else:
-      _WriteFileContentsIfPossible(iwyu_record.filename, fixed_lines,
-                                   flags.checkout_command)
-    return 1
+    _WriteFileContentsIfPossible(iwyu_record.filename, fixed_lines,
+                                 flags.checkout_command)
+  return 1
 
 
 def ProcessIWYUOutput(f, files_to_process, flags):
@@ -1523,16 +1573,22 @@ def ProcessIWYUOutput(f, files_to_process, flags):
 def SortIncludesInFiles(files_to_process, flags):
   """For each file in files_to_process, sort its #includes.
 
-  This reads the file from stdin, sorts the #include lines, and writes
-  the results to stdout.  Like ProcessIWYUOutput, this requires that
-  the file be writable, or that flags.checkout_command be set.  It does
-  not add or remove any #includes.  It ignores forward-declares.
+  This reads each input file, sorts the #include lines, and replaces
+  the input file with the result.  Like ProcessIWYUOutput, this
+  requires that the file be writable, or that flags.checkout_command
+  be set.  SortIncludesInFiles does not add or remove any #includes.
+  It also ignores forward-declares.
 
   Arguments:
     files_to_process: a list (or set) of filenames.
     flags: commandline flags, as parsed by optparse.  We do not use
        any flags directly, but pass them to other routines.
+
+  Returns:
+    The number of files that had to be modified (because they weren't
+    already all correct, that is, already in sorted order).
   """
+  num_fixes_made = 0
   for filename in files_to_process:
     # An empty iwyu record has no adds or deletes, so its only effect
     # is to cause us to sort the #include lines.  (Since fix_includes
@@ -1540,7 +1596,8 @@ def SortIncludesInFiles(files_to_process, flags):
     # the iwyu input, with an empty iwyu record it just ignores all
     # the forward-declare lines entirely.)
     sort_only_iwyu_record = IWYUOutputRecord(filename)
-    FixOneFile(sort_only_iwyu_record, flags)
+    num_fixes_made += FixOneFile(sort_only_iwyu_record, flags)
+  return num_fixes_made
 
 
 def main(argv):
@@ -1575,8 +1632,7 @@ def main(argv):
   if flags.sort_only:
     if not files_to_modify:
       sys.exit('FATAL ERROR: -s flag requires a list of filenames')
-    SortIncludesInFiles(files_to_modify, flags)
-    return 0
+    return SortIncludesInFiles(files_to_modify, flags)
   else:
     return ProcessIWYUOutput(sys.stdin, files_to_modify, flags)
 
