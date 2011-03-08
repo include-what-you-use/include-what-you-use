@@ -3096,7 +3096,9 @@ class IwyuAction : public ASTFrontendAction {
   virtual ASTConsumer* CreateASTConsumer(CompilerInstance& compiler,  // NOLINT
                                          llvm::StringRef /* dummy */) {
     // Do this first thing after getting our hands on a CompilerInstance.
-    InitGlobals(&compiler.getSourceManager());
+    InitGlobals(&compiler.getSourceManager(),
+                &compiler.getPreprocessor().getHeaderSearchInfo());
+
     // Also init the globals that are local to this file.
     g_explicitly_instantiated_classes.clear();
 
@@ -3343,4 +3345,3 @@ int main(int argc, const char **argv) {
   // given.
   return 1;
 }
-
