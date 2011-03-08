@@ -741,6 +741,7 @@ void MakeMapTransitive(const IncludePicker::IncludeMap& filename_map,
 // these cases, asm/foo.h is the public header, and asm-ARCH is
 // private.  This does a private->public mapping for that case.
 // Input should be an include-style path but without the quotes.
+// TODO(csilvers): move this to AddDirectInclude().
 string NormalizeAsm(string path) {
   if (!StartsWith(path, "asm-"))
     return path;
@@ -753,6 +754,7 @@ string NormalizeAsm(string path) {
 // Get rid of the 'x86_64-unknown-linux-gnu' bit.  This should be
 // called after initial C++ path parsing, so path is something like
 // 'x86_64-unknown-linux-gnu/bits/c++config.h'.
+// TODO(csilvers): remove after we sort GlobalSearchPath by length.
 string NormalizeSystemSpecificPath(string path) {
   size_t pos = path.find('/');
   if (pos == string::npos)
@@ -769,6 +771,16 @@ string NormalizeSystemSpecificPath(string path) {
   return path;
 }
 
+string NormalizeSystemPath(string path) {
+  // Check for a c++ filename.  It's in a c++/<version#>/include dir.
+  // (Or, possibly, c++/<version>/include/x86_64-unknown-linux-gnu/...")
+  if (StripPast(&path, "/c++/") && StripPast(&path, "/"))
+    return NormalizeSystemSpecificPath(path);
+
+  // It's a C filename.  It can be in many locations.
+  return NormalizeAsm(path);     // Fix up C includes in <asm-ARCH/foo.h>
+}
+
 }  // namespace
 
 // Converts a file-path, such as /usr/include/stdio.h, to a
@@ -778,22 +790,20 @@ string ConvertToQuotedInclude(const string& filepath) {
   string path = NormalizeFilePath(filepath);
 
   // Case 1: a local (non-system) include.
-if (llvm::sys::path::is_relative(path)) {        // A relative path
+  if (llvm::sys::path::is_relative(path)) {        // A relative path
     return "\"" + path + "\"";
   }
 
-  // Case 2: a c++ filename.  It's in a c++/<version#>/include dir.
-  // (Or, possibly, c++/<version>/include/x86_64-unknown-linux-gnu/...")
-  if (StripPast(&path, "/c++/") && StripPast(&path, "/")) {
-    path = NormalizeSystemSpecificPath(path);
-    return "<" + path + ">";
+  // Case 2: a system include.
+  const vector<string>& search_paths = GlobalSearchPaths();
+  for (Each<string> it(&search_paths); !it.AtEnd(); ++it) {
+    if (StripLeft(&path, *it)) {
+      StripLeft(&path, "/");
+      path = NormalizeSystemPath(path);
+      break;
+    }
   }
 
-
-  // Case 3: a C filename.  It can be in many locations.
-  // TODO(csilvers): get a full list of include dirs from the compiler.
-  StripPast(&path, "/include/");
-  path = NormalizeAsm(path);     // Fix up C includes in <asm-ARCH/foo.h>
   return "<" + path + ">";
 }
 
@@ -803,7 +813,9 @@ bool IsSystemIncludeFile(const string& filepath) {
   return ConvertToQuotedInclude(filepath)[0] == '<';
 }
 
+#ifndef ARRAYSIZE
 #define ARRAYSIZE(ar)  (sizeof(ar) / sizeof(*(ar)))
+#endif
 
 IncludePicker::IncludePicker()
     : symbol_include_map_(),
