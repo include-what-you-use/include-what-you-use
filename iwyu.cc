@@ -1917,7 +1917,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // contents don't matter that much.
         const FileEntry* use_file = CurrentFileEntry();
         preprocessor_info().FileInfoFor(use_file)->ReportFullSymbolUse(
-            CurrentLoc(), "/usr/include/c++/<version>/new", "operator new");
+            CurrentLoc(), "<new>", "operator new");
       }
     }
 
@@ -3112,6 +3112,52 @@ class IwyuAction : public ASTFrontendAction {
   }
 };
 
+static void PrintHelp(const char* extra_msg) {
+  printf("USAGE: iwyu [iwyu opts] <clang opts>\n"
+         "Here are the <opts> you can specify:\n"
+         "   --check_also=<glob>: tells iwyu to print iwyu-violation info\n"
+         "        for all files matching the given glob pattern (in addition\n"
+         "        to the default of reporting for the input .cc file and its\n"
+         "        associated .h files).  This flag may be specified multiple\n"
+         "        times to specify multiple glob patterns.\n"
+         "   --cwd=<dir>: tells iwyu what the current working directory is.\n"
+         "   --help: prints this help and exits.\n"
+         "   --howtodebug[=<filename>]: with no arg, prints instructions on\n"
+         "        how to run iwyu under gdb for the input file, and exits.\n"
+         "        With an arg, prints only when input file matches the arg.\n"
+         "   --verbose=<level>: the higher the level, the more output.\n");
+  if (extra_msg)
+    printf("\n%s\n\n", extra_msg);
+}
+
+// Handles all iwyu-specific flags, like --verbose.
+// The command line should look like
+//   path/to/iwyu --verbose=4 [other iwyuu flags] CLANG_FLAGS... foo.cc
+// Returns an index to the first argv element we don't recognize.
+static int ParseIWYUFlags(int argc, char** argv) {
+  static const struct option longopts[] = {
+    {"check_also", required_argument, NULL, 'c'},  // can be specified >once
+    {"cwd", required_argument, NULL, 'p'},
+    {"help", no_argument, NULL, 'h'},
+    {"howtodebug", optional_argument, NULL, 'd'},
+    {"verbose", required_argument, NULL, 'v'},
+    {0, 0, 0, 0}
+  };
+  opterr = 0;    // suppress getopt_long error reporting
+  int option_index;
+  while (true) {
+    switch (getopt_long(argc, argv, "", longopts, &option_index)) {
+      case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
+      case 'd': printf("-d/--howtodebug not yet implemented\n"); exit(1);
+      case 'h': PrintHelp(""); exit(0); break;
+      case 'p': printf("-p/--cwd not yet implemented\n"); exit(1);
+      case 'v': SetVerboseLevel(atoi(optarg)); break;
+      case '?': return optind - 1;   // 'flag not recognized'
+      default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
+    }
+  }
+  return optind;  // unreachable
+}
 
 } // namespace include_what_you_use
 
@@ -3161,6 +3207,7 @@ using llvm::raw_svector_ostream;
 using llvm::sys::getHostTriple;
 using llvm::sys::Path;
 using include_what_you_use::IwyuAction;
+using include_what_you_use::ParseIWYUFlags;
 using include_what_you_use::StartsWith;
 using std::set;
 using std::string;
@@ -3240,7 +3287,7 @@ static void ExpandArgsFromBuf(const char *Arg,
   }
 }
 
-static void ExpandArgv(int argc, const char **argv,
+static void ExpandArgv(int argc, char **argv,
                        SmallVectorImpl<const char*> &ArgVector,
                        set<string> &SavedStrings) {
   for (int i = 0; i < argc; ++i) {
@@ -3254,7 +3301,7 @@ static void ExpandArgv(int argc, const char **argv,
   }
 }
 
-int main(int argc, const char **argv) {
+int main(int argc, char **argv) {
   void* main_addr = (void*) (intptr_t) GetExecutablePath;
   Path path = GetExecutablePath(argv[0]);
   TextDiagnosticPrinter* diagnostic_client =
@@ -3270,7 +3317,12 @@ int main(int argc, const char **argv) {
   set<string> SavedStrings;
   SmallVector<const char*, 256> args;
 
-  ExpandArgv(argc, argv, args, SavedStrings);
+  // Parse out iwyu flags.
+  const int first_clang_arg = ParseIWYUFlags(argc, argv);
+  args.push_back(argv[0]);
+  // Now handle clang flags.
+  ExpandArgv(argc - first_clang_arg, argv + first_clang_arg,
+             args, SavedStrings);
 
   // FIXME: This is a hack to try to force the driver to do something we can
   // recognize. We need to extend the driver library to support this use model
