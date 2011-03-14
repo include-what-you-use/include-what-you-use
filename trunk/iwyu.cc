@@ -3135,6 +3135,10 @@ static void PrintHelp(const char* extra_msg) {
 //   path/to/iwyu --verbose=4 [other iwyuu flags] CLANG_FLAGS... foo.cc
 // Returns an index to the first argv element we don't recognize.
 static int ParseIWYUFlags(int argc, char** argv) {
+#if defined(_MSC_VER)
+  // FIXME: MSVC support
+  return 0;
+#else
   static const struct option longopts[] = {
     {"check_also", required_argument, NULL, 'c'},  // can be specified >once
     {"cwd", required_argument, NULL, 'p'},
@@ -3157,6 +3161,7 @@ static int ParseIWYUFlags(int argc, char** argv) {
     }
   }
   return optind;  // unreachable
+#endif
 }
 
 } // namespace include_what_you_use
