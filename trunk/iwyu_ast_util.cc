@@ -25,6 +25,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
@@ -79,6 +80,7 @@ using clang::QualType;
 using clang::QualifiedTemplateName;
 using clang::RecordDecl;
 using clang::RecordType;
+using clang::RecursiveASTVisitor;
 using clang::SourceLocation;
 using clang::SourceManager;
 using clang::SourceRange;
@@ -435,49 +437,34 @@ void PrintASTNode(const ASTNode* node) {
 // arguments that are types (including template types), not other
 // kinds of arguments such as built-in types.
 
-// Helper function to the functions below.
-// TODO(csilvers): come up with a better name?  Or refactor?
-void AddTypelikeTemplateArgTo(const TemplateArgument& tpl_arg,
-                                     set<const Type*>* argset) {
-  if (tpl_arg.getKind() == TemplateArgument::Type) {
-    // Holds all types seen in tpl_arg (may be more than one if tpl_arg
-    // is a function prototype, with argument-types and a return-type).
-    set<const Type*> argtypes;
-    argtypes.insert(tpl_arg.getAsType().getTypePtr());
-    // If the type is a function (a rare case, but happens in code like
-    // TplClass<char(int, int, int)>), then the parameters are types
-    // we have to consider as well.
-    // TODO(csilvers): also check a fn pointer and a fn taking a fn ptr:
-    // TplClass<char(*)(int, int, int)>, TplClass<char(char(*)(int, int))>
-    if (const FunctionProtoType* fn_type
-        = DynCastFrom(tpl_arg.getAsType().getTypePtr())) {
-      argtypes.insert(fn_type->getResultType().getTypePtr());
-      for (unsigned i = 0; i < fn_type->getNumArgs(); ++i) {
-        argtypes.insert(fn_type->getArgType(i).getTypePtr());
-      }
-      // I *think* it's correct to ignore the exception specs here.
-    }
+// This helper class visits a given AST node and finds all the types
+// beneath it, which it returns as a set.  For example, if you have a
+// VarDecl 'vector<int(*)(const MyClass&)> x', it would return
+// (vector<int(*)(const MyClass&)>, int(*)(const MyClass&),
+// (int)(const MyClass&), int, MyClass&, MyClass).  Note that this
+// function only returns types-as-typed, so it does *not* return
+// alloc<int(*)(const MyClass&)>, even though it's part of vector.
+class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
+ public:
+  typedef RecursiveASTVisitor<TypeEnumerator> Base;
 
-    for (Each<const Type*> it(&argtypes); !it.AtEnd(); ++it) {
-      VERRS(6) << "Adding a template type of interest: "
-               << PrintableType(*it) << "\n";
-      argset->insert(*it);
-      // Recurse if we ourself are a template type.  Read through elaborations.
-      const Type* subtype = RemoveElaboration(*it);
-      if (const TemplateSpecializationType* tpl_type = DynCastFrom(subtype)) {
-        for (unsigned i = 0; i < tpl_type->getNumArgs(); ++i)
-          AddTypelikeTemplateArgTo(tpl_type->getArg(i), argset);
-      }
-    }
-  } else if (tpl_arg.getKind() == TemplateArgument::Template) {
-    const TemplateName& tpl_name = tpl_arg.getAsTemplate();
-    VERRS(6) << "Noticing (but ignoring) a template template of interest: "
-             << PrintableTemplateName(tpl_name) << "\n";
-    // TODO(csilvers): add tpl_name to argset somehow.  This is a
-    // lower-priority TODO, since for the moment we just always
-    // assume template template args needs to be fully instantiated.
+  // --- Public interface
+  // We can add more entry points as needed.
+  set<const Type*> Enumerate(const TemplateArgument& tpl_arg) {
+    seen_types_.clear();
+    TraverseTemplateArgument(tpl_arg);
+    return seen_types_;
   }
-}
+
+  // --- Methods on RecursiveASTVisitor
+  bool VisitType(Type* type) {
+    seen_types_.insert(type);
+    return true;
+  }
+
+ private:
+  set<const Type*> seen_types_;
+};
 
 // --- Utilities for Decl.
 
@@ -528,19 +515,17 @@ set<const Type*> GetTplTypeArgsOfFunction(const FunctionDecl* decl) {
   set<const Type*> retval;
   if (!decl)
     return retval;
+  TypeEnumerator type_enumerator;
   const TemplateArgumentList* tpl_list =
       decl->getTemplateSpecializationArgs();
   if (tpl_list) {
     for (unsigned i = 0; i < tpl_list->size(); ++i) {
-      AddTypelikeTemplateArgTo(tpl_list->get(i), &retval);
+      InsertAllInto(type_enumerator.Enumerate(tpl_list->get(i)), &retval);
     }
-    // TODO(csilvers): for derived tpl args (Foo(arg), not
-    // Foo<type>(arg)), remove types from retval if they don't appear
-    // somewhere in a function arg (or return value) as typed.  This
-    // is a simple heuristic for dealing with typedefs and default
-    // arguments.  For instance, cout << "a" should not yield
-    // char_traits<char> here, since the first argument of operator<<
-    // is typed ostream, not basic_ostream<char, char_traits<char> >.
+  }
+  for (Each<const Type*> it(&retval); !it.AtEnd(); ++it) {
+    VERRS(6) << "Adding a template-function type of interest: "
+             << PrintableType(*it) << "\n";
   }
   return retval;
 }
@@ -818,10 +803,16 @@ set<const Type*> GetExplicitTplTypeArgsOf(const Type* type) {
   const TemplateSpecializationType* tpl_spec_type = DynCastFrom(type);
   if (!tpl_spec_type)
     return retval;
+
   // TemplateSpecializationType only includes explicitly specified
   // types in its args list, which is just what we want.
+  TypeEnumerator type_enumerator;
   for (unsigned i = 0; i < tpl_spec_type->getNumArgs(); ++i) {
-    AddTypelikeTemplateArgTo(tpl_spec_type->getArg(i), &retval);
+    InsertAllInto(type_enumerator.Enumerate(tpl_spec_type->getArg(i)), &retval);
+  }
+  for (Each<const Type*> it(&retval); !it.AtEnd(); ++it) {
+    VERRS(6) << "Adding a template-class type of interest: "
+             << PrintableType(*it) << "\n";
   }
   return retval;
 }
