@@ -22,6 +22,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_executable(include-what-you-use
   iwyu.cc
+  iwyu_ast_util.cc
   iwyu_cache.cc
   iwyu_globals.cc
   iwyu_include_picker.cc
