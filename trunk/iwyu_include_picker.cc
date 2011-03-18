@@ -144,6 +144,8 @@ const IncludePicker::IncludeMapEntry symbol_include_map[] = {
   { "uid_t", kPrivate, "<sys/stat.h>", kPublic },
   { "useconds_t", kPrivate, "<sys/types.h>", kPublic },
   { "useconds_t", kPrivate, "<unistd.h>", kPublic },
+  // glob.h seems to define size_t if necessary, but it should come from stddef.
+  { "size_t", kPrivate, "<stddef.h>", kPublic },
   // Macros that can be defined in more than one file, don't have the
   // same __foo_defined guard that other types do, so the grep above
   // doesn't discover them.  Until I figure out a better way, I just
@@ -151,7 +153,7 @@ const IncludePicker::IncludeMapEntry symbol_include_map[] = {
   { "EOF", kPrivate, "<stdio.h>", kPublic },
   { "EOF", kPrivate, "<libio.h>", kPublic },
   // Entries for NULL
-  { "NULL", kPrivate, "<stddef.h>", kPublic },   // 'canonical' location for NULL
+  { "NULL", kPrivate, "<stddef.h>", kPublic },  // 'canonical' location for NULL
   { "NULL", kPrivate, "<clocale>", kPublic },
   { "NULL", kPrivate, "<cstddef>", kPublic },
   { "NULL", kPrivate, "<cstdio>", kPublic },
@@ -474,6 +476,7 @@ const IncludePicker::IncludeMapEntry cpp_include_map[] = {
   { "<bits/streambuf.tcc>", kPrivate, "<streambuf>", kPublic },
   { "<bits/streambuf_iterator.h>", kPrivate, "<iterator>", kPublic },
   { "<bits/stringfwd.h>", kPrivate, "<string>", kPublic },
+  { "<bits/valarray_after.h>", kPrivate, "<valarray>", kPublic },
   { "<bits/valarray_array.h>", kPrivate, "<valarray>", kPublic },
   { "<bits/valarray_before.h>", kPrivate, "<valarray>", kPublic },
   { "<bits/vector.tcc>", kPrivate, "<vector>", kPublic },
@@ -621,6 +624,16 @@ const IncludePicker::IncludeMapEntry google_include_map[] = {
     "\"tests/badinc-inl.h\"",
     kPublic
   },
+  { "\"tests/keep_mapping-private*\"",
+    kPrivate,
+    "\"tests/keep_mapping-public.h\"",
+    kPublic
+  },
+  { "\"tests/keep_mapping-priv.h\"",
+    kPrivate,
+    "\"tests/keep_mapping-public.h\"",
+    kPublic
+  },
 };
 
 
@@ -741,7 +754,6 @@ void MakeMapTransitive(const IncludePicker::IncludeMap& filename_map,
 // these cases, asm/foo.h is the public header, and asm-ARCH is
 // private.  This does a private->public mapping for that case.
 // Input should be an include-style path but without the quotes.
-// TODO(csilvers): move this to AddDirectInclude().
 string NormalizeAsm(string path) {
   if (!StartsWith(path, "asm-"))
     return path;
@@ -754,7 +766,6 @@ string NormalizeAsm(string path) {
 // Get rid of the 'x86_64-unknown-linux-gnu' bit.  This should be
 // called after initial C++ path parsing, so path is something like
 // 'x86_64-unknown-linux-gnu/bits/c++config.h'.
-// TODO(csilvers): remove after we sort GlobalSearchPath by length.
 string NormalizeSystemSpecificPath(string path) {
   size_t pos = path.find('/');
   if (pos == string::npos)
@@ -771,16 +782,6 @@ string NormalizeSystemSpecificPath(string path) {
   return path;
 }
 
-string NormalizeSystemPath(string path) {
-  // Check for a c++ filename.  It's in a c++/<version#>/include dir.
-  // (Or, possibly, c++/<version>/include/x86_64-unknown-linux-gnu/...")
-  if (StripPast(&path, "/c++/") && StripPast(&path, "/"))
-    return NormalizeSystemSpecificPath(path);
-
-  // It's a C filename.  It can be in many locations.
-  return NormalizeAsm(path);     // Fix up C includes in <asm-ARCH/foo.h>
-}
-
 }  // namespace
 
 // Converts a file-path, such as /usr/include/stdio.h, to a
@@ -790,20 +791,22 @@ string ConvertToQuotedInclude(const string& filepath) {
   string path = NormalizeFilePath(filepath);
 
   // Case 1: a local (non-system) include.
-  if (llvm::sys::path::is_relative(path)) {        // A relative path
+if (llvm::sys::path::is_relative(path)) {        // A relative path
     return "\"" + path + "\"";
   }
 
-  // Case 2: a system include.
-  const vector<string>& search_paths = GlobalSearchPaths();
-  for (Each<string> it(&search_paths); !it.AtEnd(); ++it) {
-    if (StripLeft(&path, *it)) {
-      StripLeft(&path, "/");
-      path = NormalizeSystemPath(path);
-      break;
-    }
+  // Case 2: a c++ filename.  It's in a c++/<version#>/include dir.
+  // (Or, possibly, c++/<version>/include/x86_64-unknown-linux-gnu/...")
+  if (StripPast(&path, "/c++/") && StripPast(&path, "/")) {
+    path = NormalizeSystemSpecificPath(path);
+    return "<" + path + ">";
   }
 
+
+  // Case 3: a C filename.  It can be in many locations.
+  // TODO(csilvers): get a full list of include dirs from the compiler.
+  StripPast(&path, "/include/");
+  path = NormalizeAsm(path);     // Fix up C includes in <asm-ARCH/foo.h>
   return "<" + path + ">";
 }
 
@@ -813,9 +816,7 @@ bool IsSystemIncludeFile(const string& filepath) {
   return ConvertToQuotedInclude(filepath)[0] == '<';
 }
 
-#ifndef ARRAYSIZE
 #define ARRAYSIZE(ar)  (sizeof(ar) / sizeof(*(ar)))
-#endif
 
 IncludePicker::IncludePicker()
     : symbol_include_map_(),
@@ -990,9 +991,7 @@ vector<string> IncludePicker::GetPublicHeadersForFilepath(
 
 bool IncludePicker::HasMapping(const string& map_from_filepath,
                                const string& map_to_filepath) const {
-  // Since HasMapping is typically used to test for direct mappings, we
-  // won't require finalize_added_include_lines_ be set here.  But
-  // better would be to move the HasMapping() call in iwyu_preprocessor.cc
+  CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
   const string quoted_from = ConvertToQuotedInclude(map_from_filepath);
   const string quoted_to = ConvertToQuotedInclude(map_to_filepath);
   // We can't use GetPublicHeadersForFilepath since includer might be private.

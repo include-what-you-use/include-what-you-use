@@ -20,6 +20,9 @@ import re
 import subprocess
 import sys
 
+
+_IWYU_PATH = '../../../../Debug+Asserts/bin/include-what-you-use'
+
 # These are the warning/error lines that iwyu.cc produces when --verbose >= 3
 _EXPECTED_DIAGNOSTICS_RE = re.compile(r'^(.*?):(\d+):.*//\s*IWYU:\s*(.*)$')
 _ACTUAL_DIAGNOSTICS_RE = re.compile(r'^(.*?):(\d+):\d+:\s*'
@@ -34,23 +37,6 @@ _ACTUAL_SUMMARY_START_RE = re.compile(r'^(.*?) should add these lines:$')
 _ACTUAL_SUMMARY_END_RE = re.compile(r'^---$')
 _ACTUAL_REMOVAL_LIST_START_RE = re.compile(r'.* should remove these lines:$')
 _NODIFFS_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
-
-
-def _GetIwyuPath(iwyu_paths):
-  """Returns the path to IWYU or raises IOError if it cannot be found."""
-  for path in iwyu_paths:
-    if os.path.exists(path):
-      return path
-  raise IOError('Failed to locate IWYU.\nSearched %s' % iwyu_paths)
-
-
-_IWYU_PATHS = [
-    '../../../../Debug+Asserts/bin/include-what-you-use',
-    '../../../../Release+Asserts/bin/include-what-you-use',
-    '../../../../Release/bin/include-what-you-use',
-    ]
-_IWYU_PATH = _GetIwyuPath(_IWYU_PATHS)
-
 
 def _IsCppSource(file_path):
   return file_path.endswith('.h') or file_path.endswith('.cc')

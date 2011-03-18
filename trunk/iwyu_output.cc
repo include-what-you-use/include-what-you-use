@@ -227,9 +227,6 @@ string OneUse::PrintableUseLoc() const {
 }
 
 void OneUse::SetPublicHeaders() {
-  // We should never need to deal with public headers if we already know
-  // who we map to.
-  CHECK_(suggested_header_.empty() && "Should not need a public header here");
   const IncludePicker& picker = GlobalIncludePicker();   // short alias
   // If the symbol has a special mapping, use it, otherwise map its file.
   public_headers_ = picker.GetPublicHeadersForSymbol(symbol_name_);

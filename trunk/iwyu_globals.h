@@ -12,32 +12,22 @@
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
 
 #include <string>
-#include <vector>
 #include "port.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/SourceManager.h"
 
-namespace clang {
-class HeaderSearch;
-}
-
 namespace include_what_you_use {
 
 using std::string;
-using std::vector;
 
 
 class IncludePicker;
 class SourceManagerCharacterDataGetter;
 
-void InitGlobals(clang::SourceManager* source_manager,
-                 clang::HeaderSearch* header_search);
+void InitGlobals(clang::SourceManager* source_manager);
 
 
 clang::SourceManager* GlobalSourceManager();
-
-// The directories to look for #includes in, including from -I, -isystem, etc.
-const vector<string>& GlobalSearchPaths();
 
 const IncludePicker& GlobalIncludePicker();
 IncludePicker* MutableGlobalIncludePicker();   // only use at great need!

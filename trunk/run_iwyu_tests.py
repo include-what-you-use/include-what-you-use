@@ -29,6 +29,11 @@ import iwyu_test_util
 TEST_ROOTDIR = 'tests'
 
 
+def CheckAlsoExtension(extension):
+  """Return a suitable iwyu flag for checking files with the given extension."""
+  return '--check_also="%s"' % os.path.join(TEST_ROOTDIR, '*' + extension)
+
+
 class OneIwyuTest(unittest.TestCase):
   """Superclass for tests.  A subclass per test-file is created at runtime."""
 
@@ -38,10 +43,10 @@ class OneIwyuTest(unittest.TestCase):
     # iwyu flags to run properly, add an entry to the map with
     # key=cc-filename (relative to TEST_ROOTDIR), value=list of flags.
     flags_map = {
-      'check_also.cc': ['--check_also="%s"'
-                        % os.path.join(TEST_ROOTDIR, '*-d1*')],
-      'overloaded_class.cc': ['--check_also="%s"'
-                              % os.path.join(TEST_ROOTDIR, '*-i1*')],
+      'check_also.cc': [CheckAlsoExtension('-d1.h')],
+      'overloaded_class.cc': [CheckAlsoExtension('-i1.h')],
+      'implicit_ctor.cc': [CheckAlsoExtension('-d1.h')],
+      'keep_mapping.cc': [CheckAlsoExtension('-public.h')],
     }
     # Internally, we like it when the paths start with TEST_ROOTDIR.
     self._iwyu_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
