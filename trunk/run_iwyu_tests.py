@@ -75,7 +75,10 @@ class OneIwyuTest(unittest.TestCase):
 def RegisterFilesForTesting():
   """Create a test-class for every .cc file in TEST_ROOTDIR."""
   module = sys.modules[__name__]
-  for filename in glob.glob(os.path.join(TEST_ROOTDIR, '*.cc')):
+  filenames = glob.glob(os.path.join(TEST_ROOTDIR, '*.cc'))
+  if not filenames:
+    sys.exit('No tests found in %s!' % os.path.abspath(TEST_ROOTDIR))
+  for filename in filenames:
     basename = os.path.basename(filename[:-len('.cc')])
     class_name = re.sub('[^0-9a-zA-Z_]', '_', basename)  # python-clean
     if class_name[0].isdigit():            # classes can't start with a number
