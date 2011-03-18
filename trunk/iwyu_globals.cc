@@ -36,7 +36,14 @@ static const clang::PrintingPolicy default_print_policy(default_lang_options);
 static SourceManagerCharacterDataGetter* data_getter = NULL;
 static set<string>* globs_to_report_iwyu_violations_for = NULL;
 
-static vector<string>* MakeSystemDirs(clang::HeaderSearch* header_search) {
+// Make sure we put longer search-paths first, so iwyu will map
+// /usr/include/c++/4.4/foo to <foo> rather than <c++/4.4/foo>.
+static bool SortByDescendingLength(const string& left, const string& right) {
+  return left.length() > right.length();
+}
+
+static vector<string>* ComputeSystemIncludeDirectories(
+    clang::HeaderSearch* header_search) {
   vector<string>* system_include_dirs = new vector<string>;
   for (clang::HeaderSearch::search_dir_iterator
            it = header_search->search_dir_begin();
@@ -46,13 +53,15 @@ static vector<string>* MakeSystemDirs(clang::HeaderSearch* header_search) {
       system_include_dirs->push_back(entry->getName());
     }
   }
+  sort(system_include_dirs->begin(), system_include_dirs->end(),
+       &SortByDescendingLength);
   return system_include_dirs;
 }
 
 void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
-  search_paths = MakeSystemDirs(header_search);
+  search_paths = ComputeSystemIncludeDirectories(header_search);
   include_picker = new IncludePicker;
 }
 
@@ -105,14 +114,16 @@ void InitGlobalsForTesting() {
   source_manager = NULL;
   data_getter = NULL;
   include_picker = new IncludePicker;
+
   // Use a reasonable default for the -I flags.
   search_paths = new vector<string>;
+  search_paths->push_back("/usr/include");
   search_paths->push_back("/usr/include/c++/4.3");
   search_paths->push_back("/usr/include/c++/4.2");
-  // TODO(csilvers): move this above the c++ includes to test length-sorting.
-  search_paths->push_back("/usr/include");
   search_paths->push_back(".");
   search_paths->push_back("/usr/src/linux-headers-2.6.24-gg23/include");
+
+  sort(search_paths->begin(), search_paths->end(), &SortByDescendingLength);
 }
 
 }  // namespace include_what_you_use
