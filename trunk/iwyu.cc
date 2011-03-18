@@ -1364,6 +1364,40 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return type;
   }
 
+  // Re-assign uses from macro authors to macro callers when possible.
+  // With macros, it can be very difficult to tell what types are the
+  // responsibility of the macro-caller, and which the macro-author.  e.g.
+  //    #define SIZE_IN_FOOS(ptr)  ( sizeof(*ptr) / sizeof(Foo) )
+  // Here the type of *ptr is the responsibility of the caller, while the
+  // type of Foo is the responsibility of the author, even though the
+  // Epxrs for *ptr and Foo are both located inside the macro (the Expr
+  // for ptr is located at the macro-calling site, but not for *ptr).
+  // To help us guess the owner, we use this rule: if the macro-file
+  // intends-to-provide the type, then we keep ownership of the type
+  // at the macro.  Otherwise, we assume it's with the caller.  This
+  // works well as long as the file defining the macro is well-behaved.
+  //   This function should be called with a use-loc that is within
+  // an expanded macro (so the use-loc will point to either inside a
+  // macro definition, or to an argument to a macro call).  If it
+  // points within a macro definition, and that macro-definition file
+  // does not mean to re-export the symbol being used, then we reassign
+  // use of the decl to the macro-caller.
+  SourceLocation GetUseLocationForMacroExpansion(SourceLocation use_loc,
+                                                 const Decl* used_decl) {
+    CHECK_(IsInMacro(use_loc) && "Unexpected non-macro-expansion call");
+    if (!preprocessor_info().PublicHeaderIntendsToProvide(
+            GetFileEntry(use_loc), GetFileEntry(used_decl)))
+      return GetInstantiationLoc(use_loc);
+    return use_loc;
+  }
+  SourceLocation GetUseLocationForMacroExpansion(SourceLocation use_loc,
+                                                 const Type* used_type) {
+    used_type = RemovePointersAndReferencesAsWritten(used_type);
+    if (const Decl* decl = TypeToDeclAsWritten(used_type))
+      return GetUseLocationForMacroExpansion(use_loc, decl);
+    return use_loc;
+  }
+
   //------------------------------------------------------------
   // Checkers, that tell iwyu_output about uses of symbols.
   // We let, but don't require, subclasses to override these.
@@ -1375,6 +1409,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // Map private types like __normal_iterator to their public counterpart.
     type = MapPrivateTypeToPublicType(type);
+    // Figure out the best location to attribute uses inside macros.
+    if (IsInMacro(used_loc))
+      used_loc = GetUseLocationForMacroExpansion(used_loc, type);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
         used_loc, type, IsNodeInsideCXXMethodBody(current_ast_node()));
@@ -1391,6 +1428,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                            const Type* type) {
     // TODO(csilvers): figure out if/when calling CanIgnoreType() is correct.
     type = MapPrivateTypeToPublicType(type);
+    // Figure out the best location to attribute uses inside macros.
+    if (IsInMacro(used_loc))
+      used_loc = GetUseLocationForMacroExpansion(used_loc, type);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
         used_loc, type, IsNodeInsideCXXMethodBody(current_ast_node()));
@@ -1401,6 +1441,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     decl = MapPrivateDeclToPublicDecl(decl);
     if (CanIgnoreDecl(decl))
       return;
+    // Figure out the best location to attribute uses inside macros.
+    if (IsInMacro(used_loc))
+      used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
         used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()));
@@ -1417,6 +1460,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     decl = MapPrivateDeclToPublicDecl(decl);
     if (CanIgnoreDecl(decl))
       return;
+    // Figure out the best location to attribute uses inside macros.
+    if (IsInMacro(used_loc))
+      used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
         used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()));

@@ -46,6 +46,7 @@ class OneIwyuTest(unittest.TestCase):
       'check_also.cc': [CheckAlsoExtension('-d1.h')],
       'implicit_ctor.cc': [CheckAlsoExtension('-d1.h')],
       'keep_mapping.cc': [CheckAlsoExtension('-public.h')],
+      'macro_location.cc': [CheckAlsoExtension('-d2.h')],
       'overloaded_class.cc': [CheckAlsoExtension('-i1.h')],
     }
     # Internally, we like it when the paths start with TEST_ROOTDIR.

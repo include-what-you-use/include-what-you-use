@@ -95,6 +95,10 @@ inline clang::FullSourceLoc GetInstantiationLoc(clang::SourceLocation loc) {
   return clang::FullSourceLoc(loc, *GlobalSourceManager()).getInstantiationLoc();
 }
 
+inline bool IsInMacro(clang::SourceLocation loc) {
+  return GetSpellingLoc(loc) != GetInstantiationLoc(loc);
+}
+
 // Returns the line number corresponding to a source location.
 // Prefers the spelling line number, but if it's not useful (because
 // the location is in <scratch space> for instance, due to macro token
@@ -176,7 +180,7 @@ inline clang::SourceLocation GetLocation(const clang::Token& token) {
   return token.getLocation();
 }
 
-clang::SourceLocation GetLocation(const clang::Decl* token);
+clang::SourceLocation GetLocation(const clang::Decl* decl);
 clang::SourceLocation GetLocation(const clang::Stmt* stmt);
 clang::SourceLocation GetLocation(const clang::TypeLoc* typeloc);
 clang::SourceLocation GetLocation(const clang::NestedNameSpecifierLoc* nnsloc);
