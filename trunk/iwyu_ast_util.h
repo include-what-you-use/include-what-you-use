@@ -415,6 +415,34 @@ inline bool IsNamespaceQualifiedNode(const ASTNode* ast_node) {
           clang::NestedNameSpecifier::Namespace);
 }
 
+// See if a given ast_node is part of a class elaboration: that
+// is, 'Foo' in 'Foo::FooSubclass'.  The actual input should be
+// a RecordType, that might or might not be to the left of a ::.
+inline bool IsClassElaborationQualifier(const ASTNode* ast_node) {
+  if (ast_node == NULL)  return false;
+
+  const clang::Type* node_type = ast_node->GetAs<clang::Type>();
+  if (!node_type)  return false;
+  // Work properly even when we're a template parameter.
+  if (const clang::SubstTemplateTypeParmType* subst
+      = dyn_cast<clang::SubstTemplateTypeParmType>(node_type))
+    node_type = subst->getReplacementType().getTypePtr();
+
+  const clang::RecordType* record_type = dyn_cast<clang::RecordType>(node_type);
+  if (!record_type)  return false;
+
+  const clang::ElaboratedType* elaborated_type =
+      ast_node->GetParentAs<clang::ElaboratedType>();
+  if (!elaborated_type)  return false;
+
+  const clang::NestedNameSpecifier* elab_nns = elaborated_type->getQualifier();
+  if (!elab_nns)  return false;
+
+  // Is the type in the elaboration-field us?  If so, we're the elaboration.
+  return (elab_nns->getKind() == clang::NestedNameSpecifier::TypeSpec &&
+          elab_nns->getAsType() == ast_node->GetAs<clang::Type>());
+}
+
 // See if the given ast_node is the decl of a class or function that
 // occurs in a friend context.  That is, for 'friend class Foo', this
 // function matches the decl for 'class Foo'.  (It does not match the

@@ -191,7 +191,7 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
 
     const string quoted_private_include
         = ConvertToQuotedInclude(GetFilePath(current_loc));
-    for (int i = 0; i < public_includes.size(); ++i) {
+    for (string::size_type i = 0; i < public_includes.size(); ++i) {
       StripWhiteSpace(&public_includes[i]);
       const string quoted_header_name = "<" + public_includes[i] + ">";
       MutableGlobalIncludePicker()->AddMapping(quoted_private_include,
@@ -274,8 +274,8 @@ static void ProtectReexportIncludes(
            it = file_info_map->begin(); it != file_info_map->end(); ++it) {
     IwyuFileInfo& includer = it->second;
     set<const FileEntry*> incs = includer.direct_includes_as_fileentries();
+    const string includer_path = GetFilePath(it->first);
     for (Each<const FileEntry*> include(&incs); !include.AtEnd(); ++include) {
-      const string includer_path = GetFilePath(it->first);
       const string includee_path = GetFilePath(*include);
       if (GlobalIncludePicker().HasMapping(includee_path, includer_path)) {
         includer.ReportIncludeFileUse(ConvertToQuotedInclude(includee_path));
