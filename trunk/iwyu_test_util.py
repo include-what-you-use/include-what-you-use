@@ -337,11 +337,15 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
   iwyu_flags = iwyu_flags or []  # Make sure iwyu_flags is a list.
 
   # Require verbose level 3 so that we can verify the individual diagnostics.
-  iwyu_prefix = 'env IWYU_VERBOSE=3'
+  # We allow the level to be overriden by the IWYU_VERBOSE environment
+  # variable, or by iwyu_flags, for easy debugging.  (We put the
+  # envvar-based flag first, so user flags can override it later.)
+  iwyu_flags = ['--verbose=%s' % os.getenv('IWYU_VERBOSE', '3')] + iwyu_flags
+  # clang reads iwyu flags after the -Xiwyu clang flag: '-Xiwyu --verbose=6'
+  iwyu_flags = ['-Xiwyu ' + flag for flag in iwyu_flags]
 
   # TODO(csilvers): verify that has exit-status 0.
-  cmd = '%s %s %s -I . %s' % (iwyu_prefix, _IWYU_PATH, ' '.join(iwyu_flags),
-                              cc_file)
+  cmd = '%s %s -I . %s' % (_IWYU_PATH, ' '.join(iwyu_flags), cc_file)
   if verbose:
     print '>>> Running %s' % cmd
   output = _GetCommandOutput(cmd)
