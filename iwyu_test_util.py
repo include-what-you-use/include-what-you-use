@@ -251,66 +251,43 @@ def _GetActualSummaries(output):
 def _VerifyDiagnosticsAtLoc(loc_str, regexes, diagnostics):
   """Verify the diagnostics at the given location; return a list of failures."""
 
-  # Find out which regexes don't match a diagnostic and vice versa.
+  # Find out which regexes match a diagnostic and vice versa.
   matching_regexes = [[] for unused_i in xrange(len(diagnostics))]
-  unmatched_regexes = []
-  multiply_matched_regexes = []
-  ret = []
-  for regex in regexes:
-    num_matches = 0
-    for (i, diagnostic) in enumerate(diagnostics):
+  matched_diagnostics = [[] for unused_i in xrange(len(regexes))]
+  for (r_index, regex) in enumerate(regexes):
+    for (d_index, diagnostic) in enumerate(diagnostics):
       if regex.search(diagnostic):
-        matching_regexes[i].append(regex.pattern)
-        num_matches += 1
-    if num_matches == 0:
-      # regex didn't match any diagnostic.
-      unmatched_regexes.append(regex.pattern)
-    if num_matches > 1:
-      multiply_matched_regexes.append(regex.pattern)
+        matching_regexes[d_index].append(r_index)
+        matched_diagnostics[r_index].append(d_index)
 
-  unmatched_diagnostics = []
-  multiply_matched_diagnostic_messages = []
-  for (i, regexes) in enumerate(matching_regexes):
-    if not regexes:
-      unmatched_diagnostics.append(diagnostic)
-    elif len(regexes) > 1:
-      multiply_matched_diagnostic_messages.append(
+  failure_messages = []
+
+  # Collect unmatched diagnostics and multiply matched diagnostics.
+  for (d_index, r_indexes) in enumerate(matching_regexes):
+    if not r_indexes:
+      failure_messages.append('Unexpected diagnostic:\n%s\n'
+                              % diagnostics[d_index])
+    elif len(r_indexes) > 1:
+      failure_messages.append(
           'The diagnostic message:\n%s\n'
-          'matches regexes:\n%s'
-          % (diagnostic,  '\n'.join(regexes)))
+          'matches multiple regexes:\n%s'
+          % (diagnostics[d_index],
+             '\n'.join([regexes[r_index].pattern for r_index in r_indexes])))
 
-  if unmatched_diagnostics and unmatched_regexes:
-    ret = [
-        '%s Unexpected diagnostics:\n%s\nMissing matches for regexes:\n%s\n'
-        % (loc_str, '\n'.join(unmatched_diagnostics),
-           '\n'.join(unmatched_regexes))]
-  elif unmatched_diagnostics:
-    ret = [
-        '%s expecting %s diagnostics; actually had %s. '
-        'Unexpected diagnostics:\n'
-        '%s\n' % (loc_str, len(regexes), len(diagnostics),
-                  '\n'.join(unmatched_diagnostics))]
-  elif unmatched_regexes:
-    ret = [
-        '%s expecting %s diagnostics; actually had %s. '
-        'Missing matches for regexes:\n'
-        '%s\n' % (loc_str, len(regexes), len(diagnostics),
-                  '\n'.join(unmatched_regexes))]
-  else:
-    ret = []
+  # Collect unmatched regexes and regexes with multiple matches.
+  for (r_index, d_indexes) in enumerate(matched_diagnostics):
+    if not d_indexes:
+      failure_messages.append('Unmatched regex:\n%s\n'
+                              % regexes[r_index].pattern)
+    elif len(d_indexes) > 1:
+      failure_messages.append(
+          'The regex:\n%s\n'
+          'matches multiple diagnostics:\n%s'
+          % (regexes[r_index].pattern,
+             '\n'.join([diagnostics[d_index] for d_index in d_indexes])))
 
-  if multiply_matched_diagnostic_messages:
-    ret.append(
-        'There are %s diagnostics matching more than one regex:'
-        '%s\n' % (len(multiply_matched_diagnostic_messages),
-                  '\n'.join(multiply_matched_diagnostic_messages)))
+  return ['%s %s' % (loc_str, message) for message in failure_messages]
 
-  if multiply_matched_regexes:
-    ret.append(
-        'The following regexes matched multiple diagnostics\n%s\n'
-        % ('\n'.join(multiply_matched_regexes)))
-
-  return ret
 
 def _CompareExpectedAndActualDiagnostics(expected_diagnostic_regexes,
                                          actual_diagnostics):
