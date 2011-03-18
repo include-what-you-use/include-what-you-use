@@ -215,6 +215,7 @@ using std::make_pair;
 using std::map;
 using std::set;
 using std::string;
+using std::swap;
 using std::vector;
 
 // The default value for the --howtodebug flag.  Indicates that the
@@ -1612,7 +1613,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
       // Need the full to-type so we can call its constructor.
       case clang::CK_ConstructorConversion:
-        need_full_to_type = true;
+        // As a special case, if we're doing the constructor
+        // conversion in a function call (calling 'MyFunc(7)' instead
+        // of 'MyFunc(MyClass(7))'), then we don't need to report
+        // anything.  That's because iwyu says the callee (MyFunc) is
+        // responsible for these kinds of calls.  See
+        // IwyuBaseASTVisitor::VisitFunctionDecl.
+        if (!current_ast_node()->template HasAncestorOfType<CallExpr>())
+          need_full_to_type = true;
         break;
       // Need the full from-type so we can call its 'operator <totype>()'.
       case clang::CK_UserDefinedConversion:
