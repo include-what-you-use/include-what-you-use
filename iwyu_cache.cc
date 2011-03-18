@@ -35,14 +35,19 @@ namespace include_what_you_use {
 // required full use of MyClass, but not of allocator<MyClass>).
 // TODO(csilvers): put this somewhere easier to modify, and add to it.
 static const char* const kFullUseTypes[] = {
-  "std::vector",
-  "std::map",
-  "std::set",
+  "__gnu_cxx::hash_map",
+  "__gnu_cxx::hash_multimap",
+  "__gnu_cxx::hash_multiset",
+  "__gnu_cxx::hash_set",
+  "std::bitset",
   "std::deque",
+  "std::list",
+  "std::map",
   "std::multimap",
   "std::multiset",
-  "__gnu_cxx::hash_map",
-  "__gnu_cxx::hash_set",
+  "std::set",
+  "std::slist",
+  "std::vector",
 };
 
 // If the passed-in tpl_decl is one of the classes we have hard-coded
