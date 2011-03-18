@@ -15,6 +15,8 @@
 #include <utility>  // for make_pair
 #include <vector>
 
+#include "iwyu_driver.h"
+#include "iwyu_globals.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
@@ -23,6 +25,12 @@
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/Preprocessor.h"
+
+using clang::ASTConsumer;
+using clang::ASTFrontendAction;
+using clang::CompilerInstance;
 
 namespace include_what_you_use {
 
@@ -335,5 +343,33 @@ TEST(IncludePicker, HasMappingIncludeForThirdParty) {
                            "base/dynamic_annotations.h"));
 }
 
+class InitGlobalsAction : public ASTFrontendAction {
+  virtual ASTConsumer* CreateASTConsumer(CompilerInstance& compiler,  // NOLINT
+                                         llvm::StringRef /* dummy */) {
+    InitGlobals(&compiler.getSourceManager());
+    return NULL;
+  }
+};
+
 }  // namespace
 }  // namespace include_what_you_use
+
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+
+  // We make a fake compile command.  We only need this for the header
+  // search info, so it doesn't matter exactly what it says we're compiling.
+  // We are responsible for freeing this, but we're in main, so who cares?
+  const char* fake_argv[] = { "iwyu_test", "iwyu_test.cc" };
+  const int fake_argc = sizeof(fake_argv) / sizeof(*fake_argv);
+  CompilerInstance* compiler = CreateCompilerInstance(fake_argc, fake_argv);
+  CHECK_(compiler && "Failed to process fake argv");
+
+  // Create and execute the frontend to generate an LLVM bitcode module.
+  include_what_you_use::InitGlobalsAction action;
+  if (!compiler->ExecuteAction(action))
+    return 1;
+
+  return RUN_ALL_TESTS();
+}
