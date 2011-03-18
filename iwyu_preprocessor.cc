@@ -113,8 +113,7 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
 
     string pragma_text = GetSourceTextUntilEndOfLine(current_loc,
                                                      DefaultDataGetter());
-    // TODO(user): Strip white space from end and maybe beginning.
-
+    StripWhiteSpace(&pragma_text);
     if (begin_exports_location.isValid()) {
       if (pragma_text == "end_exports") {
         AddExportedRange(GetFileEntry(file_beginning),

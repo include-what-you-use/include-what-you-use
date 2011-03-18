@@ -14,32 +14,56 @@
 #endif
 #include <set>
 #include <string>
+#include "clang/Lex/HeaderSearch.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
 #include "iwyu_stl_util.h"
 
+using clang::DirectoryEntry;
+using clang::DirectoryLookup;
 using std::set;
 using std::string;
+using std::vector;
 
 namespace include_what_you_use {
 
 static clang::SourceManager* source_manager = NULL;
+static vector<string>* search_paths = NULL;
 static IncludePicker* include_picker = NULL;
 static const clang::LangOptions default_lang_options;
 static const clang::PrintingPolicy default_print_policy(default_lang_options);
 static SourceManagerCharacterDataGetter* data_getter = NULL;
 static set<string>* globs_to_report_iwyu_violations_for = NULL;
 
-void InitGlobals(clang::SourceManager* sm) {
+static vector<string>* MakeSystemDirs(clang::HeaderSearch* header_search) {
+  vector<string>* system_include_dirs = new vector<string>;
+  for (clang::HeaderSearch::search_dir_iterator
+           it = header_search->search_dir_begin();
+       it != header_search->search_dir_end(); ++it) {
+    const DirectoryEntry * entry = it->getDir();
+    if (entry != NULL) {
+      system_include_dirs->push_back(entry->getName());
+    }
+  }
+  return system_include_dirs;
+}
+
+void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
+  search_paths = MakeSystemDirs(header_search);
   include_picker = new IncludePicker;
 }
 
 clang::SourceManager* GlobalSourceManager() {
   CHECK_(source_manager && "Must call InitGlobals() before calling this");
   return source_manager;
+}
+
+const vector<string>& GlobalSearchPaths() {
+  assert(search_paths && "Must call InitGlobals() before calling this");
+  return *search_paths;
 }
 
 const IncludePicker& GlobalIncludePicker() {
@@ -81,6 +105,14 @@ void InitGlobalsForTesting() {
   source_manager = NULL;
   data_getter = NULL;
   include_picker = new IncludePicker;
+  // Use a reasonable default for the -I flags.
+  search_paths = new vector<string>;
+  search_paths->push_back("/usr/include/c++/4.3");
+  search_paths->push_back("/usr/include/c++/4.2");
+  // TODO(csilvers): move this above the c++ includes to test length-sorting.
+  search_paths->push_back("/usr/include");
+  search_paths->push_back(".");
+  search_paths->push_back("/usr/src/linux-headers-2.6.24-gg23/include");
 }
 
 }  // namespace include_what_you_use
