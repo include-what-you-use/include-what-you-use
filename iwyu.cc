@@ -183,7 +183,7 @@ using clang::QualifiedTypeLoc;
 using clang::RecordDecl;
 using clang::RecordType;
 using clang::ReferenceType;
-using clang::UnaryExprOrTypeTraitExpr;
+using clang::SizeOfAlignOfExpr;
 using clang::SourceLocation;
 using clang::SourceManager;
 using clang::Stmt;
@@ -215,7 +215,6 @@ using std::make_pair;
 using std::map;
 using std::set;
 using std::string;
-using std::swap;
 using std::vector;
 
 // The default value for the --howtodebug flag.  Indicates that the
@@ -1683,7 +1682,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // sizeof(some_var), we'll report we need full type information when
   // some_var is defined.  But if the arg is a reference, nobody else
   // will say we need full type info but us.
-  bool VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
+  bool VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
 
     // Calling sizeof on a reference-to-X is the same as calling it on X.
@@ -1917,7 +1916,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // contents don't matter that much.
         const FileEntry* use_file = CurrentFileEntry();
         preprocessor_info().FileInfoFor(use_file)->ReportFullSymbolUse(
-            CurrentLoc(), "<new>", "operator new");
+            CurrentLoc(), "/usr/include/c++/<version>/new", "operator new");
       }
     }
 
@@ -2324,8 +2323,8 @@ class InstantiatedTemplateVisitor
     return TraverseExpandedTemplateFunctionHelper(callee, parent_type);
   }
 
-  bool TraverseUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
-    if (!Base::TraverseUnaryExprOrTypeTraitExpr(expr))  return false;
+  bool TraverseSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
+    if (!Base::TraverseSizeOfAlignOfExpr(expr))  return false;
     if (CanIgnoreCurrentASTNode())  return true;
     const Type* arg_type = expr->getTypeOfArgument().getTypePtr();
     // Calling sizeof on a reference-to-X is the same as calling it on X.
@@ -2378,7 +2377,7 @@ class InstantiatedTemplateVisitor
     // sizeof(a reference type) is the same as sizeof(underlying type).
     // We have to handle that specially here, or else we'll say the
     // reference is forward-declarable, below.
-    if (current_ast_node()->ParentIsA<UnaryExprOrTypeTraitExpr>() &&
+    if (current_ast_node()->ParentIsA<SizeOfAlignOfExpr>() &&
         isa<ReferenceType>(actual_type)) {
       // This is a bit tricky: we can't call
       // ReportTypesUse(..., types_of_interest), because we want a
@@ -2976,7 +2975,7 @@ class IwyuAstConsumer
 
   // The compiler fully instantiates a template class before taking
   // the size of it.  So so do we.
-  bool VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
+  bool VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
 
     const Type* arg_type = expr->getTypeOfArgument().getTypePtr();
@@ -2990,7 +2989,7 @@ class IwyuAstConsumer
           arg_type, CurrentLoc(), processed_overload_locs(), tpl_type_args);
     }
 
-    return Base::VisitUnaryExprOrTypeTraitExpr(expr);
+    return Base::VisitSizeOfAlignOfExpr(expr);
   }
 
   // --- Visitors of types derived from clang::Type.
@@ -3096,9 +3095,7 @@ class IwyuAction : public ASTFrontendAction {
   virtual ASTConsumer* CreateASTConsumer(CompilerInstance& compiler,  // NOLINT
                                          llvm::StringRef /* dummy */) {
     // Do this first thing after getting our hands on a CompilerInstance.
-    InitGlobals(&compiler.getSourceManager(),
-                &compiler.getPreprocessor().getHeaderSearchInfo());
-
+    InitGlobals(&compiler.getSourceManager());
     // Also init the globals that are local to this file.
     g_explicitly_instantiated_classes.clear();
 
@@ -3112,57 +3109,6 @@ class IwyuAction : public ASTFrontendAction {
   }
 };
 
-static void PrintHelp(const char* extra_msg) {
-  printf("USAGE: iwyu [iwyu opts] <clang opts>\n"
-         "Here are the <opts> you can specify:\n"
-         "   --check_also=<glob>: tells iwyu to print iwyu-violation info\n"
-         "        for all files matching the given glob pattern (in addition\n"
-         "        to the default of reporting for the input .cc file and its\n"
-         "        associated .h files).  This flag may be specified multiple\n"
-         "        times to specify multiple glob patterns.\n"
-         "   --cwd=<dir>: tells iwyu what the current working directory is.\n"
-         "   --help: prints this help and exits.\n"
-         "   --howtodebug[=<filename>]: with no arg, prints instructions on\n"
-         "        how to run iwyu under gdb for the input file, and exits.\n"
-         "        With an arg, prints only when input file matches the arg.\n"
-         "   --verbose=<level>: the higher the level, the more output.\n");
-  if (extra_msg)
-    printf("\n%s\n\n", extra_msg);
-}
-
-// Handles all iwyu-specific flags, like --verbose.
-// The command line should look like
-//   path/to/iwyu --verbose=4 [other iwyuu flags] CLANG_FLAGS... foo.cc
-// Returns an index to the first argv element we don't recognize.
-static int ParseIWYUFlags(int argc, char** argv) {
-#if defined(_MSC_VER)
-  // FIXME: MSVC support
-  return 0;
-#else
-  static const struct option longopts[] = {
-    {"check_also", required_argument, NULL, 'c'},  // can be specified >once
-    {"cwd", required_argument, NULL, 'p'},
-    {"help", no_argument, NULL, 'h'},
-    {"howtodebug", optional_argument, NULL, 'd'},
-    {"verbose", required_argument, NULL, 'v'},
-    {0, 0, 0, 0}
-  };
-  opterr = 0;    // suppress getopt_long error reporting
-  int option_index;
-  while (true) {
-    switch (getopt_long(argc, argv, "", longopts, &option_index)) {
-      case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
-      case 'd': printf("-d/--howtodebug not yet implemented\n"); exit(1);
-      case 'h': PrintHelp(""); exit(0); break;
-      case 'p': printf("-p/--cwd not yet implemented\n"); exit(1);
-      case 'v': SetVerboseLevel(atoi(optarg)); break;
-      case '?': return optind - 1;   // 'flag not recognized'
-      default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
-    }
-  }
-  return optind;  // unreachable
-#endif
-}
 
 } // namespace include_what_you_use
 
@@ -3212,7 +3158,6 @@ using llvm::raw_svector_ostream;
 using llvm::sys::getHostTriple;
 using llvm::sys::Path;
 using include_what_you_use::IwyuAction;
-using include_what_you_use::ParseIWYUFlags;
 using include_what_you_use::StartsWith;
 using std::set;
 using std::string;
@@ -3292,7 +3237,7 @@ static void ExpandArgsFromBuf(const char *Arg,
   }
 }
 
-static void ExpandArgv(int argc, char **argv,
+static void ExpandArgv(int argc, const char **argv,
                        SmallVectorImpl<const char*> &ArgVector,
                        set<string> &SavedStrings) {
   for (int i = 0; i < argc; ++i) {
@@ -3306,7 +3251,7 @@ static void ExpandArgv(int argc, char **argv,
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
   void* main_addr = (void*) (intptr_t) GetExecutablePath;
   Path path = GetExecutablePath(argv[0]);
   TextDiagnosticPrinter* diagnostic_client =
@@ -3322,12 +3267,7 @@ int main(int argc, char **argv) {
   set<string> SavedStrings;
   SmallVector<const char*, 256> args;
 
-  // Parse out iwyu flags.
-  const int first_clang_arg = ParseIWYUFlags(argc, argv);
-  args.push_back(argv[0]);
-  // Now handle clang flags.
-  ExpandArgv(argc - first_clang_arg, argv + first_clang_arg,
-             args, SavedStrings);
+  ExpandArgv(argc, argv, args, SavedStrings);
 
   // FIXME: This is a hack to try to force the driver to do something we can
   // recognize. We need to extend the driver library to support this use model
@@ -3402,3 +3342,4 @@ int main(int argc, char **argv) {
   // given.
   return 1;
 }
+

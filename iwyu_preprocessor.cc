@@ -113,7 +113,8 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
 
     string pragma_text = GetSourceTextUntilEndOfLine(current_loc,
                                                      DefaultDataGetter());
-    StripWhiteSpace(&pragma_text);
+    // TODO(user): Strip white space from end and maybe beginning.
+
     if (begin_exports_location.isValid()) {
       if (pragma_text == "end_exports") {
         AddExportedRange(GetFileEntry(file_beginning),
@@ -190,7 +191,7 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
 
     const string quoted_private_include
         = ConvertToQuotedInclude(GetFilePath(current_loc));
-    for (string::size_type i = 0; i < public_includes.size(); ++i) {
+    for (int i = 0; i < public_includes.size(); ++i) {
       StripWhiteSpace(&public_includes[i]);
       const string quoted_header_name = "<" + public_includes[i] + ">";
       MutableGlobalIncludePicker()->AddMapping(quoted_private_include,
@@ -251,11 +252,11 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   } else if (!IsHeaderFile(GetFilePath(includee))) {
     protect_reason = ".cc include";
 
-  // We also keep the #include if we say that our file re-exports it.
+  // There's one more place we keep the #include: if our file re-exports it.
   // (A decision to re-export an #include counts as a "use" of it.)
-  } else if (GlobalIncludePicker().HasMapping(
-      GetFilePath(includee), GetFilePath(includer))) {
-    protect_reason = "re_exporting header";
+  // But we need to finalize all #includes before we can test that,
+  // so we do it in a separate function, ProtectReexportIncludes, below.
+
   }
 
   if (!protect_reason.empty()) {
@@ -266,6 +267,25 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
                      << " (reason: " << protect_reason << ")\n";
   }
 }
+
+static void ProtectReexportIncludes(
+    map<const FileEntry*, IwyuFileInfo>* file_info_map) {
+  for (map<const FileEntry*, IwyuFileInfo>::iterator
+           it = file_info_map->begin(); it != file_info_map->end(); ++it) {
+    IwyuFileInfo& includer = it->second;
+    set<const FileEntry*> incs = includer.direct_includes_as_fileentries();
+    for (Each<const FileEntry*> include(&incs); !include.AtEnd(); ++include) {
+      const string includer_path = GetFilePath(it->first);
+      const string includee_path = GetFilePath(*include);
+      if (GlobalIncludePicker().HasMapping(includee_path, includer_path)) {
+        includer.ReportIncludeFileUse(ConvertToQuotedInclude(includee_path));
+        ERRSYM(it->first) << "Marked dep: " << includer_path << " needs to keep"
+                          << " " << includee_path << " (reason: re-exports)\n";
+      }
+    }
+  }
+}
+
 
 // Called when a #include is encountered.  i_n_a_t includes <> or "".
 // We keep track of this information in two places:
@@ -677,6 +697,7 @@ void IwyuPreprocessorInfo::HandlePreprocessingDone() {
 
   // Other post-processing steps.
   MutableGlobalIncludePicker()->FinalizeAddedIncludes();
+  ProtectReexportIncludes(&iwyu_file_info_map_);
   PopulateIntendsToProvideMap();
 }
 
