@@ -1451,6 +1451,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     const NamedDecl* underlying_decl = TypeToDeclAsWritten(underlying_type);
 
+    if (underlying_decl && isa<TypedefDecl>(underlying_decl))
+      return true;   // we always re-export a chained typedef
+
     if (underlying_decl && GetDefinitionForClass(underlying_decl) == NULL)
       return false;    // case (1)
 
@@ -2371,13 +2374,13 @@ class InstantiatedTemplateVisitor
     if (types_of_interest.empty())
       return Base::VisitSubstTemplateTypeParmType(type);
 
-    // If we're a nested-name-specifier (the Foo in Foo::bar), we need
-    // our full type info no matter what the context (even if we're a
-    // pointer, or a template arg, or whatever).
+    // If we're a nested-name-specifier class (the Foo in Foo::bar),
+    // we need our full type info no matter what the context (even if
+    // we're a pointer, or a template arg, or whatever).
     // TODO(csilvers): consider encoding this logic via
     // in_forward_declare_context.  I think this will require changing
     // in_forward_declare_context to yes/no/maybe.
-    if (current_ast_node()->ParentIsA<NestedNameSpecifier>()) {
+    if (IsClassElaborationQualifier(current_ast_node())) {
       ReportTypesUse(CurrentLoc(), types_of_interest);
       return Base::VisitSubstTemplateTypeParmType(type);
     }
@@ -2465,6 +2468,8 @@ class InstantiatedTemplateVisitor
   // we say the templated class provides Foo, even though it's
   // scoped_ptr.h that's actually trying to call Foo::Foo and ::~Foo.
   SourceLocation GetLocOfTemplateThatProvides(const NamedDecl* decl) const {
+    if (!decl)
+      return SourceLocation();   // an invalid source-loc
     for (const ASTNode* ast_node = current_ast_node(); ast_node;
          ast_node = ast_node->parent()) {
       if (preprocessor_info().PublicHeaderIntendsToProvide(
@@ -2863,6 +2868,7 @@ class IwyuAstConsumer
 
   bool VisitTagDecl(clang::TagDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
+
     // If it's not a definition, and it's not a friend declaration, it
     // must be a forward-declaration.  Don't count the 'inline'
     // forward-declares like 'int foo(class T* t) ...'
@@ -2897,7 +2903,6 @@ class IwyuAstConsumer
       // However, multiple declarations of the nested class aren't
       // needed.  So we only need to 'fake' the use of one of them; we
       // prefer the one that's actually the definition, if present.
-      // TODO(csilvers): repeat this logic in VisitClassTemplateDecl().
       if (current_ast_node()->ParentIsA<CXXRecordDecl>() ||
           // For templated nested-classes, a ClassTemplateDecl is interposed.
           (current_ast_node()->ParentIsA<ClassTemplateDecl>() &&
@@ -3013,11 +3018,15 @@ class IwyuAstConsumer
   bool VisitTagType(clang::TagType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
 
-    // If we're forward-declarable, then no complicated checking is
-    // needed: just forward-declare.  If we're already elaborated
-    // ('class Foo x') but not namespace-qualified ('class ns::Foo x')
-    // there's no need even to forward-declare!
-    if (CanForwardDeclareType(current_ast_node())) {
+    // If we're a class elaboration, like Foo in Foo::FooSubclass, we
+    // need a full definition, even if we're in a forward-declare
+    // context.  Otherwise, if we're forward-declarable, then no
+    // complicated checking is needed: just forward-declare.  If we're
+    // already elaborated ('class Foo x') but not namespace-qualified
+    // ('class ns::Foo x') there's no need even to forward-declare!
+    if (IsClassElaborationQualifier(current_ast_node())) {
+      current_ast_node()->set_in_forward_declare_context(false);
+    } else if (CanForwardDeclareType(current_ast_node())) {
       current_ast_node()->set_in_forward_declare_context(true);
       if (!IsElaborationNode(current_ast_node()->parent()) ||
           IsNamespaceQualifiedNode(current_ast_node()->parent())) {
