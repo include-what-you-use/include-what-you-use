@@ -1383,6 +1383,27 @@ def _DeleteLinesAccordingToIwyu(iwyu_record, file_lines):
     _DeleteExtraneousBlankLines(file_lines, reorder_span)
 
 
+def _MarkUnnecessaryLinesAccordingToIwyu(iwyu_record, file_lines):
+  """The equivalent of _DeleteLinesAccordingToIwyu, but used in --safe mode.
+
+  When the user runs with --safe, we do not delete lines that iwyu tells
+  us to delete.  Instead we add a comment to the line saying that it's
+  been judged unnecessary according to iwyu.  This will allow for easy
+  cleanup later, and is also self-documenting.
+
+  Arguments:
+    iwyu_record: the IWYUOutputRecord struct for this source file
+    file_lines: a list of LineInfo objects holding the parsed output of
+      the file in iwyu_record.filename
+  """
+  for line_number in iwyu_record.lines_to_delete:
+    if '//' in file_lines[line_number].line:   # line already has a comment
+      file_lines[line_number].line += '; '
+    else:
+      file_lines[line_number].line += '  // '
+    file_lines[line_number].line += 'iwyu says this can be removed'
+
+
 def FixFileLines(iwyu_record, file_lines, flags):
   """Applies one block of lines from the iwyu output script.
 
@@ -1399,8 +1420,9 @@ def FixFileLines(iwyu_record, file_lines, flags):
       higher) pertaining to a single source file.
     file_lines: a list of LineInfo objects holding the parsed output of
       the file in iwyu_record.filename
-    flags: commandline flags, as parsed by optparse.  We only
-       use these flags indirectly (via calls to other routines).
+    flags: commandline flags, as parsed by optparse.  We use
+       flags.safe to turn off deleting lines, and use the other
+       flags indirectly (via calls to other routines).
 
   Returns:
     An array of 'fixed' source code lines, after modifications as
@@ -1408,7 +1430,10 @@ def FixFileLines(iwyu_record, file_lines, flags):
   """
   # First delete the includes and forward-declares that we should delete.
   # This is easy since iwyu tells us the line numbers.
-  _DeleteLinesAccordingToIwyu(iwyu_record, file_lines)
+  if flags.safe:
+    _MarkUnnecessaryLinesAccordingToIwyu(iwyu_record, file_lines)
+  else:
+    _DeleteLinesAccordingToIwyu(iwyu_record, file_lines)
 
   # With these deletions, we may be able to merge together some
   # reorder-spans.  Recalculate them to see.
@@ -1609,6 +1634,8 @@ def main(argv):
                           ' between system #includes and google #includes'))
   parser.add_option('--nocomments', action='store_true',
                     help='Do not put comments after the #include lines')
+  parser.add_option('--safe', action='store_true',
+                    help='Do not remove #includes/fwd-declares, just add them')
   parser.add_option('-s', '--sort_only', action='store_true',
                     help=('Just sort #includes of files listed on cmdline; '
                           'do not add or remove any #includes'))

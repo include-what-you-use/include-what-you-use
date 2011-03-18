@@ -30,6 +30,7 @@ class FakeFlags:
     self.nocomments = False
     self.dry_run = False
     self.checkout_command = None
+    self.safe = False
 
 
 class FixIncludesBase(unittest.TestCase):
@@ -821,6 +822,49 @@ The full include-list for subdir/bflag.cc:
 ---
 """
     self.RegisterFileContents({'subdir/bflag.cc': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testSafeFlag(self):
+    """Tests that --safe causes us to not delete lines."""
+    self.flags.safe = True
+    infile = """\
+// Copyright 2010
+
+#include <notused.h>  ///-
+#include <notused2.h>  // Hello!  ///-
+///+#include <notused.h>  // iwyu: this is safe to remove
+///+#include <notused2.h>  // Hello!; iwyu: this is safe to remove
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+class Foo;  ///-
+template<typename T>  ///-
+class Bar;  ///-
+///+class Foo;  // iwyu: this is safe to remove
+///+template<typename T>  // iwyu: this is safe to remove
+///+class Bar;  // iwyu: this is safe to remove
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+safe_flag should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+safe_flag should remove these lines:
+- #include <notused.h>  // lines 3-3
+- #include <notused.h>  // lines 4-4
+- class Foo             // lines 7-7
+- class Foo             // lines 8-9
+
+The full include-list for safe_flag:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    self.RegisterFileContents({'safe_flag': infile})
     self.ProcessAndTest(iwyu_output)
 
   def testIncludeComments(self):
