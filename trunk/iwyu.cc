@@ -184,7 +184,7 @@ using clang::QualifiedTypeLoc;
 using clang::RecordDecl;
 using clang::RecordType;
 using clang::ReferenceType;
-using clang::SizeOfAlignOfExpr;
+using clang::UnaryExprOrTypeTraitExpr;
 using clang::SourceLocation;
 using clang::SourceManager;
 using clang::Stmt;
@@ -1758,7 +1758,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // sizeof(some_var), we'll report we need full type information when
   // some_var is defined.  But if the arg is a reference, nobody else
   // will say we need full type info but us.
-  bool VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
+  bool VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
 
     // Calling sizeof on a reference-to-X is the same as calling it on X.
@@ -2399,8 +2399,8 @@ class InstantiatedTemplateVisitor
     return TraverseExpandedTemplateFunctionHelper(callee, parent_type);
   }
 
-  bool TraverseSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
-    if (!Base::TraverseSizeOfAlignOfExpr(expr))  return false;
+  bool TraverseUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
+    if (!Base::TraverseUnaryExprOrTypeTraitExpr(expr))  return false;
     if (CanIgnoreCurrentASTNode())  return true;
     const Type* arg_type = expr->getTypeOfArgument().getTypePtr();
     // Calling sizeof on a reference-to-X is the same as calling it on X.
@@ -2453,7 +2453,7 @@ class InstantiatedTemplateVisitor
     // sizeof(a reference type) is the same as sizeof(underlying type).
     // We have to handle that specially here, or else we'll say the
     // reference is forward-declarable, below.
-    if (current_ast_node()->ParentIsA<SizeOfAlignOfExpr>() &&
+    if (current_ast_node()->ParentIsA<UnaryExprOrTypeTraitExpr>() &&
         isa<ReferenceType>(actual_type)) {
       // This is a bit tricky: we can't call
       // ReportTypesUse(..., types_of_interest), because we want a
@@ -3056,7 +3056,7 @@ class IwyuAstConsumer
 
   // The compiler fully instantiates a template class before taking
   // the size of it.  So so do we.
-  bool VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
+  bool VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
 
     const Type* arg_type = expr->getTypeOfArgument().getTypePtr();
@@ -3070,7 +3070,7 @@ class IwyuAstConsumer
           arg_type, CurrentLoc(), processed_overload_locs(), tpl_type_args);
     }
 
-    return Base::VisitSizeOfAlignOfExpr(expr);
+    return Base::VisitUnaryExprOrTypeTraitExpr(expr);
   }
 
   // --- Visitors of types derived from clang::Type.
