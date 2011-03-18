@@ -204,6 +204,13 @@ const IncludePicker::IncludeMapEntry symbol_include_map[] = {
   { "std::allocator", kPrivate, "<vector>", kPublic },
   { "std::allocator", kPrivate, "<map>", kPublic },
   { "std::allocator", kPrivate, "<set>", kPublic },
+  // A similar kludge for std::char_traits.  basic_string,
+  // basic_ostream and basic_istream have this as a default template
+  // argument, and sometimes it bleeds through when clang desugars the
+  // string/ostream/istream type.
+  { "std::char_traits", kPrivate, "<string>", kPublic },
+  { "std::char_traits", kPrivate, "<ostream>", kPublic },
+  { "std::char_traits", kPrivate, "<istream>", kPublic },
 };
 
 const IncludePicker::IncludeMapEntry c_include_map[] = {
