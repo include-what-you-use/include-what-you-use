@@ -816,11 +816,14 @@ if (llvm::sys::path::is_relative(path)) {        // A relative path
 
   // Case 2: a system include.
   const vector<string>& search_paths = GlobalSearchPaths();
+  // GlobalSearchPaths is sorted to be longest-first, so this loop
+  // will prefer the longest prefix: /usr/include/c++/4.4/foo will
+  // be mapped to <foo>, not <c++/4.4/foo>.
   for (Each<string> it(&search_paths); !it.AtEnd(); ++it) {
     if (StripLeft(&path, *it)) {
       StripLeft(&path, "/");
       path = NormalizeSystemPath(path);
-      break;
+      return "<" + path + ">";
     }
   }
 
@@ -834,9 +837,7 @@ bool IsSystemIncludeFile(const string& filepath) {
   return ConvertToQuotedInclude(filepath)[0] == '<';
 }
 
-#ifndef ARRAYSIZE
-#define ARRAYSIZE(ar)  (sizeof(ar) / sizeof(*(ar)))
-#endif
+#define IWYU_ARRAYSIZE(ar)  (sizeof(ar) / sizeof(*(ar)))
 
 IncludePicker::IncludePicker()
     : symbol_include_map_(),
@@ -845,19 +846,19 @@ IncludePicker::IncludePicker()
       all_quoted_includes_(),
       has_called_finalize_added_include_lines_(false) {
   // Parse our hard-coded mappings into a data structure.
-  for (size_t i = 0; i < ARRAYSIZE(symbol_include_map); ++i) {
+  for (size_t i = 0; i < IWYU_ARRAYSIZE(symbol_include_map); ++i) {
     InsertInto(symbol_include_map[i], &symbol_include_map_);
   }
-  for (size_t i = 0; i < ARRAYSIZE(c_include_map); ++i) {
+  for (size_t i = 0; i < IWYU_ARRAYSIZE(c_include_map); ++i) {
     InsertInto(c_include_map[i], &filepath_include_map_);
   }
-  for (size_t i = 0; i < ARRAYSIZE(cpp_include_map); ++i) {
+  for (size_t i = 0; i < IWYU_ARRAYSIZE(cpp_include_map); ++i) {
     InsertInto(cpp_include_map[i], &filepath_include_map_);
   }
-  for (size_t i = 0; i < ARRAYSIZE(google_include_map); ++i) {
+  for (size_t i = 0; i < IWYU_ARRAYSIZE(google_include_map); ++i) {
     InsertInto(google_include_map[i], &filepath_include_map_);
   }
-  for (size_t i = 0; i < ARRAYSIZE(third_party_include_map); ++i) {
+  for (size_t i = 0; i < IWYU_ARRAYSIZE(third_party_include_map); ++i) {
     InsertInto(third_party_include_map[i], &filepath_include_map_);
   }
 }
