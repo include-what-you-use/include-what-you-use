@@ -1992,7 +1992,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // contents don't matter that much.
         const FileEntry* use_file = CurrentFileEntry();
         preprocessor_info().FileInfoFor(use_file)->ReportFullSymbolUse(
-            CurrentLoc(), "/usr/include/c++/<version>/new", "operator new");
+            CurrentLoc(), "<new>", "operator new");
       }
     }
 
@@ -3186,7 +3186,8 @@ class IwyuAction : public ASTFrontendAction {
   virtual ASTConsumer* CreateASTConsumer(CompilerInstance& compiler,  // NOLINT
                                          llvm::StringRef /* dummy */) {
     // Do this first thing after getting our hands on a CompilerInstance.
-    InitGlobals(&compiler.getSourceManager());
+    InitGlobals(&compiler.getSourceManager(),
+                &compiler.getPreprocessor().getHeaderSearchInfo());
 
     // Also init the globals that are local to this file.
     g_explicitly_instantiated_classes.clear();
