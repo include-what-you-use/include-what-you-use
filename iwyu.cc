@@ -2380,9 +2380,6 @@ class InstantiatedTemplateVisitor
   }
 
 
-  // TODO(csilvers): have TraverseSubstTemplateTypeParmType that
-  // Traverses actual_type.
-
   // These do the actual work of finding the types to return.  Our
   // task is made easier since (at least in theory), every time we
   // instantiate a template type, the instantiation has type
@@ -2447,6 +2444,9 @@ class InstantiatedTemplateVisitor
     // template's caller.
     // TODO(csilvers): If the parent is a TemplateSpecializationType,
     // then we need to figure out how the parent is being used.
+    // TODO(csilvers): recurse on actual_type (in a 'normal' context,
+    // not in InstantiatedTemplateVisitor), to catch nested types
+    // like Outer<Inner<MyClass> >.
     ReportTypesUse(caller_loc_, types_of_interest);
     return Base::VisitSubstTemplateTypeParmType(type);
   }
@@ -3109,6 +3109,16 @@ class IwyuAstConsumer
     // if any.  For methods, add in template args *explicitly*
     // specified when the template class was created.
     set<const Type*> tpl_type_args = GetTplTypeArgsOfFunction(callee);
+    // TODO(csilvers): for derived tpl args (Foo(arg), not
+    // Foo<type>(arg)), remove types from retval if they don't appear
+    // somewhere in a function arg (or return value) as typed.  (We can
+    // figure out explicit vs derived via
+    // CallExpr->getCallee()->IgnoreParenCasts()->hasExplicitTemlpateArgs(),
+    // if it's a declrefexpr.)  This is a simple heuristic for dealing
+    // with typedefs and default arguments.  For instance, cout << "a"
+    // should not yield char_traits<char> here, since the first
+    // argument of operator<< is typed ostream, not
+    // basic_ostream<char, char_traits<char> >.
     if (parent_type)     // means we're a method of a class
       InsertAllInto(GetExplicitTplTypeArgsOf(parent_type), &tpl_type_args);
 
@@ -3143,6 +3153,53 @@ class IwyuAction : public ASTFrontendAction {
     return ast_consumer;
   }
 };
+
+static void PrintHelp(const char* extra_msg) {
+  printf("USAGE: iwyu [iwyu opts] <clang opts>\n"
+         "Here are the <opts> you can specify:\n"
+         "   --check_also=<glob>: tells iwyu to print iwyu-violation info\n"
+         "        for all files matching the given glob pattern (in addition\n"
+         "        to the default of reporting for the input .cc file and its\n"
+         "        associated .h files).  This flag may be specified multiple\n"
+         "        times to specify multiple glob patterns.\n"
+         "   --cwd=<dir>: tells iwyu what the current working directory is.\n"
+         "   --help: prints this help and exits.\n"
+         "   --howtodebug[=<filename>]: with no arg, prints instructions on\n"
+         "        how to run iwyu under gdb for the input file, and exits.\n"
+         "        With an arg, prints only when input file matches the arg.\n"
+         "   --verbose=<level>: the higher the level, the more output.\n");
+  if (extra_msg)
+    printf("\n%s\n\n", extra_msg);
+}
+
+// Handles all iwyu-specific flags, like --verbose.
+// The command line should look like
+//   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu other_iwyu_flag]... CLANG_FLAGS... foo.cc
+// Returns an index to the end of the list of iwyu's flags.
+static int ParseIWYUFlags(int argc, char** argv) {
+  static const struct option longopts[] = {
+    {"check_also", required_argument, NULL, 'c'},  // can be specified >once
+    {"cwd", required_argument, NULL, 'p'},
+    {"help", no_argument, NULL, 'h'},
+    {"howtodebug", optional_argument, NULL, 'd'},
+    {"verbose", required_argument, NULL, 'v'},
+    {0, 0, 0, 0}
+  };
+  static const char shortopts[] = "d::p:v:c:";
+  int option_index;
+  while (true) {
+    switch (getopt_long(argc, argv, shortopts, longopts, &option_index)) {
+      case 'h': PrintHelp(""); exit(0); break;
+      case 'v': SetVerboseLevel(atoi(optarg)); break;
+      case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
+case 'd': printf("-d/--howtodebug not yet implemented\n"); exit(1);
+      case 'p': printf("-p/--cwd not yet implemented\n"); exit(1);
+      case -1: return optind;   // means 'no more input'
+      default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
+    }
+  }
+  return optind;  // unreachable
+}
 
 
 } // namespace include_what_you_use
@@ -3193,6 +3250,7 @@ using llvm::raw_svector_ostream;
 using llvm::sys::getHostTriple;
 using llvm::sys::Path;
 using include_what_you_use::IwyuAction;
+using include_what_you_use::ParseIWYUFlags;
 using include_what_you_use::StartsWith;
 using std::set;
 using std::string;
@@ -3272,7 +3330,7 @@ static void ExpandArgsFromBuf(const char *Arg,
   }
 }
 
-static void ExpandArgv(int argc, const char **argv,
+static void ExpandArgv(int argc, char **argv,
                        SmallVectorImpl<const char*> &ArgVector,
                        set<string> &SavedStrings) {
   for (int i = 0; i < argc; ++i) {
@@ -3286,7 +3344,7 @@ static void ExpandArgv(int argc, const char **argv,
   }
 }
 
-int main(int argc, const char **argv) {
+int main(int argc, char **argv) {
   void* main_addr = (void*) (intptr_t) GetExecutablePath;
   Path path = GetExecutablePath(argv[0]);
   TextDiagnosticPrinter* diagnostic_client =
@@ -3302,7 +3360,27 @@ int main(int argc, const char **argv) {
   set<string> SavedStrings;
   SmallVector<const char*, 256> args;
 
-  ExpandArgv(argc, argv, args, SavedStrings);
+  // Separate out iwyu and clang flags.  iwyu flags are "-Xiwyu <iwyu_flag>"
+  char** iwyu_argv = new char*[argc + 1];  // where we hold iwyu-specific flags
+  iwyu_argv[0] = argv[0];
+  int iwyu_argc = 1;
+  char** clang_argv = new char*[argc + 1];
+  clang_argv[0] = argv[0];
+  int clang_argc = 1;
+  for (int i = 1; i < argc; ++i) {
+    if (i < argc - 1 && strcmp(argv[i], "-Xiwyu") == 0)
+      iwyu_argv[iwyu_argc++] = argv[++i];   // the word after -Xiwyu
+    else
+      clang_argv[clang_argc++] = argv[i];
+  }
+  iwyu_argv[iwyu_argc] = NULL;    // argv should be NULL-terminated
+  clang_argv[clang_argc] = NULL;
+
+  ParseIWYUFlags(iwyu_argc, iwyu_argv);
+  ExpandArgv(clang_argc, clang_argv, args, SavedStrings);
+
+  delete[] iwyu_argv;
+  delete[] clang_argv;
 
   // FIXME: This is a hack to try to force the driver to do something we can
   // recognize. We need to extend the driver library to support this use model
