@@ -135,16 +135,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
                                     const clang::FileEntry* other_file)
       const;
 
-  // TODO(csilvers): remove this once we can report iwyu violations from here.
-  struct MacroUseInfo {
-    string name;
-    clang::SourceLocation usage_location;
-    clang::SourceLocation dfn_location;
-  };
-  const vector<MacroUseInfo>& macro_use_info() const {
-    return macro_use_info_;
-  }
-
  protected:
   // Preprocessor event handlers called by Clang.
   virtual void MacroExpands(const clang::Token& id,
@@ -270,9 +260,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   // directives "IWYU pragma: begin exports" and "IWYU pragma: end
   // exports".
   set<pair<const clang::FileEntry*, int> > exported_lines_set_;
-
-  // TODO(csilvers): remove this once we can report iwyu violations from here.
-  vector<MacroUseInfo> macro_use_info_;
 };
 
 }  // namespace include_what_you_use
