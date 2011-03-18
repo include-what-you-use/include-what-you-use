@@ -832,8 +832,8 @@ The full include-list for subdir/bflag.cc:
 
 #include <notused.h>  ///-
 #include <notused2.h>  // Hello!  ///-
-///+#include <notused.h>  // iwyu: this is safe to remove
-///+#include <notused2.h>  // Hello!; iwyu: this is safe to remove
+///+#include <notused.h>  // iwyu says this can be removed
+///+#include <notused2.h>  // Hello!; iwyu says this can be removed
 ///+#include <stdio.h>
 #include "used.h"
 ///+#include "used2.h"
@@ -841,9 +841,9 @@ The full include-list for subdir/bflag.cc:
 class Foo;  ///-
 template<typename T>  ///-
 class Bar;  ///-
-///+class Foo;  // iwyu: this is safe to remove
-///+template<typename T>  // iwyu: this is safe to remove
-///+class Bar;  // iwyu: this is safe to remove
+///+class Foo;  // iwyu says this can be removed
+///+template<typename T>  // iwyu says this can be removed
+///+class Bar;  // iwyu says this can be removed
 
 int main() { return 0; }
 """
