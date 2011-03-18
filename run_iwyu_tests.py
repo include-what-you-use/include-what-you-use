@@ -44,9 +44,9 @@ class OneIwyuTest(unittest.TestCase):
     # key=cc-filename (relative to TEST_ROOTDIR), value=list of flags.
     flags_map = {
       'check_also.cc': [CheckAlsoExtension('-d1.h')],
-      'overloaded_class.cc': [CheckAlsoExtension('-i1.h')],
       'implicit_ctor.cc': [CheckAlsoExtension('-d1.h')],
       'keep_mapping.cc': [CheckAlsoExtension('-public.h')],
+      'overloaded_class.cc': [CheckAlsoExtension('-i1.h')],
     }
     # Internally, we like it when the paths start with TEST_ROOTDIR.
     self._iwyu_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
