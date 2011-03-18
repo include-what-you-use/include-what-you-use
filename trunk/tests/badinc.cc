@@ -1550,6 +1550,7 @@ int main() {
   // IWYU: std::vector<.*>::iterator is...*<vector>
   for (std::vector<I2_Enum>::iterator it = local_enum_vector.begin();
        // IWYU: std::vector is...*<vector>
+       // IWYU: std::vector<.*>::iterator is...*<vector>
        it != local_enum_vector.end(); ++it) {
     // IWYU: std::vector is...*<vector>
     std::find(local_enum_vector.begin(), local_enum_vector.end(), *it);
@@ -1773,6 +1774,7 @@ int main() {
   // IWYU: std::vector<.*>::const_iterator is...*<vector>
   std::vector<float>::const_iterator float_forit;
   // IWYU: std::vector is...*<vector>
+  // IWYU: std::vector<.*>::const_iterator is...*<vector>
   for (float_forit = float_vector.begin(); ;) ;
   // IWYU: std::vector is...*<vector>
   // IWYU: std::vector<.*>::const_iterator is...*<vector>
@@ -1790,6 +1792,7 @@ int main() {
        // IWYU: std::vector is...*<vector>
        float_reverse_it != float_vector.rbegin();
        // IWYU: std::vector is...*<vector>
+       // IWYU: std::vector<.*>::reverse_iterator is...*<vector>
        ++float_reverse_it) ;
   // IWYU: std::vector is...*<vector>
   // IWYU: std::vector<.*>::const_reverse_iterator is...*<vector>
@@ -1802,6 +1805,7 @@ int main() {
        // IWYU: std::vector is...*<vector>
        float_const_reverse_it != float_vector.rend();
        // IWYU: std::vector is...*<vector>
+       // IWYU: std::vector<.*>::const_reverse_iterator is...*<vector>
        ++float_const_reverse_it) ;
 
   // Also test while and if initializers.
@@ -2022,7 +2026,7 @@ The full include-list for tests/badinc.cc:
 #include <fstream>  // for fstream
 #include <list>  // for list
 #include <new>  // for operator new
-#include <string>  // for allocator, basic_string, char_traits, operator+, string
+#include <string>  // for allocator, basic_string, basic_string<>::iterator, char_traits, operator+, string
 #include <typeinfo>  // for type_info
 #include "tests/badinc-d1.h"  // for D1CopyClassFn, D1Function, D1_Class, D1_CopyClass, D1_Enum, D1_Enum::D11, D1_I1_Typedef, D1_StructPtr, D1_Subclass, D1_TemplateClass, D1_TemplateStructWithDefaultParam, MACRO_CALLING_I4_FUNCTION
 #include "tests/badinc-d4.h"  // for D4_ClassForOperator, operator<<

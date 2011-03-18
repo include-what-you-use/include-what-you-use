@@ -1297,8 +1297,7 @@ inline const clang::Expr* GetFirstClassArgument(clang::CallExpr* expr) {
     // a SubstTemplateTypeParmType, not a RecordType.
     if (isa<clang::SubstTemplateTypeParmType>(argtype))
       continue;
-    // TODO(csilvers): uncomment this and fix up tests to match.
-    //argtype = argtype->getUnqualifiedDesugaredType();  // see through typedefs
+    argtype = argtype->getUnqualifiedDesugaredType();  // see through typedefs
     if (isa<clang::RecordType>(argtype) ||
         isa<clang::TemplateSpecializationType>(argtype)) {
       return *it;
