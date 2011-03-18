@@ -44,12 +44,13 @@
 #include <string>
 #include "port.h"
 #include "clang/AST/Decl.h"
-#include "clang/Basic/FileManager.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Stmt.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/Lex/Token.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Token.h"
 #include "iwyu_globals.h"
 #include "iwyu_path_util.h"
 
@@ -178,6 +179,7 @@ inline clang::SourceLocation GetLocation(const clang::Token& token) {
 clang::SourceLocation GetLocation(const clang::Decl* token);
 clang::SourceLocation GetLocation(const clang::Stmt* stmt);
 clang::SourceLocation GetLocation(const clang::TypeLoc* typeloc);
+clang::SourceLocation GetLocation(const clang::NestedNameSpecifierLoc* nnsloc);
 clang::SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc);
 
 // These define default implementations of GetFileEntry() and

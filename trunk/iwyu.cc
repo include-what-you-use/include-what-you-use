@@ -175,6 +175,7 @@ using clang::MacroInfo;
 using clang::MemberExpr;
 using clang::NamedDecl;
 using clang::NestedNameSpecifier;
+using clang::NestedNameSpecifierLoc;
 using clang::OverloadExpr;
 using clang::PointerType;
 using clang::PPCallbacks;
@@ -411,6 +412,18 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (!this->getDerived().VisitNestedNameSpecifier(nns))
       return false;
     return Base::TraverseNestedNameSpecifier(nns);
+  }
+
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc nns_loc) {
+    if (!nns_loc)   // using NNSLoc::operator bool()
+      return true;
+    ASTNode node(&nns_loc, *GlobalSourceManager());
+    CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+    // TODO(csilvers): have VisitNestedNameSpecifierLoc instead.
+    if (!this->getDerived().VisitNestedNameSpecifier(
+            nns_loc.getNestedNameSpecifier()))
+      return false;
+    return Base::TraverseNestedNameSpecifierLoc(nns_loc);
   }
 
   bool TraverseTemplateName(TemplateName template_name) {
@@ -871,9 +884,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // we still want to have a parent_type, as if we were defined as
     // MyClass::operator==.  So we go through the arguments and take the
     // first one that's a class, and associate the function with that.
-    if (!parent_type && GetFirstClassArgument(expr))
-      parent_type = GetTypeOf(GetFirstClassArgument(expr));
-
+    if (!parent_type) {
+      if (const Expr* first_argument = GetFirstClassArgument(expr))
+        parent_type = GetTypeOf(first_argument);
+    }
     return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
                                                  parent_type);
   }
@@ -1029,6 +1043,9 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
     bool Contains(const ASTNode& node) const {
       if (const TypeLoc* tl = node.GetAs<TypeLoc>()) {
         return find(typelocs.begin(), typelocs.end(), *tl) != typelocs.end();
+      } else if (const NestedNameSpecifierLoc* nl
+                 = node.GetAs<NestedNameSpecifierLoc>()) {
+        return find(nnslocs.begin(), nnslocs.end(), *nl) != nnslocs.end();
       } else if (const TemplateName* tn = node.GetAs<TemplateName>()) {
         // The best we can do is to compare the associated decl
         if (tn->getAsTemplateDecl() == NULL)
@@ -1054,6 +1071,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
 
     void AddAll(const NodeSet& that) {
       Extend(&typelocs, that.typelocs);
+      Extend(&nnslocs, that.nnslocs);
       Extend(&tpl_names, that.tpl_names);
       Extend(&tpl_args, that.tpl_args);
       Extend(&tpl_arglocs, that.tpl_arglocs);
@@ -1062,11 +1080,13 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
 
     // Needed since we're treated like an stl-like object.
     bool empty() const {
-      return (typelocs.empty() && tpl_names.empty() && tpl_args.empty() &&
+      return (typelocs.empty() && nnslocs.empty() &&
+              tpl_names.empty() && tpl_args.empty() &&
               tpl_arglocs.empty() && others.empty());
     }
     void clear() {
       typelocs.clear();
+      nnslocs.clear();
       tpl_names.clear();
       tpl_args.clear();
       tpl_arglocs.clear();
@@ -1078,12 +1098,14 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
 
     // It's ok not to check for duplicates; we're just traversing the tree.
     void Add(TypeLoc tl) { typelocs.push_back(tl); }
+    void Add(NestedNameSpecifierLoc nl) { nnslocs.push_back(nl); }
     void Add(TemplateName tn) { tpl_names.push_back(tn); }
     void Add(TemplateArgument ta) { tpl_args.push_back(ta); }
     void Add(TemplateArgumentLoc tal) { tpl_arglocs.push_back(tal); }
     void Add(const void* o) { others.insert(o); }
 
     vector<TypeLoc> typelocs;
+    vector<NestedNameSpecifierLoc> nnslocs;
     vector<TemplateName> tpl_names;
     vector<TemplateArgument> tpl_args;
     vector<TemplateArgumentLoc> tpl_arglocs;
@@ -1450,9 +1472,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                           const ASTNode* typedef_ast_node) {
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     const NamedDecl* underlying_decl = TypeToDeclAsWritten(underlying_type);
-
-    if (underlying_decl && isa<TypedefDecl>(underlying_decl))
-      return true;   // we always re-export a chained typedef
 
     if (underlying_decl && GetDefinitionForClass(underlying_decl) == NULL)
       return false;    // case (1)
@@ -2361,6 +2380,9 @@ class InstantiatedTemplateVisitor
   }
 
 
+  // TODO(csilvers): have TraverseSubstTemplateTypeParmType that
+  // Traverses actual_type.
+
   // These do the actual work of finding the types to return.  Our
   // task is made easier since (at least in theory), every time we
   // instantiate a template type, the instantiation has type
@@ -2380,7 +2402,7 @@ class InstantiatedTemplateVisitor
     // TODO(csilvers): consider encoding this logic via
     // in_forward_declare_context.  I think this will require changing
     // in_forward_declare_context to yes/no/maybe.
-    if (IsClassElaborationQualifier(current_ast_node())) {
+    if (current_ast_node()->ParentIsA<NestedNameSpecifier>()) {
       ReportTypesUse(CurrentLoc(), types_of_interest);
       return Base::VisitSubstTemplateTypeParmType(type);
     }
@@ -3018,15 +3040,11 @@ class IwyuAstConsumer
   bool VisitTagType(clang::TagType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
 
-    // If we're a class elaboration, like Foo in Foo::FooSubclass, we
-    // need a full definition, even if we're in a forward-declare
-    // context.  Otherwise, if we're forward-declarable, then no
-    // complicated checking is needed: just forward-declare.  If we're
-    // already elaborated ('class Foo x') but not namespace-qualified
-    // ('class ns::Foo x') there's no need even to forward-declare!
-    if (IsClassElaborationQualifier(current_ast_node())) {
-      current_ast_node()->set_in_forward_declare_context(false);
-    } else if (CanForwardDeclareType(current_ast_node())) {
+    // If we're forward-declarable, then no complicated checking is
+    // needed: just forward-declare.  If we're already elaborated
+    // ('class Foo x') but not namespace-qualified ('class ns::Foo x')
+    // there's no need even to forward-declare!
+    if (CanForwardDeclareType(current_ast_node())) {
       current_ast_node()->set_in_forward_declare_context(true);
       if (!IsElaborationNode(current_ast_node()->parent()) ||
           IsNamespaceQualifiedNode(current_ast_node()->parent())) {

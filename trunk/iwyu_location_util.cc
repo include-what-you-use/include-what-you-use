@@ -104,6 +104,11 @@ clang::SourceLocation GetLocation(const clang::TypeLoc* typeloc) {
   return typeloc->getBeginLoc();
 }
 
+clang::SourceLocation GetLocation(const clang::NestedNameSpecifierLoc* nnsloc) {
+  if (nnsloc == NULL)  return clang::SourceLocation();
+  return nnsloc->getBeginLoc();
+}
+
 clang::SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc) {
   if (argloc == NULL)  return clang::SourceLocation();
   return argloc->getLocation();

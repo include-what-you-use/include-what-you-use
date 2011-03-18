@@ -73,6 +73,10 @@ class ASTNode {
   ASTNode(const clang::NestedNameSpecifier* nns, const clang::SourceManager& sm)
       : kind_(kNNSKind), as_nns_(nns),
         parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
+  ASTNode(const clang::NestedNameSpecifierLoc* nnsloc,
+          const clang::SourceManager& sm)
+      : kind_(kNNSLocKind), as_nnsloc_(nnsloc),
+        parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
   ASTNode(const clang::TemplateName* template_name,
           const clang::SourceManager& sm)
       : kind_(kTemplateNameKind), as_template_name_(template_name),
@@ -233,7 +237,7 @@ class ASTNode {
 
  private:
   enum NodeKind {
-    kDeclKind, kStmtKind, kTypeKind, kTypelocKind, kNNSKind,
+    kDeclKind, kStmtKind, kTypeKind, kTypelocKind, kNNSKind, kNNSLocKind,
     kTemplateNameKind, kTemplateArgumentKind, kTemplateArgumentLocKind
   };
 
@@ -269,8 +273,17 @@ class ASTNode {
   }
   template<typename To> const To* DynCast(
       const clang::NestedNameSpecifier*) const {
+    // Like Type, this will cast to NNS if we're an NNSLoc.  For code
+    // that cares to distinguish, it should check for nnslocs first.
+    if (kind_ == kNNSLocKind)
+      return as_nnsloc_->getNestedNameSpecifier();
     if (kind_ != kNNSKind) return NULL;
     return as_nns_;
+  }
+  template<typename To> const To* DynCast(
+      const clang::NestedNameSpecifierLoc*) const {
+    if (kind_ != kNNSLocKind) return NULL;
+    return as_nnsloc_;
   }
   template<typename To> const To* DynCast(const clang::TemplateName*) const {
     if (kind_ != kTemplateNameKind) return NULL;
@@ -300,6 +313,7 @@ class ASTNode {
       case kTypeKind:  return as_type_;
       case kTypelocKind:  return as_typeloc_;
       case kNNSKind:  return as_nns_;
+      case kNNSLocKind:  return as_nnsloc_;
       case kTemplateNameKind:  return as_template_name_;
       case kTemplateArgumentKind:  return as_template_arg_;
       case kTemplateArgumentLocKind:  return as_template_argloc_;
@@ -320,6 +334,9 @@ class ASTNode {
         return true;
       case kTypelocKind:
         *loc = GetLocation(as_typeloc_);
+        return true;
+      case kNNSLocKind:
+        *loc = GetLocation(as_nnsloc_);
         return true;
       case kTemplateArgumentLocKind:
         *loc = GetLocation(as_template_argloc_);
@@ -342,6 +359,7 @@ class ASTNode {
     const clang::Type* as_type_;
     const clang::TypeLoc* as_typeloc_;
     const clang::NestedNameSpecifier* as_nns_;
+    const clang::NestedNameSpecifierLoc* as_nnsloc_;
     const clang::TemplateName* as_template_name_;
     const clang::TemplateArgument* as_template_arg_;
     const clang::TemplateArgumentLoc* as_template_argloc_;
@@ -413,34 +431,6 @@ inline bool IsNamespaceQualifiedNode(const ASTNode* ast_node) {
   return (elaborated_type && elaborated_type->getQualifier()
           && elaborated_type->getQualifier()->getKind() ==
           clang::NestedNameSpecifier::Namespace);
-}
-
-// See if a given ast_node is part of a class elaboration: that
-// is, 'Foo' in 'Foo::FooSubclass'.  The actual input should be
-// a RecordType, that might or might not be to the left of a ::.
-inline bool IsClassElaborationQualifier(const ASTNode* ast_node) {
-  if (ast_node == NULL)  return false;
-
-  const clang::Type* node_type = ast_node->GetAs<clang::Type>();
-  if (!node_type)  return false;
-  // Work properly even when we're a template parameter.
-  if (const clang::SubstTemplateTypeParmType* subst
-      = dyn_cast<clang::SubstTemplateTypeParmType>(node_type))
-    node_type = subst->getReplacementType().getTypePtr();
-
-  const clang::RecordType* record_type = dyn_cast<clang::RecordType>(node_type);
-  if (!record_type)  return false;
-
-  const clang::ElaboratedType* elaborated_type =
-      ast_node->GetParentAs<clang::ElaboratedType>();
-  if (!elaborated_type)  return false;
-
-  const clang::NestedNameSpecifier* elab_nns = elaborated_type->getQualifier();
-  if (!elab_nns)  return false;
-
-  // Is the type in the elaboration-field us?  If so, we're the elaboration.
-  return (elab_nns->getKind() == clang::NestedNameSpecifier::TypeSpec &&
-          elab_nns->getAsType() == ast_node->GetAs<clang::Type>());
 }
 
 // See if the given ast_node is the decl of a class or function that
@@ -780,9 +770,13 @@ inline void AddTypelikeTemplateArgTo(const clang::TemplateArgument& tpl_arg,
       VERRS(6) << "Adding a template type of interest: "
                << PrintableType(*it) << "\n";
       argset->insert(*it);
-      // Recurse if we ourself are a template type.
+      // Recurse if we ourself are a template type.  Read through elaborations.
+      const clang::Type* subtype = *it;
+      // TODO(csilvers): use RemoveElaboration() instead.
+      if (const clang::ElaboratedType* elab_type = DynCastFrom(subtype))
+        subtype = elab_type->getNamedType().getTypePtr();
       if (const clang::TemplateSpecializationType* tpl_type
-          = DynCastFrom(*it)) {
+          = DynCastFrom(subtype)) {
         for (unsigned i = 0; i < tpl_type->getNumArgs(); ++i)
           AddTypelikeTemplateArgTo(tpl_type->getArg(i), argset);
       }
@@ -863,6 +857,13 @@ inline set<const clang::Type*> GetTplTypeArgsOfFunction(
     for (unsigned i = 0; i < tpl_list->size(); ++i) {
       AddTypelikeTemplateArgTo(tpl_list->get(i), &retval);
     }
+    // TODO(csilvers): for derived tpl args (Foo(arg), not
+    // Foo<type>(arg)), remove types from retval if they don't appear
+    // somewhere in a function arg (or return value) as typed.  This
+    // is a simple heuristic for dealing with typedefs and default
+    // arguments.  For instance, cout << "a" should not yield
+    // char_traits<char> here, since the first argument of operator<<
+    // is typed ostream, not basic_ostream<char, char_traits<char> >.
   }
   return retval;
 }
@@ -1065,11 +1066,6 @@ inline const clang::Type* GetTypeOf(const clang::TypeDecl* decl) {
 }
 
 
-// Returns true if the type has any template arguments.
-inline bool IsTemplatizedType(const clang::Type* type) {
-  return type && isa<clang::TemplateSpecializationType>(type);
-}
-
 // The ElaborationType -- which says whether a type is preceded by
 // 'class' or 'struct' ('class Foo'), or whether the type-name has a
 // namespace ('ns::Foo') -- often pops where it's not wanted.  This
@@ -1081,6 +1077,12 @@ inline const clang::Type* RemoveElaboration(const clang::Type* type) {
     return elaborated_type->getNamedType().getTypePtr();
   else
     return type;
+}
+
+// Returns true if the type has any template arguments.
+inline bool IsTemplatizedType(const clang::Type* type) {
+  return (type &&
+          isa<clang::TemplateSpecializationType>(RemoveElaboration(type)));
 }
 
 // Read past SubstTemplateTypeParmType to the underlying type, if type
@@ -1235,6 +1237,7 @@ inline bool CanImplicitlyConvertTo(const clang::Type* type) {
 inline set<const clang::Type*> GetExplicitTplTypeArgsOf(
     const clang::Type* type) {
   set<const clang::Type*> retval;
+  type = RemoveElaboration(type);  // get rid of the class keyword
   const clang::TemplateSpecializationType* tpl_spec_type = DynCastFrom(type);
   if (!tpl_spec_type)
     return retval;
@@ -1287,11 +1290,15 @@ inline const clang::Expr* GetFirstClassArgument(clang::CallExpr* expr) {
   for (clang::CallExpr::arg_iterator it = expr->arg_begin();
        it != expr->arg_end(); ++it) {
     const clang::Type* argtype = GetTypeOf(*it);
-    // Luckily, this code does the right thing given a function like
+    // Make sure we do the right thing given a function like
     //    template <typename T> void operator>>(const T& x, ostream& os);
     // In this case ('myclass >> os'), we want to be returning the
     // type of os, not of myclass, and we do, because myclass will be
     // a SubstTemplateTypeParmType, not a RecordType.
+    if (isa<clang::SubstTemplateTypeParmType>(argtype))
+      continue;
+    // TODO(csilvers): uncomment this and fix up tests to match.
+    //argtype = argtype->getUnqualifiedDesugaredType();  // see through typedefs
     if (isa<clang::RecordType>(argtype) ||
         isa<clang::TemplateSpecializationType>(argtype)) {
       return *it;
