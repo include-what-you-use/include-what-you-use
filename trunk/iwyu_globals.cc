@@ -77,4 +77,10 @@ bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file) {
   return false;
 }
 
+void InitGlobalsForTesting() {
+  source_manager = NULL;
+  data_getter = NULL;
+  include_picker = new IncludePicker;
+}
+
 }  // namespace include_what_you_use

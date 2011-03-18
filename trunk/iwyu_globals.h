@@ -26,6 +26,10 @@ class SourceManagerCharacterDataGetter;
 
 void InitGlobals(clang::SourceManager* source_manager);
 
+// Can be called by tests -- doesn't need a SourceManager.  Note that
+// GlobalSourceManager() and DefaultDataGetter() will assert-fail if
+// you call this instead of InitGlobals().
+void InitGlobalsForTesting();
 
 clang::SourceManager* GlobalSourceManager();
 
