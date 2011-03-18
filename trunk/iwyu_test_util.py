@@ -58,21 +58,6 @@ def _GetCommandOutput(command):
   return p.stdout.readlines()
 
 
-def _Permute(a_list):
-  """Returns all permutations of a_list."""
-
-  if len(a_list) <= 1:
-    return [a_list]
-
-  permutations = []
-  for i in range(len(a_list)):
-    head = a_list[i]
-    tail = a_list[:i] + a_list[i + 1:]
-    for p in _Permute(tail):
-      permutations.append([head] + p)
-  return permutations
-
-
 def _GetExpectedDiagnosticRegexes(expected_diagnostic_specs):
   """Returns a map: source file location => list of regexes for that line."""
 
@@ -266,43 +251,66 @@ def _GetActualSummaries(output):
 def _VerifyDiagnosticsAtLoc(loc_str, regexes, diagnostics):
   """Verify the diagnostics at the given location; return a list of failures."""
 
-  # Newline-separated list of regexps and diagnostics
-  regexes_str = '\n'.join([r.pattern for r in regexes])
-  diagnostics_str = '\n'.join(diagnostics)
+  # Find out which regexes don't match a diagnostic and vice versa.
+  matching_regexes = [[] for unused_i in xrange(len(diagnostics))]
+  unmatched_regexes = []
+  multiply_matched_regexes = []
+  ret = []
+  for regex in regexes:
+    num_matches = 0
+    for (i, diagnostic) in enumerate(diagnostics):
+      if regex.search(diagnostic):
+        matching_regexes[i].append(regex.pattern)
+        num_matches += 1
+    if num_matches == 0:
+      # regex didn't match any diagnostic.
+      unmatched_regexes.append(regex.pattern)
+    if num_matches > 1:
+      multiply_matched_regexes.append(regex.pattern)
 
-  # Is the number of diagnostics correct?
-  regex_count = len(regexes)
-  if len(diagnostics) != regex_count:
-    return ['%s expecting %s diagnostics; actually had %s:\n%s\n' %
-            (loc_str, regex_count, len(diagnostics), diagnostics_str)]
+  unmatched_diagnostics = []
+  multiply_matched_diagnostic_messages = []
+  for (i, regexes) in enumerate(matching_regexes):
+    if not regexes:
+      unmatched_diagnostics.append(diagnostic)
+    elif len(regexes) > 1:
+      multiply_matched_diagnostic_messages.append(
+          'The diagnostic message:\n%s\n'
+          'matches regexes:\n%s'
+          % (diagnostic,  '\n'.join(regexes)))
 
-  if regex_count == 1:
-    if regexes[0].search(diagnostics[0]):
-      return []
-    else:
-      return ['%s actual diagnostic doesn\'t match expectation.\n'
-              'Expected: regular expression "%s"\n'
-              'Actual: %s\n' %
-              (loc_str, regexes_str, diagnostics_str)]
+  if unmatched_diagnostics and unmatched_regexes:
+    ret = [
+        '%s Unexpected diagnostics:\n%s\nMissing matches for regexes:\n%s\n'
+        % (loc_str, '\n'.join(unmatched_diagnostics),
+           '\n'.join(unmatched_regexes))]
+  elif unmatched_diagnostics:
+    ret = [
+        '%s expecting %s diagnostics; actually had %s. '
+        'Unexpected diagnostics:\n'
+        '%s\n' % (loc_str, len(regexes), len(diagnostics),
+                  '\n'.join(unmatched_diagnostics))]
+  elif unmatched_regexes:
+    ret = [
+        '%s expecting %s diagnostics; actually had %s. '
+        'Missing matches for regexes:\n'
+        '%s\n' % (loc_str, len(regexes), len(diagnostics),
+                  '\n'.join(unmatched_regexes))]
+  else:
+    ret = []
 
-  # There should be at least one permutation of the diagnostics that
-  # matches the regexes.  We try all the permutations one-by-one.
-  # This sounds bad, but is OK in practice as the list of diagnostics
-  # on any given line is typically very small (1~2).
-  for permutation in _Permute(diagnostics):
-    for regex, diagnostic in zip(regexes, permutation):
-      if not regex.search(diagnostic):
-        # This permutation is not good.  Try the next.
-        break
-    else:
-      # This permutation works!
-      return []
+  if multiply_matched_diagnostic_messages:
+    ret.append(
+        'There are %s diagnostics matching more than one regex:'
+        '%s\n' % (len(multiply_matched_diagnostic_messages),
+                  '\n'.join(multiply_matched_diagnostic_messages)))
 
-  return [loc_str + ' no permutation of the actual diagnostics on this '
-          'line matches the regex specs.\n'
-          '--- Expected:\n%s\n--- Actual:\n%s\n---\n'
-          % (regexes_str, diagnostics_str)]
+  if multiply_matched_regexes:
+    ret.append(
+        'The following regexes matched multiple diagnostics\n%s\n'
+        % ('\n'.join(multiply_matched_regexes)))
 
+  return ret
 
 def _CompareExpectedAndActualDiagnostics(expected_diagnostic_regexes,
                                          actual_diagnostics):
