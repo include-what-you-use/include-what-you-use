@@ -7,8 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// The generic OperateOn, but each specialization needs to define its own.
-template<class T> class OperateOn { };
+#include "tests/default_template_arg_other_file-o1.h"
+
+// We provide one specialization here.
+class IntendsToProvideClass { };
+template<> class OperateOn<IntendsToProvideClass> { };
+
+// And one partial specialization as well.
+template<typename T> class OperateOn<T*> { };
+
+template<typename T> class IntendsToProvideTplClass { };
+template<typename T> class OperateOn<IntendsToProvideTplClass<T> > { };
 
 template<class T, class Functor = OperateOn<T> > class TemplateStructHelper {
  public:

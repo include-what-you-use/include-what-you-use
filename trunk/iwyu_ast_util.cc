@@ -41,6 +41,7 @@ using clang::CXXDeleteExpr;
 using clang::CXXDependentScopeMemberExpr;
 using clang::CXXDestructorDecl;
 using clang::CXXMethodDecl;
+using clang::CXXNewExpr;
 using clang::CXXRecordDecl;
 using clang::CallExpr;
 using clang::CastExpr;
@@ -57,6 +58,7 @@ using clang::DependentTemplateSpecializationType;
 using clang::ElaboratedType;
 using clang::EnumDecl;
 using clang::ExplicitCastExpr;
+using clang::ExplicitTemplateArgumentList;
 using clang::Expr;
 using clang::ExprWithCleanups;
 using clang::FileEntry;
@@ -75,6 +77,7 @@ using clang::NamedDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::ObjCObjectType;
+using clang::OverloadExpr;
 using clang::PointerType;
 using clang::QualType;
 using clang::QualifiedTemplateName;
@@ -426,6 +429,15 @@ void PrintASTNode(const ASTNode* node) {
 
 // --- Utilities for Template Arguments.
 
+// If the TemplateArgument is a type (and not an expression such as
+// 'true', or a template such as 'vector', etc), return it.  Otherwise
+// return NULL.
+static const Type* GetTemplateArgAsType(const TemplateArgument& tpl_arg) {
+  if (tpl_arg.getKind() == TemplateArgument::Type)
+    return tpl_arg.getAsType().getTypePtr();
+  return NULL;
+}
+
 // These utilities figure out the template arguments that are
 // specified in various contexts: TemplateSpecializationType (for
 // template classes) and FunctionDecl (for template functions).
@@ -441,8 +453,8 @@ void PrintASTNode(const ASTNode* node) {
 // beneath it, which it returns as a set.  For example, if you have a
 // VarDecl 'vector<int(*)(const MyClass&)> x', it would return
 // (vector<int(*)(const MyClass&)>, int(*)(const MyClass&),
-// (int)(const MyClass&), int, MyClass&, MyClass).  Note that this
-// function only returns types-as-typed, so it does *not* return
+// int(const MyClass&), int, const MyClass&, MyClass).  Note that
+// this function only returns types-as-typed, so it does *not* return
 // alloc<int(*)(const MyClass&)>, even though it's part of vector.
 class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
  public:
@@ -450,6 +462,14 @@ class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
 
   // --- Public interface
   // We can add more entry points as needed.
+  set<const Type*> Enumerate(const Type* type) {
+    seen_types_.clear();
+    if (!type)
+      return seen_types_;
+    TraverseType(QualType(type, 0));
+    return seen_types_;
+  }
+
   set<const Type*> Enumerate(const TemplateArgument& tpl_arg) {
     seen_types_.clear();
     TraverseTemplateArgument(tpl_arg);
@@ -511,22 +531,170 @@ SourceRange GetSourceRangeOfClassDecl(const Decl* decl) {
   return SourceRange();
 }
 
-set<const Type*> GetTplTypeArgsOfFunction(const FunctionDecl* decl) {
-  set<const Type*> retval;
-  if (!decl)
-    return retval;
+// Helper for the Get*ResugarMap*() functions.  Given a map from
+// desugared->resugared types, looks at each component of the
+// resugared type (eg, both hash_set<Foo>* and vector<hash_set<Foo> >
+// have two components: hash_set<Foo> and Foo), and returns a map that
+// contains the original map elements plus mapping for the components.
+// This is because when a type is 'owned' by the template
+// instantiator, all parts of the type are owned.  We only consider
+// type-components as typed.
+static map<const Type*, const Type*> ResugarTypeComponents(
+    const map<const Type*, const Type*>& resugar_map) {
+  map<const Type*, const Type*> retval = resugar_map;
   TypeEnumerator type_enumerator;
-  const TemplateArgumentList* tpl_list =
-      decl->getTemplateSpecializationArgs();
-  if (tpl_list) {
-    for (unsigned i = 0; i < tpl_list->size(); ++i) {
-      InsertAllInto(type_enumerator.Enumerate(tpl_list->get(i)), &retval);
+  for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
+    const set<const Type*>& components = type_enumerator.Enumerate(it->second);
+    for (Each<const Type*> component_type(&components);
+         !component_type.AtEnd(); ++component_type) {
+      const Type* desugared_type = GetCanonicalType(*component_type);
+      if (!Contains(retval, desugared_type)) {
+        retval[desugared_type] = *component_type;
+        VERRS(6) << "Adding a type-components of interest: "
+                 << PrintableType(*component_type) << "\n";
+      }
     }
   }
-  for (Each<const Type*> it(&retval); !it.AtEnd(); ++it) {
-    VERRS(6) << "Adding a template-function type of interest: "
-             << PrintableType(*it) << "\n";
+  return retval;
+}
+
+// Helpers for GetTplTypeResugarMapForFunction().
+static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
+    const FunctionDecl* decl, unsigned start_arg) {
+  map<const Type*, const Type*> retval;
+  if (!decl)   // can be NULL if the function call is via a function pointer
+    return retval;
+  if (const TemplateArgumentList* tpl_list
+      = decl->getTemplateSpecializationArgs()) {
+    for (unsigned i = start_arg; i < tpl_list->size(); ++i) {
+      if (const Type* arg_type = GetTemplateArgAsType(tpl_list->get(i))) {
+        retval[GetCanonicalType(arg_type)] = arg_type;
+        VERRS(6) << "Adding an implicit tpl-function type of interest: "
+                 << PrintableType(arg_type) << "\n";
+      }
+    }
   }
+  return retval;
+}
+
+static map<const Type*, const Type*>
+GetTplTypeResugarMapForFunctionExplicitTplArgs(
+    const FunctionDecl* decl,
+    const ExplicitTemplateArgumentList* explicit_tpl_list) {
+  map<const Type*, const Type*> retval;
+  if (explicit_tpl_list) {
+    for (unsigned i = 0; i < explicit_tpl_list->NumTemplateArgs; ++i) {
+      const TemplateArgument& arg
+          = explicit_tpl_list->getTemplateArgs()[i].getArgument();
+      if (const Type* arg_type = GetTemplateArgAsType(arg)) {
+        retval[GetCanonicalType(arg_type)] = arg_type;
+        VERRS(6) << "Adding an explicit template-function type of interest: "
+                 << PrintableType(arg_type) << "\n";
+      }
+    }
+  }
+  return retval;
+}
+
+map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
+    const FunctionDecl* decl, const Expr* calling_expr) {
+  map<const Type*, const Type*> retval;
+
+  // If calling_expr is NULL, then we can't find any explicit template
+  // arguments, if they were specified (e.g. 'Fn<int>()'), and we
+  // won't be able to get the function arguments as written.  So we
+  // can't resugar at all.  We just have to hope that the types happen
+  // to be already sugared, because the actual-type is already canonical.
+  if (calling_expr == NULL) {
+    retval = GetTplTypeResugarMapForFunctionNoCallExpr(decl, 0);
+    retval = ResugarTypeComponents(retval);  // add in retval's decomposition
+    return retval;
+  }
+
+  // If calling_expr is a CXXConstructExpr of CXXNewExpr, then it's
+  // impossible to explicitly specify template arguments; all we have
+  // to go on is function arguments.  If it's a CallExpr, and some
+  // arguments might be explicit, and others implicit.  Otherwise,
+  // it's a type that doesn't take function template args at all (like
+  // CXXDeleteExpr) or only takes explicit args (like DeclRefExpr).
+  Expr** fn_args = NULL;
+  unsigned num_args = 0;
+  unsigned start_of_implicit_args = 0;
+  if (const CXXConstructExpr* ctor_expr = DynCastFrom(calling_expr)) {
+    fn_args = ctor_expr->getArgs();
+    num_args = ctor_expr->getNumArgs();
+  } else if (const CXXNewExpr* new_expr = DynCastFrom(calling_expr)) {
+    // Ugh, CXXNewExpr doesn't have a const version.  I promise not to mutate...
+    fn_args = const_cast<CXXNewExpr*>(new_expr)->getConstructorArgs();
+    num_args = new_expr->getNumConstructorArgs();
+  } else if (const CallExpr* call_expr = DynCastFrom(calling_expr)) {
+    fn_args = const_cast<CallExpr*>(call_expr)->getArgs();
+    num_args = call_expr->getNumArgs();
+    const Expr* callee_expr = call_expr->getCallee()->IgnoreParenCasts();
+    if (const ExplicitTemplateArgumentList* explicit_tpl_args
+        = GetExplicitTplArgs(callee_expr)) {
+      retval = GetTplTypeResugarMapForFunctionExplicitTplArgs(
+          decl, explicit_tpl_args);
+      start_of_implicit_args = explicit_tpl_args->NumTemplateArgs;
+    }
+  } else {
+    // If calling_expr has explicit template args, then consider them.
+    if (const ExplicitTemplateArgumentList* explicit_tpl_args
+        = GetExplicitTplArgs(calling_expr)) {
+      retval = GetTplTypeResugarMapForFunctionExplicitTplArgs(
+          decl, explicit_tpl_args);
+      retval = ResugarTypeComponents(retval);
+    }
+    return retval;
+  }
+
+  // Now we have to figure out, as best we can, the sugar-mappings for
+  // compiler-deduced template args.  We do this by looking at every
+  // type specified in any part of the function arguments as written.
+  // If any of these types matches a template type, then we take that
+  // to be the resugar mapping.  If none of the types match, then we
+  // assume that the template is matching some desugared part of the
+  // type, and we ignore it.  For instance:
+  //     operator<<(basic_ostream<char, T>& o, int i);
+  // If I pass in an ostream as the first argument, then no part
+  // of the (sugared) argument types match T, so we ignore it.
+  const map<const Type*, const Type*>& desugared_types
+      = GetTplTypeResugarMapForFunctionNoCallExpr(decl, start_of_implicit_args);
+
+  // TODO(csilvers): SubstTemplateTypeParms are always desugared,
+  //                 making this less useful than it should be.
+  // TODO(csilvers): if the GetArg(i) expr has an implicit cast
+  //                 under it, take the pre-cast type instead?
+  set<const Type*> fn_arg_types;
+  TypeEnumerator type_enumerator;
+  for (unsigned i = 0; i < num_args; ++i) {
+    const Type* argtype = GetTypeOf(fn_args[i]);
+    // TODO(csilvers): handle RecordTypes that are a TemplateSpecializationDecl
+    InsertAllInto(type_enumerator.Enumerate(argtype), &fn_arg_types);
+  }
+
+  for (Each<const Type*> it(&fn_arg_types); !it.AtEnd(); ++it) {
+    // See if any of the template args in retval are the desugared form of us.
+    const Type* desugared_type = GetCanonicalType(*it);
+    if (Contains(desugared_types, desugared_type)) {
+      retval[desugared_type] = *it;
+      if (desugared_type != *it) {
+        VERRS(6) << "Remapping template arg of interest: "
+                 << PrintableType(desugared_type) << " -> "
+                 << PrintableType(*it) << "\n";
+      }
+    }
+  }
+
+  // Log the types we never mapped.
+  for (Each<const Type*, const Type*> it(&desugared_types); !it.AtEnd(); ++it) {
+    if (!Contains(retval, it->first)) {
+      VERRS(6) << "Ignoring unseen-in-fn-args template arg of interest: "
+               << PrintableType(it->first) << "\n";
+    }
+  }
+
+  retval = ResugarTypeComponents(retval);  // add in the decomposition of retval
   return retval;
 }
 
@@ -677,6 +845,11 @@ const Type* GetTypeOf(const TypeDecl* decl) {
   return decl->getTypeForDecl();
 }
 
+const Type* GetCanonicalType(const Type* type) {
+  QualType canonical_type = type->getCanonicalTypeUnqualified();
+  return canonical_type.getTypePtr();
+}
+
 const Type* RemoveElaboration(const Type* type) {
   if (const ElaboratedType* elaborated_type = DynCastFrom(type))
     return elaborated_type->getNamedType().getTypePtr();
@@ -797,23 +970,61 @@ bool CanImplicitlyConvertTo(const Type* type) {
   return HasImplicitConversionCtor(cxx_class);
 }
 
-set<const Type*> GetExplicitTplTypeArgsOf(const Type* type) {
-  set<const Type*> retval;
+map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForClass(
+    const clang::Type* type) {
+  map<const Type*, const Type*> retval;
   type = RemoveElaboration(type);  // get rid of the class keyword
   const TemplateSpecializationType* tpl_spec_type = DynCastFrom(type);
   if (!tpl_spec_type)
     return retval;
 
+  // Get the list of template args that apply to the decls.
+  const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
+  const ClassTemplateSpecializationDecl* tpl_decl = DynCastFrom(decl);
+  if (!tpl_decl)   // probably because tpl_spec_type is a dependent type
+    return retval;
+  const TemplateArgumentList& tpl_args
+      = tpl_decl->getTemplateInstantiationArgs();
+
   // TemplateSpecializationType only includes explicitly specified
-  // types in its args list, which is just what we want.
+  // types in its args list, so we start with that.  Note that an
+  // explicitly specified type may fulfill multiple template args:
+  //   template <typename R, typename A1> struct Foo<R(A1)> { ... }
+  set<unsigned> explicit_args;   // indices into tpl_args we've filled
   TypeEnumerator type_enumerator;
   for (unsigned i = 0; i < tpl_spec_type->getNumArgs(); ++i) {
-    InsertAllInto(type_enumerator.Enumerate(tpl_spec_type->getArg(i)), &retval);
+    set<const Type*> arg_components
+        = type_enumerator.Enumerate(tpl_spec_type->getArg(i));
+    // Go through all template types mentioned in the arg-as-written,
+    // and compare it against each of the types in the template decl
+    // (the latter are all desugared).  If there's a match, update
+    // the mapping.
+    for (Each<const Type*> it(&arg_components); !it.AtEnd(); ++it) {
+      for (unsigned i = 0; i < tpl_args.size(); ++i) {
+        if (const Type* arg_type = GetTemplateArgAsType(tpl_args[i])) {
+          if (GetCanonicalType(*it) == arg_type) {
+            retval[arg_type] = *it;
+            VERRS(6) << "Adding a template-class type of interest: "
+                     << PrintableType(*it) << "\n";
+            explicit_args.insert(i);
+          }
+        }
+      }
+    }
   }
-  for (Each<const Type*> it(&retval); !it.AtEnd(); ++it) {
-    VERRS(6) << "Adding a template-class type of interest: "
-             << PrintableType(*it) << "\n";
+
+  // Now take a look at the args that were not filled explicitly.
+  for (unsigned i = 0; i < tpl_args.size(); ++i) {
+    if (Contains(explicit_args, i))
+      continue;
+    if (const Type* arg_type = GetTemplateArgAsType(tpl_args[i])) {
+      retval[arg_type] = NULL;
+      VERRS(6) << "Adding a template-class default type of interest: "
+               << PrintableType(arg_type) << "\n";
+    }
   }
+
+  retval = ResugarTypeComponents(retval);  // add in the decomposition of retval
   return retval;
 }
 
@@ -906,6 +1117,21 @@ bool IsCastToReferenceType(const CastExpr* expr) {
     CHECK_(false && "Unexpected type of cast expression");
     return false;
   }
+}
+
+const ExplicitTemplateArgumentList* GetExplicitTplArgs(const Expr* expr) {
+  if (const DeclRefExpr* decl_ref = DynCastFrom(expr))
+    return decl_ref->getExplicitTemplateArgsOpt();
+  if (const MemberExpr* member_expr = DynCastFrom(expr))
+    return member_expr->getOptionalExplicitTemplateArgs();
+  // Ugh, annoying casts needed because no const methods exist.
+  if (const OverloadExpr* overload_expr = DynCastFrom(expr))
+    return const_cast<OverloadExpr*>(overload_expr)
+        ->getOptionalExplicitTemplateArgs();
+  if (const DependentScopeDeclRefExpr* dependent_decl_ref = DynCastFrom(expr))
+    return const_cast<DependentScopeDeclRefExpr*>(dependent_decl_ref)
+        ->getOptionalExplicitTemplateArgs();
+  return NULL;
 }
 
 }  // namespace include_what_you_use

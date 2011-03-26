@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 class MyClass {};
+template<typename T> class TplClass {};
 
 template<class T> class OperateOn;   // forward declare
-template<> class OperateOn<MyClass> { };
+template<> class OperateOn<MyClass> { };             // explicit specialization
+template<class T> class OperateOn<TplClass<T> > { };  // partial specialization

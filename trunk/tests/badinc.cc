@@ -598,11 +598,8 @@ H_TemplateClass<H_Enum> h_templateclass1(H1);
 // IWYU: I1_Enum is...*badinc-i1.h
 // IWYU: I11 is...*badinc-i1.h
 H_TemplateClass<I1_Enum> h_templateclass2(I11);
-// This needs the OperateOn functor because of its typedef.
-// TODO(csilvers): IWYU: OperateOn is...*badinc-i1.h
 // IWYU: I1_Struct needs a declaration
 H_TemplateStruct<I1_Struct> h_template_struct;
-// This does not need OperateOn because it has no typedef.
 // IWYU: I1_Struct needs a declaration
 H_TemplateStructHelper<I1_Struct> h_template_struct_helper;
 // IWYU: I1_Struct needs a declaration
@@ -1870,16 +1867,14 @@ int main() {
   I1_TemplateFunction<I1_Class*>(i1_class_ptr);
   // Try again, but with a typedef
   Cc_typedef cc_typedef;
-  // TODO(csilvers): figure out the template arg here is really a typedef
-  //    (hard in the first case, easier in the second and third), and
-  //    don't add it to tpl-types-of-interest.
+  // TODO(csilvers): figure out the template arg here is really a
+  //    typedef (tricky because we need to call the I1_Class ctor),
+  //    and don't add it to tpl-types-of-interest.
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I1_TemplateFunction is...*badinc-i1.h
   I1_TemplateFunction(cc_typedef);
-  // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I1_TemplateFunction is...*badinc-i1.h
   I1_TemplateFunction<Cc_typedef>(cc_typedef);
-  // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I1_TemplateFunction is...*badinc-i1.h
   I1_TemplateFunction<Cc_typedef>(i1_class);
 
