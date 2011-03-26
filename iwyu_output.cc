@@ -797,13 +797,17 @@ void ProcessForwardDeclare(OneUse* use) {
     use->set_full_use();
     return;
   }
-  // This is useful for the subsequent tests.
+  // This is useful for the subsequent tests -- let's normalize some types.
   const RecordDecl* record_decl = DynCastFrom(use->decl());
-  if (const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl()))
+  const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
+  const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(use->decl());
+  if (spec_decl)
+    tpl_decl = spec_decl->getSpecializedTemplate();
+  if (tpl_decl)
     record_decl = tpl_decl->getTemplatedDecl();
 
   // (A2) If it has default template parameters, recategorize as a full use.
-  if (const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl())) {
+  if (tpl_decl) {
     if (HasDefaultTemplateParameters(tpl_decl)) {
       VERRS(6) << "Moving " << use->symbol_name()
                << " from fwd-decl use to full use: has default template param"
@@ -864,7 +868,7 @@ void ProcessFullUse(OneUse* use) {
       DeclCanBeForwardDeclared(use->decl())) {
     VERRS(6) << "Moving " << use->symbol_name()
              << " from full use to fwd-decl: definition found later in file"
-             << " (" << use->PrintableUseLoc() << ")";
+             << " (" << use->PrintableUseLoc() << ")\n";
     // Just change us to a forward-declare use.  Later, we'll decide
     // which forward-declare is the best one to keep.
     use->set_forward_declare_use();
@@ -995,7 +999,7 @@ void CalculateIwyuForForwardDeclareUse(
 
   // If this record is defined in one of the desired_includes, mark that
   // fact.  Also if it's defined in one of the actual_includes.
-  const RecordDecl* dfn = GetDefinitionForClass(use->decl());
+  const NamedDecl* dfn = GetDefinitionForClass(use->decl());
   bool dfn_is_in_desired_includes = false;
   bool dfn_is_in_actual_includes = false;
   if (dfn) {
@@ -1006,6 +1010,13 @@ void CalculateIwyuForForwardDeclareUse(
         dfn_is_in_desired_includes = true;
       if (Contains(actual_includes, *header))
         dfn_is_in_actual_includes = true;
+    }
+    // We ourself are always a 'desired' and 'actual' include (though
+    // only if the definition is visible from the use location).
+    if (GetFileEntry(dfn) == GetFileEntry(use->use_loc()) &&
+        DeclIsVisibleToUseInSameFile(dfn, *use)) {
+      dfn_is_in_desired_includes = true;
+      dfn_is_in_actual_includes = true;
     }
   }
 
@@ -1039,19 +1050,19 @@ void CalculateIwyuForForwardDeclareUse(
   // (D1) Mark that the fwd-declare is satisfied by dfn in desired include.
   const NamedDecl* providing_decl = NULL;
   if (dfn_is_in_desired_includes) {
+    providing_decl = dfn;
     VERRS(6) << "Noting fwd-decl use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << ") is satisfied by dfn in "
              << PrintableLoc(GetLocation(providing_decl)) << "\n";
-    providing_decl = dfn;
     // Mark that this use is another reason we want this header.
     const string file = GetFilePath(dfn);
     const string quoted_hdr = ConvertToQuotedInclude(file);
     use->set_suggested_header(quoted_hdr);
   } else if (same_file_decl) {
+    providing_decl = same_file_decl;
     VERRS(6) << "Noting fwd-decl use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << ") is declared at "
              << PrintableLoc(GetLocation(providing_decl)) << "\n";
-    providing_decl = same_file_decl;
     // If same_file_decl is actually in an associated .h, mark our use
     // of that.  No need to map-to-public for associated .h files.
     if (GetFileEntry(same_file_decl) != GetFileEntry(use->use_loc()))
@@ -1060,7 +1071,7 @@ void CalculateIwyuForForwardDeclareUse(
   if (providing_decl) {
     // Change decl_ to point to this "better" redecl.  Be sure to store
     // as a TemplateClassDecl if that's what decl_ was originally.
-    if (tpl_decl) {
+    if (tpl_decl && isa<RecordDecl>(providing_decl)) {
       CHECK_(isa<CXXRecordDecl>(providing_decl) &&
              cast<CXXRecordDecl>(providing_decl)->getDescribedClassTemplate());
       const CXXRecordDecl* cxx_decl = cast<CXXRecordDecl>(providing_decl);
