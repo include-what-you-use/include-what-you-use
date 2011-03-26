@@ -11,6 +11,8 @@
 // classes. For some uses the forward declaration is needed, for
 // others it isn't.
 
+template<typename T> void TplFn() { T t; (void)t; }
+
 class Foo {
   class NoUsage;  // Unnecessary -- defined inline later in the class.
   class NoUsageDefinedOutOfLine;  // Necessary -- part of the public API.
@@ -34,6 +36,10 @@ class Foo {
   }
   void Bar2() {
     UsedFullyInMethod x;
+    UsedFullyInMethodNotForwardDeclared y;
+    // Make sure we don't have trouble saying we're inside a method
+    // even when templates get in the way.
+    TplFn<UsedFullyInMethodNotForwardDeclared>();
   }
 
   // If a nested class is used in a typedef, a preceding declaration
@@ -55,6 +61,7 @@ class Foo {
   class UsedAsPtrArg { };
   class UsedAsPtrReturn { };
   class UsedAsPtrMember { };
+  struct UsedFullyInMethodNotForwardDeclared { };
 
   UsedFullyInInitializer init_;
   UsedImplicitlyInInitializer implicit_;
@@ -87,6 +94,8 @@ class Outer {
   }
   void Bar2() {
     UsedFullyInMethod<int> x;
+    UsedFullyInMethodNotForwardDeclared<int> y;
+    TplFn<UsedFullyInMethodNotForwardDeclared<int> >();
   }
 
   // If a nested class is used in a typedef, a preceding declaration
@@ -108,6 +117,7 @@ class Outer {
   template<typename T> class UsedAsPtrArg { };
   template<typename T> class UsedAsPtrReturn { };
   template<typename T> class UsedAsPtrMember { };
+  template<typename T> class UsedFullyInMethodNotForwardDeclared { };
 
   UsedFullyInInitializer<int> init_;
   UsedImplicitlyInInitializer<int> implicit_;

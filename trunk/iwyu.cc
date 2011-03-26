@@ -353,7 +353,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // How subclasses can access current_ast_node_;
   const ASTNode* current_ast_node() const { return current_ast_node_; }
   ASTNode* current_ast_node() { return current_ast_node_; }
-  void ResetCurrentAstNode() { current_ast_node_ = NULL; }
+  void set_current_ast_node(ASTNode* an) { current_ast_node_ = an; }
 
   bool TraverseDecl(Decl* decl) {
     if (current_ast_node_->StackContainsContent(decl))
@@ -2283,13 +2283,21 @@ class InstantiatedTemplateVisitor
 
   void ScanInstantiatedFunction(
       const FunctionDecl* fn_decl, const Type* parent_type,
-      const SourceLocation caller_loc,
+      const ASTNode* caller_ast_node,
       const set<SourceLocation>& processed_overload_locs,
       const set<const Type*>& tpl_type_args_of_interest) {
     Clear();
-    caller_loc_ = caller_loc;
+    caller_ast_node_ = caller_ast_node;
     ExtendProcessedOverloadLocs(processed_overload_locs);  // copy from caller
     tpl_type_args_of_interest_ = tpl_type_args_of_interest;
+
+    // Make sure that the caller didn't already put the decl on the ast-stack.
+    CHECK_(caller_ast_node->GetAs<Decl>() != fn_decl && "AST node already set");
+    // caller_ast_node requires a non-const ASTNode, but our node is
+    // const.  This cast is safe because we don't do anything with this
+    // node (instead, we immediately push a new node on top of it).
+    set_current_ast_node(const_cast<ASTNode*>(caller_ast_node));
+
     TraverseExpandedTemplateFunctionHelper(fn_decl, parent_type);
   }
 
@@ -2297,13 +2305,20 @@ class InstantiatedTemplateVisitor
   // a template class to get at a field of it, for instance:
   // MyClass<T>::size_type s;
   void ScanInstantiatedType(
-      const Type* type, SourceLocation caller_loc,
+      const Type* type, const ASTNode* caller_ast_node,
       const set<SourceLocation>& processed_overload_locs,
       const set<const Type*>& tpl_type_args_of_interest) {
     Clear();
-    caller_loc_ = caller_loc;
+    caller_ast_node_ = caller_ast_node;
     ExtendProcessedOverloadLocs(processed_overload_locs);  // copy from caller
     tpl_type_args_of_interest_ = tpl_type_args_of_interest;
+
+    // Make sure that the caller didn't already put the type on the ast-stack.
+    CHECK_(caller_ast_node->GetAs<Type>() != type && "AST node already set");
+    // caller_ast_node requires a non-const ASTNode, but our node is
+    // const.  This cast is safe because we don't do anything with this
+    // node (instead, we immediately push a new node on top of it).
+    set_current_ast_node(const_cast<ASTNode*>(caller_ast_node));
 
     // As in TraverseExpandedTemplateFunctionHelper, we ignore all AST nodes
     // that will be reported when we traverse the uninstantiated type.
@@ -2372,7 +2387,7 @@ class InstantiatedTemplateVisitor
       // report, so they can update their cache entries.
       for (Each<CacheStoringScope*> it(&cache_storers_); !it.AtEnd(); ++it)
         (*it)->NoteReportedDecl(decl);
-      Base::ReportDeclUse(caller_loc_, decl);
+      Base::ReportDeclUse(caller_loc(), decl);
     }
   }
 
@@ -2382,7 +2397,7 @@ class InstantiatedTemplateVisitor
     type = ResugarType(type);
     for (Each<CacheStoringScope*> it(&cache_storers_); !it.AtEnd(); ++it)
       (*it)->NoteReportedType(type);
-    Base::ReportTypeUse(caller_loc_, type);
+    Base::ReportTypeUse(caller_loc(), type);
   }
 
   //------------------------------------------------------------
@@ -2494,7 +2509,7 @@ class InstantiatedTemplateVisitor
     // TODO(csilvers): recurse on actual_type (in a 'normal' context,
     // not in InstantiatedTemplateVisitor), to catch nested types
     // like Outer<Inner<MyClass> >.
-    ReportTypesUse(caller_loc_, types_of_interest);
+    ReportTypesUse(caller_loc(), types_of_interest);
     return Base::VisitSubstTemplateTypeParmType(type);
   }
 
@@ -2508,14 +2523,14 @@ class InstantiatedTemplateVisitor
     if (CanIgnoreCurrentASTNode())  return true;
     const set<const Type*> types_of_interest
         = GetMatchingTypesOfInterest(GetTypeOf(expr));
-    ReportTypesUse(caller_loc_, types_of_interest);
+    ReportTypesUse(caller_loc(), types_of_interest);
     return Base::VisitCXXConstructExpr(expr);
   }
 
  private:
   // Clears the state of the visitor.
   void Clear() {
-    caller_loc_ = SourceLocation();
+    caller_ast_node_ = NULL;
     tpl_type_args_of_interest_.clear();
     traversed_decls_.clear();
     nodes_to_ignore_.clear();
@@ -2539,8 +2554,8 @@ class InstantiatedTemplateVisitor
   SourceLocation GetLocOfTemplateThatProvides(const NamedDecl* decl) const {
     if (!decl)
       return SourceLocation();   // an invalid source-loc
-    for (const ASTNode* ast_node = current_ast_node(); ast_node;
-         ast_node = ast_node->parent()) {
+    for (const ASTNode* ast_node = current_ast_node();
+         ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
       if (preprocessor_info().PublicHeaderIntendsToProvide(
               GetFileEntry(ast_node->GetLocation()),
               GetFileEntry(decl)))
@@ -2630,7 +2645,7 @@ class InstantiatedTemplateVisitor
     // Otherwise, for all reporting done in the rest of this scope,
     // store in the cache for this function.
     if (ReplayUsesFromCache(function_calls_full_use_cache_,
-                            fn_decl, caller_loc_))
+                            fn_decl, caller_loc()))
       return true;
     // Make sure all the types we report in the recursive TraverseDecl
     // calls, below, end up in the cache for fn_decl.
@@ -2703,7 +2718,7 @@ class InstantiatedTemplateVisitor
     // Otherwise, for all reporting done in the rest of this scope,
     // store in the cache for this function.
     if (ReplayUsesFromCache(class_members_full_use_cache_,
-                            class_decl, caller_loc_))
+                            class_decl, caller_loc()))
       return true;
     if (ReplayClassMemberUsesFromPrecomputedList(type))
       return true;
@@ -2760,7 +2775,7 @@ class InstantiatedTemplateVisitor
                << TypeToDeclAsWritten(tpl_type)->getQualifiedNameAsString()
                << ")\n";
       for (Each<const Type*> it(&fulluse_types); !it.AtEnd(); ++it) {
-        ReportTypesUse(caller_loc_, GetMatchingTypesOfInterest(*it));
+        ReportTypesUse(caller_loc(), GetMatchingTypesOfInterest(*it));
       }
       return true;
     }
@@ -2768,10 +2783,17 @@ class InstantiatedTemplateVisitor
   }
 
   //------------------------------------------------------------
+  // Member accessors.
+
+  SourceLocation caller_loc() const {
+    return caller_ast_node_->GetLocation();
+  }
+
+  //------------------------------------------------------------
   // Member variables.
 
-  // Where the template is instantiated.
-  SourceLocation caller_loc_;
+  // The AST-chain when this template was instantiated.
+  const ASTNode* caller_ast_node_;
 
   // The types mentioned in the call expression/etc -- those types
   // actually typed by the user (or inferred template arguments in
@@ -3068,7 +3090,8 @@ class IwyuAstConsumer
     const set<const Type*> tpl_type_args = GetExplicitTplTypeArgsOf(arg_type);
     if (IsTemplatizedType(arg_type)) {
       instantiated_template_visitor_.ScanInstantiatedType(
-          arg_type, CurrentLoc(), processed_overload_locs(), tpl_type_args);
+          arg_type, current_ast_node(), processed_overload_locs(),
+          tpl_type_args);
     }
 
     return Base::VisitUnaryExprOrTypeTraitExpr(expr);
@@ -3116,8 +3139,12 @@ class IwyuAstConsumer
     // specialization requires having the full type information.
     if (!CanForwardDeclareType(current_ast_node())) {
       const set<const Type*> tpl_type_args = GetExplicitTplTypeArgsOf(type);
+      // ScanInstantiatedType requires that type not already be on the
+      // ast-stack that it sees, but in our case it will be.  So we
+      // pass in the parent-node.
+      const ASTNode* ast_parent = current_ast_node()->parent();
       instantiated_template_visitor_.ScanInstantiatedType(
-          type, CurrentLoc(), processed_overload_locs(), tpl_type_args);
+          type, ast_parent, processed_overload_locs(), tpl_type_args);
     }
 
     return Base::VisitTemplateSpecializationType(type);
@@ -3172,7 +3199,7 @@ class IwyuAstConsumer
     if (IsTemplatizedFunctionDecl(callee) || IsTemplatizedType(parent_type))
       instantiated_template_visitor_.ScanInstantiatedFunction(
           callee, parent_type,
-          CurrentLoc(), processed_overload_locs(), tpl_type_args);
+          current_ast_node(), processed_overload_locs(), tpl_type_args);
     return true;
   }
 
