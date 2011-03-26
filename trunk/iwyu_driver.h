@@ -8,10 +8,12 @@ namespace clang {
 class CompilerInstance;
 }
 
-// This is in the global namespace to make it easier to call from main().
+namespace include_what_you_use {
 
 // Creates a CompilerInstance object based on the commandline
 // arguments, or NULL if there's an error of some sort.
 clang::CompilerInstance* CreateCompilerInstance(int argc, const char **argv);
+
+}  // namespace include_what_you_use
 
 #endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_DRIVER_H_

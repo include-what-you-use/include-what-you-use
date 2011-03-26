@@ -48,6 +48,8 @@ using llvm::sys::getHostTriple;
 using llvm::sys::Path;
 using std::set;
 
+namespace include_what_you_use {
+
 namespace {
 
 Path GetExecutablePath(const char *Argv0) {
@@ -217,3 +219,5 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
 
   return compiler;
 }
+
+}  // namespace include_what_you_use

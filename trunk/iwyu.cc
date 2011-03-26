@@ -3259,6 +3259,7 @@ case 'd': printf("-d/--howtodebug not yet implemented\n"); exit(1);
 
 using include_what_you_use::ParseIWYUFlags;
 using include_what_you_use::IwyuAction;
+using include_what_you_use::CreateCompilerInstance;
 
 int main(int argc, char **argv) {
   // This code has various memory leaks, but we're in main, so who cares?
