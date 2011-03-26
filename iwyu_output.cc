@@ -862,6 +862,9 @@ void ProcessFullUse(OneUse* use) {
   if (GetFileEntry(use->use_loc()) == GetFileEntry(use->decl()) &&
       !DeclIsVisibleToUseInSameFile(use->decl(), *use) &&
       DeclCanBeForwardDeclared(use->decl())) {
+    VERRS(6) << "Moving " << use->symbol_name()
+             << " from full use to fwd-decl: definition found later in file"
+             << " (" << use->PrintableUseLoc() << ")";
     // Just change us to a forward-declare use.  Later, we'll decide
     // which forward-declare is the best one to keep.
     use->set_forward_declare_use();
