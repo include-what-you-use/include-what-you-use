@@ -503,14 +503,23 @@ bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
   return false;
 }
 
-const RecordDecl* GetDefinitionForClass(const Decl* decl) {
+const NamedDecl* GetDefinitionForClass(const Decl* decl) {
   const RecordDecl* as_record = DynCastFrom(decl);
   const ClassTemplateDecl* as_tpl = DynCastFrom(decl);
-  if (as_tpl)   // Convert the template to its underlying class defn.
+  const bool is_templated_decl = (as_tpl != NULL);
+  if (as_tpl) {  // Convert the template to its underlying class defn.
     as_record = dyn_cast_or_null<RecordDecl>(as_tpl->getTemplatedDecl());
+  }
   if (as_record) {
-    if (const RecordDecl* record_dfn = as_record->getDefinition())
+    if (const RecordDecl* record_dfn = as_record->getDefinition()) {
+      // If we started this fn as a template, convert back to a template now.
+      if (is_templated_decl) {
+        CHECK_(isa<CXXRecordDecl>(record_dfn) && "A non-C++ template class?");
+        CHECK_(cast<CXXRecordDecl>(record_dfn)->getDescribedClassTemplate());
+        return cast<CXXRecordDecl>(record_dfn)->getDescribedClassTemplate();
+      }
       return record_dfn;
+    }
   }
   return NULL;
 }
@@ -731,12 +740,7 @@ const NamedDecl* GetDefinitionAsWritten(const NamedDecl* decl) {
       decl = tpl_pattern;
   }
   // Then, get to definition.
-  if (const RecordDecl* class_dfn = GetDefinitionForClass(decl)) {
-    // If we started this fn as a template, convert back to a template now.
-    if (const CXXRecordDecl* cxx_class_dfn = DynCastFrom(class_dfn)) {
-      if (cxx_class_dfn->getDescribedClassTemplate())
-        return cxx_class_dfn->getDescribedClassTemplate();
-    }
+  if (const NamedDecl* class_dfn = GetDefinitionForClass(decl)) {
     return class_dfn;
   } else if (const FunctionDecl* fn_decl = DynCastFrom(decl)) {
     for (FunctionDecl::redecl_iterator it = fn_decl->redecls_begin();

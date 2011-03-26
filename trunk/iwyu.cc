@@ -2066,12 +2066,30 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   bool VisitTemplateSpecializationType(
       clang::TemplateSpecializationType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreType(type))  return true;
 
-    // We don't care about any of this if we ourselves are
-    // fwd-declarable.
+    // If we're a template that was never instantiated (because we
+    // only need to forward-declare it), then the
+    // TemplateSpecializationType will point to a decl that doesn't
+    // "really" exist in the source.  The same is true if we're an
+    // explicit instantiation of a template.
+    const NamedDecl* decl = TypeToDeclAsWritten(type);
+    if (!type->isDependentType()) {
+      const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(decl);
+      CHECK_(spec_decl && "TST is not a ClassTemplateSpecializationDecl?");
+      if (spec_decl->getSpecializationKind() == clang::TSK_Undeclared ||
+          spec_decl->getSpecializationKind()
+          == clang::TSK_ExplicitInstantiationDefinition) {
+        decl = spec_decl->getSpecializedTemplate();
+      }
+    }
+
+    // If we are forward-declarable, so are our template arguments.
     if (CanForwardDeclareType(current_ast_node())) {
+      ReportDeclForwardDeclareUse(CurrentLoc(), decl);
       current_ast_node()->set_in_forward_declare_context(true);
-      return true;
+    } else {
+      ReportDeclUse(CurrentLoc(), decl);
     }
 
     return true;
@@ -2136,50 +2154,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // encode the logic of whether a particular type of object
   // can be forward-declared or not.
 
-  bool CanForwardDeclareTemplateName(const ASTNode* ast_node) const {
-    CHECK_(ast_node->IsA<TemplateName>());
-    // If we're a template template arg (A in template<template<class
-    // T> class A>), we may be forward-declarable, or we may not.
-    // Unfortunately, it's a lot of machinery to check, and we almost
-    // always will be -- if you're passing in a template template,
-    // aren't you going to use it?  You *could* do something like:
-    // 'template<template<class T> class A> class C { A<int>* x; };'
-    // and never dereference x, but that's pretty unlikely.  So for
-    // now, we just assume template template args -- these are
-    // TemplateName's whose parent is a TemplateArg -- always need
-    // full type info.
-    // TODO(csilvers): Add them to AddTypelikeTemplateArgTo instead,
-    // and change InstantiatedTemplateVisitor to look for them being
-    // used.  Then we can get rid of this if statement below.
-    if (IsDefaultTemplateTemplateArg(ast_node))
-      return false;
-
-    // If we're in a forward-declare context, we can forward declare.  Duh...
-    if (ast_node->in_forward_declare_context())
-      return true;
-
-    // It may not be possible for the parent to be something other
-    // than a TemplateSpecializationType.  In any case, the remaining
-    // heuristics depend on that.
-    if (!ast_node->ParentIsA<TemplateSpecializationType>())
-      return false;
-
-    // Another place we disregard what the language allows: if we're
-    // a dependent type, in theory we can be forward-declared.  But
-    // we require the full definition anyway, so all the template
-    // callers don't have to provide it instead.  Thus we don't
-    // run the following commented-out code (left here for reference):
-    //if (ast_node->GetParentAs<TemplateSpecializationType>()->isDependentType())
-    //  return true;
-
-    // If grandparent is a pointer (parent is
-    // TemplateSpecializationType), we can forward-declare this name.
-    if (!ast_node->AncestorIsA<PointerType>(2) &&
-        !ast_node->AncestorIsA<LValueReferenceType>(2))
-      return false;
-    return true;
-  }
-
   bool CanForwardDeclareType(const ASTNode* ast_node) const {
     CHECK_(ast_node->IsA<Type>());
     // If we're in a forward-declare context, well then, there you have it.
@@ -2190,6 +2164,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // type of Foo.)
     if (ast_node->ParentIsA<TypedefDecl>())
       return false;
+
+    // Another place we disregard what the language allows: if we're
+    // a dependent type, in theory we can be forward-declared.  But
+    // we require the full definition anyway, so all the template
+    // callers don't have to provide it instead.  Thus we don't
+    // run the following commented-out code (left here for reference):
+    //if (ast_node->GetAs<TemplateSpecializationType>()->isDependentType())
+    //  return false;
 
     // Read past elaborations like 'class' keyword or namespaces.
     while (ast_node->ParentIsA<ElaboratedType>()) {
@@ -3165,17 +3147,20 @@ class IwyuAstConsumer
   bool VisitTemplateName(TemplateName template_name) {
     if (CanIgnoreCurrentASTNode())  return true;
     if (!Base::VisitTemplateName(template_name))  return false;
-    // TODO(csilvers): I think this is wrong -- it gets the base
-    // template definition when we may actually be referring to a
-    // specialization.
-    if (const TemplateDecl* tpl_decl = template_name.getAsTemplateDecl()) {
-      if (CanForwardDeclareTemplateName(current_ast_node())) {
-        current_ast_node()->set_in_forward_declare_context(true);
-        ReportDeclForwardDeclareUse(CurrentLoc(), tpl_decl);
-      } else {
-        current_ast_node()->set_in_forward_declare_context(false);
-        ReportDeclUse(CurrentLoc(), tpl_decl);
-      }
+    // The only time we can see a TemplateName not in the
+    // context of a TemplateSpecializationType is when it's
+    // the default argument of a template template arg:
+    //    template<template<class T> class A = TplNameWithoutTST> class Foo ...
+    // So that's the only case we need to handle here.
+    // TODO(csilvers): check if this is really forward-declarable or
+    // not.  You *could* do something like: 'template<template<class
+    // T> class A = Foo> class C { A<int>* x; };' and never
+    // dereference x, but that's pretty unlikely.  So for now, we just
+    // assume these default template template args always need full
+    // type info.
+    if (IsDefaultTemplateTemplateArg(current_ast_node())) {
+      current_ast_node()->set_in_forward_declare_context(false);
+      ReportDeclUse(CurrentLoc(), template_name.getAsTemplateDecl());
     }
     return true;
   }
