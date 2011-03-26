@@ -595,6 +595,13 @@ const IncludePicker::IncludeMapEntry cpp_include_map[] = {
   { "<backward/hashtable.h>", kPrivate, "<hash_map>", kPublic },
   { "<backward/hashtable.h>", kPrivate, "<hash_set>", kPublic },
   { "<backward/strstream>", kPrivate, "<strstream>", kPublic },
+  // We have backward as part of the -I search path now, so have the
+  // non-backwards-prefix version as well.
+  { "<binders.h>", kPrivate, "<functional>", kPublic },
+  { "<hash_fun.h>", kPrivate, "<hash_map>", kPublic },
+  { "<hash_fun.h>", kPrivate, "<hash_set>", kPublic },
+  { "<hashtable.h>", kPrivate, "<hash_map>", kPublic },
+  { "<hashtable.h>", kPrivate, "<hash_set>", kPublic },
   // We do our own string implementation, which needs some mappings.
   { "<ext/vstring_fwd.h>", kPrivate, "<string>", kPublic },
   { "<ext/vstring.h>", kPrivate, "<string>", kPublic },
