@@ -462,7 +462,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // location will be in <scratch space>.  Use the instantiation
     // location instead.
     const FullSourceLoc spelling_loc = GetSpellingLoc(loc);
-    if (StartsWith(PrintableLoc(spelling_loc), "<scratch "))
+    if (IsInMacro(loc) && StartsWith(PrintableLoc(spelling_loc), "<scratch "))
       return GetInstantiationLoc(loc);
     else
       return spelling_loc;
@@ -2395,7 +2395,8 @@ class InstantiatedTemplateVisitor
     parent_type = ResugarType(parent_type);
     if (!Base::HandleFunctionCall(callee, parent_type))
       return false;
-    if (!callee || CanIgnoreCurrentASTNode())  return true;
+    if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
+      return true;
     return TraverseExpandedTemplateFunctionHelper(callee, parent_type);
   }
 
