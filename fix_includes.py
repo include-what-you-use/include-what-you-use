@@ -109,9 +109,9 @@ _ELSE_RE = re.compile(r'\s*#\s*(else|elif)\b')  # compiles #else/elif
 _ENDIF_RE = re.compile(r'\s*#\s*endif\b')
 # This is used to delete 'empty' namespaces after fwd-decls are removed.
 # Some third-party libraries use macros to start/end namespaces.
-_NAMESPACE_START_RE = re.compile(r'(\s*namespace\b[^{]*{\s*)+$|'
+_NAMESPACE_START_RE = re.compile(r'(\s*namespace\b[^{]*{\s*)+(//.*)?$|'
                                  r'(U_NAMESPACE_BEGIN)')
-_NAMESPACE_END_RE = re.compile(r'(\s*}+)|(U_NAMESPACE_END)')
+_NAMESPACE_END_RE = re.compile(r'(})|(U_NAMESPACE_END)')
 # The group (in parens) holds the unique 'key' identifying this #include.
 _INCLUDE_RE = re.compile(r'\s*#\s*include\s+([<"][^"">]+[>"])')
 # We don't need this to actually match forward-declare lines (we get
@@ -1088,6 +1088,88 @@ def _GetToplevelReorderSpans(file_lines):
   return good_reorder_spans
 
 
+def _GetFirstNamespaceLevelReorderSpan(file_lines):
+  """Returns the first reorder-span inside a namespace, if it's easy to do.
+
+  This routine is meant to handle the simple case where code consists
+  of includes and forward-declares, and then a 'namespace my_namespace'
+  followed by more forward-declares.  We return the reorder span of
+  the inside-namespace forward-declares, which is a good place to
+  insert new inside-namespace forward-declares (rather than putting
+  these new forward-declares at the top level).
+
+  So it goes through the top of the file, stopping at the first
+  'contentful' line.  If that line has the form 'namespace <foo> {',
+  it then continues until it finds a forward-declare line, or a
+  non-namespace contentful line.  In the latter case it returns None.
+  In the former case, it figures out the reorder-span this
+  forward-declare line is part of, and returns (enclosing_namespaces,
+  reorder_span).
+
+  Arguments:
+    file_lines: an array of LineInfo objects with .type and
+       .reorder_span filled in.
+
+  Returns:
+    (None, None) if we could not find the first namespace-level
+    reorder-span, or (enclosing_namespaces, reorder_span), where
+    enclosing_namespaces is a string that looks like (for instance)
+    'namespace ns1 { namespace ns2 {', and reorder-span is a
+    [start_line, end_line) pair.
+  """
+  simple_namespace_re = re.compile('^\s*namespace\s+([^{]+)\s*\{\s*(//.*)?$')
+  namespace_prefix = ''
+
+  for line_number in xrange(len(file_lines)):
+    line_info = file_lines[line_number]
+    if line_info.deleted:
+      continue
+
+    # If we're an empty line, just ignore us.  Likewise with #include
+    # lines, which aren't 'contentful' for our purposes.
+    if line_info.type in (_COMMENT_LINE_RE, _BLANK_LINE_RE, _INCLUDE_RE):
+      continue
+
+    # If we're a 'contentful' line such as an #ifdef, bail.  The one
+    # exception is the ifdef header-guard.
+    elif line_info.type == _IFDEF_RE:
+      # Ignore header-guard #ifdef.
+      if (line_number < len(file_lines) - 1 and
+          _IsHeaderGuard(file_lines[line_number], file_lines[line_number+1])):
+        pass
+      else:
+        return (None, None)
+
+    elif line_info.type in (_NAMESPACE_END_RE, _ELSE_RE, _ENDIF_RE, None):
+      # Other contentful lines that cause us to bail.
+      # TODO(csilvers): we could probably keep going if there are no
+      # braces on the line.  We could also keep track of our #ifdef
+      # depth instead of bailing on #else and #endif, and only accept
+      # the fwd-decl-inside-namespace if it's at ifdef-depth 0.
+      return (None, None)
+
+    elif line_info.type == _NAMESPACE_START_RE:
+      # Only handle the simple case of 'namespace <foo> {'
+      m = simple_namespace_re.match(line_info.line)
+      if not m:
+        return (None, None)
+      namespace_prefix += ('namespace %s { ' % m.group(1).strip())
+
+    elif line_info.type == _FORWARD_DECLARE_RE:
+      # If we're not in a namespace, keep going.  Otherwise, this is
+      # just the situation we're looking for!
+      if namespace_prefix:
+        return (namespace_prefix, line_info.reorder_span)
+
+    else:
+      # We should have handled all the cases above!
+      assert False, ('unknown line-info type', line_info.type)
+
+  # If we get here, we never saw a forward-declare inside a namespace
+  # (nor anything that would have caused us to bail earlier).  Alas.
+  return (None, None)
+
+
 # These are potential 'kind' arguments to _FirstReorderSpanWith.
 # We also sort our output in this order, to the extent possible.
 _MAIN_CU_INCLUDE_KIND = 1         # e.g. #include "foo.h" when editing foo.cc
@@ -1268,6 +1350,44 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename):
   return (len(file_lines), len(file_lines))
 
 
+def _RemoveNamespacePrefix(fwd_decl_iwyu_line, namespace_prefix):
+  """Return a version of the input line with namespace_prefix removed, or None.
+
+  If fwd_decl_iwyu_line is
+     namespace ns1 { namespace ns2 { namespace ns3 { foo } } }
+  and namespace_prefix = 'namespace ns1 { namespace ns2 {', then
+  this function returns 'namespace ns3 { foo }'.  It removes the
+  namespace_prefix, and any } }'s at the end of the line.  If line
+  does not fit this form, then this function returns None.
+
+  Arguments:
+    line: a line from iwyu about a forward-declare line to add
+    namespace_prefix: a non-empty string of the form
+      namespace <ns1> { namespace <ns2> { [...]
+
+  Returns:
+    A version of the input line with the namespaces in namespace
+    prefix removed, or None if this is not possible because the input
+    line is not of the right form.
+  """
+  assert namespace_prefix, "_RemoveNamespaces requires a non-empty prefix"
+  if not fwd_decl_iwyu_line.startswith(namespace_prefix):
+    return None
+
+  # Remove the prefix
+  fwd_decl_iwyu_line = fwd_decl_iwyu_line[len(namespace_prefix):].lstrip()
+
+  # Remove the matching trailing }'s, preserving comments.
+  num_braces = namespace_prefix.count('{')
+  ending_braces_re = re.compile('(\s*\}){%d}\s*$' % num_braces)
+  m = ending_braces_re.search(fwd_decl_iwyu_line)
+  if not m:
+    return None
+  fwd_decl_iwyu_line = fwd_decl_iwyu_line[:m.start(0)]
+
+  return fwd_decl_iwyu_line
+
+
 def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines):
   """Given a span of lines from file_lines, returns a "decorated" result.
 
@@ -1348,10 +1468,29 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines):
   # All we're left with is the reorder-span we're in.  Hopefully it's easy.
   reorder_span = firstline.reorder_span
   if reorder_span is None:     # must be a new #include we're adding
-    # TODO(csilvers): could make this more efficient by storing, per-kind.
-    toplevel_reorder_spans = _GetToplevelReorderSpans(file_lines)
-    reorder_span = _FirstReorderSpanWith(file_lines, toplevel_reorder_spans,
-                                         kind, iwyu_record.filename)
+    # If we're a forward-declare inside a namespace, see if there's a
+    # reorder span inside the same namespace we can fit into.
+    if kind == _FORWARD_DECLARE_KIND:
+      (namespace_prefix, possible_reorder_span) = \
+          _GetFirstNamespaceLevelReorderSpan(file_lines)
+      if (namespace_prefix and possible_reorder_span and
+          firstline.line.startswith(namespace_prefix)):
+        # Great, we can go into this reorder_span.  We also need to
+        # modify all-lines because this line doesn't need the
+        # namespace prefix anymore.  Make sure we can do that before
+        # succeeding.
+        new_firstline = _RemoveNamespacePrefix(firstline.line, namespace_prefix)
+        if new_firstline:
+          assert all_lines[first_contentful_line] == firstline.line
+          all_lines[first_contentful_line] = new_firstline
+          reorder_span = possible_reorder_span
+
+    # If that didn't work out, find a top-level reorder span to go into.
+    if reorder_span is None:
+      # TODO(csilvers): could make this more efficient by storing, per-kind.
+      toplevel_reorder_spans = _GetToplevelReorderSpans(file_lines)
+      reorder_span = _FirstReorderSpanWith(file_lines, toplevel_reorder_spans,
+                                           kind, iwyu_record.filename)
 
   return (reorder_span, kind, sort_key, all_lines)
 

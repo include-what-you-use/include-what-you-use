@@ -222,6 +222,39 @@ int main() { return 0; }
     self.assertListEqual([], self.actual_after_contents)  # 'no diffs'
     self.assertEqual(0, num_modified_files)
 
+  def testRemoveEmptyNamespace(self):
+    """Tests we remove a namespace if we remove all fwd-decls inside it."""
+    infile = """\
+// Copyright 2010
+
+#include <stdio.h>
+
+namespace ns {   ///-
+class Foo;       ///-
+namespace ns2 {  ///-
+namespace ns3 {  ///-
+class Bar;       ///-
+} }              ///-
+class Baz;       ///-
+}                ///-
+                 ///-
+int main() { return 0; }
+"""
+    iwyu_output = """\
+empty_namespace should add these lines:
+
+empty_namespace should remove these lines:
+- class Foo;  // lines 6-6
+- namespace ns { namespace ns2 { namespace ns3 { class Bar; } } }  // lines 9-9
+- namespace ns { class Baz; } }  // lines 11-11
+
+The full include-list for empty_namespace:
+#include <stdio.h>
+---
+"""
+    self.RegisterFileContents({'empty_namespace': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testRemoveEmptyIfdef(self):
     """Tests we remove an #ifdef if we remove all #includes inside it."""
     # Also makes sure we reorder properly around the removed ifdef.
@@ -671,6 +704,99 @@ namespace Foo { class Bang; }  // lines 7-7
     self.RegisterFileContents({'add_fwd_decl_before_using': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testAddForwardDeclareInsideNamespaceSometimes(self):
+    """Tests that in special situations, we will put fwd-decls inside a ns."""
+    infile = """\
+// Copyright 2010
+
+#include "foo.h"
+
+class Bar;
+template <typename T> class Baz;
+
+namespace ns {
+
+  namespace  ns2   {   // we sure do love nesting our namespaces!
+
+class NsFoo;
+///+namespace ns3 { class NsBang; }
+///+namespace ns3 { template <typename T> class NsBaz; }
+template <typename T> class NsBar;
+
+}
+}
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_decl_inside_namespace should add these lines:
+namespace ns { namespace ns2 { namespace ns3 { class NsBang; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class NsBaz; } } }
+
+add_fwd_decl_inside_namespace should remove these lines:
+
+The full include-list for add_fwd_decl_inside_namespace:
+#include "foo.h"  // lines 3-3
+class Bar;  // lines 5-5
+namespace ns { namespace ns2 { class NsFoo; } }  // lines 12-12
+namespace ns { namespace ns2 { namespace ns3 { class NsBang; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class NsBaz; } } }
+namespace ns { namespace ns2 { template <typename T> class NsBar; } }  // lines 13-13
+template <typename T> class Baz;  // lines 6-6
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_inside_namespace': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testDoNotAddForwardDeclareInsideNamespaceWithContentfulLine(self):
+    """Tests that for 'confusing' code, we keep fwd-decl at the top."""
+    infile = """\
+// Copyright 2010
+
+#include "foo.h"
+
+class Bar;
+///+namespace ns { namespace ns2 { class NsBang; } }
+///+namespace ns { namespace ns2 { template <typename T> class NsBaz; } }
+template <typename T> class Baz;
+
+#ifdef THIS_IS_A_CONTENTFUL_LINE
+#include "bar.h"
+#endif
+
+namespace ns {
+
+namespace ns2 {
+
+class NsFoo;
+template <typename T> class NsBar;
+
+}
+
+}
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+do_not_add_fwd_decl_inside_namespace should add these lines:
+namespace ns { namespace ns2 { class NsBang; } }
+namespace ns { namespace ns2 { template <typename T> class NsBaz; } }
+
+do_not_add_fwd_decl_inside_namespace should remove these lines:
+
+The full include-list for do_not_add_fwd_decl_inside_namespace:
+#include "foo.h"  // lines 3-3
+class Bar;  // lines 5-5
+namespace ns { namespace ns2 { class NsBang; } }
+namespace ns { namespace ns2 { class NsFoo; } }  // lines 16-16
+namespace ns { namespace ns2 { template <typename T> class NsBar; } }  // lines 17-17
+namespace ns { namespace ns2 { template <typename T> class NsBaz; } }
+template <typename T> class Baz;  // lines 6-6
+---
+"""
+    self.RegisterFileContents({'do_not_add_fwd_decl_inside_namespace': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testRemoveNamespaces(self):
     """Tests that we keep or remove ns's based on fwd decl content."""
     infile = """\
@@ -697,11 +823,11 @@ ns_fwd_decl should add these lines:
 
 ns_fwd_decl should remove these lines:
 - class NoKeepClass;  // lines 5-5
-- template<typename Foo> class ns1::ns2::NoKeepTplClass;    // lines 13-13
+- namespace ns1 { namespace ns2 { template<typename Foo> class NoKeepTplClass; } }   // lines 13-13
 
 The full include-list for ns_fwd_decl:
-struct ns1::KeepStruct; // lines 4-4
-template<typename Foo> class ns1::KeepTplClass;  // lines 6-6
+namespace ns1 { struct KeepStruct; }  // lines 4-4
+namespace ns1 { template<typename Foo> class KeepTplClass; }  // lines 6-6
 ---
 """
     self.RegisterFileContents({'ns_fwd_decl': infile})
@@ -756,8 +882,8 @@ icu_namespace should remove these lines:
 - template<typename Foo> class NoKeepTplClass;    // lines 10-10
 
 The full include-list for icu_namespace:
-struct ns1::KeepStruct; // lines 4-4
-template<typename Foo> class ns1::KeepTplClass;  // lines 6-6
+namespace ns1 { struct KeepStruct; }  // lines 4-4
+namespace ns1 { template<typename Foo> class KeepTplClass; }  // lines 6-6
 ---
 """
     self.RegisterFileContents({'icu_namespace': infile})
