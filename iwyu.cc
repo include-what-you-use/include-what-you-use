@@ -838,9 +838,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // If the function being called is a member of a class, parent_type
   // is the type of the method's owner (parent), as it is written in
   // the source.  (We need the type-as-written so we can distinguish
-  // explicitly-written template args from default template args.)
+  // explicitly-written template args from default template args.)  We
+  // also pass in the CallExpr (or CXXConstructExpr, etc).  This may
+  // be NULL if the function call is implicit.
   bool HandleFunctionCall(clang::FunctionDecl* callee,
-                          const clang::Type* parent_type) {
+                          const clang::Type* parent_type,
+                          const clang::Expr* calling_expr) {
     if (!callee)  return true;
     if (ShouldPrintSymbolFromCurrentFile()) {
       errs() << AnnotatedName("FunctionCall")
@@ -857,7 +860,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       errs() << AnnotatedName("Destruction")
              << PrintableType(type_being_destroyed) << "\n";
     }
-    return this->getDerived().HandleFunctionCall(decl, type_being_destroyed);
+    return this->getDerived().HandleFunctionCall(decl, type_being_destroyed,
+                                                 static_cast<Expr*>(NULL));
   }
 
 
@@ -865,14 +869,16 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (!Base::TraverseCallExpr(expr))  return false;
     if (CanIgnoreCurrentASTNode())  return true;
     return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
-                                                 TypeOfParentIfMethod(expr));
+                                                 TypeOfParentIfMethod(expr),
+                                                 expr);
   }
 
   bool TraverseCXXMemberCallExpr(clang::CXXMemberCallExpr* expr) {
     if (!Base::TraverseCXXMemberCallExpr(expr))  return false;
     if (CanIgnoreCurrentASTNode())  return true;
     return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
-                                                 TypeOfParentIfMethod(expr));
+                                                 TypeOfParentIfMethod(expr),
+                                                 expr);
   }
 
   bool TraverseCXXOperatorCallExpr(clang::CXXOperatorCallExpr* expr) {
@@ -889,7 +895,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
         parent_type = GetTypeOf(first_argument);
     }
     return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
-                                                 parent_type);
+                                                 parent_type, expr);
   }
 
   bool TraverseCXXConstructExpr(clang::CXXConstructExpr* expr) {
@@ -897,7 +903,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())  return true;
 
     if (!this->getDerived().HandleFunctionCall(expr->getConstructor(),
-                                               GetTypeOf(expr)))
+                                               GetTypeOf(expr),
+                                               expr))
       return false;
 
     // When creating a local variable or a temporary, the constructor
@@ -927,8 +934,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     CXXDestructorDecl* dtor_decl =
         const_cast<CXXDestructorDecl*>(GetSiblingDestructorFor(expr));
     const Type* type = GetTypeOf(expr);
-    return (this->getDerived().HandleFunctionCall(ctor_decl, type) &&
-            this->getDerived().HandleFunctionCall(dtor_decl, type));
+    return (this->getDerived().HandleFunctionCall(ctor_decl, type, expr) &&
+            this->getDerived().HandleFunctionCall(dtor_decl, type, expr));
   }
 
   bool TraverseCXXNewExpr(clang::CXXNewExpr* expr) {
@@ -943,11 +950,11 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       const Type* op_parent = NULL;
       if (isa<CXXMethodDecl>(operator_new))
         op_parent = parent_type;
-      if (!this->getDerived().HandleFunctionCall(operator_new, op_parent))
+      if (!this->getDerived().HandleFunctionCall(operator_new, op_parent, expr))
         return false;
     }
-    return this->getDerived().HandleFunctionCall(
-        expr->getConstructor(), parent_type);
+    return this->getDerived().HandleFunctionCall(expr->getConstructor(),
+                                                 parent_type, expr);
   }
 
   bool TraverseCXXDeleteExpr(clang::CXXDeleteExpr* expr) {
@@ -963,12 +970,13 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       const Type* op_parent = NULL;
       if (isa<CXXMethodDecl>(operator_delete))
         op_parent = parent_type;
-      if (!this->getDerived().HandleFunctionCall(operator_delete, op_parent))
+      if (!this->getDerived().HandleFunctionCall(operator_delete, op_parent,
+                                                 expr))
         return false;
     }
     const CXXDestructorDecl* dtor = GetDestructorForDeleteExpr(expr);
     return this->getDerived().HandleFunctionCall(
-        const_cast<CXXDestructorDecl*>(dtor), parent_type);
+        const_cast<CXXDestructorDecl*>(dtor), parent_type, expr);
   }
 
   // This is to catch assigning template functions to function pointers.
@@ -992,7 +1000,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       const Type* parent_type = NULL;
       if (expr->getQualifier() && expr->getQualifier()->getAsType())
         parent_type = expr->getQualifier()->getAsType();
-      if (!this->getDerived().HandleFunctionCall(fn_decl, parent_type))
+      if (!this->getDerived().HandleFunctionCall(fn_decl, parent_type, expr))
         return false;
     }
     return true;
@@ -1186,12 +1194,13 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
     return Base::TraverseImplicitDestructorCall(decl, type);
   }
   bool HandleFunctionCall(clang::FunctionDecl* callee,
-                          const clang::Type* parent_type) {
+                          const clang::Type* parent_type,
+                          const clang::Expr* calling_expr) {
     VERRS(7) << GetSymbolAnnotation() << "[function call] "
              << static_cast<void*>(callee)
              << (callee ? PrintableDecl(callee) : "NULL") << "\n";
     AddAstNodeAsPointer(callee);
-    return Base::HandleFunctionCall(callee, parent_type);
+    return Base::HandleFunctionCall(callee, parent_type, calling_expr);
   }
 
   //------------------------------------------------------------
@@ -2007,8 +2016,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // When we call (or potentially call) a function, do an IWYU check
   // via ReportDeclUse() to make sure the definition of the function
   // is properly #included.
-  bool HandleFunctionCall(FunctionDecl* callee, const Type* parent_type) {
-    if (!Base::HandleFunctionCall(callee, parent_type))
+  bool HandleFunctionCall(FunctionDecl* callee, const Type* parent_type,
+                          const clang::Expr* calling_expr) {
+    if (!Base::HandleFunctionCall(callee, parent_type, calling_expr))
       return false;
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
@@ -2281,15 +2291,22 @@ class InstantiatedTemplateVisitor
   // ScanInstantiatedType() is similar, except that it looks through
   // the definition of a class template instead of a statement.
 
+  // resugar_map is a map from an unsugared (canonicalized) template
+  // type to the template type as written (or as close as we can find
+  // to it).  If a type is not in resugar-map, it might be due to a
+  // recursive template call and encode a template type we don't care
+  // about ourselves.  If it's in the resugar_map but with a NULL
+  // value, it's a default template parameter, that the
+  // template-caller may or may not be responsible for.
   void ScanInstantiatedFunction(
       const FunctionDecl* fn_decl, const Type* parent_type,
       const ASTNode* caller_ast_node,
       const set<SourceLocation>& processed_overload_locs,
-      const set<const Type*>& tpl_type_args_of_interest) {
+      const map<const Type*, const Type*>& resugar_map) {
     Clear();
     caller_ast_node_ = caller_ast_node;
     ExtendProcessedOverloadLocs(processed_overload_locs);  // copy from caller
-    tpl_type_args_of_interest_ = tpl_type_args_of_interest;
+    resugar_map_ = resugar_map;
 
     // Make sure that the caller didn't already put the decl on the ast-stack.
     CHECK_(caller_ast_node->GetAs<Decl>() != fn_decl && "AST node already set");
@@ -2307,11 +2324,11 @@ class InstantiatedTemplateVisitor
   void ScanInstantiatedType(
       const Type* type, const ASTNode* caller_ast_node,
       const set<SourceLocation>& processed_overload_locs,
-      const set<const Type*>& tpl_type_args_of_interest) {
+      const map<const Type*, const Type*>& resugar_map) {
     Clear();
     caller_ast_node_ = caller_ast_node;
     ExtendProcessedOverloadLocs(processed_overload_locs);  // copy from caller
-    tpl_type_args_of_interest_ = tpl_type_args_of_interest;
+    resugar_map_ = resugar_map;
 
     // Make sure that the caller didn't already put the type on the ast-stack.
     CHECK_(caller_ast_node->GetAs<Type>() != type && "AST node already set");
@@ -2349,16 +2366,36 @@ class InstantiatedTemplateVisitor
 
   virtual string GetSymbolAnnotation() const { return " in tpl"; }
 
-  // We only care about types that are Subst types, and also are in
-  // tpl_type_args_of_interest_.
+  // We only care about types that would have been dependent in the
+  // uninstantiated template: that is, SubstTemplateTypeParmType types
+  // or types derived from them.  We use nodes_to_ignore_ to select
+  // down to those.  Even amongst subst-type, we only want ones in the
+  // resugar-map: the rest we have chosen to ignore for some reason.
   virtual bool CanIgnoreType(const Type* type) const {
     if (nodes_to_ignore_.Contains(type))
       return true;
-    const SubstTemplateTypeParmType* subst_type = DynCastFrom(type);
-    if (!subst_type)
-      return true;
-    const Type* real_type = subst_type->getReplacementType().getTypePtr();
-    return GetMatchingTypesOfInterest(real_type).empty();
+
+    // If we're a default template argument, we should ignore the type
+    // if the template author intend-to-provide it, but otherwise we
+    // should not ignore it -- the caller is responsible for the type.
+    // This captures cases like hash_set<Foo>, where the caller is
+    // responsible for defining hash<Foo>.
+    // SomeInstantiatedTemplateIntendsToProvide handles the case we
+    // have a templated class that #includes "foo.h" and has a
+    // scoped_ptr<Foo>: we say the templated class provides Foo, even
+    // though it's scoped_ptr.h that's actually trying to call
+    // Foo::Foo and ::~Foo.
+    // TODO(csilvers): this isn't ideal: ideally we'd want
+    // 'TheInstantiatedTemplateForWhichTypeWasADefaultTemplateArgumentIntendsToProvide',
+    // but clang doesn't store that information.
+    if (IsDefaultTemplateParameter(type))
+      return SomeInstantiatedTemplateIntendsToProvide(type);
+
+    // If we're not in the resugar-map at all, we're not a type
+    // corresponding to the template being instantiated, so we
+    // can be ignored.
+    type = RemoveSubstTemplateTypeParm(type);
+    return !Contains(resugar_map_, type);
   }
 
   // We ignore function calls in nodes_to_ignore_, which were already
@@ -2404,11 +2441,11 @@ class InstantiatedTemplateVisitor
   // Overridden traverse-style methods from Base.
 
   // The 'convenience' HandleFunctionCall is perfect for us!
-  bool HandleFunctionCall(FunctionDecl* callee, const Type* parent_type) {
-    // clang desugars template types, so Foo<MyTypedef>() gets turned
-    // into Foo<UnderlyingType>().  Try to convert back.
-    parent_type = ResugarType(parent_type);
-    if (!Base::HandleFunctionCall(callee, parent_type))
+  bool HandleFunctionCall(FunctionDecl* callee, const Type* parent_type,
+                          const clang::Expr* calling_expr) {
+    if (const Type* resugared_type = ResugarType(parent_type))
+      parent_type = resugared_type;
+    if (!Base::HandleFunctionCall(callee, parent_type, calling_expr))
       return false;
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
@@ -2448,12 +2485,15 @@ class InstantiatedTemplateVisitor
   // SubstTemplateTypeParmTypeLoc in the AST tree.
   bool VisitSubstTemplateTypeParmType(clang::SubstTemplateTypeParmType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
-    // Ignore everything not in our list of explicitly-typed-in-code types.
-    const Type* actual_type = type->getReplacementType().getTypePtr();
-    const set<const Type*> types_of_interest  // almost always has 0 or 1 entry
-        = GetMatchingTypesOfInterest(actual_type);
-    if (types_of_interest.empty())
-      return Base::VisitSubstTemplateTypeParmType(type);
+    if (CanIgnoreType(type))  return true;
+
+    // Figure out how this type was actually written.  clang always
+    // canonicalizes SubstTemplateTypeParmType, losing typedef info, etc.
+    const Type* actual_type = ResugarType(type);
+    CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
+
+    // TODO(csilvers): whenever we report a type use here, we want to
+    // do an iwyu check on this type (to see if sub-types are used).
 
     // If we're a nested-name-specifier class (the Foo in Foo::bar),
     // we need our full type info no matter what the context (even if
@@ -2462,7 +2502,7 @@ class InstantiatedTemplateVisitor
     // in_forward_declare_context.  I think this will require changing
     // in_forward_declare_context to yes/no/maybe.
     if (current_ast_node()->ParentIsA<NestedNameSpecifier>()) {
-      ReportTypesUse(CurrentLoc(), types_of_interest);
+      ReportTypeUse(CurrentLoc(), actual_type);
       return Base::VisitSubstTemplateTypeParmType(type);
     }
 
@@ -2471,23 +2511,9 @@ class InstantiatedTemplateVisitor
     // reference is forward-declarable, below.
     if (current_ast_node()->ParentIsA<UnaryExprOrTypeTraitExpr>() &&
         isa<ReferenceType>(actual_type)) {
-      // This is a bit tricky: we can't call
-      // ReportTypesUse(..., types_of_interest), because we want a
-      // dereferenced version of what's in types_of_interest.  We
-      // can't just use actual_type because it's possibly desugared.
       const ReferenceType* actual_reftype = cast<ReferenceType>(actual_type);
-      const Type* deref_actual_type
-          = actual_reftype->getPointeeTypeAsWritten().getTypePtr();
-      const Type* desugared_deref_actual_type
-          = deref_actual_type->getUnqualifiedDesugaredType();
-      for (Each<const Type*> it(&types_of_interest); !it.AtEnd(); ++it) {
-        if (const ReferenceType* reftype = DynCastFrom(*it)) {
-          const Type* deref = reftype->getPointeeTypeAsWritten().getTypePtr();
-          if (deref->getUnqualifiedDesugaredType()
-              == desugared_deref_actual_type)
-            ReportTypeUse(CurrentLoc(), deref);
-        }
-      }
+      ReportTypeUse(CurrentLoc(),
+                    actual_reftype->getPointeeTypeAsWritten().getTypePtr());
       return Base::VisitSubstTemplateTypeParmType(type);
     }
 
@@ -2504,12 +2530,7 @@ class InstantiatedTemplateVisitor
 
     // We attribute all uses in an instantiated template to the
     // template's caller.
-    // TODO(csilvers): If the parent is a TemplateSpecializationType,
-    // then we need to figure out how the parent is being used.
-    // TODO(csilvers): recurse on actual_type (in a 'normal' context,
-    // not in InstantiatedTemplateVisitor), to catch nested types
-    // like Outer<Inner<MyClass> >.
-    ReportTypesUse(caller_loc(), types_of_interest);
+    ReportTypeUse(caller_loc(), actual_type);
     return Base::VisitSubstTemplateTypeParmType(type);
   }
 
@@ -2521,9 +2542,13 @@ class InstantiatedTemplateVisitor
   // TODO(csilvers): This should maybe move to HandleFunctionCall.
   bool VisitCXXConstructExpr(clang::CXXConstructExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
-    const set<const Type*> types_of_interest
-        = GetMatchingTypesOfInterest(GetTypeOf(expr));
-    ReportTypesUse(caller_loc(), types_of_interest);
+    const Type* class_type = GetTypeOf(expr);
+    if (CanIgnoreType(class_type))  return true;
+
+    // If the ctor type is a SubstTemplateTypeParmType, get the type-as-typed.
+    const Type* actual_type = ResugarType(class_type);
+    CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
+    ReportTypeUse(caller_loc(), actual_type);
     return Base::VisitCXXConstructExpr(expr);
   }
 
@@ -2531,26 +2556,26 @@ class InstantiatedTemplateVisitor
   // Clears the state of the visitor.
   void Clear() {
     caller_ast_node_ = NULL;
-    tpl_type_args_of_interest_.clear();
+    resugar_map_.clear();
     traversed_decls_.clear();
     nodes_to_ignore_.clear();
     cache_storers_.clear();
   }
 
   // If we see the instantiated template using a type or decl (such as
-  // std::allocator), we want to know if the template-as-written is
+  // std::allocator), we want to know if the author of the template is
   // providing the type or decl, so the code using the instantiated
   // template doesn't have to.  For instance:
   //    vector<int, /*allocator<int>*/> v;   // in foo.cc
   // Does <vector> provide the definition of allocator<int>?  If not,
   // foo.cc will have to #include <allocator>.
-  //   We say the template-as-written does provide the decl if it,
-  // or any other header seen since we started instantiating the
-  // template, sees it.  The latter requirement is to deal with
-  // template args that cross instantiation boundaries: if we have a
-  // templated class that #includes "foo.h" and has a scoped_ptr<Foo>,
-  // we say the templated class provides Foo, even though it's
-  // scoped_ptr.h that's actually trying to call Foo::Foo and ::~Foo.
+  //   We say the template-as-written does provide the decl if it, or
+  // any other header seen since we started instantiating the
+  // template, sees it.  The latter requirement is to deal with a
+  // sitaution like this: we have a templated class that #includes
+  // "foo.h" and has a scoped_ptr<Foo>; we say the templated class
+  // provides Foo, even though it's scoped_ptr.h that's actually
+  // trying to call Foo::Foo and Foo::~Foo.
   SourceLocation GetLocOfTemplateThatProvides(const NamedDecl* decl) const {
     if (!decl)
       return SourceLocation();   // an invalid source-loc
@@ -2567,71 +2592,35 @@ class InstantiatedTemplateVisitor
   bool SomeInstantiatedTemplateIntendsToProvide(const NamedDecl* decl) const {
     return GetLocOfTemplateThatProvides(decl).isValid();
   }
+  bool SomeInstantiatedTemplateIntendsToProvide(const Type* type) const {
+    type = RemoveSubstTemplateTypeParm(type);
+    type = RemovePointersAndReferences(type);  // get down to the decl
+    if (const NamedDecl* decl = TypeToDeclAsWritten(type))
+      return GetLocOfTemplateThatProvides(decl).isValid();
+    return true;   // we always provide non-decl types like int, etc.
+  }
 
-  // The type that gets substituted in SubstTemplateTypeParmTypeLoc is
-  // a fully desugared type -- typedefs followed, etc.  So testing
-  // whether it's the same as one of the user-specified template types
-  // is non-trivial.  We find all the user-specified types that could
-  // qualify, a bit-overconservative, but fine in practice.
-  //    We also say our type is of interest if it's a template type
-  // with a template param in tpl_type_args_of_interest_, but *only*
-  // if we (the current file) aren't responsible for providing this
-  // template type.  This means we don't say we're interested in
-  // allocator<Foo> (which vector provides), but we are interested
-  // in hash<Foo> (which hash_set doesn't provide).
-  set<const Type*> GetMatchingTypesOfInterest(const Type* type) const {
-    set<const Type*> retval;
-    const Type* canonical_type = type->getUnqualifiedDesugaredType();
-    for (Each<const Type*> it(&tpl_type_args_of_interest_); !it.AtEnd(); ++it) {
-      if ((*it)->getUnqualifiedDesugaredType() == canonical_type)
-        retval.insert(*it);
-    }
-    if (const RecordType* record_type = DynCastFrom(canonical_type)) {
-      if (const ClassTemplateSpecializationDecl* tpl_decl =
-          DynCastFrom(record_type->getDecl())) {
-        if (!SomeInstantiatedTemplateIntendsToProvide(tpl_decl)) {
-          const TemplateArgumentList& tpl_args = tpl_decl->getTemplateArgs();
-          for (unsigned i = 0; i < tpl_args.size(); ++i) {
-            const TemplateArgument& arg = tpl_args[i];
-            // TODO(csilvers): deal with other kinds of template args
-            // (TemplateTemplateArgs, and const expressions like sizeof(T))
-            if (arg.getKind() != TemplateArgument::Type)
-              continue;
-            const Type* arg_type = arg.getAsType().getTypePtr();
-            const Type* canonical_arg_type
-                = arg_type->getUnqualifiedDesugaredType();
-            for (Each<const Type*> it(&tpl_type_args_of_interest_);
-                 !it.AtEnd(); ++it) {
-              if ((*it)->getUnqualifiedDesugaredType() == canonical_arg_type) {
-                retval.insert(record_type);
-                return retval;   // nothing else will affect retval
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return retval;
+  // For a SubstTemplateTypeParmType, says whether it corresponds to a
+  // default template parameter (one not explicitly specified when the
+  // class was instantiated) or not.  We store this in resugar_map by
+  // having the value be NULL.
+  bool IsDefaultTemplateParameter(const Type* type) const {
+    type = RemoveSubstTemplateTypeParm(type);
+    return ContainsKeyValue(resugar_map_, type, static_cast<Type*>(NULL));
   }
 
   // clang desugars template types, so Foo<MyTypedef>() gets turned
-  // into Foo<UnderlyingType>().  We can 'resugar' using
-  // tpl_type_args_of_interest_.  If tpl_type_args_of_interest_ shows
-  // nothing interesting, we return the type under the input
-  // SubstTemplateTypeParmType.  If the given type isn't a
-  // SubstTemplateTypeParmType, just return it unchanged.
+  // into Foo<UnderlyingType>().  We can 'resugar' using resugar_map_.
+  // If we're not in the resugar-map, then we weren't canonicalized,
+  // so we can just use the input type unchanged.
   const Type* ResugarType(const Type* type) const {
-    if (type && isa<SubstTemplateTypeParmType>(type)) {
-      const set<const Type*> sugared_types = GetMatchingTypesOfInterest(type);
-      // It's possible for two sugared types to have mapped to the
-      // same unsugared type, but for our purposes they're equivalent,
-      // so we just pick one arbitrarily.
-      if (!sugared_types.empty())
-        return *sugared_types.begin();
-      return RemoveSubstTemplateTypeParm(type);
-    }
-    return type;
+    type = RemoveSubstTemplateTypeParm(type);
+    // If we're the resugar-map but with a value of NULL, it means
+    // we're a default template arg, which means we don't have anything
+    // to resugar to.  So just return the input type.
+    if (ContainsKeyValue(resugar_map_, type, static_cast<const Type*>(NULL)))
+      return type;
+    return GetOrDefault(resugar_map_, type, type);
   }
 
   bool TraverseExpandedTemplateFunctionHelper(const FunctionDecl* fn_decl,
@@ -2650,7 +2639,7 @@ class InstantiatedTemplateVisitor
     // Make sure all the types we report in the recursive TraverseDecl
     // calls, below, end up in the cache for fn_decl.
     CacheStoringScope css(&cache_storers_, &function_calls_full_use_cache_,
-                          fn_decl, tpl_type_args_of_interest_);
+                          fn_decl, resugar_map_);
 
     // We want to ignore all nodes that are the same in this
     // instantiated function as they are in the uninstantiated version
@@ -2726,7 +2715,7 @@ class InstantiatedTemplateVisitor
     // Make sure all the types we report in the recursive TraverseDecl
     // calls, below, end up in the cache for class_decl.
     CacheStoringScope css(&cache_storers_, &class_members_full_use_cache_,
-                          class_decl, tpl_type_args_of_interest_);
+                          class_decl, resugar_map_);
 
     for (DeclContext::decl_iterator it = class_decl->decls_begin();
          it != class_decl->decls_end(); ++it) {
@@ -2746,14 +2735,12 @@ class InstantiatedTemplateVisitor
   // Returns true if we replayed uses, false if key isn't in the cache.
   bool ReplayUsesFromCache(const FullUseCache& cache, const NamedDecl* key,
                            SourceLocation use_loc) {
-    if (!cache.Contains(key, tpl_type_args_of_interest_))
+    if (!cache.Contains(key, resugar_map_))
       return false;
     VERRS(6) << "(Replaying full-use information from the cache for "
              << key->getQualifiedNameAsString() << ")\n";
-    ReportTypesUse(use_loc,
-                   cache.GetFullUseTypes(key, tpl_type_args_of_interest_));
-    ReportDeclsUse(use_loc,
-                   cache.GetFullUseDecls(key, tpl_type_args_of_interest_));
+    ReportTypesUse(use_loc, cache.GetFullUseTypes(key, resugar_map_));
+    ReportDeclsUse(use_loc, cache.GetFullUseDecls(key, resugar_map_));
     return true;
   }
 
@@ -2767,15 +2754,30 @@ class InstantiatedTemplateVisitor
     if (current_ast_node() && current_ast_node()->in_forward_declare_context())
       return true;   // never depend on any types if a fwd-decl
 
-    const set<const Type*>& fulluse_types =
-        FullUseCache::GetPrecomputedUnsugaredFullUseTypes(preprocessor_info(),
-                                                          tpl_type);
-    if (!fulluse_types.empty()) {
+    const map<const Type*, const Type*>& resugar_map =
+        FullUseCache::GetPrecomputedResugarMap(tpl_type);
+    if (!resugar_map.empty()) {
       VERRS(6) << "(Using pre-computed list of full-use information for "
                << TypeToDeclAsWritten(tpl_type)->getQualifiedNameAsString()
                << ")\n";
-      for (Each<const Type*> it(&fulluse_types); !it.AtEnd(); ++it) {
-        ReportTypesUse(caller_loc(), GetMatchingTypesOfInterest(*it));
+      // For entries with a non-NULL value, we report the value, which
+      // is the unsugared type, as being fully used.  Entries with a
+      // NULL value are default template args, and we only report them
+      // if the template class doesn't intend-to-provide them.
+      // SomeInstantiatedTemplateIntendsToProvide handles the case we
+      // have a templated class that #includes "foo.h" and has a
+      // scoped_ptr<Foo>: we say the templated class provides Foo,
+      // even though it's scoped_ptr.h that's actually trying to call
+      // Foo::Foo and ::~Foo.  TODO(csilvers): this isn't ideal:
+      // ideally we'd want
+      // 'TheInstantiatedTemplateForWhichTypeWasADefaultTemplateArgumentIntendsToProvide',
+      // but clang doesn't store that information.
+
+      for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
+        if (it->second)
+          ReportTypeUse(caller_loc(), it->second);
+        else if (!SomeInstantiatedTemplateIntendsToProvide(it->first))
+          ReportTypeUse(caller_loc(), it->first);
       }
       return true;
     }
@@ -2795,10 +2797,14 @@ class InstantiatedTemplateVisitor
   // The AST-chain when this template was instantiated.
   const ASTNode* caller_ast_node_;
 
-  // The types mentioned in the call expression/etc -- those types
-  // actually typed by the user (or inferred template arguments in
-  // template function calls).  It excludes default tpl parameters.
-  set<const Type*> tpl_type_args_of_interest_;
+  // resugar_map is a map from an unsugared (canonicalized) template
+  // type to the template type as written (or as close as we can find
+  // to it).  If a type is not in resugar-map, it might be due to a
+  // recursive template call and encode a template type we don't care
+  // about ourselves.  If it's in the resugar_map but with a NULL
+  // value, it's a default template parameter, that the
+  // template-caller may or may not be responsible for.
+  map<const Type*, const Type*> resugar_map_;
 
   // Used to avoid recursion in the *Helper() methods.
   set<const Decl*> traversed_decls_;
@@ -3059,7 +3065,8 @@ class IwyuAstConsumer
         } else {
           continue;    // not a method or static method
         }
-        if (!this->getDerived().HandleFunctionCall(fn_decl, underlying_type))
+        if (!this->getDerived().HandleFunctionCall(
+                fn_decl, underlying_type, static_cast<Expr*>(NULL)))
           return false;
       }
     }
@@ -3077,8 +3084,9 @@ class IwyuAstConsumer
     return Base::VisitDeclRefExpr(expr);
   }
 
-  // The compiler fully instantiates a template class before taking
-  // the size of it.  So so do we.
+  // This Expr is for sizeof(), alignof() and similar.  The compiler
+  // fully instantiates a template class before taking the size of it.
+  // So so do we.
   bool VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
 
@@ -3087,12 +3095,13 @@ class IwyuAstConsumer
     if (const ReferenceType* reftype = DynCastFrom(arg_type)) {
       arg_type = reftype->getPointeeTypeAsWritten().getTypePtr();
     }
-    const set<const Type*> tpl_type_args = GetExplicitTplTypeArgsOf(arg_type);
-    if (IsTemplatizedType(arg_type)) {
-      instantiated_template_visitor_.ScanInstantiatedType(
-          arg_type, current_ast_node(), processed_overload_locs(),
-          tpl_type_args);
-    }
+    if (!IsTemplatizedType(arg_type))
+      return Base::VisitUnaryExprOrTypeTraitExpr(expr);
+
+    const map<const Type*, const Type*> resugar_map
+        = GetTplTypeResugarMapForClass(arg_type);
+    instantiated_template_visitor_.ScanInstantiatedType(
+        arg_type, current_ast_node(), processed_overload_locs(), resugar_map);
 
     return Base::VisitUnaryExprOrTypeTraitExpr(expr);
   }
@@ -3138,13 +3147,14 @@ class IwyuAstConsumer
     // If we're not in a forward-declare context, use of a template
     // specialization requires having the full type information.
     if (!CanForwardDeclareType(current_ast_node())) {
-      const set<const Type*> tpl_type_args = GetExplicitTplTypeArgsOf(type);
+      const map<const Type*, const Type*> resugar_map
+          = GetTplTypeResugarMapForClass(type);
       // ScanInstantiatedType requires that type not already be on the
       // ast-stack that it sees, but in our case it will be.  So we
       // pass in the parent-node.
       const ASTNode* ast_parent = current_ast_node()->parent();
       instantiated_template_visitor_.ScanInstantiatedType(
-          type, ast_parent, processed_overload_locs(), tpl_type_args);
+          type, ast_parent, processed_overload_locs(), resugar_map);
     }
 
     return Base::VisitTemplateSpecializationType(type);
@@ -3155,6 +3165,9 @@ class IwyuAstConsumer
   bool VisitTemplateName(TemplateName template_name) {
     if (CanIgnoreCurrentASTNode())  return true;
     if (!Base::VisitTemplateName(template_name))  return false;
+    // TODO(csilvers): I think this is wrong -- it gets the base
+    // template definition when we may actually be referring to a
+    // specialization.
     if (const TemplateDecl* tpl_decl = template_name.getAsTemplateDecl()) {
       if (CanForwardDeclareTemplateName(current_ast_node())) {
         current_ast_node()->set_in_forward_declare_context(true);
@@ -3173,33 +3186,24 @@ class IwyuAstConsumer
   // check IWYU status of the template parameters *in the template
   // code* (so for 'MyFunc<T>() { T t; ... }', the contents of
   // MyFunc<MyClass> add an iwyu requirement on MyClass).
-  bool HandleFunctionCall(FunctionDecl* callee, const Type* parent_type) {
-    if (!Base::HandleFunctionCall(callee, parent_type))
+  bool HandleFunctionCall(FunctionDecl* callee, const Type* parent_type,
+                          const clang::Expr* calling_expr) {
+    if (!Base::HandleFunctionCall(callee, parent_type, calling_expr))
       return false;
-    if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
+
+    if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type))
       return true;
 
-    // Figure out the template parameters for this function or method,
-    // if any.  For methods, add in template args *explicitly*
-    // specified when the template class was created.
-    set<const Type*> tpl_type_args = GetTplTypeArgsOfFunction(callee);
-    // TODO(csilvers): for derived tpl args (Foo(arg), not
-    // Foo<type>(arg)), remove types from retval if they don't appear
-    // somewhere in a function arg (or return value) as typed.  (We can
-    // figure out explicit vs derived via
-    // CallExpr->getCallee()->IgnoreParenCasts()->hasExplicitTemlpateArgs(),
-    // if it's a declrefexpr.)  This is a simple heuristic for dealing
-    // with typedefs and default arguments.  For instance, cout << "a"
-    // should not yield char_traits<char> here, since the first
-    // argument of operator<< is typed ostream, not
-    // basic_ostream<char, char_traits<char> >.
-    if (parent_type)     // means we're a method of a class
-      InsertAllInto(GetExplicitTplTypeArgsOf(parent_type), &tpl_type_args);
+    map<const Type*, const Type*> resugar_map
+        = GetTplTypeResugarMapForFunction(callee, calling_expr);
 
-    if (IsTemplatizedFunctionDecl(callee) || IsTemplatizedType(parent_type))
-      instantiated_template_visitor_.ScanInstantiatedFunction(
-          callee, parent_type,
-          current_ast_node(), processed_overload_locs(), tpl_type_args);
+    if (parent_type) {    // means we're a method of a class
+      InsertAllInto(GetTplTypeResugarMapForClass(parent_type), &resugar_map);
+    }
+
+    instantiated_template_visitor_.ScanInstantiatedFunction(
+        callee, parent_type,
+        current_ast_node(), processed_overload_locs(), resugar_map);
     return true;
   }
 

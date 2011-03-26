@@ -64,40 +64,43 @@ class FullUseCache {
   // caching reporting-info for.  Since what we report depends on
   // what the types-of-interest were, we store that in the key too.
   typedef pair<const void*,
-               set<const clang::Type*> > Key;
+               map<const clang::Type*, const clang::Type*> > Key;
   // The value are the types and decls we reported.
   typedef pair<const set<const clang::Type*>,
                const set<const clang::NamedDecl*> > Value;
 
   void Insert(const void* decl_or_type,
-              const set<const clang::Type*>& types_of_interest,
+              const map<const clang::Type*, const clang::Type*>& resugar_map,
               const set<const clang::Type*>& reported_types,
               const set<const clang::NamedDecl*>& reported_decls) {
     // TODO(csilvers): should in_forward_declare_context() be in Key too?
-    cache_.insert(pair<Key,Value>(Key(decl_or_type, types_of_interest),
+    cache_.insert(pair<Key,Value>(Key(decl_or_type, resugar_map),
                                   Value(reported_types, reported_decls)));
   }
 
-  // types_of_interest are the template arguments used to instantiate
-  // this template.
-  bool Contains(const void* key,
-                const set<const clang::Type*>& types_of_interest) const {
+  // resguar_map is the 'uncanonicalize' map for the template
+  // arguments used to instantiate this template.
+  bool Contains(
+      const void* key,
+      const map<const clang::Type*, const clang::Type*>& resugar_map) const {
     return include_what_you_use::Contains(
-        cache_, Key(key, types_of_interest));
+        cache_, Key(key, resugar_map));
   }
 
   // You must call Contains() before calling these, to make sure the
   // key is in the cache.
   const set<const clang::Type*>& GetFullUseTypes(
-      const void* key, const set<const clang::Type*>& types_of_interest) const {
-    const Value* value = FindInMap(&cache_, Key(key, types_of_interest));
+      const void* key,
+      const map<const clang::Type*, const clang::Type*>& resugar_map) const {
+    const Value* value = FindInMap(&cache_, Key(key, resugar_map));
     CHECK_(value && "Must call Contains() before calling GetFullUseTypes()");
     return value->first;
   }
 
   const set<const clang::NamedDecl*>& GetFullUseDecls(
-      const void* key, const set<const clang::Type*>& types_of_interest) const {
-    const Value* value = FindInMap(&cache_, Key(key, types_of_interest));
+      const void* key,
+      const map<const clang::Type*, const clang::Type*>& resugar_map) const {
+    const Value* value = FindInMap(&cache_, Key(key, resugar_map));
     CHECK_(value && "Must call Contains() before calling GetFullUseDecls()");
     return value->second;
   }
@@ -115,8 +118,7 @@ class FullUseCache {
   // That is why this is implemented in a different function, and not
   // available via GetFullUseType(), which does not have this problem
   // with sugaring.
-  static set<const clang::Type*> GetPrecomputedUnsugaredFullUseTypes(
-      const IwyuPreprocessorInfo& preprocessor_info,
+  static map<const clang::Type*, const clang::Type*> GetPrecomputedResugarMap(
       const clang::TemplateSpecializationType* tpl_type);
 
  private:
@@ -138,17 +140,16 @@ class CacheStoringScope {
   CacheStoringScope(set<CacheStoringScope*>* cache_storers,
                     FullUseCache* cache,
                     const void* key,
-                    const set<const clang::Type*>& types_of_interest)
+                    const map<const clang::Type*, const clang::Type*>& resugar)
       : cache_storers_(cache_storers), cache_(cache),
-        key_(key), types_of_interest_(types_of_interest) {
+        key_(key), resugar_map_(resugar) {
     // Register ourselves so ReportDeclUse() and ReportTypeUse()
     // will call back to us.
     cache_storers_->insert(this);
   }
 
   ~CacheStoringScope() {
-    cache_->Insert(key_, types_of_interest_,
-                   reported_types_, reported_decls_);
+    cache_->Insert(key_, resugar_map_, reported_types_, reported_decls_);
     cache_storers_->erase(this);
   }
 
@@ -165,7 +166,7 @@ class CacheStoringScope {
   set<CacheStoringScope*>* const cache_storers_;
   FullUseCache* const cache_;
   const void* const key_;
-  const set<const clang::Type*> types_of_interest_;
+  const map<const clang::Type*, const clang::Type*>& resugar_map_;
   set<const clang::Type*> reported_types_;
   set<const clang::NamedDecl*> reported_decls_;
 };

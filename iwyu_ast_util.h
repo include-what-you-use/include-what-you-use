@@ -31,6 +31,7 @@ class CXXRecordDecl;
 class CallExpr;
 class CastExpr;
 class Decl;
+class ExplicitTemplateArgumentList;
 class Expr;
 class FunctionDecl;
 class FunctionType;
@@ -493,10 +494,38 @@ const clang::RecordDecl* GetDefinitionForClass(const clang::Decl* decl);
 // class name.  Used to determine where forward-declares are.
 clang::SourceRange GetSourceRangeOfClassDecl(const clang::Decl* decl);
 
-// Luckily, one can't have partial template specialization or
-// default template args for function templates.
-set<const clang::Type*> GetTplTypeArgsOfFunction(
-    const clang::FunctionDecl* decl);
+// One can't have partial template specialization or default template
+// args for function templates, but they're complicated in their own
+// way: they can have deduced template arguments (deduced from the
+// function arguments).  When a templated function call does not
+// specify the template arguments explicitly, but instead derives them
+// from the function arguments, clang canonicalizes (desugars) the
+// template args.  For
+//    template<class T> void MyFunc(T t) { ... }
+//    MyFunc(typedef_type)
+// clang will say this is a call to MyFunc<canonical_type>().  Also:
+//    MyFunc(my_int_vector)
+// clang will say this is MyFunc<vector<int, alloc<int> >(), with
+// no indication that alloc<int> is actually a default parameter.
+// Equally bad:
+//    template<class T> void OtherFunc(MyClass<T> t) { ... }
+//    typedef MyClass<Foo> FooClass;
+//    OtherFunc(my_foo_class);
+// clang will see T as MyClass<Foo> even though my_foo_class hides the
+// use of Foo through the typedef.
+//    This routine attempts to solve all these problems by looking at
+// the type-as-written for the actual arguments (and return value) to
+// try to reverse engineer the derived-argument matching that was
+// done.  (It's easy in the rare cases the template args are
+// explicitly specified.)  It returns a map from the unsugared
+// (canonical) types of each template argument to its sugared
+// (as-written) type.  For now we ignore non-type template args.
+// NOTE: This routine is far from perfect.  To really do this right,
+// we'd need to refactor SemaTemplateDeduction to take an argument to
+// not canonicalize deduced template arguments.
+// calling_expr should be a CallExpr, CXXConstructExpr, or DeclRefExpr.
+map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForFunction(
+    const clang::FunctionDecl* decl, const clang::Expr* calling_expr);
 
 // If class_decl is instantiated from a class template,
 // returns the decl for that template; otherwise returns class_decl.
@@ -568,6 +597,9 @@ const clang::Type* GetTypeOf(const clang::ValueDecl* decl);
 // ...or class, struct, union, enum, typedef, or template type.
 const clang::Type* GetTypeOf(const clang::TypeDecl* decl);
 
+// Template parameters are always reduced to the canonical type.
+const clang::Type* GetCanonicalType(const clang::Type* type);
+
 // The ElaborationType -- which says whether a type is preceded by
 // 'class' or 'struct' ('class Foo'), or whether the type-name has a
 // namespace ('ns::Foo') -- often pops where it's not wanted.  This
@@ -633,9 +665,16 @@ const clang::NamedDecl* TypeToDeclAsWritten(const clang::Type* type);
 // different type to 'type' via an implicit constructor.
 bool CanImplicitlyConvertTo(const clang::Type* type);
 
+// clang desugars template arguments: follows typedefs, etc.  We
+// want the unsugared type, so this function provides a map from
+// the desugared type back to the original type-as-written, as
+// determined from the class's template arguments.  For default
+// template arguments that are not specified by the caller, we
+// map the type to NULL, to indicate there's no inherent sugaring.
 // For ease of calling, this accept any type, but will return an empty
-// set for any input that's not a template specialization type.
-set<const clang::Type*> GetExplicitTplTypeArgsOf(const clang::Type* type);
+// map for any input that's not a template specialization type.
+map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForClass(
+    const clang::Type* type);
 
 // --- Utilities for Stmt.
 
@@ -678,6 +717,11 @@ const clang::FunctionType* GetCalleeFunctionType(clang::CallExpr* expr);
 // think it would work to just look at expr->getSubExpr()->getType(),
 // but that seems to strip off the reference.)
 bool IsCastToReferenceType(const clang::CastExpr* expr);
+
+// Returns the list of explicit template args for all exprs that support
+// such a concept (declrefexpr, memberexpr), and NULL if none is present.
+const clang::ExplicitTemplateArgumentList* GetExplicitTplArgs(
+    const clang::Expr* expr);
 
 }  // namespace include_what_you_use
 

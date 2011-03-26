@@ -16,7 +16,11 @@
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_INDIRECT_H_
 
 class IndirectClass {
+ public:
+  void Method() { };
+  int a;
   static void StaticMethod() { };
+  static int statica;
 };
 
 

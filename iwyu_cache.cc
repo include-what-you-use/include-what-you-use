@@ -58,8 +58,7 @@ static const char* const kFullUseTypes[] = {
 // full use-info for 'sizeof(vector<MyClass>)', but not for
 // 'myclass_vector.clear();'.  This is because the former never tries
 // to instantiate methods, making the hard-coding much easier.
-set<const Type*> FullUseCache::GetPrecomputedUnsugaredFullUseTypes(
-    const IwyuPreprocessorInfo& preprocessor_info,
+map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
     const TemplateSpecializationType* tpl_type) {
   static const int fulluse_size = (sizeof(kFullUseTypes) /
                                    sizeof(*kFullUseTypes));
@@ -74,7 +73,7 @@ set<const Type*> FullUseCache::GetPrecomputedUnsugaredFullUseTypes(
   CHECK_(tpl_decl && "tpl-type decl is not a tpl specialization?");
   if (!include_what_you_use::Contains(
           fulluse_types, tpl_decl->getQualifiedNameAsString()))
-    return set<const Type*>();
+    return map<const Type*, const Type*>();
 
   VERRS(6) << "(Using pre-computed list of full-use information for "
            << tpl_decl->getQualifiedNameAsString() << ")\n";
@@ -86,23 +85,11 @@ set<const Type*> FullUseCache::GetPrecomputedUnsugaredFullUseTypes(
            && "kFullUseType types must contain only 'type' template args");
   }
 
-  // First, collect all explicit template args.  (Note: we'll have to
-  // do something more clever here if any types in kFullUseTypes
-  // start accepting template-template types.)
-  set<const Type*> retval = GetExplicitTplTypeArgsOf(tpl_type);
-
-  // Now, collect all default template args (after the explicit
-  // args).  We collect those that our type does not 'intend to
-  // provide'.
-  for (unsigned i = tpl_type->getNumArgs(); i < all_tpl_args.size(); ++i) {
-    const Type* arg_type = all_tpl_args.get(i).getAsType().getTypePtr();
-    if (preprocessor_info.PublicHeaderIntendsToProvide(
-            GetFileEntry(tpl_decl),
-            GetFileEntry(TypeToDeclAsWritten(arg_type))))
-      continue;
-    retval.insert(arg_type);
-  }
-  return retval;
+  // The default resugar-map works correctly for all these types (by
+  // design): we fully use all template types.  (Note: we'll have to
+  // do something more clever here if any types in kFullUseTypes start
+  // accepting template-template types.)
+  return GetTplTypeResugarMapForClass(tpl_type);
 }
 
 }  // namespace include_what_you_use
