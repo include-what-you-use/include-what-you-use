@@ -14,6 +14,7 @@
 #include "clang/Frontend/DiagnosticOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/LLVMContext.h"
@@ -159,8 +160,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   // recognize. We need to extend the driver library to support this use model
   // (basically, exactly one input, and the operation mode is hard wired).
   args.push_back("-fsyntax-only");
-  OwningPtr<Compilation> compilation(driver.BuildCompilation(args.size(),
-                                                             args.data()));
+  OwningPtr<Compilation> compilation(driver.BuildCompilation(args));
   if (!compilation)
     return NULL;
 
