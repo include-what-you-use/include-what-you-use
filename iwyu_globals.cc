@@ -18,6 +18,7 @@
 #include "iwyu_include_picker.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
+#include "iwyu_output.h"
 #include "iwyu_stl_util.h"
 
 using clang::DirectoryEntry;
@@ -59,10 +60,14 @@ static vector<string>* ComputeSystemIncludeDirectories(
 }
 
 void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
+  CHECK_(sm && "InitGlobals() needs a non-NULL SourceManager");
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
   search_paths = ComputeSystemIncludeDirectories(header_search);
   include_picker = new IncludePicker;
+
+  for (Each<string> it(search_paths); !it.AtEnd(); ++it)
+    VERRS(6) << "Search path: " << *it << "\n";
 }
 
 clang::SourceManager* GlobalSourceManager() {
