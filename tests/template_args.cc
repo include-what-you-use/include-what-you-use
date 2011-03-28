@@ -80,10 +80,18 @@ template<typename T> struct Outer { T t; };
 template<typename T> struct Inner { T t; };
 
 void NestedTemplateArguments() {
-  // TODO(csilvers): IWYU: IndirectClass is...*indirect.h
   // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
   Outer<Inner<IndirectClass> > oi;
   (void)oi;
+
+  // IWYU: IndirectClass needs a declaration
+  Outer<Inner<IndirectClass>* > oip;
+  (void)oip;
+
+  // IWYU: IndirectClass needs a declaration
+  Outer<Inner<IndirectClass> >* opi;
+  (void)opi;
 }
 
 // ---------------------------------------------------------------

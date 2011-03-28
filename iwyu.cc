@@ -1517,7 +1517,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   //   template<class T> struct C { typedef pair<T,T> value_type; };
   // iwyu will demand the full type of pair, but not of its template
   // arguments.  This is handled not here, but below, in
-  // DetermineForwardDeclareStatusForTemplateArg.
+  // VisitSubstTemplateTypeParmType.
   //
   // There may be other exceptions we could add, but these are the
   // important ones.  (2) is important to avoid requiring the full
@@ -2123,16 +2123,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       ast_node->set_in_forward_declare_context(true);
       return;
     }
-    // We do allow *passed-in* template args to be forward-declared
-    // when they're in a typedef.  That is, for code like this:
-    //    template<class T> struct MyStruct { typedef pair<T, T> MyPair; };
-    // we allow T to be forward-declared.  That's because the typedef
-    // is not 're-exporting' the type: if anything, it was given the type.
-    if (arg->getKind() == TemplateArgument::Type &&
-        isa<SubstTemplateTypeParmType>(arg->getAsType().getTypePtr()) &&
-        ast_node->HasAncestorOfType<TypedefDecl>()) {
-      ast_node->set_in_forward_declare_context(true);
-    }
   }
 
   bool VisitTemplateArgument(const TemplateArgument& arg) {
@@ -2154,6 +2144,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // encode the logic of whether a particular type of object
   // can be forward-declared or not.
 
+  // TODO(csilvers): get rid of in_forward_declare_context() and make
+  // this the canonical place to figure out if we can forward-declare.
   bool CanForwardDeclareType(const ASTNode* ast_node) const {
     CHECK_(ast_node->IsA<Type>());
     // If we're in a forward-declare context, well then, there you have it.
@@ -2178,6 +2170,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       ast_node = ast_node->parent();
     }
     const Type* parent_type = ast_node->GetParentAs<Type>();
+    // TODO(csilvers): should probably just be IsPointerOrReference
     return parent_type && IsPointerOrReferenceAsWritten(parent_type);
   }
 
@@ -2327,6 +2320,11 @@ class InstantiatedTemplateVisitor
           const_cast<NamedDecl*>(type_decl_as_written));
     }
 
+    // TODO(csilvers): figure out the type and call
+    // TraverseDataAndTypeMembersOfClassHelper directly when possible.
+    // Then, change TraverseTemplateSpecializationType to call
+    // CanIgnoreType (actually, have CanIgnoreCurrentASTNode() call
+    // CanIgnoreType()).
     TraverseType(QualType(type, 0));
   }
 
@@ -2337,6 +2335,7 @@ class InstantiatedTemplateVisitor
   // template definition is, so we never have any reason to ignore a
   // node.
   virtual bool CanIgnoreCurrentASTNode() const {
+    // TODO(csilvers): call CanIgnoreType() if we're a type.
     return nodes_to_ignore_.Contains(*current_ast_node());
   }
 
@@ -2453,13 +2452,47 @@ class InstantiatedTemplateVisitor
     return true;
   }
 
+  bool TraverseTemplateSpecializationTypeHelper(
+      const clang::TemplateSpecializationType* type) {
+    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanForwardDeclareType(current_ast_node()))
+      current_ast_node()->set_in_forward_declare_context(true);
+    return TraverseDataAndTypeMembersOfClassHelper(type);
+  }
   bool TraverseTemplateSpecializationType(
       clang::TemplateSpecializationType* type) {
     if (!Base::TraverseTemplateSpecializationType(type))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
-    return TraverseDataAndTypeMembersOfClassHelper(type);
+    return TraverseTemplateSpecializationTypeHelper(type);
+  }
+  bool TraverseTemplateSpecializationTypeLoc(
+      clang::TemplateSpecializationTypeLoc typeloc) {
+    if (!Base::TraverseTemplateSpecializationTypeLoc(typeloc))  return false;
+    return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
   }
 
+  bool TraverseTemplateSpecializationTypeHelper(
+      const clang::SubstTemplateTypeParmType* type) {
+    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreType(type))  return true;
+    const Type* actual_type = ResugarType(type);
+    CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
+    return TraverseType(QualType(actual_type, 0));
+  }
+  // When we see a template argument used inside an instantiated
+  // template, we want to explore the type recursively.  For instance
+  // if we see Inner<Outer<Foo> >(), we want to recurse onto Foo.
+  bool TraverseSubstTemplateTypeParmType(
+      clang::SubstTemplateTypeParmType* type) {
+    if (!Base::TraverseSubstTemplateTypeParmType(type))
+      return false;
+    return TraverseTemplateSpecializationTypeHelper(type);
+  }
+  bool TraverseSubstTemplateTypeParmTypeLoc(
+      clang::SubstTemplateTypeParmTypeLoc typeloc) {
+    if (!Base::TraverseSubstTemplateTypeParmTypeLoc(typeloc))
+      return false;
+    return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
+  }
 
   // These do the actual work of finding the types to return.  Our
   // task is made easier since (at least in theory), every time we
@@ -2486,6 +2519,25 @@ class InstantiatedTemplateVisitor
     if (current_ast_node()->ParentIsA<NestedNameSpecifier>()) {
       ReportTypeUse(CurrentLoc(), actual_type);
       return Base::VisitSubstTemplateTypeParmType(type);
+    }
+
+    // If we're inside a typedef, we don't need our full type info --
+    // in this case we follow what the C++ language allows and let
+    // the underlying type of a typedef be forward-declared.  This has
+    // the effect that code like:
+    //   class MyClass;
+    //   template<class T> struct Foo { typedef T value_type; ... }
+    //   Foo<MyClass> f;
+    // does not make us require the full type of MyClass.  The idea
+    // is that using Foo<MyClass>::value_type already requires the
+    // type for MyClass, so it doesn't make sense for the typedef
+    // to require it as well.  TODO(csilvers): this doesn't really
+    // make any sense.  Who figures out we need the full type if
+    // you do 'Foo<MyClass>::value_type m;'?
+    for (const ASTNode* ast_node = current_ast_node();
+         ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
+      if (ast_node->IsA<TypedefDecl>())
+        return Base::VisitSubstTemplateTypeParmType(type);
     }
 
     // sizeof(a reference type) is the same as sizeof(underlying type).
@@ -2676,6 +2728,9 @@ class InstantiatedTemplateVisitor
     // No point in doing traversal if we're not fully instantiated.
     if (!type || type->isDependentType())
       return true;
+    // Or if we're forward-declared.
+    if (current_ast_node()->in_forward_declare_context())
+      return true;
 
     const ClassTemplateSpecializationDecl* class_decl
         = DynCastFrom(TypeToDeclAsWritten(type));
@@ -2842,6 +2897,8 @@ class IwyuAstConsumer
     // involving the typedef.
     if (IsMemberOfATypedef(current_ast_node()))
       return true;
+
+    // TODO(csilvers): if we're a type, call CanIgnoreType().
 
     return false;
   }
