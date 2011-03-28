@@ -1218,10 +1218,7 @@ int main() {
   // IWYU: std::vector is...*<vector>
   // IWYU: I2_Class needs a declaration
   std::vector<I2_Class>* i2_class_vector = NULL;
-  // TODO(csilvers): IWYU: I2_Class is...*badinc-i2.h
-  // To get I2_Class, we'll have to do better at figuring out the
-  // derived type as typed.  (Right now, we'll see the full type,
-  // including Alloc<>).  This seems hard.
+  // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
   // IWYU: std::vector is...*<vector>
   i1_template_method_only_class.e(i2_class_vector);
