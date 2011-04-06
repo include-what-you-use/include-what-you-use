@@ -261,6 +261,18 @@ bool OneUse::NeedsSuggestedHeader() const {
 
 namespace internal {
 
+// At verbose level 7 and above, returns a printable version of
+// the pointer, suitable for being emitted after AnnotatedName.
+// At lower verbose levels, returns the empty string.
+string PrintablePtr(const void* ptr) {
+  if (ShouldPrint(7)) {
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "%p ", ptr);
+    return buffer;
+  }
+  return "";
+}
+
 // Helpers for printing a forward declaration of a record type or
 // record type template that can be put in source code.  The hierarchy
 // of the Decl classes used in these helpers looks like:
@@ -435,21 +447,27 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
 
 void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl) {
   CHECK_(fwd_decl && "forward_declare_decl unexpectedly NULL");
+  CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<RecordDecl>(fwd_decl))
+         && "Can only forward declare classes and templated classes");
   lines_.push_back(OneIncludeOrForwardDeclareLine(fwd_decl));
   lines_.back().set_present();
   direct_forward_declares_.insert(fwd_decl);   // store in another way as well
   VERRS(6) << "Marked found forward-declare: "
            << GetFilePath(file_) << ":" << lines_.back().LineNumberString()
-           << ": " << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
+           << ": " << internal::PrintablePtr(fwd_decl)
+           << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
 }
 
 static void LogSymbolUse(const string& prefix, const OneUse& use) {
   string decl_loc;
-  if (use.decl())
+  string printable_ptr;
+  if (use.decl()) {
     decl_loc = PrintableLoc(GetLocation(use.decl()));
-  else
+    printable_ptr = internal::PrintablePtr(use.decl());
+  } else {
     decl_loc = use.decl_filepath();
-  VERRS(6) << prefix << " " << use.symbol_name()
+  }
+  VERRS(6) << prefix << " " << printable_ptr << use.symbol_name()
            << " (from " << decl_loc << ")"
            << " at " << use.PrintableUseLoc() << "\n";
 }
@@ -1025,6 +1043,9 @@ void CalculateIwyuForForwardDeclareUse(
   const NamedDecl* same_file_decl = NULL;
   const RecordDecl* record_decl = DynCastFrom(use->decl());
   const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
+  const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(use->decl());
+  if (spec_decl)
+    tpl_decl = spec_decl->getSpecializedTemplate();
   if (tpl_decl)
     record_decl = tpl_decl->getTemplatedDecl();
   CHECK_(record_decl && "Non-records should have been handled already");
@@ -1070,15 +1091,17 @@ void CalculateIwyuForForwardDeclareUse(
   }
   if (providing_decl) {
     // Change decl_ to point to this "better" redecl.  Be sure to store
-    // as a TemplateClassDecl if that's what decl_ was originally.
-    if (tpl_decl && isa<RecordDecl>(providing_decl)) {
-      CHECK_(isa<CXXRecordDecl>(providing_decl) &&
-             cast<CXXRecordDecl>(providing_decl)->getDescribedClassTemplate());
-      const CXXRecordDecl* cxx_decl = cast<CXXRecordDecl>(providing_decl);
-      use->reset_decl(cxx_decl->getDescribedClassTemplate());
-    } else {
-      use->reset_decl(providing_decl);
+    // as a TemplateClassDecl if we're a templated class.
+    const NamedDecl* better_decl = providing_decl;
+    if (const ClassTemplateSpecializationDecl* spec_decl
+        = DynCastFrom(providing_decl)) {
+      better_decl = spec_decl->getSpecializedTemplate();
+      CHECK_(better_decl && "Can't find specialization");
+    } else if (const CXXRecordDecl* cxx_decl = DynCastFrom(providing_decl)) {
+      if (cxx_decl->getDescribedClassTemplate())
+        better_decl = cxx_decl->getDescribedClassTemplate();
     }
+    use->reset_decl(better_decl);
   }
 
   // (D2) Mark iwyu violation unless defined in a current #include.
@@ -1091,6 +1114,12 @@ void CalculateIwyuForForwardDeclareUse(
              << " (" << use->PrintableUseLoc() << "): have earlier fwd-decl at "
              << PrintableLoc(GetLocation(same_file_decl)) << "\n";
   } else {
+    // OK, we're going to forward-declare this type.  Make sure it's
+    // a template class decl, and not an instantiation decl.
+    if (const ClassTemplateSpecializationDecl* spec_decl
+        = DynCastFrom(use->decl())) {
+      use->reset_decl(spec_decl->getSpecializedTemplate());
+    }
     use->set_is_iwyu_violation();
   }
 }

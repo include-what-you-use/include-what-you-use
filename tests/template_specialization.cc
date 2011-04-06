@@ -12,8 +12,13 @@
 
 #include "tests/template_specialization-d1.h"
 
+template<typename T> class Foo;
+
 // IWYU: Foo is...*template_specialization-i2.h
 Foo<int> foo;
+// Even though Foo<int> has a specialization, it doesn't matter
+// because forward-declaring is ok.
+Foo<int>* foo_ptr;
 
 // Check we do the right thing when we're a template template arg, too.
 // IWYU: Foo is...*template_specialization-i1.h
@@ -41,6 +46,7 @@ tests/template_specialization.cc should add these lines:
 
 tests/template_specialization.cc should remove these lines:
 - #include "tests/template_specialization-d1.h"  // lines XX-XX
+- template <typename T> class Foo;  // lines XX-XX
 
 The full include-list for tests/template_specialization.cc:
 #include "tests/template_specialization-i1.h"  // for Foo
