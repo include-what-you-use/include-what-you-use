@@ -7,10 +7,12 @@
 #
 ##===----------------------------------------------------------------------===##
 
-# If you get compile errors while building this, try syncing your
-# version of LLVM+Clang to the revision include-what-you-use was
-# developed against:
-#LLVM_AND_CLANG_REVISION = r124350
+# If you get compile errors while building this, it may be that
+# top-of-tree clang has changed its internal API a bit since the last
+# iwyu commit.  One way to solve this is to use 'svn log' to figure
+# out when the last commit to the include-what-you-use tree was (or
+# visit http://code.google.com/p/include-what-you-use/source/list),
+# and then sync clang and llvm to the revision they had at that time.
 
 CLANG_LEVEL := ../..
 
