@@ -1,4 +1,4 @@
-//===--- no_h_includes_cc-inc.cc - test input file for iwyu ---------------===//
+//===--- no_h_includes_cc-inc.c - test input file for iwyu ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,3 +12,9 @@
 #define CC_INC_HAS_INT 1
 
 const int kCcIncInt = 100;
+
+/**** IWYU_SUMMARY
+
+(devtools/maintenance/include_what_you_use/tests/no_h_includes_cc-inc.c has correct #includes/fwd-decls)
+
+***** IWYU_SUMMARY */

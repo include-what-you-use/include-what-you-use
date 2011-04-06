@@ -770,11 +770,9 @@ set<string> CalculateMinimalIncludes(
 // B3) Discard symbol uses for builtin symbols ('__builtin_memcmp') and
 //     for operator new and operator delete (excluding placement new),
 //     which are effectively built-in even though they're in <new>.
-// B4) Discard .h-file uses of symbols defined in a .cc file (sanity check).
-// B5) Discard symbol uses for member functions that live in the same
+// B4) Discard symbol uses for member functions that live in the same
 //     file as the class they're part of (the parent check suffices).
-// B6) Discard macro uses in the same file as the definition (B2 redux).
-// B7) Discard .h-file uses of macros defined in a .cc file (B4 redux).
+// B5) Discard macro uses in the same file as the definition (B2 redux).
 
 // Determining 'desired' #includes:
 // C1) Get a list of 'effective' direct includes.  For most files, it's
@@ -786,6 +784,8 @@ set<string> CalculateMinimalIncludes(
 //     collection of files that has overlap with every set from (1).
 //     "Add-minimal" means that the collection should have as few
 //     files in it as possible *that we are not already #including*.
+// C4) Sanity check: remove any .cc files from desired-includes unless
+//     they're already in actual-includes.
 //
 // Calculate IWYU violations for forward-declares:
 // D1) If the definition of the forward-declaration lives in a desired
@@ -798,7 +798,9 @@ set<string> CalculateMinimalIncludes(
 //     violation.
 //
 // Calculate IWYU violations for full uses:
-// E1) If the desired include-file for this symbols is not in the
+// E1) Sanity check: ignore the use if it would require adding an
+//     #include of a .cc file.
+// E2) If the desired include-file for this symbols is not in the
 //     current includes, mark as an iwyu violation.
 
 void ProcessForwardDeclare(OneUse* use) {
@@ -921,29 +923,7 @@ void ProcessFullUse(OneUse* use) {
     }
   }
 
-  // (B4) Discard uses of a symbol declared in a .cc and used in a .h.
-  // Here's how it could happen:
-  //   foo.h:  #define DEFINE_CLASS(classname) <backslash>
-  //             struct classname { classname() { Init(); } void Init() {} };
-  //   foo.cc: DEFINE_CLASS(Foo).
-  // iwyu will say "Init() is a member function, so say we need the
-  // full type information of the parent class."  The parent class
-  // is Foo, which iwyu correctly declares lives in foo.cc.  But
-  // iwyu also correctly says that Init() lives in foo.h (Except for
-  // the macro arguments, macro code belongs to the macro definer,
-  // not to every macro caller).  Put those together, though, and
-  // iwyu says foo.h needs to #include foo.cc.
-  // TODO(csilvers): instead of checking file extensions, check if
-  // defined_in is in the transitive closure of used_in's #includes.
-  if (use->use_loc().isValid() && IsHeaderFile(GetFilePath(use->use_loc())) &&
-      !IsHeaderFile(use->decl_filepath())) {
-    VERRS(6) << "Ignoring use of " << use->symbol_name()
-             << " (" << use->PrintableUseLoc() << "): .h #including .cc\n";
-    use->set_ignore_use();
-    return;
-  }
-
-  // (B5) Discard symbol uses for member functions in the same file as parent.
+  // (B4) Discard symbol uses for member functions in the same file as parent.
   if (const CXXMethodDecl* method_dfn = DynCastFrom(use->decl())) {
     // See if we also recorded a use of the parent.
     const NamedDecl* parent_dfn
@@ -980,27 +960,10 @@ void ProcessSymbolUse(OneUse* use) {
   if (use->ignore_use())   // we're already ignoring it
     return;
 
-  // (B6) Discard symbol uses in the same file as their definition.
+  // (B5) Discard symbol uses in the same file as their definition.
   if (GetFilePath(use->use_loc()) == use->decl_filepath()) {
     VERRS(6) << "Ignoring symbol use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): defined in same file\n";
-    use->set_ignore_use();
-    return;
-  }
-
-  // (B7) Discard uses of a macro declared in a .cc and used in a .h.
-  // Here's how it could happen:
-  //   foo.h:  #ifdef FOO ...
-  //   foo-inl.cc: #define FOO
-  //   foo.cc: #include "foo-inl.cc"
-  //           #include "foo.h"
-  // (Though this is arguably a bug in iwyu, and FOO should be treated as
-  // a 'soft' use here; see comments in iwyu_preprocessor.cc:ReportMacroUse.)
-  if (use->use_loc().isValid() && IsHeaderFile(GetFilePath(use->use_loc())) &&
-      !IsHeaderFile(use->decl_filepath())) {
-    VERRS(6) << "Ignoring symbol use of " << use->symbol_name()
-             << " (" << use->PrintableUseLoc() << "): "
-             << "avoid .h #including .cc\n";
     use->set_ignore_use();
     return;
   }
@@ -1131,7 +1094,40 @@ void CalculateIwyuForFullUse(OneUse* use,
   CHECK_(use->is_full_use() && "CalculateIwyuForFullUse requires a full use");
   CHECK_(use->has_suggested_header() && "All full uses must have a header");
 
-  // (E1) Mark iwyu violation unless in a current #include.
+  // (E1) Discard uses of a symbol declared in a .cc and used
+  // elsewhere.  Unless that 'elsewhere' is #including the .cc file,
+  // then something is wrong: we're using a symbol from a file we
+  // can't possibly be #including.  There are several ways this could
+  // happen:
+  // (1)
+  //   foo.h:  #ifdef FOO ...
+  //   foo-inl.cc: #define FOO
+  //   foo.cc: #include "foo-inl.cc"
+  //           #include "foo.h"   // foo.h 'uses' FOO from foo-inl.cc
+  // (Though this is arguably a bug in iwyu, and FOO should be treated as
+  // a 'soft' use here; see comments in iwyu_preprocessor.cc:ReportMacroUse.)
+  // (2)
+  //   foo.h:  #define DEFINE_CLASS(classname) <backslash>
+  //             struct classname { classname() { Init(); } void Init() {} }
+  //   foo.cc: DEFINE_CLASS(Foo);
+  // iwyu will say "Init() is a member function, so say we need the
+  // full type information of the method's class."  The method's class
+  // is Foo, which iwyu correctly declares lives in foo.cc.  But
+  // iwyu also correctly says that Init() lives in foo.h (Except for
+  // the macro arguments, macro code belongs to the macro definer,
+  // not to every macro caller).  Put those together, though, and
+  // iwyu says foo.h needs to #include foo.cc.
+  // TODO(csilvers): it's probably more correct to check if
+  // suggested_header() is in the transitive closure of actual_includes.
+  if (!IsHeaderFile(use->suggested_header()) &&
+      !Contains(actual_includes, use->suggested_header())) {
+    VERRS(6) << "Ignoring use of " << use->symbol_name()
+             << " (" << use->PrintableUseLoc() << "): #including .cc\n";
+    use->set_ignore_use();
+    return;
+  }
+
+  // (E2) Mark iwyu violation unless in a current #include.
   if (Contains(actual_includes, use->suggested_header())) {
     VERRS(6) << "Ignoring full use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): #including dfn from "
@@ -1176,9 +1172,16 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
       = Union(associated_direct_includes, direct_includes());
 
   // (C2) + (C3) Find the minimal 'set cover' for all symbol uses.
-  desired_includes_ = internal::CalculateMinimalIncludes(
+  const set<string>& desired_set_cover = internal::CalculateMinimalIncludes(
       direct_includes(), associated_direct_includes, uses);
+
+  // (C4) Remove .cc files from desired-includes unless they're in actual-inc.
+  for (Each<string> it(&desired_set_cover); !it.AtEnd(); ++it) {
+    if (IsHeaderFile(*it) || Contains(direct_includes(), *it))
+      desired_includes_.insert(*it);
+  }
   desired_includes_have_been_calculated_ = true;
+
 
   // The 'effective' desired includes are defined to be the desired
   // includes of associated, plus us.  These are used to decide if a

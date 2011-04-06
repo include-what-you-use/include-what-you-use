@@ -17,6 +17,10 @@
 const int x = kCcIncInt + 2;
 #endif
 
+#define INCLUDED_FROM_MAIN 1
+#include "tests/no_h_includes_cc-inc2.c"
+
+
 /**** IWYU_SUMMARY
 
 (tests/no_h_includes_cc.cc has correct #includes/fwd-decls)
