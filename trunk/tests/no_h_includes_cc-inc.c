@@ -15,6 +15,6 @@ const int kCcIncInt = 100;
 
 /**** IWYU_SUMMARY
 
-(devtools/maintenance/include_what_you_use/tests/no_h_includes_cc-inc.c has correct #includes/fwd-decls)
+(tests/no_h_includes_cc-inc.c has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */
