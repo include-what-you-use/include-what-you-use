@@ -116,16 +116,6 @@ TEST(IncludePicker, ConvertToQuotedInclude) {
             ConvertToQuotedInclude("/usr/include/c++/4.3/bits/stl_vector.h"));
 }
 
-TEST(IncludePicker, GetQuotedIncludeFor_NormalizesAsm) {
-  EXPECT_EQ("<asm/posix_types.h>",
-            ConvertToQuotedInclude("/usr/src/linux-headers-2.6.24-gg23/"
-                                   "include/asm-cris/posix_types.h"));
-  // This isn't an asm, so should be left alone.
-  EXPECT_EQ("<linux/ioctl.h>",
-            ConvertToQuotedInclude("/usr/src/linux-headers-2.6.24-gg23/"
-                                   "include/linux/ioctl.h"));
-}
-
 TEST(IncludePicker, DynamicMapping_DoesMapping) {
   IncludePicker p;
   p.AddDirectInclude("project/public/foo.h", "\"project/internal/private.h\"");
@@ -171,6 +161,16 @@ TEST(IncludePicker, DynamicMapping_MultipleTransitiveMapping) {
       p.GetPublicHeadersForFilepath("project/internal/other.h"),
       "\"project/public/foo.h\"", "\"project/public/bar.h\"",
       "\"project/public/baz.h\"");
+}
+
+TEST(IncludePicker, DynamicMapping_NormalizesAsm) {
+  IncludePicker p;
+  p.AddDirectInclude("<types.h>", "<asm-cris/posix_types.h>");
+  p.FinalizeAddedIncludes();
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("/usr/src/linux-headers-2.6.24-gg23/"
+                                    "include/asm-cris/posix_types.h"),
+      "<asm/posix_types.h>");
 }
 
 TEST(IncludePicker, DynamicMapping_PrivateToPublicMapping) {

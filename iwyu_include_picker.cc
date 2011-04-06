@@ -567,13 +567,15 @@ const IncludePicker::IncludeMapEntry cpp_include_map[] = {
   { "<tr1_impl/random.tcc>", kPrivate, "<tr1_impl/random>", kPrivate },
   // Some bits->bits #includes: A few files in bits re-export
   // symbols from other files in bits.
-  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep '^ *# *include.*bits/' bits/* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { "<$2>", kPrivate, "<$1>", kPrivate },@' | grep bits/ | sort -u)
+  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep '^ *# *include.*bits/' bits/* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@  { "<$2>", kPrivate, "<$1>", kPrivate },@' | grep bits/ | sort -u)
   // and carefully picked reasonable-looking results (algorithm
   // *uses* pair but doesn't *re-export* pair, for instance).
   { "<bits/boost_concept_check.h>", kPrivate,
     "<bits/concept_check.h>", kPrivate },
   { "<bits/c++allocator.h>", kPrivate, "<bits/allocator.h>", kPrivate },
   { "<bits/codecvt.h>", kPrivate, "<bits/locale_facets_nonio.h>", kPrivate },
+  { "<bits/ctype_base.h>", kPrivate, "<bits/locale_facets.h>", kPrivate },
+  { "<bits/ctype_inline.h>", kPrivate, "<bits/locale_facets.h>", kPrivate },
   { "<bits/functexcept.h>", kPrivate, "<bits/stl_algobase.h>", kPrivate },
   { "<bits/locale_classes.h>", kPrivate, "<bits/basic_ios.h>", kPrivate },
   { "<bits/locale_facets.h>", kPrivate, "<bits/basic_ios.h>", kPrivate },
@@ -762,52 +764,6 @@ void MakeMapTransitive(const IncludePicker::IncludeMap& filename_map,
 }
 
 
-// In linux/gcc, we often see the pattern that there will be
-// <asm/foo.h> which just forwards to <asm-ARCH/foo.h>, which will
-// actually define the appropriate symbols for a given arch.  In
-// these cases, asm/foo.h is the public header, and asm-ARCH is
-// private.  This does a private->public mapping for that case.
-// Input should be an include-style path but without the quotes.
-// TODO(csilvers): move this to AddDirectInclude().
-string NormalizeAsm(string path) {
-  if (!StartsWith(path, "asm-"))
-    return path;
-  StripPast(&path, "/");    // read past "asm-whatever/"
-  return "asm/" + path;
-}
-
-// Another pattern we see, for system-specific includes, is, e.g.
-//    /usr/include/c++/4.2/x86_64-unknown-linux-gnu/bits/c++config.h
-// Get rid of the 'x86_64-unknown-linux-gnu' bit.  This should be
-// called after initial C++ path parsing, so path is something like
-// 'x86_64-unknown-linux-gnu/bits/c++config.h'.
-// TODO(csilvers): remove after we sort GlobalSearchPath by length.
-string NormalizeSystemSpecificPath(string path) {
-  size_t pos = path.find('/');
-  if (pos == string::npos)
-    return path;
-  // Check that the first directory-path has exactly 3 dashes.
-  for (int i = 0; i < 3; ++i) {
-    pos = path.rfind('-', pos-1);
-    if (pos == string::npos)
-      return path;
-  }
-  if (path.rfind('-', pos-1) != string::npos)
-    return path;            // has 4 dashes!
-  StripPast(&path, "/");    // read past "x86_64-whatever/"
-  return path;
-}
-
-string NormalizeSystemPath(string path) {
-  // Check for a c++ filename.  It's in a c++/<version#>/include dir.
-  // (Or, possibly, c++/<version>/include/x86_64-unknown-linux-gnu/...")
-  if (StripPast(&path, "/c++/") && StripPast(&path, "/"))
-    return NormalizeSystemSpecificPath(path);
-
-  // It's a C filename.  It can be in many locations.
-  return NormalizeAsm(path);     // Fix up C includes in <asm-ARCH/foo.h>
-}
-
 }  // namespace
 
 // Converts a file-path, such as /usr/include/stdio.h, to a
@@ -829,7 +785,6 @@ if (llvm::sys::path::is_relative(path)) {        // A relative path
   for (Each<string> it(&search_paths); !it.AtEnd(); ++it) {
     if (StripLeft(&path, *it)) {
       StripLeft(&path, "/");
-      path = NormalizeSystemPath(path);
       return "<" + path + ">";
     }
   }
@@ -914,11 +869,22 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   // Note: the includer may be a .cc file, which is unnecessary to add
   // to our map, but harmless.
   const string quoted_includer = ConvertToQuotedInclude(includer_filepath);
+
+  // Automatically mark files in foo/internal/bar as private, and map them.
   if (include_name_as_typed.find("/internal/") != string::npos) {
-    AddMapping(include_name_as_typed, quoted_includer);
     MarkIncludeAsPrivate(include_name_as_typed);
+    AddMapping(include_name_as_typed, quoted_includer);
     if (quoted_includer.find("/internal/") != string::npos)
       MarkIncludeAsPrivate(quoted_includer);
+  }
+
+  // Automatically mark <asm-FOO/bar.h> as private, and map to <asm/bar.h>.
+  if (StartsWith(include_name_as_typed, "<asm-")) {
+    MarkIncludeAsPrivate(include_name_as_typed);
+    string public_header = include_name_as_typed;
+    StripPast(&public_header, "/");   // read past "asm-whatever/"
+    public_header = "<asm/" + public_header;   // now it's <asm/something.h>
+    AddMapping(include_name_as_typed, public_header);
   }
 }
 
