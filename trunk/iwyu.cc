@@ -1234,6 +1234,42 @@ AstFlattenerVisitor::nodeset_decl_cache_;
 
 
 // ----------------------------------------------------------------------
+// --- VisitorState
+// ----------------------------------------------------------------------
+//
+// This is a simple struct holding data that IwyuBaseASTVisitor will
+// need to access and manipulate.  It's held separately from
+// IwyuBaseASTVisitor because we want this information to be shared
+// between the IwyuASTConsumer and the InstantiatedTemplateVisitor,
+// each of which gets its own copy of IwyuBaseASTVisitor data.  So to
+// share data, we need to hold it somewhere else.
+
+struct VisitorState {
+  VisitorState(CompilerInstance* c, const IwyuPreprocessorInfo& ipi)
+      : compiler(c), preprocessor_info(ipi) {}
+
+  CompilerInstance* const compiler;
+
+  // Information gathered at preprocessor time, including #include info.
+  const IwyuPreprocessorInfo& preprocessor_info;
+
+  // When we see an overloaded function that depends on a template
+  // parameter, we can't resolve the overload until the template
+  // is instantiated (e.g., MyFunc<int> in the following example):
+  //    template<typename T> MyFunc() { OverloadedFunction(T()); }
+  // However, sometimes we can do iwyu even before resolving the
+  // overload, if *all* potential overloads live in the same file.  We
+  // mark the location of such 'early-processed' functions here, so
+  // when we see the function again at template-instantiation time, we
+  // know not to do iwyu-checking on it again.  (Since the actual
+  // function-call exprs are different between the uninstantiated and
+  // instantiated calls, we can't store the exprs themselves, but have
+  // to store their location.)
+  set<SourceLocation> processed_overload_locs;
+};
+
+
+// ----------------------------------------------------------------------
 // --- IwyuBaseAstVisitor
 // ----------------------------------------------------------------------
 //
@@ -1249,11 +1285,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
  public:
   typedef BaseAstVisitor<Derived> Base;
 
-  IwyuBaseAstVisitor(CompilerInstance* compiler,
-                     const IwyuPreprocessorInfo& preprocessor_info)
-      : Base(compiler),
-        preprocessor_info_(preprocessor_info),
-        processed_overload_locs_() {}
+  explicit IwyuBaseAstVisitor(VisitorState* visitor_state)
+      : Base(visitor_state->compiler),
+        visitor_state_(visitor_state) {}
 
   virtual ~IwyuBaseAstVisitor() {}
 
@@ -1947,10 +1981,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // only operator==() we see is in foo.h, we don't need to #include
     // foo.h if the only call to operator== we see is on two integers.)
     if (arbitrary_fn_decl && !arbitrary_fn_decl->isOverloadedOperator()) {
-      processed_overload_locs_.insert(CurrentLoc());
+      AddProcessedOverloadLoc(CurrentLoc());
       VERRS(7) << "Adding to processed_overload_locs: "
                << PrintableCurrentLoc() << "\n";
-      // Because processed_overload_locs_ might be set in one visitor
+      // Because processed_overload_locs might be set in one visitor
       // but used in another, each with a different definition of
       // CanIgnoreCurrentASTNode(), we have to be conservative and set
       // the has-considered flag always.  But of course we only
@@ -1976,7 +2010,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // like a placement-new, we handle it at template-writing time
   // anyway.
   bool VisitCXXNewExpr(clang::CXXNewExpr* expr) {
-    // Like in VisitOverloadExpr(), we set processed_overload_locs_
+    // Like in VisitOverloadExpr(), we update processed_overload_locs
     // regardless of the value of CanIgnoreCurrentASTNode().
 
     // We say it's placement-new if the (lone) placment-arg is a
@@ -1991,7 +2025,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
          GetTypeOf(expr->getPlacementArg(0))->isArrayType() ||
          IsAddressOf(expr->getPlacementArg(0)))) {
       // Treat this like an OverloadExpr.
-      processed_overload_locs_.insert(CurrentLoc());
+      AddProcessedOverloadLoc(CurrentLoc());
       VERRS(7) << "Adding to processed_overload_locs (placement-new): "
                << PrintableCurrentLoc() << "\n";
       if (!CanIgnoreCurrentASTNode()) {
@@ -2024,7 +2058,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
     // We may have already been checked in a previous
     // VisitOverloadExpr() call.  Don't check again in that case.
-    if (Contains(processed_overload_locs_, CurrentLoc()))
+    if (IsProcessedOverloadLoc(CurrentLoc()))
       return true;
 
     // TODO(csilvers): if the function is not inline, call
@@ -2162,36 +2196,25 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
  protected:
   const IwyuPreprocessorInfo& preprocessor_info() const {
-    return preprocessor_info_;
-  }
-
-  const set<SourceLocation>& processed_overload_locs() {
-    return processed_overload_locs_;
-  }
-
-  void ExtendProcessedOverloadLocs(const set<SourceLocation>& locs) {
-    InsertAllInto(locs, &processed_overload_locs_);
+    return visitor_state_->preprocessor_info;
   }
 
  private:
   template <typename T> friend class IwyuBaseAstVisitor;
 
-  // Information gathered at preprocessor time, including #include info.
-  const IwyuPreprocessorInfo& preprocessor_info_;
+  bool IsProcessedOverloadLoc(SourceLocation loc) const {
+    return Contains(visitor_state_->processed_overload_locs, loc);
+  }
 
-  // When we see an overloaded function that depends on a template
-  // parameter, we can't resolve the overload until the template
-  // is instantiated (e.g., MyFunc<int> in the following example):
-  //    template<typename T> MyFunc() { OverloadedFunction(T()); }
-  // However, sometimes we can do iwyu even before resolving the
-  // overload, if *all* potential overloads live in the same file.  We
-  // mark the location of such 'early-processed' functions here, so
-  // when we see the function again at template-instantiation time, we
-  // know not to do iwyu-checking on it again.  (Since the actual
-  // function-call exprs are different between the uninstantiated and
-  // instantiated calls, we can't store the exprs themselves, but have
-  // to store their location.)
-  set<SourceLocation> processed_overload_locs_;
+  void AddProcessedOverloadLoc(SourceLocation loc) {
+    visitor_state_->processed_overload_locs.insert(loc);
+  }
+
+  // Do not any variables here!  If you do, they will not be shared
+  // between the normal iwyu ast visitor and the
+  // template-instantiation visitor, which is almost always a mistake.
+  // Instead, add them to the VisitorState struct, above.
+  VisitorState* const visitor_state_;
 };
 
 
@@ -2232,9 +2255,8 @@ class InstantiatedTemplateVisitor
  public:
   typedef IwyuBaseAstVisitor<InstantiatedTemplateVisitor> Base;
 
-  InstantiatedTemplateVisitor(CompilerInstance* compiler,
-                              const IwyuPreprocessorInfo& preprocessor_info)
-      : Base(compiler, preprocessor_info) {
+  InstantiatedTemplateVisitor(VisitorState* visitor_state)
+      : Base(visitor_state) {
     Clear();
   }
 
@@ -2262,11 +2284,9 @@ class InstantiatedTemplateVisitor
   void ScanInstantiatedFunction(
       const FunctionDecl* fn_decl, const Type* parent_type,
       const ASTNode* caller_ast_node,
-      const set<SourceLocation>& processed_overload_locs,
       const map<const Type*, const Type*>& resugar_map) {
     Clear();
     caller_ast_node_ = caller_ast_node;
-    ExtendProcessedOverloadLocs(processed_overload_locs);  // copy from caller
     resugar_map_ = resugar_map;
 
     // Make sure that the caller didn't already put the decl on the ast-stack.
@@ -2284,11 +2304,9 @@ class InstantiatedTemplateVisitor
   // MyClass<T>::size_type s;
   void ScanInstantiatedType(
       const Type* type, const ASTNode* caller_ast_node,
-      const set<SourceLocation>& processed_overload_locs,
       const map<const Type*, const Type*>& resugar_map) {
     Clear();
     caller_ast_node_ = caller_ast_node;
-    ExtendProcessedOverloadLocs(processed_overload_locs);  // copy from caller
     resugar_map_ = resugar_map;
 
     // Make sure that the caller didn't already put the type on the ast-stack.
@@ -2853,10 +2871,9 @@ class IwyuAstConsumer
  public:
   typedef IwyuBaseAstVisitor<IwyuAstConsumer> Base;
 
-  IwyuAstConsumer(CompilerInstance* compiler,
-                  const IwyuPreprocessorInfo& preprocessor_info)
-      : Base(compiler, preprocessor_info),
-        instantiated_template_visitor_(compiler, preprocessor_info) {}
+  IwyuAstConsumer(VisitorState* visitor_state)
+      : Base(visitor_state),
+        instantiated_template_visitor_(visitor_state) {}
 
   //------------------------------------------------------------
   // Implements pure virtual methods from Base.
@@ -3116,7 +3133,7 @@ class IwyuAstConsumer
     const map<const Type*, const Type*> resugar_map
         = GetTplTypeResugarMapForClass(arg_type);
     instantiated_template_visitor_.ScanInstantiatedType(
-        arg_type, current_ast_node(), processed_overload_locs(), resugar_map);
+        arg_type, current_ast_node(), resugar_map);
 
     return Base::VisitUnaryExprOrTypeTraitExpr(expr);
   }
@@ -3169,7 +3186,7 @@ class IwyuAstConsumer
       // pass in the parent-node.
       const ASTNode* ast_parent = current_ast_node()->parent();
       instantiated_template_visitor_.ScanInstantiatedType(
-          type, ast_parent, processed_overload_locs(), resugar_map);
+          type, ast_parent, resugar_map);
     }
 
     return Base::VisitTemplateSpecializationType(type);
@@ -3221,7 +3238,7 @@ class IwyuAstConsumer
 
     instantiated_template_visitor_.ScanInstantiatedFunction(
         callee, parent_type,
-        current_ast_node(), processed_overload_locs(), resugar_map);
+        current_ast_node(), resugar_map);
     return true;
   }
 
@@ -3244,8 +3261,10 @@ class IwyuAction : public ASTFrontendAction {
 
     IwyuPreprocessorInfo* const preprocessor_consumer
         = new IwyuPreprocessorInfo();
+    VisitorState* const visitor_state
+        = new VisitorState(&compiler, *preprocessor_consumer);
     IwyuAstConsumer* const ast_consumer
-        = new IwyuAstConsumer(&compiler, *preprocessor_consumer);
+        = new IwyuAstConsumer(visitor_state);
 
     compiler.getPreprocessor().addPPCallbacks(preprocessor_consumer);
     return ast_consumer;
