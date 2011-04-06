@@ -2324,11 +2324,6 @@ class InstantiatedTemplateVisitor
           const_cast<NamedDecl*>(type_decl_as_written));
     }
 
-    // TODO(csilvers): figure out the type and call
-    // TraverseDataAndTypeMembersOfClassHelper directly when possible.
-    // Then, change TraverseTemplateSpecializationType to call
-    // CanIgnoreType (actually, have CanIgnoreCurrentASTNode() call
-    // CanIgnoreType()).
     TraverseType(QualType(type, 0));
   }
 
@@ -2474,7 +2469,7 @@ class InstantiatedTemplateVisitor
     return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
   }
 
-  bool TraverseTemplateSpecializationTypeHelper(
+  bool TraverseSubstTemplateTypeParmTypeHelper(
       const clang::SubstTemplateTypeParmType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
     if (CanIgnoreType(type))  return true;
@@ -2489,13 +2484,13 @@ class InstantiatedTemplateVisitor
       clang::SubstTemplateTypeParmType* type) {
     if (!Base::TraverseSubstTemplateTypeParmType(type))
       return false;
-    return TraverseTemplateSpecializationTypeHelper(type);
+    return TraverseSubstTemplateTypeParmTypeHelper(type);
   }
   bool TraverseSubstTemplateTypeParmTypeLoc(
       clang::SubstTemplateTypeParmTypeLoc typeloc) {
     if (!Base::TraverseSubstTemplateTypeParmTypeLoc(typeloc))
       return false;
-    return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
+    return TraverseSubstTemplateTypeParmTypeHelper(typeloc.getTypePtr());
   }
 
   // These do the actual work of finding the types to return.  Our
