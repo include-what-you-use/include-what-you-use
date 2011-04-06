@@ -13,9 +13,20 @@
 #include <set>
 #include "tests/precomputed_tpl_args-d1.h"
 
+template <typename T> struct Identity {
+  T t;
+};
+
 // IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
 std::vector<IndirectClass> ic_vec;
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+std::vector<Identity<IndirectClass> > i_ic_vec;
+
+// IWYU: IndirectClass needs a declaration
+std::vector<IndirectClass*> icptr_vec;
 
 // IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h

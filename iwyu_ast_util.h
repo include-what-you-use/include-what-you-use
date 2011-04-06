@@ -520,6 +520,9 @@ clang::SourceRange GetSourceRangeOfClassDecl(const clang::Decl* decl);
 // explicitly specified.)  It returns a map from the unsugared
 // (canonical) types of each template argument to its sugared
 // (as-written) type.  For now we ignore non-type template args.
+// We also include mappings for component types: if we have an entry
+// 'vector<TypedefType>' -> 'vector<Foo>', we also add an entry
+// 'TypedefType' -> 'Foo'.
 // NOTE: This routine is far from perfect.  To really do this right,
 // we'd need to refactor SemaTemplateDeduction to take an argument to
 // not canonicalize deduced template arguments.
@@ -671,10 +674,20 @@ bool CanImplicitlyConvertTo(const clang::Type* type);
 // determined from the class's template arguments.  For default
 // template arguments that are not specified by the caller, we
 // map the type to NULL, to indicate there's no inherent sugaring.
+// We also include mappings for component types: if we have an entry
+// 'vector<TypedefType>' -> 'vector<Foo>', we also add an entry
+// 'TypedefType' -> 'Foo'.
 // For ease of calling, this accept any type, but will return an empty
 // map for any input that's not a template specialization type.
 map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForClass(
     const clang::Type* type);
+
+// Like GetTplTypeResugarMapForClass, but if a type has
+// components (for instance, 'Foo*' and 'vector<Foo>' both
+// have a component Foo), we don't include the components
+// in the result-map.
+map<const clang::Type*, const clang::Type*>
+GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type);
 
 // --- Utilities for Stmt.
 
