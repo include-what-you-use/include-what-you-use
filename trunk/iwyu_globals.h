@@ -27,6 +27,7 @@ using std::string;
 
 using std::vector;
 
+class FullUseCache;
 class IncludePicker;
 class SourceManagerCharacterDataGetter;
 
@@ -37,6 +38,8 @@ void InitGlobals(clang::SourceManager* source_manager,
 // GlobalSourceManager() and DefaultDataGetter() will assert-fail if
 // you call this instead of InitGlobals().
 void InitGlobalsForTesting();
+
+// TODO(csilvers): put all of these in the 'globals' namespace?
 
 clang::SourceManager* GlobalSourceManager();
 
@@ -49,6 +52,14 @@ IncludePicker* MutableGlobalIncludePicker();   // only use at great need!
 const clang::PrintingPolicy& DefaultPrintPolicy();
 
 const SourceManagerCharacterDataGetter& DefaultDataGetter();
+
+// These caches record what types and decls we reported when
+// instantiating a particular decl.  That avoids extra work if we see
+// the same decl again -- we can replay those reports, just from a new
+// caller_loc.
+FullUseCache* FunctionCallsFullUseCache();
+FullUseCache* ClassMembersFullUseCache();
+
 
 // These files are based on the commandline (--check_also flag plus argv).
 // They are specified as glob file-patterns (which behave just as they
