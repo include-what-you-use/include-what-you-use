@@ -524,11 +524,15 @@ const NamedDecl* GetDefinitionForClass(const Decl* decl) {
     // we were never "used"), then getDefinition() will return NULL.
     // In that case, use the definition-as-written.
     if (const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(decl)) {
-      if (spec_decl->getSpecializationKind() == clang::TSK_Undeclared) {
-        as_tpl = spec_decl->getSpecializedTemplate();
-        if (as_tpl->getTemplatedDecl()->isDefinition())
-          return as_tpl;
-      }
+      // When we fake-instantiate typedefs, we can get explicit
+      // instantiations with no definition as well.
+      CHECK_((spec_decl->getSpecializationKind() == clang::TSK_Undeclared ||
+              spec_decl->getSpecializationKind() ==
+              clang::TSK_ExplicitSpecialization)
+             && "A declared template-specialization lacks a definition?");
+      as_tpl = spec_decl->getSpecializedTemplate();
+      if (as_tpl->getTemplatedDecl()->isDefinition())
+        return as_tpl;
     }
   }
   return NULL;

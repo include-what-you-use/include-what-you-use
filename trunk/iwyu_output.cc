@@ -448,7 +448,7 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
 void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl) {
   CHECK_(fwd_decl && "forward_declare_decl unexpectedly NULL");
   CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<RecordDecl>(fwd_decl))
-         && "Can only forward declare classes and templated classes");
+         && "Can only forward declare classes and class templates");
   lines_.push_back(OneIncludeOrForwardDeclareLine(fwd_decl));
   lines_.back().set_present();
   direct_forward_declares_.insert(fwd_decl);   // store in another way as well
@@ -1093,9 +1093,9 @@ void CalculateIwyuForForwardDeclareUse(
     // Change decl_ to point to this "better" redecl.  Be sure to store
     // as a TemplateClassDecl if we're a templated class.
     const NamedDecl* better_decl = providing_decl;
-    if (const ClassTemplateSpecializationDecl* spec_decl
+    if (const ClassTemplateSpecializationDecl* providing_spec_decl
         = DynCastFrom(providing_decl)) {
-      better_decl = spec_decl->getSpecializedTemplate();
+      better_decl = providing_spec_decl->getSpecializedTemplate();
       CHECK_(better_decl && "Can't find specialization");
     } else if (const CXXRecordDecl* cxx_decl = DynCastFrom(providing_decl)) {
       if (cxx_decl->getDescribedClassTemplate())
