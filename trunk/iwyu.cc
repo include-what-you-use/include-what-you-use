@@ -2068,21 +2068,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())  return true;
     if (CanIgnoreType(type))  return true;
 
-    // If we're a template that was never instantiated (because we
-    // only need to forward-declare it), then the
-    // TemplateSpecializationType will point to a decl that doesn't
-    // "really" exist in the source.  The same is true if we're an
-    // explicit instantiation of a template.
     const NamedDecl* decl = TypeToDeclAsWritten(type);
-    if (!type->isDependentType()) {
-      const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(decl);
-      CHECK_(spec_decl && "TST is not a ClassTemplateSpecializationDecl?");
-      if (spec_decl->getSpecializationKind() == clang::TSK_Undeclared ||
-          spec_decl->getSpecializationKind()
-          == clang::TSK_ExplicitInstantiationDefinition) {
-        decl = spec_decl->getSpecializedTemplate();
-      }
-    }
 
     // If we are forward-declarable, so are our template arguments.
     if (CanForwardDeclareType(current_ast_node())) {

@@ -520,6 +520,16 @@ const NamedDecl* GetDefinitionForClass(const Decl* decl) {
       }
       return record_dfn;
     }
+    // If we're a templated class that was never instantiated (because
+    // we were never "used"), then getDefinition() will return NULL.
+    // In that case, use the definition-as-written.
+    if (const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(decl)) {
+      if (spec_decl->getSpecializationKind() == clang::TSK_Undeclared) {
+        as_tpl = spec_decl->getSpecializedTemplate();
+        if (as_tpl->getTemplatedDecl()->isDefinition())
+          return as_tpl;
+      }
+    }
   }
   return NULL;
 }
