@@ -65,9 +65,6 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
   static const set<string> fulluse_types(kFullUseTypes,
                                          kFullUseTypes + fulluse_size);
 
-  // The decl for this type is desugared, which means it includes
-  // default template arguments.  (Sadly, it also resolves
-  // typedefs/etc, which we'll have to undo.)
   const ClassTemplateSpecializationDecl* tpl_decl
       = DynCastFrom(TypeToDeclAsWritten(tpl_type));
   CHECK_(tpl_decl && "tpl-type decl is not a tpl specialization?");
@@ -75,8 +72,6 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
           fulluse_types, tpl_decl->getQualifiedNameAsString()))
     return map<const Type*, const Type*>();
 
-  VERRS(6) << "(Using pre-computed list of full-use information for "
-           << tpl_decl->getQualifiedNameAsString() << ")\n";
   // The code below doesn't handle template-template args/etc.  None
   // of the types in kFullUseTypes should have those.  Just verify.
   const TemplateArgumentList& all_tpl_args = tpl_decl->getTemplateArgs();
@@ -89,7 +84,7 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
   // design): we fully use all template types.  (Note: we'll have to
   // do something more clever here if any types in kFullUseTypes start
   // accepting template-template types.)
-  return GetTplTypeResugarMapForClass(tpl_type);
+  return GetTplTypeResugarMapForClassNoComponentTypes(tpl_type);
 }
 
 }  // namespace include_what_you_use

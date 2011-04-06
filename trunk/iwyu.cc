@@ -2810,10 +2810,19 @@ class InstantiatedTemplateVisitor
       // but clang doesn't store that information.
 
       for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
+        const Type* resugared_type = NULL;
         if (it->second)
-          ReportTypeUse(caller_loc(), it->second);
+          resugared_type = it->second;
         else if (!SomeInstantiatedTemplateIntendsToProvide(it->first))
-          ReportTypeUse(caller_loc(), it->first);
+          resugared_type = it->first;
+        if (resugared_type && !resugared_type->isPointerType()) {
+          ReportTypeUse(caller_loc(), resugared_type);
+          // For a templated type, check the template args as well.
+          if (const TemplateSpecializationType* spec_type
+              = DynCastFrom(resugared_type)) {
+            TraverseDataAndTypeMembersOfClassHelper(spec_type);
+          }
+        }
       }
       return true;
     }

@@ -988,8 +988,8 @@ bool CanImplicitlyConvertTo(const Type* type) {
   return HasImplicitConversionCtor(cxx_class);
 }
 
-map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForClass(
-    const clang::Type* type) {
+map<const clang::Type*, const clang::Type*>
+GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
   map<const Type*, const Type*> retval;
   type = RemoveElaboration(type);  // get rid of the class keyword
   const TemplateSpecializationType* tpl_spec_type = DynCastFrom(type);
@@ -1042,8 +1042,13 @@ map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForClass(
     }
   }
 
-  retval = ResugarTypeComponents(retval);  // add in the decomposition of retval
   return retval;
+}
+
+map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForClass(
+    const clang::Type* type) {
+  return ResugarTypeComponents(  // add in the decomposition of retval
+      GetTplTypeResugarMapForClassNoComponentTypes(type));
 }
 
 // --- Utilities for Stmt.
