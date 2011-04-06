@@ -2653,12 +2653,12 @@ class InstantiatedTemplateVisitor
     // report again (but with the new caller_loc this time).
     // Otherwise, for all reporting done in the rest of this scope,
     // store in the cache for this function.
-    if (ReplayUsesFromCache(function_calls_full_use_cache_,
+    if (ReplayUsesFromCache(*FunctionCallsFullUseCache(),
                             fn_decl, caller_loc()))
       return true;
     // Make sure all the types we report in the recursive TraverseDecl
     // calls, below, end up in the cache for fn_decl.
-    CacheStoringScope css(&cache_storers_, &function_calls_full_use_cache_,
+    CacheStoringScope css(&cache_storers_, FunctionCallsFullUseCache(),
                           fn_decl, resugar_map_);
 
     // We want to ignore all nodes that are the same in this
@@ -2729,7 +2729,7 @@ class InstantiatedTemplateVisitor
     // report again (but with the new caller_loc this time).
     // Otherwise, for all reporting done in the rest of this scope,
     // store in the cache for this function.
-    if (ReplayUsesFromCache(class_members_full_use_cache_,
+    if (ReplayUsesFromCache(*ClassMembersFullUseCache(),
                             class_decl, caller_loc()))
       return true;
     if (ReplayClassMemberUsesFromPrecomputedList(type))
@@ -2737,7 +2737,7 @@ class InstantiatedTemplateVisitor
 
     // Make sure all the types we report in the recursive TraverseDecl
     // calls, below, end up in the cache for class_decl.
-    CacheStoringScope css(&cache_storers_, &class_members_full_use_cache_,
+    CacheStoringScope css(&cache_storers_, ClassMembersFullUseCache(),
                           class_decl, resugar_map_);
 
     for (DeclContext::decl_iterator it = class_decl->decls_begin();
@@ -2836,17 +2836,7 @@ class InstantiatedTemplateVisitor
 
   // The current set of nodes we're updating cache entries for.
   set<CacheStoringScope*> cache_storers_;
-
-  // These caches record what types and decls we reported when
-  // instantiating a particular decl.  That avoids extra work if we
-  // see the same decl again -- we can replay those reports, just from
-  // a new caller_loc.
-  static FullUseCache function_calls_full_use_cache_;
-  static FullUseCache class_members_full_use_cache_;
 };  // class InstantiatedTemplateVisitor
-
-FullUseCache InstantiatedTemplateVisitor::function_calls_full_use_cache_;
-FullUseCache InstantiatedTemplateVisitor::class_members_full_use_cache_;
 
 
 // ----------------------------------------------------------------------

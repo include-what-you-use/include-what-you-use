@@ -15,6 +15,7 @@
 #include <set>
 #include <string>
 #include "clang/Lex/HeaderSearch.h"
+#include "iwyu_cache.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
@@ -35,6 +36,8 @@ static IncludePicker* include_picker = NULL;
 static const clang::LangOptions default_lang_options;
 static const clang::PrintingPolicy default_print_policy(default_lang_options);
 static SourceManagerCharacterDataGetter* data_getter = NULL;
+static FullUseCache* function_calls_full_use_cache = NULL;
+static FullUseCache* class_members_full_use_cache = NULL;
 static set<string>* globs_to_report_iwyu_violations_for = NULL;
 
 // Make sure we put longer search-paths first, so iwyu will map
@@ -65,6 +68,8 @@ void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
   search_paths = ComputeSystemIncludeDirectories(header_search);
   include_picker = new IncludePicker;
+  function_calls_full_use_cache = new FullUseCache;
+  class_members_full_use_cache = new FullUseCache;
 
   for (Each<string> it(search_paths); !it.AtEnd(); ++it)
     VERRS(6) << "Search path: " << *it << "\n";
@@ -99,6 +104,14 @@ const SourceManagerCharacterDataGetter& DefaultDataGetter() {
   return *data_getter;
 }
 
+FullUseCache* FunctionCallsFullUseCache() {
+  return function_calls_full_use_cache;
+}
+
+FullUseCache* ClassMembersFullUseCache() {
+  return class_members_full_use_cache;
+}
+
 void AddGlobToReportIWYUViolationsFor(const string& glob) {
   if (globs_to_report_iwyu_violations_for == NULL)
     globs_to_report_iwyu_violations_for = new set<string>;
@@ -119,6 +132,8 @@ void InitGlobalsForTesting() {
   source_manager = NULL;
   data_getter = NULL;
   include_picker = new IncludePicker;
+  function_calls_full_use_cache = new FullUseCache;
+  class_members_full_use_cache = new FullUseCache;
 
   // Use a reasonable default for the -I flags.
   search_paths = new vector<string>;
