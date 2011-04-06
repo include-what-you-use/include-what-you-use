@@ -47,6 +47,7 @@ class OneIwyuTest(unittest.TestCase):
       'implicit_ctor.cc': [CheckAlsoExtension('-d1.h')],
       'keep_mapping.cc': [CheckAlsoExtension('-public.h')],
       'macro_location.cc': [CheckAlsoExtension('-d2.h')],
+      'no_h_includes_cc.cc': [CheckAlsoExtension('.c')],
       'overloaded_class.cc': [CheckAlsoExtension('-i1.h')],
     }
     # Internally, we like it when the paths start with TEST_ROOTDIR.
@@ -57,9 +58,11 @@ class OneIwyuTest(unittest.TestCase):
     logging.info('Testing iwyu on %s', filename)
     # Split full/path/to/foo.cc into full/path/to/foo and .cc.
     (basename, _) = os.path.splitext(filename)
-    # Generate diagnostics on all foo-*.h files in addition to
-    # foo.h (if present) and foo.h.
-    files_to_check = glob.glob(basename + '-*.h')
+    # Generate diagnostics on all foo-* files (well, not other
+    # foo-*.cc files, which is not kosher but is legal), in addition
+    # to foo.h (if present) and foo.cc.
+    files_to_check = [f for f in glob.glob(basename + '-*')
+                      if not f.endswith('.cc')]
     h_file = basename + '.h'
     if os.path.exists(h_file):
       files_to_check.append(h_file)

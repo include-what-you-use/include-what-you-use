@@ -51,7 +51,8 @@ _IWYU_PATH = _GetIwyuPath(_IWYU_PATHS)
 
 
 def _IsCppSource(file_path):
-  return file_path.endswith('.h') or file_path.endswith('.cc')
+  return (file_path.endswith('.h') or file_path.endswith('.cc') or
+          file_path.endswith('.c'))
 
 
 def _GetAllCppFilesUnderDir(root_dir):
