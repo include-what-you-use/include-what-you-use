@@ -17,6 +17,6 @@ const int inc2 = 2;
 
 /**** IWYU_SUMMARY
 
-(devtools/maintenance/include_what_you_use/tests/no_h_includes_cc-inc2.c has correct #includes/fwd-decls)
+(tests/no_h_includes_cc-inc2.c has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */
