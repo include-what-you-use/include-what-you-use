@@ -44,6 +44,7 @@ using std::string;
 using std::vector;
 
 
+class IwyuPreprocessorInfo;
 class SymbolIncludeData;
 
 // The verbose level indicates how chatty IWYU should be.  The bigger
@@ -193,7 +194,8 @@ class IwyuFileInfo {
  public:
   // TODO(csilvers): also take iwyufileinfos for 'associated' files (.h's).
   // And a source-manager.
-  explicit IwyuFileInfo(const clang::FileEntry* this_file);
+  IwyuFileInfo(const clang::FileEntry* this_file,
+               const IwyuPreprocessorInfo* preprocessor_info);
 
   // An 'internal' header is a header that this file #includes
   // (possibly indirectly) that we should treat as being logically
@@ -284,6 +286,8 @@ class IwyuFileInfo {
 
   // The constructor arguments.  file_ is 'this file'.
   const clang::FileEntry* file_;
+  const IwyuPreprocessorInfo* preprocessor_info_;
+
   string quoted_file_;
 
   // internal_headers_ are the files 'associated' with this file: if

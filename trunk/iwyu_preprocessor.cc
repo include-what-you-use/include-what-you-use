@@ -149,6 +149,14 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
       continue;
     }
 
+    if (StripLeft(&pragma_text, "no_include ")) {
+      // pragma text should be an quoted header.
+      no_include_map_[GetFileEntry(current_loc)].insert(pragma_text);
+      ERRSYM(GetFileEntry(current_loc)) << "Inhibiting include of "
+                                        << pragma_text << "\n";
+      continue;
+    }
+
     // "keep" and "export" are handled in MaybeProtectInclude.
     if (pragma_text != "keep" && pragma_text != "export") {
       Warn(current_loc, "Unknown or malformed pragma (" + pragma_text + ")");
@@ -213,7 +221,7 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
 IwyuFileInfo* IwyuPreprocessorInfo::GetFromFileInfoMap(const FileEntry* file) {
   IwyuFileInfo* iwyu_file_info = FindInMap(&iwyu_file_info_map_, file);
   if (!iwyu_file_info) {
-    iwyu_file_info_map_.insert(make_pair(file, IwyuFileInfo(file)));
+    iwyu_file_info_map_.insert(make_pair(file, IwyuFileInfo(file, this)));
     iwyu_file_info = FindInMap(&iwyu_file_info_map_, file);
     CHECK_(iwyu_file_info);   // should succeed this time!
   }
@@ -721,8 +729,7 @@ const IwyuFileInfo& IwyuPreprocessorInfo::FileInfoOrEmptyFor(
   if (retval)
     return *retval;
 
-  static const IwyuFileInfo kEmptyInfo(NULL);
-  return kEmptyInfo;
+  return empty_file_info_;
 }
 
 bool IwyuPreprocessorInfo::PublicHeaderIntendsToProvide(
@@ -732,6 +739,13 @@ bool IwyuPreprocessorInfo::PublicHeaderIntendsToProvide(
     return Contains(*provides, other_file);
   }
   return false;
+}
+
+bool IwyuPreprocessorInfo::IncludeIsInhibited(
+    const clang::FileEntry* file, const string& other_filename) const {
+  const set<string>* inhibited_includes = FindInMap(&no_include_map_, file);
+  return (inhibited_includes != NULL) &&
+      Contains(*inhibited_includes, other_filename);
 }
 
 }  // namespace include_what_you_use
