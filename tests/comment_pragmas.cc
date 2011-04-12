@@ -46,6 +46,10 @@
 //     @headername{some_system_header_file, some_other_header_file}
 // 15. Malformed @headername -> warning
 //     d7.h
+// 16. "no_include" pragma: Don't suggest include.
+//     cpi9's type is defined in i9.h, included by d10.h.
+//     d10.h will be deemed unnecessary, which is ok, and i9.h will
+//     not be suggested.
 
 // TODO(user): Tests where both the defining public file and an
 // exporting public file are included, once it's clear what the policy
@@ -60,6 +64,9 @@
 #include "tests/comment_pragmas-d7.h"
 #include "tests/comment_pragmas-d8.h"
 #include "tests/comment_pragmas-d9.h"
+#include "tests/comment_pragmas-d10.h"
+// IWYU pragma: no_include "tests/comment_pragmas-i9.h"
+
 
 // The following classes are all defined in public files exported by i2.h.
 // IWYU: CommentPragmasI2 is...*comment_pragmas-i1.h
@@ -98,6 +105,11 @@ CommentPragmasD8 cpd8;
 // IWYU: CommentPragmasD9 is...*<some_system_header_file>
 CommentPragmasD9 cpd9;
 
+// Note: IWYU will emit the diagnostic but suppress the include
+// recommendation due to the no_include pragma.
+// IWYU: CommentPragmasI9 is...*comment_pragmas-i9.h
+CommentPragmasI9 cpi9;
+
 /**** IWYU_SUMMARY
 
 tests/comment_pragmas.cc should add these lines:
@@ -111,6 +123,7 @@ tests/comment_pragmas.cc should add these lines:
 
 tests/comment_pragmas.cc should remove these lines:
 - #include "tests/comment_pragmas-d1.h"  // lines XX-XX
+- #include "tests/comment_pragmas-d10.h"  // lines XX-XX
 - #include "tests/comment_pragmas-d2.h"  // lines XX-XX
 - #include "tests/comment_pragmas-d3.h"  // lines XX-XX
 - #include "tests/comment_pragmas-d4.h"  // lines XX-XX

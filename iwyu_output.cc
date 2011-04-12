@@ -18,6 +18,7 @@
 #include "iwyu_include_picker.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
+#include "iwyu_preprocessor.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "llvm/Support/raw_ostream.h"
@@ -414,8 +415,10 @@ string OneIncludeOrForwardDeclareLine::LineNumberString() const {
 }
 
 
-IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file)
+IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
+                           const IwyuPreprocessorInfo* preprocessor_info)
   : file_(this_file),
+    preprocessor_info_(preprocessor_info),
     quoted_file_(ConvertToQuotedInclude(GetFilePath(file_))),
     internal_headers_(),
     symbol_uses_(),
@@ -1517,6 +1520,17 @@ int IwyuFileInfo::CalculateAndReportIwyuViolations() {
   const int retval = EmitWarningMessages(symbol_uses_);
   internal::CalculateDesiredIncludesAndForwardDeclares(
       symbol_uses_, associated_desired_includes, &lines_);
+
+  // Remove desired inclusions that have been inhibited by pragma
+  // "no_include".
+  for (vector<OneIncludeOrForwardDeclareLine>::iterator
+           it = lines_.begin(); it != lines_.end(); ++it) {
+    if (it->IsIncludeLine() &&
+        preprocessor_info_->IncludeIsInhibited(file_, it->quoted_include())) {
+      it->clear_desired();
+    }
+  }
+
   EmitDiffs(lines_);
   return retval;
 }

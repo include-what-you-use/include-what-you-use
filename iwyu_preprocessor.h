@@ -20,16 +20,17 @@
 // is #defined in one file and the token is accessed in another, do an
 // iwyu check on that use.
 //
-// 3) Process iwyu pragma-like constructs.  (Fow now, we encode these
-// constructs in comments; an actual #pragma might be better.)  Here
-// are the constructs we look for:
+
+// 3) Process iwyu pragma-like constructs. Here are the constructs we
+// look for:
 // Full-line constructs:
 //    a) // IWYU pragma: private, include "foo/bar/baz.h"
 //    b) // IWYU pragma: begin_exports
 //    c) // IWYU pragma: end_exports
+//    d) // IWYU pragma: no_include "foo/bar/baz.h"
 // 'Annotation' constructs:
-//    d) // #include "foo/bar/baz.h"  // IWYU pragma: export
-//    e) // #include "foo/bar/baz.h"  // IWYU pragma: keep
+//    d) #include "foo/bar/baz.h"  // IWYU pragma: export
+//    e) #include "foo/bar/baz.h"  // IWYU pragma: keep
 //
 // 4) Process doxygen @headername directives. In later versions of GCC,
 //    these directives are like IWYU pragma private directives:
@@ -82,7 +83,8 @@ using std::vector;
 
 class IwyuPreprocessorInfo : public clang::PPCallbacks {
  public:
-  IwyuPreprocessorInfo() : main_file_(NULL) {}
+  IwyuPreprocessorInfo() : main_file_(NULL),
+                           empty_file_info_(NULL, this) {}
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
   void HandlePreprocessingDone();
@@ -134,6 +136,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   bool PublicHeaderIntendsToProvide(const clang::FileEntry* public_header,
                                     const clang::FileEntry* other_file)
       const;
+
+  // Return true if the given file has an iwyu_pragma
+  // "no_include <other_filename>".
+  bool IncludeIsInhibited(const clang::FileEntry* file,
+                          const string& other_filename) const;
 
  protected:
   // Preprocessor event handlers called by Clang.
@@ -256,10 +263,16 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   map<const clang::FileEntry*,
       set<const clang::FileEntry*> > intends_to_provide_map_;
 
+  // Maps from a FileEntry* to the quoted names of files that its file
+  // is directed *not* to include via the "no_include" pragma.
+  map<const clang::FileEntry*, set<string> > no_include_map_;
+
   // Set of (file, line number) pairs that are enclosed by the pair of
   // directives "IWYU pragma: begin exports" and "IWYU pragma: end
   // exports".
   set<pair<const clang::FileEntry*, int> > exported_lines_set_;
+
+  const IwyuFileInfo empty_file_info_;
 };
 
 }  // namespace include_what_you_use
