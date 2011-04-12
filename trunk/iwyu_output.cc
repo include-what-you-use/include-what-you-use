@@ -1119,6 +1119,13 @@ void CalculateIwyuForFullUse(OneUse* use,
   // iwyu says foo.h needs to #include foo.cc.
   // TODO(csilvers): it's probably more correct to check if
   // suggested_header() is in the transitive closure of actual_includes.
+  // TODO(csilvers): this could cause breakage for code like this:
+  //    x.cc:    class X {};
+  //    y.h:     #include "x.cc"
+  //    z.cc:    #include "y.h"; X x;
+  // iwyu will say 'replace the #include of y.h with an #include of
+  // x.cc,' which the code below will then strip.  The end result is
+  // z.cc will not #include anything, and will fail to compile.
   if (!IsHeaderFile(use->suggested_header()) &&
       !Contains(actual_includes, use->suggested_header())) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()

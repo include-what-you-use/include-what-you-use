@@ -1790,6 +1790,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // that's responsible for its type or not, we just assume it is.
     // TODO(csilvers): fix when we can determine what the macro-text
     // is responsible for and what we're responsible for.
+    // TODO(csilvers): we should be reporting a fwd-decl use for
+    // GetTypeOf(expr), not on deref_base_type.
     ReportTypeUse(CurrentLoc(), deref_base_type);
     return true;
   }
