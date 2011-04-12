@@ -31,6 +31,7 @@ class FakeFlags:
     self.dry_run = False
     self.checkout_command = None
     self.safe = False
+    self.separate_project_includes = None
 
 
 class FixIncludesBase(unittest.TestCase):
@@ -2202,6 +2203,58 @@ int main() { return 0; }
                                                            self.flags)
     self.assertListEqual([], self.actual_after_contents)
     self.assertEqual(0, num_files_modified)
+
+  def testSortingProjectIncludesAuto(self):
+    """Check that project includes can be sorted separately."""
+    infile = """\
+#include "me/subdir0/foo.h"
+#include <stdio.h>
+#include "me/subdir2/bar.h"
+#include "me/subdir1/bar.h"
+#include "me/subdir0/bar.h"
+#include "other/baz.h"
+"""
+    expected_output = """\
+#include "me/subdir0/foo.h"
+#include <stdio.h>
+#include "other/baz.h"
+#include "me/subdir0/bar.h"
+#include "me/subdir1/bar.h"
+#include "me/subdir2/bar.h"
+"""
+    self.RegisterFileContents({'me/subdir0/foo.cc': infile})
+    self.flags.separate_project_includes = '<tld>'
+    num_files_modified = fix_includes.SortIncludesInFiles(['me/subdir0/foo.cc'],
+                                                          self.flags)
+    self.assertListEqual(expected_output.strip().split('\n'),
+                         self.actual_after_contents)
+    self.assertEqual(1, num_files_modified)
+
+  def testSortingProjectIncludesUserSpecified(self):
+    """Test user-specified project directory name."""
+    infile = """\
+#include "me/subdir0/foo.h"
+#include <stdio.h>
+#include "me/subdir2/bar.h"
+#include "me/subdir1/bar.h"
+#include "me/subdir0/bar.h"
+#include "other/baz.h"
+"""
+    expected_output = """\
+#include "me/subdir0/foo.h"
+#include <stdio.h>
+#include "me/subdir1/bar.h"
+#include "me/subdir2/bar.h"
+#include "other/baz.h"
+#include "me/subdir0/bar.h"
+"""
+    self.RegisterFileContents({'me/subdir0/foo.cc': infile})
+    self.flags.separate_project_includes = 'me/subdir0'
+    num_files_modified = fix_includes.SortIncludesInFiles(['me/subdir0/foo.cc'],
+                                                          self.flags)
+    self.assertListEqual(expected_output.strip().split('\n'),
+                         self.actual_after_contents)
+    self.assertEqual(1, num_files_modified)
 
   def testAddingNewIncludesAfterRemovingOldOnes(self):
     infile = """\

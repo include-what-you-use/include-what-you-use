@@ -1176,8 +1176,9 @@ _MAIN_CU_INCLUDE_KIND = 1         # e.g. #include "foo.h" when editing foo.cc
 _C_SYSTEM_INCLUDE_KIND = 2        # e.g. #include <stdio.h>
 _CXX_SYSTEM_INCLUDE_KIND = 3      # e.g. #include <vector>
 _NONSYSTEM_INCLUDE_KIND = 4       # e.g. #include "bar.h"
-_FORWARD_DECLARE_KIND = 5         # e.g. class Baz;
-_EOF_KIND = 6                     # used at eof
+_PROJECT_INCLUDE_KIND = 5         # e.g. #include "myproject/quux.h"
+_FORWARD_DECLARE_KIND = 6         # e.g. class Baz;
+_EOF_KIND = 7                     # used at eof
 
 
 def _IsSystemInclude(line_info):
@@ -1214,7 +1215,36 @@ def _IsMainCUInclude(line_info, filename):
   return canonical_file in (canonical_include, canonical_include2)
 
 
-def _GetLineKind(file_line, filename):
+def _IsSameProject(line_info, edited_file, project):
+  """Return true if included file and edited file are in the same project.
+
+  An included_file is in project 'project' if the project is a prefix of the
+  included_file.  'project' should end with /.
+
+  As a special case, if project is '<tld>', then the project is defined to
+  be the top-level directory of edited_file.
+
+  Arguments:
+    line_info: a LineInfo structure with .key containing the file that is
+      being included.
+    edited_file: the name of the file being edited.
+    project: if '<tld>', set the project path to be the top-level directory
+      name of the file being edited.  If not '<tld>', this value is used to
+      specify the project directory.
+
+  Returns:
+    True if line_info and filename belong in the same project, False otherwise.
+  """
+  included_file = line_info.key[1:]
+  if project != '<tld>':
+    return included_file.startswith(project)
+  included_root = included_file.find(os.path.sep)
+  edited_root = edited_file.find(os.path.sep)
+  return (included_root > -1 and edited_root > -1 and
+          included_file[0:included_root] == edited_file[0:edited_root])
+
+
+def _GetLineKind(file_line, filename, separate_project_includes):
   """Given a file_line + file being edited, return best *_KIND value or None."""
   line_without_coments = _COMMENT_RE.sub('', file_line.line)
   if file_line.deleted:
@@ -1226,6 +1256,9 @@ def _GetLineKind(file_line, filename):
   elif _IsSystemInclude(file_line):
     return _CXX_SYSTEM_INCLUDE_KIND
   elif file_line.type == _INCLUDE_RE:
+    if (separate_project_includes and
+        _IsSameProject(file_line, filename, separate_project_includes)):
+      return _PROJECT_INCLUDE_KIND
     return _NONSYSTEM_INCLUDE_KIND
   elif file_line.type == _FORWARD_DECLARE_RE:
     return _FORWARD_DECLARE_KIND
@@ -1233,7 +1266,8 @@ def _GetLineKind(file_line, filename):
     return None
 
 
-def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename):
+def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
+                          flags):
   """Returns [start_line,end_line) of 1st reorder_span with a line of kind kind.
 
   This function iterates over all the reorder_spans in file_lines, and
@@ -1261,6 +1295,7 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename):
      _C_SYSTEM_INCLUDE_KIND:   #include <stdio.h>
      _CXX_SYSTEM_INCLUDE_KIND: #include <vector>
      _NONSYSTEM_INCLUDE_KIND:  #include "bar.h"
+     _PROJECT_INCLUDE_KIND:    #include "myproject/quux.h"
      _FORWARD_DECLARE_KIND:    class Baz;
 
   Arguments:
@@ -1272,6 +1307,9 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename):
     kind: one of *_KIND values.
     filename: the name of the file that file_lines comes from.
        This is passed to _GetLineKind (are we a main-CU #include?)
+    flags: commandline flags, as parsed by optparse.  We use
+       flags.separate_project_includes to sort the #includes for the
+       current project separately from other #includes.
 
   Returns:
     A pair of line numbers, [start_line, end_line), that is the 'best'
@@ -1279,7 +1317,7 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename):
   """
   assert kind in (_MAIN_CU_INCLUDE_KIND, _C_SYSTEM_INCLUDE_KIND,
                   _CXX_SYSTEM_INCLUDE_KIND, _NONSYSTEM_INCLUDE_KIND,
-                  _FORWARD_DECLARE_KIND), kind
+                  _PROJECT_INCLUDE_KIND, _FORWARD_DECLARE_KIND), kind
   # Figure out where the first 'contentful' line is (after the first
   # 'good' span, so we skip past header guards and the like).  Basically,
   # the first contentful line is a line not in any reorder span.
@@ -1298,7 +1336,8 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename):
   last_reorder_spans = {}
   for reorder_span in good_reorder_spans:
     for line_number in apply(xrange, reorder_span):
-      line_kind = _GetLineKind(file_lines[line_number], filename)
+      line_kind = _GetLineKind(file_lines[line_number], filename,
+                               flags.separate_project_includes)
       # Ignore forward-declares that come after 'contentful' code; we
       # never want to insert new forward-declares there.
       if (line_kind == _FORWARD_DECLARE_KIND and
@@ -1388,7 +1427,7 @@ def _RemoveNamespacePrefix(fwd_decl_iwyu_line, namespace_prefix):
   return fwd_decl_iwyu_line
 
 
-def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines):
+def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines, flags):
   """Given a span of lines from file_lines, returns a "decorated" result.
 
   First, we construct the actual contents of the move-span, as a list
@@ -1420,6 +1459,9 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines):
       forward-declares already in the file, this will be a sub-list
       of file_lines.  For #includes and forward-declares we're adding
       in, it will be a newly created list.
+    flags: commandline flags, as parsed by optparse.  We use
+      flags.separate_project_includes to sort the #includes for the
+      current project separately from other #includes.
 
   Returns:
     A tuple (reorder_span, kind, sort_key, all_lines_as_list)
@@ -1463,7 +1505,8 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines):
   sort_key = sort_key.replace('-inl.h', '_inl.h')
 
   # Next figure out the kind.
-  kind = _GetLineKind(firstline, iwyu_record.filename)
+  kind = _GetLineKind(firstline, iwyu_record.filename,
+                      flags.separate_project_includes)
 
   # All we're left with is the reorder-span we're in.  Hopefully it's easy.
   reorder_span = firstline.reorder_span
@@ -1490,7 +1533,7 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines):
       # TODO(csilvers): could make this more efficient by storing, per-kind.
       toplevel_reorder_spans = _GetToplevelReorderSpans(file_lines)
       reorder_span = _FirstReorderSpanWith(file_lines, toplevel_reorder_spans,
-                                           kind, iwyu_record.filename)
+                                           kind, iwyu_record.filename, flags)
 
   return (reorder_span, kind, sort_key, all_lines)
 
@@ -1653,7 +1696,8 @@ def FixFileLines(iwyu_record, file_lines, flags):
   decorated_move_spans = []
   for (start_line, end_line) in move_spans:
     decorated_span = _DecoratedMoveSpanLines(iwyu_record, file_lines,
-                                             file_lines[start_line:end_line])
+                                             file_lines[start_line:end_line],
+                                             flags)
     if decorated_span:
       decorated_move_spans.append(decorated_span)
 
@@ -1668,7 +1712,7 @@ def FixFileLines(iwyu_record, file_lines, flags):
     else:
       line_info.type = _FORWARD_DECLARE_RE
     decorated_span = _DecoratedMoveSpanLines(iwyu_record, file_lines,
-                                             [line_info])
+                                             [line_info], flags)
     assert decorated_span, 'line to add is not an #include or fwd-decl?'
     decorated_move_spans.append(decorated_span)
 
@@ -1859,16 +1903,30 @@ def main(argv):
                           'else min(the number of files that would be '
                           'modified, 100)'))
   parser.add_option('--checkout_command',
-                    help='A command, such as "p4 edit", to run on each '
-                    'non-writeable file before modifying it.  The name of '
-                    'the file will be appended to the command after a space.  '
-                    'The command will not be run on any file that does not '
-                    'need to change.')
+                    help=('A command, such as "p4 edit", to run on each '
+                          'non-writeable file before modifying it.  The name '
+                          'of the file will be appended to the command after '
+                          'a space.  The command will not be run on any file '
+                          'that does not need to change.'))
+  parser.add_option('--separate_project_includes',
+                    help=('Sort #includes for current project separately '
+                          'from all other #includes.  This flag specifies '
+                          'the root directory of the current project.  '
+                          'If the value is "<tld>", #includes that share the '
+                          'same top-level directory are assumed to be in the '
+                          'same project.  If not specified, project #includes '
+                          'will be sorted with other non-system #includes.'))
+
   (flags, files_to_modify) = parser.parse_args(argv[1:])
   if files_to_modify:
     files_to_modify = set(files_to_modify)
   else:
     files_to_modify = None
+
+  if (flags.separate_project_includes and
+      flags.separate_project_includes != '<tld>' and
+      not flags.separate_project_includes.endswith(os.path.sep)):
+    flags.separate_project_includes += os.path.sep
 
   if flags.sort_only:
     if not files_to_modify:
