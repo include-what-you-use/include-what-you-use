@@ -126,12 +126,14 @@ _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
                _INCLUDE_RE, _FORWARD_DECLARE_RE,
               ]
 
-# A regexp matching #include lines that should not be sorted -- that
-# is, we should never reorganize the code so an #include that used to
-# come before this line now comes after, or vice versa.  This can be
-# used for 'fragile' #includes that require other #includes to happen
-# before them to function properly.
-_NOSORT_INCLUDES = re.compile(r'^\s*#\s*include\s+(<linux/)')
+# A regexp matching #include lines that should be a barrier for
+# sorting -- that is, we should never reorganize the code so an
+# #include that used to come before this line now comes after, or vice
+# versa.  This can be used for 'fragile' #includes that require other
+# #includes to happen before them to function properly.
+# (Note that the barrier has no effect on where new #includes are
+# added; it just affects the reordering of existing #includes.)
+_BARRIER_INCLUDES = re.compile(r'^\s*#\s*include\s+(<linux/)')
 
 
 class FixIncludesError(Exception):
@@ -668,11 +670,11 @@ def _CalculateMoveSpans(file_lines, forward_declare_spans):
       file_lines[i].move_span = (span_begin, span_end)
 
 
-def _IsNosortInclude(file_lines, line_range):
-  """Returns true iff some line in [line_range[0], line_range[1]) is _NOSORT."""
+def _ContainsBarrierInclude(file_lines, line_range):
+  """Returns true iff some line in [line_range[0], line_range[1]) is BARRIER."""
   for line_number in apply(xrange, line_range):
     if (not file_lines[line_number].deleted and
-        _NOSORT_INCLUDES.search(file_lines[line_number].line)):
+        _BARRIER_INCLUDES.search(file_lines[line_number].line)):
       return True
   return False
 
@@ -702,12 +704,12 @@ def _CalculateReorderSpans(file_lines):
   thrown in), because move-spans share the 'no actual code'
   requirement.
 
-  There's one exception: if any move-span matches the _NOSORT_INCLUDES
-  regexp, it means that we should consider that move-span to be a
-  'barrier': nothing should get reordered from one side of that
-  move-span to the other.  (This is used for #includes that depend on
-  other #includes being before them to function properly.)  We do that
-  by putting them into their own reorder span.
+  There's one exception: if any move-span matches the
+  _BARRIER_INCLUDES regexp, it means that we should consider that
+  move-span to be a 'barrier': nothing should get reordered from one
+  side of that move-span to the other.  (This is used for #includes
+  that depend on other #includes being before them to function
+  properly.)  We do that by putting them into their own reorder span.
 
   For lines of type _INCLUDE_RE or _FORWARD_DECLARE_RE, the reorder
   span is set to the tuple [start_of_span, end_of_span).  All other
@@ -728,12 +730,12 @@ def _CalculateReorderSpans(file_lines):
     # If we're a 'nosort' include, we're always in a reorder span of
     # our own.  Otherwise, add in the next move span if we're
     # connected to it only by blank lines.
-    if not _IsNosortInclude(file_lines, sorted_move_spans[i]):
+    if not _ContainsBarrierInclude(file_lines, sorted_move_spans[i]):
       while i < len(sorted_move_spans) - 1:
         move_span_end = sorted_move_spans[i][1]
         next_move_span_start = sorted_move_spans[i+1][0]
         if (_LinesAreAllBlank(file_lines, move_span_end, next_move_span_start)
-            and not _IsNosortInclude(file_lines, sorted_move_spans[i+1])):
+            and not _ContainsBarrierInclude(file_lines, sorted_move_spans[i+1])):
           i += 1
         else:
           break

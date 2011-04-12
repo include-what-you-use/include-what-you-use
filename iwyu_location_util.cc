@@ -73,10 +73,11 @@ SourceLocation GetLocation(const clang::Decl* decl) {
 
 // Unfortunately member_expr doesn't expose the location of the .  or
 // ->.  If the base is implicit, there is no . or ->, and we just
-// return the member loc.  Otherwise, we have to guess if we're in a
-// macro or not.  We look at getMemberLoc(), the start of the member,
-// and getBase()->getLocEnd(), the end of the base.  If they're both
-// on the same line of the same file, we assume the . or -> is there
+// return the member loc.  Otherwise, we have to guess if the entire
+// member-expression (all of 'b.m') is in a macro or not.  We look at
+// getMemberLoc(), the start of the member ('m') , and
+// getBase()->getLocEnd(), the end of the base ('b').  If they're both
+// on the same line of the same file, then the . or -> must be there
 // too, and return that as the location.  Otherwise, we assume that
 // one or the other is in a macro, but the . or -> is not, and use the
 // instantiation (not spelling) location of the macro.

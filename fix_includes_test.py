@@ -2237,8 +2237,8 @@ int main() { return 0; }
     self.assertListEqual([], self.actual_after_contents)
     self.assertEqual(0, num_files_modified)
 
-  def testNosortIncludes(self):
-    """Tests that we correctly sort 'around' _NOSORT_INCLUDES."""
+  def testBarrierIncludes(self):
+    """Tests that we correctly sort 'around' _BARRIER_INCLUDES."""
     infile = """\
 // Copyright 2010
 
@@ -2259,14 +2259,14 @@ int main() { return 0; }
 int main() { return 0; }
 """
     iwyu_output = """\
-nosort_includes.h should add these lines:
+barrier_includes.h should add these lines:
 #include "user/new_include.h"
 #include <new_cpp_include>
 
-nosort_includes.h should remove these lines:
+barrier_includes.h should remove these lines:
 - #include <linux/can_sort_around_this_deleted_include>  // lines 5-5
 
-The full include-list for nosort_includes.h:
+The full include-list for barrier_includes.h:
 #include "user/include.h"
 #include "user/new_include.h"
 #include <cpp_include>
@@ -2280,7 +2280,7 @@ The full include-list for nosort_includes.h:
 #include <stdlib.h>
 ---
 """
-    self.RegisterFileContents({'nosort_includes.h': infile})
+    self.RegisterFileContents({'barrier_includes.h': infile})
     self.ProcessAndTest(iwyu_output)
 
   def testSortingProjectIncludesAuto(self):
