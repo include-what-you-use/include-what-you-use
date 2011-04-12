@@ -2204,6 +2204,52 @@ int main() { return 0; }
     self.assertListEqual([], self.actual_after_contents)
     self.assertEqual(0, num_files_modified)
 
+  def testNosortIncludes(self):
+    """Tests that we correctly sort 'around' _NOSORT_INCLUDES."""
+    infile = """\
+// Copyright 2010
+
+#include <linux/a_stay_top.h>
+#include <stdlib.h>   ///-
+#include <linux/can_sort_around_this_deleted_include>  ///-
+#include <stdio.h>
+///+#include <stdlib.h>
+#include "user/include.h"
+///+#include "user/new_include.h"
+#include <linux/c_stay_second.h>
+#include <linux/b_stay_third.h>
+#include <ctype.h>
+#include <cpp_include>
+///+#include <new_cpp_include>
+#include <linux/d_stay_fourth.h>
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+nosort_includes.h should add these lines:
+#include "user/new_include.h"
+#include <new_cpp_include>
+
+nosort_includes.h should remove these lines:
+- #include <linux/can_sort_around_this_deleted_include>  // lines 5-5
+
+The full include-list for nosort_includes.h:
+#include "user/include.h"
+#include "user/new_include.h"
+#include <cpp_include>
+#include <ctype.h>
+#include <linux/a_stay_top.h>
+#include <linux/b_stay_third.h>
+#include <linux/c_stay_second.h>
+#include <linux/d_stay_fourth.h>
+#include <new_cpp_include>
+#include <stdio.h>
+#include <stdlib.h>
+---
+"""
+    self.RegisterFileContents({'nosort_includes.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testSortingProjectIncludesAuto(self):
     """Check that project includes can be sorted separately."""
     infile = """\
