@@ -2686,6 +2686,24 @@ class InstantiatedTemplateVisitor
       if (!TraverseDecl(*it))
         return false;
     }
+
+    // An annoying corner of the language: if you instantiate a type,
+    // and a virtual method of that type does any deleting, you need
+    // to have the full type being deleted, *even if that virtual
+    // method is never called*.  (It's not a langauge error not to,
+    // but compilers warn about it because the destructor that gets
+    // called is figured out at instantiation time, so if the type
+    // isn't present, no destructor will get called.)
+    for (DeclContext::decl_iterator it = class_decl->decls_begin();
+         it != class_decl->decls_end(); ++it) {
+      if (const CXXMethodDecl* method_decl = DynCastFrom(*it)) {
+        if (method_decl->isVirtual()) {
+          // TODO(csilvers): call TraverseExpandedTemplateFunctionHelper,
+          // but in a mode where we only pay attention to delete calls.
+        }
+      }
+    }
+
     return true;
   }
 
