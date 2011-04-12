@@ -288,12 +288,7 @@ string IntToString(int i) {
 //    initializers were explicitly written, all default constructors
 //    were explicitly written, etc, even if they're not.  We traverse
 //    the implicit stuff as if it were explicit.
-// 5) Make sure templates in typedefs are instantiated.  When we see
-//    a typedef, we want to simulate creating an instance of the
-//    underlying type.  If the underlying type is never actually used,
-//    though, and it's a template, clang may never instantiate it.
-//    So we have to.
-// 6) Add two callbacks that subclasses can override (just like any
+// 5) Add two callbacks that subclasses can override (just like any
 //    other AST callback): TraverseImplicitDestructorCall and
 //    HandleFunctionCall.  TraverseImplicitDestructorCall is a
 //    callback for a "pseudo-AST" node that covers destruction not
@@ -308,12 +303,6 @@ string IntToString(int i) {
 // VisitTemplateArgLoc, which are parallel to the Visit*Decl()/etc
 // visitors.  Subclasses should override these Visit routines, and not
 // the Traverse routine directly.
-
-// Holds all decls (either a class or class template) where we've
-// chosen to explicitly instantiate the methods of this decl.  This
-// makes sure we don't try to instantiate twice.  Required by (5).
-// TODO(csilvers): should clear this when (if) the AST ever changes.
-static set<const Decl*> g_explicitly_instantiated_classes;
 
 template <class Derived>
 class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
@@ -731,72 +720,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   //------------------------------------------------------------
-  // (5) Make sure templates in typedefs are instantiated.
-
-  // If you do 'typedef MyClass<Foo> Bar', we basically instantiate
-  // MyClass<Foo> right there, and report any iwyu violations we see.
-  // This is because the typedef causes us to 're-export'
-  // MyClass<Foo>: that is, when you write 'typedef Foo Bar', clients
-  // can use Bar however they want without having to worry about
-  // #including anything except you.  That puts you on the hook for
-  // all the #includes that Bar might need, for *anything* one might
-  // want to do to a Bar (basically, instantiate it or access methods
-  // of it).
-  //
-  // But if MyClass<Foo> is never actually used in the program, then
-  // clang won't bother to create an implicit instantiation of
-  // MyClass<Foo>.  To protect against that, we fake an explicit
-  // instantiation at the spot of the typedef, by telling clang that
-  // in the code 'typedef MyClass<Foo> MyTypedef;', the 'MyClass<Foo>'
-  // is actually an explicit instantiation.
-
-  bool TraverseTypedefDecl(clang::TypedefDecl* decl) {
-    if (CanIgnoreCurrentASTNode())
-      return Base::TraverseTypedefDecl(decl);
-
-    const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
-    const Decl* underlying_decl = TypeToDeclAsWritten(underlying_type);
-    if (const ClassTemplateSpecializationDecl* specialization_decl =
-        DynCastFrom(underlying_decl)) {
-      const TemplateSpecializationKind spec_kind
-          = specialization_decl->getTemplateSpecializationKind();
-      // TSK_Undeclared means that clang didn't see the need to
-      // instantiate it.  Note: this call modifies specialization_decl
-      // in place.  It does not cause specialization_decl to be
-      // inserted into the AST; it's only accessible via this typedef.
-      if (spec_kind == clang::TSK_Undeclared) {
-        compiler_->getSema().InstantiateClassTemplateSpecialization(
-            CurrentLoc(),
-            const_cast<ClassTemplateSpecializationDecl*>(specialization_decl),
-            clang::TSK_ExplicitInstantiationDefinition,
-            false);   // no complaining!
-      }
-      // If there was already an explicit instantiation (written
-      // directly in the code), all members were instantiated then.
-      // If not -- either spec_kind was TSK_Undeclared, or was an
-      // implicit instantiation -- we need to make sure all members
-      // are instantiated.  However, make sure we only ever do it once!
-      if (spec_kind != clang::TSK_ExplicitInstantiationDeclaration &&
-          spec_kind != clang::TSK_ExplicitInstantiationDefinition &&
-          spec_kind != clang::TSK_ExplicitSpecialization &&
-          !Contains(g_explicitly_instantiated_classes, specialization_decl)) {
-        // TODO(csilvers): this can emit warnings in badinc.cc.  Figure out why.
-        compiler_->getSema().InstantiateClassTemplateSpecializationMembers(
-            CurrentLoc(),
-            const_cast<ClassTemplateSpecializationDecl*>(specialization_decl),
-            clang::TSK_ExplicitInstantiationDefinition);
-        g_explicitly_instantiated_classes.insert(specialization_decl);
-      }
-    }
-    // We want to do all this instantiation before traversing the
-    // typedef decl, since we have some VisitTypedefDecl() calls
-    // (below) which look at specialization_decl, and they need to see
-    // an instantiated decl.  That's why we do this parent-call last.
-    return Base::TraverseTypedefDecl(decl);
-  }
-
-  //------------------------------------------------------------
-  // (6) Add TraverseImplicitDestructorCall and HandleFunctionCall.
+  // (5) Add TraverseImplicitDestructorCall and HandleFunctionCall.
 
   // TraverseImplicitDestructorCall: This is a callback this class
   // introduces that is a first-class callback just like any AST-node
@@ -3261,9 +3185,6 @@ class IwyuAction : public ASTFrontendAction {
     // Do this first thing after getting our hands on a CompilerInstance.
     InitGlobals(&compiler.getSourceManager(),
                 &compiler.getPreprocessor().getHeaderSearchInfo());
-
-    // Also init the globals that are local to this file.
-    g_explicitly_instantiated_classes.clear();
 
     IwyuPreprocessorInfo* const preprocessor_consumer
         = new IwyuPreprocessorInfo();

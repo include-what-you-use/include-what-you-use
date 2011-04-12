@@ -291,10 +291,10 @@ typedef I2_EnumForTypedefs H_Typedef;
 typedef std::set<I2_Enum> H_I2Enum_Set;
 // We need the full definition of I2_Class because as a typedef we are
 // re-exporting the vector<I2_Class> type, so it must be fully defined.
+// TODO(csilvers): IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
 // IWYU: std::vector is...*<vector>
 // IWYU: I2_Class needs a declaration
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
 typedef std::vector<I2_Class> H_I2Class_Vector_Unused;
 // IWYU: I2_TemplateClass is...*badinc-i2.h
 // IWYU: I2_TemplateClass::I2_TemplateClass<.*> is...*badinc-i2-inl.h
