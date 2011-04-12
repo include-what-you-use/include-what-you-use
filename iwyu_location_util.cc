@@ -16,11 +16,17 @@
 #include "iwyu_ast_util.h"
 #include "iwyu_location_util.h"
 
-using clang::SourceLocation;
-using clang::Decl;
+using clang::BinaryOperator;
+using clang::CXXDependentScopeMemberExpr;
 using clang::CXXMethodDecl;
+using clang::CXXOperatorCallExpr;
 using clang::ClassTemplateSpecializationDecl;
+using clang::ConditionalOperator;
 using clang::FunctionDecl;
+using clang::MemberExpr;
+using clang::SourceLocation;
+using clang::UnresolvedMemberExpr;
+
 
 namespace include_what_you_use {
 
@@ -49,7 +55,7 @@ namespace include_what_you_use {
 // methods don't have their own location anyway.
 //    Note the two issues can both be present, if an implicit method's
 // parent is an implicit instantiation.
-SourceLocation GetLocation(const Decl* decl) {
+SourceLocation GetLocation(const clang::Decl* decl) {
   if (decl == NULL)  return SourceLocation();
 
   if (const CXXMethodDecl* method_decl = DynCastFrom(decl)) {
@@ -65,33 +71,68 @@ SourceLocation GetLocation(const Decl* decl) {
   return decl->getLocation();
 }
 
-clang::SourceLocation GetLocation(const clang::Stmt* stmt) {
-  if (stmt == NULL)  return clang::SourceLocation();
+// Unfortunately member_expr doesn't expose the location of the .  or
+// ->.  If the base is implicit, there is no . or ->, and we just
+// return the member loc.  Otherwise, we have to guess if we're in a
+// macro or not.  We look at getMemberLoc(), the start of the member,
+// and getBase()->getLocEnd(), the end of the base.  If they're both
+// on the same line of the same file, we assume the . or -> is there
+// too, and return that as the location.  Otherwise, we assume that
+// one or the other is in a macro, but the . or -> is not, and use the
+// instantiation (not spelling) location of the macro.
+static SourceLocation GetMemberExprLocation(const MemberExpr* member_expr) {
+  const SourceLocation member_start = member_expr->getMemberLoc();
+  const SourceLocation base_end = member_expr->getBase()->getLocEnd();
+
+  if (member_expr->isImplicitAccess() || base_end.isInvalid())
+    return member_start;
+  // Weird: member_start can be 'invalid' for calls like bool(x),
+  // where bool() is a class's own operator bool.  Shrug.
+  if (member_start.isInvalid())
+    return base_end;
+
+  // If either the base or the member is not a macro, then we consider
+  // the location of this member-expr to be outside the macro.
+  if (!IsInMacro(member_start))
+    return member_start;
+  if (!IsInMacro(base_end))
+    return base_end;
+
+  // Now figure out if the base and member are in the same macro.  If
+  // so, we say the whole member-expr is part of that macro.
+  // Otherwise, we just say the member-expr is in the file where the
+  // member and base macros are called.
+  if (GetFileEntry(member_start) == GetFileEntry(base_end) &&
+      GetLineNumber(member_start) == GetLineNumber(base_end)) {
+    return member_start;
+  }
+
+  return GetInstantiationLoc(member_start);
+}
+
+SourceLocation GetLocation(const clang::Stmt* stmt) {
+  if (stmt == NULL)  return SourceLocation();
   // For some expressions, we take the location to be the 'key' part
   // of the expression, not the beginning.  For instance, the
   // location of 'a << b' is the '<<', not the 'a'.  This is
   // important for code like 'MACRO << 5', where we want to make
   // sure the location we return is "here", and not inside MACRO.
   // (The price is we do worse for '#define OP <<; a OP b;'.)
-  if (const clang::CXXOperatorCallExpr* call_expr = DynCastFrom(stmt)) {
+  if (const CXXOperatorCallExpr* call_expr = DynCastFrom(stmt)) {
     return call_expr->getOperatorLoc();
-  } else if (const clang::MemberExpr* member_expr = DynCastFrom(stmt)) {
-    // ExprLoc() is the location of the . or ->.  If it's invalid, the
-    // parent-part of the expression is implicit, and there's no . or ->,
-    // so just fall back on the default loc that clang gives for this expr.
-    if (member_expr->getExprLoc().isValid())
-      return member_expr->getExprLoc();
-  } else if (const clang::UnresolvedMemberExpr* member_expr
+  } else if (const MemberExpr* member_expr = DynCastFrom(stmt)) {
+    return GetMemberExprLocation(member_expr);
+  } else if (const UnresolvedMemberExpr* member_expr
              = DynCastFrom(stmt)) {
     if (member_expr->getOperatorLoc().isValid())
       return member_expr->getOperatorLoc();
-  } else if (const clang::CXXDependentScopeMemberExpr* member_expr
+  } else if (const CXXDependentScopeMemberExpr* member_expr
              = DynCastFrom(stmt)) {
     if (member_expr->getOperatorLoc().isValid())
       return member_expr->getOperatorLoc();
-  } else if (const clang::BinaryOperator* binary_op = DynCastFrom(stmt)) {
+  } else if (const BinaryOperator* binary_op = DynCastFrom(stmt)) {
     return binary_op->getOperatorLoc();
-  } else if (const clang::ConditionalOperator* conditional_op =
+  } else if (const ConditionalOperator* conditional_op =
              DynCastFrom(stmt)) {
     return conditional_op->getQuestionLoc();
   }
@@ -99,18 +140,18 @@ clang::SourceLocation GetLocation(const clang::Stmt* stmt) {
   return stmt->getLocStart();
 }
 
-clang::SourceLocation GetLocation(const clang::TypeLoc* typeloc) {
-  if (typeloc == NULL)  return clang::SourceLocation();
+SourceLocation GetLocation(const clang::TypeLoc* typeloc) {
+  if (typeloc == NULL)  return SourceLocation();
   return typeloc->getBeginLoc();
 }
 
-clang::SourceLocation GetLocation(const clang::NestedNameSpecifierLoc* nnsloc) {
-  if (nnsloc == NULL)  return clang::SourceLocation();
+SourceLocation GetLocation(const clang::NestedNameSpecifierLoc* nnsloc) {
+  if (nnsloc == NULL)  return SourceLocation();
   return nnsloc->getBeginLoc();
 }
 
-clang::SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc) {
-  if (argloc == NULL)  return clang::SourceLocation();
+SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc) {
+  if (argloc == NULL)  return SourceLocation();
   return argloc->getLocation();
 }
 
