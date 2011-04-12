@@ -46,6 +46,11 @@ void ViaMacro(const IndirectClass& ic) {
   // IWYU: IndirectClass is...*indirect.h
   IC.CALL_METHOD;
 
+  IC
+      .
+      // IWYU: IndirectClass is...*indirect.h
+      CALL_METHOD;
+
   // But this member-expr is entirely in the macro, so we don't own it.
   IC_CALL_METHOD;
 }
