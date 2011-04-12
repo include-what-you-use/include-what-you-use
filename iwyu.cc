@@ -2637,6 +2637,7 @@ class InstantiatedTemplateVisitor
     //    class S; int main() { C<S> c; }
     if (isa<CXXConstructorDecl>(fn_decl)) {
       CHECK_(parent_type && "How can a constructor have no parent?");
+      parent_type = RemoveElaboration(parent_type);
       if (!TraverseDataAndTypeMembersOfClassHelper(
               dyn_cast<TemplateSpecializationType>(parent_type)))
         return false;
@@ -2734,31 +2735,26 @@ class InstantiatedTemplateVisitor
     if (current_ast_node() && current_ast_node()->in_forward_declare_context())
       return true;   // never depend on any types if a fwd-decl
 
+    const NamedDecl* tpl_decl = TypeToDeclAsWritten(tpl_type);
     const map<const Type*, const Type*>& resugar_map =
         FullUseCache::GetPrecomputedResugarMap(tpl_type);
     if (!resugar_map.empty()) {
       VERRS(6) << "(Using pre-computed list of full-use information for "
-               << TypeToDeclAsWritten(tpl_type)->getQualifiedNameAsString()
-               << ")\n";
+               << tpl_decl->getQualifiedNameAsString() << ")\n";
       // For entries with a non-NULL value, we report the value, which
       // is the unsugared type, as being fully used.  Entries with a
       // NULL value are default template args, and we only report them
       // if the template class doesn't intend-to-provide them.
-      // SomeInstantiatedTemplateIntendsToProvide handles the case we
-      // have a templated class that #includes "foo.h" and has a
-      // scoped_ptr<Foo>: we say the templated class provides Foo,
-      // even though it's scoped_ptr.h that's actually trying to call
-      // Foo::Foo and ::~Foo.  TODO(csilvers): this isn't ideal:
-      // ideally we'd want
-      // 'TheInstantiatedTemplateForWhichTypeWasADefaultTemplateArgumentIntendsToProvide',
-      // but clang doesn't store that information.
-
       for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
         const Type* resugared_type = NULL;
-        if (it->second)
+        if (it->second) {
           resugared_type = it->second;
-        else if (!SomeInstantiatedTemplateIntendsToProvide(it->first))
-          resugared_type = it->first;
+        } else {
+          const NamedDecl* resugared_decl = TypeToDeclAsWritten(it->first);
+          if (!preprocessor_info().PublicHeaderIntendsToProvide(
+                  GetFileEntry(tpl_decl), GetFileEntry(resugared_decl)))
+            resugared_type = it->first;
+        }
         if (resugared_type && !resugared_type->isPointerType()) {
           ReportTypeUse(caller_loc(), resugared_type);
           // For a templated type, check the template args as well.

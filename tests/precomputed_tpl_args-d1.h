@@ -10,3 +10,15 @@
 // Tests the precomputed template-arg-use list in iwyu_cache.cc.
 
 #include "tests/precomputed_tpl_args-i1.h"
+
+// Provide another class that we have a std::allocator specialization for.
+class D1SpecializationClass { };
+
+namespace std {
+template<> class less<D1SpecializationClass> {
+ public:
+  bool operator()(const D1SpecializationClass&, const D1SpecializationClass&) {
+    return true;
+  }
+};
+}
