@@ -27,7 +27,7 @@ import fix_includes
 class FakeFlags:
   def __init__(self):
     self.blank_lines = False
-    self.nocomments = False
+    self.comments = True
     self.dry_run = False
     self.checkout_command = None
     self.safe = False
@@ -1083,7 +1083,7 @@ The full include-list for subdir/include_comments.cc:
 
   def testNocommentsFlag(self):
     """Tests we properly don't include/modify comments with --nocomments."""
-    self.flags.nocomments = True
+    self.flags.comments = False
     infile = """\
 // Copyright 2010
 
@@ -1898,7 +1898,7 @@ The full include-list for keep_nolint:
 
   def testKeepNolintCommentInNocommentMode(self):
     """Test we keep a nolint comment even with --nocomments."""
-    self.flags.nocomments = True
+    self.flags.comments = False
     self.testKeepNolintComment()
 
   # Test the IWYUOutputParser method _MatchSectionHeading.
