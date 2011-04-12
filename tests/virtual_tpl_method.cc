@@ -1,4 +1,4 @@
-//===--- delete_in_template.cc - test input file for iwyu -----------------===//
+//===--- virtual_tpl_method.cc - test input file for iwyu -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C++ has the following rule: when you instantiate a template class,
-// and any virtual method in that class calls delete, you had better
-// provide a definition for the type being deleted, even if you never
-// call the virtual method.  While it's not a language error, g++ and
-// clang both warn on it, because the destructors of the deleted type
-// won't be run if the virtual method is called via a base class.  (I
-// think?)  iwyu should be careful to provide full types in that case.
+// Normally, C++ only instantiates methods on template classes when
+// the methods are called.  But for virtual methods, they're
+// instantiated when the key method for the template class is
+// instantiated.  Since template classes rarely have key methods, that
+// means they're instantiated when the class is instantiated.  We test
+// that iwyu correctly handles that situation.
 
 #include "tests/direct.h"
 
@@ -30,19 +29,19 @@ template <typename T> struct Deleter {
 };
 
 // Note we require the full type even though we don't call Delete.
-// TODO(csilvers): // IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass is...*indirect.h
 // IWYU: IndirectClass needs a declaration
 Deleter<IndirectClass> d(0);
 
 // IWYU: IndirectClass needs a declaration
 Deleter<IndirectClass>* pd
 // Another way to instantiate a template, also requirs the full type.
-// TODO(csilvers): // IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass is...*indirect.h
 // IWYU: IndirectClass needs a declaration
     = new Deleter<IndirectClass>(0);
 
 // This also instantiates the template, and thus requires the deleted-type.
-// TODO(csilvers): IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass is...*indirect.h
 // IWYU: IndirectClass needs a declaration
 int id = Deleter<IndirectClass>::NothingToDoWithDelete();
 
@@ -67,15 +66,30 @@ NonvirtualDeleter<IndirectClass>* pnd
 int ind = NonvirtualDeleter<IndirectClass>::NothingToDoWithDelete();
 
 
+template <typename T> struct NonTplArgDeleter {
+  virtual void Delete() {
+    // IWYU: IndirectClass needs a declaration
+    IndirectClass* ic = 0;
+    // IWYU: IndirectClass is...*indirect.h
+    delete ic;
+  }
+};
+
+// These should not require the full type, for the normal reason that
+// they're not a template arg.
+NonTplArgDeleter<int> ntad;
+
+
+
 /**** IWYU_SUMMARY
 
-tests/delete_in_template.cc should add these lines:
+tests/virtual_tpl_method.cc should add these lines:
 #include "tests/indirect.h"
 
-tests/delete_in_template.cc should remove these lines:
+tests/virtual_tpl_method.cc should remove these lines:
 - #include "tests/direct.h"  // lines XX-XX
 
-The full include-list for tests/delete_in_template.cc:
+The full include-list for tests/virtual_tpl_method.cc:
 #include "tests/indirect.h"  // for IndirectClass
 
 ***** IWYU_SUMMARY */
