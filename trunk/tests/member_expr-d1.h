@@ -1,4 +1,4 @@
-//===--- template_specialization-d1.h - test input file for iwyu ----------===//
+//===--- member_expr-d1.h - test input file for iwyu ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,5 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/template_specialization-i1.h"
-#include "tests/template_specialization-i2.h"
+#define CALL_METHOD Method()
+#define IC ic
+#define IC_CALL_METHOD  (ic).Method()
