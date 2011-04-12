@@ -1056,18 +1056,18 @@ void CalculateIwyuForForwardDeclareUse(
       use->set_suggested_header(GetFilePath(same_file_decl));
   }
   if (providing_decl) {
-    // Change decl_ to point to this "better" redecl.  Be sure to store
-    // as a TemplateClassDecl if we're a templated class.
-    const NamedDecl* better_decl = providing_decl;
-    if (const ClassTemplateSpecializationDecl* providing_spec_decl
-        = DynCastFrom(providing_decl)) {
-      better_decl = providing_spec_decl->getSpecializedTemplate();
-      CHECK_(better_decl && "Can't find specialization");
-    } else if (const CXXRecordDecl* cxx_decl = DynCastFrom(providing_decl)) {
-      if (cxx_decl->getDescribedClassTemplate())
-        better_decl = cxx_decl->getDescribedClassTemplate();
-    }
-    use->reset_decl(better_decl);
+    // Change decl_ to point to this "better" redecl.
+    use->reset_decl(providing_decl);
+  }
+
+  // Be sure to store as a TemplateClassDecl if we're a templated
+  // class.
+  if (const ClassTemplateSpecializationDecl* spec_decl
+      = DynCastFrom(use->decl())) {
+    use->reset_decl(spec_decl->getSpecializedTemplate());
+  } else if (const CXXRecordDecl* cxx_decl = DynCastFrom(use->decl())) {
+    if (cxx_decl->getDescribedClassTemplate())
+      use->reset_decl(cxx_decl->getDescribedClassTemplate());
   }
 
   // (D2) Mark iwyu violation unless defined in a current #include.
@@ -1080,12 +1080,6 @@ void CalculateIwyuForForwardDeclareUse(
              << " (" << use->PrintableUseLoc() << "): have earlier fwd-decl at "
              << PrintableLoc(GetLocation(same_file_decl)) << "\n";
   } else {
-    // OK, we're going to forward-declare this type.  Make sure it's
-    // a template class decl, and not an instantiation decl.
-    if (const ClassTemplateSpecializationDecl* spec_decl
-        = DynCastFrom(use->decl())) {
-      use->reset_decl(spec_decl->getSpecializedTemplate());
-    }
     use->set_is_iwyu_violation();
   }
 }
