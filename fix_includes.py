@@ -1933,7 +1933,7 @@ def main(argv):
     files_to_modify = None
 
   if (flags.separate_project_includes and
-      flags.separate_project_includes != '<tld>' and
+      not flags.separate_project_includes.startswith('<') and  # 'special' vals
       not flags.separate_project_includes.endswith(os.path.sep)):
     flags.separate_project_includes += os.path.sep
 
