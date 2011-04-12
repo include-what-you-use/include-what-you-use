@@ -3155,6 +3155,8 @@ class IwyuAstConsumer
                           const clang::Expr* calling_expr) {
     if (!Base::HandleFunctionCall(callee, parent_type, calling_expr))
       return false;
+    if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
+      return true;
 
     if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type))
       return true;
