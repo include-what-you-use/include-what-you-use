@@ -206,6 +206,9 @@ typedef I1_Class Cc_typedef_array[kI1ConstInt];
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
 typedef I1_TemplateClass<I1_TemplateClass<I1_Class,I2_Class> > Cc_tpl_typedef;
+// TODO(csilvers): it would be nice to be able to take this line out and
+// still have the above tests pass:
+Cc_tpl_typedef cc_tpl_typedef;
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class::I2_Class is...*badinc-i2-inl.h
 // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
@@ -589,6 +592,10 @@ int cc_ptr_check3 = Cc_PTS<int I1_Class::*>::IsPointer;
 
 // badinc.h
 H_Typedef h_typedef;
+// TODO(csilvers): it would be nice to be able to remove this and
+// still have all tests pass.  As it is, we need this to instantiate
+// the template's underlying type, which we need to find its violations.
+H_I1_Class_Typedef h_i1_class_typedef;
 H_I2Enum_Set h_i2enum_set;
 H_I2Enum_Set* h_i2enum_set_ptr;
 H_Class h_class;
