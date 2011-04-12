@@ -256,6 +256,39 @@ The full include-list for empty_namespace:
     self.RegisterFileContents({'empty_namespace': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testRemovePartOfEmptyNamespace(self):
+    """Tests we remove a namespace if empty, but not enclosing namespaces."""
+    infile = """\
+// Copyright 2010
+
+namespace maps_transit_realtime {
+namespace service_alerts {
+class StaticServiceAlertStore;
+namespace trigger {                  ///-
+class Trigger;                       ///-
+}  // namespace trigger              ///-
+namespace ui {                       ///-
+class Alert;                         ///-
+}  // namespace ui                   ///-
+}  // namespace service_alerts
+}  // namespace maps_transit_realtime
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+empty_internal_namespace should add these lines:
+
+empty_internal_namespace should remove these lines:
+- namespace maps_transit_realtime { namespace service_alerts { namespace trigger { class Trigger; } } }  // lines 7-7
+- namespace maps_transit_realtime { namespace service_alerts { namespace ui { class Alert; } } }  // lines 10-10
+
+The full include-list for empty_internal_namespace:
+namespace maps_transit_realtime { namespace service_alerts { class StaticServiceAlertStore; } }   // lines 5-5
+---
+"""
+    self.RegisterFileContents({'empty_internal_namespace': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testRemoveEmptyIfdef(self):
     """Tests we remove an #ifdef if we remove all #includes inside it."""
     # Also makes sure we reorder properly around the removed ifdef.

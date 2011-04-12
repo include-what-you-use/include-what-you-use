@@ -795,7 +795,7 @@ def _DeleteEmptyNamespaces(file_lines):
   start_line = 0
   while start_line < len(file_lines):
     line_info = file_lines[start_line]
-    if line_info.type != _NAMESPACE_START_RE:
+    if line_info.deleted or line_info.type != _NAMESPACE_START_RE:
       start_line += 1
       continue
     # Because multiple namespaces can be on one line
