@@ -1495,6 +1495,74 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines):
   return (reorder_span, kind, sort_key, all_lines)
 
 
+def _CommonPrefixLength(a, b):
+  """Given two lists, returns the index of 1st element not common to both."""
+  end = min(len(a), len(b))
+  for i in xrange(end):
+    if a[i] != b[i]:
+      return i
+  return end
+
+
+def _NormalizeNamespaceForwardDeclareLines(lines):
+  """'Normalize' namespace lines in a list of output lines and return new list.
+
+  When suggesting new forward-declares to insert, iwyu uses the following
+  format, putting each class on its own line with all namespaces:
+     namespace foo { namespace bar { class A; } }
+     namespace foo { namespace bar { class B; } }
+     namespace foo { namespace bang { class C; } }
+  We convert this to 'normalized' form, which puts namespaces on their
+  own line and collects classes together:
+     namespace foo {
+     namespace bar {
+     class A;
+     class B;
+     }
+     namespace bang {
+     class C;
+     }
+     }
+
+  Non-namespace lines are left alone.  Only adjacent namespace lines
+  from the input are merged.
+
+  Arguments:
+    lines: a list of output-lines -- that is, lines that are ready to
+       be emitted as-is to the output file.
+
+  Returns:
+    A new version of lines, with namespace lines normalized as above.
+  """
+  # iwyu input is very regular, which is nice.
+  iwyu_namespace_re = re.compile('namespace ([^{]*) { ')
+  iwyu_classname_re = re.compile('{ ([^{}]*) }')
+
+  retval = []
+  current_namespaces = []
+  # We append a blank line so the final namespace-closing happens "organically".
+  for line in lines + ['']:
+    namespaces_in_line = iwyu_namespace_re.findall(line)
+    differ_pos = _CommonPrefixLength(namespaces_in_line, current_namespaces)
+    namespaces_to_close = current_namespaces[differ_pos:]
+    namespaces_to_open = namespaces_in_line[differ_pos:]
+    retval.extend(['}'] * len(namespaces_to_close))
+    retval.extend('namespace %s {' % ns for ns in namespaces_to_open)
+    current_namespaces = namespaces_in_line
+    # Now add the current line.  If we were a namespace line, it's the
+    # 'class' part of the line (everything but the 'namespace {'s).
+    if namespaces_in_line:
+      m = iwyu_classname_re.search(line)
+      if not m:
+        raise FixIncludesError('Malformed namespace line from iwyu: %s', line)
+      retval.append(m.group(1))
+    else:
+      retval.append(line)
+
+  assert retval and retval[-1] == '', 'What happened to our sentinel line?'
+  return retval[:-1]
+
+
 def _DeleteLinesAccordingToIwyu(iwyu_record, file_lines):
   """Deletes all lines that iwyu_record tells us to, and cleans up after."""
   for line_number in iwyu_record.lines_to_delete:
@@ -1626,14 +1694,21 @@ def FixFileLines(iwyu_record, file_lines, flags):
       line_number += 1
 
     # Now fill in the contents of the reorder-span from decorated_move_spans
+    new_lines = []
     while (decorated_move_spans and
            decorated_move_spans[0][0] == current_reorder_span):
-      output_lines.extend(decorated_move_spans[0][3])   # the full content
+      new_lines.extend(decorated_move_spans[0][3])   # the full content
       if (len(decorated_move_spans) > 1 and
           _ShouldInsertBlankLine(decorated_move_spans[0],
                                  decorated_move_spans[1], file_lines, flags)):
-        output_lines.append('')
+        new_lines.append('')
       decorated_move_spans = decorated_move_spans[1:]   # pop
+    # Now do the munging to convert namespace lines from the iwyu input
+    # format to the 'official style' format:
+    #    'namespace foo { class Bar; }\n' -> 'namespace foo {\nclass Bar;\n}'
+    # along with collecting multiple classes in the same namespace.
+    new_lines = _NormalizeNamespaceForwardDeclareLines(new_lines)
+    output_lines.extend(new_lines)
     line_number = current_reorder_span[1]               # go to end of span
 
   return output_lines

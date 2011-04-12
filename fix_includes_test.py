@@ -681,11 +681,16 @@ template<typename T> class Nest::NestedTplClass;  // lines 11-11
 
 #include "foo.h"
 
-///+namespace Bar { class Baz; }
+///+namespace Bar {
+///+class Baz;
+///+}
 ///+
 using Bar::baz;
 
-namespace Foo { class Bang; }
+namespace Foo { class Bang; }  ///-
+///+namespace Foo {
+///+class Bang;
+///+}
 
 int main() { return 0; }
 """
@@ -704,6 +709,49 @@ namespace Foo { class Bang; }  // lines 7-7
     self.RegisterFileContents({'add_fwd_decl_before_using': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testAddForwardDeclareInNamespace(self):
+    """Make sure we normalize namespaces properly."""
+    infile = """\
+// Copyright 2010
+
+#include "foo.h"
+
+///+namespace ns {
+///+class Foo;
+///+namespace ns2 {
+///+namespace ns3 {
+///+class Bar;
+///+template <typename T> class Bang;
+///+}
+///+}
+///+namespace ns4 {
+///+class Baz;
+///+}
+///+}
+///+
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_decl_inside_namespace should add these lines:
+namespace ns { class Foo; }
+namespace ns { namespace ns2 { namespace ns3 { class Bar; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class Bang; } } }
+namespace ns { namespace ns4 { class Baz; } }
+
+add_fwd_decl_inside_namespace should remove these lines:
+
+The full include-list for add_fwd_decl_inside_namespace:
+#include "foo.h"  // lines 3-3
+namespace ns { class Foo; }
+namespace ns { namespace ns2 { namespace ns3 { class Bar; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class Bang; } } }
+namespace ns { namespace ns4 { class Baz; } }
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_inside_namespace': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testAddForwardDeclareInsideNamespaceSometimes(self):
     """Tests that in special situations, we will put fwd-decls inside a ns."""
     infile = """\
@@ -719,8 +767,10 @@ namespace ns {
   namespace  ns2   {   // we sure do love nesting our namespaces!
 
 class NsFoo;
-///+namespace ns3 { class NsBang; }
-///+namespace ns3 { template <typename T> class NsBaz; }
+///+namespace ns3 {
+///+class NsBang;
+///+template <typename T> class NsBaz;
+///+}
 template <typename T> class NsBar;
 
 }
@@ -756,8 +806,12 @@ template <typename T> class Baz;  // lines 6-6
 #include "foo.h"
 
 class Bar;
-///+namespace ns { namespace ns2 { class NsBang; } }
-///+namespace ns { namespace ns2 { template <typename T> class NsBaz; } }
+///+namespace ns {
+///+namespace ns2 {
+///+class NsBang;
+///+template <typename T> class NsBaz;
+///+}
+///+}
 template <typename T> class Baz;
 
 #ifdef THIS_IS_A_CONTENTFUL_LINE
@@ -2164,7 +2218,9 @@ int main() { return 0; }
 ///+#include "base/scoped_ptr.h"            // for scoped_ptr
 
 class Query;
-///+namespace util { class Status; }
+///+namespace util {
+///+class Status;
+///+}
 
 namespace structuredsearch {
 
