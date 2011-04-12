@@ -3000,8 +3000,8 @@ class IwyuAstConsumer
     return Base::VisitTagDecl(decl);
   }
 
-  // If you specialize a template that is only declared, we need
-  // to keep the declaration around.  That is, for code like this:
+  // If you specialize a template, you need a declaration of the
+  // template you're specializing.  That is, for code like this:
   //    template <class T> struct Foo;
   //    template<> struct Foo<int> { ... };
   // we don't want iwyu to recommend removing the 'forward declare' of Foo.
@@ -3009,8 +3009,7 @@ class IwyuAstConsumer
       clang::ClassTemplateSpecializationDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
     ClassTemplateDecl* specialized_decl = decl->getSpecializedTemplate();
-    if (GetDefinitionForClass(specialized_decl) == NULL)
-      ReportDeclForwardDeclareUse(CurrentLoc(), specialized_decl);
+    ReportDeclForwardDeclareUse(CurrentLoc(), specialized_decl);
     return Base::VisitClassTemplateSpecializationDecl(decl);
   }
 
