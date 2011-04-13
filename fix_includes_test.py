@@ -29,6 +29,7 @@ class FakeFlags:
     self.blank_lines = False
     self.comments = True
     self.dry_run = False
+    self.ignore_re = None
     self.checkout_command = None
     self.safe = False
     self.separate_project_includes = None
@@ -2154,6 +2155,48 @@ The full include-list for changed:
     self.ProcessAndTest(iwyu_output, cmdline_files=['changed'],
                         unedited_files=['unchanged'])
 
+  def testIgnoreRe(self):
+    """Test the behavior of the --ignore_re flag."""
+    changed_infile = """\
+// Copyright 2010
+
+#include <notused.h>  ///-
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+int main() { return 0; }
+"""
+    unchanged_infile = """\
+// Copyright 2010
+
+#include <notused.h>
+#include "used.h"
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+changed should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+changed should remove these lines:
+- #include <notused.h>  // lines 3-3
+
+The full include-list for changed:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    # Have the exact same iwyu output for 'unchanged' as for 'changed'.
+    iwyu_output += iwyu_output.replace('changed', 'unchanged')
+
+    self.RegisterFileContents({'changed': changed_infile,
+                               'unchanged': unchanged_infile})
+    # unchanged should not be edited, since it matches ignore_re.
+    self.flags.ignore_re = 'nch'
+    self.ProcessAndTest(iwyu_output, unedited_files=['unchanged'])
 
   def testSortIncludes(self):
     """Test sorting includes only -- like running fix_includes.py -s."""
