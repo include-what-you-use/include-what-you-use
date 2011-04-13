@@ -1944,9 +1944,9 @@ def main(argv):
                           ' else min(the number of files that would be'
                           ' modified, 100)'))
 
-  parse.add_option('--ignore_re', default=None,
-                   help=('fix_includes.py will skip editing any file whose'
-                         ' name matches this regular expression.'))
+  parser.add_option('--ignore_re', default=None,
+                    help=('fix_includes.py will skip editing any file whose'
+                          ' name matches this regular expression.'))
 
   parser.add_option('--checkout_command', default=None,
                     help=('A command, such as "p4 edit", to run on each'

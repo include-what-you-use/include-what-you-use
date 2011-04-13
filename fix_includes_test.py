@@ -18,6 +18,7 @@ __author__ = 'csilvers@google.com (Craig Silverstein)'
 
 import cStringIO
 import re
+import sys
 # I use unittest instead of googletest to ease opensourcing.  Luckily,
 # the only googletest function I have to re-implement is assertListEqual.
 import unittest
@@ -2432,6 +2433,21 @@ namespace util { class Status; }
         {'structuredsearch/common/internal/query_field_xlate.h': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testMain(self):
+    """Make sure calling main doesn't crash.  Inspired by a syntax-error bug."""
+    # Give an empty stdin so we don't actually try to parse anything.
+    old_stdin = sys.stdin
+    try:
+      sys.stdin = cStringIO.StringIO()
+      fix_includes.main(['fix_includes.py'])    # argv[0] doesn't really matter
+    finally:
+      sys.stdin = old_stdin
+
+  def testFilenamesForSortingInMain(self):
+    """Make sure if we use s, we have a filename specified, in main()."""
+    # -s without any files to sort.
+    self.assertRaises(SystemExit, fix_includes.main,
+                      ['fix_includes.py', '-s'])
 
 if __name__ == '__main__':
   unittest.main()
