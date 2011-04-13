@@ -1844,8 +1844,9 @@ def ProcessIWYUOutput(f, files_to_process, flags):
     f: an iterable object that is the output of include_what_you_use.
     files_to_process: A set of filenames, or None.  If not None, we
        ignore files mentioned in f that are not in files_to_process.
-    flags: commandline flags, as parsed by optparse.  We do not use
-       any flags directly, but pass them to other routines.
+    flags: commandline flags, as parsed by optparse.  The only flag
+       we use directly is flags.ignore_re, to indicate files not to
+       process; we also pass the flags to other routines.
 
   Returns:
     The number of files that had to be modified (because they weren't
@@ -1866,6 +1867,9 @@ def ProcessIWYUOutput(f, files_to_process, flags):
     filename = iwyu_record.filename
     if files_to_process is not None and filename not in files_to_process:
       print '(skipping %s: not listed on commandline)' % filename
+      continue
+    if flags.ignore_re and re.search(flags.ignore_re, filename):
+      print '(skipping %s: it matches --ignore_re)' % filename
       continue
 
     if filename in iwyu_output_records:
@@ -1940,14 +1944,18 @@ def main(argv):
                           ' else min(the number of files that would be'
                           ' modified, 100)'))
 
-  parser.add_option('--checkout_command', default='',
+  parse.add_option('--ignore_re', default=None,
+                   help=('fix_includes.py will skip editing any file whose'
+                         ' name matches this regular expression.'))
+
+  parser.add_option('--checkout_command', default=None,
                     help=('A command, such as "p4 edit", to run on each'
                           ' non-writeable file before modifying it.  The name'
                           ' of the file will be appended to the command after'
                           ' a space.  The command will not be run on any file'
                           ' that does not need to change.'))
 
-  parser.add_option('--separate_project_includes',
+  parser.add_option('--separate_project_includes', default=None,
                     help=('Sort #includes for current project separately'
                           ' from all other #includes.  This flag specifies'
                           ' the root directory of the current project.'
