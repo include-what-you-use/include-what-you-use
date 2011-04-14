@@ -109,6 +109,7 @@ _ELSE_RE = re.compile(r'\s*#\s*(else|elif)\b')  # compiles #else/elif
 _ENDIF_RE = re.compile(r'\s*#\s*endif\b')
 # This is used to delete 'empty' namespaces after fwd-decls are removed.
 # Some third-party libraries use macros to start/end namespaces.
+# TODO(csilvers): add HASH_NAMESPACE_DECLARATION_START/_END.
 _NAMESPACE_START_RE = re.compile(r'(\s*namespace\b[^{]*{\s*)+(//.*)?$|'
                                  r'(U_NAMESPACE_BEGIN)')
 _NAMESPACE_END_RE = re.compile(r'(})|(U_NAMESPACE_END)')
@@ -120,6 +121,8 @@ _INCLUDE_RE = re.compile(r'\s*#\s*include\s+([<"][^"">]+[>"])')
 _FORWARD_DECLARE_RE = re.compile(r'$.')
 
 # We annotate every line in the source file by the re it matches, or None.
+# TODO(csilvers): introduce _HEADER_GUARD_RE, separate from _IFDEF_RE,
+#                 and calculate it once when parsing the input file.
 _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
                _NAMESPACE_START_RE, _NAMESPACE_END_RE,
                _IFDEF_RE, _ELSE_RE, _ENDIF_RE,
@@ -994,7 +997,8 @@ def _ShouldInsertBlankLine(decorated_move_span, next_decorated_move_span,
   a different rule for blank lines applies: if the next line is
   contentful (eg 'static int x = 5;'), or a namespace start, we want
   to insert a blank line to separate the move-span from the next
-  block.
+  block.  When figuring out if the next line is contentful, we skip
+  over comments.
 
   Arguments:
     decorated_move_span: a decorated_move_span we may want to put a blank
@@ -1012,7 +1016,11 @@ def _ShouldInsertBlankLine(decorated_move_span, next_decorated_move_span,
   # First handle the 'at the end of a reorder range' case.
   if decorated_move_span[0] != next_decorated_move_span[0]:
     next_line = _NextNondeletedLine(file_lines, decorated_move_span[0][1] - 1)
-    return (next_line and
+    # Skip over comments to figure out if the next line is contentful.
+    while (next_line and next_line < len(file_lines) and
+           file_lines[next_line].type == _COMMENT_LINE_RE):
+      next_line += 1
+    return (next_line and next_line < len(file_lines) and
             file_lines[next_line].type in (_NAMESPACE_START_RE, None))
 
   # We never insert a blank line between two spans of the same kind.
@@ -1042,11 +1050,57 @@ def _ShouldInsertBlankLine(decorated_move_span, next_decorated_move_span,
   return False
 
 
-def _IsHeaderGuard(line_info, next_line_info):
-  """Given two adjacent lines of a file, say whether line 1 is header guard."""
-  m1 = _HEADER_GUARD_RE.search(line_info.line or '')
-  m2 = _HEADER_GUARD_NEXTLINE_RE.search(next_line_info.line or '')
-  return m1 and m2 and m1.group(1) == m2.group(1)
+def _IsHeaderGuard(file_lines, line_number):
+  """Says whether the given line-number in a file is a header-guard.
+
+  We define a header-guard as follows: an #ifdef where there is
+  nothing contentful before or after the #ifdef.  Also, the #ifdef
+  should have no #elif in it (though we don't currently test that).
+  This catches the common case of an 'ifdef guard' in .h file, such
+  as '#ifndef FOO_H\n#define FOO_H\n...contents...\n#endif', but it
+  can also catch other whole-program #ifdefs, such as
+  '#ifdef __linux\n...\n#endif'.
+
+  Arguments:
+    file_lines: an array of LineInfo objects with .type filled in.
+    line_number: the index into file_lines to check is a header guard.
+
+  Returns:
+    True if line_number is a heard-guard line, False else.
+  """
+  # First, is line-number an '#if' or '#ifdef' at all?
+  if (file_lines[line_number].deleted or
+      file_lines[line_number].type != _IFDEF_RE):
+    return False
+
+  # Second, all the lines above us must be blank or comments.
+  for i in xrange(line_number - 1, -1, -1):
+    if (not file_lines[i].deleted and
+        file_lines[i].type not in [_COMMENT_LINE_RE, _BLANK_LINE_RE]):
+      return False
+
+  # Find the end of this ifdef.
+  ifdef_depth = 0
+  for ifdef_end in xrange(line_number, len(file_lines)):
+    if file_lines[ifdef_end].deleted:
+      continue
+    if file_lines[ifdef_end].type == _IFDEF_RE:
+      ifdef_depth += 1
+    elif file_lines[ifdef_end].type == _ENDIF_RE:
+      ifdef_depth -= 1
+      if ifdef_depth == 0:   # The end of our #ifdef!
+        break
+  else:                      # for/else
+    return False             # Weird: never found a close to this #ifdef
+
+  # Third, all the lines after the end of the ifdef must be blank or comments.
+  for i in xrange(ifdef_end + 1, len(file_lines)):
+    if (not file_lines[i].deleted and
+        file_lines[i].type not in [_COMMENT_LINE_RE, _BLANK_LINE_RE]):
+      return False
+
+  # We passed the gauntlet!
+  return True
 
 
 def _GetToplevelReorderSpans(file_lines):
@@ -1066,17 +1120,20 @@ def _GetToplevelReorderSpans(file_lines):
   """
   in_ifdef = [False] * len(file_lines)   # lines inside an #if
   ifdef_depth = 0
+  num_ifdefs_seen = 0
   for line_number in xrange(len(file_lines)):
     line_info = file_lines[line_number]
     if line_info.deleted:
       continue
     if line_info.type == _IFDEF_RE:
-      # Ignore header-guard #ifdef.
-      if (ifdef_depth == 0 and line_number < len(file_lines) - 1 and
-          _IsHeaderGuard(file_lines[line_number], file_lines[line_number+1])):
+      # Ignore header-guard #ifdef.  The header-guard has to be the
+      # first ifdef in the file, so we check that to avoid extra work.
+      if (num_ifdefs_seen == 0 and line_number < len(file_lines) - 1 and
+          _IsHeaderGuard(file_lines, line_number)):
         pass
       else:
         ifdef_depth += 1
+        num_ifdefs_seen += 1
     elif line_info.type == _ENDIF_RE:
       ifdef_depth -= 1
     if ifdef_depth > 0:
@@ -1165,7 +1222,7 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
     elif line_info.type == _IFDEF_RE:
       # Ignore header-guard #ifdef.
       if (line_number < len(file_lines) - 1 and
-          _IsHeaderGuard(file_lines[line_number], file_lines[line_number+1])):
+          _IsHeaderGuard(file_lines, line_number)):
         pass
       else:
         return (None, None)
@@ -1397,12 +1454,20 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
   # comments, whitespace, and #ifdef guard lines, or the beginning
   # of the _FORWARD_DECLARE span, whichever is smaller.
   line_number = 0
+  seen_header_guard = False
   while line_number < len(file_lines) - 1:
     if file_lines[line_number].deleted:
       line_number += 1
-    elif _IsHeaderGuard(file_lines[line_number], file_lines[line_number + 1]):
+    elif _IsHeaderGuard(file_lines, line_number):
+      seen_header_guard = True
       line_number += 2    # skip over the header guard
-    elif file_lines[line_number].type in (_COMMENT_LINE_RE, _BLANK_LINE_RE):
+    elif file_lines[line_number].type == _BLANK_LINE_RE:
+      line_number += 1
+    elif (file_lines[line_number].type == _COMMENT_LINE_RE
+          and not seen_header_guard):
+      # We put #includes after top-of-file comments.  But comments
+      # inside the header guard are no longer top-of-file comments;
+      # #includes go before them.
       line_number += 1
     else:
       # If the "first line" we would return is inside the forward-declare
@@ -1538,7 +1603,7 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines, flags):
   kind = _GetLineKind(firstline, iwyu_record.filename,
                       flags.separate_project_includes)
 
-  # All we're left with is the reorder-span we're in.  Hopefully it's easy.
+  # All we're left to do is the reorder-span we're in.  Hopefully it's easy.
   reorder_span = firstline.reorder_span
   if reorder_span is None:     # must be a new #include we're adding
     # If we're a forward-declare inside a namespace, see if there's a
