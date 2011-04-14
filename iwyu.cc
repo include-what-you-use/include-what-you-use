@@ -2944,53 +2944,62 @@ class IwyuAstConsumer
     // If it's not a definition, and it's not a friend declaration, it
     // must be a forward-declaration.  Don't count the 'inline'
     // forward-declares like 'int foo(class T* t) ...'
-    // TODO(csilvers): replace IsDeclNodeInsideFriend with IsFriendDecl().
-    if (!decl->isDefinition() && !IsDeclNodeInsideFriend(current_ast_node()) &&
+    if (!decl->isDefinition() && !IsFriendDecl(decl) &&
         !decl->isEmbeddedInDeclarator()) {
       // If we're a templated class, make sure we add the whole template.
       const NamedDecl* decl_to_fwd_declare = decl;
       if (const CXXRecordDecl* cxx_decl = DynCastFrom(decl))
         if (cxx_decl->getDescribedClassTemplate())
           decl_to_fwd_declare = cxx_decl->getDescribedClassTemplate();
-      preprocessor_info().FileInfoFor(CurrentFileEntry())->AddForwardDeclare(
-          decl_to_fwd_declare);
 
-      // A forward declaration is not a "use" of a forward-declaration
-      // (a "use" is when you use a decl, not when you declare it), so
-      // we don't need to report this.  However, there are some
-      // situations where we don't want to remove the forward
-      // declaration, even if it's not used anywhere.  If the
-      // forward-decl has a linkage spec ('extern "C"') or has
-      // gcc-style __attributes__, then it can't be removed, since
-      // that information probably isn't encoded anywhere else.  To
-      // make sure iwyu doesn't remove this decl, we claim it's used.
-      // This is a bit of a hack; better would be to have an API that
-      // says, "don't remove this decl even if it's not used."
+      // We've found a forward-declaration.  We'll report we've found
+      // it, but we also want to report if we know already that we
+      // should keep this forward-declaration around (and not consider
+      // it for deletion if it's never used).  There are a few
+      // situations we can do this, described below.
+      bool definitely_keep_fwd_decl = false;
+
+      // (1) If the forward-decl has a linkage spec ('extern "C"') or
+      // has gcc-style __attributes__, then it can't be removed, since
+      // that information probably isn't encoded anywhere else.
+      // (Surprisingly classes can have linkage specs! -- they are
+      // applied to all static methods of the class.  See
+      // http://msdn.microsoft.com/en-us/library/ms882260.aspx.)
       if (current_ast_node()->ParentIsA<LinkageSpecDecl>() || decl->hasAttrs())
-        ReportDeclForwardDeclareUse(CurrentLoc(), decl_to_fwd_declare);
+        definitely_keep_fwd_decl = true;
 
-      // If we're a nested class ("class A { class SubA; };"), then we
-      // can't necessary be removed either, since we're part of the
-      // public API of the enclosing class.  So again, fake a use.
-      // However, multiple declarations of the nested class aren't
-      // needed.  So we only need to 'fake' the use of one of them; we
-      // prefer the one that's actually the definition, if present.
+      // (2) If we're a nested class ("class A { class SubA; };"),
+      // then we can't necessary be removed either, since we're part
+      // of the public API of the enclosing class -- it's illegal to
+      // have a nested class and not at least declare it in the
+      // enclosing class.  If the nested class is actually defined in
+      // the enclosing class, then we're fine; if not, we need to keep
+      // one (and only one) forward-declaration inside the enclosing
+      // class.  We choose the first one.
       if (current_ast_node()->ParentIsA<CXXRecordDecl>() ||
           // For templated nested-classes, a ClassTemplateDecl is interposed.
           (current_ast_node()->ParentIsA<ClassTemplateDecl>() &&
            current_ast_node()->AncestorIsA<CXXRecordDecl>(2))) {
-        // Prefer the definition if present -- but only if it's
-        // defined inside the class, like we are.
-        const clang::NamedDecl* canonical_decl = decl->getDefinition();
-        if (!canonical_decl || canonical_decl->isOutOfLine()) {
-          // If not, just take an arbitrary, but fixed, redecl (that
-          // is, every redecl will map to the same place).  Note these
-          // must be inline (only definitions can be out of line).
-          canonical_decl = GetNonfriendClassRedecl(decl);
+        if (!decl->getDefinition() || decl->getDefinition()->isOutOfLine()) {
+          if (const RecordDecl* record_decl = DynCastFrom(decl)) {
+            set<const RecordDecl*> all_redecls = GetClassRedecls(record_decl);
+            map<unsigned, const RecordDecl*> linenum_to_decl;  // easy min()
+            for (Each<const RecordDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
+              // All declarations of a nested decl must be in the class,
+              // and thus "must" be in the same file.  So just keep line #s.
+              if (!(*it)->isDefinition())
+                linenum_to_decl[GetLineNumber(GetLocation(*it))] = *it;
+            }
+            assert(!linenum_to_decl.empty() && "decl should be in it at least!");
+            // Check if we're the decl with the smallest line number.
+            if (linenum_to_decl.begin()->second == record_decl)
+              definitely_keep_fwd_decl = true;
+          }
         }
-        if (decl == canonical_decl)  // we're the redecl iwyu should keep!
-          ReportDeclForwardDeclareUse(CurrentLoc(), decl_to_fwd_declare);
       }
+
+      preprocessor_info().FileInfoFor(CurrentFileEntry())->AddForwardDeclare(
+          decl_to_fwd_declare, definitely_keep_fwd_decl);
     }
     return Base::VisitTagDecl(decl);
   }
