@@ -191,6 +191,19 @@ isolation. As a result, we have very few tools to distinguish when the
 author of a macro is responsible for a symbol used in a macro, and
 when the caller of the macro is responsible.
 
+==Includes with Side Effects==
+
+While not a major problem, this indicates the myriad "gotchas" that exist around include-what-you-use: removing an #include and replacing it with a forward-declare may be dangerous even if no symbols are fully used from the #include.  Consider the following code:
+
+{{{
+foo.h: namespace ns { class Foo {}; }
+       using ns::Foo;
+foo.cc: #include "foo.h"
+        Foo* foo;`
+}}}
+
+If iwyu just blindly replaces the `#include` with a forward declare such as `namespace ns { class Foo; }`, the code will break because of the lost using declaration.  Include-what-you-use has to watch out for this case.
+
 ==Private Includes==
 
 Suppose you write `vector<int> v;`. You are using vector, and thus have
