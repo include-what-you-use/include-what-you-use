@@ -1437,6 +1437,34 @@ class Foo;
     self.RegisterFileContents({'empty_file': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testCommentsAtEndOfFile(self):
+    """Tests we don't crash if a file ends with #includs and then a comment."""
+    infile = """\
+// Copyright 2010
+
+const int kFoo = 5;  // make sure we don't just insert at the beginning
+
+#include <stdio.h>
+#include "used.h"
+///+
+///+class Foo;
+// Comments, and then...nothing
+"""
+    iwyu_output = """\
+comments_at_end_of_file should add these lines:
+class Foo;
+
+comments_at_end_of_file should remove these lines:
+
+The full include-list for comments_at_end_of_file:
+#include <stdio.h>
+#include "used.h"
+class Foo;
+---
+"""
+    self.RegisterFileContents({'comments_at_end_of_file': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testAddSystemIncludeToFileWithoutAny(self):
     """Tests we add a system #include to a non-sys location when needed."""
     infile = """\
@@ -1535,6 +1563,51 @@ class Foo;  // lines 9-9
     self.RegisterFileContents({'nearest_include.cc': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testFalseAlarmHeaderGuard(self):
+    """Tests we calculate top-level-ness even in face of a fake header-guard."""
+    infile = """\
+// Copyright 2010
+
+#include "nearest_toplevel_include.h"
+
+static int x = 6;
+#include <stdio.h>
+///+#include "used.h"
+
+#ifndef MAP_ANONYMOUS  // This is the fake header guard!
+# define MAP_ANONYMOUS MAP_ANON
+#endif
+
+#ifdef FOO
+#include <foo.h>
+#endif
+#if defined(BAR)
+#include <bar.h>
+#endif
+
+static int y = 7;
+class Foo;
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+nearest_toplevel_include.cc should add these lines:
+#include "used.h"
+
+nearest_toplevel_include.cc should remove these lines:
+
+The full include-list for nearest_toplevel_include.cc:
+#include "nearest_toplevel_include.h"
+#include <bar.h>
+#include <foo.h>
+#include <stdio.h>
+#include "used.h"
+class Foo;  // lines 9-9
+---
+"""
+    self.RegisterFileContents({'nearest_toplevel_include.cc': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testAddIncludeAfterHeaderGuard(self):
     """Test that we are willing to insert .h's inside a header guard."""
     infile = """\
@@ -1597,6 +1670,70 @@ The full include-list for simple.h:
 ---
 """
     self.RegisterFileContents({'simple.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddIncludeAfterHeaderGuardLikeIfdef(self):
+    """Test that we are willing to insert .h's inside a h-guard-*like* line."""
+    infile = """\
+// Copyright 2010
+
+#ifdef __linux   // serves the same role as a header guard
+
+#include <notused.h>  ///-
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+#endif
+
+// Comments are allowed after the header guard.
+"""
+    iwyu_output = """\
+os_header_guard.h should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+os_header_guard.h should remove these lines:
+- #include <notused.h>  // lines 5-5
+
+The full include-list for os_header_guard.h:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    self.RegisterFileContents({'os_header_guard.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddIncludeAfterHeaderGuardButBeforeComments(self):
+    """Test that we introduce new #includes right after a header guard."""
+    infile = """\
+// Copyright 2010
+
+#ifndef SIMPLE_WITH_COMMENT_H_
+#define SIMPLE_WITH_COMMENT_H_
+
+///+#include <stdio.h>
+///+#include "used.h"
+///+
+// This is a comment
+void ForThisFunction();
+
+#endif
+"""
+    iwyu_output = """\
+simple_with_comment.h should add these lines:
+#include <stdio.h>
+#include "used.h"
+
+simple_with_comment.h should remove these lines:
+
+The full include-list for simple_with_comment.h:
+#include <stdio.h>
+#include "used.h"
+---
+"""
+    self.RegisterFileContents({'simple_with_comment.h': infile})
     self.ProcessAndTest(iwyu_output)
 
   def testIncludeOfCcFile(self):
@@ -2406,6 +2543,8 @@ class FieldSpecification;  ///-
 class TokenizationSpec;
 
 class QueryXlator { ... };
+
+#endif  // #define STRUCTUREDSEARCH_COMMON_INTERNAL_DFS_H_
 """
     iwyu_output = """\
 structuredsearch/common/internal/query_field_xlate.h should add these lines:
