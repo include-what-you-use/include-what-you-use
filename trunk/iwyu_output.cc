@@ -448,12 +448,15 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
            << " -> " << GetFilePath(includee) << "\n";
 }
 
-void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl) {
+void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
+                                     bool definitely_keep_fwd_decl) {
   CHECK_(fwd_decl && "forward_declare_decl unexpectedly NULL");
   CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<RecordDecl>(fwd_decl))
          && "Can only forward declare classes and class templates");
   lines_.push_back(OneIncludeOrForwardDeclareLine(fwd_decl));
   lines_.back().set_present();
+  if (definitely_keep_fwd_decl)
+    lines_.back().set_desired();
   direct_forward_declares_.insert(fwd_decl);   // store in another way as well
   VERRS(6) << "Marked found forward-declare: "
            << GetFilePath(file_) << ":" << lines_.back().LineNumberString()
@@ -840,18 +843,25 @@ void ProcessForwardDeclare(OneUse* use) {
     }
   }
 
-  // (A3) If a nested class, discard this use.
-  if (record_decl->getQualifier() &&
-      record_decl->getQualifier()->getKind() == NestedNameSpecifier::TypeSpec) {
+  // (A3) If using a nested class, discard this use.
+  if (IsNestedClass(record_decl)) {
     // iwyu will require the full type of the parent class when it
     // recurses on the qualifier (any use of Foo::Bar requires the
     // full type of Foo).  So if we're forward-declared inside Foo,
     // the user will get that forward-declaration for free when
-    // it gets the full definition of Foo.
-    VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name()
-             << " (" << use->PrintableUseLoc() << "): nested class\n";
-    use->set_ignore_use();
-    return;
+    // it gets the full definition of Foo.  The one exception is
+    // when the use is itself inside the class, in which case it
+    // sometimes needs the forward-declaration: for instance
+    //    class Foo { class Nested; Nested* Fn(); class Nested { ... } };
+    // This exception applies only when the use is in the same class
+    // as the decl; we'll be conservative and apply it whenever
+    // they're in the same file.
+    if (GetFileEntry(use->use_loc()) != GetFileEntry(use->decl())) {
+      VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name()
+               << " (" << use->PrintableUseLoc() << "): nested class\n";
+      use->set_ignore_use();
+      return;
+    }
   }
 
   // (A4) If a definition exists earlier in this file, discard this use.

@@ -383,13 +383,6 @@ bool IsElaborationNode(const ASTNode* ast_node);
 // node. (E.g. 'class ns::Foo myyvar'.)
 bool IsNamespaceQualifiedNode(const ASTNode* ast_node);
 
-// See if the given ast_node is the decl of a class or function that
-// occurs in a friend context.  That is, for 'friend class Foo', this
-// function matches the decl for 'class Foo'.  (It does not match the
-// FriendDecl 'friend class Foo' -- we're looking to say whether we're
-// the decl *inside* the friend decl.)
-bool IsDeclNodeInsideFriend(const ASTNode* ast_node);
-
 // Return true if the given ast_node is inside a C++ method body.  Do
 // this by walking up the AST tree until you find a CXXMethodDecl,
 // then see if the node just before you reached it is the body.  We
@@ -572,6 +565,9 @@ bool IsDefaultNewOrDelete(const clang::FunctionDecl* decl,
 
 // Returns true if this decl is part of a friend decl.
 bool IsFriendDecl(const clang::Decl* decl);
+
+// Returns true if this decl is defined inside another class/struct.
+bool IsNestedClass(const clang::TagDecl* decl);
 
 bool HasDefaultTemplateParameters(const clang::TemplateDecl* decl);
 

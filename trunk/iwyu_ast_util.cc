@@ -190,21 +190,6 @@ bool IsNamespaceQualifiedNode(const ASTNode* ast_node) {
           NestedNameSpecifier::Namespace);
 }
 
-bool IsDeclNodeInsideFriend(const ASTNode* ast_node) {
-  if (ast_node->ParentIsA<FriendDecl>() ||
-      ast_node->ParentIsA<FriendTemplateDecl>())
-    return true;
-
-  // For 'template<class Foo> friend class X', 'class X's parent is
-  // a ClassTemplateDecl.
-  if (ast_node->ParentIsA<ClassTemplateDecl>() &&
-      (ast_node->AncestorIsA<FriendDecl>(2) ||
-       ast_node->AncestorIsA<FriendTemplateDecl>(2)))
-    return true;
-
-  return false;
-}
-
 bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
   // If we're a destructor, we're definitely part of a method body;
   // destructors don't have any other parts to them.  This case is
@@ -797,6 +782,16 @@ bool IsFriendDecl(const Decl* decl) {
     if (cxx_decl->getDescribedClassTemplate())
       decl = cxx_decl->getDescribedClassTemplate();
   return decl->getFriendObjectKind() != Decl::FOK_None;
+}
+
+bool IsNestedClass(const TagDecl* decl) {
+  // Two possibilities: it's written as a nested class (that is, with
+  // a qualifier) or it's actually living inside another class.
+  if (decl->getQualifier() &&
+      decl->getQualifier()->getKind() == NestedNameSpecifier::TypeSpec) {
+    return true;
+  }
+  return isa<RecordDecl>(decl->getDeclContext());
 }
 
 bool HasDefaultTemplateParameters(const TemplateDecl* decl) {

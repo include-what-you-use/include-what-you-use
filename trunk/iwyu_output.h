@@ -211,7 +211,10 @@ class IwyuFileInfo {
 
   void AddInclude(const clang::FileEntry* includee,
                   const string& quoted_includee, int linenumber);
-  void AddForwardDeclare(const clang::NamedDecl* forward_declare_decl);
+  // definitely_keep_fwd_decl tells us that we should never suggest
+  // the fwd-decl be removed, even if we don't see any uses of it.
+  void AddForwardDeclare(const clang::NamedDecl* forward_declare_decl,
+                         bool definitely_keep_fwd_decl);
 
   // Use these to register an iwyu 'use'.  It's preferable to indicate
   // an explicit type or decl being used, but if that's not available,
