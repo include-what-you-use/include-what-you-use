@@ -93,18 +93,13 @@ in which case 100 is returned.
 
 _COMMENT_RE = re.compile('\s*//.*')
 
-# For this to be a header guard, the two groups from these re's must match.
-_HEADER_GUARD_RE = re.compile(r'^\s*#\s*(?:ifndef|if\s*!\s*defined)\s*\(*\s*'
-                              r'([\w_]+)')
-_HEADER_GUARD_NEXTLINE_RE = re.compile(r'^\s*#\s*define\s+([\w_]+)')
-
 # These are the types of lines a file can have.  These are matched
 # using re.match(), so don't need a leading ^.
 _C_COMMENT_START_RE = re.compile(r'\s*/\*')
 _C_COMMENT_END_RE = re.compile(r'.*\*/\s*$')
 _COMMENT_LINE_RE = re.compile(r'\s*//')
 _BLANK_LINE_RE = re.compile(r'\s*$')
-_IFDEF_RE = re.compile(r'\s*#\s*if')            # compiles #if/ifdef/ifndef
+_IF_RE = re.compile(r'\s*#\s*if')               # compiles #if/ifdef/ifndef
 _ELSE_RE = re.compile(r'\s*#\s*(else|elif)\b')  # compiles #else/elif
 _ENDIF_RE = re.compile(r'\s*#\s*endif\b')
 # This is used to delete 'empty' namespaces after fwd-decls are removed.
@@ -118,15 +113,16 @@ _INCLUDE_RE = re.compile(r'\s*#\s*include\s+([<"][^"">]+[>"])')
 # We don't need this to actually match forward-declare lines (we get
 # that information from the iwyu input), but we do need an RE here to
 # serve as an index to _LINE_TYPES.  So we use an RE that never matches.
-_FORWARD_DECLARE_RE = re.compile(r'$.')
+_FORWARD_DECLARE_RE = re.compile(r'$.FORWARD_DECLARE_RE')
+# Likewise, used to mark an '#ifdef' line of a header guard, or other
+# #ifdef that covers an entire file.
+_HEADER_GUARD_RE = re.compile(r'$.HEADER_GUARD_RE')
 
 # We annotate every line in the source file by the re it matches, or None.
-# TODO(csilvers): introduce _HEADER_GUARD_RE, separate from _IFDEF_RE,
-#                 and calculate it once when parsing the input file.
 _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
                _NAMESPACE_START_RE, _NAMESPACE_END_RE,
-               _IFDEF_RE, _ELSE_RE, _ENDIF_RE,
-               _INCLUDE_RE, _FORWARD_DECLARE_RE,
+               _IF_RE, _ELSE_RE, _ENDIF_RE,
+               _INCLUDE_RE, _FORWARD_DECLARE_RE, _HEADER_GUARD_RE,
               ]
 
 # A regexp matching #include lines that should be a barrier for
@@ -524,6 +520,65 @@ def PrintFileDiff(old_file_contents, new_file_contents):
     pass
 
 
+def _MarkHeaderGuardIfPresent(file_lines):
+  """If any line in file_lines is a header-guard, mark it in file_lines.
+
+  We define a header-guard as follows: an #ifdef where there is
+  nothing contentful before or after the #ifdef.  Also, the #ifdef
+  should have no #elif in it (though we don't currently test that).
+  This catches the common case of an 'ifdef guard' in .h file, such
+  as '#ifndef FOO_H\n#define FOO_H\n...contents...\n#endif', but it
+  can also catch other whole-program #ifdefs, such as
+  '#ifdef __linux\n...\n#endif'.  The issue here is that if an #ifdef
+  encloses the entire file, then we are willing to put new
+  #includes/fwd-declares inside the #ifdef (which normally we
+  wouldn't do).  So we want to mark such #ifdefs with a special label.
+
+  If we find such an #ifdef line -- and a single file can have at most
+  one -- we change its type to a special type for header guards.
+
+  Arguments:
+    file_lines: an array of LineInfo objects with .type filled in.
+  """
+  # Pass over blank lines or comments at the top of the file.
+  i = 0
+  for i in xrange(len(file_lines)):
+    if (not file_lines[i].deleted and
+        file_lines[i].type not in [_COMMENT_LINE_RE, _BLANK_LINE_RE]):
+      break
+  else:     # for/else: got to EOF without finding any non-blank/comment lines
+    return
+
+  # This next line is the candidate header guard-line.
+  ifdef_start = i
+  if file_lines[ifdef_start].type != _IF_RE:
+    # Not a header guard, just return without doing anything.
+    return
+
+  # Find the end of this ifdef, to see if it's really a header guard..
+  ifdef_depth = 0
+  for ifdef_end in xrange(ifdef_start, len(file_lines)):
+    if file_lines[ifdef_end].deleted:
+      continue
+    if file_lines[ifdef_end].type == _IF_RE:
+      ifdef_depth += 1
+    elif file_lines[ifdef_end].type == _ENDIF_RE:
+      ifdef_depth -= 1
+      if ifdef_depth == 0:   # The end of our #ifdef!
+        break
+  else:                      # for/else
+    return False             # Weird: never found a close to this #ifdef
+
+  # Finally, all the lines after the end of the ifdef must be blank or comments.
+  for i in xrange(ifdef_end + 1, len(file_lines)):
+    if (not file_lines[i].deleted and
+        file_lines[i].type not in [_COMMENT_LINE_RE, _BLANK_LINE_RE]):
+      return
+
+  # We passed the gauntlet!
+  file_lines[ifdef_start].type = _HEADER_GUARD_RE
+
+
 def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
   """Fills file_line's type and key fields, where the 'type' is a regexp object.
 
@@ -593,6 +648,15 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
                              ' an #include or forward declare'
                              % (iwyu_record.filename, line_number,
                                 file_lines[line_number].line))
+
+  # Check if this file has a header guard, which for our purposes is
+  # an #ifdef (or #if) that covers an entire source file.  Usually
+  # this will be a standard .h header-guard, but it could be something
+  # like '#if __linux/#endif'.  The point here is that if an #ifdef
+  # encloses the entire file, then we are willing to put new
+  # #includes/fwd-declares inside the #ifdef (which normally we
+  # wouldn't do).  So we mark such #ifdefs with a special label.
+  _MarkHeaderGuardIfPresent(file_lines)
 
 
 def _PreviousNondeletedLine(file_lines, line_number):
@@ -866,7 +930,7 @@ def _DeleteEmptyIfdefs(file_lines):
   num_ifdefs_deleted = 0
   start_line = 0
   while start_line < len(file_lines):
-    if file_lines[start_line].type != _IFDEF_RE:
+    if file_lines[start_line].type not in (_IF_RE, _HEADER_GUARD_RE):
       start_line += 1
       continue
     end_line = start_line + 1
@@ -1050,59 +1114,6 @@ def _ShouldInsertBlankLine(decorated_move_span, next_decorated_move_span,
   return False
 
 
-def _IsHeaderGuard(file_lines, line_number):
-  """Says whether the given line-number in a file is a header-guard.
-
-  We define a header-guard as follows: an #ifdef where there is
-  nothing contentful before or after the #ifdef.  Also, the #ifdef
-  should have no #elif in it (though we don't currently test that).
-  This catches the common case of an 'ifdef guard' in .h file, such
-  as '#ifndef FOO_H\n#define FOO_H\n...contents...\n#endif', but it
-  can also catch other whole-program #ifdefs, such as
-  '#ifdef __linux\n...\n#endif'.
-
-  Arguments:
-    file_lines: an array of LineInfo objects with .type filled in.
-    line_number: the index into file_lines to check is a header guard.
-
-  Returns:
-    True if line_number is a heard-guard line, False else.
-  """
-  # First, is line-number an '#if' or '#ifdef' at all?
-  if (file_lines[line_number].deleted or
-      file_lines[line_number].type != _IFDEF_RE):
-    return False
-
-  # Second, all the lines above us must be blank or comments.
-  for i in xrange(line_number - 1, -1, -1):
-    if (not file_lines[i].deleted and
-        file_lines[i].type not in [_COMMENT_LINE_RE, _BLANK_LINE_RE]):
-      return False
-
-  # Find the end of this ifdef.
-  ifdef_depth = 0
-  for ifdef_end in xrange(line_number, len(file_lines)):
-    if file_lines[ifdef_end].deleted:
-      continue
-    if file_lines[ifdef_end].type == _IFDEF_RE:
-      ifdef_depth += 1
-    elif file_lines[ifdef_end].type == _ENDIF_RE:
-      ifdef_depth -= 1
-      if ifdef_depth == 0:   # The end of our #ifdef!
-        break
-  else:                      # for/else
-    return False             # Weird: never found a close to this #ifdef
-
-  # Third, all the lines after the end of the ifdef must be blank or comments.
-  for i in xrange(ifdef_end + 1, len(file_lines)):
-    if (not file_lines[i].deleted and
-        file_lines[i].type not in [_COMMENT_LINE_RE, _BLANK_LINE_RE]):
-      return False
-
-  # We passed the gauntlet!
-  return True
-
-
 def _GetToplevelReorderSpans(file_lines):
   """Returns a sorted list of all reorder_spans not inside an #ifdef/namespace.
 
@@ -1120,20 +1131,12 @@ def _GetToplevelReorderSpans(file_lines):
   """
   in_ifdef = [False] * len(file_lines)   # lines inside an #if
   ifdef_depth = 0
-  num_ifdefs_seen = 0
   for line_number in xrange(len(file_lines)):
     line_info = file_lines[line_number]
     if line_info.deleted:
       continue
-    if line_info.type == _IFDEF_RE:
-      # Ignore header-guard #ifdef.  The header-guard has to be the
-      # first ifdef in the file, so we check that to avoid extra work.
-      if (num_ifdefs_seen == 0 and line_number < len(file_lines) - 1 and
-          _IsHeaderGuard(file_lines, line_number)):
-        pass
-      else:
-        ifdef_depth += 1
-        num_ifdefs_seen += 1
+    if line_info.type == _IF_RE:  # does not cover the header-guard ifdef
+      ifdef_depth += 1
     elif line_info.type == _ENDIF_RE:
       ifdef_depth -= 1
     if ifdef_depth > 0:
@@ -1213,19 +1216,16 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
       continue
 
     # If we're an empty line, just ignore us.  Likewise with #include
-    # lines, which aren't 'contentful' for our purposes.
-    if line_info.type in (_COMMENT_LINE_RE, _BLANK_LINE_RE, _INCLUDE_RE):
+    # lines, which aren't 'contentful' for our purposes, and the
+    # header guard, which is (by definition) the only kind of #ifdef
+    # that we can be inside and still considered at the "top level".
+    if line_info.type in (_COMMENT_LINE_RE, _BLANK_LINE_RE,
+                          _INCLUDE_RE, _HEADER_GUARD_RE):
       continue
 
-    # If we're a 'contentful' line such as an #ifdef, bail.  The one
-    # exception is the ifdef header-guard.
-    elif line_info.type == _IFDEF_RE:
-      # Ignore header-guard #ifdef.
-      if (line_number < len(file_lines) - 1 and
-          _IsHeaderGuard(file_lines, line_number)):
-        pass
-      else:
-        return (None, None)
+    # If we're a 'contentful' line such as a (non-header-guard) #ifdef, bail.
+    elif line_info.type == _IF_RE:
+      return (None, None)
 
     elif line_info.type in (_NAMESPACE_END_RE, _ELSE_RE, _ENDIF_RE, None):
       # Other contentful lines that cause us to bail.
@@ -1458,7 +1458,7 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
   while line_number < len(file_lines) - 1:
     if file_lines[line_number].deleted:
       line_number += 1
-    elif _IsHeaderGuard(file_lines, line_number):
+    elif file_lines[line_number].type == _HEADER_GUARD_RE:
       seen_header_guard = True
       line_number += 2    # skip over the header guard
     elif file_lines[line_number].type == _BLANK_LINE_RE:
