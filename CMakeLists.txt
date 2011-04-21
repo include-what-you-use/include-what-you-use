@@ -24,6 +24,7 @@ add_clang_executable(include-what-you-use
   iwyu.cc
   iwyu_ast_util.cc
   iwyu_cache.cc
+  iwyu_driver.cc
   iwyu_globals.cc
   iwyu_include_picker.cc
   iwyu_lexer_utils.cc
