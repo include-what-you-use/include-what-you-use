@@ -13,10 +13,12 @@
 #include <fnmatch.h>
 #endif
 #include <getopt.h>
+#include <stdio.h>
 #include <algorithm>
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include "clang/Lex/HeaderSearch.h"
 #include "iwyu_cache.h"
 #include "iwyu_include_picker.h"
@@ -27,6 +29,7 @@
 
 using clang::DirectoryEntry;
 using clang::DirectoryLookup;
+using std::make_pair;
 using std::map;
 using std::set;
 using std::string;
@@ -112,11 +115,11 @@ int ParseIwyuCommandlineFlags(int argc, char** argv) {
   commandline_flags = new CommandlineFlags;
   const int retval = commandline_flags->ParseArgv(argc, argv);
 
-if (!commandline_flags.cwd.empty()) {
+if (!commandline_flags->cwd.empty()) {
      printf("-p/--cwd not yet implemented\n");
      exit(1);
   }
-  if (commandline_flags.howtodebug != CommandlineFlags::kUnspecified) {
+  if (commandline_flags->howtodebug != CommandlineFlags::kUnspecified) {
      printf("-d/--howtodebug not yet implemented\n");
      exit(1);
   }

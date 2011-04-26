@@ -108,7 +108,7 @@ namespace {
 // tokens than expected, warn if the first one doesn't start "//".
 bool MatchOneToken(const vector<string>& tokens,
                    const string& token,
-                   int num_expected_tokens,
+                   size_t num_expected_tokens,
                    SourceLocation loc) {
   if (tokens.size() < num_expected_tokens) {
     return false;
@@ -132,7 +132,7 @@ bool MatchOneToken(const vector<string>& tokens,
 bool MatchTwoTokens(const vector<string>& tokens,
                     const string& token1,
                     const string& token2,
-                    int num_expected_tokens,
+                    size_t num_expected_tokens,
                     SourceLocation loc) {
   if (tokens.size() < num_expected_tokens) {
     return false;
