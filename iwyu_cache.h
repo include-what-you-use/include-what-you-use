@@ -83,8 +83,7 @@ class FullUseCache {
   bool Contains(
       const void* key,
       const map<const clang::Type*, const clang::Type*>& resugar_map) const {
-    return include_what_you_use::Contains(
-        cache_, Key(key, resugar_map));
+    return ContainsKey(cache_, Key(key, resugar_map));
   }
 
   // You must call Contains() before calling these, to make sure the

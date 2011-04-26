@@ -564,7 +564,7 @@ static map<const Type*, const Type*> ResugarTypeComponents(
     for (Each<const Type*> component_type(&components);
          !component_type.AtEnd(); ++component_type) {
       const Type* desugared_type = GetCanonicalType(*component_type);
-      if (!Contains(retval, desugared_type)) {
+      if (!ContainsKey(retval, desugared_type)) {
         retval[desugared_type] = *component_type;
         VERRS(6) << "Adding a type-components of interest: "
                  << PrintableType(*component_type) << "\n";
@@ -692,7 +692,7 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   for (Each<const Type*> it(&fn_arg_types); !it.AtEnd(); ++it) {
     // See if any of the template args in retval are the desugared form of us.
     const Type* desugared_type = GetCanonicalType(*it);
-    if (Contains(desugared_types, desugared_type)) {
+    if (ContainsKey(desugared_types, desugared_type)) {
       retval[desugared_type] = *it;
       if (desugared_type != *it) {
         VERRS(6) << "Remapping template arg of interest: "
@@ -704,7 +704,7 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
 
   // Log the types we never mapped.
   for (Each<const Type*, const Type*> it(&desugared_types); !it.AtEnd(); ++it) {
-    if (!Contains(retval, it->first)) {
+    if (!ContainsKey(retval, it->first)) {
       VERRS(6) << "Ignoring unseen-in-fn-args template arg of interest: "
                << PrintableType(it->first) << "\n";
     }
@@ -1055,7 +1055,7 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
 
   // Now take a look at the args that were not filled explicitly.
   for (unsigned i = 0; i < tpl_args.size(); ++i) {
-    if (Contains(explicit_args, i))
+    if (ContainsKey(explicit_args, i))
       continue;
     if (const Type* arg_type = GetTemplateArgAsType(tpl_args[i])) {
       retval[arg_type] = NULL;
