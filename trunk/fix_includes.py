@@ -2019,8 +2019,8 @@ def main(argv):
                           ' [default]'))
   parser.add_option('--noblank_lines', action='store_false', dest='blank_lines')
 
-  parser.add_option('--comments', action='store_true', default=True,
-                    help='Put comments after the #include lines [default]')
+  parser.add_option('--comments', action='store_true', default=False,
+                    help='Put comments after the #include lines')
   parser.add_option('--nocomments', action='store_false', dest='comments')
 
   parser.add_option('--safe_headers', action='store_true', default=True,
