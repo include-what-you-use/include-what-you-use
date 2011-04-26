@@ -344,7 +344,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 
   // Tell the include-picker about this new include.
   MutableGlobalIncludePicker()->AddDirectInclude(GetFilePath(includer),
-                                                 include_name_as_typed);
+                                                 GetFilePath(includee));
 
   MaybeProtectInclude(includer_loc, includee, include_name_as_typed);
 

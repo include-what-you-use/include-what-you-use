@@ -119,7 +119,7 @@ TEST(IncludePicker, ConvertToQuotedInclude) {
 
 TEST(IncludePicker, DynamicMapping_DoesMapping) {
   IncludePicker p;
-  p.AddDirectInclude("project/public/foo.h", "\"project/internal/private.h\"");
+  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetPublicHeadersForFilepath("project/internal/private.h"),
@@ -128,9 +128,9 @@ TEST(IncludePicker, DynamicMapping_DoesMapping) {
 
 TEST(IncludePicker, DynamicMapping_MultiplePublicFiles) {
   IncludePicker p;
-  p.AddDirectInclude("project/public/foo.h", "\"project/internal/private.h\"");
-  p.AddDirectInclude("project/public/bar.h", "\"project/internal/private.h\"");
-  p.AddDirectInclude("project/public/bar.h", "\"project/internal/other.h\"");
+  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h");
+  p.AddDirectInclude("project/public/bar.h", "project/internal/private.h");
+  p.AddDirectInclude("project/public/bar.h", "project/internal/other.h");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetPublicHeadersForFilepath("project/internal/private.h"),
@@ -139,9 +139,9 @@ TEST(IncludePicker, DynamicMapping_MultiplePublicFiles) {
 
 TEST(IncludePicker, DynamicMapping_TransitiveMapping) {
   IncludePicker p;
-  p.AddDirectInclude("project/public/foo.h", "\"project/internal/private.h\"");
+  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h");
   p.AddDirectInclude("project/internal/private.h",
-                     "\"project/internal/other.h\"");
+                     "project/internal/other.h");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetPublicHeadersForFilepath("project/internal/other.h"),
@@ -150,13 +150,13 @@ TEST(IncludePicker, DynamicMapping_TransitiveMapping) {
 
 TEST(IncludePicker, DynamicMapping_MultipleTransitiveMapping) {
   IncludePicker p;
-  p.AddDirectInclude("project/public/foo.h", "\"project/internal/private.h\"");
-  p.AddDirectInclude("project/public/bar.h", "\"project/internal/private.h\"");
-  p.AddDirectInclude("project/public/baz.h", "\"project/internal/private2.h\"");
+  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h");
+  p.AddDirectInclude("project/public/bar.h", "project/internal/private.h");
+  p.AddDirectInclude("project/public/baz.h", "project/internal/private2.h");
   p.AddDirectInclude("project/internal/private.h",
-                     "\"project/internal/other.h\"");
+                     "project/internal/other.h");
   p.AddDirectInclude("project/internal/private2.h",
-                     "\"project/internal/other.h\"");
+                     "project/internal/other.h");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetPublicHeadersForFilepath("project/internal/other.h"),
@@ -166,7 +166,8 @@ TEST(IncludePicker, DynamicMapping_MultipleTransitiveMapping) {
 
 TEST(IncludePicker, DynamicMapping_NormalizesAsm) {
   IncludePicker p;
-  p.AddDirectInclude("<types.h>", "<asm-cris/posix_types.h>");
+  p.AddDirectInclude("/usr/include/types.h",
+                     "/usr/include/asm-cris/posix_types.h");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetPublicHeadersForFilepath("/usr/src/linux-headers-2.6.24-gg23/"
@@ -233,11 +234,11 @@ TEST(IncludePicker, GetPublicHeadersForFilepath_CXX) {
 TEST(IncludePicker, GetPublicHeadersForFilepath_ThirdParty) {
   IncludePicker p;
   // For globs to work, we need to have actually seen the includes.
-  p.AddDirectInclude("\"a.h\"", "\"third_party/dynamic_annotations/d.h\"");
-  p.AddDirectInclude("\"b.h\"", "\"third_party/dynamic_annotations/a/b/c.h\"");
-  p.AddDirectInclude("\"c.h\"", "\"third_party/python2_4_3/includes/py.h\"");
-  p.AddDirectInclude("\"d.h\"", "\"third_party/isu/include/unicode/udraft.h\"");
-  p.AddDirectInclude("\"e.h\"", "\"third_party/isu/include/unicode/ukeep.h\"");
+  p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h");
+  p.AddDirectInclude("b.h", "third_party/dynamic_annotations/a/b/c.h");
+  p.AddDirectInclude("c.h", "third_party/python2_4_3/includes/py.h");
+  p.AddDirectInclude("d.h", "third_party/isu/include/unicode/udraft.h");
+  p.AddDirectInclude("e.h", "third_party/isu/include/unicode/ukeep.h");
   p.FinalizeAddedIncludes();
 
   EXPECT_VECTOR_STREQ(
@@ -261,7 +262,7 @@ TEST(IncludePicker, GetPublicHeadersForFilepath_GlobOverlap) {
   IncludePicker p;
   // It's ok if a header is specified in both a glob and non-glob rule.
   // For globs to work, we need to have actually seen the includes.
-  p.AddDirectInclude("\"a.h\"", "\"third_party/dynamic_annotations/d.h\"");
+  p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h");
   p.AddMapping("\"third_party/dynamic_annotations/d.h\"",
                "\"third_party/dynamic_annotations/public.h\"");
   p.MarkIncludeAsPrivate("\"third_party/dynamic_annotations/d.h\"");
@@ -280,8 +281,8 @@ TEST(IncludePicker, GetPublicHeadersForFilepath_NoIdentityGlob) {
   p.AddMapping("\"mydir/*.h\"", "\"mydir/include.h\"");
   p.MarkIncludeAsPrivate("\"mydir/*.h\"");   // will *not* apply to include.h!
   // Add a direct include that should be mapped, and that already is.
-  p.AddDirectInclude("\"a.h\"", "\"mydir/internal.h\"");
-  p.AddDirectInclude("\"b.h\"", "\"mydir/include.h\"");
+  p.AddDirectInclude("a.h", "mydir/internal.h");
+  p.AddDirectInclude("b.h", "mydir/include.h");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetPublicHeadersForFilepath("mydir/internal.h"), "\"mydir/include.h\"");
@@ -355,8 +356,8 @@ TEST(IncludePicker, HasMappingIncludeMatchDifferentMaps) {
 TEST(IncludePicker, HasMappingIncludeForThirdParty) {
   IncludePicker p;
   // For globs to work, we need to have actually seen the includes.
-  p.AddDirectInclude("\"base/dynamic_annotations.h\"",
-                     "\"third_party/dynamic_annotations/foo/bar.h\"");
+  p.AddDirectInclude("base/dynamic_annotations.h",
+                     "third_party/dynamic_annotations/foo/bar.h");
   p.FinalizeAddedIncludes();
   EXPECT_TRUE(p.HasMapping("third_party/dynamic_annotations/foo/bar.h",
                            "base/dynamic_annotations.h"));

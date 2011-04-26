@@ -866,30 +866,31 @@ void IncludePicker::InsertInto(const IncludePicker::IncludeMapEntry& e,
 // code (Google hides private headers in /internal/, much like glibc
 // hides them in /bits/.)
 void IncludePicker::AddDirectInclude(const string& includer_filepath,
-                                     const string& include_name_as_typed) {
+                                     const string& includee_filepath) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
-
-  all_quoted_includes_.insert(include_name_as_typed);
 
   // Note: the includer may be a .cc file, which is unnecessary to add
   // to our map, but harmless.
   const string quoted_includer = ConvertToQuotedInclude(includer_filepath);
+  const string quoted_includee = ConvertToQuotedInclude(includee_filepath);
+
+  all_quoted_includes_.insert(quoted_includee);
 
   // Automatically mark files in foo/internal/bar as private, and map them.
-  if (include_name_as_typed.find("/internal/") != string::npos) {
-    MarkIncludeAsPrivate(include_name_as_typed);
-    AddMapping(include_name_as_typed, quoted_includer);
+  if (quoted_includee.find("/internal/") != string::npos) {
+    MarkIncludeAsPrivate(quoted_includee);
+    AddMapping(quoted_includee, quoted_includer);
     if (quoted_includer.find("/internal/") != string::npos)
       MarkIncludeAsPrivate(quoted_includer);
   }
 
   // Automatically mark <asm-FOO/bar.h> as private, and map to <asm/bar.h>.
-  if (StartsWith(include_name_as_typed, "<asm-")) {
-    MarkIncludeAsPrivate(include_name_as_typed);
-    string public_header = include_name_as_typed;
+  if (StartsWith(quoted_includee, "<asm-")) {
+    MarkIncludeAsPrivate(quoted_includee);
+    string public_header = quoted_includee;
     StripPast(&public_header, "/");   // read past "asm-whatever/"
     public_header = "<asm/" + public_header;   // now it's <asm/something.h>
-    AddMapping(include_name_as_typed, public_header);
+    AddMapping(quoted_includee, public_header);
   }
 }
 
