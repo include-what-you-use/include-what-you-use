@@ -104,10 +104,12 @@ _ELSE_RE = re.compile(r'\s*#\s*(else|elif)\b')  # compiles #else/elif
 _ENDIF_RE = re.compile(r'\s*#\s*endif\b')
 # This is used to delete 'empty' namespaces after fwd-decls are removed.
 # Some third-party libraries use macros to start/end namespaces.
-# TODO(csilvers): add HASH_NAMESPACE_DECLARATION_START/_END.
-_NAMESPACE_START_RE = re.compile(r'(\s*namespace\b[^{]*{\s*)+(//.*)?$|'
-                                 r'(U_NAMESPACE_BEGIN)')
-_NAMESPACE_END_RE = re.compile(r'(})|(U_NAMESPACE_END)')
+_NAMESPACE_START_RE = re.compile(r'\s*(namespace\b[^{]*{\s*)+(//.*)?$|'
+                                 r'\s*(U_NAMESPACE_BEGIN)|'
+                                 r'\s*(HASH_NAMESPACE_DECLARATION_START)')
+_NAMESPACE_END_RE = re.compile(r'\s*(})|'
+                               r'\s*(U_NAMESPACE_END)|'
+                               r'\s*(HASH_NAMESPACE_DECLARATION_END)')
 # The group (in parens) holds the unique 'key' identifying this #include.
 _INCLUDE_RE = re.compile(r'\s*#\s*include\s+([<"][^"">]+[>"])')
 # We don't need this to actually match forward-declare lines (we get
