@@ -308,7 +308,8 @@ TEST(IncludePicker, GetPublicHeadersForFilepath_ImplicitThirdPartyMapping) {
                       "\"third_party/private2.h\"", "\"third_party/public.h\"");
   EXPECT_VECTOR_STREQ(
       p.GetPublicHeadersForFilepath("third_party/private11.h"),
-      "\"third_party/private11.h\"", "\"third_party/private1.h\"");
+      "\"third_party/private11.h\"", "\"third_party/private1.h\"",
+      "\"third_party/public.h\"");
   EXPECT_VECTOR_STREQ(
       p.GetPublicHeadersForFilepath("third_party/other_public.h"),
       "\"third_party/other_public.h\"");
