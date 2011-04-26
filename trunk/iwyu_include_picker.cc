@@ -400,6 +400,7 @@ const IncludePicker::IncludeMapEntry c_include_map[] = {
   // assert.h with cassert, you'd change it to a public->private
   // mapping.)  Here is how I identified the files to map:
   // $ for i in /usr/include/c++/4.4/c* ; do ls /usr/include/`basename $i | cut -b2-`.h 2>/dev/null ; done
+  // I also added in stddef.h, which is in a system-specific location.
   { "<assert.h>", kPublic, "<cassert>", kPublic },
   { "<complex.h>", kPublic, "<ccomplex>", kPublic },
   { "<ctype.h>", kPublic, "<cctype>", kPublic },
@@ -411,6 +412,7 @@ const IncludePicker::IncludeMapEntry c_include_map[] = {
   { "<math.h>", kPublic, "<cmath>", kPublic },
   { "<setjmp.h>", kPublic, "<csetjmp>", kPublic },
   { "<signal.h>", kPublic, "<csignal>", kPublic },
+  { "<stddef.h>", kPublic, "<cstddef>", kPublic },
   { "<stdint.h>", kPublic, "<cstdint>", kPublic },
   { "<stdio.h>", kPublic, "<cstdio>", kPublic },
   { "<stdlib.h>", kPublic, "<cstdlib>", kPublic },
@@ -805,20 +807,23 @@ string ConvertToQuotedInclude(const string& filepath) {
   // First, get rid of leading ./'s and the like.
   string path = NormalizeFilePath(filepath);
 
-
-  // Case 1: a system include.
-  const vector<string>& search_paths = GlobalSearchPaths();
-  // GlobalSearchPaths is sorted to be longest-first, so this loop
-  // will prefer the longest prefix: /usr/include/c++/4.4/foo will
-  // be mapped to <foo>, not <c++/4.4/foo>.
-  for (Each<string> it(&search_paths); !it.AtEnd(); ++it) {
-    if (StripLeft(&path, *it)) {
+  // Case 1: Uses an explicit entry on the search path (-I) list.
+  const vector<HeaderSearchPath>& search_paths = GlobalHeaderSearchPaths();
+  // GlobalHeaderSearchPaths is sorted to be longest-first, so this
+  // loop will prefer the longest prefix: /usr/include/c++/4.4/foo
+  // will be mapped to <foo>, not <c++/4.4/foo>.
+  for (Each<HeaderSearchPath> it(&search_paths); !it.AtEnd(); ++it) {
+    if (StripLeft(&path, it->path)) {
       StripLeft(&path, "/");
-      return "<" + path + ">";
+      if (it->path_type == HeaderSearchPath::kSystemPath)
+        return "<" + path + ">";
+      else
+        return "\"" + path + "\"";
     }
   }
 
-  // Everything else: a local (non-system) include.
+
+  // Case 2: Uses the implicit "-I." entry on the search path.  Always local.
   return "\"" + path + "\"";
 }
 

@@ -1,4 +1,4 @@
-//===--- iwyu_include_picker_test.cc - test helper functions for iwyue ----===//
+//===--- iwyu_include_picker_test.cc - test the iwyu include-picker file --===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -193,7 +193,7 @@ TEST(GetCandidateHeadersForSymbol, Basic) {
   EXPECT_VECTOR_STREQ(p.GetCandidateHeadersForSymbol("dev_t"),
                       "<sys/types.h>", "<sys/stat.h>");
   EXPECT_VECTOR_STREQ(p.GetCandidateHeadersForSymbol("NULL"),
-                      "<stddef.h>", "<clocale>", "<cstddef>", "<cstdio>",
+                      "<stddef.h>", "<cstddef>", "<clocale>", "<cstdio>",
                       "<cstdlib>", "<cstring>", "<ctime>", "<cwchar>",
                       "<locale.h>", "<stdio.h>", "<stdlib.h>", "<string.h>",
                       "<time.h>", "<wchar.h>"
