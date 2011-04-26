@@ -747,8 +747,14 @@ set<string> CalculateMinimalIncludes(
 //     #includes where we say a.h should #include b.h, but b.h is
 //     already #including a.h.  This happens when iwyu attributes a
 //     use to the wrong file.
-// B6) Discard macro uses in the same file as the definition (B2 redux).
-// B7) Discard macros uses that form a 'backwards' #include (B5 redux).
+// B6) In --transitive_includes_only mode, discard 'new' #includes.
+//     These are #includes where we say a.h should #include b.h, but
+//     a.h does not see b.h in its transitive #includes.  (Note: This
+//     happens before include-picker mapping, so it's still possible to
+//     see 'new' includes via a manual mapping.)
+// B7) Discard macro uses in the same file as the definition (B2 redux).
+// B8) Discard macro uses that form a 'backwards' #include (B5 redux).
+// B9) Discard macro uses from a 'new' #include (B6 redux).
 
 // Determining 'desired' #includes:
 // C1) Get a list of 'effective' direct includes.  For most files, it's
@@ -965,6 +971,21 @@ void ProcessFullUse(OneUse* use,
     use->set_ignore_use();
     return;
   }
+
+  // (B6) In --transitive_includes_only mode, discard 'new' #includes.
+  // In practice, if we tell a.h to add an #include that is not in its
+  // transitive includes, it's usually (but not always) an iwyu error
+  // of some sort.  So we allow a flag to discard such recommendations.
+  if (GlobalFlags().transitive_includes_only) {
+    if (!preprocessor_info->FileTransitivelyIncludes(
+            GetFileEntry(use->use_loc()), GetFileEntry(use->decl()))) {
+      VERRS(6) << "Ignoring use of " << use->symbol_name()
+               << " (" << use->PrintableUseLoc() << "):"
+               << " non-transitive #include\n";
+      use->set_ignore_use();
+      return;
+    }
+  }
 }
 
 void ProcessSymbolUse(OneUse* use,
@@ -972,7 +993,10 @@ void ProcessSymbolUse(OneUse* use,
   if (use->ignore_use())   // we're already ignoring it
     return;
 
-  // (B6) Like (B2), discard symbol uses in the same file as their definition.
+  const FileEntry* use_file = GetFileEntry(use->use_loc());
+  const string quoted_decl_file = ConvertToQuotedInclude(use->decl_filepath());
+
+  // (B7) Like (B2), discard symbol uses in the same file as their definition.
   if (GetFilePath(use->use_loc()) == use->decl_filepath()) {
     VERRS(6) << "Ignoring symbol use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): defined in same file\n";
@@ -980,18 +1004,29 @@ void ProcessSymbolUse(OneUse* use,
     return;
   }
 
-  // (B7) Like (B5), discard uses of symbols that create 'backwards' includes.
+  // (B8) Like (B5), discard uses of symbols that create 'backwards' includes.
   // Note we suppress this check if suggested_header_ is already set:
   // that only happens with hard-coded uses, which we shouldn't second guess.
   // TODO(csilvers): like (B5), remove this when we have 'soft' uses.
   if (!use->has_suggested_header() &&
-      preprocessor_info->FileTransitivelyIncludes(
-          ConvertToQuotedInclude(use->decl_filepath()),
-          GetFileEntry(use->use_loc()))) {
+      preprocessor_info->FileTransitivelyIncludes(quoted_decl_file, use_file)) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): 'backwards' #include\n";
     use->set_ignore_use();
     return;
+  }
+
+  // (B9) Like (B6), discard uses of symbols that create 'new' includes.
+  if (GlobalFlags().transitive_includes_only) {
+    if (!use->has_suggested_header() &&
+        !preprocessor_info->FileTransitivelyIncludes(use_file,
+                                                     quoted_decl_file)) {
+      VERRS(6) << "Ignoring use of " << use->symbol_name()
+               << " (" << use->PrintableUseLoc() << "):"
+               << " non-transitive #include\n";
+      use->set_ignore_use();
+      return;
+    }
   }
 }
 
