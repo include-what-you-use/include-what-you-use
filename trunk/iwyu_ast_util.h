@@ -589,13 +589,15 @@ bool IsNestedClass(const clang::TagDecl* decl);
 
 bool HasDefaultTemplateParameters(const clang::TemplateDecl* decl);
 
-// For any decl that inherits from clang::Redeclarable -- enums,
-// classes, typedefs, functions, vars -- returns all the declarations
-// of decl.  For any other decl, the output is just the input decl.
-// Output decls are guaranteed to be of the same type as the input
-// Decl.  If you know the input is a class, it's better to call
-// GetClassRedecls, which avoids a clang bug with friend decls.
-set<const clang::NamedDecl*> GetRedecls(const clang::NamedDecl* decl);
+// For any decl that inherits from clang::Redeclarable *except* for
+// classes and class templates -- enums, typedefs, functions, vars --
+// returns all the declarations of decl.  For any other decl, the
+// output is just the input decl.  Output decls are guaranteed to be
+// of the same type as the input Decl.  Because iwyu fundamentally
+// treats classes different from other redeclarable types, it has
+// its own separate function.  (If that proves to be annoying, we
+// can merge them.)
+set<const clang::NamedDecl*> GetNonclassRedecls(const clang::NamedDecl* decl);
 
 // Given a class, returns a set of all declarations of that class
 // (forward-declarations and, if present, the definition).  This
