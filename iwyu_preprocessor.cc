@@ -99,6 +99,60 @@ void IwyuPreprocessorInfo::AddExportedRange(const clang::FileEntry* file,
   }
 }
 
+namespace {
+
+// Given a vector of tokens, a token to match, and an expected number
+// of tokens, return true if the number of tokens is at least the
+// expected number and the first token matches the given token, else
+// false. In addition, if in the 'return true' case there are more
+// tokens than expected, warn if the first one doesn't start "//".
+bool MatchOneToken(const vector<string>& tokens,
+                   const string& token,
+                   int num_expected_tokens,
+                   SourceLocation loc) {
+  if (tokens.size() < num_expected_tokens) {
+    return false;
+  }
+  if (tokens[0] != token) {
+    return false;
+  }
+  if (tokens.size() > num_expected_tokens &&
+      !StartsWith(tokens[num_expected_tokens], "//")) {
+    Warn(loc, "Extra tokens on pragma line");
+  }
+  return true;
+}
+
+// Given a vector of tokens, two tokens to match, and an expected
+// number of tokens, return true if the number of tokens is at least
+// the expected number and the first two tokens match the given
+// tokens, else false. In addition, if in the 'return true' case there
+// are more tokens than expected, warn if the first one doesn't start
+// "//".
+bool MatchTwoTokens(const vector<string>& tokens,
+                    const string& token1,
+                    const string& token2,
+                    int num_expected_tokens,
+                    SourceLocation loc) {
+  if (tokens.size() < num_expected_tokens) {
+    return false;
+  }
+  if (tokens[0] != token1) {
+    return false;
+  }
+  if (tokens[1] != token2) {
+    return false;
+  }
+  if (tokens.size() > num_expected_tokens &&
+      !StartsWith(tokens[num_expected_tokens], "//")) {
+    // Accept but warn.
+    Warn(loc, "Extra tokens on pragma line");
+  }
+  return true;
+}
+
+}  // namespace
+
 // IWYU pragma processing.
 void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
   SourceLocation current_loc = file_beginning;
@@ -112,11 +166,11 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
       break;
     }
 
-    string pragma_text = GetSourceTextUntilEndOfLine(current_loc,
-                                                     DefaultDataGetter());
-    StripWhiteSpace(&pragma_text);
+    const string pragma_text = GetSourceTextUntilEndOfLine(current_loc,
+                                                           DefaultDataGetter());
+    vector<string> tokens = SplitOnWhiteSpacePreservingQuotes(pragma_text, 0);
     if (begin_exports_location.isValid()) {
-      if (pragma_text == "end_exports") {
+      if (MatchOneToken(tokens, "end_exports", 1, current_loc)) {
         AddExportedRange(GetFileEntry(file_beginning),
                          GetLineNumber(begin_exports_location) + 1,
                          GetLineNumber(current_loc));
@@ -128,38 +182,39 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
       continue;
     }
 
-    if (pragma_text == "begin_exports") {
+    if (MatchOneToken(tokens, "begin_exports", 1, current_loc)) {
       begin_exports_location = current_loc;
       continue;
     }
 
-    if (pragma_text == "end_exports") {
+    if (MatchOneToken(tokens, "end_exports", 1, current_loc)) {
       Warn(current_loc, "end_exports without a begin_exports");
       continue;
     }
 
-    if (StripLeft(&pragma_text, "private, include ")) {
-      // pragma_text should be a quoted header.
+    if (MatchTwoTokens(tokens, "private,", "include", 3, current_loc)) {
+      // 3rd token should be a quoted header.
       const string quoted_include
           = ConvertToQuotedInclude(GetFilePath(current_loc));
-      MutableGlobalIncludePicker()->AddMapping(quoted_include, pragma_text);
+      MutableGlobalIncludePicker()->AddMapping(quoted_include, tokens[2]);
       MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_include);
       ERRSYM(GetFileEntry(current_loc)) << "Adding private pragma-mapping: "
                                         << quoted_include << " -> "
-                                        << pragma_text << "\n";
+                                        << tokens[2] << "\n";
       continue;
     }
 
-    if (StripLeft(&pragma_text, "no_include ")) {
-      // pragma text should be an quoted header.
-      no_include_map_[GetFileEntry(current_loc)].insert(pragma_text);
+    if (MatchOneToken(tokens, "no_include", 2, current_loc)) {
+      // 2nd token should be an quoted header.
+      no_include_map_[GetFileEntry(current_loc)].insert(tokens[1]);
       ERRSYM(GetFileEntry(current_loc)) << "Inhibiting include of "
-                                        << pragma_text << "\n";
+                                        << tokens[1] << "\n";
       continue;
     }
 
     // "keep" and "export" are handled in MaybeProtectInclude.
-    if (pragma_text != "keep" && pragma_text != "export") {
+    if (!MatchOneToken(tokens, "keep", 1, current_loc)
+        && !MatchOneToken(tokens, "export", 1, current_loc)) {
       Warn(current_loc, "Unknown or malformed pragma (" + pragma_text + ")");
       continue;
     }
