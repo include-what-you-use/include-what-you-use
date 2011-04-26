@@ -541,6 +541,29 @@ The full include-list for top_of_file_comments.c:
     self.RegisterFileContents({'top_of_file_comments.c': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testNotFullLineCComments(self):
+    """Tests that we treat lines with c comments then code as code-lines."""
+    infile = """\
+// Copyright 2010
+///+#include <stdio.h>
+///+
+/* code here */  x = 4;
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+not_full_line_c_comments.c should add these lines:
+#include <stdio.h>
+
+not_full_line_c_comments.c should remove these lines:
+
+The full include-list for not_full_line_c_comments.c:
+#include <stdio.h>
+---
+"""
+    self.RegisterFileContents({'not_full_line_c_comments.c': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testUnusualHFileNames(self):
     """Tests we treat .pb.h files as header files."""
     infile = """\
@@ -1593,6 +1616,28 @@ class Foo;
 ---
 """
     self.RegisterFileContents({'empty_file': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddIncludeToOnlyOneContentfulLineFile(self):
+    """Prevent regression when the only contentful line was the last."""
+    infile = """\
+// Copyright 2010
+///+
+///+#include <stdio.h>
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+only_one_contentful_line.c should add these lines:
+#include <stdio.h>
+
+only_one_contentful_line.c should remove these lines:
+
+The full include-list for only_one_contentful_line.c:
+#include <stdio.h>
+---
+"""
+    self.RegisterFileContents({'only_one_contentful_line.c': infile})
     self.ProcessAndTest(iwyu_output)
 
   def testCommentsAtEndOfFile(self):

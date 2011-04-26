@@ -96,7 +96,7 @@ _COMMENT_RE = re.compile('\s*//.*')
 # These are the types of lines a file can have.  These are matched
 # using re.match(), so don't need a leading ^.
 _C_COMMENT_START_RE = re.compile(r'\s*/\*')
-_C_COMMENT_END_RE = re.compile(r'.*\*/\s*$')
+_C_COMMENT_END_RE = re.compile(r'.*\*/\s*(.*)$')
 _COMMENT_LINE_RE = re.compile(r'\s*//')
 _BLANK_LINE_RE = re.compile(r'\s*$')
 _IF_RE = re.compile(r'\s*#\s*if')               # compiles #if/ifdef/ifndef
@@ -598,9 +598,20 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
     if line_info.line is None:
       line_info.type = None
     elif _C_COMMENT_START_RE.match(line_info.line):
-      line_info.type = _COMMENT_LINE_RE
-      if not _C_COMMENT_END_RE.match(line_info.line):   # not a 1-line comment
+      # Note: _C_COMMENT_START_RE only matches a comment at the start
+      # of a line.  Comments in the middle of a line are ignored.
+      # This can cause problems with multi-line comments that start
+      # in the middle of the line, but that's hopefully quite rare.
+      # TODO(csilvers): check for that case.
+      m = _C_COMMENT_END_RE.match(line_info.line)
+      if not m:             # comment continues onto future lines
+        line_info.type = _COMMENT_LINE_RE
         in_c_style_comment = True
+      elif not m.group(1):  # comment extends across entire line (only)
+        line_info.type = _COMMENT_LINE_RE
+      else:                 # comment takes only part of line, treat as content
+        # TODO(csilvers): this mis-diagnoses lines like '/*comment*/class Foo;'
+        line_info.type = None
     elif in_c_style_comment and _C_COMMENT_END_RE.match(line_info.line):
       line_info.type = _COMMENT_LINE_RE
       in_c_style_comment = False
@@ -1459,7 +1470,7 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
   # of the _FORWARD_DECLARE span, whichever is smaller.
   line_number = 0
   seen_header_guard = False
-  while line_number < len(file_lines) - 1:
+  while line_number < len(file_lines):
     if file_lines[line_number].deleted:
       line_number += 1
     elif file_lines[line_number].type == _HEADER_GUARD_RE:
