@@ -17,6 +17,19 @@
     OtherClass o;                               \
   };
 
+// This macro is tricky because myclass_##classname involves a type
+// that's defined in scratch space.  Make sure this doesn't result in
+// an IWYU violation.  Nor should classname used *not* in a macro
+// concatenation (as the return value of Init).
+#define USE_CLASS(classname)                    \
+  struct Use_##classname {                      \
+    Use_##classname() { Init(); }               \
+    classname* Init() { return 0; }             \
+  };                                            \
+  static Use_##classname myclass_##classname
+
+#define CREATE_VAR(typ)   typ create_var
+
 
 /**** IWYU_SUMMARY
 

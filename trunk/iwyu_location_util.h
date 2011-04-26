@@ -204,6 +204,19 @@ template<typename T, typename U>
 inline bool IsBeforeInTranslationUnit(const T& a, const U& b) {
   const clang::FullSourceLoc a_loc(GetLocation(a), *GlobalSourceManager());
   const clang::FullSourceLoc b_loc(GetLocation(b), *GlobalSourceManager());
+  // Inside a macro, everything has the same instantiation location.
+  // We'd like to use spelling-location to break that tie, but it's
+  // unreliable since a or b might be spelled in "<scratch space>".
+  // So we're just conservative and return true always if the two have
+  // an equal location and are in a macro.  (Because we check the
+  // instantiation-location is equal, it's enough that one of the two
+  // be in a macro; we prefer that since IsInMacro fails if T or U is
+  // the wrong type.)  TODO(csilvers): see if's possible to get
+  // isBeforeInTranslationUnitThan working properly.  This may require
+  // storing source-locations better in OneUse.
+  if ((IsInMacro(a_loc) || IsInMacro(b_loc)) &&
+      GetInstantiationLoc(a_loc) == GetInstantiationLoc(b_loc))
+    return true;
   return a_loc.isBeforeInTranslationUnitThan(b_loc);
 }
 
