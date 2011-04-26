@@ -193,7 +193,8 @@ TEST(IncludePicker, GetPublicHeadersForSymbol) {
                       "<stddef.h>", "<clocale>", "<cstddef>", "<cstdio>",
                       "<cstdlib>", "<cstring>", "<ctime>", "<cwchar>",
                       "<locale.h>", "<stdio.h>", "<stdlib.h>", "<string.h>",
-                      "<time.h>", "<wchar.h>");
+                      "<time.h>", "<wchar.h>"
+                      );
   EXPECT_VECTOR_STREQ(p.GetPublicHeadersForSymbol("std::ios"),
                       "<ios>", "<istream>", "<fstream>", "<iostream>",
                       "<sstream>", "<ostream>", "\"base/logging.h\"");
