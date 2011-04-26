@@ -613,10 +613,6 @@ const IncludePicker::IncludeMapEntry cpp_include_map[] = {
   { "<hash_fun.h>", kPrivate, "<hash_set>", kPublic },
   { "<hashtable.h>", kPrivate, "<hash_map>", kPublic },
   { "<hashtable.h>", kPrivate, "<hash_set>", kPublic },
-  // We do our own string implementation, which needs some mappings.
-  { "<ext/vstring_fwd.h>", kPrivate, "<string>", kPublic },
-  { "<ext/vstring.h>", kPrivate, "<string>", kPublic },
-  { "<ext/vstring.tcc>", kPrivate, "<string>", kPublic },
   // (This one should perhaps be found automatically somehow.)
   { "<ext/sso_string_base.h>", kPrivate, "<string>", kPublic },
   // The iostream .h files are confusing.  Lots of private headers,
