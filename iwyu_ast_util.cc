@@ -102,7 +102,7 @@ using clang::TemplateSpecializationType;
 using clang::Type;
 using clang::TypeDecl;
 using clang::TypeLoc;
-using clang::TypedefDecl;
+using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryOperator;
 using clang::UsingDirectiveDecl;
@@ -823,27 +823,26 @@ bool HasDefaultTemplateParameters(const TemplateDecl* decl) {
   return tpl_params->getMinRequiredArguments() < tpl_params->size();
 }
 
-template <class T> set<const clang::NamedDecl*> GetRedeclsImpl(
+template <class T> inline set<const clang::NamedDecl*> GetRedeclsOfRedeclarable(
     const clang::Redeclarable<T>* decl) {
-  set<const clang::NamedDecl*> retval;
-  for (typename clang::Redeclarable<T>::redecl_iterator
-           it = decl->redecls_begin(); it != decl->redecls_end(); ++it) {
-    retval.insert(*it);
-  }
-  return retval;
+  return set<const clang::NamedDecl*>(decl->redecls_begin(),
+                                      decl->redecls_end());
 }
 
-// TODO(csilvers): see if we can find out if decl is a Redeclarable<>;
-// I can't figure out how to do it.  Instead, I hard-code the list.
+// The only way to find out whether a decl can be dyn_cast to a
+// Redeclarable<T> and what T is is to enumerate the possibilities.
+// Hence we hard-code the list.
 set<const clang::NamedDecl*> GetRedecls(const clang::NamedDecl* decl) {
   if (const TagDecl* specific_decl = DynCastFrom(decl))
-    return GetRedeclsImpl(specific_decl);
-  if (const TypedefDecl* specific_decl = DynCastFrom(decl))
-    return GetRedeclsImpl(specific_decl);
+    return GetRedeclsOfRedeclarable(specific_decl);
+  // TODO(wan): go through iwyu to replace TypedefDecl with
+  // TypedefNameDecl as needed.
+  if (const TypedefNameDecl* specific_decl = DynCastFrom(decl))
+    return GetRedeclsOfRedeclarable(specific_decl);
   if (const FunctionDecl* specific_decl = DynCastFrom(decl))
-    return GetRedeclsImpl(specific_decl);
+    return GetRedeclsOfRedeclarable(specific_decl);
   if (const VarDecl* specific_decl = DynCastFrom(decl))
-    return GetRedeclsImpl(specific_decl);
+    return GetRedeclsOfRedeclarable(specific_decl);
   // Not redeclarable, so the output is just the input.
   set<const clang::NamedDecl*> retval;
   retval.insert(decl);
