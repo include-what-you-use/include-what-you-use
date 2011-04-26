@@ -90,7 +90,6 @@
 #if defined(_MSC_VER)
 #include <direct.h>
 #else
-#include <getopt.h>
 #include <unistd.h>
 #endif
 #include <stdio.h>   // for snprintf
@@ -218,18 +217,6 @@ using std::set;
 using std::string;
 using std::swap;
 using std::vector;
-
-// The default value for the --howtodebug flag.  Indicates that the
-// flag isn't present.  It's a special, reserved value, and a user
-// isn't expected to type it directly.
-const char kFlagUnspecified[] = "<flag-unspecified>";
-
-// Which source file should IWYU print debug instructions for ("" for
-// every file being checked)?
-static string FLAGS_howtodebug = kFlagUnspecified;  // NOLINT
-
-// What directory was the tool invoked from?
-static string FLAGS_cwd;
 
 namespace {
 
@@ -2320,7 +2307,7 @@ class InstantiatedTemplateVisitor
   // For template instantiations, we want to print the symbol even if
   // it's not from the main compilation unit.
   virtual bool ShouldPrintSymbolFromCurrentFile() const {
-     return GetVerboseLevel() >= 5;
+    return GlobalFlags().verbose >= 5;
   }
 
   virtual string GetSymbolAnnotation() const { return " in tpl"; }
@@ -3272,53 +3259,6 @@ class IwyuAction : public ASTFrontendAction {
   }
 };
 
-static void PrintHelp(const char* extra_msg) {
-  printf("USAGE: iwyu [iwyu opts] <clang opts>\n"
-         "Here are the <opts> you can specify:\n"
-         "   --check_also=<glob>: tells iwyu to print iwyu-violation info\n"
-         "        for all files matching the given glob pattern (in addition\n"
-         "        to the default of reporting for the input .cc file and its\n"
-         "        associated .h files).  This flag may be specified multiple\n"
-         "        times to specify multiple glob patterns.\n"
-         "   --cwd=<dir>: tells iwyu what the current working directory is.\n"
-         "   --help: prints this help and exits.\n"
-         "   --howtodebug[=<filename>]: with no arg, prints instructions on\n"
-         "        how to run iwyu under gdb for the input file, and exits.\n"
-         "        With an arg, prints only when input file matches the arg.\n"
-         "   --verbose=<level>: the higher the level, the more output.\n");
-  if (extra_msg)
-    printf("\n%s\n\n", extra_msg);
-}
-
-// Handles all iwyu-specific flags, like --verbose.
-// The command line should look like
-//   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu other_iwyu_flag]... CLANG_FLAGS... foo.cc
-// Returns an index to the end of the list of iwyu's flags.
-static int ParseIWYUFlags(int argc, char** argv) {
-  static const struct option longopts[] = {
-    {"check_also", required_argument, NULL, 'c'},  // can be specified >once
-    {"cwd", required_argument, NULL, 'p'},
-    {"help", no_argument, NULL, 'h'},
-    {"howtodebug", optional_argument, NULL, 'd'},
-    {"verbose", required_argument, NULL, 'v'},
-    {0, 0, 0, 0}
-  };
-  static const char shortopts[] = "d::p:v:c:";
-  int option_index;
-  while (true) {
-    switch (getopt_long(argc, argv, shortopts, longopts, &option_index)) {
-      case 'h': PrintHelp(""); exit(0); break;
-      case 'v': SetVerboseLevel(atoi(optarg)); break;
-      case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
-case 'd': printf("-d/--howtodebug not yet implemented\n"); exit(1);
-      case 'p': printf("-p/--cwd not yet implemented\n"); exit(1);
-      case -1: return optind;   // means 'no more input'
-      default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
-    }
-  }
-  return optind;  // unreachable
-}
-
 
 } // namespace include_what_you_use
 
@@ -3327,7 +3267,7 @@ case 'd': printf("-d/--howtodebug not yet implemented\n"); exit(1);
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/Support/ManagedStatic.h"
 
-using include_what_you_use::ParseIWYUFlags;
+using include_what_you_use::ParseIwyuCommandlineFlags;
 using include_what_you_use::IwyuAction;
 using include_what_you_use::CreateCompilerInstance;
 
@@ -3350,7 +3290,9 @@ int main(int argc, char **argv) {
   iwyu_argv[iwyu_argc] = NULL;    // argv should be NULL-terminated
   clang_argv[clang_argc] = NULL;
 
-  ParseIWYUFlags(iwyu_argc, iwyu_argv);
+  // The command line should look like
+  //   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu --other_iwyu_flag]... CLANG_FLAGS... foo.cc
+  ParseIwyuCommandlineFlags(iwyu_argc, iwyu_argv);
 
   clang::CompilerInstance* compiler = CreateCompilerInstance(clang_argc,
                                                              clang_argv);

@@ -11,6 +11,7 @@
 
 #include <set>
 #include "iwyu_ast_util.h"
+#include "iwyu_globals.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_stl_util.h"
@@ -232,13 +233,19 @@ TEST(CalculateDesiredIncludesAndForwardDeclaresTest, Works) {
 // between tests to prevent leaking side effects.
 class VerboseTest : public ::testing::Test {
  protected:
-  VerboseTest() : old_verbose_level_(GetVerboseLevel()) {
+  VerboseTest() : old_verbose_level_(GlobalFlags().verbose) {
     // 2 is the default verbose level for tests that don't care much
     // about the level.
     SetVerboseLevel(2);
   }
 
-  ~VerboseTest() { SetVerboseLevel(old_verbose_level_); }
+  ~VerboseTest() {
+    SetVerboseLevel(old_verbose_level_);
+  }
+
+  void SetVerboseLevel(int level) {
+    MutableGlobalFlagsForTesting()->verbose = level;
+  }
 
  private:
   const int old_verbose_level_;
@@ -572,3 +579,10 @@ TEST_F(PrintableIncludeOrForwardDeclareLineTest,
 
 }  // unnamed namespace
 }  // namespace include_what_you_use
+
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  include_what_you_use::InitGlobalsAndFlagsForTesting();
+  return RUN_ALL_TESTS();
+}

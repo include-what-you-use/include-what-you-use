@@ -16,7 +16,10 @@
 #include <string>
 #include <vector>
 
+#include "base/logging.h"
+#include "iwyu_globals.h"
 #include "iwyu_lexer_utils.h"
+#include "testing/base/public/gunit.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
@@ -265,7 +268,9 @@ TEST(GetIncludeNameAsTyped, WithComments) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  include_what_you_use::InitGlobalsAndFlagsForTesting();
   return RUN_ALL_TESTS();
 }
-

@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "port.h"
+#include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
@@ -47,26 +48,9 @@ using std::vector;
 class IwyuPreprocessorInfo;
 class SymbolIncludeData;
 
-// The verbose level indicates how chatty IWYU should be.  The bigger
-// the chattier.
-//
-//   0: just print the full list of header files.
-//   1: like 0, and also print new and deleted header files.
-//   2: like 1, and also print 'canonical' error line for each type.
-//   3: like 1, and also print *every* error line.
-//   4: like 3, but with sorted error lines, and print all 'reason' comments.
-//   5: like 4, and add tons of debug info.
-//   6: like 5, and print every symbol that's needed by main-cu files.
-//   7: like 6, and print pointers of AST nodes (and uninstantiated templates)
-//  10: like 7, and add tons more debug info (for all non-system header files).
-//  11: like 10, and add tons *more* debug info (for all header files).
-// TODO(csilvers): move these methods to iwyu_globals.h?
-int GetVerboseLevel();
-int SetVerboseLevel(int n);    // returns n
-
 // Returns true if we should print a message at the given verbosity level.
 inline bool ShouldPrint(int verbose_level) {
-  return verbose_level <= GetVerboseLevel();
+  return verbose_level <= GlobalFlags().verbose;
 }
 
 // Returns true if we should print information about a symbol in the
