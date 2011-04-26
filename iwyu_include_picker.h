@@ -94,9 +94,9 @@ class IncludePicker {
 
   // Call this for every #include seen during iwyu analysis.  The
   // include-picker can use this data to better suggest #includes,
-  // perhaps.  include_name_as_typed includes the <> or "".
+  // perhaps.
   void AddDirectInclude(const string& includer_filepath,
-                        const string& include_name_as_typed);
+                        const string& includee_filepath);
 
   // Add this to say "map_to re-exports everything in file map_from".
   // Both map_to and map_from should be quoted includes.
