@@ -419,16 +419,23 @@ class I1_DefinedInCc_Class {
   I1_Enum i1_enum;
 };
 
-// For function declarations, we don't need complete type info.
+// For function declarations, we don't need complete type info for
+// arguments.  But we do for the return type unless we explicitly
+// say we don't want to (by providing a forward-declare).
+// IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I1_Class needs a declaration
 // IWYU: I2_Struct needs a declaration
 I1_Class Cc_DeclareOnlyFn(I2_Struct i2_class);
 
+// IWYU: I2_Struct needs a declaration
+I3_ForwardDeclareClass Cc_DeclareOnlyFnWithFwdDecl(I2_Struct i2_class);
+
+
 class Cc_DeclareOnlyClass {
   // IWYU: I1_Class needs a declaration
   Cc_DeclareOnlyClass(I1_Class);
-  // IWYU: I2_Class needs a declaration
-  I2_Class DeclareOnlyFn();
+  // IWYU: I2_Struct needs a declaration
+  I3_ForwardDeclareClass DeclareOnlyFn(I2_Struct);
 };
 
 // The implicit constructor for i1tc uses I2_Class.
