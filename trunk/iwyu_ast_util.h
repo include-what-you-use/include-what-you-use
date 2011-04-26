@@ -597,11 +597,13 @@ bool HasDefaultTemplateParameters(const clang::TemplateDecl* decl);
 // GetClassRedecls, which avoids a clang bug with friend decls.
 set<const clang::NamedDecl*> GetRedecls(const clang::NamedDecl* decl);
 
-// This accepts both RecordDecls and ClassTemplateDecls -- the return
-// Decls are guaranteed to be of the same type as the input Decl.
-// Returns the empty set if the input is not a RecordDecl or
-// ClassTemplateDecl.  Otherwise, always returns at least one
-// element (since the input decl is its own redecl).
+// Given a class, returns a set of all declarations of that class
+// (forward-declarations and, if present, the definition).  This
+// accepts both RecordDecls and ClassTemplateDecls -- the return Decls
+// are guaranteed to be of the same type as the input Decl.  Returns
+// the empty set if the input is not a RecordDecl or
+// ClassTemplateDecl.  Otherwise, always returns at least one element
+// (since the input decl is its own redecl).
 set<const clang::NamedDecl*> GetClassRedecls(const clang::NamedDecl* decl);
 
 // Returns the redecl of decl that occurs first in the translation
@@ -697,7 +699,7 @@ const clang::NamedDecl* TypeToDeclAsWritten(const clang::Type* type);
 
 // Returns true if it's possible to implicitly convert a value of a
 // different type to 'type' via an implicit constructor.
-bool CanImplicitlyConvertTo(const clang::Type* type);
+bool HasImplicitConversionConstructor(const clang::Type* type);
 
 // clang desugars template arguments: follows typedefs, etc.  We
 // want the unsugared type, so this function provides a map from

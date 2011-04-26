@@ -1041,7 +1041,7 @@ const Type* RemoveReferenceAsWritten(const Type* type) {
     return type;
 }
 
-bool CanImplicitlyConvertTo(const Type* type) {
+bool HasImplicitConversionConstructor(const Type* type) {
   type = RemoveElaboration(type);  // get rid of the class keyword
   if (isa<PointerType>(type))
     return false;  // can't implicitly convert to a pointer

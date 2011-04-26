@@ -1355,6 +1355,157 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return use_loc;
   }
 
+  // There are a few situations where iwyu is more restrictive than
+  // C++: where C++ allows a forward-declare but iwyu wants the full
+  // type.  One is in a typedef: if you write 'typedef Foo MyTypedef',
+  // iwyu says that you are responsible for #including "foo.h", but
+  // the language allows a forward-declare.  Another is for
+  // 'autocast': if your function has a parameter with a conversion
+  // (one-arg, not-explicit) constructor, iwyu requires that the
+  // function-author provides the full type of that parameter, but
+  // the language doesn't.  (It's ok with all callers providing the
+  // full type instead.)
+  //
+  // In each of these situations, we allow the user to say that iwyu
+  // should not require #includes for these underlying types, but
+  // allow forward-declares instead.  The author can do this by
+  // explicitly forward-declaring in the same file: for instance, they
+  // would do
+  //    class Foo; typedef Foo MyTypedef;   // can be on different lines :-)
+  //    class AutocastType; void MyFunc(AutocastType);   // but in same file
+  // If a definition- or declaration-site does this forward-declaring
+  // *and* does not directly #include the necessary file for Foo or
+  // AutocastType, we take that as a signal from the code-author that
+  // iwyu should relax its policies.  These functions calculate the
+  // types (which may have many component-types if it's a templated
+  // type) for which the code-author has made this decision.
+  bool CodeAuthorWantsJustAForwardDeclare(const Type* type,
+                                          SourceLocation use_loc) {
+    const NamedDecl* decl = TypeToDeclAsWritten(type);
+    if (decl == NULL)    // only class-types are candidates for returning true
+      return false;
+
+    // If we're a template specialization, we also accept
+    // forward-declarations of the underlying template (vector<T>, not
+    // vector<int>).
+    set<const NamedDecl*> redecls = GetClassRedecls(decl);
+    if (const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(decl)) {
+      InsertAllInto(GetClassRedecls(spec_decl->getSpecializedTemplate()),
+                    &redecls);
+    }
+
+    // Check if the author forward-declared the class in the same file.
+    bool found_earlier_forward_declare_in_same_file = false;
+    for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
+      if (IsBeforeInSameFile(*it, use_loc)) {
+        found_earlier_forward_declare_in_same_file = true;
+        break;
+      }
+    }
+    if (!found_earlier_forward_declare_in_same_file)
+      return false;
+
+    // Check if the the author is not #including the file with the
+    // definition.  PublicHeaderIntendsToProvide has exactly the
+    // semantics we want.  Note if there's no definition anywhere, we
+    // say the author does not want the full type (which is a good
+    // thing, since there isn't one!)
+    if (const NamedDecl* dfn = GetDefinitionForClass(decl)) {
+      if (IsBeforeInSameFile(dfn, use_loc))
+        return false;
+      if (preprocessor_info().PublicHeaderIntendsToProvide(
+              GetFileEntry(use_loc), GetFileEntry(dfn))) {
+        return false;
+      }
+    }
+
+    // OK, looks like the author has stated they don't want the fulll type.
+    return true;
+  }
+
+  set<const Type*> GetCallerResponsibleTypesForTypedef(
+      const TypedefDecl* decl) {
+    set<const Type*> retval;
+    const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
+    // If the underlying type is itself a typedef, we recurse.
+    if (const TypedefType* underlying_typedef = DynCastFrom(underlying_type)) {
+      if (const TypedefDecl* underlying_typedef_decl
+          = DynCastFrom(TypeToDeclAsWritten(underlying_typedef))) {
+        // TODO(csilvers): if one of the intermediate typedefs
+        // #includes the necessary definition of the 'final'
+        // underlying type, do we want to return the empty set here?
+        return GetCallerResponsibleTypesForTypedef(underlying_typedef_decl);
+      }
+    }
+
+    const Type* deref_type
+        = RemovePointersAndReferencesAsWritten(underlying_type);
+    if (CodeAuthorWantsJustAForwardDeclare(deref_type, GetLocation(decl))) {
+      retval.insert(deref_type);
+      // TODO(csilvers): include template type-args if appropriate.
+      // This requires doing an iwyu visit of the instantiated
+      // underlying type and seeing which type-args we require full
+      // use for.  Also have to handle the case where the type-args
+      // are themselves templates.  It will require pretty substantial
+      // iwyu surgery.
+    }
+    return retval;
+  }
+
+  // ast_node is the node for the autocast CastExpr.  We use it to get
+  // the parent CallExpr to figure out what function is being called.
+  set<const Type*> GetCallerResponsibleTypesForAutocast(
+      const ASTNode* ast_node) {
+    while (ast_node && !ast_node->IsA<CallExpr>())
+      ast_node = ast_node->parent();
+    CHECK_(ast_node && "Should only check Autocast if under a CallExpr");
+    const CallExpr* call_expr = ast_node->GetAs<CallExpr>();
+    const FunctionDecl* fn_decl = call_expr->getDirectCallee();
+    if (!fn_decl)     // TODO(csilvers): what to do for fn ptrs and the like?
+      return set<const Type*>();
+
+    // Collect the non-explicit, one-arg constructor ('autocast') types.
+    set<const Type*> autocast_types;
+    for (FunctionDecl::param_const_iterator param = fn_decl->param_begin();
+         param != fn_decl->param_end(); ++param) {
+      const Type* param_type = GetTypeOf(*param);
+      if (HasImplicitConversionConstructor(param_type)) {
+        const Type* deref_param_type =
+            RemovePointersAndReferencesAsWritten(param_type);
+        autocast_types.insert(deref_param_type);
+      }
+    }
+
+    // Now look at all the function decls that are visible from the
+    // call-location.  We keep only the autocast params that *all*
+    // the function decl authors want the caller to be responsible
+    // for.  We do this by elimination: start with all types, and
+    // remove them as we see authors providing the full type.
+    set<const Type*> retval = autocast_types;
+    for (FunctionDecl::redecl_iterator fn_redecl = fn_decl->redecls_begin();
+         fn_redecl != fn_decl->redecls_end(); ++fn_redecl) {
+      // Ignore function-decls that we can't see from the use-location.
+      if (!preprocessor_info().FileTransitivelyIncludes(
+              GetFileEntry(call_expr), GetFileEntry(*fn_redecl))) {
+        continue;
+      }
+      for (set<const Type*>::iterator it = retval.begin();
+           it != retval.end(); ) {
+        if (!CodeAuthorWantsJustAForwardDeclare(*it, GetLocation(*fn_redecl))) {
+          // set<> has nice property that erasing doesn't invalidate iterators.
+
+          retval.erase(it++);
+        } else {
+          ++it;
+        }
+      }
+    }
+
+    // TODO(csilvers): include template type-args of each entry of retval.
+
+    return retval;
+  }
+
   //------------------------------------------------------------
   // Checkers, that tell iwyu_output about uses of symbols.
   // We let, but don't require, subclasses to override these.
@@ -1370,20 +1521,48 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
 
+    preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
+        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()));
+
+    // Sometimes using a decl drags in a few other uses as well:
+
     // If we're a use that depends on a using declaration, make sure
     // we #include the file with the using declaration.
     // TODO(csilvers): check that our getQualifier() does not match
     // the namespace of the decl.  If we have 'using std::vector;' +
     // 'std::vector<int> foo;' we don't actually care about the
     // using-decl.
+    // TODO(csilvers): maybe just insert our own using declaration
+    // instead?  We can call it "Use what you use". :-)
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
           used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()));
     }
 
-    preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()));
+    // For typedefs, the user of the type is sometimes the one
+    // responsible for the underlying type.  We check if that is the
+    // case here, since we might be using a typedef type from
+    // anywhere.  ('autocast' is similar, but is handled in
+    // VisitCastExpr.)
+    if (const TypedefDecl* typedef_decl = DynCastFrom(decl)) {
+      // One exception: if this TypedefType is being used in another
+      // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
+      // user -- the other typedef -- is never responsible for the
+      // underlying type.  Instead, users of that typedef are.
+      if (!current_ast_node()->template ParentIsA<TypedefDecl>()) {
+        const set<const Type*>& underlying_types
+            = GetCallerResponsibleTypesForTypedef(typedef_decl);
+        if (!underlying_types.empty()) {
+          VERRS(6) << "User, not author, of typedef "
+                   << typedef_decl->getQualifiedNameAsString()
+                   << " owns the underlying type:\n";
+          // If any of the used types are themselves typedefs, this will
+          // result in a recursive expansion.
+          ReportTypesUse(used_loc, underlying_types);
+        }
+      }
+    }
   }
 
   virtual void ReportDeclsUse(SourceLocation used_loc,
@@ -1464,23 +1643,22 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  // If you say 'typedef Foo Bar', we want to decide if you are
-  // 're-export' type Foo under the name Bar.  If so, iwyu would
-  // require you to fully define Foo (even though C++ doesn't).
-  // Currently, we say most all typedefs are re-exporting.  However,
-  // we make exceptions for situations we know the typedef is not
-  // actually re-exporting anything useful:
-  // 1) There's no definition for the class (weird, but legal):
-  //       class NeverDefined; typedef NeverDefined Foo;
-  //    In that case, we *can't* require the full definition,
-  //    because it doesn't exist.
+  // If you say 'typedef Foo Bar', C++ says you just need to
+  // forward-declare Foo.  But iwyu would rather you fully define Foo,
+  // so all users of Bar don't have to.  We make two exceptions:
+  // 1) The author of the typedef doesn't *want* to provide Foo, and
+  //    is happy making all the callers do so.  The author indicates
+  //    this by explicitly forward-declaring Foo and not #including
+  //    foo.h.
   // 2) The typedef is a member of a templated class, and the
   //    underlying type is a template parameter:
   //       template<class T> struct C { typedef T value_type; };
   //    This is not a re-export because you need the type to
   //    access the typedef (via 'C<Someclass>::value_type'), so
   //    there's no need for the typedef-file to provide the type
-  //    too.
+  //    too.  TODO(csilvers): this is patently wrong; figure out
+  //    something better.  We need something that doesn't require
+  //    the full type info for creating a scoped_ptr<MyClass>.
   // As an extension of (2), if the typedef is a template type that
   // contains T as a template parameter, the typedef still re-exports
   // the template type (it's not (2)), but the template parameter
@@ -1489,33 +1667,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // iwyu will demand the full type of pair, but not of its template
   // arguments.  This is handled not here, but below, in
   // VisitSubstTemplateTypeParmType.
-  //
-  // There may be other exceptions we could add, but these are the
-  // important ones.  (2) is important to avoid requiring the full
-  // type info for scoped_ptr<MyClass> -- by design, scoped_ptr
-  // should only need the full type info of its arg for its destructor.
-  bool TypedefIsReExportingUnderlyingType(const clang::TypedefDecl* decl,
-                                          const ASTNode* typedef_ast_node) {
-    const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
-    const NamedDecl* underlying_decl = TypeToDeclAsWritten(underlying_type);
-
-    if (underlying_decl && GetDefinitionForClass(underlying_decl) == NULL)
-      return false;    // case (1)
-
-    if (isa<SubstTemplateTypeParmType>(underlying_type))
-      return false;  // case (2)
-
-    return true;
-  }
-
-  // If you say 'typedef Foo Bar', the language says you just need to
-  // forward-declare Foo.  But we may require you to fully define it
-  // if we think the typedef means you're 're-exporting' the type
-  // under a new name.
   bool VisitTypedefDecl(clang::TypedefDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
-    current_ast_node()->set_in_forward_declare_context(
-        !TypedefIsReExportingUnderlyingType(decl, current_ast_node()));
+    const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
+    const Type* deref_type
+        = RemovePointersAndReferencesAsWritten(underlying_type);
+
+    if (CodeAuthorWantsJustAForwardDeclare(deref_type, GetLocation(decl)) ||
+        isa<SubstTemplateTypeParmType>(underlying_type)) {
+      current_ast_node()->set_in_forward_declare_context(true);
+    } else {
+      current_ast_node()->set_in_forward_declare_context(false);
+    }
+
     return Base::VisitTypedefDecl(decl);
   }
 
@@ -1527,8 +1691,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // non-explicit, one-arg constructor, or is a const reference to
   // such a type, mark that type as not forward declarable.  The
   // worry is that people might need the full type for the implicit
-  // conversion, for instance, passing in a char* to
-  // Fn(const StringPiece& foo) { ... }
+  // conversion (the 'autocast'), for instance, passing in a char*
+  // to Fn(const StringPiece& foo) { ... }
   bool VisitFunctionDecl(clang::FunctionDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
 
@@ -1536,11 +1700,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // Make all our types forward-declarable.
       current_ast_node()->set_in_forward_declare_context(true);
 
-    // Check for the non-explicit, one-arg constructor types.
+    // Check for the non-explicit, one-arg ('autocast') constructor types.
     for (FunctionDecl::param_iterator param = decl->param_begin();
          param != decl->param_end(); ++param) {
       const Type* param_type = GetTypeOf(*param);
-      if (!CanImplicitlyConvertTo(param_type))
+      if (!HasImplicitConversionConstructor(param_type))
         continue;
       const Type* deref_param_type =
           RemovePointersAndReferencesAsWritten(param_type);
@@ -1551,6 +1715,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // clang bug where getTypeSourceInfo() can return NULL.
       if ((*param)->getTypeSourceInfo()) {
         const TypeLoc param_tl = (*param)->getTypeSourceInfo()->getTypeLoc();
+        // While iwyu requires the full type of autocast parameters,
+        // c++ does not.  Function-writers can force iwyu to follow
+        // the language by explicitly forward-declaring the type.
+        // Check for that now, and don't require the full type.
+        if (CodeAuthorWantsJustAForwardDeclare(deref_param_type,
+                                               GetLocation(&param_tl)))
+          continue;
         // This is a 'full type required' check, to 'turn off' fwd decl.
         ReportTypeUse(GetLocation(&param_tl), deref_param_type);
       } else {
@@ -1661,14 +1832,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
       // Need the full to-type so we can call its constructor.
       case clang::CK_ConstructorConversion:
-        // As a special case, if we're doing the constructor
-        // conversion in a function call (calling 'MyFunc(7)' instead
-        // of 'MyFunc(MyClass(7))'), then we don't need to report
-        // anything.  That's because iwyu says the callee (MyFunc) is
-        // responsible for these kinds of calls.  See
-        // IwyuBaseASTVisitor::VisitFunctionDecl.
-        if (!current_ast_node()->template HasAncestorOfType<CallExpr>())
+        // 'Autocast' -- calling a one-arg, non-explicit constructor
+        // -- is a special case when it's done for a function call.
+        // iwyu requires the function-writer to provide the #include
+        // for the casted-to type, just so we don't have to require it
+        // here.  *However*, the function-author can override this
+        // iwyu requirement, in which case we're responsible for the
+        // casted-to type.  See IwyuBaseASTVisitor::VisitFunctionDecl.
+        if (!current_ast_node()->template HasAncestorOfType<CallExpr>() ||
+            ContainsKey(
+                GetCallerResponsibleTypesForAutocast(current_ast_node()),
+                RemovePointersAndReferences(to_type))) {
           need_full_to_type = true;
+        }
         break;
       // Need the full from-type so we can call its 'operator <totype>()'.
       case clang::CK_UserDefinedConversion:
@@ -3036,8 +3212,11 @@ class IwyuAstConsumer
       // the first forward-declaration.
       } else if (IsNestedClassAsWritten(current_ast_node())) {
         if (!decl->getDefinition() || decl->getDefinition()->isOutOfLine()) {
-          if (decl == GetFirstRedecl(decl))
-            definitely_keep_fwd_decl = true;
+          if (const NamedDecl* first_decl = GetFirstRedecl(decl)) {
+            // Check if we're the decl with the smallest line number.
+            if (decl == first_decl)
+              definitely_keep_fwd_decl = true;
+          }
         }
       }
 

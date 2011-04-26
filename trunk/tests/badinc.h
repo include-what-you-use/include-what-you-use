@@ -26,7 +26,6 @@ class Cc_Class;
 enum H_Enum { H1, H2, H3 };
 
 template<typename T> class I2_TypedefOnly_Class;
-// IWYU: I2_TypedefOnly_Class is...*badinc-i2.h
 typedef I2_TypedefOnly_Class<int> H_I1_Class_Typedef;
 
 // H_ScopedPtr and H_MakeScopedPtr mimic the implementation of
@@ -407,7 +406,7 @@ The full include-list for tests/badinc.h:
 #include <vector>  // for vector
 #include "tests/badinc-d3.h"  // for D3_Enum, D3_Enum::D31
 #include "tests/badinc-i2-inl.h"  // for I2_Class::I2_Class, I2_Class::InlFileFn, I2_Class::InlFileStaticFn, I2_Class::InlFileTemplateFn, I2_Class::~I2_Class, I2_TemplateClass::I2_TemplateClass<FOO>, I2_TemplateClass::InlFileTemplateClassFn, I2_TemplateClass::~I2_TemplateClass<FOO>
-#include "tests/badinc-i2.h"  // for I2_Class, I2_Enum, I2_Enum::I21, I2_Enum::I22, I2_Enum::I23, I2_EnumForTypedefs, I2_MACRO, I2_Struct, I2_TemplateClass, I2_Typedef, I2_TypedefOnly_Class, TemplateForHClassTplFn (ptr only)
+#include "tests/badinc-i2.h"  // for I2_Class, I2_Enum, I2_Enum::I21, I2_Enum::I22, I2_Enum::I23, I2_EnumForTypedefs, I2_MACRO, I2_Struct, I2_TemplateClass, I2_Typedef, I2_TypedefOnly_Class (ptr only), TemplateForHClassTplFn (ptr only)
 class Cc_Class;  // lines XX-XX
 // TODO(csilvers): this should change to struct Cc_Struct.
 class Cc_Struct;  // lines XX-XX
