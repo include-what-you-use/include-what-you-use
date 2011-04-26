@@ -66,8 +66,8 @@ class FixIncludesBase(unittest.TestCase):
 
     # Mock out checkout commands; keep a list of all files checked out.
     self.system_commands = []
-    fix_includes._RunCommandOnFile = \
-        lambda command, filename: self.system_commands.append(filename)
+    fix_includes._RunCommandOnFiles = \
+        lambda command, filenames: self.system_commands.extend(filenames)
 
   def assertListEqual(self, a, b):
     """If the two lists aren't equal, raise an error and print the diffs."""
@@ -1488,7 +1488,7 @@ class Foo;
     self.ProcessAndTest(iwyu_output)
 
   def testAddIncludeToEmptyFile(self):
-    """Tests we add an #include ok to a basically empty file.."""
+    """Tests we add an #include ok to an empty file.."""
     infile = ''
     iwyu_output = """\
 empty_file should add these lines:
@@ -2475,6 +2475,35 @@ int main() { return 0; }
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
+  def testSortingMultipleFiles(self):
+    """Tests passing more than one argument to SortIncludesInFiles()."""
+    infile1 = """\
+#include <stdlib.h>
+#include <stdio.h>
+#include <stddef.h>
+"""
+    infile2 = """\
+#include "z.h"
+#include "y.h"
+#include "x.y"
+"""
+
+    expected_output = """\
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "x.y"
+#include "y.h"
+#include "z.h"
+"""
+    self.RegisterFileContents({'f1': infile1, 'f2': infile2})
+    num_files_modified = fix_includes.SortIncludesInFiles(['f1', 'f2'],
+                                                          self.flags)
+    self.assertListEqual(expected_output.strip().split('\n'),
+                         self.actual_after_contents)
+    self.assertEqual(2, num_files_modified)
+
+
   def testSortingIncludesAlreadySorted(self):
     """Tests sorting includes only, when includes are already sorted."""
     infile = """\
@@ -2648,6 +2677,40 @@ namespace util { class Status; }
     self.RegisterFileContents(
         {'structuredsearch/common/internal/query_field_xlate.h': infile})
     self.ProcessAndTest(iwyu_output)
+
+  def testDryRun(self):
+    """Tests that --dry_run mode does not modify files."""
+    self.flags.dry_run = True
+    infile = """\
+// Copyright 2010
+
+#include <notused.h>
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+dry_run should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+dry_run should remove these lines:
+- #include <notused.h>  // lines 3-3
+
+The full include-list for dry_run:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    self.RegisterFileContents({'dry_run': infile})
+    num_modified_files = fix_includes.ProcessIWYUOutput(
+        cStringIO.StringIO(iwyu_output), ['dry_run'], self.flags)
+    self.assertListEqual([], self.actual_after_contents)
+    self.assertEqual(0, num_modified_files)
+
 
   def testMain(self):
     """Make sure calling main doesn't crash.  Inspired by a syntax-error bug."""
