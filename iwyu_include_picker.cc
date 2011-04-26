@@ -64,8 +64,8 @@ const IncludePicker::Visibility kPublic = IncludePicker::kPublic;
 // equivalents.
 // In each case, I ordered them so <sys/types.h> was first, if it was
 // an option for this type.  That's the preferred #include all else
-// equal.  The visibility on the symbol-name isn't meaningful, but
-// must be kPrivate (or GetPublicValues() will self-map them, below).
+// equal.  The visibility on the symbol-name is ignored; by convension
+// we always set it to kPrivate.
 const IncludePicker::IncludeMapEntry symbol_include_map[] = {
   { "blksize_t", kPrivate, "<sys/types.h>", kPublic },
   { "blkcnt_t", kPrivate, "<sys/stat.h>", kPublic },
@@ -838,19 +838,25 @@ IncludePicker::IncludePicker()
       has_called_finalize_added_include_lines_(false) {
   // Parse our hard-coded mappings into a data structure.
   for (size_t i = 0; i < IWYU_ARRAYSIZE(symbol_include_map); ++i) {
-    InsertInto(symbol_include_map[i], &symbol_include_map_);
+    const IncludePicker::IncludeMapEntry& e = symbol_include_map[i];
+    CHECK_(IsQuotedInclude(e.map_to) && "Map values must be quoted includes");
+    symbol_include_map_[e.map_from].push_back(e.map_to);
+    // Symbol-names are always marked as private (or GetPublicValues()
+    // will self-map them, below).
+    MarkVisibility(e.map_from, kPrivate);
+    MarkVisibility(e.map_to, e.to_visibility);
   }
   for (size_t i = 0; i < IWYU_ARRAYSIZE(c_include_map); ++i) {
-    InsertInto(c_include_map[i], &filepath_include_map_);
+    InsertIntoFilepathIncludeMap(c_include_map[i]);
   }
   for (size_t i = 0; i < IWYU_ARRAYSIZE(cpp_include_map); ++i) {
-    InsertInto(cpp_include_map[i], &filepath_include_map_);
+    InsertIntoFilepathIncludeMap(cpp_include_map[i]);
   }
   for (size_t i = 0; i < IWYU_ARRAYSIZE(google_include_map); ++i) {
-    InsertInto(google_include_map[i], &filepath_include_map_);
+    InsertIntoFilepathIncludeMap(google_include_map[i]);
   }
   for (size_t i = 0; i < IWYU_ARRAYSIZE(third_party_include_map); ++i) {
-    InsertInto(third_party_include_map[i], &filepath_include_map_);
+    InsertIntoFilepathIncludeMap(third_party_include_map[i]);
   }
 }
 
@@ -864,22 +870,13 @@ void IncludePicker::MarkVisibility(const string& quoted_include,
          "Same file seen with two different visibilities");
 }
 
-void IncludePicker::InsertInto(const IncludePicker::IncludeMapEntry& e,
-                               IncludePicker::IncludeMap* include_map) {
+void IncludePicker::InsertIntoFilepathIncludeMap(
+    const IncludePicker::IncludeMapEntry& e) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
-
-  // Verify that the key/value starts with < or " when it's a
-  // quoted-include.  Not all keys are quoted-includes (they may also
-  // be symbols), but all public keys are: symbols are always marked
-  // private, by convention.  Values are always quoted-includes.
-  if (e.from_visibility == kPublic) {
-    CHECK_(IsQuotedInclude(e.map_from)
-           && "All public map keys must be quoted includes");
-  }
+  // Verify that the key/value starts with < or ".
+  CHECK_(IsQuotedInclude(e.map_from) && "All map keys must be quoted includes");
   CHECK_(IsQuotedInclude(e.map_to) && "All map values must be quoted includes");
-  (*include_map)[e.map_from].push_back(e.map_to);
-  // Marking the visibility of symbols is meaningless but also harmless,
-  // so we don't bother to check if map_from is a filepath or a symbol-name.
+  filepath_include_map_[e.map_from].push_back(e.map_to);
   MarkVisibility(e.map_from, e.from_visibility);
   MarkVisibility(e.map_to, e.to_visibility);
 }

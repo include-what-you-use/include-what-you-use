@@ -1,4 +1,4 @@
-//===--- iwyu_test.cc - test helper functions for include-what-you-use ----===//
+//===--- iwyu_include_picker_test.cc - test helper functions for iwyue ----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
