@@ -32,7 +32,7 @@ class FakeFlags:
     self.dry_run = False
     self.ignore_re = None
     self.checkout_command = None
-    self.safe = False
+    self.safe_headers = False
     self.separate_project_includes = None
 
 
@@ -1117,9 +1117,9 @@ The full include-list for subdir/bflag.cc:
     self.RegisterFileContents({'subdir/bflag.cc': infile})
     self.ProcessAndTest(iwyu_output)
 
-  def testSafeFlag(self):
-    """Tests that --safe causes us to not delete lines."""
-    self.flags.safe = True
+  def testSafeHeadersFlag(self):
+    """Tests that --safe_headers causes us to not delete lines."""
+    self.flags.safe_headers = True
     infile = """\
 // Copyright 2010
 
@@ -1160,9 +1160,9 @@ The full include-list for safe_flag.h:
     self.RegisterFileContents({'safe_flag.h': infile})
     self.ProcessAndTest(iwyu_output)
 
-  def testSafeFlagTwice(self):
-    """Tests that running --safe twice in a row doesn't duplicate comments."""
-    self.flags.safe = True
+  def testSafeHeadersFlagTwice(self):
+    """Tests running --safe_headers 2ce in a row doesn't duplicate comments."""
+    self.flags.safe_headers = True
     infile = """\
 // Copyright 2010
 
@@ -1198,9 +1198,9 @@ The full include-list for safe_flag_twice.h:
     self.RegisterFileContents({'safe_flag_twice.h': infile})
     self.ProcessAndTest(iwyu_output)
 
-  def testSafeFlagOnCcFiles(self):
-    """Tests that we delete headers even in --safe mode, on .cc files."""
-    self.flags.safe = True
+  def testSafeHeadersFlagOnCcFiles(self):
+    """Tests that we delete even in --safe_headers mode, on .cc files."""
+    self.flags.safe_headers = True
     infile = """\
 // Copyright 2010
 

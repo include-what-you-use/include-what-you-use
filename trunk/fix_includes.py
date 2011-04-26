@@ -1733,10 +1733,10 @@ def _DeleteLinesAccordingToIwyu(iwyu_record, file_lines):
 
 
 def _MarkUnnecessaryLinesAccordingToIwyu(iwyu_record, file_lines):
-  """The equivalent of _DeleteLinesAccordingToIwyu, but used in --safe mode.
+  """The equivalent of _DeleteLinesAccordingToIwyu, used with --safe_headers.
 
-  When the user runs with --safe, which is the default, we do not
-  delete lines that iwyu tells us to delete from header files.
+  When the user runs with --safe_headers, which is the default, we do
+  not delete lines that iwyu tells us to delete from header files.
   Instead we add a comment to the line saying that it's been judged
   unnecessary according to iwyu.  This will allow for easy cleanup
   later, and is also self-documenting.
@@ -1773,8 +1773,8 @@ def FixFileLines(iwyu_record, file_lines, flags):
     file_lines: a list of LineInfo objects holding the parsed output of
       the file in iwyu_record.filename
     flags: commandline flags, as parsed by optparse.  We use
-       flags.safe to turn off deleting lines, and use the other
-       flags indirectly (via calls to other routines).
+       flags.safe_headers to turn off deleting lines, and use the
+       other flags indirectly (via calls to other routines).
 
   Returns:
     An array of 'fixed' source code lines, after modifications as
@@ -1782,7 +1782,7 @@ def FixFileLines(iwyu_record, file_lines, flags):
   """
   # First delete the includes and forward-declares that we should delete.
   # This is easy since iwyu tells us the line numbers.
-  if flags.safe and _MayBeHeaderFile(iwyu_record.filename):
+  if flags.safe_headers and _MayBeHeaderFile(iwyu_record.filename):
     _MarkUnnecessaryLinesAccordingToIwyu(iwyu_record, file_lines)
   else:
     _DeleteLinesAccordingToIwyu(iwyu_record, file_lines)
@@ -2037,10 +2037,11 @@ def main(argv):
                     help='Put comments after the #include lines [default]')
   parser.add_option('--nocomments', action='store_false', dest='comments')
 
-  parser.add_option('--safe', action='store_true', default=True,
+  parser.add_option('--safe_headers', action='store_true', default=True,
                     help=('Do not remove unused #includes/fwd-declares from'
                           ' header files; just add new ones [default]'))
-  parser.add_option('--nosafe', action='store_false', dest='safe')
+  parser.add_option('--nosafe_headers', action='store_false',
+                    dest='safe_headers')
 
   parser.add_option('-s', '--sort_only', action='store_true',
                     help=('Just sort #includes of files listed on cmdline;'
