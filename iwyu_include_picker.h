@@ -144,6 +144,10 @@ class IncludePicker {
   // globs by matching them against all #includes seen by iwyu.
   void ExpandGlobs();
 
+  // Figure out mappings to add between third-party files, that we
+  // guess based on the structure and use of third-party code.
+  void AddImplicitThirdPartyMappings();
+
   // Helper routine to parse the internal, hard-coded mappings.
   void InsertInto(const IncludePicker::IncludeMapEntry& e,
                   IncludePicker::IncludeMap* include_map);
@@ -165,8 +169,9 @@ class IncludePicker {
   // Quoted-includes that are not present in this map are assumed public.
   map<string, Visibility> filepath_visibility_map_;
 
-  // All the includes we've seen so far, to help with globbing.
-  set<string> all_quoted_includes_;
+  // All the includes we've seen so far, to help with globbing and
+  // other dynamic mapping.  For each file, we list who #includes it.
+  map<string, set<string> > quoted_includes_to_quoted_includers_;
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;

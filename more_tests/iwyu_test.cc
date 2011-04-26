@@ -290,6 +290,52 @@ TEST(IncludePicker, GetPublicHeadersForFilepath_NoIdentityGlob) {
       p.GetPublicHeadersForFilepath("mydir/include.h"), "\"mydir/include.h\"");
 }
 
+TEST(IncludePicker, GetPublicHeadersForFilepath_ImplicitThirdPartyMapping) {
+  IncludePicker p;
+  p.AddDirectInclude("third_party/public.h", "third_party/private1.h");
+  p.AddDirectInclude("third_party/public.h", "third_party/private2.h");
+  p.AddDirectInclude("third_party/private1.h", "third_party/private11.h");
+  p.AddDirectInclude("third_party/public.h", "third_party/other_public.h");
+  p.AddDirectInclude("third_party/other_public.h", "third_party/oprivate.h");
+  p.AddDirectInclude("my_app.h", "third_party/public.h");
+  p.AddDirectInclude("my_app.h", "third_party/other_public.h");
+  p.FinalizeAddedIncludes();
+  EXPECT_VECTOR_STREQ(p.GetPublicHeadersForFilepath("third_party/public.h"),
+                      "\"third_party/public.h\"");
+  EXPECT_VECTOR_STREQ(p.GetPublicHeadersForFilepath("third_party/private1.h"),
+                      "\"third_party/public.h\"");
+  EXPECT_VECTOR_STREQ(p.GetPublicHeadersForFilepath("third_party/private2.h"),
+                      "\"third_party/public.h\"");
+  EXPECT_VECTOR_STREQ(p.GetPublicHeadersForFilepath("third_party/private11.h"),
+                      "\"third_party/public.h\"");
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("third_party/other_public.h"),
+      "\"third_party/other_public.h\"");
+  // Shouldn't have third_party/public.h here, even though it indirectly
+  // includes oprivate.h, because other_public is in between and is itself
+  // considered a public include (since it is #included from my_app.h).
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("third_party/oprivate.h"),
+      "\"third_party/other_public.h\"");
+}
+
+TEST(IncludePicker, GetPublicHeadersForFilepath_ImplicitvsExplicitThirdParty) {
+  IncludePicker p;
+  // These are controlled by third_party_include_map, not by
+  // AddImplicitThirdPartyMappings().
+  p.AddDirectInclude("my_app.h", "third_party/dynamic_annotations/public.h");
+  p.AddDirectInclude("third_party/dynamic_annotations/public.h",
+                     "third_party/dynamic_annotations/private.h");
+  p.AddDirectInclude("my_app.h", "third_party/icu/include/unicode/umachine.h");
+  p.FinalizeAddedIncludes();
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("third_party/dynamic_annotations/public.h"),
+      "\"base/dynamic_annotations.h\"");
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("third_party/icu/include/unicode/umachine.h"),
+      "\"third_party/icu/include/unicode/utypes.h\"");
+}
+
 TEST(IncludePicker, GetPublicHeadersForFilepath_NotInAnyMap) {
   IncludePicker p;
   p.FinalizeAddedIncludes();
