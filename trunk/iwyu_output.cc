@@ -559,14 +559,10 @@ bool DeclIsVisibleToUseInSameFile(const Decl* decl, const OneUse& use) {
   // If the decl comes before the use, it's visible to it.  It can
   // even be visible if the decl comes after, if the decl is inside
   // the class definition and the use is in the body of a method.
-  // TODO(csilvers): better than comparing line numbers would be to
-  // call SourceManager::getDecomposedLoc() and compare offsets.
-  return ((GetInstantiationLineNumber(use.use_loc()) >=
-           GetInstantiationLineNumber(GetLocation(decl))) ||
+  return (IsBeforeInSameFile(decl, use.use_loc()) ||
           (DeclsAreInSameClass(decl, use.decl()) && !decl->isOutOfLine()
            && use.in_cxx_method_body()));
 }
-
 
 // This makes a best-effort attempt to find the smallest set of
 // #include files that satisfy all uses.  A more accurate name
@@ -1041,9 +1037,24 @@ void CalculateIwyuForForwardDeclareUse(
   CHECK_(use->decl() && "CalculateIwyuForForwardDeclareUse takes a fwd-decl");
   CHECK_(!use->is_full_use() && "ForwardDeclareUse are not full uses");
 
+  const NamedDecl* same_file_decl = NULL;
+  const RecordDecl* record_decl = DynCastFrom(use->decl());
+  const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
+  const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(use->decl());
+  if (spec_decl)
+    tpl_decl = spec_decl->getSpecializedTemplate();
+  if (tpl_decl)
+    record_decl = tpl_decl->getTemplatedDecl();
+  CHECK_(record_decl && "Non-records should have been handled already");
+
   // If this record is defined in one of the desired_includes, mark that
   // fact.  Also if it's defined in one of the actual_includes.
   const NamedDecl* dfn = GetDefinitionForClass(use->decl());
+  // If we are, ourselves, a template specialization, then the definition
+  // we use is not the definition of the specialization (that's us), but
+  // the definition of the template we're specializing.
+  if (spec_decl && dfn == spec_decl)
+    dfn = GetDefinitionForClass(spec_decl->getSpecializedTemplate());
   bool dfn_is_in_desired_includes = false;
   bool dfn_is_in_actual_includes = false;
   if (dfn) {
@@ -1057,8 +1068,7 @@ void CalculateIwyuForForwardDeclareUse(
     }
     // We ourself are always a 'desired' and 'actual' include (though
     // only if the definition is visible from the use location).
-    if (GetFileEntry(dfn) == GetFileEntry(use->use_loc()) &&
-        DeclIsVisibleToUseInSameFile(dfn, *use)) {
+    if (DeclIsVisibleToUseInSameFile(dfn, *use)) {
       dfn_is_in_desired_includes = true;
       dfn_is_in_actual_includes = true;
     }
@@ -1066,15 +1076,6 @@ void CalculateIwyuForForwardDeclareUse(
 
   // We also want to know if *any* redecl of this record is defined
   // in the same file as the use (and before it).
-  const NamedDecl* same_file_decl = NULL;
-  const RecordDecl* record_decl = DynCastFrom(use->decl());
-  const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
-  const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(use->decl());
-  if (spec_decl)
-    tpl_decl = spec_decl->getSpecializedTemplate();
-  if (tpl_decl)
-    record_decl = tpl_decl->getTemplatedDecl();
-  CHECK_(record_decl && "Non-records should have been handled already");
   const set<const NamedDecl*>& redecls = GetClassRedecls(record_decl);
   for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
     if (DeclIsVisibleToUseInSameFile(*it, *use)) {
