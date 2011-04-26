@@ -760,9 +760,12 @@ set<string> CalculateMinimalIncludes(
 // A1) If not a class or a templated class, recategorize as a full use.
 // A2) If a templated class with default template params, recategorize
 //     as a full use (forward-declaring in that case is too error-prone).
-// A3) If a nested class, discard this use (the parent class declaration
+// A3) If a symbol in std, recategorize as a full use.  This is entirely
+//     a policy decision: we've decided never to forward-declare anything
+//     in std.
+// A4) If a nested class, discard this use (the parent class declaration
 //     is sufficient).
-// A4) If any of the redeclarations of this declaration is in the same
+// A5) If any of the redeclarations of this declaration is in the same
 //     file as the use (and before it), and is actually a definition,
 //     discard the forward-declare use.
 
@@ -839,11 +842,20 @@ void ProcessForwardDeclare(OneUse* use) {
                << " from fwd-decl use to full use: has default template param"
                << " (" << use->PrintableUseLoc() << ")\n";
       use->set_full_use();
-      // No return here: (A3) or (A4) may cause us to ignore this decl entirely.
+      // No return here: (A4) or (A5) may cause us to ignore this decl entirely.
     }
   }
 
-  // (A3) If using a nested class, discard this use.
+  // (A3) If it is in namespace std, recategorize as a full use.
+  if (StartsWith(use->symbol_name(), "std::")) {
+    VERRS(6) << "Moving " << use->symbol_name()
+             << " from fwd-decl use to full use: in namespace std"
+             << " (" << use->PrintableUseLoc() << ")\n";
+    use->set_full_use();
+    // No return here: (A4) or (A5) may cause us to ignore this decl entirely.
+  }
+
+  // (A4) If using a nested class, discard this use.
   if (IsNestedClass(record_decl)) {
     // iwyu will require the full type of the parent class when it
     // recurses on the qualifier (any use of Foo::Bar requires the
@@ -864,7 +876,7 @@ void ProcessForwardDeclare(OneUse* use) {
     }
   }
 
-  // (A4) If a definition exists earlier in this file, discard this use.
+  // (A5) If a definition exists earlier in this file, discard this use.
   // Note: for the 'earlier' checks, what matters is the *instantiation*
   // location.
   const set<const RecordDecl*> redecls = GetClassRedecls(record_decl);
