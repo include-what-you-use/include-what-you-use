@@ -675,7 +675,7 @@ const IncludePicker::IncludeMapEntry third_party_include_map[] = {
     "\"testing/base/public/gunit.h\"", kPublic
   },
   { "\"third_party/python2_4_3/*\"", kPrivate, "<Python.h>", kPublic },
-  { "third_party/icu/include/unicode/umachine.h", kPrivate,
+  { "\"third_party/icu/include/unicode/umachine.h\"", kPrivate,
     "\"third_party/icu/include/unicode/utypes.h\"", kPublic
   },
   { "\"third_party/icu/include/unicode/uversion.h\"", kPrivate,
