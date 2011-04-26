@@ -2941,11 +2941,7 @@ class IwyuAstConsumer
   bool VisitTagDecl(clang::TagDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
 
-    // If it's not a definition, and it's not a friend declaration, it
-    // must be a forward-declaration.  Don't count the 'inline'
-    // forward-declares like 'int foo(class T* t) ...'
-    if (!decl->isDefinition() && !IsFriendDecl(decl) &&
-        !decl->isEmbeddedInDeclarator()) {
+    if (IsForwardDecl(decl)) {
       // If we're a templated class, make sure we add the whole template.
       const NamedDecl* decl_to_fwd_declare = decl;
       if (const CXXRecordDecl* cxx_decl = DynCastFrom(decl))
@@ -2965,7 +2961,8 @@ class IwyuAstConsumer
       // (Surprisingly classes can have linkage specs! -- they are
       // applied to all static methods of the class.  See
       // http://msdn.microsoft.com/en-us/library/ms882260.aspx.)
-      if (current_ast_node()->ParentIsA<LinkageSpecDecl>() || decl->hasAttrs())
+      if (current_ast_node()->ParentIsA<LinkageSpecDecl>() ||
+          decl->hasAttrs()) {
         definitely_keep_fwd_decl = true;
 
       // (2) If we're a nested class ("class A { class SubA; };"),
@@ -2974,25 +2971,13 @@ class IwyuAstConsumer
       // have a nested class and not at least declare it in the
       // enclosing class.  If the nested class is actually defined in
       // the enclosing class, then we're fine; if not, we need to keep
-      // one (and only one) forward-declaration inside the enclosing
-      // class.  We choose the first one.
-      if (current_ast_node()->ParentIsA<CXXRecordDecl>() ||
-          // For templated nested-classes, a ClassTemplateDecl is interposed.
-          (current_ast_node()->ParentIsA<ClassTemplateDecl>() &&
-           current_ast_node()->AncestorIsA<CXXRecordDecl>(2))) {
+      // the first forward-declaration.
+      } else if (IsNestedClassAsWritten(current_ast_node())) {
         if (!decl->getDefinition() || decl->getDefinition()->isOutOfLine()) {
           if (const RecordDecl* record_decl = DynCastFrom(decl)) {
-            set<const RecordDecl*> all_redecls = GetClassRedecls(record_decl);
-            map<unsigned, const RecordDecl*> linenum_to_decl;  // easy min()
-            for (Each<const RecordDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
-              // All declarations of a nested decl must be in the class,
-              // and thus "must" be in the same file.  So just keep line #s.
-              if (!(*it)->isDefinition())
-                linenum_to_decl[GetLineNumber(GetLocation(*it))] = *it;
-            }
-            assert(!linenum_to_decl.empty() && "decl should be in it at least!");
+            const RecordDecl* first_decl = GetFirstRedecl(record_decl);
             // Check if we're the decl with the smallest line number.
-            if (linenum_to_decl.begin()->second == record_decl)
+            if (record_decl == first_decl)
               definitely_keep_fwd_decl = true;
           }
         }

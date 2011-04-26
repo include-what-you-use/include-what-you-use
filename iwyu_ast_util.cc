@@ -216,6 +216,14 @@ bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
   return false;
 }
 
+bool IsNestedClassAsWritten(const ASTNode* ast_node) {
+  return (ast_node->IsA<RecordDecl>() &&
+          (ast_node->ParentIsA<CXXRecordDecl>() ||
+           // For templated nested-classes, a ClassTemplateDecl is interposed.
+           (ast_node->ParentIsA<ClassTemplateDecl>() &&
+            ast_node->AncestorIsA<CXXRecordDecl>(2))));
+}
+
 bool IsDefaultTemplateTemplateArg(const ASTNode* ast_node) {
   // Is ast_node the 'D' in the following:
   //    template<template <typename A> class T = D> class C { ... }
@@ -784,9 +792,14 @@ bool IsFriendDecl(const Decl* decl) {
   return decl->getFriendObjectKind() != Decl::FOK_None;
 }
 
+bool IsForwardDecl(const clang::TagDecl* decl) {
+  return (!decl->isDefinition() && !IsFriendDecl(decl) &&
+          !decl->isEmbeddedInDeclarator());
+}
+
+// Two possibilities: it's written as a nested class (that is, with a
+// qualifier) or it's actually living inside another class.
 bool IsNestedClass(const TagDecl* decl) {
-  // Two possibilities: it's written as a nested class (that is, with
-  // a qualifier) or it's actually living inside another class.
   if (decl->getQualifier() &&
       decl->getQualifier()->getKind() == NestedNameSpecifier::TypeSpec) {
     return true;
@@ -812,6 +825,20 @@ set<const RecordDecl*> GetClassRedecls(const RecordDecl* decl) {
       redecls.insert(redecl);
   }
   return redecls;
+}
+
+const RecordDecl* GetFirstRedecl(const RecordDecl* decl) {
+  const RecordDecl* first_decl = decl;
+  FullSourceLoc first_decl_loc(GetLocation(first_decl), *GlobalSourceManager());
+  set<const RecordDecl*> all_redecls = GetClassRedecls(decl);
+  for (Each<const RecordDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
+    const FullSourceLoc redecl_loc(GetLocation(*it), *GlobalSourceManager());
+    if (redecl_loc.isBeforeInTranslationUnitThan(first_decl_loc)) {
+      first_decl = *it;
+      first_decl_loc = redecl_loc;
+    }
+  }
+  return first_decl;
 }
 
 const NamedDecl* GetNonfriendClassRedecl(const NamedDecl* decl) {

@@ -390,6 +390,12 @@ bool IsNamespaceQualifiedNode(const ASTNode* ast_node);
 // implicitly), or the implicit (non-body) code of a destructor.
 bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node);
 
+// Return true if we're a nested class as written, that is, we're a
+// class decl inside another class decl.  The parent class may be
+// templated, but we should not be.  (We could extend the function to
+// handle that case, but there's been no need yet.)
+bool IsNestedClassAsWritten(const ASTNode* ast_node);
+
 // Is ast_node the 'D' in the following:
 //    template<template <typename A> class T = D> class C { ... }
 // ('D' might be something like 'vector').
@@ -566,12 +572,25 @@ bool IsDefaultNewOrDelete(const clang::FunctionDecl* decl,
 // Returns true if this decl is part of a friend decl.
 bool IsFriendDecl(const clang::Decl* decl);
 
+// Returns true if a Record-decl looks like a forward-declaration of a
+// class (rather than a definition, a friend declaration, or an 'in
+// place' declaration like 'struct Foo' in 'void MyFunc(struct Foo*);'
+bool IsForwardDecl(const clang::TagDecl* decl);
+
 // Returns true if this decl is defined inside another class/struct.
+// Unlike IsNestedClassAsWritten(), which works on an ASTNode, this
+// function considers decl to be nested even if it's not syntactically
+// written inside its outer class (that is, 'class Foo::Bar {...}' is
+// considered nested, even though it's not written inside Foo).
 bool IsNestedClass(const clang::TagDecl* decl);
 
 bool HasDefaultTemplateParameters(const clang::TemplateDecl* decl);
 
 set<const clang::RecordDecl*> GetClassRedecls(const clang::RecordDecl* decl);
+
+// Returns the redecl of decl that occurs first in the translation
+// unit (that is, is the first one you'd see if you did 'cc -E').
+const clang::RecordDecl* GetFirstRedecl(const clang::RecordDecl* decl);
 
 // Unlike GetClassRedecls, this accepts both RecordDecls and
 // ClassTemplateDecls -- the return Decl is guaranteed to be of the
