@@ -1656,11 +1656,11 @@ def _NormalizeNamespaceForwardDeclareLines(lines):
      namespace bar {
      class A;
      class B;
-     }
+     }  // namespace bar
      namespace bang {
      class C;
-     }
-     }
+     }  // namespace bang
+     }  // namespace foo
 
   Non-namespace lines are left alone.  Only adjacent namespace lines
   from the input are merged.
@@ -1682,9 +1682,9 @@ def _NormalizeNamespaceForwardDeclareLines(lines):
   for line in lines + ['']:
     namespaces_in_line = iwyu_namespace_re.findall(line)
     differ_pos = _CommonPrefixLength(namespaces_in_line, current_namespaces)
-    namespaces_to_close = current_namespaces[differ_pos:]
+    namespaces_to_close = reversed(current_namespaces[differ_pos:])
     namespaces_to_open = namespaces_in_line[differ_pos:]
-    retval.extend(['}'] * len(namespaces_to_close))
+    retval.extend('}  // namespace %s' % ns for ns in namespaces_to_close)
     retval.extend('namespace %s {' % ns for ns in namespaces_to_open)
     current_namespaces = namespaces_in_line
     # Now add the current line.  If we were a namespace line, it's the
