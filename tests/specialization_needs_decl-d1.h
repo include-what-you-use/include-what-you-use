@@ -8,3 +8,5 @@
 //===----------------------------------------------------------------------===//
 
 template <typename T> struct TplStruct { };
+
+template <> struct TplStruct<float> { };
