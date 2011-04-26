@@ -12,6 +12,7 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 
+#include <algorithm>  // for find
 #include <map>
 #include <set>
 #include <utility>  // for pair<>
@@ -27,10 +28,20 @@ using std::set;
 using std::vector;
 
 
-// Returns true if the container contains the given key.
-template <class Container, typename K>
-bool Contains(const Container& container, const K& key) {
+// Returns true if the associative container (e.g. set or map)
+// contains the given key.
+template <class AssociativeContainer>
+bool Contains(const AssociativeContainer& container,
+              const typename AssociativeContainer::key_type& key) {
   return container.find(key) != container.end();
+}
+
+// Returns true if the container contains the given value.
+template <class Container>
+bool ContainsValue(const Container& container,
+                   const typename Container::value_type& value) {
+  return (std::find(container.begin(), container.end(), value)
+          != container.end());
 }
 
 // For maps, we also let you check if the key exists with the given value.

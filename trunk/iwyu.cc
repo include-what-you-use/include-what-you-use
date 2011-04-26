@@ -974,10 +974,10 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
     }
     bool Contains(const ASTNode& node) const {
       if (const TypeLoc* tl = node.GetAs<TypeLoc>()) {
-        return find(typelocs.begin(), typelocs.end(), *tl) != typelocs.end();
+        return ContainsValue(typelocs, *tl);
       } else if (const NestedNameSpecifierLoc* nl
                  = node.GetAs<NestedNameSpecifierLoc>()) {
-        return find(nnslocs.begin(), nnslocs.end(), *nl) != nnslocs.end();
+        return ContainsValue(nnslocs, *nl);
       } else if (const TemplateName* tn = node.GetAs<TemplateName>()) {
         // The best we can do is to compare the associated decl
         if (tn->getAsTemplateDecl() == NULL)
@@ -997,7 +997,8 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
         (void)tal;
         return false;
       } else {
-        return others.find(node.GetAs<void>()) != others.end();
+        return include_what_you_use::Contains(
+            others, node.GetAs<void>());
       }
     }
 

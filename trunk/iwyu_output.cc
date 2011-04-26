@@ -249,10 +249,8 @@ const vector<string>& OneUse::public_headers() {
 }
 
 bool OneUse::PublicHeadersContain(const string& elt) {
-  // TODO(csilvers): consider overloading Contains() to handle vectors,
-  // and get rid of this method.
-  return (std::find(public_headers().begin(), public_headers().end(), elt)
-          != public_headers().end());
+  // TODO(csilvers): get rid of this method.
+  return ContainsValue(public_headers(), elt);
 }
 
 bool OneUse::NeedsSuggestedHeader() const {

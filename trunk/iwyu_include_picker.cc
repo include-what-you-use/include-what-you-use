@@ -931,7 +931,7 @@ void IncludePicker::ExpandGlobs() {
       const string& glob_key = it->first;
       const vector<string>& map_to = it->second;
       if (fnmatch(glob_key.c_str(), hdr->c_str(), 0) == 0 &&   // has a match
-          find(map_to.begin(), map_to.end(), *hdr) == map_to.end()) {
+          !ContainsValue(map_to, *hdr)) {
         Extend(&filepath_include_map_[*hdr], filepath_include_map_[glob_key]);
         MarkVisibility(*hdr, filepath_visibility_map_[glob_key]);
       }
