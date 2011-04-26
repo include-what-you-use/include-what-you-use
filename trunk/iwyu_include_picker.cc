@@ -810,7 +810,7 @@ IncludePicker::IncludePicker()
     : symbol_include_map_(),
       filepath_include_map_(),
       filepath_visibility_map_(),
-      all_quoted_includes_(),
+      quoted_includes_to_quoted_includers_(),
       has_called_finalize_added_include_lines_(false) {
   // Parse our hard-coded mappings into a data structure.
   for (size_t i = 0; i < IWYU_ARRAYSIZE(symbol_include_map); ++i) {
@@ -874,7 +874,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   const string quoted_includer = ConvertToQuotedInclude(includer_filepath);
   const string quoted_includee = ConvertToQuotedInclude(includee_filepath);
 
-  all_quoted_includes_.insert(quoted_includee);
+  quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
 
   // Automatically mark files in foo/internal/bar as private, and map them.
   if (quoted_includee.find("/internal/") != string::npos) {
@@ -922,17 +922,66 @@ void IncludePicker::ExpandGlobs() {
 
   // Then, go through all #includes to see if they match the globs,
   // discarding the identity mappings.
-  for (Each<string> hdr(&all_quoted_includes_); !hdr.AtEnd(); ++hdr) {
+  for (Each<string, set<string> > incmap(&quoted_includes_to_quoted_includers_);
+       !incmap.AtEnd(); ++incmap) {
+    const string& hdr = incmap->first;
     for (Each<string, vector<string> >
              it(&mappings_with_glob_keys); !it.AtEnd(); ++it) {
       const string& glob_key = it->first;
       const vector<string>& map_to = it->second;
-      if (fnmatch(glob_key.c_str(), hdr->c_str(), 0) == 0 &&   // has a match
-          !ContainsValue(map_to, *hdr)) {
-        Extend(&filepath_include_map_[*hdr], filepath_include_map_[glob_key]);
-        MarkVisibility(*hdr, filepath_visibility_map_[glob_key]);
+      if (fnmatch(glob_key.c_str(), hdr.c_str(), 0) == 0 &&   // has a match
+          !ContainsValue(map_to, hdr)) {
+        Extend(&filepath_include_map_[hdr], filepath_include_map_[glob_key]);
+        MarkVisibility(hdr, filepath_visibility_map_[glob_key]);
       }
     }
+  }
+}
+
+// We treat third-party code specially, since it's difficult to add
+// iwyu pragmas to code we don't own.  Basically, what we do is trust
+// the code authors when it comes to third-party code: if they
+// #include x.h to get symbols from y.h, then assume that's how the
+// third-party authors wanted it.  This boils down to the following
+// rules:
+// 1) If there's already a mapping for third_party/x.h, do not
+//    add any implicit maps for it.
+// 2) if not_third_party/x.{h,cc} #includes third_party/y.h,
+//    assume y.h is supposed to be included directly, and do not
+//    add any implicit maps for it.
+// 3) Otherwise, if third_party/x.h #includes third_party/y.h,
+//    add a mapping from y.h to x.h, and make y.h private.  This
+//    means iwyu will never suggest adding y.h.
+void IncludePicker::AddImplicitThirdPartyMappings() {
+  set<string> headers_with_explicit_mappings;
+  for (Each<IncludeMap::value_type>
+           it(&filepath_include_map_); !it.AtEnd(); ++it) {
+    if (StartsWith(it->first, "\"third_party/"))
+      headers_with_explicit_mappings.insert(it->first);
+  }
+
+  set<string> headers_included_from_non_third_party;
+  for (Each<string, set<string> >
+           it(&quoted_includes_to_quoted_includers_); !it.AtEnd(); ++it) {
+    for (Each<string> includer(&it->second); !includer.AtEnd(); ++includer) {
+      if (!StartsWith(*includer, "\"third_party/")) {
+        headers_included_from_non_third_party.insert(it->first);
+        break;
+      }
+    }
+  }
+
+  for (Each<string, set<string> >
+           it(&quoted_includes_to_quoted_includers_); !it.AtEnd(); ++it) {
+    if (ContainsKey(headers_with_explicit_mappings, it->first) ||
+        ContainsKey(headers_included_from_non_third_party, it->first)) {
+      continue;
+    }
+    for (Each<string> includer(&it->second); !includer.AtEnd(); ++includer) {
+      CHECK_(StartsWith(*includer, "\"third_party/") && "Why not nixed!");
+      AddMapping(it->first, *includer);
+    }
+    MarkIncludeAsPrivate(it->first);
   }
 }
 
@@ -946,6 +995,10 @@ void IncludePicker::FinalizeAddedIncludes() {
 
   // The map keys may have *'s in them.  Match those to seen #includes now.
   ExpandGlobs();
+
+  // We treat third-party code specially, since it's difficult to add
+  // iwyu pragmas to code we don't own.
+  AddImplicitThirdPartyMappings();
 
   // If a.h maps to b.h maps to c.h, we'd like an entry from a.h to c.h too.
   MakeMapTransitive(filepath_include_map_, &filepath_include_map_);
