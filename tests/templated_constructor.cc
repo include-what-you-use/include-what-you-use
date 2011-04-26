@@ -1,4 +1,4 @@
-//===--- template_args.cc - test input file for iwyu ----------------------===//
+//===--- templated_constructor.cc - test input file for iwyu --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
