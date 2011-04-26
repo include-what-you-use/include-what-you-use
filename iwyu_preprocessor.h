@@ -134,8 +134,16 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   //    Returns true iff our analysis shows that public_header intends
   // to provide all the symbols in other_file.
   bool PublicHeaderIntendsToProvide(const clang::FileEntry* public_header,
-                                    const clang::FileEntry* other_file)
-      const;
+                                    const clang::FileEntry* other_file) const;
+
+  // Returns true if the first file directly or indirectly includes
+  // the second.
+  bool FileTransitivelyIncludes(const clang::FileEntry* includer,
+                                const clang::FileEntry* includee) const;
+  // This seems like a weird way to call this function, but that's
+  // what we happen to need in iwyu_output.cc:
+  bool FileTransitivelyIncludes(const string& quoted_includer,
+                                const clang::FileEntry* includee) const;
 
   // Return true if the given file has an iwyu_pragma
   // "no_include <other_filename>".
@@ -222,6 +230,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   void AddAllIncludesAsFileEntries(const clang::FileEntry* includer,
                                    set<const clang::FileEntry*>* retval) const;
   void PopulateIntendsToProvideMap();
+  void PopulateTransitiveIncludeMap();
 
   // The C++ source file passed in as an argument to the compiler (as
   // opposed to other files seen via #includes).
@@ -262,6 +271,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   // of the public/private system.
   map<const clang::FileEntry*,
       set<const clang::FileEntry*> > intends_to_provide_map_;
+
+  // Maps from a FileEntry* to all the files that this file includes,
+  // either directly or indirectly.
+  map<const clang::FileEntry*,
+      set<const clang::FileEntry*> > transitive_include_map_;
 
   // Maps from a FileEntry* to the quoted names of files that its file
   // is directed *not* to include via the "no_include" pragma.
