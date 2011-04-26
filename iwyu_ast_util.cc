@@ -821,26 +821,46 @@ bool HasDefaultTemplateParameters(const TemplateDecl* decl) {
   return tpl_params->getMinRequiredArguments() < tpl_params->size();
 }
 
-set<const RecordDecl*> GetClassRedecls(const RecordDecl* decl) {
-  set<const RecordDecl*> redecls;
-  for (TagDecl::redecl_iterator it = decl->redecls_begin();
-       it != decl->redecls_end(); ++it) {
+set<const NamedDecl*> GetClassRedecls(const NamedDecl* decl) {
+  const RecordDecl* record_decl = DynCastFrom(decl);
+  const ClassTemplateDecl* tpl_decl = DynCastFrom(decl);
+  if (tpl_decl)
+    record_decl = tpl_decl->getTemplatedDecl();
+  if (!record_decl)
+    return set<const NamedDecl*>();
+
+  set<const NamedDecl*> redecls;
+  for (TagDecl::redecl_iterator it = record_decl->redecls_begin();
+       it != record_decl->redecls_end(); ++it) {
     const RecordDecl* redecl = cast<RecordDecl>(*it);
     // If this decl is a friend decl, don't count it: friend decls
     // don't serve as forward-declarations.  (This should never
     // happen, I think, but it sometimes does due to a clang bug:
-    // http://llvm.org/bugs/show_bug.cgi?id=8669)
-    if (!IsFriendDecl(redecl))
+    // http://llvm.org/bugs/show_bug.cgi?id=8669).  The only exception
+    // is made because every decl is a redecl of itself.
+    if (IsFriendDecl(redecl) && redecl != decl)
+      continue;
+
+    if (tpl_decl) {   // need to convert back to a ClassTemplateDecl
+      CHECK_(isa<CXXRecordDecl>(redecl) &&
+             cast<CXXRecordDecl>(redecl)->getDescribedClassTemplate());
+      const CXXRecordDecl* cxx_redecl = cast<CXXRecordDecl>(redecl);
+      redecls.insert(cxx_redecl->getDescribedClassTemplate());
+    } else {
       redecls.insert(redecl);
+    }
   }
   return redecls;
 }
 
-const RecordDecl* GetFirstRedecl(const RecordDecl* decl) {
-  const RecordDecl* first_decl = decl;
+const NamedDecl* GetFirstRedecl(const NamedDecl* decl) {
+  const NamedDecl* first_decl = decl;
   FullSourceLoc first_decl_loc(GetLocation(first_decl), *GlobalSourceManager());
-  set<const RecordDecl*> all_redecls = GetClassRedecls(decl);
-  for (Each<const RecordDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
+  set<const NamedDecl*> all_redecls = GetClassRedecls(decl);
+  if (all_redecls.empty())  // input is not a class or class template
+    return NULL;
+
+  for (Each<const NamedDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
     const FullSourceLoc redecl_loc(GetLocation(*it), *GlobalSourceManager());
     if (redecl_loc.isBeforeInTranslationUnitThan(first_decl_loc)) {
       first_decl = *it;
@@ -855,20 +875,13 @@ const NamedDecl* GetNonfriendClassRedecl(const NamedDecl* decl) {
   const ClassTemplateDecl* tpl_decl = DynCastFrom(decl);
   if (tpl_decl)
     record_decl = tpl_decl->getTemplatedDecl();
+  // This check is so we return the input decl whenever possible.
   if (!record_decl || !IsFriendDecl(record_decl))
     return decl;
 
-  const set<const RecordDecl*> redecls = GetClassRedecls(record_decl);
-  CHECK_(!redecls.empty() && "Should be at least once 'real' decl");
-  const RecordDecl* retval = *redecls.begin();  // arbitrary choice
-
-  if (tpl_decl) {   // need to convert back to a ClassTemplateDecl
-    CHECK_(isa<CXXRecordDecl>(retval) &&
-           cast<CXXRecordDecl>(retval)->getDescribedClassTemplate());
-    const CXXRecordDecl* cxx_decl = cast<CXXRecordDecl>(retval);
-    return cxx_decl->getDescribedClassTemplate();
-  }
-  return retval;
+  set<const NamedDecl*> all_redecls = GetClassRedecls(decl);
+  CHECK_(!all_redecls.empty() && "Uncaught non-class decl");
+  return *all_redecls.begin();    // arbitrary choice
 }
 
 bool DeclsAreInSameClass(const Decl* decl1, const Decl* decl2) {

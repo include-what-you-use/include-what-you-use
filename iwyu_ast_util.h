@@ -589,19 +589,25 @@ bool IsNestedClass(const clang::TagDecl* decl);
 
 bool HasDefaultTemplateParameters(const clang::TemplateDecl* decl);
 
-set<const clang::RecordDecl*> GetClassRedecls(const clang::RecordDecl* decl);
+
+// This accepts both RecordDecls and ClassTemplateDecls -- the return
+// Decls are guaranteed to be of the same type as the input Decl.
+// Returns the empty set if the input is not a RecordDecl or
+// ClassTemplateDecl.  Otherwise, always returns at least one
+// element (since the input decl is its own redecl).
+set<const clang::NamedDecl*> GetClassRedecls(const clang::NamedDecl* decl);
 
 // Returns the redecl of decl that occurs first in the translation
 // unit (that is, is the first one you'd see if you did 'cc -E').
-const clang::RecordDecl* GetFirstRedecl(const clang::RecordDecl* decl);
+// Returns NULL if the input is not a RecordDecl or ClassTemplateDecl.
+const clang::NamedDecl* GetFirstRedecl(const clang::NamedDecl* decl);
 
-// Unlike GetClassRedecls, this accepts both RecordDecls and
-// ClassTemplateDecls -- the return Decl is guaranteed to be of the
-// same type as the input Decl.  It picks one redecl arbitrarily.
+// Picks one redecl from GetClassRedecls() arbitrarily.
 // This is used to recover from the clang bug that mixes friend decls
 // with 'real' redecls (http://llvm.org/bugs/show_bug.cgi?id=8669);
-// this function returns a 'real' redecl.  If the input decl is not a
-// friend decl, or not a class decl at all, it will always be returned.
+// this function returns a 'real' redecl.  If the input decl is a
+// friend decl, returns an arbitrary non-friend redecl of it;
+// otherwise returns decl itself.
 // TODO(csilvers): remove once PR 8669 is fixed.
 const clang::NamedDecl* GetNonfriendClassRedecl(const clang::NamedDecl* decl);
 
