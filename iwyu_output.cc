@@ -908,10 +908,10 @@ void ProcessFullUse(OneUse* use,
   // RedeclarableTemplate<> types (FunctionTemplateDecl), since for
   // those types, iwyu *does* care about the definition vs declaration.
   set<const NamedDecl*> all_redecls;
-  if (isa<RecordDecl>(use->decl()))
+  if (isa<RecordDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
     all_redecls.insert(use->decl());    // for classes, just consider the dfn
   else
-    all_redecls = GetRedecls(use->decl());
+    all_redecls = GetNonclassRedecls(use->decl());
   for (Each<const NamedDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
     if (DeclIsVisibleToUseInSameFile(*it, *use)) {
       VERRS(6) << "Ignoring use of " << use->symbol_name()

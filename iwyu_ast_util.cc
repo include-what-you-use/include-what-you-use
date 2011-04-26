@@ -832,7 +832,9 @@ template <class T> inline set<const clang::NamedDecl*> GetRedeclsOfRedeclarable(
 // The only way to find out whether a decl can be dyn_cast to a
 // Redeclarable<T> and what T is is to enumerate the possibilities.
 // Hence we hard-code the list.
-set<const clang::NamedDecl*> GetRedecls(const clang::NamedDecl* decl) {
+set<const clang::NamedDecl*> GetNonclassRedecls(const clang::NamedDecl* decl) {
+  CHECK_(!isa<RecordDecl>(decl) && "For classes, call GetClassRedecls()");
+  CHECK_(!isa<ClassTemplateDecl>(decl) && "For tpls, call GetClassRedecls()");
   if (const TagDecl* specific_decl = DynCastFrom(decl))
     return GetRedeclsOfRedeclarable(specific_decl);
   // TODO(wan): go through iwyu to replace TypedefDecl with
