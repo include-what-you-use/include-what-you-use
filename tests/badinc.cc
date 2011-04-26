@@ -593,8 +593,12 @@ int cc_ptr_check3 = Cc_PTS<int I1_Class::*>::IsPointer;
 // badinc.h
 H_Typedef h_typedef;
 // TODO(csilvers): it would be nice to be able to remove this and
-// still have all tests pass.  As it is, we need this to instantiate
-// the template's underlying type, which we need to find its violations.
+//   still have all tests pass.  As it is, we need this to instantiate
+//   the template's underlying type, which we need to find its violations.
+// We are responsible for the underlying type of this typedef because
+// the .h file has signalled (by forward-declaring the underlying type,
+// and not directly including it) that it doesn't want responsibility.
+// IWYU: I2_TypedefOnly_Class is...*badinc-i2.h
 H_I1_Class_Typedef h_i1_class_typedef;
 H_I2Enum_Set h_i2enum_set;
 H_I2Enum_Set* h_i2enum_set_ptr;
@@ -2022,7 +2026,7 @@ The full include-list for tests/badinc.cc:
 #include <stddef.h>  // for offsetof, size_t
 #include <stdlib.h>  // for rand
 #include <algorithm>  // for find
-#include <fstream>  // for fstream
+#include <fstream>  // for basic_fstream, fstream
 #include <list>  // for list
 #include <new>  // for operator new
 #include <string>  // for allocator, basic_string, basic_string<>::iterator, char_traits, operator+, string
