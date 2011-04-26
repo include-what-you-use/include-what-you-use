@@ -102,10 +102,12 @@ using clang::TemplateSpecializationType;
 using clang::Type;
 using clang::TypeDecl;
 using clang::TypeLoc;
+using clang::TypedefDecl;
 using clang::TypedefType;
 using clang::UnaryOperator;
 using clang::UsingDirectiveDecl;
 using clang::ValueDecl;
+using clang::VarDecl;
 using llvm::PointerUnion;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
@@ -819,6 +821,33 @@ bool IsNestedClass(const TagDecl* decl) {
 bool HasDefaultTemplateParameters(const TemplateDecl* decl) {
   TemplateParameterList* tpl_params = decl->getTemplateParameters();
   return tpl_params->getMinRequiredArguments() < tpl_params->size();
+}
+
+template <class T> set<const clang::NamedDecl*> GetRedeclsImpl(
+    const clang::Redeclarable<T>* decl) {
+  set<const clang::NamedDecl*> retval;
+  for (typename clang::Redeclarable<T>::redecl_iterator
+           it = decl->redecls_begin(); it != decl->redecls_end(); ++it) {
+    retval.insert(*it);
+  }
+  return retval;
+}
+
+// TODO(csilvers): see if we can find out if decl is a Redeclarable<>;
+// I can't figure out how to do it.  Instead, I hard-code the list.
+set<const clang::NamedDecl*> GetRedecls(const clang::NamedDecl* decl) {
+  if (const TagDecl* specific_decl = DynCastFrom(decl))
+    return GetRedeclsImpl(specific_decl);
+  if (const TypedefDecl* specific_decl = DynCastFrom(decl))
+    return GetRedeclsImpl(specific_decl);
+  if (const FunctionDecl* specific_decl = DynCastFrom(decl))
+    return GetRedeclsImpl(specific_decl);
+  if (const VarDecl* specific_decl = DynCastFrom(decl))
+    return GetRedeclsImpl(specific_decl);
+  // Not redeclarable, so the output is just the input.
+  set<const clang::NamedDecl*> retval;
+  retval.insert(decl);
+  return retval;
 }
 
 set<const NamedDecl*> GetClassRedecls(const NamedDecl* decl) {
