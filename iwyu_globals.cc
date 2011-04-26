@@ -14,6 +14,7 @@
 #endif
 #include <getopt.h>
 #include <algorithm>
+#include <map>
 #include <set>
 #include <string>
 #include "clang/Lex/HeaderSearch.h"
@@ -26,6 +27,7 @@
 
 using clang::DirectoryEntry;
 using clang::DirectoryLookup;
+using std::map;
 using std::set;
 using std::string;
 using std::vector;
@@ -34,7 +36,7 @@ namespace include_what_you_use {
 
 static CommandlineFlags* commandline_flags = NULL;
 static clang::SourceManager* source_manager = NULL;
-static vector<string>* search_paths = NULL;
+static vector<HeaderSearchPath>* search_paths = NULL;
 static IncludePicker* include_picker = NULL;
 static const clang::LangOptions default_lang_options;
 static const clang::PrintingPolicy default_print_policy(default_lang_options);
@@ -126,41 +128,65 @@ if (!commandline_flags.cwd.empty()) {
 
 // Make sure we put longer search-paths first, so iwyu will map
 // /usr/include/c++/4.4/foo to <foo> rather than <c++/4.4/foo>.
-static bool SortByDescendingLength(const string& left, const string& right) {
-  return left.length() > right.length();
+static bool SortByDescendingLength(const HeaderSearchPath& left,
+                                   const HeaderSearchPath& right) {
+  return left.path.length() > right.path.length();
 }
 
 // Sorts them by descending length, does other kinds of cleanup.
-static void NormalizeSystemIncludeDirectories(vector<string>* include_dirs) {
-  sort(include_dirs->begin(), include_dirs->end(), &SortByDescendingLength);
+static vector<HeaderSearchPath> NormalizeHeaderSearchPaths(
+    const map<string, HeaderSearchPath::Type>& include_dirs_map) {
+  vector<HeaderSearchPath> include_dirs;
+  for (Each<string, HeaderSearchPath::Type>
+           it(&include_dirs_map); !it.AtEnd(); ++it) {
+    include_dirs.push_back(HeaderSearchPath(it->first, it->second));
+  }
+
+
+  sort(include_dirs.begin(), include_dirs.end(), &SortByDescendingLength);
+  return include_dirs;
 }
 
-static vector<string>* ComputeSystemIncludeDirectories(
+// Asks clang what the search-paths are for include files, normalizes
+// them, and returns them in a vector.
+static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
     clang::HeaderSearch* header_search) {
-  vector<string>* system_include_dirs = new vector<string>;
+  map<string, HeaderSearchPath::Type> search_path_map;
+  for (clang::HeaderSearch::search_dir_iterator
+           it = header_search->system_dir_begin();
+       it != header_search->system_dir_end(); ++it) {
+    if (const DirectoryEntry* entry = it->getDir())
+      search_path_map[entry->getName()] = HeaderSearchPath::kSystemPath;
+  }
   for (clang::HeaderSearch::search_dir_iterator
            it = header_search->search_dir_begin();
        it != header_search->search_dir_end(); ++it) {
-    const DirectoryEntry * entry = it->getDir();
-    if (entry != NULL) {
-      system_include_dirs->push_back(entry->getName());
+    if (const DirectoryEntry* entry = it->getDir()) {
+      // search_dir_begin()/end() includes both system and user paths.
+      // If it's a system path, it's already in the map, so everything
+      // new is a user path.  The insert only 'takes' for new entries.
+      search_path_map.insert(make_pair(entry->getName(),
+                                       HeaderSearchPath::kUserPath));
     }
   }
-  NormalizeSystemIncludeDirectories(system_include_dirs);
-  return system_include_dirs;
+  return NormalizeHeaderSearchPaths(search_path_map);
 }
 
 void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
   CHECK_(sm && "InitGlobals() needs a non-NULL SourceManager");
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
-  search_paths = ComputeSystemIncludeDirectories(header_search);
+  search_paths = new vector<HeaderSearchPath>(
+      ComputeHeaderSearchPaths(header_search));
   include_picker = new IncludePicker;
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 
-  for (Each<string> it(search_paths); !it.AtEnd(); ++it)
-    VERRS(6) << "Search path: " << *it << "\n";
+  for (Each<HeaderSearchPath> it(search_paths); !it.AtEnd(); ++it) {
+    const char* path_type_name
+        = (it->path_type == HeaderSearchPath::kSystemPath ? "system" : "user");
+    VERRS(6) << "Search path: " << it->path << " (" << path_type_name << ")\n";
+  }
 }
 
 const CommandlineFlags& GlobalFlags() {
@@ -178,7 +204,7 @@ clang::SourceManager* GlobalSourceManager() {
   return source_manager;
 }
 
-const vector<string>& GlobalSearchPaths() {
+const vector<HeaderSearchPath>& GlobalHeaderSearchPaths() {
   assert(search_paths && "Must call InitGlobals() before calling this");
   return *search_paths;
 }
@@ -234,14 +260,15 @@ void InitGlobalsAndFlagsForTesting() {
   class_members_full_use_cache = new FullUseCache;
 
   // Use a reasonable default for the -I flags.
-  search_paths = new vector<string>;
-  search_paths->push_back("/usr/include");
-  search_paths->push_back("/usr/include/c++/4.3");
-  search_paths->push_back("/usr/include/c++/4.2");
-  search_paths->push_back(".");
-  search_paths->push_back("/usr/src/linux-headers-2.6.24-gg23/include");
+  map<string, HeaderSearchPath::Type> search_path_map;
+  search_path_map["/usr/include"] = HeaderSearchPath::kSystemPath;
+  search_path_map["/usr/include/c++/4.3"] = HeaderSearchPath::kSystemPath;
+  search_path_map["/usr/include/c++/4.2"] = HeaderSearchPath::kSystemPath;
+  search_path_map["."] = HeaderSearchPath::kUserPath;
+  search_path_map["/usr/src/linux-headers-2.6.24-gg23/include"] = HeaderSearchPath::kSystemPath;
 
-  NormalizeSystemIncludeDirectories(search_paths);
+  search_paths = new vector<HeaderSearchPath>(
+      NormalizeHeaderSearchPaths(search_path_map));
 }
 
 }  // namespace include_what_you_use
