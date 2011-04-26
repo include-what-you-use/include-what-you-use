@@ -271,6 +271,23 @@ TEST(IncludePicker, GetPublicHeadersForFilepath_GlobOverlap) {
       "\"base/dynamic_annotations.h\"");
 }
 
+TEST(IncludePicker, GetPublicHeadersForFilepath_NoIdentityGlob) {
+  IncludePicker p;
+  // Make sure we don't complain when the key of a mapping is a glob
+  // that includes the value (which would, naively, lead to an identity
+  // mapping).
+  p.AddMapping("\"mydir/*.h\"", "\"mydir/include.h\"");
+  p.MarkIncludeAsPrivate("\"mydir/*.h\"");   // will *not* apply to include.h!
+  // Add a direct include that should be mapped, and that already is.
+  p.AddDirectInclude("\"a.h\"", "\"mydir/internal.h\"");
+  p.AddDirectInclude("\"b.h\"", "\"mydir/include.h\"");
+  p.FinalizeAddedIncludes();
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("mydir/internal.h"), "\"mydir/include.h\"");
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("mydir/include.h"), "\"mydir/include.h\"");
+}
+
 TEST(IncludePicker, GetPublicHeadersForFilepath_NotInAnyMap) {
   IncludePicker p;
   p.FinalizeAddedIncludes();

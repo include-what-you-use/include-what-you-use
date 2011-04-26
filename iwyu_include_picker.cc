@@ -13,6 +13,7 @@
 #ifndef _MSC_VER      // _MSC_VER gets its own fnmatch from ./port.h
 #include <fnmatch.h>
 #endif
+#include <algorithm>
 #include <map>  // not hash_map: it's not as portable and needs hash<string>
 #include <string>
 #include <utility>
@@ -23,6 +24,7 @@
 #include "iwyu_string_util.h"
 #include "llvm/Support/Path.h"
 
+using std::find;
 using std::map;
 using std::pair;
 using std::string;
@@ -914,19 +916,24 @@ void IncludePicker::MarkIncludeAsPrivate(const string& quoted_include) {
 // the glob entry and replacing the key with the seen #include.
 void IncludePicker::ExpandGlobs() {
   // First, get the glob entries.
-  set<string> glob_keys;
-  for (Each<IncludeMap::value_type> it(&filepath_include_map_);
-       !it.AtEnd(); ++it) {
+  map<string, vector<string> > mappings_with_glob_keys;  // key to values-seen
+  for (Each<IncludeMap::value_type>
+           it(&filepath_include_map_); !it.AtEnd(); ++it) {
     if (it->first.find_first_of("*[?") != string::npos)
-      glob_keys.insert(it->first);
+      mappings_with_glob_keys.insert(*it);
   }
 
-  // Then, go through all #includes to see if they match the globs.
+  // Then, go through all #includes to see if they match the globs,
+  // discarding the identity mappings.
   for (Each<string> hdr(&all_quoted_includes_); !hdr.AtEnd(); ++hdr) {
-    for (Each<string> glob_key(&glob_keys); !glob_key.AtEnd(); ++glob_key) {
-      if (fnmatch(glob_key->c_str(), hdr->c_str(), 0) == 0) {
-        Extend(&filepath_include_map_[*hdr], filepath_include_map_[*glob_key]);
-        MarkVisibility(*hdr, filepath_visibility_map_[*glob_key]);
+    for (Each<string, vector<string> >
+             it(&mappings_with_glob_keys); !it.AtEnd(); ++it) {
+      const string& glob_key = it->first;
+      const vector<string>& map_to = it->second;
+      if (fnmatch(glob_key.c_str(), hdr->c_str(), 0) == 0 &&   // has a match
+          find(map_to.begin(), map_to.end(), *hdr) == map_to.end()) {
+        Extend(&filepath_include_map_[*hdr], filepath_include_map_[glob_key]);
+        MarkVisibility(*hdr, filepath_visibility_map_[glob_key]);
       }
     }
   }
