@@ -3027,12 +3027,8 @@ class IwyuAstConsumer
       // the first forward-declaration.
       } else if (IsNestedClassAsWritten(current_ast_node())) {
         if (!decl->getDefinition() || decl->getDefinition()->isOutOfLine()) {
-          if (const RecordDecl* record_decl = DynCastFrom(decl)) {
-            const RecordDecl* first_decl = GetFirstRedecl(record_decl);
-            // Check if we're the decl with the smallest line number.
-            if (record_decl == first_decl)
-              definitely_keep_fwd_decl = true;
-          }
+          if (decl == GetFirstRedecl(decl))
+            definitely_keep_fwd_decl = true;
         }
       }
 

@@ -852,10 +852,12 @@ void ProcessForwardDeclare(OneUse* use) {
   // (A5) If a definition exists earlier in this file, discard this use.
   // Note: for the 'earlier' checks, what matters is the *instantiation*
   // location.
-  const set<const RecordDecl*> redecls = GetClassRedecls(record_decl);
-  for (Each<const RecordDecl*> it(&redecls); !it.AtEnd(); ++it) {
+  const set<const NamedDecl*> redecls = GetClassRedecls(record_decl);
+  for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
+    CHECK_(isa<RecordDecl>(*it) && "GetClassRedecls has redecls of wrong type");
     const SourceLocation defined_loc = GetLocation(*it);
-    if ((*it)->isDefinition() && DeclIsVisibleToUseInSameFile(*it, *use)) {
+    if (cast<RecordDecl>(*it)->isDefinition() &&
+        DeclIsVisibleToUseInSameFile(*it, *use)) {
       VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "): dfn is present: "
                << PrintableLoc(defined_loc) << "\n";
@@ -1073,8 +1075,8 @@ void CalculateIwyuForForwardDeclareUse(
   if (tpl_decl)
     record_decl = tpl_decl->getTemplatedDecl();
   CHECK_(record_decl && "Non-records should have been handled already");
-  const set<const RecordDecl*>& redecls = GetClassRedecls(record_decl);
-  for (Each<const RecordDecl*> it(&redecls); !it.AtEnd(); ++it) {
+  const set<const NamedDecl*>& redecls = GetClassRedecls(record_decl);
+  for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
     if (DeclIsVisibleToUseInSameFile(*it, *use)) {
       same_file_decl = *it;
       break;
@@ -1084,7 +1086,7 @@ void CalculateIwyuForForwardDeclareUse(
   // an associated .h file.  Since associated .h files are always
   // desired includes, we don't need to check for that.
   if (!same_file_decl) {
-    for (Each<const RecordDecl*> it(&redecls); !it.AtEnd(); ++it) {
+    for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
       if (ContainsKey(associated_includes, GetFileEntry(*it))) {
         same_file_decl = *it;
         break;
