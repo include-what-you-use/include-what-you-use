@@ -119,6 +119,8 @@ _FORWARD_DECLARE_RE = re.compile(r'$.FORWARD_DECLARE_RE')
 _HEADER_GUARD_RE = re.compile(r'$.HEADER_GUARD_RE')
 
 # We annotate every line in the source file by the re it matches, or None.
+# Note that not all of the above RE's are represented here; for instance,
+# we fold _C_COMMENT_START_RE and _C_COMMENT_END_RE into _COMMENT_LINE_RE.
 _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
                _NAMESPACE_START_RE, _NAMESPACE_END_RE,
                _IF_RE, _ELSE_RE, _ENDIF_RE,
