@@ -1177,26 +1177,26 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
   """Returns the first reorder-span inside a namespace, if it's easy to do.
 
   This routine is meant to handle the simple case where code consists
-  of includes and forward-declares, and then a 'namespace my_namespace'
-  followed by more forward-declares.  We return the reorder span of
-  the inside-namespace forward-declares, which is a good place to
-  insert new inside-namespace forward-declares (rather than putting
-  these new forward-declares at the top level).
+  of includes and forward-declares, and then a 'namespace
+  my_namespace'.  We return the reorder span of the inside-namespace
+  forward-declares, which is a good place to insert new
+  inside-namespace forward-declares (rather than putting these new
+  forward-declares at the top level).
 
   So it goes through the top of the file, stopping at the first
   'contentful' line.  If that line has the form 'namespace <foo> {',
   it then continues until it finds a forward-declare line, or a
-  non-namespace contentful line.  In the latter case it returns None.
-  In the former case, it figures out the reorder-span this
-  forward-declare line is part of, and returns (enclosing_namespaces,
-  reorder_span).
+  non-namespace contentful line.  In the former case, it figures out
+  the reorder-span this forward-declare line is part of, while in the
+  latter case it creates a new reorder-span.  It returns
+  (enclosing_namespaces, reorder_span).
 
   Arguments:
     file_lines: an array of LineInfo objects with .type and
        .reorder_span filled in.
 
   Returns:
-    (None, None) if we could not find the first namespace-level
+    (None, None) if we could not find a first namespace-level
     reorder-span, or (enclosing_namespaces, reorder_span), where
     enclosing_namespaces is a string that looks like (for instance)
     'namespace ns1 { namespace ns2 {', and reorder-span is a
@@ -1222,13 +1222,22 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
     elif line_info.type == _IF_RE:
       return (None, None)
 
-    elif line_info.type in (_NAMESPACE_END_RE, _ELSE_RE, _ENDIF_RE, None):
+    elif line_info.type in (_NAMESPACE_END_RE, _ELSE_RE, _ENDIF_RE):
       # Other contentful lines that cause us to bail.
       # TODO(csilvers): we could probably keep going if there are no
       # braces on the line.  We could also keep track of our #ifdef
       # depth instead of bailing on #else and #endif, and only accept
       # the fwd-decl-inside-namespace if it's at ifdef-depth 0.
       return (None, None)
+
+    elif line_info.type is None:
+      # A 'normal' contentful line.  If we're the first contentful
+      # line inside the first-namespace, let's return this position as
+      # a good place to insert forward-declares inside this namespace.
+      if namespace_prefix:
+        return (namespace_prefix, (line_number, line_number))
+      else:
+        return (None, None)
 
     elif line_info.type == _NAMESPACE_START_RE:
       # Only handle the simple case of 'namespace <foo> {'
