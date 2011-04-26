@@ -887,6 +887,51 @@ template <typename T> class Baz;  // lines 6-6
     self.RegisterFileContents({'do_not_add_fwd_decl_inside_namespace': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testAddForwardDeclareInsideNamespaceWithoutForwardDeclaresAlready(self):
+    """Tests we put fwd-decls inside an ns even if the ns has no fwd-decl."""
+    infile = """\
+// Copyright 2010
+
+#include "foo.h"
+
+class Bar;
+template <typename T> class Baz;
+
+namespace ns {
+
+  namespace  ns2   {   // we sure do love nesting our namespaces!
+
+///+namespace ns3 {
+///+class NsBang;
+///+template <typename T> class NsBaz;
+///+}  // namespace ns3
+///+
+int MyFunction() { }
+
+}
+}
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_decl_inside_namespace_without_fwd_decl should add these lines:
+namespace ns { namespace ns2 { namespace ns3 { class NsBang; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class NsBaz; } } }
+
+add_fwd_decl_inside_namespace_without_fwd_decl should remove these lines:
+
+The full include-list for add_fwd_decl_inside_namespace_without_fwd_decl:
+#include "foo.h"  // lines 3-3
+class Bar;  // lines 5-5
+namespace ns { namespace ns2 { namespace ns3 { class NsBang; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class NsBaz; } } }
+template <typename T> class Baz;  // lines 6-6
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_inside_namespace_without_fwd_decl':
+                                 infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testRemoveNamespaces(self):
     """Tests that we keep or remove ns's based on fwd decl content."""
     infile = """\
