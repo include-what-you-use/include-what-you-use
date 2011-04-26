@@ -412,7 +412,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 
 // Called whenever a macro is expanded.  Example: when FOO(a, b) is
 // seen in the source code, where FOO() is a macro #defined earlier,
-// OnExpandMacro() will be called once with 'macro_use_token' being
+// MacroExpands() will be called once with 'macro_use_token' being
 // FOO, and 'macro_def' containing more information about FOO's
 // definition.
 void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
@@ -658,7 +658,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
        !it.AtEnd(); ++it) {
     const FileEntry* header = it->first;
     const vector<string> public_headers_for_header =
-        GlobalIncludePicker().GetPublicHeadersForFilepath(
+        GlobalIncludePicker().GetCandidateHeadersForFilepath(
             GetFilePath(header));
     for (Each<string> pub(&public_headers_for_header); !pub.AtEnd(); ++pub) {
       if (const FileEntry* public_file

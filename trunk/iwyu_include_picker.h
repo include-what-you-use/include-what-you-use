@@ -120,7 +120,7 @@ class IncludePicker {
   // important (which is why we return a vector, not a set): all else
   // being equal, the first element of the vector is the "best" (or
   // most standard) header for the symbol.
-  vector<string> GetPublicHeadersForSymbol(const string& symbol) const;
+  vector<string> GetCandidateHeadersForSymbol(const string& symbol) const;
 
   // Returns the set of all public header files that a given header
   // file -- specified as a full path -- would map to, as a set of
@@ -130,7 +130,18 @@ class IncludePicker {
   // (which is why we return a vector, not a set): all else being
   // equal, the first element of the vector is the "best" (or most
   // standard) header for the input header.
-  vector<string> GetPublicHeadersForFilepath(const string& filepath) const;
+  vector<string> GetCandidateHeadersForFilepath(const string& filepath) const;
+
+  // This allows for special-casing of GetCandidateHeadersForFilepath
+  // -- it's the same, but you give it the filepath that's doing the
+  // #including.  This lets us give a different answer for different
+  // call-sites.  For instance, "foo/internal/bar.h" is a fine
+  // candidate header when #included from "foo/internal/baz.h", but
+  // not when #included from "qux/quux.h".  In the common case there's
+  // no special-casing, and this falls back on
+  // GetCandidateHeadersForFilepath().
+  vector<string> GetCandidateHeadersForFilepathIncludedFrom(
+      const string& included_filepath, const string& including_filepath) const;
 
   // Returns true if there is a mapping (possibly indirect) from
   // map_from to map_to.  This means that to_file 're-exports' all the
