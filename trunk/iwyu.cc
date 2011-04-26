@@ -1277,10 +1277,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // vector<> class includes the typedef.  Likewise, we map any free
   // function taking a __normal_iterator<foo, vector> (such as
   // operator==) to vector<>, assuming that that (templatized)
-  // function is instantiated as part of the vector class.  If the
-  // input decl does not correspond to a private decl, we return NULL.
-  // This method is actually a helper for MapPrivateDeclToPublicDecl()
-  // and MapPrivateTypeToPublicType().
+  // function is instantiated as part of the vector class.
+  //    We do something similar for _List_iterator and
+  // _List_const_iterator.  These private names are defined in stl_list.h,
+  // so we don't need to re-map them, but we do want to re-map
+  // reverse_iterator<_List_iterator> to something in stl_list.h.
+  //    If the input decl does not correspond to one of these private
+  // decls, we return NULL.  This method is actually a helper for
+  // MapPrivateDeclToPublicDecl() and MapPrivateTypeToPublicType().
   const Type* MapPrivateDeclToPublicType(const NamedDecl* decl) const {
     const NamedDecl* class_decl = decl;
     // If we're a member method, then the __normal_iterator will be
@@ -1304,12 +1308,22 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const Type* ni_type = GetTplTypeArg(class_decl, 0);
       // Gets class_decl to be '__normal_iterator<x>'.
       class_decl = TypeToDeclAsWritten(ni_type);
+
+      // If it's reverse_iterator<_List_iterator>, map to
+      // _List_iterator, which is defined in stl_list like we want.
+      if (DeclIsTemplateWithNameAndNumArgsAndTypeArg(
+              class_decl, "std::_List_iterator", 1, 0) ||
+          DeclIsTemplateWithNameAndNumArgsAndTypeArg(
+              class_decl, "std::_List_const_iterator", 1, 0)) {
+        return ni_type;
+      }
     }
 
     if (DeclIsTemplateWithNameAndNumArgsAndTypeArg(
             class_decl, "__gnu_cxx::__normal_iterator", 2, 1)) {
       return GetTplTypeArg(class_decl, 1);
     }
+
     return NULL;
   }
 
