@@ -117,12 +117,6 @@ inline int GetLineNumber(clang::SourceLocation loc) {
   return retval;
 }
 
-inline int GetInstantiationLineNumber(clang::SourceLocation loc) {
-  if (!loc.isValid())
-    return -1;
-  return GetLineNumber(GetInstantiationLoc(loc));
-}
-
 // The rest of this section of the file is for returning the
 // FileEntry* corresponding to a source location: the file that the
 // location is in.  This is a surprising amount of work.
@@ -180,6 +174,9 @@ inline clang::SourceLocation GetLocation(const clang::Token& token) {
   return token.getLocation();
 }
 
+inline clang::SourceLocation GetLocation(clang::SourceLocation loc) {
+  return loc;   // the identity location-getter, useful with templates
+}
 clang::SourceLocation GetLocation(const clang::Decl* decl);
 clang::SourceLocation GetLocation(const clang::Stmt* stmt);
 clang::SourceLocation GetLocation(const clang::TypeLoc* typeloc);
@@ -194,6 +191,29 @@ template<typename T> const clang::FileEntry* GetFileEntry(const T& obj) {
 }
 template<typename T> const string GetFilePath(const T& obj) {
   return GetFilePath(GetFileEntry(obj));
+}
+
+//------------------------------------------------------------
+// Some utility, location-based routines.
+
+// Given any two objects that have instantiation-locations, says
+// whether one occurs before the other in the translation unit (using
+// instantiated locations).  This means that one would occur before
+// the other looking at the output of cc -E or equivalent.
+template<typename T, typename U>
+inline bool IsBeforeInTranslationUnit(const T& a, const U& b) {
+  const clang::FullSourceLoc a_loc(GetLocation(a), *GlobalSourceManager());
+  const clang::FullSourceLoc b_loc(GetLocation(b), *GlobalSourceManager());
+  return a_loc.isBeforeInTranslationUnitThan(b_loc);
+}
+
+// Like IsBeforeInTranslationUnit, but both a and b must be
+// instantiated in the same file as well.
+template<typename T, typename U>
+inline bool IsBeforeInSameFile(const T& a, const U& b) {
+  if (GetFileEntry(a) != GetFileEntry(b))
+    return false;
+  return IsBeforeInTranslationUnit(a, b);
 }
 
 }  // namespace include_what_you_use
