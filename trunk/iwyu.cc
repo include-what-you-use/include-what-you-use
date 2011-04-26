@@ -2116,6 +2116,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (ast_node->ParentIsA<TypedefDecl>())
       return false;
 
+    // If we ourselves are a forward-decl -- that is, we're the type
+    // component of a forward-declaration (which would be our parent
+    // AST node) -- then we're forward-declarable by definition.
+    if (const TagDecl* parent
+        = current_ast_node()->template GetParentAs<TagDecl>()) {
+      if (IsForwardDecl(parent))
+        return true;
+    }
+
     // Another place we disregard what the language allows: if we're
     // a dependent type, in theory we can be forward-declared.  But
     // we require the full definition anyway, so all the template
