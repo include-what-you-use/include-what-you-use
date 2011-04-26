@@ -488,33 +488,6 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
   }
 }
 
-// Converts the type into a decl, and reports that.
-void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
-                                       const Type* type,
-                                       bool in_cxx_method_body) {
-  if (!type)
-    return;
-  // The 'full info' for a pointer type can be satisfied by
-  // forward-declaring its underlying type.
-  if (IsPointerOrReferenceAsWritten(type)) {
-    type = RemovePointersAndReferencesAsWritten(type);
-    const NamedDecl* decl = TypeToDeclAsWritten(type);
-    if (decl) {
-      symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse,
-                                    in_cxx_method_body));
-      LogSymbolUse("Marked (fwd decl) use of pointer to", symbol_uses_.back());
-    }
-  } else {
-    const NamedDecl* decl = TypeToDeclAsWritten(type);
-    if (decl) {
-      decl = GetDefinitionAsWritten(decl);
-      symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kFullUse,
-                                    in_cxx_method_body));
-      LogSymbolUse("Marked full-info use of type", symbol_uses_.back());
-    }
-  }
-}
-
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
                                        const string& dfn_filepath,
                                        const string& symbol) {

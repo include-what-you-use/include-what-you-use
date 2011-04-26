@@ -1190,6 +1190,16 @@ struct VisitorState {
   // instantiated calls, we can't store the exprs themselves, but have
   // to store their location.)
   set<SourceLocation> processed_overload_locs;
+
+  // When we see a using declaration, we want to keep track of what
+  // file it's in, because other files may depend on that using
+  // declaration to get the names of their types right.  We want to
+  // make sure we don't replace an #include with a forward-declare
+  // when we might need the #include's using declaration.
+  // The key is the type being 'used', the FileEntry is the file
+  // that has the using decl.  If there are multiple using decls
+  // for a file, we prefer the one that has NamedDecl in it.
+  multimap<const NamedDecl*, const UsingDecl*> using_declarations;
 };
 
 
@@ -1357,61 +1367,34 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return GetInstantiationLoc(use_loc);
     return use_loc;
   }
-  SourceLocation GetUseLocationForMacroExpansion(SourceLocation use_loc,
-                                                 const Type* used_type) {
-    used_type = RemovePointersAndReferencesAsWritten(used_type);
-    if (const Decl* decl = TypeToDeclAsWritten(used_type))
-      return GetUseLocationForMacroExpansion(use_loc, decl);
-    return use_loc;
-  }
 
   //------------------------------------------------------------
   // Checkers, that tell iwyu_output about uses of symbols.
   // We let, but don't require, subclasses to override these.
-
-  // Called when the given type is fully used at used_loc, regardless
-  // of the type being explicitly written in the source code or not.
-  virtual void ReportTypeUse(SourceLocation used_loc, const Type* type) {
-    // TODO(csilvers): figure out if/when calling CanIgnoreType() is correct.
-
-    // Map private types like __normal_iterator to their public counterpart.
-    type = MapPrivateTypeToPublicType(type);
-    // Figure out the best location to attribute uses inside macros.
-    if (IsInMacro(used_loc))
-      used_loc = GetUseLocationForMacroExpansion(used_loc, type);
-    const FileEntry* used_in = GetFileEntry(used_loc);
-    preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, type, IsNodeInsideCXXMethodBody(current_ast_node()));
-  }
-
-  virtual void ReportTypesUse(SourceLocation used_loc,
-                              const set<const Type*>& types) {
-    for (Each<const Type*> it(&types); !it.AtEnd(); ++it)
-      ReportTypeUse(used_loc, *it);
-  }
-
-  // Called when a type is used in a forward-declare context.
-  virtual void ReportTypeForwardDeclareUse(SourceLocation used_loc,
-                                           const Type* type) {
-    // TODO(csilvers): figure out if/when calling CanIgnoreType() is correct.
-    type = MapPrivateTypeToPublicType(type);
-    // Figure out the best location to attribute uses inside macros.
-    if (IsInMacro(used_loc))
-      used_loc = GetUseLocationForMacroExpansion(used_loc, type);
-    const FileEntry* used_in = GetFileEntry(used_loc);
-    preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, type, IsNodeInsideCXXMethodBody(current_ast_node()));
-  }
 
   virtual void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl) {
     // Map private decls like __normal_iterator to their public counterpart.
     decl = MapPrivateDeclToPublicDecl(decl);
     if (CanIgnoreDecl(decl))
       return;
+
     // Figure out the best location to attribute uses inside macros.
     if (IsInMacro(used_loc))
       used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
+
+    // If we're a use that depends on a using declaration, make sure
+    // we #include the file with the using declaration.
+    // TODO(csilvers): check that our getQualifier() does not match
+    // the namespace of the decl.  If we have 'using std::vector;' +
+    // 'std::vector<int> foo;' we don't actually care about the
+    // using-decl.
+    if (const UsingDecl* using_decl
+        = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
+      preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
+          used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()));
+    }
+
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
         used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()));
   }
@@ -1427,12 +1410,55 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     decl = MapPrivateDeclToPublicDecl(decl);
     if (CanIgnoreDecl(decl))
       return;
+
     // Figure out the best location to attribute uses inside macros.
     if (IsInMacro(used_loc))
       used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
+
+    // If we're a use that depends on a using declaration, make sure
+    // we #include the file with the using declaration.
+    if (const UsingDecl* using_decl
+        = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
+      preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
+          used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()));
+    }
+
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
         used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()));
+  }
+
+  // Called when the given type is fully used at used_loc, regardless
+  // of the type being explicitly written in the source code or not.
+  virtual void ReportTypeUse(SourceLocation used_loc, const Type* type) {
+    // TODO(csilvers): figure out if/when calling CanIgnoreType() is correct.
+    if (!type)
+      return;
+
+    // Map private types like __normal_iterator to their public counterpart.
+    type = MapPrivateTypeToPublicType(type);
+    // For the below, we want to be careful to call *our*
+    // ReportDeclUse(), not any of the ones in subclasses.
+    if (IsPointerOrReferenceAsWritten(type)) {
+      type = RemovePointersAndReferencesAsWritten(type);
+      if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
+        VERRS(6) << "(For pointer type " << PrintableType(type) << "):\n";
+        IwyuBaseAstVisitor<Derived>::ReportDeclForwardDeclareUse(used_loc,
+                                                                 decl);
+      }
+    } else {
+      if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
+        decl = GetDefinitionAsWritten(decl);
+        VERRS(6) << "(For type " << PrintableType(type) << "):\n";
+        IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl);
+      }
+    }
+  }
+
+  virtual void ReportTypesUse(SourceLocation used_loc,
+                              const set<const Type*>& types) {
+    for (Each<const Type*> it(&types); !it.AtEnd(); ++it)
+      ReportTypeUse(used_loc, *it);
   }
 
   //------------------------------------------------------------
@@ -2125,6 +2151,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return visitor_state_->preprocessor_info;
   }
 
+  void AddUsingDeclaration(const NamedDecl* target_decl,  // what's being used
+                           const UsingDecl* using_decl) {
+    visitor_state_->using_declarations.insert(make_pair(target_decl,
+                                                        using_decl));
+  }
+
  private:
   template <typename T> friend class IwyuBaseAstVisitor;
 
@@ -2134,6 +2166,27 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   void AddProcessedOverloadLoc(SourceLocation loc) {
     visitor_state_->processed_overload_locs.insert(loc);
+  }
+
+  const UsingDecl* GetUsingDeclarationOf(const NamedDecl* decl,
+                                         const DeclContext* using_context) {
+    // We look through all the using-decls of the given decl.  We
+    // limit them to ones that are visible from the decl-context we're
+    // currently in (that is, what namespaces we're in).  Of those, we
+    // pick the one that's in the same file as decl, if possible,
+    // otherwise we pick one arbitrarily.
+    const UsingDecl* retval = NULL;
+    vector<const UsingDecl*> using_decls
+        = FindInMultiMap(visitor_state_->using_declarations, decl);
+    for (Each<const UsingDecl*> it(&using_decls); !it.AtEnd(); ++it) {
+      if (!(*it)->getDeclContext()->Encloses(using_context))
+        continue;
+      if (GetFileEntry(decl) == GetFileEntry(*it) ||    // in same file, prefer
+          retval == NULL) {        // not in same file, but better than nothing
+        retval = *it;
+      }
+    }
+    return retval;
   }
 
   // Do not any variables here!  If you do, they will not be shared
@@ -2926,7 +2979,19 @@ class IwyuAstConsumer
   }
 
   bool VisitUsingDecl(clang::UsingDecl* decl) {
+    // If somebody in a different file tries to use one of these decls
+    // with the shortened name, then they had better #include us in
+    // order to get our using declaration.  We store the necessary
+    // information here.  Note: we have to store this even if this is
+    // an ast node we would otherwise ignore, since other AST nodes
+    // (which we might not ignore) can depend on it.
+    for (UsingDecl::shadow_iterator it = decl->shadow_begin();
+         it != decl->shadow_end(); ++it) {
+      AddUsingDeclaration((*it)->getTargetDecl(), decl);
+    }
+
     if (CanIgnoreCurrentASTNode())  return true;
+
     // The shadow decls hold the declarations for the var/fn/etc we're
     // using.  (There may be more than one if, say, we're using an
     // overloaded function.)  We check to make sure nothing we're
@@ -2935,6 +3000,7 @@ class IwyuAstConsumer
          it != decl->shadow_end(); ++it) {
       ReportDeclForwardDeclareUse(CurrentLoc(), (*it)->getTargetDecl());
     }
+
     return Base::VisitUsingDecl(decl);
   }
 
