@@ -48,6 +48,8 @@ class OneIwyuTest(unittest.TestCase):
       'implicit_ctor.cc': [CheckAlsoExtension('-d1.h')],
       'keep_mapping.cc': [CheckAlsoExtension('-public.h')],
       'macro_location.cc': [CheckAlsoExtension('-d2.h')],
+      'non_transitive_include.cc': [CheckAlsoExtension('-d*.h'),
+                                    '--transitive_includes_only'],
       'no_h_includes_cc.cc': [CheckAlsoExtension('.c')],
       'overloaded_class.cc': [CheckAlsoExtension('-i1.h')],
     }

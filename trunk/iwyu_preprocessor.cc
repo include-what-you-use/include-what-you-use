@@ -818,6 +818,18 @@ bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
 }
 
 bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
+    const FileEntry* includer, const string& quoted_includee) const {
+  if (const set<const FileEntry*>* all_includes
+      = FindInMap(&transitive_include_map_, includer)) {
+    for (Each<const FileEntry*> it(all_includes); !it.AtEnd(); ++it) {
+      if (ConvertToQuotedInclude(GetFilePath(*it)) == quoted_includee)
+        return true;
+    }
+  }
+  return false;
+}
+
+bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
     const string& quoted_includer, const FileEntry* includee) const {
   for (Each<const FileEntry*, set<const FileEntry*> >
            it(&transitive_include_map_); !it.AtEnd(); ++it) {

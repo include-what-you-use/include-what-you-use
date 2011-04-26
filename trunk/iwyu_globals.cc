@@ -56,6 +56,9 @@ static void PrintHelp(const char* extra_msg) {
          "   --howtodebug[=<filename>]: with no arg, prints instructions on\n"
          "        how to run iwyu under gdb for the input file, and exits.\n"
          "        With an arg, prints only when input file matches the arg.\n"
+         "   --transitive_includes_only: do not suggest that a file add\n"
+         "        foo.h unless foo.h is already visible in the file's\n"
+         "        transitive includes.\n"
          "   --verbose=<level>: the higher the level, the more output.\n");
   if (extra_msg)
     printf("\n%s\n\n", extra_msg);
@@ -65,6 +68,7 @@ CommandlineFlags::CommandlineFlags()
     : check_also(),
       howtodebug(CommandlineFlags::kUnspecified),
       cwd(""),
+      transitive_includes_only(false),
       verbose(getenv("IWYU_VERBOSE") ? atoi(getenv("IWYU_VERBOSE")) : 1) {
 }
 
@@ -74,6 +78,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"howtodebug", optional_argument, NULL, 'd'},
     {"help", no_argument, NULL, 'h'},
     {"cwd", required_argument, NULL, 'p'},
+    {"transitive_includes_only", no_argument, NULL, 't'},
     {"verbose", required_argument, NULL, 'v'},
     {0, 0, 0, 0}
   };
@@ -85,6 +90,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case 'd': howtodebug = optarg ? optarg : ""; break;
       case 'h': PrintHelp(""); exit(0); break;
       case 'p': cwd = optarg; break;
+      case 't': transitive_includes_only = true; break;
       case 'v': verbose = atoi(optarg); break;
       case -1: return optind;   // means 'no more input'
       default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;

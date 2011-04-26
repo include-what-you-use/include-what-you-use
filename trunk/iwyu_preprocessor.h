@@ -140,8 +140,10 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   // the second.
   bool FileTransitivelyIncludes(const clang::FileEntry* includer,
                                 const clang::FileEntry* includee) const;
-  // This seems like a weird way to call this function, but that's
-  // what we happen to need in iwyu_output.cc:
+  bool FileTransitivelyIncludes(const clang::FileEntry* includer,
+                                const string& quoted_includee) const;
+  // This seems like a weird way to call this function, but we
+  // happen to need this in iwyu_output.cc:
   bool FileTransitivelyIncludes(const string& quoted_includer,
                                 const clang::FileEntry* includee) const;
 
