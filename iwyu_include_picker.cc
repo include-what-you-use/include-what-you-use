@@ -981,7 +981,6 @@ void IncludePicker::AddImplicitThirdPartyMappings() {
       CHECK_(StartsWith(*includer, "\"third_party/") && "Why not nixed!");
       AddMapping(it->first, *includer);
     }
-    MarkIncludeAsPrivate(it->first);
   }
 }
 
