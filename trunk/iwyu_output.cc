@@ -556,10 +556,14 @@ bool DeclIsVisibleToUseInSameFile(const Decl* decl, const OneUse& use) {
   if (GetFileEntry(decl) != GetFileEntry(use.use_loc()))
     return false;
 
-  // If the decl comes before the use, it's visible to it.  It can
-  // even be visible if the decl comes after, if the decl is inside
-  // the class definition and the use is in the body of a method.
+  // If the decl comes before the use, it's visible to it.  (The
+  // decl can also be at the same location as the use, e.g. for
+  //   struct Foo { int x, y; } myvar
+  // )  It can even be visible if the decl comes after, if the decl
+  // is inside the class definition and the use is in the body of a
+  // method.
   return (IsBeforeInSameFile(decl, use.use_loc()) ||
+          GetLocation(decl) == use.use_loc() ||
           (DeclsAreInSameClass(decl, use.decl()) && !decl->isOutOfLine()
            && use.in_cxx_method_body()));
 }
