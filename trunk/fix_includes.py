@@ -1745,12 +1745,14 @@ def _MarkUnnecessaryLinesAccordingToIwyu(iwyu_record, file_lines):
     file_lines: a list of LineInfo objects holding the parsed output of
       the file in iwyu_record.filename
   """
+  comment = 'iwyu says this can be removed'
   for line_number in iwyu_record.lines_to_delete:
-    if '//' in file_lines[line_number].line:   # line already has a comment
-      file_lines[line_number].line += '; '
+    if comment in file_lines[line_number].line:  # line already annotated
+      pass
+    elif '//' in file_lines[line_number].line:   # line already has a comment
+      file_lines[line_number].line += '; ' + comment
     else:
-      file_lines[line_number].line += '  // '
-    file_lines[line_number].line += 'iwyu says this can be removed'
+      file_lines[line_number].line += '  // ' + comment
 
 
 def FixFileLines(iwyu_record, file_lines, flags):

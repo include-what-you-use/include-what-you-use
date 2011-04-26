@@ -1104,7 +1104,45 @@ safe_flag should remove these lines:
 - #include <notused.h>  // lines 3-3
 - #include <notused.h>  // lines 4-4
 - class Foo             // lines 7-7
-- class Foo             // lines 8-9
+- class Bar             // lines 8-9
+
+The full include-list for safe_flag:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    self.RegisterFileContents({'safe_flag': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testSafeFlagTwice(self):
+    """Tests that running --safe twice in a row doesn't duplicate comments."""
+    self.flags.safe = True
+    infile = """\
+// Copyright 2010
+
+#include <notused.h>  // iwyu says this can be removed
+#include <notused2.h>  // Hello!; iwyu says this can be removed
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+class Foo;  // iwyu says this can be removed
+template<typename T>  // iwyu says this can be removed
+class Bar;  // iwyu says this can be removed
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+safe_flag should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+safe_flag should remove these lines:
+- #include <notused.h>  // lines 3-3
+- #include <notused.h>  // lines 4-4
+- class Foo             // lines 7-7
+- class Bar             // lines 8-9
 
 The full include-list for safe_flag:
 #include <stdio.h>
