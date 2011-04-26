@@ -393,7 +393,7 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
 
 bool OneIncludeOrForwardDeclareLine::HasSymbolUse(const string& symbol_name)
     const {
-  return Contains(symbol_counts_, symbol_name);
+  return ContainsKey(symbol_counts_, symbol_name);
 }
 
 void OneIncludeOrForwardDeclareLine::AddSymbolUse(const string& symbol_name) {
@@ -664,7 +664,7 @@ set<string> CalculateMinimalIncludes(
     // TODO(csilvers): write ElementInBoth() in iwyu_stl_util.h
     for (Each<string> choice(&public_headers);
          !use->has_suggested_header() && !choice.AtEnd(); ++choice) {
-      if (Contains(associated_direct_includes, *choice)) {
+      if (ContainsKey(associated_direct_includes, *choice)) {
         use->set_suggested_header(*choice);
         desired_headers.insert(use->suggested_header());
         LogIncludeMapping("in associated header", *use);
@@ -672,8 +672,8 @@ set<string> CalculateMinimalIncludes(
     }
     for (Each<string> choice(&public_headers);
          !use->has_suggested_header() && !choice.AtEnd(); ++choice) {
-      if (Contains(direct_includes, *choice) &&
-          Contains(desired_headers, *choice)) {
+      if (ContainsKey(direct_includes, *choice) &&
+          ContainsKey(desired_headers, *choice)) {
         use->set_suggested_header(*choice);
         desired_headers.insert(use->suggested_header());
         LogIncludeMapping("#include already present and needed", *use);
@@ -681,7 +681,7 @@ set<string> CalculateMinimalIncludes(
     }
     for (Each<string> choice(&public_headers);
          !use->has_suggested_header() && !choice.AtEnd(); ++choice) {
-      if (Contains(desired_headers, *choice)) {
+      if (ContainsKey(desired_headers, *choice)) {
         use->set_suggested_header(*choice);
         desired_headers.insert(use->suggested_header());
         LogIncludeMapping("#include already needed", *use);
@@ -689,7 +689,7 @@ set<string> CalculateMinimalIncludes(
     }
     for (Each<string> choice(&public_headers);
          !use->has_suggested_header() && !choice.AtEnd(); ++choice) {
-      if (Contains(direct_includes, *choice)) {
+      if (ContainsKey(direct_includes, *choice)) {
         use->set_suggested_header(*choice);
         desired_headers.insert(use->suggested_header());
         LogIncludeMapping("#include already present", *use);
@@ -1049,9 +1049,9 @@ void CalculateIwyuForForwardDeclareUse(
     vector<string> headers
         = GlobalIncludePicker().GetPublicHeadersForFilepath(GetFilePath(dfn));
     for (Each<string> header(&headers); !header.AtEnd(); ++header) {
-      if (Contains(desired_includes, *header))
+      if (ContainsKey(desired_includes, *header))
         dfn_is_in_desired_includes = true;
-      if (Contains(actual_includes, *header))
+      if (ContainsKey(actual_includes, *header))
         dfn_is_in_actual_includes = true;
     }
     // We ourself are always a 'desired' and 'actual' include (though
@@ -1086,7 +1086,7 @@ void CalculateIwyuForForwardDeclareUse(
   // desired includes, we don't need to check for that.
   if (!same_file_decl) {
     for (Each<const RecordDecl*> it(&redecls); !it.AtEnd(); ++it) {
-      if (Contains(associated_includes, GetFileEntry(*it))) {
+      if (ContainsKey(associated_includes, GetFileEntry(*it))) {
         same_file_decl = *it;
         break;
       }
@@ -1183,7 +1183,7 @@ void CalculateIwyuForFullUse(OneUse* use,
   // x.cc,' which the code below will then strip.  The end result is
   // z.cc will not #include anything, and will fail to compile.
   if (!IsHeaderFile(use->suggested_header()) &&
-      !Contains(actual_includes, use->suggested_header())) {
+      !ContainsKey(actual_includes, use->suggested_header())) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): #including .cc\n";
     use->set_ignore_use();
@@ -1191,7 +1191,7 @@ void CalculateIwyuForFullUse(OneUse* use,
   }
 
   // (E2) Mark iwyu violation unless in a current #include.
-  if (Contains(actual_includes, use->suggested_header())) {
+  if (ContainsKey(actual_includes, use->suggested_header())) {
     VERRS(6) << "Ignoring full use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): #including dfn from "
              << use->suggested_header() << "\n";
@@ -1240,7 +1240,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
 
   // (C4) Remove .cc files from desired-includes unless they're in actual-inc.
   for (Each<string> it(&desired_set_cover); !it.AtEnd(); ++it) {
-    if (IsHeaderFile(*it) || Contains(direct_includes(), *it))
+    if (IsHeaderFile(*it) || ContainsKey(direct_includes(), *it))
       desired_includes_.insert(*it);
   }
   desired_includes_have_been_calculated_ = true;
@@ -1329,7 +1329,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
     // Update the appropriate map depending on the type of use.
     if (use->is_full_use()) {
       CHECK_(use->has_suggested_header() && "Full uses should have #includes");
-      if (!Contains(include_map, use->suggested_header())) {  // must be added
+      if (!ContainsKey(include_map, use->suggested_header())) {  // must be added
         lines->push_back(OneIncludeOrForwardDeclareLine(use->suggested_header(),
                                                         -1));
         include_map[use->suggested_header()] = lines->size() - 1;
@@ -1342,7 +1342,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
     // have that as their suggested_header.  For the rest, we need to
     // make sure there's a forward-declare in the current file.
     } else if (!use->has_suggested_header()) {
-      if (!Contains(fwd_decl_map, use->decl())) {  // must be added
+      if (!ContainsKey(fwd_decl_map, use->decl())) {  // must be added
         lines->push_back(OneIncludeOrForwardDeclareLine(use->decl()));
         // The OneIncludeOrForwardDeclareLine ctor sets up line
         // numbers, but they're for some other file!  Clear them.
@@ -1360,7 +1360,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
   // to bother with a "(ptr only)" use if there's already a full use.
   for (Each<OneUse> use(&uses); !use.AtEnd(); ++use) {
     if (!use->ignore_use() && !use->is_full_use() && use->has_suggested_header()
-        && Contains(include_map, use->suggested_header())) {
+        && ContainsKey(include_map, use->suggested_header())) {
       const string symbol_name = use->short_symbol_name();
       const int index = include_map[use->suggested_header()];
       if (!(*lines)[index].HasSymbolUse(symbol_name))
@@ -1376,7 +1376,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
   for (vector<OneIncludeOrForwardDeclareLine>::iterator
            it = lines->begin(); it != lines->end(); ++it) {
     if (it->is_desired() && !it->is_present() && it->IsIncludeLine() &&
-        Contains(associated_desired_includes, it->quoted_include())) {
+        ContainsKey(associated_desired_includes, it->quoted_include())) {
       it->clear_desired();
     }
   }
@@ -1424,7 +1424,7 @@ string PrintableIncludeOrForwardDeclareLine(
   }
   // We don't need to explain why foo.cc #includes foo.h
   if (line.IsIncludeLine() &&
-      Contains(associated_quoted_includes, line.quoted_include())) {
+      ContainsKey(associated_quoted_includes, line.quoted_include())) {
     return line.line() + "\n";
   }
   string retval = line.line();
@@ -1466,7 +1466,7 @@ LineSortKey GetSortKey(const OneIncludeOrForwardDeclareLine& line,
                        const set<string>& associated_quoted_includes) {
   if (!line.IsIncludeLine())
     return LineSortKey(6, line.line());
-  if (Contains(associated_quoted_includes, line.quoted_include())) {
+  if (ContainsKey(associated_quoted_includes, line.quoted_include())) {
     if (EndsWith(line.quoted_include(), "-inl.h\""))
       return LineSortKey(2, line.line());
     return LineSortKey(1, line.line());

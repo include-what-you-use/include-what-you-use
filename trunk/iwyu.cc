@@ -967,10 +967,10 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
    public:
     // We could add more versions, but these are the only useful ones so far.
     bool Contains(const Type* type) const {
-      return include_what_you_use::Contains(others, type);
+      return ContainsKey(others, type);
     }
     bool Contains(const Decl* decl) const {
-      return include_what_you_use::Contains(others, decl);
+      return ContainsKey(others, decl);
     }
     bool Contains(const ASTNode& node) const {
       if (const TypeLoc* tl = node.GetAs<TypeLoc>()) {
@@ -997,8 +997,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
         (void)tal;
         return false;
       } else {
-        return include_what_you_use::Contains(
-            others, node.GetAs<void>());
+        return ContainsKey(others, node.GetAs<void>());
       }
     }
 
@@ -2130,7 +2129,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   template <typename T> friend class IwyuBaseAstVisitor;
 
   bool IsProcessedOverloadLoc(SourceLocation loc) const {
-    return Contains(visitor_state_->processed_overload_locs, loc);
+    return ContainsKey(visitor_state_->processed_overload_locs, loc);
   }
 
   void AddProcessedOverloadLoc(SourceLocation loc) {
@@ -2302,7 +2301,7 @@ class InstantiatedTemplateVisitor
     // corresponding to the template being instantiated, so we
     // can be ignored.
     type = RemoveSubstTemplateTypeParm(type);
-    return !Contains(resugar_map_, type);
+    return !ContainsKey(resugar_map_, type);
   }
 
   // We ignore function calls in nodes_to_ignore_, which were already
@@ -2585,7 +2584,7 @@ class InstantiatedTemplateVisitor
 
   bool TraverseExpandedTemplateFunctionHelper(const FunctionDecl* fn_decl,
                                               const Type* parent_type) {
-    if (!fn_decl || Contains(traversed_decls_, fn_decl))
+    if (!fn_decl || ContainsKey(traversed_decls_, fn_decl))
       return true;   // avoid recursion and repetition
     traversed_decls_.insert(fn_decl);
 
@@ -2662,7 +2661,7 @@ class InstantiatedTemplateVisitor
     const ClassTemplateSpecializationDecl* class_decl
         = DynCastFrom(TypeToDeclAsWritten(type));
     CHECK_(class_decl && "TemplateSpecializationType is not a TplSpecDecl?");
-    if (Contains(traversed_decls_, class_decl))
+    if (ContainsKey(traversed_decls_, class_decl))
       return true;   // avoid recursion & repetition
     traversed_decls_.insert(class_decl);
 

@@ -68,8 +68,7 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
   const ClassTemplateSpecializationDecl* tpl_decl
       = DynCastFrom(TypeToDeclAsWritten(tpl_type));
   CHECK_(tpl_decl && "tpl-type decl is not a tpl specialization?");
-  if (!include_what_you_use::Contains(
-          fulluse_types, tpl_decl->getQualifiedNameAsString()))
+  if (!ContainsKey(fulluse_types, tpl_decl->getQualifiedNameAsString()))
     return map<const Type*, const Type*>();
 
   // The code below doesn't handle template-template args/etc.  None

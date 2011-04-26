@@ -86,8 +86,9 @@ static string GetName(const Token& token) {
 
 bool IwyuPreprocessorInfo::IncludeLineIsInExportedRange(
     clang::SourceLocation includer_loc) const {
-  return Contains(exported_lines_set_, make_pair(GetFileEntry(includer_loc),
-                                                 GetLineNumber(includer_loc)));
+  return ContainsKey(exported_lines_set_,
+                     make_pair(GetFileEntry(includer_loc),
+                               GetLineNumber(includer_loc)));
 }
 
 void IwyuPreprocessorInfo::AddExportedRange(const clang::FileEntry* file,
@@ -267,7 +268,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   }
 
   if (!protect_reason.empty()) {
-    CHECK_(Contains(iwyu_file_info_map_, includer));
+    CHECK_(ContainsKey(iwyu_file_info_map_, includer));
     GetFromFileInfoMap(includer)->ReportIncludeFileUse(include_name_as_typed);
     ERRSYM(includer) << "Marked dep: " << GetFilePath(includer)
                      << " needs to keep " << include_name_as_typed
@@ -336,7 +337,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   // several files; we use the first such mapping we see, which is the
   // top of the #include-next chain.
   if (!include_name_as_typed.empty()) {
-    if (!Contains(include_to_fileentry_map_, include_name_as_typed)) {
+    if (!ContainsKey(include_to_fileentry_map_, include_name_as_typed)) {
       include_to_fileentry_map_[include_name_as_typed] = includee;
     }
   }
@@ -586,7 +587,7 @@ void IwyuPreprocessorInfo::AddAllIncludesAsFileEntries(
   set<const FileEntry*> direct_incs
       = FileInfoOrEmptyFor(includer).direct_includes_as_fileentries();
   for (Each<const FileEntry*> it(&direct_incs); !it.AtEnd(); ++it) {
-    if (Contains(*retval, *it))  // avoid infinite recursion
+    if (ContainsKey(*retval, *it))  // avoid infinite recursion
       continue;
     retval->insert(*it);
     AddAllIncludesAsFileEntries(*it, retval);
@@ -607,7 +608,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
     for (Each<string> pub(&public_headers_for_header); !pub.AtEnd(); ++pub) {
       if (const FileEntry* public_file
           = GetOrDefault(include_to_fileentry_map_, *pub, NULL)) {
-        CHECK_(Contains(iwyu_file_info_map_, public_file));
+        CHECK_(ContainsKey(iwyu_file_info_map_, public_file));
         if (public_file != header)  // no credit for mapping to yourself :-)
           private_headers_behind[public_file].insert(header);
       }
@@ -623,15 +624,15 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   for (Each<const FileEntry*, IwyuFileInfo> it(&iwyu_file_info_map_);
        !it.AtEnd(); ++it) {
     const FileEntry* file = it->first;
-    intends_to_provide_map_[file].insert(file);     // everyone provides itself!
-    if (Contains(private_headers_behind, file)) {   // means we're a public hdr
+    intends_to_provide_map_[file].insert(file);  // Everyone provides itself!
+    if (ContainsKey(private_headers_behind, file)) {  // We're a public header.
       AddAllIncludesAsFileEntries(file, &intends_to_provide_map_[file]);
     } else {
       const set<const FileEntry*>& direct_includes
           = it->second.direct_includes_as_fileentries();
       for (Each<const FileEntry*> inc(&direct_includes); !inc.AtEnd(); ++inc) {
         intends_to_provide_map_[file].insert(*inc);
-        if (Contains(private_headers_behind, *inc))
+        if (ContainsKey(private_headers_behind, *inc))
           AddAllIncludesAsFileEntries(*inc, &intends_to_provide_map_[file]);
       }
     }
@@ -673,7 +674,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
     for (Each<const FileEntry*> private_header_it(&it->second);
          !private_header_it.AtEnd(); ++private_header_it) {
       const FileEntry* private_header = *private_header_it;
-      CHECK_(Contains(intends_to_provide_map_, private_header));
+      CHECK_(ContainsKey(intends_to_provide_map_, private_header));
       InsertAllInto(intends_to_provide_map_[public_header],
                     &intends_to_provide_map_[private_header]);
     }
@@ -747,7 +748,7 @@ bool IwyuPreprocessorInfo::PublicHeaderIntendsToProvide(
     const FileEntry* public_header, const FileEntry* other_file) const {
   if (const set<const FileEntry*>* provides
       = FindInMap(&intends_to_provide_map_, public_header)) {
-    return Contains(*provides, other_file);
+    return ContainsKey(*provides, other_file);
   }
   return false;
 }
@@ -756,7 +757,7 @@ bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
     const FileEntry* includer, const FileEntry* includee) const {
   if (const set<const FileEntry*>* all_includes
       = FindInMap(&transitive_include_map_, includer)) {
-    return Contains(*all_includes, includee);
+    return ContainsKey(*all_includes, includee);
   }
   return false;
 }
@@ -766,7 +767,7 @@ bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
   for (Each<const FileEntry*, set<const FileEntry*> >
            it(&transitive_include_map_); !it.AtEnd(); ++it) {
     if (ConvertToQuotedInclude(GetFilePath(it->first)) == quoted_includer)
-      return Contains(it->second, includee);
+      return ContainsKey(it->second, includee);
   }
   return false;
 }
@@ -775,7 +776,7 @@ bool IwyuPreprocessorInfo::IncludeIsInhibited(
     const clang::FileEntry* file, const string& other_filename) const {
   const set<string>* inhibited_includes = FindInMap(&no_include_map_, file);
   return (inhibited_includes != NULL) &&
-      Contains(*inhibited_includes, other_filename);
+      ContainsKey(*inhibited_includes, other_filename);
 }
 
 }  // namespace include_what_you_use

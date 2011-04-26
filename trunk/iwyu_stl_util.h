@@ -31,8 +31,8 @@ using std::vector;
 // Returns true if the associative container (e.g. set or map)
 // contains the given key.
 template <class AssociativeContainer>
-bool Contains(const AssociativeContainer& container,
-              const typename AssociativeContainer::key_type& key) {
+bool ContainsKey(const AssociativeContainer& container,
+                 const typename AssociativeContainer::key_type& key) {
   return container.find(key) != container.end();
 }
 
@@ -61,7 +61,7 @@ template <class Map>
 const typename Map::mapped_type& GetOrDefault(
     const Map& a_map, const typename Map::key_type& key,
     const typename Map::mapped_type& default_value) {
-  if (Contains(a_map, key))
+  if (ContainsKey(a_map, key))
     return a_map.find(key)->second;
   return default_value;
 }
@@ -128,7 +128,7 @@ vector<T> GetUniqueEntries(const vector<T>& v) {
   set<T> seen;
   vector<T> retval;
   for (typename vector<T>::const_iterator it = v.begin(); it != v.end(); ++it) {
-    if (!Contains(seen, *it)) {
+    if (!ContainsKey(seen, *it)) {
       retval.push_back(*it);
       seen.insert(*it);
     }

@@ -731,7 +731,7 @@ void AugmentValuesForKey(
     const string& key, const string& value,
     set<string> seen_keys,            // used to avoid recursion
     vector<string>* all_values) {
-  CHECK_(!Contains(seen_keys, key) && "Cycle in include-mapping");
+  CHECK_(!ContainsKey(seen_keys, key) && "Cycle in include-mapping");
   CHECK_(key != value && "Self-mapping in include-mapping");
   all_values->push_back(value);
 
@@ -764,7 +764,7 @@ void MakeMapTransitive(const IncludePicker::IncludeMap& filename_map,
     set<string> seen_values;
     for (Each<string> value(&all_values_for_current_key);
          !value.AtEnd(); ++value) {
-      if (!Contains(seen_values, *value)) {
+      if (!ContainsKey(seen_values, *value)) {
         it->second.push_back(*value);
         seen_values.insert(*value);
       }
