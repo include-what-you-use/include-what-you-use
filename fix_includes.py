@@ -2039,10 +2039,8 @@ def main(argv):
 
   parser.add_option('--safe', action='store_true', default=True,
                     help=('Do not remove unused #includes/fwd-declares from'
-                          ' header files, just add new ones'))
-  parser.add_option('--nosafe', action='store_false', dest='safe',
-                    help=('Also remove #includes/fwd-declares,'
-                          ' not just add them'))
+                          ' header files; just add new ones [default]'))
+  parser.add_option('--nosafe', action='store_false', dest='safe')
 
   parser.add_option('-s', '--sort_only', action='store_true',
                     help=('Just sort #includes of files listed on cmdline;'
