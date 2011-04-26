@@ -57,22 +57,12 @@ using std::pair;
 using std::sort;
 using std::vector;
 
-static int FLAGS_verbose = SetVerboseLevel(
-    (getenv("IWYU_VERBOSE") == NULL) ? 1 : atoi(getenv("IWYU_VERBOSE")));
-
-int GetVerboseLevel() { return FLAGS_verbose; }
-int SetVerboseLevel(int n) {
-  FLAGS_verbose = n;
-  VERRS(4) << "Setting verbosity level to " << n << "\n";
-  return FLAGS_verbose;
-}
-
 bool ShouldPrintSymbolFromFile(const FileEntry* file) {
-  if (GetVerboseLevel() < 5) {
+  if (GlobalFlags().verbose < 5) {
     return false;
-  } else if (GetVerboseLevel() < 10) {
+  } else if (GlobalFlags().verbose < 10) {
     return ShouldReportIWYUViolationsFor(file);
-  } else if (GetVerboseLevel() < 11) {
+  } else if (GlobalFlags().verbose < 11) {
     return !IsSystemIncludeFile(GetFilePath(file));
   } else {
     return true;
