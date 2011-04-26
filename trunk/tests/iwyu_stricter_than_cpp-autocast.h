@@ -60,6 +60,15 @@ void TplFn(
     struct TplDirectStruct2<char> dc2,
     TplIndirectStruct2<char> ic2);
 
+// --- The rules do not apply for friend functions declarations.
+
+struct AutocastStruct {
+  // IWYU: IndirectStruct1 needs a declaration
+  friend void ClassFn1(const IndirectStruct1&);
+  // IWYU: TplIndirectStruct1 needs a declaration
+  friend void ClassFn2(TplIndirectStruct1<char>);
+};
+
 #endif   // IWYU_STRICTER_THAN_CPP_AUTOCAST_H_
 
 

@@ -1506,6 +1506,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return retval;
   }
 
+  set<const Type*> GetCallerResponsibleTypesForFnReturn(
+      const FunctionDecl* decl) {
+    set<const Type*> retval;
+    const Type* result_type
+        = RemoveElaboration(decl->getResultType().getTypePtr());
+    if (CodeAuthorWantsJustAForwardDeclare(result_type, GetLocation(decl))) {
+      retval.insert(result_type);
+      // TODO(csilvers): include template type-args if appropriate.
+    }
+    return retval;
+  }
+
   //------------------------------------------------------------
   // Checkers, that tell iwyu_output about uses of symbols.
   // We let, but don't require, subclasses to override these.
@@ -1544,7 +1556,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // responsible for the underlying type.  We check if that is the
     // case here, since we might be using a typedef type from
     // anywhere.  ('autocast' is similar, but is handled in
-    // VisitCastExpr.)
+    // VisitCastExpr; 'fn-return-type' is also similar and is
+    // handled in HandleFunctionCall.)
     if (const TypedefDecl* typedef_decl = DynCastFrom(decl)) {
       // One exception: if this TypedefType is being used in another
       // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
@@ -1685,22 +1698,43 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   // If we're a declared (not defined) function, all our types --
   // return type and argument types -- are forward-declarable.  The
-  // one exception is the throw types, which we clean up in
-  // VisitType().
-  // Also, if any of our function parameters have a type with a
-  // non-explicit, one-arg constructor, or is a const reference to
-  // such a type, mark that type as not forward declarable.  The
-  // worry is that people might need the full type for the implicit
-  // conversion (the 'autocast'), for instance, passing in a char*
-  // to Fn(const StringPiece& foo) { ... }
+  // one exception required by the language is the throw types, which
+  // we clean up in VisitType().
+  // There are two more exceptions that iwyu imposes:
+  // (1) iwyu asks the function author to provide the full type
+  //     information for the return type.  That way the user doesn't
+  //     have to.
+  // (2) If any of our function parameters have a type with a
+  //     non-explicit, one-arg constructor, or is a const reference to
+  //     such a type, mark that type as not forward declarable.  The
+  //     worry is that people might need the full type for the
+  //     implicit conversion (the 'autocast'), for instance, passing
+  //     in a char* to Fn(const StringPiece& foo) { ... }
+  // Both of these iwyu requirements can be overridden by the function
+  // author; for details, see CodeAuthorWantsJustAForwarDeclare.
   bool VisitFunctionDecl(clang::FunctionDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
 
-    if (!decl->isThisDeclarationADefinition())
-      // Make all our types forward-declarable.
+    if (!decl->isThisDeclarationADefinition()) {
+      // Make all our types forward-declarable...
       current_ast_node()->set_in_forward_declare_context(true);
+    }
 
-    // Check for the non-explicit, one-arg ('autocast') constructor types.
+    // (The exceptions below don't apply to friend declarations; we
+    // never need full types for them.)
+    if (IsFriendDecl(decl))
+      return true;
+
+    // ...except the return value.
+    const Type* result_type
+        = RemoveElaboration(decl->getResultType().getTypePtr());
+    if (!CanIgnoreType(result_type) &&
+        !IsPointerOrReferenceAsWritten(result_type) &&
+        !CodeAuthorWantsJustAForwardDeclare(result_type, GetLocation(decl))) {
+      ReportTypeUse(GetLocation(decl), result_type);
+    }
+
+    // ...and non-explicit, one-arg ('autocast') constructor types.
     for (FunctionDecl::param_iterator param = decl->param_begin();
          param != decl->param_end(); ++param) {
       const Type* param_type = GetTypeOf(*param);
@@ -2176,9 +2210,17 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (IsProcessedOverloadLoc(CurrentLoc()))
       return true;
 
-    // TODO(csilvers): if the function is not inline, call
-    // ReportDeclForwardDeclareUse() instead.
     ReportDeclUse(CurrentLoc(), callee);
+
+    // Usually the function-author is responsible for providing the
+    // full type information for the return type of the function, but
+    // in cases where it's not, we have to take responsibility.
+    const Type* result_type = callee->getResultType().getTypePtr();
+    if (ContainsKey(GetCallerResponsibleTypesForFnReturn(callee),
+                    result_type)) {
+      ReportTypeUse(CurrentLoc(), result_type);
+    }
+
     return true;
   }
 
