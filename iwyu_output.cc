@@ -233,9 +233,10 @@ void OneUse::SetPublicHeaders() {
   CHECK_(suggested_header_.empty() && "Should not need a public header here");
   const IncludePicker& picker = GlobalIncludePicker();   // short alias
   // If the symbol has a special mapping, use it, otherwise map its file.
-  public_headers_ = picker.GetPublicHeadersForSymbol(symbol_name_);
+  public_headers_ = picker.GetCandidateHeadersForSymbol(symbol_name_);
   if (public_headers_.empty())
-    public_headers_ = picker.GetPublicHeadersForFilepath(decl_filepath_);
+    public_headers_ = picker.GetCandidateHeadersForFilepathIncludedFrom(
+        decl_filepath_, GetFilePath(use_loc_));
   if (public_headers_.empty())
     public_headers_.push_back(ConvertToQuotedInclude(decl_filepath_));
 }
@@ -939,9 +940,9 @@ void ProcessFullUse(OneUse* use,
     // will pick later).  TODO(csilvers): figure out that case too.
     const IncludePicker& picker = GlobalIncludePicker();
     const vector<string>& method_dfn_files
-        = picker.GetPublicHeadersForFilepath(GetFilePath(method_dfn));
+        = picker.GetCandidateHeadersForFilepath(GetFilePath(method_dfn));
     const vector<string>& parent_dfn_files
-        = picker.GetPublicHeadersForFilepath(GetFilePath(parent_dfn));
+        = picker.GetCandidateHeadersForFilepath(GetFilePath(parent_dfn));
     bool same_file;
     if (method_dfn_files.size() == 1 && parent_dfn_files.size() == 1) {
       same_file = (method_dfn_files[0] == parent_dfn_files[0]);
@@ -1020,7 +1021,7 @@ void CalculateIwyuForForwardDeclareUse(
   bool dfn_is_in_actual_includes = false;
   if (dfn) {
     vector<string> headers
-        = GlobalIncludePicker().GetPublicHeadersForFilepath(GetFilePath(dfn));
+      = GlobalIncludePicker().GetCandidateHeadersForFilepath(GetFilePath(dfn));
     for (Each<string> header(&headers); !header.AtEnd(); ++header) {
       if (ContainsKey(desired_includes, *header))
         dfn_is_in_desired_includes = true;

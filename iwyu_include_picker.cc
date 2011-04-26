@@ -904,8 +904,6 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   if (quoted_includee.find("/internal/") != string::npos) {
     MarkIncludeAsPrivate(quoted_includee);
     AddMapping(quoted_includee, quoted_includer);
-    if (quoted_includer.find("/internal/") != string::npos)
-      MarkIncludeAsPrivate(quoted_includer);
   }
 
   // Automatically mark <asm-FOO/bar.h> as private, and map to <asm/bar.h>.
@@ -1058,13 +1056,13 @@ vector<string> IncludePicker::GetPublicValues(
   return retval;
 }
 
-vector<string> IncludePicker::GetPublicHeadersForSymbol(
+vector<string> IncludePicker::GetCandidateHeadersForSymbol(
     const string& symbol) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
   return GetPublicValues(symbol_include_map_, symbol);
 }
 
-vector<string> IncludePicker::GetPublicHeadersForFilepath(
+vector<string> IncludePicker::GetCandidateHeadersForFilepath(
     const string& filepath) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
   const string quoted_header = ConvertToQuotedInclude(filepath);
@@ -1076,12 +1074,30 @@ vector<string> IncludePicker::GetPublicHeadersForFilepath(
   return retval;
 }
 
+// Except for the case of one /internal/ file including another, the
+// same as GetCandidateHeadersForFilepath.
+vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
+    const string& included_filepath, const string& including_filepath) const {
+  const size_t internal_pos = included_filepath.find("/internal/");
+  if (internal_pos != string::npos &&
+      // Check if they're both part of the same 'internal' tree -- that
+      // is, everything before the 'internal' string is the same.
+      included_filepath.substr(0, internal_pos + 1) ==
+      including_filepath.substr(0, internal_pos + 1)) {
+    vector<string> retval;
+    // The file we're including now is just fine.  No need to map it.
+    retval.push_back(ConvertToQuotedInclude(included_filepath));
+    return retval;
+  }
+  return GetCandidateHeadersForFilepath(included_filepath);
+}
+
 bool IncludePicker::HasMapping(const string& map_from_filepath,
                                const string& map_to_filepath) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
   const string quoted_from = ConvertToQuotedInclude(map_from_filepath);
   const string quoted_to = ConvertToQuotedInclude(map_to_filepath);
-  // We can't use GetPublicHeadersForFilepath since includer might be private.
+  // We can't use GetCandidateHeadersForFilepath since includer might be private
   const vector<string>* all_mappers = FindInMap(&filepath_include_map_,
                                                 quoted_from);
   if (all_mappers) {
