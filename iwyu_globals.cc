@@ -12,6 +12,7 @@
 #ifndef _MSC_VER      // _MSC_VER gets its own fnmatch from ./port.h
 #include <fnmatch.h>
 #endif
+#include <algorithm>
 #include <set>
 #include <string>
 #include "clang/Lex/HeaderSearch.h"
@@ -46,6 +47,11 @@ static bool SortByDescendingLength(const string& left, const string& right) {
   return left.length() > right.length();
 }
 
+// Sorts them by descending length, does other kinds of cleanup.
+static void NormalizeSystemIncludeDirectories(vector<string>* include_dirs) {
+  sort(include_dirs->begin(), include_dirs->end(), &SortByDescendingLength);
+}
+
 static vector<string>* ComputeSystemIncludeDirectories(
     clang::HeaderSearch* header_search) {
   vector<string>* system_include_dirs = new vector<string>;
@@ -57,8 +63,7 @@ static vector<string>* ComputeSystemIncludeDirectories(
       system_include_dirs->push_back(entry->getName());
     }
   }
-  sort(system_include_dirs->begin(), system_include_dirs->end(),
-       &SortByDescendingLength);
+  NormalizeSystemIncludeDirectories(system_include_dirs);
   return system_include_dirs;
 }
 
@@ -143,7 +148,7 @@ void InitGlobalsForTesting() {
   search_paths->push_back(".");
   search_paths->push_back("/usr/src/linux-headers-2.6.24-gg23/include");
 
-  sort(search_paths->begin(), search_paths->end(), &SortByDescendingLength);
+  NormalizeSystemIncludeDirectories(search_paths);
 }
 
 }  // namespace include_what_you_use

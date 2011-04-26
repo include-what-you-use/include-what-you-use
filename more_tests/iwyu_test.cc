@@ -116,6 +116,7 @@ TEST(IncludePicker, ConvertToQuotedInclude) {
             ConvertToQuotedInclude("/usr/include/c++/4.3/bits/stl_vector.h"));
 }
 
+
 TEST(IncludePicker, DynamicMapping_DoesMapping) {
   IncludePicker p;
   p.AddDirectInclude("project/public/foo.h", "\"project/internal/private.h\"");
