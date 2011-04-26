@@ -1966,7 +1966,8 @@ def ProcessIWYUOutput(f, files_to_process, flags):
       print '(skipping %s: not listed on commandline)' % filename
       continue
     if flags.ignore_re and re.search(flags.ignore_re, filename):
-      print '(skipping %s: it matches --ignore_re)' % filename
+      print '(skipping %s: it matches --ignore_re, which is %s)' % (
+          filename, flags.ignore_re)
       continue
 
     if filename in iwyu_output_records:
