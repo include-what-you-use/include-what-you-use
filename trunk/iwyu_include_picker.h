@@ -160,8 +160,7 @@ class IncludePicker {
   void AddImplicitThirdPartyMappings();
 
   // Helper routine to parse the internal, hard-coded mappings.
-  void InsertInto(const IncludePicker::IncludeMapEntry& e,
-                  IncludePicker::IncludeMap* include_map);
+  void InsertIntoFilepathIncludeMap(const IncludePicker::IncludeMapEntry& e);
 
   // Adds an entry to filepath_visibility_map_, with error checking.
   void MarkVisibility(const string& quoted_include,
