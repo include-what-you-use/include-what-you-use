@@ -1146,20 +1146,15 @@ The full include-list for subdir/bflag.cc:
     infile = """\
 // Copyright 2010
 
-#include <notused.h>  ///-
-#include <notused2.h>  // Hello!  ///-
-///+#include <notused.h>  // iwyu says this can be removed
-///+#include <notused2.h>  // Hello!; iwyu says this can be removed
+#include <notused.h>
+#include <notused2.h>  // Hello!
 ///+#include <stdio.h>
 #include "used.h"
 ///+#include "used2.h"
 
-class Foo;  ///-
-template<typename T>  ///-
-class Bar;  ///-
-///+class Foo;  // iwyu says this can be removed
-///+template<typename T>  // iwyu says this can be removed
-///+class Bar;  // iwyu says this can be removed
+class Foo;
+template<typename T>
+class Bar;
 
 int main() { return 0; }
 """
