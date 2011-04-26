@@ -719,14 +719,14 @@ template<typename T> class Nest::NestedTplClass;  // lines 11-11
 
 ///+namespace Bar {
 ///+class Baz;
-///+}
+///+}  // namespace Bar
 ///+
 using Bar::baz;
 
 namespace Foo { class Bang; }  ///-
 ///+namespace Foo {
 ///+class Bang;
-///+}
+///+}  // namespace Foo
 
 int main() { return 0; }
 """
@@ -758,12 +758,12 @@ namespace Foo { class Bang; }  // lines 7-7
 ///+namespace ns3 {
 ///+class Bar;
 ///+template <typename T> class Bang;
-///+}
-///+}
+///+}  // namespace ns3
+///+}  // namespace ns2
 ///+namespace ns4 {
 ///+class Baz;
-///+}
-///+}
+///+}  // namespace ns4
+///+}  // namespace ns
 ///+
 
 int main() { return 0; }
@@ -806,7 +806,7 @@ class NsFoo;
 ///+namespace ns3 {
 ///+class NsBang;
 ///+template <typename T> class NsBaz;
-///+}
+///+}  // namespace ns3
 template <typename T> class NsBar;
 
 }
@@ -846,8 +846,8 @@ class Bar;
 ///+namespace ns2 {
 ///+class NsBang;
 ///+template <typename T> class NsBaz;
-///+}
-///+}
+///+}  // namespace ns2
+///+}  // namespace ns
 template <typename T> class Baz;
 
 #ifdef THIS_IS_A_CONTENTFUL_LINE
@@ -2533,7 +2533,7 @@ The full include-list for barrier_includes.h:
 class Query;
 ///+namespace util {
 ///+class Status;
-///+}
+///+}  // namespace util
 
 namespace structuredsearch {
 
