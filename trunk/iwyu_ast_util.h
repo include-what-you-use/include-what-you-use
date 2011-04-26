@@ -589,6 +589,13 @@ bool IsNestedClass(const clang::TagDecl* decl);
 
 bool HasDefaultTemplateParameters(const clang::TemplateDecl* decl);
 
+// For any decl that inherits from clang::Redeclarable -- enums,
+// classes, typedefs, functions, vars -- returns all the declarations
+// of decl.  For any other decl, the output is just the input decl.
+// Output decls are guaranteed to be of the same type as the input
+// Decl.  If you know the input is a class, it's better to call
+// GetClassRedecls, which avoids a clang bug with friend decls.
+set<const clang::NamedDecl*> GetRedecls(const clang::NamedDecl* decl);
 
 // This accepts both RecordDecls and ClassTemplateDecls -- the return
 // Decls are guaranteed to be of the same type as the input Decl.

@@ -578,6 +578,10 @@ set<string> CalculateMinimalIncludes(
     vector<OneUse>* uses) {
   set<string> desired_headers;
 
+  // TODO(csilvers): if a use's decl supports equivalent redecls
+  // (such as a FunctionDecl or TypedefDecl), pick the redecl
+  // that yields the "best" #include.
+
   // Step (1) The easy case: decls that map to just one file.  This
   // captures both decls that aren't in private header files, and
   // those in private header files that only map to one public file.
@@ -734,6 +738,9 @@ set<string> CalculateMinimalIncludes(
 //     where iwyu demands a full use but the language allows a
 //     forward-declare.)
 // B2) Discard symbol uses of a symbol defined in the same file it's used.
+//     If the symbol is an enum, typedef, function, or var -- every decl
+//     that is re-declarable except for RecordDecl -- discard if *any*
+//     declaration is in the same file as the use.
 // B3) Discard symbol uses for builtin symbols ('__builtin_memcmp') and
 //     for operator new and operator delete (excluding placement new),
 //     which are effectively built-in even though they're in <new>.
@@ -748,9 +755,9 @@ set<string> CalculateMinimalIncludes(
 //     a.h does not see b.h in its transitive #includes.  (Note: This
 //     happens before include-picker mapping, so it's still possible to
 //     see 'new' includes via a manual mapping.)
-// B7) Discard macro uses in the same file as the definition (B2 redux).
-// B8) Discard macro uses that form a 'backwards' #include (B5 redux).
-// B9) Discard macro uses from a 'new' #include (B6 redux).
+// B1') Discard macro uses in the same file as the definition (B2 redux).
+// B2') Discard macro uses that form a 'backwards' #include (B5 redux).
+// B3') Discard macro uses from a 'new' #include (B6 redux).
 
 // Determining 'desired' #includes:
 // C1) Get a list of 'effective' direct includes.  For most files, it's
@@ -893,12 +900,26 @@ void ProcessFullUse(OneUse* use,
   }
 
   // (B2) Discard symbol uses of a symbol defined in the same file it's used.
-  if (GetFileEntry(use->use_loc()) == GetFileEntry(use->decl())) {
-    VERRS(6) << "Ignoring use of " << use->symbol_name()
-             << " (" << use->PrintableUseLoc() << "): definition is present: "
-             << PrintableLoc(GetLocation(use->decl())) << "\n";
-    use->set_ignore_use();
-    return;
+  // If the symbol can be declared in multiple places, we count it if
+  // *any* declaration is in the same file, unless the symbol is a
+  // class.  (Every other kind of redeclarable symbol, such as
+  // functions, have the property that a decl is the same as a
+  // definition from iwyu's point of view.)  We don't bother with
+  // RedeclarableTemplate<> types (FunctionTemplateDecl), since for
+  // those types, iwyu *does* care about the definition vs declaration.
+  set<const NamedDecl*> all_redecls;
+  if (isa<RecordDecl>(use->decl()))
+    all_redecls.insert(use->decl());    // for classes, just consider the dfn
+  else
+    all_redecls = GetRedecls(use->decl());
+  for (Each<const NamedDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
+    if (DeclIsVisibleToUseInSameFile(*it, *use)) {
+      VERRS(6) << "Ignoring use of " << use->symbol_name()
+               << " (" << use->PrintableUseLoc() << "): definition is present: "
+               << PrintableLoc(GetLocation(use->decl())) << "\n";
+      use->set_ignore_use();
+      return;
+    }
   }
 
   // (B3) Discard symbol uses for builtin symbols, including new/delete.
@@ -994,7 +1015,7 @@ void ProcessSymbolUse(OneUse* use,
   const FileEntry* use_file = GetFileEntry(use->use_loc());
   const string quoted_decl_file = ConvertToQuotedInclude(use->decl_filepath());
 
-  // (B7) Like (B2), discard symbol uses in the same file as their definition.
+  // (B1') Like (B2), discard symbol uses in the same file as their definition.
   if (GetFilePath(use->use_loc()) == use->decl_filepath()) {
     VERRS(6) << "Ignoring symbol use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): defined in same file\n";
@@ -1002,7 +1023,7 @@ void ProcessSymbolUse(OneUse* use,
     return;
   }
 
-  // (B8) Like (B5), discard uses of symbols that create 'backwards' includes.
+  // (B2') Like (B5), discard uses of symbols that create 'backwards' includes.
   // Note we suppress this check if suggested_header_ is already set:
   // that only happens with hard-coded uses, which we shouldn't second guess.
   // TODO(csilvers): like (B5), remove this when we have 'soft' uses.
@@ -1014,7 +1035,7 @@ void ProcessSymbolUse(OneUse* use,
     return;
   }
 
-  // (B9) Like (B6), discard uses of symbols that create 'new' includes.
+  // (B3') Like (B6), discard uses of symbols that create 'new' includes.
   if (GlobalFlags().transitive_includes_only) {
     if (!use->has_suggested_header() &&
         !preprocessor_info->FileTransitivelyIncludes(use_file,
