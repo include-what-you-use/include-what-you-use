@@ -1743,30 +1743,6 @@ def _DeleteLinesAccordingToIwyu(iwyu_record, file_lines):
     _DeleteExtraneousBlankLines(file_lines, reorder_span)
 
 
-def _MarkUnnecessaryLinesAccordingToIwyu(iwyu_record, file_lines):
-  """The equivalent of _DeleteLinesAccordingToIwyu, used with --safe_headers.
-
-  When the user runs with --safe_headers, which is the default, we do
-  not delete lines that iwyu tells us to delete from header files.
-  Instead we add a comment to the line saying that it's been judged
-  unnecessary according to iwyu.  This will allow for easy cleanup
-  later, and is also self-documenting.
-
-  Arguments:
-    iwyu_record: the IWYUOutputRecord struct for this source file
-    file_lines: a list of LineInfo objects holding the parsed output of
-      the file in iwyu_record.filename
-  """
-  comment = 'iwyu says this can be removed'
-  for line_number in iwyu_record.lines_to_delete:
-    if comment in file_lines[line_number].line:  # line already annotated
-      pass
-    elif '//' in file_lines[line_number].line:   # line already has a comment
-      file_lines[line_number].line += '; ' + comment
-    else:
-      file_lines[line_number].line += '  // ' + comment
-
-
 def FixFileLines(iwyu_record, file_lines, flags):
   """Applies one block of lines from the iwyu output script.
 
@@ -1793,9 +1769,7 @@ def FixFileLines(iwyu_record, file_lines, flags):
   """
   # First delete the includes and forward-declares that we should delete.
   # This is easy since iwyu tells us the line numbers.
-  if flags.safe_headers and _MayBeHeaderFile(iwyu_record.filename):
-    _MarkUnnecessaryLinesAccordingToIwyu(iwyu_record, file_lines)
-  else:
+  if not (flags.safe_headers and _MayBeHeaderFile(iwyu_record.filename)):
     _DeleteLinesAccordingToIwyu(iwyu_record, file_lines)
 
   # With these deletions, we may be able to merge together some
