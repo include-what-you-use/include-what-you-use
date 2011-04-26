@@ -688,6 +688,16 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   }
 }
 
+void IwyuPreprocessorInfo::PopulateTransitiveIncludeMap() {
+  CHECK_(transitive_include_map_.empty() && "Should only call this fn once");
+  for (Each<const FileEntry*, IwyuFileInfo> it(&iwyu_file_info_map_);
+       !it.AtEnd(); ++it) {
+    const FileEntry* file = it->first;
+    transitive_include_map_[file].insert(file);   // everyone includes itself!
+    AddAllIncludesAsFileEntries(file, &transitive_include_map_[file]);
+  }
+}
+
 //------------------------------------------------------------
 // The public API.
 
@@ -706,6 +716,7 @@ void IwyuPreprocessorInfo::HandlePreprocessingDone() {
   MutableGlobalIncludePicker()->FinalizeAddedIncludes();
   ProtectReexportIncludes(&iwyu_file_info_map_);
   PopulateIntendsToProvideMap();
+  PopulateTransitiveIncludeMap();
 }
 
 bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(const FileEntry* file)
@@ -737,6 +748,25 @@ bool IwyuPreprocessorInfo::PublicHeaderIntendsToProvide(
   if (const set<const FileEntry*>* provides
       = FindInMap(&intends_to_provide_map_, public_header)) {
     return Contains(*provides, other_file);
+  }
+  return false;
+}
+
+bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
+    const FileEntry* includer, const FileEntry* includee) const {
+  if (const set<const FileEntry*>* all_includes
+      = FindInMap(&transitive_include_map_, includer)) {
+    return Contains(*all_includes, includee);
+  }
+  return false;
+}
+
+bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
+    const string& quoted_includer, const FileEntry* includee) const {
+  for (Each<const FileEntry*, set<const FileEntry*> >
+           it(&transitive_include_map_); !it.AtEnd(); ++it) {
+    if (ConvertToQuotedInclude(GetFilePath(it->first)) == quoted_includer)
+      return Contains(it->second, includee);
   }
   return false;
 }

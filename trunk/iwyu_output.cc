@@ -443,7 +443,7 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
   // Store in a few other ways as well.
   direct_includes_as_fileentries_.insert(includee);
   direct_includes_.insert(quoted_includee);
-  VERRS(6) << "Marked found include: "
+  VERRS(6) << "Found include: "
            << GetFilePath(file_) << ":" << linenumber
            << " -> " << GetFilePath(includee) << "\n";
 }
@@ -458,7 +458,7 @@ void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
   if (definitely_keep_fwd_decl)
     lines_.back().set_desired();
   direct_forward_declares_.insert(fwd_decl);   // store in another way as well
-  VERRS(6) << "Marked found forward-declare: "
+  VERRS(6) << "Found forward-declare: "
            << GetFilePath(file_) << ":" << lines_.back().LineNumberString()
            << ": " << internal::PrintablePtr(fwd_decl)
            << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
@@ -781,7 +781,12 @@ set<string> CalculateMinimalIncludes(
 //     which are effectively built-in even though they're in <new>.
 // B4) Discard symbol uses for member functions that live in the same
 //     file as the class they're part of (the parent check suffices).
-// B5) Discard macro uses in the same file as the definition (B2 redux).
+// B5) Sanity check: Discard 'backwards' #includes.  These are
+//     #includes where we say a.h should #include b.h, but b.h is
+//     already #including a.h.  This happens when iwyu attributes a
+//     use to the wrong file.
+// B6) Discard macro uses in the same file as the definition (B2 redux).
+// B7) Discard macros uses that form a 'backwards' #include (B5 redux).
 
 // Determining 'desired' #includes:
 // C1) Get a list of 'effective' direct includes.  For most files, it's
@@ -892,7 +897,8 @@ void ProcessForwardDeclare(OneUse* use) {
   }
 }
 
-void ProcessFullUse(OneUse* use) {
+void ProcessFullUse(OneUse* use,
+                    const IwyuPreprocessorInfo* preprocessor_info) {
   CHECK_(use->decl() && "Must call ProcessFullUse on a decl");
   CHECK_(use->is_full_use() && "Must not call ProcessFullUse on fwd-decl");
   if (use->ignore_use())   // we're already ignoring it
@@ -979,16 +985,49 @@ void ProcessFullUse(OneUse* use) {
       return;
     }
   }
+
+  // (B5) Discard uses of symbols that form a 'backwards' #include.
+  // This means that we say a.h is using a symbol in b.h, but b.h
+  // already #includes a.h (either directly or indirectly).  Since the
+  // include graph should be acyclic, this means that iwyu messed up,
+  // either by incorrectly saying it was a.h that is using the symbol
+  // (this can happen trying to figure out who 'owns' macro code), or
+  // by incorrectly saying it was a use (this can happen with typedefs
+  // -- we say the underlying type is 'used' in a different way than
+  // the language requires).
+  // TODO(csilvers): remove this when we resolve the bugs with macros/typedefs.
+  if (preprocessor_info->FileTransitivelyIncludes(
+          GetFileEntry(use->decl()), GetFileEntry(use->use_loc()))) {
+    VERRS(6) << "Ignoring use of " << use->symbol_name()
+             << " (" << use->PrintableUseLoc() << "): 'backwards' #include\n";
+    use->set_ignore_use();
+    return;
+  }
 }
 
-void ProcessSymbolUse(OneUse* use) {
+void ProcessSymbolUse(OneUse* use,
+                      const IwyuPreprocessorInfo* preprocessor_info) {
   if (use->ignore_use())   // we're already ignoring it
     return;
 
-  // (B5) Discard symbol uses in the same file as their definition.
+  // (B6) Like (B2), discard symbol uses in the same file as their definition.
   if (GetFilePath(use->use_loc()) == use->decl_filepath()) {
     VERRS(6) << "Ignoring symbol use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): defined in same file\n";
+    use->set_ignore_use();
+    return;
+  }
+
+  // (B7) Like (B5), discard uses of symbols that create 'backwards' includes.
+  // Note we suppress this check if suggested_header_ is already set:
+  // that only happens with hard-coded uses, which we shouldn't second guess.
+  // TODO(csilvers): like (B5), remove this when we have 'soft' uses.
+  if (!use->has_suggested_header() &&
+      preprocessor_info->FileTransitivelyIncludes(
+          ConvertToQuotedInclude(use->decl_filepath()),
+          GetFileEntry(use->use_loc()))) {
+    VERRS(6) << "Ignoring use of " << use->symbol_name()
+             << " (" << use->PrintableUseLoc() << "): 'backwards' #include\n";
     use->set_ignore_use();
     return;
   }
@@ -1178,11 +1217,11 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   }
   for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
     if (it->is_full_use() && it->decl())
-      internal::ProcessFullUse(&*it);
+      internal::ProcessFullUse(&*it, preprocessor_info_);
   }
   for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
     if (it->is_full_use() && !it->decl())
-      internal::ProcessSymbolUse(&*it);
+      internal::ProcessSymbolUse(&*it, preprocessor_info_);
   }
 
   // (C1) Compute the direct includes of 'associated' files.

@@ -43,6 +43,7 @@ class OneIwyuTest(unittest.TestCase):
     # iwyu flags to run properly, add an entry to the map with
     # key=cc-filename (relative to TEST_ROOTDIR), value=list of flags.
     flags_map = {
+      'backwards_includes.cc': [CheckAlsoExtension('-d*.h')],
       'check_also.cc': [CheckAlsoExtension('-d1.h')],
       'implicit_ctor.cc': [CheckAlsoExtension('-d1.h')],
       'keep_mapping.cc': [CheckAlsoExtension('-public.h')],
