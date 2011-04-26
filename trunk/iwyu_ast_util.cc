@@ -49,6 +49,7 @@ using clang::ClassTemplateDecl;
 using clang::ClassTemplatePartialSpecializationDecl;
 using clang::ClassTemplateSpecializationDecl;
 using clang::Decl;
+using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::DeclaratorDecl;
 using clang::DependentNameType;
@@ -318,6 +319,14 @@ bool IsMemberOfATypedef(const ASTNode* ast_node) {
       return true;
   }
   return false;
+}
+
+const DeclContext* GetDeclContext(const ASTNode* ast_node) {
+  for (; ast_node != NULL; ast_node = ast_node->parent()) {
+    if (ast_node->IsA<Decl>())
+      return ast_node->GetAs<Decl>()->getDeclContext();
+  }
+  return NULL;
 }
 
 

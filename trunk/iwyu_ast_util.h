@@ -415,6 +415,9 @@ const clang::NestedNameSpecifier* GetQualifier(const ASTNode* ast_node);
 // *not* return true if the ast_node itself is a typedef.
 bool IsMemberOfATypedef(const ASTNode* ast_node);
 
+// Returns the decl-context of the deepest decl in the ast-chain.
+const clang::DeclContext* GetDeclContext(const ASTNode* ast_node);
+
 
 //------------------------------------------------------------
 // Helper functions for working with raw Clang AST nodes.

@@ -225,9 +225,6 @@ class IwyuFileInfo {
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
                            const clang::NamedDecl* decl,
                            bool in_cxx_method_body);
-  void ReportFullSymbolUse(clang::SourceLocation use_loc,
-                           const clang::Type* type,
-                           bool in_cxx_method_body);
   // This will mostly be used for macro tokens.
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
                            const string& dfn_filepath,
