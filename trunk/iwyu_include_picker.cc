@@ -173,6 +173,7 @@ const IncludePicker::IncludeMapEntry symbol_include_map[] = {
   { "NULL", kPrivate, "<string.h>", kPublic },
   { "NULL", kPrivate, "<time.h>", kPublic },
   { "NULL", kPrivate, "<wchar.h>", kPublic },
+
   // These are c++ symbol maps that handle the forwarding headers
   // that define classes as typedefs.  Because gcc uses typedefs for
   // these, we are tricked into thinking the classes are defined
