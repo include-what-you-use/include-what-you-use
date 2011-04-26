@@ -781,12 +781,8 @@ string ConvertToQuotedInclude(const string& filepath) {
   // First, get rid of leading ./'s and the like.
   string path = NormalizeFilePath(filepath);
 
-  // Case 1: a local (non-system) include.
-if (llvm::sys::path::is_relative(path)) {        // A relative path
-    return "\"" + path + "\"";
-  }
 
-  // Case 2: a system include.
+  // Case 1: a system include.
   const vector<string>& search_paths = GlobalSearchPaths();
   // GlobalSearchPaths is sorted to be longest-first, so this loop
   // will prefer the longest prefix: /usr/include/c++/4.4/foo will
@@ -798,8 +794,8 @@ if (llvm::sys::path::is_relative(path)) {        // A relative path
     }
   }
 
-
-  return "<" + path + ">";
+  // Everything else: a local (non-system) include.
+  return "\"" + path + "\"";
 }
 
 // Returns whether this is a system (as opposed to user) include file,
