@@ -1330,6 +1330,7 @@ class FileBClass;  // lines 9-9
 
 #include <notused.h>  ///-
 ///+#include <stdio.h>
+///+#include "include_this_file"  // for reason 2
 #include "used.h"
 ///+#include "used2.h"
 #include "used_only_in_file_a.h"
@@ -1341,6 +1342,7 @@ class FileBClass;   // kept for file B, not for file A   ///-
     iwyu_output = """\
 twice.cc should add these lines:
 #include <stdio.h>
+#include "include_this_file"  // for reason 1
 
 twice.cc should remove these lines:
 - #include <notused.h>  // lines 3-3
@@ -1351,11 +1353,13 @@ twice.cc should remove these lines:
 
 The full include-list for twice.cc:
 #include <stdio.h>
+#include "include_this_file"  // for reason 1
 #include "used.h"
 ---
 
 twice.cc should add these lines:
 #include "used2.h"
+#include "include_this_file"  // for reason 2
 
 twice.cc should remove these lines:
 - #include <notused.h>  // lines 3-3
@@ -1363,6 +1367,7 @@ twice.cc should remove these lines:
 - class FileBClass;  // lines 9-9
 
 The full include-list for twice.cc:
+#include "include_this_file"  // for reason 2
 #include "used.h"
 #include "used2.h"
 #include "used_only_in_file_a.h"

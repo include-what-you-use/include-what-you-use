@@ -382,8 +382,7 @@ class IWYUOutputParser(object):
 
     # IWYUOutputRecord.includes_and_forward_declares_to_add
     for line in self.lines_by_section.get(self._ADD_SECTION_RE, []):
-      if not flags.comments:
-        line = _COMMENT_RE.sub('', line)
+      line = _COMMENT_RE.sub('', line)
       retval.includes_and_forward_declares_to_add.add(line)
 
     # IWYUOutputRecord.full_include_lines
