@@ -118,6 +118,70 @@ inline vector<string> Split(
   return retval;
 }
 
+// Like Split, but using a divider of arbitrary whitespace.
+// Whitespace at the beginning and end is ignored.
+inline vector<string> SplitOnWhiteSpace(const string& str, size_t max_segs) {
+  vector<string> retval;
+  size_t tokstart = string::npos;
+  for (size_t pos = 0; pos < str.size(); ++pos) {
+    if (isspace(str[pos])) {
+      if (tokstart != string::npos) {
+        retval.push_back(str.substr(tokstart, pos - tokstart));
+        if (retval.size() == max_segs) {
+          return retval;
+        }
+        tokstart = string::npos;
+      }
+    } else {
+      if (tokstart == string::npos) {
+        tokstart = pos;
+      }
+    }
+  }
+  if (tokstart != string::npos) {
+    retval.push_back(str.substr(tokstart));
+  }
+  return retval;
+}
+
+// Like SplitOnWhiteSpace, but double-quoted and bracketed strings are
+// preserved. No error checking with respect to closing quotes is done.
+inline vector<string> SplitOnWhiteSpacePreservingQuotes(
+    const string& str, size_t max_segs) {
+  vector<string> retval;
+  size_t tokstart = string::npos;
+  char closing_quote = '\0';
+  for (size_t pos = 0; pos < str.size(); ++pos) {
+    if (isspace(str[pos])) {
+      if (tokstart != string::npos && closing_quote == '\0') {
+        retval.push_back(str.substr(tokstart, pos - tokstart));
+        if (retval.size() == max_segs) {
+          return retval;
+        }
+        tokstart = string::npos;
+      }
+    } else {
+      if (tokstart == string::npos) {
+        tokstart = pos;
+        if (str[pos] == '"') {
+          closing_quote = '"';
+        } else if (str[pos] == '<') {
+          closing_quote = '>';
+        } else {
+          closing_quote = '\0';
+        }
+      } else if (str[pos] == closing_quote) {
+        closing_quote = '\0';
+      }
+    }
+  }
+  if (tokstart != string::npos) {
+    retval.push_back(str.substr(tokstart));
+  }
+  return retval;
+}
+
+
 }  // namespace include_what_you_use
 
 #endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_

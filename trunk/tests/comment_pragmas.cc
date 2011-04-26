@@ -60,12 +60,12 @@
 #include "tests/comment_pragmas-d3.h"
 #include "tests/comment_pragmas-d4.h"
 #include "tests/comment_pragmas-d5.h"  // IWYU pragma: keep
-#include "tests/comment_pragmas-d6.h"  // IWYU pragma: keep
+#include "tests/comment_pragmas-d6.h"  // IWYU pragma: keep  // second instance, testing comment at end
 #include "tests/comment_pragmas-d7.h"
 #include "tests/comment_pragmas-d8.h"
 #include "tests/comment_pragmas-d9.h"
 #include "tests/comment_pragmas-d10.h"
-// IWYU pragma: no_include "tests/comment_pragmas-i9.h"
+// IWYU pragma: no_include "tests/comment_pragmas-i9.h"  // another test of comments
 
 
 // The following classes are all defined in public files exported by i2.h.
