@@ -1096,23 +1096,23 @@ class Bar;  ///-
 int main() { return 0; }
 """
     iwyu_output = """\
-safe_flag should add these lines:
+safe_flag.h should add these lines:
 #include <stdio.h>
 #include "used2.h"
 
-safe_flag should remove these lines:
+safe_flag.h should remove these lines:
 - #include <notused.h>  // lines 3-3
 - #include <notused.h>  // lines 4-4
 - class Foo             // lines 7-7
 - class Bar             // lines 8-9
 
-The full include-list for safe_flag:
+The full include-list for safe_flag.h:
 #include <stdio.h>
 #include "used.h"
 #include "used2.h"
 ---
 """
-    self.RegisterFileContents({'safe_flag': infile})
+    self.RegisterFileContents({'safe_flag.h': infile})
     self.ProcessAndTest(iwyu_output)
 
   def testSafeFlagTwice(self):
@@ -1134,23 +1134,61 @@ class Bar;  // iwyu says this can be removed
 int main() { return 0; }
 """
     iwyu_output = """\
-safe_flag should add these lines:
+safe_flag_twice.h should add these lines:
 #include <stdio.h>
 #include "used2.h"
 
-safe_flag should remove these lines:
+safe_flag_twice.h should remove these lines:
 - #include <notused.h>  // lines 3-3
 - #include <notused.h>  // lines 4-4
 - class Foo             // lines 7-7
 - class Bar             // lines 8-9
 
-The full include-list for safe_flag:
+The full include-list for safe_flag_twice.h:
 #include <stdio.h>
 #include "used.h"
 #include "used2.h"
 ---
 """
-    self.RegisterFileContents({'safe_flag': infile})
+    self.RegisterFileContents({'safe_flag_twice.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testSafeFlagOnCcFiles(self):
+    """Tests that we delete headers even in --safe mode, on .cc files."""
+    self.flags.safe = True
+    infile = """\
+// Copyright 2010
+
+#include <notused.h>              ///-
+#include <notused2.h>  // Hello!  ///-
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+class Foo;            ///-
+template<typename T>  ///-
+class Bar;            ///-
+                      ///-
+int main() { return 0; }
+"""
+    iwyu_output = """\
+safe_flag.cc should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+safe_flag.cc should remove these lines:
+- #include <notused.h>  // lines 3-3
+- #include <notused.h>  // lines 4-4
+- class Foo             // lines 7-7
+- class Bar             // lines 8-9
+
+The full include-list for safe_flag.cc:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    self.RegisterFileContents({'safe_flag.cc': infile})
     self.ProcessAndTest(iwyu_output)
 
   def testIncludeComments(self):

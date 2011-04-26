@@ -139,6 +139,15 @@ _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
 _BARRIER_INCLUDES = re.compile(r'^\s*#\s*include\s+(<linux/)')
 
 
+def _MayBeHeaderFile(filename):
+  """Tries to figure out if filename is a C++ header file.  Defaults to yes."""
+  # Header files have all sorts of extensions: .h, .hpp, .hxx, or no
+  # extension at all.  So we say everything is a header file unless it
+  # has a known extension that's not.
+  extension = os.path.splitext(filename)[1]
+  return extension not in ('.c', '.cc', '.cxx', '.cpp', '.C', '.CC')
+
+
 class FixIncludesError(Exception):
   pass
 
@@ -489,7 +498,7 @@ def _WriteFileContents(filename, file_lines):
 
 def _RunCommandOnFiles(command, filenames):
   """Run the given shell command on the given filenames (appended to end)."""
-  # Replace ' with '"'"' in the filename, since it's inside single quotes.
+  # Replace ' with '\'' in the filename, since it's inside single quotes.
   # Consider using map(pipes.quote, filenames) instead.
   escaped_filenames = [f.replace("'", "'\\''") for f in filenames]
   os.system("%s '%s'" % (command, "' '".join(escaped_filenames)))
@@ -1764,7 +1773,7 @@ def FixFileLines(iwyu_record, file_lines, flags):
   """
   # First delete the includes and forward-declares that we should delete.
   # This is easy since iwyu tells us the line numbers.
-  if flags.safe:
+  if flags.safe and _MayBeHeaderFile(iwyu_record.filename):
     _MarkUnnecessaryLinesAccordingToIwyu(iwyu_record, file_lines)
   else:
     _DeleteLinesAccordingToIwyu(iwyu_record, file_lines)
@@ -2020,7 +2029,8 @@ def main(argv):
   parser.add_option('--nocomments', action='store_false', dest='comments')
 
   parser.add_option('--safe', action='store_true', default=False,
-                    help='Do not remove #includes/fwd-declares, just add them')
+                    help=('Do not remove unused #includes/fwd-declares from'
+                          ' header files, just add new ones'))
   parser.add_option('--nosafe', action='store_false', dest='safe',
                     help=('Also remove #includes/fwd-declares,'
                           ' not just add them'))
