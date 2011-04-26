@@ -487,29 +487,12 @@ def _WriteFileContents(filename, file_lines):
     print "Error writing '%s': %s" % (filename, why)
 
 
-def _RunCommandOnFile(command, filename):
-  """Run the given shell command on the given filename (appended to end)."""
+def _RunCommandOnFiles(command, filenames):
+  """Run the given shell command on the given filenames (appended to end)."""
   # Replace ' with '"'"' in the filename, since it's inside single quotes.
-  os.system("%s '%s'" % (command, filename.replace("'", "'\"'\"'")))
-
-
-def _WriteFileContentsIfPossible(filename, file_lines, checkout_command):
-  """Write the given file-lines to the file, if it can be written.
-
-  Arguments:
-    filename: the name of the file to write.
-    file_lines: iterable collection of lines.
-    checkout_command: a shell command to run on the file if it is not
-       writeable.  The command should be a string, to which we append
-       the filename to edit; for example, "p4 edit".  If empty or None,
-       no checkout command is run.
-  """
-  if checkout_command and not os.access(filename, os.W_OK):
-    # TODO(user): Per wan@google.com, it would be MUCH faster to run
-    # a single checkout command for all files that need to be checked
-    # out, rather than one command for each file.
-    _RunCommandOnFile(checkout_command, filename)
-  _WriteFileContents(filename, file_lines)
+  # Consider using map(pipes.quote, filenames) instead.
+  escaped_filenames = [f.replace("'", "'\\''") for f in filenames]
+  os.system("%s '%s'" % (command, "' '".join(escaped_filenames)))
 
 
 def PrintFileDiff(old_file_contents, new_file_contents):
@@ -1859,14 +1842,13 @@ def FixFileLines(iwyu_record, file_lines, flags):
   return output_lines
 
 
-def FixOneFile(iwyu_record, flags):
-  """Fix the #include and forward-declare lines of one file.
+def GetFixedFile(iwyu_record, flags):
+  """Figure out #include and forward-declare line fixes of one file.
 
   Given an iwyu record for a single file, listing the #includes and
-  forward-declares to add, remove, and re-sort, loads the file,
-  makes the fixes, and writes the file out again.  The flags
-  effect how file loading and saving are done, as well as the
-  details of the fixing.
+  forward-declares to add, remove, and re-sort, loads the file, makes
+  the fixes, and returns the fixed file as a list of lines.  The flags
+  affect the details of the fixing.
 
   Arguments:
     iwyu_record: an IWYUOutputRecord object holding the parsed output
@@ -1874,19 +1856,19 @@ def FixOneFile(iwyu_record, flags):
       higher) pertaining to a single source file.
       iwyu_record.filename indicates what file to edit.
     flags: commandline flags, as parsed by optparse.  We use
-       flags.dry_run, which determines whether we write the 'fixed'
-       file to disk, flags.checkout_command, which determines
-       how we handle files that are not writable, and other flags
+       flags.dry_run and flags.checkout_command, which determine
+       whether we try to fix unwritable files, and other flags
        indirectly.
 
   Returns:
-    1 if the file needed to be fixed, or 0 if it was already all ok.
+    A list of strings representing the 'fixed' file, if the file has
+    changed, or None if the file hasn't changed at all.
   """
   file_contents = _ReadWriteableFile(iwyu_record.filename,
                                      flags.dry_run or flags.checkout_command)
   if not file_contents:
     print '(skipping %s: not a writable file)' % iwyu_record.filename
-    return 0
+    return None
   print ">>> Fixing #includes in '%s'" % iwyu_record.filename
   file_lines = ParseOneFile(file_contents, iwyu_record)
   old_lines = [fl.line for fl in file_lines
@@ -1895,14 +1877,55 @@ def FixOneFile(iwyu_record, flags):
   fixed_lines = [line for line in fixed_lines if line is not None]
   if old_lines == fixed_lines:
     print "No changes in file", iwyu_record.filename
-    return 0
+    return None
 
   if flags.dry_run:
     PrintFileDiff(old_lines, fixed_lines)
-  else:
-    _WriteFileContentsIfPossible(iwyu_record.filename, fixed_lines,
-                                 flags.checkout_command)
-  return 1
+
+  return fixed_lines
+
+
+def FixManyFiles(iwyu_records, flags):
+  """Given a list of iwyu_records, fix each file listed in the record.
+
+  For each iwyu record in the input, which lists the #includes and
+  forward-declares to add, remove, and re-sort, loads the file, makes
+  the fixes, and writes the fixed file to disk.  The flags affect the
+  details of the fixing.
+
+  Arguments:
+    iwyu_records: a collection of IWYUOutputRecord objects holding
+      the parsed output of the include-what-you-use script (run at
+      verbose level 1 or higher) pertaining to a single source file.
+      iwyu_record.filename indicates what file to edit.
+    flags: commandline flags, as parsed by optparse.  We use
+       flags.dry_run and flags.checkout_command, which determine
+       how we read and write files, and other flags indirectly.
+
+  Returns:
+    The number of files fixed (as opposed to ones that needed no fixing).
+  """
+  files_to_fix = []
+  files_to_checkout = []
+  for iwyu_record in iwyu_records:
+    try:
+      fixed_lines = GetFixedFile(iwyu_record, flags)
+      if not flags.dry_run and fixed_lines is not None:
+        files_to_fix.append((iwyu_record.filename, fixed_lines))
+        if (flags.checkout_command and
+            not os.access(iwyu_record.filename, os.W_OK)):
+          files_to_checkout.append(iwyu_record.filename)
+    except FixIncludesError, why:
+      print 'ERROR: %s - skipping file %s' % (why, iwyu_record.filename)
+
+  # It's much faster to check out all the files at once.
+  if flags.checkout_command and files_to_checkout:
+    _RunCommandOnFiles(flags.checkout_command, files_to_checkout)
+
+  for (filename, fixed_lines) in files_to_fix:
+    _WriteFileContents(filename, fixed_lines)
+
+  return len(files_to_fix)
 
 
 def ProcessIWYUOutput(f, files_to_process, flags):
@@ -1948,14 +1971,8 @@ def ProcessIWYUOutput(f, files_to_process, flags):
     else:
       iwyu_output_records[filename] = iwyu_record
 
-  # Now do all the fixing.
-  num_fixes_made = 0
-  for iwyu_record in iwyu_output_records.itervalues():
-    try:
-      num_fixes_made += FixOneFile(iwyu_record, flags)
-    except FixIncludesError, why:
-      print 'ERROR: %s - skipping file %s' % (why, iwyu_record.filename)
-  return num_fixes_made
+  # Now do all the fixing, and return the number of files modified
+  return FixManyFiles(iwyu_output_records.itervalues(), flags)
 
 
 def SortIncludesInFiles(files_to_process, flags):
@@ -1977,15 +1994,15 @@ def SortIncludesInFiles(files_to_process, flags):
     already all correct, that is, already in sorted order).
   """
   num_fixes_made = 0
+  sort_only_iwyu_records = []
   for filename in files_to_process:
     # An empty iwyu record has no adds or deletes, so its only effect
     # is to cause us to sort the #include lines.  (Since fix_includes
     # gets all its knowledge of where forward-declare lines are from
     # the iwyu input, with an empty iwyu record it just ignores all
     # the forward-declare lines entirely.)
-    sort_only_iwyu_record = IWYUOutputRecord(filename)
-    num_fixes_made += FixOneFile(sort_only_iwyu_record, flags)
-  return num_fixes_made
+    sort_only_iwyu_records.append(IWYUOutputRecord(filename))
+  return FixManyFiles(sort_only_iwyu_records, flags)
 
 
 def main(argv):
@@ -2023,9 +2040,9 @@ def main(argv):
                           ' name matches this regular expression.'))
 
   parser.add_option('--checkout_command', default=None,
-                    help=('A command, such as "p4 edit", to run on each'
-                          ' non-writeable file before modifying it.  The name'
-                          ' of the file will be appended to the command after'
+                    help=('A command, such as "p4 edit", to run on all the'
+                          ' non-writeable files before modifying them.  The'
+                          ' filenames will be appended to the command after'
                           ' a space.  The command will not be run on any file'
                           ' that does not need to change.'))
 
