@@ -1727,10 +1727,11 @@ def _DeleteLinesAccordingToIwyu(iwyu_record, file_lines):
 def _MarkUnnecessaryLinesAccordingToIwyu(iwyu_record, file_lines):
   """The equivalent of _DeleteLinesAccordingToIwyu, but used in --safe mode.
 
-  When the user runs with --safe, we do not delete lines that iwyu tells
-  us to delete.  Instead we add a comment to the line saying that it's
-  been judged unnecessary according to iwyu.  This will allow for easy
-  cleanup later, and is also self-documenting.
+  When the user runs with --safe, which is the default, we do not
+  delete lines that iwyu tells us to delete from header files.
+  Instead we add a comment to the line saying that it's been judged
+  unnecessary according to iwyu.  This will allow for easy cleanup
+  later, and is also self-documenting.
 
   Arguments:
     iwyu_record: the IWYUOutputRecord struct for this source file
@@ -2028,7 +2029,7 @@ def main(argv):
                     help='Put comments after the #include lines [default]')
   parser.add_option('--nocomments', action='store_false', dest='comments')
 
-  parser.add_option('--safe', action='store_true', default=False,
+  parser.add_option('--safe', action='store_true', default=True,
                     help=('Do not remove unused #includes/fwd-declares from'
                           ' header files, just add new ones'))
   parser.add_option('--nosafe', action='store_false', dest='safe',

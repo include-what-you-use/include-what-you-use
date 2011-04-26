@@ -73,7 +73,7 @@ your source files based on the iwyu recommendations.  This is also
 alpha-quality software!  Here's how to use it (requires python):
 
    make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use > /tmp/iwyu.out
-   python fix_includes.py < /tmp/iwyu.out
+   python fix_includes.py --nosafe < /tmp/iwyu.out
 
 If you don't like the way fix_includes.py munges your #include lines,
 you can control its behavior via flags. fix_includes.py --help will
