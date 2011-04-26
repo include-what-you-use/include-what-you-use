@@ -233,7 +233,6 @@ TEST(IncludePicker, GetPublicHeadersForFilepath_CXX) {
 
 TEST(IncludePicker, GetPublicHeadersForFilepath_ThirdParty) {
   IncludePicker p;
-  // For globs to work, we need to have actually seen the includes.
   p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h");
   p.AddDirectInclude("b.h", "third_party/dynamic_annotations/a/b/c.h");
   p.AddDirectInclude("c.h", "third_party/python2_4_3/includes/py.h");
@@ -256,6 +255,27 @@ TEST(IncludePicker, GetPublicHeadersForFilepath_ThirdParty) {
   EXPECT_VECTOR_STREQ(
       p.GetPublicHeadersForFilepath("third_party/icu/include/unicode/ukeep.h"),
       "\"third_party/icu/include/unicode/ukeep.h\"");
+}
+
+TEST(IncludePicker, GetPublicHeadersForFilepath_ThirdPartyCycle) {
+  IncludePicker p;
+  // We should ignore the cycle here.
+  p.AddDirectInclude("myapp.h", "third_party/a.h");
+  p.AddDirectInclude("third_party/a.h", "third_party/b.h");
+  p.AddDirectInclude("third_party/b.h", "third_party/c.h");
+  p.AddDirectInclude("third_party/c.h", "third_party/a.h");  // cycle!
+  p.FinalizeAddedIncludes();
+
+  // We ignore the cycle, so the includes look like a -> b -> c.
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("third_party/a.h"),
+      "\"third_party/a.h\"");
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("third_party/b.h"),
+      "\"third_party/b.h\"", "\"third_party/a.h\"");
+  EXPECT_VECTOR_STREQ(
+      p.GetPublicHeadersForFilepath("third_party/c.h"),
+      "\"third_party/c.h\"", "\"third_party/b.h\"", "\"third_party/a.h\"");
 }
 
 TEST(IncludePicker, GetPublicHeadersForFilepath_GlobOverlap) {

@@ -720,56 +720,84 @@ inline bool IsQuotedInclude(const string& s) {
           (StartsWith(s, "\"") && EndsWith(s, "\"")));
 }
 
-// If the filepath map maps a.h to b.h, and also b.h to c.h, then
+// Given a vector of nodes, augment each node with its children, as
+// defined by m: nodes[i] is replaced by nodes[i] + m[nodes[i]],
+// ignoring duplicates.  The input vector is modified in place.
+void ExpandOnce(const IncludePicker::IncludeMap& m, vector<string>* nodes) {
+  vector<string> nodes_and_children;
+  set<string> seen_nodes_and_children;
+  for (Each<string> node(nodes); !node.AtEnd(); ++node) {
+    // First insert the node itself, then all its kids.
+    if (!ContainsKey(seen_nodes_and_children, *node)) {
+      nodes_and_children.push_back(*node);
+      seen_nodes_and_children.insert(*node);
+    }
+    if (const vector<string>* children = FindInMap(&m, *node)) {
+      for (Each<string> child(children); !child.AtEnd(); ++child) {
+        if (!ContainsKey(seen_nodes_and_children, *child)) {
+          nodes_and_children.push_back(*child);
+          seen_nodes_and_children.insert(*child);
+        }
+      }
+    }
+  }
+  nodes->swap(nodes_and_children);  // modify nodes in-place
+}
+
+enum TransitiveStatus { kUnused = 0, kCalculating, kDone };
+
+// If the filename-map maps a.h to b.h, and also b.h to c.h, then
 // there's a transitive mapping of a.h to c.h.  We want to add that
 // into the filepath map as well, to make lookups easier.  We do this
 // by doing a depth-first search for a single mapping, recursing
 // whenever the value is itself a key in the map, and putting the
 // results in a vector of all values seen.
-void AugmentValuesForKey(
-    const IncludePicker::IncludeMap& m,
-    const string& key, const string& value,
-    set<string> seen_keys,            // used to avoid recursion
-    vector<string>* all_values) {
-  CHECK_(!ContainsKey(seen_keys, key) && "Cycle in include-mapping");
-  CHECK_(key != value && "Self-mapping in include-mapping");
-  all_values->push_back(value);
-
-  const string new_key = value;
-  const vector<string>* values = FindInMap(&m, new_key);
-  if (!values)     // no need to recurse
-    return;
-  seen_keys.insert(key);              // update the stack with the old key
-  for (Each<string> it(values); !it.AtEnd(); ++it) {
-    AugmentValuesForKey(m, new_key, *it, seen_keys, all_values);
+// NOTE: This function updates values seen in filename_map, but
+// does not invalidate any filename_map iterators.
+void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
+                        map<string, TransitiveStatus>* seen_nodes,
+                        const string& key) {
+  // If we've already calculated this node's transitive closure, we're done.
+  const TransitiveStatus status = (*seen_nodes)[key];
+  if (status == kCalculating) {   // means there's a cycle in the mapping
+    // third-party code sometimes has #include cycles (*cough* boost
+    // *cough*).  Because we add many implicit third-party mappings,
+    // we may add a cycle without meaning to.  The best we can do is
+    // to ignore the mapping that causes the cycle.
+    if (StartsWith(key, "\"third_party/"))
+      return;
   }
+  CHECK_(status != kCalculating && "Cycle in include-mapping");
+  if (status == kDone)
+    return;
+
+  IncludePicker::IncludeMap::iterator node = filename_map->find(key);
+  if (node == filename_map->end()) {
+    (*seen_nodes)[key] = kDone;
+    return;
+  }
+
+  // Keep track of node->second as we update it, to avoid duplicates.
+  (*seen_nodes)[key] = kCalculating;
+  for (Each<string> child(&node->second); !child.AtEnd(); ++child) {
+    MakeNodeTransitive(filename_map, seen_nodes, *child);
+  }
+  (*seen_nodes)[key] = kDone;
+
+  // Our transitive closure is just the union of the closure of our
+  // children.  This routine replaces our value with this closure,
+  // by replacing each of our values with its values.  Since our
+  // values have already been made transitive, that is a closure.
+  ExpandOnce(*filename_map, &node->second);
 }
 
-// This updates the values in include_map based on the transitive
-// mappings seen in filename_map.  It's ok if the two are the same.
-// This could be made much more efficient, but I don't see a need yet.
-void MakeMapTransitive(const IncludePicker::IncludeMap& filename_map,
-                       IncludePicker::IncludeMap* include_map) {
-  // We can't use Each<>() because we need a non-const iterator.
-  for (IncludePicker::IncludeMap::iterator it = include_map->begin();
-       it != include_map->end(); ++it) {
-    vector<string> all_values_for_current_key;
-    for (Each<string> value(&it->second); !value.AtEnd(); ++value) {
-      const string key = it->first;
-      AugmentValuesForKey(filename_map, key, *value, set<string>(),
-                          &all_values_for_current_key);
-    }
-    // Copy all_values_for_current_key into it->second, uniquifying as we go.
-    it->second.clear();
-    set<string> seen_values;
-    for (Each<string> value(&all_values_for_current_key);
-         !value.AtEnd(); ++value) {
-      if (!ContainsKey(seen_values, *value)) {
-        it->second.push_back(*value);
-        seen_values.insert(*value);
-      }
-    }
-  }
+// Updates the values in filename_map based on its transitive mappings.
+void MakeMapTransitive(IncludePicker::IncludeMap* filename_map) {
+  // Insert keys of filename_map here once we know their value is
+  // the complete transitive closure.
+  map<string, TransitiveStatus> seen_nodes;
+  for (Each<string, vector<string> > it(filename_map); !it.AtEnd(); ++it)
+    MakeNodeTransitive(filename_map, &seen_nodes, it->first);
 }
 
 
@@ -1000,8 +1028,14 @@ void IncludePicker::FinalizeAddedIncludes() {
   AddImplicitThirdPartyMappings();
 
   // If a.h maps to b.h maps to c.h, we'd like an entry from a.h to c.h too.
-  MakeMapTransitive(filepath_include_map_, &filepath_include_map_);
-  MakeMapTransitive(filepath_include_map_, &symbol_include_map_);
+  MakeMapTransitive(&filepath_include_map_);
+  // Now that filepath_include_map_ is transitively closed, it's an
+  // easy task to get the values of symbol_include_map_ closed too.
+  // We can't use Each<>() because we need a non-const iterator.
+  for (IncludePicker::IncludeMap::iterator it = symbol_include_map_.begin();
+       it != symbol_include_map_.end(); ++it) {
+    ExpandOnce(filepath_include_map_, &it->second);
+  }
 
   has_called_finalize_added_include_lines_ = true;
 }
