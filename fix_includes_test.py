@@ -957,10 +957,10 @@ struct KeepStruct;
 class NoKeepClass;  ///-
 template<typename Foo> class KeepTplClass;
 U_NAMESPACE_END
-                                                ///-
-U_NAMESPACE_BEGIN                               ///-
-template<typename Foo> class NoKeepTplClass;    ///-
-U_NAMESPACE_END                                 ///-
+                                                  ///-
+  U_NAMESPACE_BEGIN                               ///-
+  template<typename Foo> class NoKeepTplClass;    ///-
+  U_NAMESPACE_END                                 ///-
 
 int main() { return 0; }
 """
@@ -977,6 +977,38 @@ namespace ns1 { template<typename Foo> class KeepTplClass; }  // lines 6-6
 ---
 """
     self.RegisterFileContents({'icu_namespace': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testHashNamespaces(self):
+    """Tests we treat the hash namespace macros as namespaces."""
+    infile = """\
+// Copyright 2010
+
+HASH_NAMESPACE_DECLARATION_START   // macro from hash.h
+struct KeepStruct;
+class NoKeepClass;  ///-
+template<typename Foo> class KeepTplClass;
+HASH_NAMESPACE_DECLARATION_END
+                                                  ///-
+  HASH_NAMESPACE_DECLARATION_START                ///-
+  template<typename Foo> class NoKeepTplClass;    ///-
+  HASH_NAMESPACE_DECLARATION_END                  ///-
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+hash_namespace should add these lines:
+
+hash_namespace should remove these lines:
+- class NoKeepClass;  // lines 5-5
+- template<typename Foo> class NoKeepTplClass;    // lines 10-10
+
+The full include-list for hash_namespace:
+namespace ns1 { struct KeepStruct; }  // lines 4-4
+namespace ns1 { template<typename Foo> class KeepTplClass; }  // lines 6-6
+---
+"""
+    self.RegisterFileContents({'hash_namespace': infile})
     self.ProcessAndTest(iwyu_output)
 
   def testElaboratedClasses(self):
@@ -1857,6 +1889,12 @@ class Delete1;                 ///-
 }}}                            ///-
                                                 ///-
 namespace A { namespace B { class Delete2; } }  ///-
+                         ///-
+namespace A {            ///-
+   namespace B {         ///-
+     class Delete3;      ///-
+   }                     ///-
+}  // namespace A        ///-
 
 int main() { return 0; }
 """
@@ -1867,6 +1905,7 @@ many_namespaces should add these lines:
 many_namespaces should remove these lines:
 - class Delete1;  // lines 13-13
 - class Delete2;  // lines 16-16
+- class Delete3;  // lines 20-20
 
 The full include-list for many_namespaces:
 #include <stdio.h>
