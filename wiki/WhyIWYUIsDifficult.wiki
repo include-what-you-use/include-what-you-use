@@ -204,6 +204,15 @@ foo.cc: #include "foo.h"
 
 If iwyu just blindly replaces the `#include` with a forward declare such as `namespace ns { class Foo; }`, the code will break because of the lost using declaration.  Include-what-you-use has to watch out for this case.
 
+Another case is a header file like this:
+{{{
+foo.h:
+   #define MODULE_NAME MyModule
+   #include "module_writer.h"
+}}}
+
+We might think we can remove an #include of `foo.h` and replace it by  `#include module_writer.h`, but that is likely to break the build if `module_writer.h` requires `MODULE_NAME` be defined.  Since my file doesn't participate in this dependency at all, it won't even notice it.  IWYU needs to keep track of dependencies between files it's not even trying to analyze!
+
 ==Private Includes==
 
 Suppose you write `vector<int> v;`. You are using vector, and thus have
