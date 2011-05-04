@@ -715,9 +715,11 @@ set<string> CalculateMinimalIncludes(
 // A1) If not a class or a templated class, recategorize as a full use.
 // A2) If a templated class with default template params, recategorize
 //     as a full use (forward-declaring in that case is too error-prone).
-// A3) If a symbol in std, recategorize as a full use.  This is entirely
-//     a policy decision: we've decided never to forward-declare anything
-//     in std.
+// A3) If a symbol in std, __gnu_cxx, or another system namespace,
+//     recategorize as a full use.  This is entirely a policy
+//     decision: we've decided never to forward-declare anything in
+//     a system namespace, because it's best not to expose the internals
+//     of system headers in user code, if possible.
 // A4) If a nested class, discard this use (the parent class declaration
 //     is sufficient).
 // A5) If any of the redeclarations of this declaration is in the same
@@ -815,10 +817,15 @@ void ProcessForwardDeclare(OneUse* use) {
     }
   }
 
-  // (A3) If it is in namespace std, recategorize as a full use.
-  if (StartsWith(use->symbol_name(), "std::")) {
+  // (A3) If it is in namespace std or a system ns, recategorize as a full use.
+  // We can add new system namespaces here as needed.
+  // TODO(csilvers): if someone has specialized a class in std, the
+  // specialization should be treated as in user-space and
+  // forward-declarable.  Check for that case.
+  if (StartsWith(use->symbol_name(), "std::") ||
+      StartsWith(use->symbol_name(), "__gnu_cxx::")) {
     VERRS(6) << "Moving " << use->symbol_name()
-             << " from fwd-decl use to full use: in namespace std"
+             << " from fwd-decl use to full use: in a system namespace "
              << " (" << use->PrintableUseLoc() << ")\n";
     use->set_full_use();
     // No return here: (A4) or (A5) may cause us to ignore this decl entirely.
