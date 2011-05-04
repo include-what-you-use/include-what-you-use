@@ -399,19 +399,22 @@ const IncludePicker::IncludeMapEntry c_include_map[] = {
   // <cassert> back to <assert.h>.  (If you *did* want to replace
   // assert.h with cassert, you'd change it to a public->private
   // mapping.)  Here is how I identified the files to map:
-  // $ for i in /usr/include/c++/4.4/c* ; do ls /usr/include/`basename $i | cut -b2-`.h 2>/dev/null ; done
-  // I also added in stddef.h, which is in a system-specific location.
+  // $ for i in /usr/include/c++/4.4/c* ; do ls /usr/include/`basename $i | cut -b2-`.h /usr/lib/gcc/*/4.4/include/`basename $i | cut -b2-`.h 2>/dev/null ; done
   { "<assert.h>", kPublic, "<cassert>", kPublic },
   { "<complex.h>", kPublic, "<ccomplex>", kPublic },
   { "<ctype.h>", kPublic, "<cctype>", kPublic },
   { "<errno.h>", kPublic, "<cerrno>", kPublic },
   { "<fenv.h>", kPublic, "<cfenv>", kPublic },
+  { "<float.h>", kPublic, "<cfloat>", kPublic },
   { "<inttypes.h>", kPublic, "<cinttypes>", kPublic },
+  { "<iso646.h>", kPublic, "<ciso646>", kPublic },
   { "<limits.h>", kPublic, "<climits>", kPublic },
   { "<locale.h>", kPublic, "<clocale>", kPublic },
   { "<math.h>", kPublic, "<cmath>", kPublic },
   { "<setjmp.h>", kPublic, "<csetjmp>", kPublic },
   { "<signal.h>", kPublic, "<csignal>", kPublic },
+  { "<stdarg.h>", kPublic, "<cstdarg>", kPublic },
+  { "<stdbool.h>", kPublic, "<cstdbool>", kPublic },
   { "<stddef.h>", kPublic, "<cstddef>", kPublic },
   { "<stdint.h>", kPublic, "<cstdint>", kPublic },
   { "<stdio.h>", kPublic, "<cstdio>", kPublic },
