@@ -1035,6 +1035,48 @@ template <typename T> class Baz;  // lines 6-6
                                  infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testAddForwardDeclareInsideNamespaceWithUnnamedNamespace(self):
+    """Tests that unnamed namespaces do not mess up our in-ns calculation."""
+    infile = """\
+// Copyright 2010
+
+#include "foo.h"
+
+class Bar;
+
+namespace ns {
+///+
+///+class NsBang;
+///+template <typename T> class NsBaz;
+
+namespace   {
+class NsFoo;
+template <typename T> class NsBar;
+}
+}
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_decl_inside_namespace_unnamed_ns should add these lines:
+namespace ns { class NsBang; }
+namespace ns { template <typename T> class NsBaz; }
+
+add_fwd_decl_inside_namespace_unnamed_ns should remove these lines:
+
+The full include-list for add_fwd_decl_inside_namespace_unnamed_ns:
+#include "foo.h"  // lines 3-3
+class Bar;  // lines 5-5
+namespace ns { namespace { class NsFoo; } }  // lines 12-12
+namespace ns { class NsBang; }
+namespace ns { template <typename T> class NsBaz; }
+namespace ns { namespace { template <typename T> class NsBar; } }  // lines 13-13
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_inside_namespace_unnamed_ns':
+                                 infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testRemoveNamespaces(self):
     """Tests that we keep or remove ns's based on fwd decl content."""
     infile = """\
