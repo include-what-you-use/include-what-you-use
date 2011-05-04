@@ -26,6 +26,7 @@
 
 using std::find;
 using std::map;
+using std::make_pair;
 using std::pair;
 using std::string;
 using std::vector;
@@ -934,32 +935,55 @@ void IncludePicker::MarkIncludeAsPrivate(const string& quoted_include) {
   MarkVisibility(quoted_include, kPrivate);
 }
 
+void IncludePicker::AddFriendGlob(const string& includee,
+                                  const string& friend_glob) {
+  friend_to_headers_map_[friend_glob].insert(includee);
+}
+
+namespace {
+// Given a map keyed by string, return a vector containing the keys
+// that are globs.
+template <typename MapType> vector<string> ExtractGlobKeys(const MapType& m) {
+  vector<string> glob_keys;
+  for (Each<typename MapType::value_type> it(&m); !it.AtEnd(); ++it) {
+    if (it->first.find_first_of("*[?") != string::npos)
+      glob_keys.push_back(it->first);
+  }
+  return glob_keys;
+}
+}  // namespace
+
 // Given a map whose keys may have globs (* or [] or ?), expand the
 // globs by matching them against all #includes seen by iwyu.  For
 // each include that matches the glob, we add it to the map by copying
 // the glob entry and replacing the key with the seen #include.
 void IncludePicker::ExpandGlobs() {
   // First, get the glob entries.
-  map<string, vector<string> > mappings_with_glob_keys;  // key to values-seen
-  for (Each<IncludeMap::value_type>
-           it(&filepath_include_map_); !it.AtEnd(); ++it) {
-    if (it->first.find_first_of("*[?") != string::npos)
-      mappings_with_glob_keys.insert(*it);
-  }
+  const vector<string> filepath_include_map_glob_keys =
+      ExtractGlobKeys(filepath_include_map_);
+  const vector<string> friend_to_headers_map_glob_keys =
+      ExtractGlobKeys(friend_to_headers_map_);
 
   // Then, go through all #includes to see if they match the globs,
   // discarding the identity mappings.
   for (Each<string, set<string> > incmap(&quoted_includes_to_quoted_includers_);
        !incmap.AtEnd(); ++incmap) {
     const string& hdr = incmap->first;
-    for (Each<string, vector<string> >
-             it(&mappings_with_glob_keys); !it.AtEnd(); ++it) {
-      const string& glob_key = it->first;
-      const vector<string>& map_to = it->second;
+    for (Each<string> it(&filepath_include_map_glob_keys); !it.AtEnd(); ++it) {
+      const string& glob_key = *it;
+      const vector<string>& map_to = filepath_include_map_[glob_key];
       if (fnmatch(glob_key.c_str(), hdr.c_str(), 0) == 0 &&   // has a match
           !ContainsValue(map_to, hdr)) {
         Extend(&filepath_include_map_[hdr], filepath_include_map_[glob_key]);
         MarkVisibility(hdr, filepath_visibility_map_[glob_key]);
+      }
+    }
+    for (Each<string> it(&friend_to_headers_map_glob_keys);
+         !it.AtEnd(); ++it) {
+      const string& glob_key = *it;
+      if (fnmatch(glob_key.c_str(), hdr.c_str(), 0) == 0) {
+        InsertAllInto(friend_to_headers_map_[glob_key],
+                      &friend_to_headers_map_[hdr]);
       }
     }
   }
@@ -1083,6 +1107,14 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepath(
 // same as GetCandidateHeadersForFilepath.
 vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     const string& included_filepath, const string& including_filepath) const {
+  const set<string>* headers_with_includer_as_friend =
+      FindInMap(&friend_to_headers_map_, including_filepath);
+  if (headers_with_includer_as_friend != NULL &&
+      ContainsKey(*headers_with_includer_as_friend, included_filepath)) {
+    vector<string> retval;
+    retval.push_back(ConvertToQuotedInclude(included_filepath));
+    return retval;
+  }
   const size_t internal_pos = included_filepath.find("/internal/");
   if (internal_pos != string::npos &&
       // Check if they're both part of the same 'internal' tree -- that

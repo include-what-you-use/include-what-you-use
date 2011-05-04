@@ -21,13 +21,18 @@
 // iwyu check on that use.
 //
 
-// 3) Process iwyu pragma-like constructs. Here are the constructs we
-// look for:
+// 3) Process iwyu pragma-like constructs.  Comments beginning "//"
+// are allowed to follow any pragma, otherwise extraneous text on the
+// line will result in an error message being logged. Here are the
+// constructs we look for:
 // Full-line constructs:
 //    a) // IWYU pragma: private, include "foo/bar/baz.h"
 //    b) // IWYU pragma: begin_exports
 //    c) // IWYU pragma: end_exports
 //    d) // IWYU pragma: no_include "foo/bar/baz.h"
+//    e) // IWYU pragma: friend foo/bar/*
+//       // IWYU pragma: friend "foo/quotes needed if spaces in path/*"
+//       // IWYU pragma: friend foo/just_one_file.cc
 // 'Annotation' constructs:
 //    d) #include "foo/bar/baz.h"  // IWYU pragma: export
 //    e) #include "foo/bar/baz.h"  // IWYU pragma: keep

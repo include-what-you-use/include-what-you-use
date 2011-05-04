@@ -212,6 +212,21 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
       continue;
     }
 
+    if (MatchOneToken(tokens, "friend", 2, current_loc)) {
+      // 2nd token should be a glob.
+      string glob = tokens[1];
+      // It is allowed to be quoted. In fact, it *must* be quoted if
+      // it contains white space.
+      if (glob.size() >= 2 && glob[0] == '"' && glob[glob.size() - 1] == '"') {
+        glob = glob.substr(1, glob.size() - 2);
+      }
+      ERRSYM(GetFileEntry(current_loc))
+          << GetFilePath(current_loc) << " adding friend glob " << glob << "\n";
+      MutableGlobalIncludePicker()->AddFriendGlob(
+          GetFilePath(current_loc), glob);
+      continue;
+    }
+
     // "keep" and "export" are handled in MaybeProtectInclude.
     if (!MatchOneToken(tokens, "keep", 1, current_loc)
         && !MatchOneToken(tokens, "export", 1, current_loc)) {
