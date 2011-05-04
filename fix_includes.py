@@ -65,6 +65,7 @@ __author__ = 'csilvers@google.com (Craig Silverstein)'
 import difflib
 import optparse
 import os
+import pipes
 import re
 import sys
 
@@ -495,12 +496,16 @@ def _WriteFileContents(filename, file_lines):
     print "Error writing '%s': %s" % (filename, why)
 
 
-def _RunCommandOnFiles(command, filenames):
-  """Run the given shell command on the given filenames (appended to end)."""
-  # Replace ' with '\'' in the filename, since it's inside single quotes.
-  # Consider using map(pipes.quote, filenames) instead.
-  escaped_filenames = [f.replace("'", "'\\''") for f in filenames]
-  os.system("%s '%s'" % (command, "' '".join(escaped_filenames)))
+def _GetCommandOutputLines(command, args):
+  """Return an iterable over the output lines of the given shell command."""
+  full_command = '%s %s' % (command, ' '.join(map(pipes.quote, args)))
+  return os.popen(full_command, 'r')
+
+
+def _RunCommand(command, args):
+  """Run the given shell command."""
+  for line in _GetCommandOutputLines(command, args):
+    print line,
 
 
 def PrintFileDiff(old_file_contents, new_file_contents):
@@ -1888,6 +1893,12 @@ def GetFixedFile(iwyu_record, flags):
   return fixed_lines
 
 
+def _ShowHowToTest(files_fixed, safe_headers):
+  """Return instructions on how to test the changes IWYU made."""
+  output = 'IWYU edited %d files on your behalf.\n' % len(files_fixed)
+  return output
+
+
 def FixManyFiles(iwyu_records, flags):
   """Given a list of iwyu_records, fix each file listed in the record.
 
@@ -1908,13 +1919,13 @@ def FixManyFiles(iwyu_records, flags):
   Returns:
     The number of files fixed (as opposed to ones that needed no fixing).
   """
-  files_to_fix = []
+  file_and_fix_pairs = []
   files_to_checkout = []
   for iwyu_record in iwyu_records:
     try:
       fixed_lines = GetFixedFile(iwyu_record, flags)
       if not flags.dry_run and fixed_lines is not None:
-        files_to_fix.append((iwyu_record.filename, fixed_lines))
+        file_and_fix_pairs.append((iwyu_record.filename, fixed_lines))
         if (flags.checkout_command and
             not os.access(iwyu_record.filename, os.W_OK)):
           files_to_checkout.append(iwyu_record.filename)
@@ -1923,12 +1934,14 @@ def FixManyFiles(iwyu_records, flags):
 
   # It's much faster to check out all the files at once.
   if flags.checkout_command and files_to_checkout:
-    _RunCommandOnFiles(flags.checkout_command, files_to_checkout)
+    _RunCommand(flags.checkout_command, files_to_checkout)
 
-  for (filename, fixed_lines) in files_to_fix:
+  for filename, fixed_lines in file_and_fix_pairs:
     _WriteFileContents(filename, fixed_lines)
 
-  return len(files_to_fix)
+  files_fixed = [filename for filename, _ in file_and_fix_pairs]
+  print _ShowHowToTest(files_fixed, flags.safe_headers)
+  return len(files_fixed)
 
 
 def ProcessIWYUOutput(f, files_to_process, flags):
