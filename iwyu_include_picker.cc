@@ -675,9 +675,6 @@ const IncludePicker::IncludeMapEntry third_party_include_map[] = {
   { "\"third_party/gmock/include/gmock/*\"", kPrivate,
     "\"testing/base/public/gmock.h\"", kPublic
   },
-  { "\"third_party/gtest/include/gtest/*\"", kPrivate,
-    "\"testing/base/public/gunit.h\"", kPublic
-  },
   { "\"third_party/python2_4_3/*\"", kPrivate, "<Python.h>", kPublic },
   { "\"third_party/icu/include/unicode/umachine.h\"", kPrivate,
     "\"third_party/icu/include/unicode/utypes.h\"", kPublic
