@@ -403,6 +403,18 @@ TEST(GetCandidateHeadersForFilepath, PrivateValueInRecursion) {
       "<errno.h>", "<cerrno>");
 }
 
+TEST(GetCandidateHeadersForFilepath, NoBuiltin) {
+  // Make sure we never specify "<built-in>" as an #include mapping.
+  IncludePicker p;
+  p.AddDirectInclude("<built-in>", "foo/bar/internal/code.cc");
+  p.AddDirectInclude("foo/bar/internal/code.cc", "foo/qux/internal/lib.h");
+
+  p.FinalizeAddedIncludes();
+  EXPECT_VECTOR_STREQ(
+      p.GetCandidateHeadersForFilepath("foo/qux/internal/lib.h"),
+      "\"foo/qux/internal/lib.h\"");
+}
+
 TEST(GetCandidateHeadersForFilepathIncludedFrom, NoInternal) {
   IncludePicker p;
   p.FinalizeAddedIncludes();
