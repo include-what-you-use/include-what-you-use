@@ -1896,6 +1896,7 @@ def GetFixedFile(iwyu_record, flags):
 def _ShowHowToTest(files_fixed, safe_headers):
   """Return instructions on how to test the changes IWYU made."""
   output = 'IWYU edited %d files on your behalf.\n' % len(files_fixed)
+
   return output
 
 
