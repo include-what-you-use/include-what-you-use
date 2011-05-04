@@ -11,6 +11,8 @@
 // Tests for the iwyu_lexer_utils module. In addition, provides sample
 // code for using Clang's Lexer.
 
+#include "iwyu_lexer_utils.h"
+
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -18,7 +20,6 @@
 
 #include "base/logging.h"
 #include "iwyu_globals.h"
-#include "iwyu_lexer_utils.h"
 #include "testing/base/public/gunit.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"

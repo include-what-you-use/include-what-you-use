@@ -10,9 +10,10 @@
 
 // Tests for the iwyu_string_util module.
 
+#include "iwyu_string_util.h"
+
 #include <string>
 
-#include "iwyu_string_util.h"
 
 // TODO(user): using string for MOE.
 

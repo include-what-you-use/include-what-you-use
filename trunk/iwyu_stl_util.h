@@ -12,11 +12,13 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 
+#include <stddef.h>
 #include <algorithm>  // for find
 #include <map>
 #include <set>
 #include <utility>  // for pair<>
 #include <vector>
+
 #include "port.h"
 
 namespace include_what_you_use {

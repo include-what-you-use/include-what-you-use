@@ -7,25 +7,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "port.h"
 #include "iwyu_globals.h"
+
 #ifndef _MSC_VER      // _MSC_VER gets its own fnmatch from ./port.h
 #include <fnmatch.h>
 #endif
+#include <assert.h>
 #include <getopt.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <algorithm>
 #include <map>
 #include <set>
 #include <string>
 #include <utility>
-#include "clang/Lex/HeaderSearch.h"
+
 #include "iwyu_cache.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_stl_util.h"
+#include "iwyu_string_util.h"
+#include "port.h"
+#include "llvm/Support/raw_ostream.h"
+#include "clang/AST/PrettyPrinter.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Lex/HeaderSearch.h"
 
 using clang::DirectoryEntry;
 using clang::DirectoryLookup;

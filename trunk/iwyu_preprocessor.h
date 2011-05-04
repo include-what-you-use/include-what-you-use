@@ -62,12 +62,13 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "iwyu_output.h"
 #include "port.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Token.h"
-#include "iwyu_output.h"
 
 namespace include_what_you_use {
 class IwyuAstConsumer;

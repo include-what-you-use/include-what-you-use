@@ -14,13 +14,17 @@
 #include <set>
 #include <string>
 #include <vector>
+
 #include "port.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/SourceManager.h"
 
 namespace clang {
+class FileEntry;
 class HeaderSearch;
-}
+class SourceManager;
+struct PrintingPolicy;
+}  // namespace clang
 
 namespace include_what_you_use {
 

@@ -10,24 +10,23 @@
 // Tests the internals of iwyu_include_picker.{h,cc}, and a few related
 // functions from iwyu_path_util.h
 
+#include "iwyu_include_picker.h"
+
+#include <stddef.h>
+#include <stdio.h>
 #include <algorithm>
-#include <set>
 #include <string>
-#include <utility>  // for make_pair
 #include <vector>
 
-#include "iwyu_driver.h"
 #include "iwyu_globals.h"
-#include "iwyu_output.h"
 #include "iwyu_path_util.h"
-#include "iwyu_stl_util.h"
 #include "testing/base/public/gunit.h"
-#undef ATTRIBUTE_UNUSED
-#include "llvm/Support/raw_ostream.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Lex/Preprocessor.h"
+
+namespace clang {
+class ASTConsumer;
+class ASTFrontendAction;
+class CompilerInstance;
+}  // namespace clang
 
 using clang::ASTConsumer;
 using clang::ASTFrontendAction;

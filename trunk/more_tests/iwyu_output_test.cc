@@ -9,17 +9,16 @@
 
 // Tests iwyu_output.{h,cc}
 
+#include "iwyu_output.h"
+
 #include <set>
+
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
-#include "iwyu_location_util.h"
-#include "iwyu_output.h"
-#include "iwyu_stl_util.h"
 #include "testing/base/public/gunit.h"
+
 #undef ATTRIBUTE_UNUSED
-#include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 
 using clang::NamedDecl;

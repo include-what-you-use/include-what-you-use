@@ -23,13 +23,14 @@
 #include <utility>  // for pair
 #include <vector>
 
-#include "port.h"
 #include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
+#include "port.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/SourceLocation.h"
 
 namespace clang {
 class FileEntry;

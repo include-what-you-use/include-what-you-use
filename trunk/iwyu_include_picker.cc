@@ -7,21 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "port.h"
 #include "iwyu_include_picker.h"
+
+#include <stdio.h>
+#include <stddef.h>
 
 #ifndef _MSC_VER      // _MSC_VER gets its own fnmatch from ./port.h
 #include <fnmatch.h>
 #endif
 #include <algorithm>
+#include <iterator>  // TODO(wan): make sure IWYU doesn't suggest this.
 #include <map>  // not hash_map: it's not as portable and needs hash<string>
 #include <string>
 #include <utility>
 #include <vector>
+
 #include "iwyu_globals.h"
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
+#include "port.h"
 #include "llvm/Support/Path.h"
 
 using std::find;
@@ -1012,10 +1017,13 @@ void IncludePicker::ExpandGlobs() {
 //    add a mapping from y.h to x.h, and make y.h private.  This
 //    means iwyu will never suggest adding y.h.
 void IncludePicker::AddImplicitThirdPartyMappings() {
+  // TODO(user): Refactor the third_party/car bit into
+  // living in third_party because of old licensing constraints.
   set<string> headers_with_explicit_mappings;
   for (Each<IncludeMap::value_type>
            it(&filepath_include_map_); !it.AtEnd(); ++it) {
-    if (StartsWith(it->first, "\"third_party/"))
+    if (StartsWith(it->first, "\"third_party/") &&
+        !StartsWith(it->first, "\"third_party/car"))
       headers_with_explicit_mappings.insert(it->first);
   }
 
@@ -1023,7 +1031,8 @@ void IncludePicker::AddImplicitThirdPartyMappings() {
   for (Each<string, set<string> >
            it(&quoted_includes_to_quoted_includers_); !it.AtEnd(); ++it) {
     for (Each<string> includer(&it->second); !includer.AtEnd(); ++includer) {
-      if (!StartsWith(*includer, "\"third_party/")) {
+      if (!StartsWith(*includer, "\"third_party/") ||
+          StartsWith(*includer, "\"third_party/car")) {
         headers_included_from_non_third_party.insert(it->first);
         break;
       }

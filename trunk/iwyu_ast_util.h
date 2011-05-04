@@ -12,14 +12,22 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
 
+#include <map>
 #include <set>
 #include <string>
-#include "port.h"
+
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_string_util.h"
+#include "port.h"
 #include "llvm/Support/Casting.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/TemplateBase.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 
 namespace clang {
@@ -43,6 +51,7 @@ class SourceLocation;
 class SourceManager;
 class SourceRange;
 class Stmt;
+class TagDecl;
 class TemplateArgument;
 class TemplateArgumentLoc;
 class TemplateDecl;
@@ -51,7 +60,7 @@ class Type;
 class TypeDecl;
 class TypeLoc;
 class ValueDecl;
-}
+}  // namespace clang
 
 namespace include_what_you_use {
 
