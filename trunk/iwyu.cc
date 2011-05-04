@@ -1798,8 +1798,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // compiler a fighting chance of generating correct code.
   bool VisitCastExpr(clang::CastExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
-    const Type* from_type = GetTypeOf(expr->getSubExprAsWritten());
-    const Type* to_type = GetTypeOf(expr);
+    const Type* const from_type = GetTypeOf(expr->getSubExprAsWritten());
+    const Type* const to_type = GetTypeOf(expr);
+    const Type* const deref_from_type = RemovePointersAndReferences(from_type);
+    const Type* const deref_to_type = RemovePointersAndReferences(to_type);
 
     // For all those casts that don't result in function calls
     // (everything except a user-defined cast or a constructor cast),
@@ -1816,8 +1818,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         return true;    // we only care about ptr-to-ptr casts for this check
     }
 
-    bool need_full_from_type = false;
-    bool need_full_to_type = false;
+    bool need_full_deref_from_type = false;
+    bool need_full_deref_to_type = false;
     // The list of kinds: http://clang.llvm.org/doxygen/namespaceclang.html
     switch (expr->getCastKind()) {
       // This cast still isn't handled directly.
@@ -1890,39 +1892,42 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         if (!current_ast_node()->template HasAncestorOfType<CallExpr>() ||
             ContainsKey(
                 GetCallerResponsibleTypesForAutocast(current_ast_node()),
-                RemovePointersAndReferences(to_type))) {
-          need_full_to_type = true;
+                deref_to_type)) {
+          need_full_deref_to_type = true;
         }
         break;
       // Need the full from-type so we can call its 'operator <totype>()'.
       case clang::CK_UserDefinedConversion:
-        need_full_from_type = true;
+        need_full_deref_from_type = true;
         break;
 
       // Kinds that cast up or down an inheritance hierarchy.
       case clang::CK_BaseToDerived:
       case clang::CK_BaseToDerivedMemberPointer:
-        need_full_to_type = true;  // full type for derived gets base type too
+        // Just 'to' type is enough: full type for derived gets base type too.
+        need_full_deref_to_type = true;
         break;
       case clang::CK_DerivedToBase:
       case clang::CK_UncheckedDerivedToBase:
       case clang::CK_DerivedToBaseMemberPointer:
-        need_full_from_type = true;
+        need_full_deref_from_type = true;
         break;
       case clang::CK_Dynamic:
         // Usually dynamic casting is a base-to-derived cast, but it is
         // possible to dynamic-cast between siblings, in which case we
         // need both types.
-        need_full_from_type = true;
-        need_full_to_type = true;
+        need_full_deref_from_type = true;
+        need_full_deref_to_type = true;
         break;
     }
 
-    if (need_full_from_type && !CanIgnoreType(from_type)) {
-      ReportTypeUse(CurrentLoc(), RemovePointersAndReferences(from_type));
+    // TODO(csilvers): test if we correctly say we use FooPtr for
+    //    typedef Foo* FooPtr; ... static_cast<FooPtr>(...) ...
+    if (need_full_deref_from_type && !CanIgnoreType(deref_from_type)) {
+      ReportTypeUse(CurrentLoc(), deref_from_type);
     }
-    if (need_full_to_type && !CanIgnoreType(to_type)) {
-      ReportTypeUse(CurrentLoc(), RemovePointersAndReferences(to_type));
+    if (need_full_deref_to_type && !CanIgnoreType(deref_to_type)) {
+      ReportTypeUse(CurrentLoc(), deref_to_type);
     }
     return true;
   }
