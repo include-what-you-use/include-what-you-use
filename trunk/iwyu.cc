@@ -138,6 +138,7 @@ namespace include_what_you_use {
 
 // I occasionally clean up this list by running:
 // $ grep "using clang":: iwyu.cc | cut -b14- | tr -d ";" | while read t; do grep -q "[^:]$t" iwyu.cc || echo $t; done
+using clang::ArrayType;
 using clang::ASTConsumer;
 using clang::ASTContext;
 using clang::ASTFrontendAction;
@@ -2009,6 +2010,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  // For a[4], report that we need the full type of *a (to get its
+  // size; otherwise the compiler can't tell the address of a[4]).
+  bool VisitArraySubscriptExpr(clang::ArraySubscriptExpr* expr) {
+    if (CanIgnoreCurrentASTNode())  return true;
+
+    const Type* element_type = GetTypeOf(expr);
+    if (CanIgnoreType(element_type))
+      return true;
+    ReportTypeUse(CurrentLoc(), element_type);
+    return true;
+  }
+
   // Mark that we need the full type info for the thing we're taking
   // sizeof of.  Sometimes this is double-counting: for
   // sizeof(some_type), RecursiveASTVisitor will visit some_type and
@@ -3429,7 +3442,11 @@ class IwyuAstConsumer
   bool VisitTypedefType(clang::TypedefType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
     // TypedefType::getDecl() returns the place where the typedef is defined.
-    ReportDeclUse(CurrentLoc(), type->getDecl());
+    if (CanForwardDeclareType(current_ast_node())) {
+      ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
+    } else {
+      ReportDeclUse(CurrentLoc(), type->getDecl());
+    }
     return Base::VisitTypedefType(type);
   }
 

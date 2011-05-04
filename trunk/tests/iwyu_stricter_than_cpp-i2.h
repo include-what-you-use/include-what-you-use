@@ -7,7 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-struct IndirectStruct2 { IndirectStruct2(int) {} };
+struct IndirectStruct2 {
+  IndirectStruct2(int) {}
+  int a;
+};
 
 template <typename T> struct TplIndirectStruct2 { TplIndirectStruct2(int) {} };
 

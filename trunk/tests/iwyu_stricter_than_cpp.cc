@@ -63,6 +63,14 @@ void TestTypedefs() {
   // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   TplDoesEverythingRightAgain tdora(12);
 
+  // But if we're in a forward-declare context, we don't require the
+  // underlying type!
+  DoesEverythingRight* dor_ptr = 0;
+  TplDoesEverythingRightAgain* tdora_ptr = 0;
+  // ...at least until we dereference the pointer
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  (void) dor_ptr->a;
+
   // TODO(csilvers): test template types where we need some (but not
   // all) of the template args as well.
 }
