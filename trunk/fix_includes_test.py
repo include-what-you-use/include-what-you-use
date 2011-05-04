@@ -60,14 +60,22 @@ class FixIncludesBase(unittest.TestCase):
     fix_includes._WriteFileContents = \
         lambda filename, contents: self.actual_after_contents.extend(contents)
 
-    # Mock out OS writeability check to say all files are writeable.
+    # Stub out OS writeability check to say all files are writeable.
     fix_includes.os.access = \
         lambda filename, flags: True
 
-    # Mock out checkout commands; keep a list of all files checked out.
-    self.system_commands = []
-    fix_includes._RunCommandOnFiles = \
-        lambda command, filenames: self.system_commands.extend(filenames)
+    # Stub out the checkout command; keep a list of all files checked out.
+    self.checkout_command_args = []
+    fix_includes._RunCommand = \
+        lambda command, args: self.checkout_command_args.extend(args)
+
+    # Stub out the find_clients_of_files command.
+    self.find_clients_of_files_output = [
+        '==== 1 targets from 1 packages are affected\n',
+        '==== targets\n',
+        '//foo/bar:a\n']
+    fix_includes._GetCommandOutputLines = \
+        lambda command, args: self.find_clients_of_files_output
 
   def assertListEqual(self, a, b):
     """If the two lists aren't equal, raise an error and print the diffs."""
@@ -145,7 +153,7 @@ class FixIncludesBase(unittest.TestCase):
       self.assertEqual(expected_num_modified_files, num_modified_files)
 
   def MakeFilesUnwriteable(self):
-    """Mock out OS writeability check to say all files are NOT writeable."""
+    """Stub out OS writeability check to say all files are NOT writeable."""
     fix_includes.os.access = \
         lambda filename, flags: False
 
@@ -2453,7 +2461,7 @@ The full include-list for checkout:
     self.flags.checkout_command = 'check out'
     # Files are unwriteable, so they get checked out, then written.
     self.ProcessAndTest(iwyu_output)
-    self.assertEqual(['checkout'], self.system_commands)
+    self.assertEqual(['checkout'], self.checkout_command_args)
 
   def testFileSpecifiedOnCommandline(self):
     """Test we limit editing to files specified on the commandline."""
@@ -2855,6 +2863,7 @@ The full include-list for dry_run:
     # -s without any files to sort.
     self.assertRaises(SystemExit, fix_includes.main,
                       ['fix_includes.py', '-s'])
+
 
 if __name__ == '__main__':
   unittest.main()
