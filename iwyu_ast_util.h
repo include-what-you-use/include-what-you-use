@@ -16,10 +16,6 @@
 #include <set>                          // for set
 #include <string>                       // for string
 
-#include "iwyu_globals.h"
-#include "iwyu_location_util.h"
-#include "iwyu_output.h"
-#include "iwyu_string_util.h"
 #include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "clang/AST/DeclBase.h"
@@ -38,27 +34,15 @@ class CXXDestructorDecl;
 class CXXRecordDecl;
 class CallExpr;
 class CastExpr;
-class Decl;
 class ExplicitTemplateArgumentList;
 class Expr;
 class FunctionDecl;
-class FunctionType;
 class NamedDecl;
-class NestedNameSpecifier;
-class NestedNameSpecifierLoc;
-class RecordDecl;
-class SourceLocation;
 class SourceManager;
-class SourceRange;
-class Stmt;
 class TagDecl;
-class TemplateArgument;
-class TemplateArgumentLoc;
 class TemplateDecl;
 class TemplateName;
-class Type;
 class TypeDecl;
-class TypeLoc;
 class ValueDecl;
 }  // namespace clang
 

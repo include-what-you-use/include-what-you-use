@@ -22,7 +22,6 @@
 #include <string>                       // for string, allocator, etc
 
 #include "iwyu_string_util.h"
-#include "port.h"
 
 namespace include_what_you_use {
 

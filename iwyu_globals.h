@@ -15,10 +15,6 @@
 #include <string>                       // for string
 #include <vector>                       // for vector
 
-#include "port.h"
-#include "clang/AST/PrettyPrinter.h"
-#include "clang/Basic/SourceManager.h"
-
 namespace clang {
 class FileEntry;
 class HeaderSearch;

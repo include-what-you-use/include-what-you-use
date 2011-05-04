@@ -16,17 +16,13 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 
-#include <cassert>
 #include <map>                          // for map
 #include <set>                          // for set
 #include <string>                       // for string, operator<
-#include <utility>  // for pair
 #include <vector>                       // for vector
 
 #include "iwyu_globals.h"
-#include "iwyu_include_picker.h"
 #include "iwyu_stl_util.h"
-#include "iwyu_string_util.h"
 #include "port.h"  // for CHECK_
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
@@ -34,7 +30,6 @@
 
 namespace clang {
 class FileEntry;
-class Type;
 }
 
 namespace include_what_you_use {
@@ -47,7 +42,6 @@ using std::vector;
 
 
 class IwyuPreprocessorInfo;
-class SymbolIncludeData;
 
 // Returns true if we should print a message at the given verbosity level.
 inline bool ShouldPrint(int verbose_level) {
