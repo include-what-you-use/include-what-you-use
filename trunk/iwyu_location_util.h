@@ -41,7 +41,7 @@
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_FILE_UTIL_H_
 
 #include <string.h>
-#include <string>
+#include <string>                       // for string
 
 #include "iwyu_globals.h"
 #include "iwyu_path_util.h"

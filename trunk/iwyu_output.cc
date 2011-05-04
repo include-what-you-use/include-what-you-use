@@ -9,12 +9,13 @@
 
 #include "iwyu_output.h"
 
-#include <stdio.h>
-#include <algorithm>  // for sort(), find()
-#include <iterator>   // TODO(wan): make sure IWYU doesn't suggest this.
-#include <map>
-#include <utility>    // for pair<>
-#include <vector>
+#include <stdio.h>                      // for snprintf
+#include <algorithm>                    // for sort, find
+// TODO(wan): make sure IWYU doesn't suggest <iterator>.
+#include <iterator>                     // for find
+#include <map>                          // for map, etc
+#include <utility>                      // for pair, make_pair, operator>
+#include <vector>                       // for vector, vector<>::iterator, etc
 
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
@@ -24,9 +25,12 @@
 #include "iwyu_preprocessor.h"  // IWYU pragma: keep
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
+// TODO(wan): remove this once the IWYU bug is fixed.
+// IWYU pragma no_include "foo/bar/baz.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 

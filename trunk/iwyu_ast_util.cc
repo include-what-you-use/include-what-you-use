@@ -11,9 +11,9 @@
 
 #include "iwyu_ast_util.h"
 
-#include <set>
-#include <string>
-#include <utility>
+#include <set>                          // for set
+#include <string>                       // for string, operator+, etc
+#include <utility>                      // for pair
 
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
@@ -21,7 +21,7 @@
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
-#include "port.h"
+#include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
@@ -41,7 +41,6 @@
 
 namespace clang {
 class FileEntry;
-class FriendDecl;
 }  // namespace clang
 
 using clang::BlockPointerType;

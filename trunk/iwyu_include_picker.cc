@@ -9,25 +9,25 @@
 
 #include "iwyu_include_picker.h"
 
-#include <stdio.h>
-#include <stddef.h>
+#include <stddef.h>                     // for size_t, NULL
 
 #ifndef _MSC_VER      // _MSC_VER gets its own fnmatch from ./port.h
-#include <fnmatch.h>
+#include <fnmatch.h>                    // for fnmatch
 #endif
-#include <algorithm>
-#include <iterator>  // TODO(wan): make sure IWYU doesn't suggest this.
-#include <map>  // not hash_map: it's not as portable and needs hash<string>
-#include <string>
-#include <utility>
-#include <vector>
+#include <algorithm>                    // for find
+// TODO(wan): make sure IWYU doesn't suggest <iterator>.
+#include <iterator>                     // for find
+// not hash_map: it's not as portable and needs hash<string>.
+#include <map>                          // for map, _Rb_tree_iterator, etc
+#include <string>                       // for string, basic_string, etc
+#include <utility>                      // for pair, make_pair
+#include <vector>                       // for vector
 
 #include "iwyu_globals.h"
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
-#include "port.h"
-#include "llvm/Support/Path.h"
+#include "port.h"  // for CHECK_
 
 using std::find;
 using std::map;

@@ -15,13 +15,13 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_CACHE_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_CACHE_H_
 
-#include <map>
-#include <set>
+#include <map>                          // for map
+#include <set>                          // for set
 #include <string>
-#include <utility>  // for pair
+#include <utility>                      // for pair
 
 #include "iwyu_stl_util.h"
-#include "port.h"
+#include "port.h"  // for CHECK_
 
 namespace clang {
 class NamedDecl;

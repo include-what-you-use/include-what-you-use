@@ -11,9 +11,9 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
 
-#include <set>
-#include <string>
-#include <vector>
+#include <set>                          // for set
+#include <string>                       // for string
+#include <vector>                       // for vector
 
 #include "port.h"
 #include "clang/AST/PrettyPrinter.h"

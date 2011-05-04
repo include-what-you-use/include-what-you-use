@@ -44,11 +44,12 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_INCLUDE_PICKER_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_INCLUDE_PICKER_H_
 
-#include <map>
-#include <set>
-#include <string>
+#include <map>                          // for map, map<>::value_compare
+#include <set>                          // for set
+#include <string>                       // for string
 #include <utility>
-#include <vector>
+#include <vector>                       // for vector
+
 #include "port.h"
 
 namespace include_what_you_use {

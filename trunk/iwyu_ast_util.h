@@ -12,15 +12,15 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
 
-#include <map>
-#include <set>
-#include <string>
+#include <map>                          // for map
+#include <set>                          // for set
+#include <string>                       // for string
 
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_string_util.h"
-#include "port.h"
+#include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/NestedNameSpecifier.h"

@@ -17,17 +17,17 @@
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 
 #include <cassert>
-#include <map>
-#include <set>
-#include <string>
+#include <map>                          // for map
+#include <set>                          // for set
+#include <string>                       // for string, operator<
 #include <utility>  // for pair
-#include <vector>
+#include <vector>                       // for vector
 
 #include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
-#include "port.h"
+#include "port.h"  // for CHECK_
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"

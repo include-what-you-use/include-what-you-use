@@ -12,14 +12,14 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
 
-#include <limits.h>  // for PATH_MAX
-#include <string.h>
+#include <limits.h>                     // for PATH_MAX
+#include <string.h>                     // for strlen
 #if defined(_MSC_VER)
 #include <direct.h>
 #else
-#include <unistd.h>  // for getcwd()
+#include <unistd.h>                     // for getcwd
 #endif
-#include <string>
+#include <string>                       // for string, allocator, etc
 
 #include "iwyu_string_util.h"
 #include "port.h"

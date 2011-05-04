@@ -57,11 +57,11 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
 
-#include <map>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
+#include <map>                          // for map
+#include <set>                          // for set
+#include <string>                       // for string
+#include <utility>                      // for pair
+#include <vector>                       // for vector
 
 #include "iwyu_output.h"
 #include "port.h"

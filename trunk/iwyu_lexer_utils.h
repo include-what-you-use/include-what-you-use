@@ -11,8 +11,8 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
 
-#include <string>
-#include <vector>
+#include <string>                       // for string
+#include <vector>                       // for vector
 
 #include "port.h"
 #include "clang/Basic/SourceLocation.h"
