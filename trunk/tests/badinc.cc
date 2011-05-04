@@ -1126,8 +1126,7 @@ int main() {
   // IWYU: I1_PtrDereferenceClass needs a declaration
   I1_PtrDereferenceClass* local_i1_ptrdereference_class = 0;
   int x;
-  // TODO(wan): report that va_list needs <stdarg.h> instead of <stdio.h>.
-  // IWYU: va_list is...*<stdio.h>
+  // IWYU: va_list is...*<stdarg.h>
   va_list vl;  // in gcc, va_list is an internal type, so this tests <built-in>
   D1_I1_Typedef d1_i1_typedef;
   // IWYU: i1_int is...*badinc-i1.h
@@ -1999,6 +1998,7 @@ int main() {
 
 tests/badinc.cc should add these lines:
 #include <ctype.h>
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <list>
@@ -2030,6 +2030,7 @@ The full include-list for tests/badinc.cc:
 #include "tests/badinc-inl.h"
 #include <ctype.h>  // for isascii
 #include <setjmp.h>
+#include <stdarg.h>  // for va_list
 #include <stddef.h>  // for offsetof, size_t
 #include <stdlib.h>  // for rand
 #include <algorithm>  // for find
