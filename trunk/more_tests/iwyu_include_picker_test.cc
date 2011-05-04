@@ -217,6 +217,9 @@ TEST(GetCandidateHeadersForFilepath, C) {
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("/usr/grte/v1/include/assert.h"),
       "<assert.h>", "<cassert>");
+  EXPECT_VECTOR_STREQ(
+      p.GetCandidateHeadersForFilepath("/usr/grte/v1/include/stdarg.h"),
+      "<stdarg.h>", "<cstdarg>");
 }
 
 TEST(GetCandidateHeadersForFilepath, CXX) {
