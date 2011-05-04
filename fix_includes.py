@@ -93,7 +93,7 @@ be modified if --dry_run was specified) unless that number exceeds 100,
 in which case 100 is returned.
 """
 
-_COMMENT_RE = re.compile('\s*//.*')
+_COMMENT_RE = re.compile(r'\s*//.*')
 
 # These are the types of lines a file can have.  These are matched
 # using re.match(), so don't need a leading ^.
@@ -1237,7 +1237,7 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
     'namespace ns1 { namespace ns2 {', and reorder-span is a
     [start_line, end_line) pair.
   """
-  simple_namespace_re = re.compile('^\s*namespace\s+([^{]+)\s*\{\s*(//.*)?$')
+  simple_namespace_re = re.compile(r'^\s*namespace\s+([^{\s]+)\s*\{\s*(//.*)?$')
   namespace_prefix = ''
 
   for line_number in xrange(len(file_lines)):
@@ -1254,31 +1254,19 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
       continue
 
     # If we're a 'contentful' line such as a (non-header-guard) #ifdef, bail.
-    elif line_info.type == _IF_RE:
-      return (None, None)
-
-    elif line_info.type in (_NAMESPACE_END_RE, _ELSE_RE, _ENDIF_RE):
-      # Other contentful lines that cause us to bail.
+    elif line_info.type in (_IF_RE, _NAMESPACE_END_RE, _ELSE_RE, _ENDIF_RE,
+                            None):    # None is a 'normal' contentful line
       # TODO(csilvers): we could probably keep going if there are no
       # braces on the line.  We could also keep track of our #ifdef
       # depth instead of bailing on #else and #endif, and only accept
       # the fwd-decl-inside-namespace if it's at ifdef-depth 0.
-      return (None, None)
-
-    elif line_info.type is None:
-      # A 'normal' contentful line.  If we're the first contentful
-      # line inside the first-namespace, let's return this position as
-      # a good place to insert forward-declares inside this namespace.
-      if namespace_prefix:
-        return (namespace_prefix, (line_number, line_number))
-      else:
-        return (None, None)
+      break
 
     elif line_info.type == _NAMESPACE_START_RE:
       # Only handle the simple case of 'namespace <foo> {'
       m = simple_namespace_re.match(line_info.line)
       if not m:
-        return (None, None)
+        break
       namespace_prefix += ('namespace %s { ' % m.group(1).strip())
 
     elif line_info.type == _FORWARD_DECLARE_RE:
@@ -1289,10 +1277,14 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
 
     else:
       # We should have handled all the cases above!
-      assert False, ('unknown line-info type', line_info.type)
+      assert False, ('unknown line-info type',
+                     _LINE_TYPES.index(line_info.type))
 
-  # If we get here, we never saw a forward-declare inside a namespace
-  # (nor anything that would have caused us to bail earlier).  Alas.
+  # We stopped because we hit a contentful line (or, possibly, a
+  # weird-looking namespace).  If we're inside the first-namespace,
+  # return this position as a good place to insert forward-declares.
+  if namespace_prefix:
+    return (namespace_prefix, (line_number, line_number))
   return (None, None)
 
 
@@ -1552,7 +1544,7 @@ def _RemoveNamespacePrefix(fwd_decl_iwyu_line, namespace_prefix):
 
   # Remove the matching trailing }'s, preserving comments.
   num_braces = namespace_prefix.count('{')
-  ending_braces_re = re.compile('(\s*\}){%d}\s*$' % num_braces)
+  ending_braces_re = re.compile(r'(\s*\}){%d}\s*$' % num_braces)
   m = ending_braces_re.search(fwd_decl_iwyu_line)
   if not m:
     return None
@@ -1634,7 +1626,7 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines, flags):
     all_lines = [li.line for li in move_span_lines if not li.deleted]
 
   # Get rid of whitespace in the contentful_lines
-  sort_key = re.sub('\s+', '', sort_key)
+  sort_key = re.sub(r'\s+', '', sort_key)
   # Replace -inl.h with _inl.h so foo-inl.h sorts after foo.h in #includes.
   sort_key = sort_key.replace('-inl.h', '_inl.h')
 
@@ -1712,8 +1704,8 @@ def _NormalizeNamespaceForwardDeclareLines(lines):
     A new version of lines, with namespace lines normalized as above.
   """
   # iwyu input is very regular, which is nice.
-  iwyu_namespace_re = re.compile('namespace ([^{]*) { ')
-  iwyu_classname_re = re.compile('{ ([^{}]*) }')
+  iwyu_namespace_re = re.compile(r'namespace ([^{]*) { ')
+  iwyu_classname_re = re.compile(r'{ ([^{}]*) }')
 
   retval = []
   current_namespaces = []
@@ -1774,8 +1766,8 @@ def _GetSymbolNameFromForwardDeclareLine(line):
   If in namespaces, then return foo::bar::sym.
   Else just sym.
   """
-  iwyu_namespace_re = re.compile('namespace ([^{]*) { ')
-  symbolname_re = re.compile('([A-Za-z0-9_]+)')
+  iwyu_namespace_re = re.compile(r'namespace ([^{]*) { ')
+  symbolname_re = re.compile(r'([A-Za-z0-9_]+)')
   namespaces_in_line = iwyu_namespace_re.findall(line)
   symbols_in_line = symbolname_re.findall(line)
   symbol_name = symbols_in_line[-1]
@@ -1992,7 +1984,7 @@ def CreateCLForCheckoutCommand(checkout_command, invoking_command):
   output =  _GetCommandOutputWithInput('%s change -cc iwyu-dev -i'
                                        % what4, input_text)
   # Parse output for "Changelist XXX created."
-  m = re.match('Change (\d+) created.', output)
+  m = re.match(r'Change (\d+) created.', output)
   if not m:
     print 'ERROR: Unexpected change creation output "%s"' % output
     return None
