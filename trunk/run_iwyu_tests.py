@@ -84,7 +84,10 @@ class OneIwyuTest(unittest.TestCase):
 def RegisterFilesForTesting():
   """Create a test-class for every .cc file in TEST_ROOTDIR."""
   module = sys.modules[__name__]
-  filenames = glob.glob(os.path.join(TEST_ROOTDIR, '*.cc'))
+  filenames = []
+  for (dirpath, dirs, files) in os.walk(TEST_ROOTDIR):
+    filenames.extend(os.path.join(dirpath, f) for f in files
+                     if f.endswith('.cc'))
   if not filenames:
     sys.exit('No tests found in %s!' % os.path.abspath(TEST_ROOTDIR))
   for filename in filenames:

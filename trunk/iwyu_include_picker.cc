@@ -715,11 +715,6 @@ const IncludePicker::IncludeMapEntry third_party_include_map[] = {
 
 // Whew!  Done.
 
-inline bool IsQuotedInclude(const string& s) {
-  return ((StartsWith(s, "<") && EndsWith(s, ">")) ||
-          (StartsWith(s, "\"") && EndsWith(s, "\"")));
-}
-
 // Given a vector of nodes, augment each node with its children, as
 // defined by m: nodes[i] is replaced by nodes[i] + m[nodes[i]],
 // ignoring duplicates.  The input vector is modified in place.
@@ -829,6 +824,13 @@ string ConvertToQuotedInclude(const string& filepath) {
   return "\"" + path + "\"";
 }
 
+bool IsQuotedInclude(const string& s) {
+  if (s.size() < 2)
+    return false;
+  return ((StartsWith(s, "<") && EndsWith(s, ">")) ||
+          (StartsWith(s, "\"") && EndsWith(s, "\"")));
+}
+
 // Returns whether this is a system (as opposed to user) include file,
 // based on where it lives.
 bool IsSystemIncludeFile(const string& filepath) {
@@ -905,8 +907,16 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
 
   // Automatically mark files in foo/internal/bar as private, and map them.
-  if (quoted_includee.find("/internal/") != string::npos) {
+  // Then say that everyone else in foo/* is a friend, who is allowed to
+  // include the otherwise-private header.
+  const size_t internal_pos = quoted_includee.find("internal/");
+  if (internal_pos != string::npos &&
+      (internal_pos == 0 || quoted_includee[internal_pos - 1] == '/')) {
     MarkIncludeAsPrivate(quoted_includee);
+    // The second argument here is a quoted include.  We get the opening
+    // quote from quoted_includee, and the closing quote as part of the *.
+    AddFriendGlob(includee_filepath,
+                  quoted_includee.substr(0, internal_pos) + "*");
     AddMapping(quoted_includee, quoted_includer);
   }
 
@@ -934,8 +944,8 @@ void IncludePicker::MarkIncludeAsPrivate(const string& quoted_include) {
 }
 
 void IncludePicker::AddFriendGlob(const string& includee,
-                                  const string& friend_glob) {
-  friend_to_headers_map_[friend_glob].insert(includee);
+                                  const string& quoted_friend_glob) {
+  friend_to_headers_map_[quoted_friend_glob].insert(includee);
 }
 
 namespace {
@@ -1101,26 +1111,17 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepath(
   return retval;
 }
 
-// Except for the case of one /internal/ file including another, the
-// same as GetCandidateHeadersForFilepath.
+// Except for the case that the includer is a 'friend' of the includee
+// (via an '// IWYU pragma: friend XXX'), the same as
+// GetCandidateHeadersForFilepath.
 vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     const string& included_filepath, const string& including_filepath) const {
+  const string quoted_includer = ConvertToQuotedInclude(including_filepath);
   const set<string>* headers_with_includer_as_friend =
-      FindInMap(&friend_to_headers_map_, including_filepath);
+      FindInMap(&friend_to_headers_map_, quoted_includer);
   if (headers_with_includer_as_friend != NULL &&
       ContainsKey(*headers_with_includer_as_friend, included_filepath)) {
     vector<string> retval;
-    retval.push_back(ConvertToQuotedInclude(included_filepath));
-    return retval;
-  }
-  const size_t internal_pos = included_filepath.find("/internal/");
-  if (internal_pos != string::npos &&
-      // Check if they're both part of the same 'internal' tree -- that
-      // is, everything before the 'internal' string is the same.
-      included_filepath.substr(0, internal_pos + 1) ==
-      including_filepath.substr(0, internal_pos + 1)) {
-    vector<string> retval;
-    // The file we're including now is just fine.  No need to map it.
     retval.push_back(ConvertToQuotedInclude(included_filepath));
     return retval;
   }
