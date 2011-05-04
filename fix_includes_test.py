@@ -36,7 +36,7 @@ class FakeFlags(object):
     self.separate_project_includes = None
     self.create_cl_if_possible = True
     self.invoking_command_line = 'iwyu.py my_targets'
-
+    self.find_affected_targets = True
 
 class FakeRunCommand(object):
   def __init__(self):
