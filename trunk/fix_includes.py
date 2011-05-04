@@ -1912,11 +1912,7 @@ def GetFixedFile(iwyu_record, flags):
   return fixed_lines
 
 
-def _ShowHowToTest(files_fixed, safe_headers):
-  """Return instructions on how to test the changes IWYU made."""
-  output = 'IWYU edited %d files on your behalf.\n' % len(files_fixed)
 
-  return output
 
 def CreateCLForCheckoutCommand(checkout_command, invoking_command):
   """Create a CL using a command inferred from the checkout_command.
@@ -2030,7 +2026,9 @@ def FixManyFiles(iwyu_records, flags):
 
   files_fixed = [filename for filename, _ in file_and_fix_pairs]
 
-  print _ShowHowToTest(files_fixed, flags.safe_headers)
+  print 'IWYU edited %d files on your behalf.\n' % len(files_fixed)
+
+
   return len(files_fixed)
 
 
@@ -2173,6 +2171,7 @@ def main(argv):
   parser.add_option('--invoking_command_line', default=None,
                     help=('Internal flag used by iwyu.py, It should be the'
                           ' command line used to invoke iwyu.py'))
+
 
   (flags, files_to_modify) = parser.parse_args(argv[1:])
   if files_to_modify:
