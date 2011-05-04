@@ -13,6 +13,7 @@
 // the using declaration, replacing is fair game.
 
 // TODO(csilvers): also test UsingDirectiveDecl ('using namespace std').
+// TODO(csilvers): also test namespace aliases ('namespace b = std').
 
 #include "tests/include_with_using-d1.h"
 #include "tests/include_with_using-d2.h"
@@ -35,14 +36,24 @@ PtrInNs5* pin5 = 0;
 }
 }
 
-int main() {
+void TestDeclFromD4() {
   // Needs the using decl from d4.
   var_in_d4 = 0;
 }
 
+// IWYU: i1::UsingInCc needs a declaration
+using i1::UsingInCc;
+
+void TestUsingInCc() {
+  // IWYU: UsingInCc is...*include_with_using-i1.h
+  UsingInCc uicc;
+}
+
+
 /**** IWYU_SUMMARY
 
 tests/include_with_using.cc should add these lines:
+#include "tests/include_with_using-i1.h"
 class UsedFromD2;
 namespace ns3 { class PtrInNs3; }
 namespace ns5 { class PtrInNs5; }
@@ -57,6 +68,7 @@ The full include-list for tests/include_with_using.cc:
 #include "tests/include_with_using-d3b.h"  // for PtrInNs3
 #include "tests/include_with_using-d4.h"  // for var_in_d4
 #include "tests/include_with_using-d5b.h"  // for PtrInNs5
+#include "tests/include_with_using-i1.h"  // for UsingInCc
 class UsedFromD2;
 namespace ns3 { class PtrInNs3; }
 namespace ns5 { class PtrInNs5; }

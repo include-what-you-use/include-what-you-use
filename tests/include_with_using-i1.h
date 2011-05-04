@@ -1,4 +1,4 @@
-//===--- include_with_using-d1.h - test input file for iwyu ---------------===//
+//===--- include_with_using-i1.h - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/include_with_using-i1.h"
-
-namespace ns {
-class PtrInNs {};
+namespace i1 {
+class UsingInCc {};
 }
-
-using ns::PtrInNs;
