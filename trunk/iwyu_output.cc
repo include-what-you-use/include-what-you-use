@@ -817,14 +817,14 @@ void ProcessForwardDeclare(OneUse* use) {
     record_decl = tpl_decl->getTemplatedDecl();
 
   // (A2) If it has default template parameters, recategorize as a full use.
-  if (tpl_decl) {
-    if (HasDefaultTemplateParameters(tpl_decl)) {
-      VERRS(6) << "Moving " << use->symbol_name()
-               << " from fwd-decl use to full use: has default template param"
-               << " (" << use->PrintableUseLoc() << ")\n";
-      use->set_full_use();
-      // No return here: (A4) or (A5) may cause us to ignore this decl entirely.
-    }
+  // Suppress this if there's no definition for this class (so can't full-use).
+  if (tpl_decl && HasDefaultTemplateParameters(tpl_decl) &&
+      GetDefinitionForClass(tpl_decl) != NULL) {
+    VERRS(6) << "Moving " << use->symbol_name()
+             << " from fwd-decl use to full use: has default template param"
+             << " (" << use->PrintableUseLoc() << ")\n";
+    use->set_full_use();
+    // No return here: (A4) or (A5) may cause us to ignore this decl entirely.
   }
 
   // (A3) If it is in namespace std or a system ns, recategorize as a full use.

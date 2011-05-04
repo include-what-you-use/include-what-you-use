@@ -1767,6 +1767,23 @@ def _DeleteLinesAccordingToIwyu(iwyu_record, file_lines):
     _DeleteExtraneousBlankLines(file_lines, reorder_span)
 
 
+def _GetSymbolNameFromForwardDeclareLine(line):
+  """Given a forward declare line to add from iwyu output, get symbol.
+
+  Two possibilities: In or not in namespace(s).
+  If in namespaces, then return foo::bar::sym.
+  Else just sym.
+  """
+  iwyu_namespace_re = re.compile('namespace ([^{]*) { ')
+  symbolname_re = re.compile('([A-Za-z0-9_]+)')
+  namespaces_in_line = iwyu_namespace_re.findall(line)
+  symbols_in_line = symbolname_re.findall(line)
+  symbol_name = symbols_in_line[-1]
+  if (namespaces_in_line):
+    symbol_name = '::'.join(namespaces_in_line) + '::' + symbol_name
+  return symbol_name
+
+
 def FixFileLines(iwyu_record, file_lines, flags):
   """Applies one block of lines from the iwyu output script.
 
@@ -1814,6 +1831,7 @@ def FixFileLines(iwyu_record, file_lines, flags):
 
   # Now let's add in a decorated move-span for all the new #includes
   # and forward-declares.
+  symbol_names_seen = set()
   for line in iwyu_record.includes_and_forward_declares_to_add:
     line_info = LineInfo(line)
     m = _INCLUDE_RE.match(line)
@@ -1821,6 +1839,12 @@ def FixFileLines(iwyu_record, file_lines, flags):
       line_info.type = _INCLUDE_RE
       line_info.key = m.group(1)
     else:
+      # Avoid duplicates that can arise if different template args
+      # were suggested by different iwyu analyses for this file.
+      symbol_name = _GetSymbolNameFromForwardDeclareLine(line)
+      if symbol_name in symbol_names_seen:
+        continue
+      symbol_names_seen.add(symbol_name)
       line_info.type = _FORWARD_DECLARE_RE
     decorated_span = _DecoratedMoveSpanLines(iwyu_record, file_lines,
                                              [line_info], flags)
