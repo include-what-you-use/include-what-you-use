@@ -415,6 +415,9 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, NoInternal) {
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, Internal) {
   IncludePicker p;
+  // clang always has <built-in> #including the file specified on the cmdline.
+  p.AddDirectInclude("<built-in>", "foo/bar/internal/code.cc");
+  p.AddDirectInclude("foo/bar/internal/code.cc", "foo/bar/public/code.h");
   p.AddDirectInclude("foo/bar/public/code.h", "foo/bar/internal/hdr.h");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
@@ -435,6 +438,8 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, OtherInternal) {
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, PublicToInternal) {
   IncludePicker p;
+  p.AddDirectInclude("foo/bar/public/code.cc", "foo/bar/public/code.h");
+  p.AddDirectInclude("foo/bar/public/code.cc", "foo/bar/public/code2.h");
   p.AddDirectInclude("foo/bar/public/code.h", "foo/bar/internal/hdr.h");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
@@ -445,6 +450,26 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, PublicToInternal) {
       p.GetCandidateHeadersForFilepathIncludedFrom("foo/bar/internal/hdr.h",
                                                    "foo/bar/public/code2.h"),
       "\"foo/bar/internal/hdr.h\"");
+}
+
+TEST(GetCandidateHeadersForFilepathIncludedFrom, FriendGlob) {
+  IncludePicker p;
+  p.AddDirectInclude("baz.cc", "baz.h");
+  p.AddDirectInclude("baz.cc", "random.h");
+  p.AddDirectInclude("baz.h", "project/private/bar.h");
+  p.AddDirectInclude("random.h", "project/private/bar.h");
+  p.AddMapping("\"project/private/bar.h\"", "\"foo.h\"");
+  p.MarkIncludeAsPrivate("\"project/private/bar.h\"");
+  p.AddFriendGlob("project/private/bar.h", "\"baz*\"");
+  p.FinalizeAddedIncludes();
+  EXPECT_VECTOR_STREQ(
+      p.GetCandidateHeadersForFilepathIncludedFrom("project/private/bar.h",
+                                                   "random.h"),
+      "\"foo.h\"");
+  EXPECT_VECTOR_STREQ(
+      p.GetCandidateHeadersForFilepathIncludedFrom("project/private/bar.h",
+                                                   "baz.h"),
+      "\"project/private/bar.h\"");
 }
 
 TEST(HasMapping, IncludeMatch) {

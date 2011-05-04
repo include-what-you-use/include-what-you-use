@@ -68,6 +68,8 @@ using std::vector;
 // quoted include, such as <stdio.h>.
 string ConvertToQuotedInclude(const string& filepath);
 
+bool IsQuotedInclude(const string& s);
+
 // Returns whether this is a system (as opposed to user) include
 // file, based on where it lives.
 bool IsSystemIncludeFile(const string& filepath);
@@ -109,9 +111,10 @@ class IncludePicker {
   void MarkIncludeAsPrivate(const string& quoted_include);
 
   // Add this to say that "any file whose name matches the friend_glob
-  // is allowed to include includee_filepath".
+  // is allowed to include includee_filepath".  The glob should
+  // be a quoted-include glob (starting and ending with "" or <>).
   void AddFriendGlob(const string& includee_filepath,
-                     const string& friend_glob);
+                     const string& quoted_friend_glob);
 
   // Call this after iwyu preprocessing is done.  No more calls to
   // AddDirectInclude() or AddMapping() are allowed after this.

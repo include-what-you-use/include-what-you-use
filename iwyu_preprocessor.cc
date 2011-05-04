@@ -215,10 +215,10 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
     if (MatchOneToken(tokens, "friend", 2, current_loc)) {
       // 2nd token should be a glob.
       string glob = tokens[1];
-      // It is allowed to be quoted. In fact, it *must* be quoted if
-      // it contains white space.
-      if (glob.size() >= 2 && glob[0] == '"' && glob[glob.size() - 1] == '"') {
-        glob = glob.substr(1, glob.size() - 2);
+      // Interally, the glob is stored as a quoted include.  If the
+      // user didn't put quotes, assume they wanted a non-system file.
+      if (!IsQuotedInclude(glob)) {
+        glob = "\"" + glob + "\"";
       }
       ERRSYM(GetFileEntry(current_loc))
           << GetFilePath(current_loc) << " adding friend glob " << glob << "\n";
