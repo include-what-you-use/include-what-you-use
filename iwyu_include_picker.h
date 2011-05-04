@@ -47,6 +47,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 #include "port.h"
 
@@ -55,8 +56,8 @@ namespace include_what_you_use {
 using std::map;
 using std::set;
 using std::string;
-using std::vector;
 
+using std::vector;
 
 // Below, we talk 'quoted' includes.  A quoted include is something
 // that would be written on an #include line, complete with the <> or
@@ -106,6 +107,11 @@ class IncludePicker {
   // a "private" include.  If possible, we use the include-picker
   // mappings to map such includes to public (not-private) includs.
   void MarkIncludeAsPrivate(const string& quoted_include);
+
+  // Add this to say that "any file whose name matches the friend_glob
+  // is allowed to include includee_filepath".
+  void AddFriendGlob(const string& includee_filepath,
+                     const string& friend_glob);
 
   // Call this after iwyu preprocessing is done.  No more calls to
   // AddDirectInclude() or AddMapping() are allowed after this.
@@ -182,6 +188,16 @@ class IncludePicker {
   // All the includes we've seen so far, to help with globbing and
   // other dynamic mapping.  For each file, we list who #includes it.
   map<string, set<string> > quoted_includes_to_quoted_includers_;
+
+  // Map from filename or file glob to the set of files that used a
+  // pragma declaring it as a friend.  That is, if foo/bar/x.h has a line
+  // "// IWYU pragma: friend foo/bar/*" then "x.h" will be a member of
+  // friend_to_headers_map_["foo/bar/*"]. In a postprocessing step,
+  // files friend_to_headers_map_ will have globs expanded, i.e.
+  // if foo/bar/x.cc is processed, then
+  // friend_to_headers_map_["foo/bar/x.cc"] will be augmented with
+  // the contents of friend_to_headers_map_["foo/bar/*"].
+  map<string, set<string> > friend_to_headers_map_;
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;

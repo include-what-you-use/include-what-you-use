@@ -50,12 +50,18 @@
 //     cpi9's type is defined in i9.h, included by d10.h.
 //     d10.h will be deemed unnecessary, which is ok, and i9.h will
 //     not be suggested.
-
 // TODO(user): Tests where both the defining public file and an
 // exporting public file are included, once it's clear what the policy
 // should be.
+// 17. "friend" pragma: cpd11's type is defined in d11.h which is private
+//     but declares this file as a friend.
+// TODO(user): More tests of "friend": globs, header files,
+// quoted globs, more than one friend pragma in one file, file with more
+// than one file befriending it.
 
 #include "tests/comment_pragmas-d1.h"
+#include "tests/comment_pragmas-d10.h"
+#include "tests/comment_pragmas-d11.h"
 #include "tests/comment_pragmas-d2.h"
 #include "tests/comment_pragmas-d3.h"
 #include "tests/comment_pragmas-d4.h"
@@ -64,7 +70,6 @@
 #include "tests/comment_pragmas-d7.h"
 #include "tests/comment_pragmas-d8.h"
 #include "tests/comment_pragmas-d9.h"
-#include "tests/comment_pragmas-d10.h"
 // IWYU pragma: no_include "tests/comment_pragmas-i9.h"  // another test of comments
 
 
@@ -110,6 +115,11 @@ CommentPragmasD9 cpd9;
 // IWYU: CommentPragmasI9 is...*comment_pragmas-i9.h
 CommentPragmasI9 cpi9;
 
+// d11.h is a private file which says to include no_such_file2.h, but
+// has a pragma saying it's ok for comment_pragmas.cc to include
+// it.
+CommentPragmasD11 cpd11;
+
 /**** IWYU_SUMMARY
 
 tests/comment_pragmas.cc should add these lines:
@@ -133,6 +143,7 @@ tests/comment_pragmas.cc should remove these lines:
 
 The full include-list for tests/comment_pragmas.cc:
 #include <some_system_header_file>  // for CommentPragmasD8, CommentPragmasD9
+#include "tests/comment_pragmas-d11.h"  // for CommentPragmasD11
 #include "tests/comment_pragmas-d5.h"
 #include "tests/comment_pragmas-d6.h"
 #include "tests/comment_pragmas-i1.h"  // for CommentPragmasI2, CommentPragmasI3, CommentPragmasI4
