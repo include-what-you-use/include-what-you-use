@@ -12,12 +12,12 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 
-#include <stddef.h>
-#include <algorithm>  // for find
-#include <map>
-#include <set>
-#include <utility>  // for pair<>
-#include <vector>
+#include <stddef.h>                     // for NULL
+#include <algorithm>                    // for find
+#include <map>                          // for map, multimap
+#include <set>                          // for set
+#include <utility>                      // for pair
+#include <vector>                       // for vector
 
 #include "port.h"
 

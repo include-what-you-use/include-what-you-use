@@ -24,6 +24,7 @@
 
 // Get a windows-equivalent fnmatch()
 # include "Shlwapi.h"  // For PathMatchSpec
+
 # pragma comment(lib, "Shlwapi.lib")
 # define fnmatch(pattern, filepath, flags)  (!PathMatchSpec(filepath, pattern))
 

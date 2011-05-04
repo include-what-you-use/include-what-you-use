@@ -90,20 +90,20 @@
 #if defined(_MSC_VER)
 #include <direct.h>
 #else
-#include <unistd.h>
+#include <unistd.h>                     // for chdir
 #endif
-#include <stddef.h>
-#include <stdio.h>   // for snprintf
-#include <stdlib.h>
-#include <algorithm>
-#include <deque>
-#include <iterator>
-#include <list>
-#include <map>
-#include <set>
-#include <string>
-#include <utility>   // For make_pair
-#include <vector>
+#include <stddef.h>                     // for size_t
+#include <stdio.h>                      // for snprintf
+#include <stdlib.h>                     // for atoi, exit
+#include <algorithm>                    // for swap, find, make_pair
+#include <deque>                        // for swap
+#include <iterator>                     // for find
+#include <list>                         // for swap
+#include <map>                          // for map, swap, etc
+#include <set>                          // for set, set<>::iterator, swap
+#include <string>                       // for string, operator+, etc
+#include <utility>                      // for pair, make_pair
+#include <vector>                       // for vector, swap
 
 #include "iwyu_ast_util.h"
 #include "iwyu_cache.h"
@@ -117,11 +117,14 @@
 #include "iwyu_preprocessor.h"  // IWYU pragma: keep
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
-#include "port.h"
+#include "port.h"  // for CHECK_
+// TODO(wan): remove this once the IWYU bug is fixed.
+// IWYU pragma: no_include "foo/bar/baz.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -137,7 +140,6 @@
 
 namespace clang {
 class FileEntry;
-class MacroInfo;
 class PPCallbacks;
 class SourceManager;
 class Token;
