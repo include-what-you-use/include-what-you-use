@@ -1,13 +1,13 @@
 #!/usr/bin/python
 
-##===--- fix_includes_test.py - test for fix_includes.py -------------------===##
+##===--- fix_includes_test.py - test for fix_includes.py ------------------===##
 #
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 #
-##===-----------------------------------------------------------------------===##
+##===----------------------------------------------------------------------===##
 
 """Test for fix_includes.py
 
@@ -25,7 +25,7 @@ import unittest
 import fix_includes
 
 
-class FakeFlags:
+class FakeFlags(object):
   def __init__(self):
     self.blank_lines = False
     self.comments = True
@@ -34,7 +34,48 @@ class FakeFlags:
     self.checkout_command = None
     self.safe_headers = False
     self.separate_project_includes = None
+    self.create_cl_if_possible = True
+    self.invoking_command_line = 'iwyu.py my_targets'
 
+
+class FakeRunCommand(object):
+  def __init__(self):
+    self.command = None
+    self.args = None
+
+  def RunCommand(self, command, args):
+    self.command = command
+    self.args = args
+
+
+class FakeGetCommandOutputWithInput(object):
+  def __init__(self, stdout):
+    self.stdout = stdout
+    self.command = None
+    self.stdin = None
+
+  def GetCommandOutputWithInput(self, command, stdin):
+    print 'GetCommandOutputWithInput(%s, ...)' % command
+    self.command = command
+    self.stdin = stdin
+    return self.stdout
+
+
+class FakeGetCommandOutputLines(object):
+  def __init__(self):
+    self.stdout_lines_map = {}
+    self.command = None
+    self.args = None
+
+  def GetCommandOutputLines(self, command, args):
+    print 'GetCommandOutputLines(%s, %s)' % (command, args)
+    self.command = command
+    self.args = args
+    return self.stdout_lines_map[command]
+
+  def SetCommandOutputLines(self, command, lines):
+    lines = [line + '\n' for line in lines]
+    self.stdout_lines_map[command] = lines
 
 class FixIncludesBase(unittest.TestCase):
   """Does setup that every test will want."""
@@ -65,17 +106,40 @@ class FixIncludesBase(unittest.TestCase):
         lambda filename, flags: True
 
     # Stub out the checkout command; keep a list of all files checked out.
-    self.checkout_command_args = []
-    fix_includes._RunCommand = \
-        lambda command, args: self.checkout_command_args.extend(args)
+    self.fake_checkout_command = FakeRunCommand()
+    fix_includes._RunCommand = self.fake_checkout_command.RunCommand
+
+    # Stub out the CL creation command.
+    self.fake_cl_creation_command = (
+        FakeGetCommandOutputWithInput('Change 1234 created.\n'))
+    fix_includes._GetCommandOutputWithInput = (
+        self.fake_cl_creation_command.GetCommandOutputWithInput)
+
+    # Create a generic 'stubber'.
+    self.fake_get_command_output_lines = FakeGetCommandOutputLines()
+    fix_includes._GetCommandOutputLines = (
+        self.fake_get_command_output_lines.GetCommandOutputLines)
+
+    # Stub out the CL template command.
+    self.fake_get_command_output_lines.SetCommandOutputLines(
+        'g4', ['Description:',
+               '\t<enter description here>',
+               '',
+               'Files:',
+               '\tthis_file_should_not_appear_in_the_cl'])
 
     # Stub out the find_clients_of_files command.
-    self.find_clients_of_files_output = [
-        '==== 1 targets from 1 packages are affected\n',
-        '==== targets\n',
-        '//foo/bar:a\n']
-    fix_includes._GetCommandOutputLines = \
-        lambda command, args: self.find_clients_of_files_output
+    self.find_clients_of_files_command = (
+        '/google/data/ro/projects/cymbal/tools/find_clients_of_files.par')
+    self.fake_get_command_output_lines.SetCommandOutputLines(
+        self.find_clients_of_files_command,
+        ['==== 1 targets from 1 packages are affected',
+         '==== targets',
+         '//foo/bar:a'])
+
+  def SetFindClientsOfFilesOutput(self, output_lines):
+    self.fake_get_command_output_lines.SetCommandOutputLines(
+        self.find_clients_of_files_command, output_lines)
 
   def assertListEqual(self, a, b):
     """If the two lists aren't equal, raise an error and print the diffs."""
@@ -2458,10 +2522,21 @@ The full include-list for checkout:
 """
     self.RegisterFileContents({'checkout': infile})
     self.MakeFilesUnwriteable()
-    self.flags.checkout_command = 'check out'
+    self.flags.checkout_command = 'g4 edit'
     # Files are unwriteable, so they get checked out, then written.
     self.ProcessAndTest(iwyu_output)
-    self.assertEqual(['checkout'], self.checkout_command_args)
+    self.assertEqual('g4 edit -c 1234', self.fake_checkout_command.command)
+    self.assertEqual(['checkout'], self.fake_checkout_command.args)
+    self.assertEqual('g4 change -cc iwyu-dev -i',
+                     self.fake_cl_creation_command.command)
+    expected_change_description = """\
+Description:
+\tInclude-what-you-use fixit (http://goto/iwyu).
+\tThe following command was run to modify the files:
+\tiwyu.py my_targets
+"""
+    self.assertEqual(expected_change_description,
+                     self.fake_cl_creation_command.stdin)
 
   def testFileSpecifiedOnCommandline(self):
     """Test we limit editing to files specified on the commandline."""

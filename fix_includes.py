@@ -1,13 +1,13 @@
 #!/usr/bin/python
 
-##===--- fix_includes.py - rewrite source files based on iwyu output -------===##
+##===--- fix_includes.py - rewrite source files based on iwyu output ------===##
 #
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 #
-##===-----------------------------------------------------------------------===##
+##===----------------------------------------------------------------------===##
 
 """Update files with the 'correct' #include and forward-declare lines.
 
@@ -65,9 +65,10 @@ __author__ = 'csilvers@google.com (Craig Silverstein)'
 import difflib
 import optparse
 import os
-import pipes
+import pipes  # For (undocumented) pipes.quote
 import re
 import sys
+import subprocess
 
 _USAGE = """\
 %prog [options] [filename] ... < <output from include-what-you-use script>
@@ -496,16 +497,34 @@ def _WriteFileContents(filename, file_lines):
     print "Error writing '%s': %s" % (filename, why)
 
 
+def _CreateCommandLine(command, args):
+  """Join the command with the args in a shell-quoted way."""
+  ret = '%s %s' % (command, ' '.join(map(pipes.quote, args)))
+  print 'Running:', ret
+  return ret
+
+
 def _GetCommandOutputLines(command, args):
   """Return an iterable over the output lines of the given shell command."""
-  full_command = '%s %s' % (command, ' '.join(map(pipes.quote, args)))
-  return os.popen(full_command, 'r')
+  full_command = _CreateCommandLine(command, args)
+  proc = subprocess.Popen(full_command, shell=True, stdout=subprocess.PIPE)
+  return proc.stdout
 
 
 def _RunCommand(command, args):
   """Run the given shell command."""
   for line in _GetCommandOutputLines(command, args):
     print line,
+
+
+def _GetCommandOutputWithInput(command, stdin_text):
+  """Return the output of the given command fed the stdin_text."""
+  print command
+  proc = subprocess.Popen(command,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          shell=True)
+  return proc.communicate(input=stdin_text)[0]
 
 
 def PrintFileDiff(old_file_contents, new_file_contents):
@@ -1899,6 +1918,65 @@ def _ShowHowToTest(files_fixed, safe_headers):
 
   return output
 
+def CreateCLForCheckoutCommand(checkout_command, invoking_command):
+  """Create a CL using a command inferred from the checkout_command.
+
+  Arguments:
+    checkout_commmand: The command specified with --checkout_command
+    invoking_command: If not None, the command line passed to iwyu.py
+
+  Returns:
+    A CL number on success, else None.
+
+  If the checkout_command is 'p4|g4|v4 edit' then attempt to create a
+  CL with an appropriate description. On success, return the CL
+  number. Otherwise return None.
+  """
+  if checkout_command in ('p4 edit', 'g4 edit', 'v4 edit'):
+    what4 = checkout_command.split(' ')[0]
+  else:
+    # We don't know how to create a CL. Punt.
+    return None
+
+  description_lines = ['\tInclude what you use.\n']
+  if invoking_command:
+    description_lines.append(
+          '\tThe following command was run to modify the files:\n')
+    description_lines.append('\t' + invoking_command + '\n')
+
+  # The change description must be of a certain form. First invoke
+  # '<what4> client -o' to create a template, then replace
+  # '<enter description here>' with the desired description.
+  # The lines after that are File lines, which we will discard
+  # here, because we will add the files via '<what4> edit -c <CL#>'.
+  input_lines = []
+  description_added = False
+  output_lines = []
+  for line in _GetCommandOutputLines(what4, ['change', '-o']):
+    output_lines.append(line)
+    if line == '\t<enter description here>\n':
+      input_lines.extend(description_lines)
+      description_added = True
+      break
+    else:
+      input_lines.append(line)
+
+  if not description_added:
+    print ('ERROR: Didn\'t find "\t<enter description here>" in'
+           ' "%s change -o" output' % what4)
+    for line in output_lines:
+      print line,
+    return None
+
+  input_text = ''.join(input_lines)
+  output =  _GetCommandOutputWithInput('%s change -cc iwyu-dev -i'
+                                       % what4, input_text)
+  # Parse output for "Changelist XXX created."
+  m = re.match('Change (\d+) created.', output)
+  if not m:
+    print 'ERROR: Unexpected change creation output "%s"' % output
+    return None
+  return m.group(1)
 
 def FixManyFiles(iwyu_records, flags):
   """Given a list of iwyu_records, fix each file listed in the record.
@@ -1935,12 +2013,23 @@ def FixManyFiles(iwyu_records, flags):
 
   # It's much faster to check out all the files at once.
   if flags.checkout_command and files_to_checkout:
-    _RunCommand(flags.checkout_command, files_to_checkout)
+    checkout_command = flags.checkout_command
+    # If no files to fix are writable and a checkout command was
+    # specified and we can figure out how to create a CL, do it.
+    if (flags.create_cl_if_possible and
+        len(files_to_checkout) == len(file_and_fix_pairs)):
+      cl = CreateCLForCheckoutCommand(flags.checkout_command,
+                                      flags.invoking_command_line)
+      if cl:
+        # Assumption: the checkout command supports the '-c <CL#>' syntax.
+        checkout_command += (' -c ' + cl)
+    _RunCommand(checkout_command, files_to_checkout)
 
   for filename, fixed_lines in file_and_fix_pairs:
     _WriteFileContents(filename, fixed_lines)
 
   files_fixed = [filename for filename, _ in file_and_fix_pairs]
+
   print _ShowHowToTest(files_fixed, flags.safe_headers)
   return len(files_fixed)
 
@@ -2064,6 +2153,14 @@ def main(argv):
                           ' a space.  The command will not be run on any file'
                           ' that does not need to change.'))
 
+  parser.add_option('--create_cl_if_possible', action='store_true',
+                    default=True,
+                    help=('If --checkout_command is "p4|g4|v4 edit" and'
+                          ' all files to be modified needed to be checked out,'
+                          ' then create a CL containing those files.'))
+  parser.add_option('--nocreate_cl_if_possible', action='store_false',
+                    dest='create_cl_if_possible')
+
   parser.add_option('--separate_project_includes', default=None,
                     help=('Sort #includes for current project separately'
                           ' from all other #includes.  This flag specifies'
@@ -2072,6 +2169,10 @@ def main(argv):
                           ' same top-level directory are assumed to be in the'
                           ' same project.  If not specified, project #includes'
                           ' will be sorted with other non-system #includes.'))
+
+  parser.add_option('--invoking_command_line', default=None,
+                    help=('Internal flag used by iwyu.py, It should be the'
+                          ' command line used to invoke iwyu.py'))
 
   (flags, files_to_modify) = parser.parse_args(argv[1:])
   if files_to_modify:
