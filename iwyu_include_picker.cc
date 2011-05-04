@@ -911,6 +911,11 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
 
   quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
 
+  // Mark the clang fake-file "<built-in>" as private, so we never try
+  // to map anything to it.
+  if (includer_filepath == "<built-in>")
+    MarkIncludeAsPrivate("\"<built-in>\"");
+
   // Automatically mark files in foo/internal/bar as private, and map them.
   // Then say that everyone else in foo/* is a friend, who is allowed to
   // include the otherwise-private header.
