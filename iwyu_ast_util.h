@@ -649,6 +649,9 @@ const clang::Type* RemoveElaboration(const clang::Type* type);
 // Returns true if the type has any template arguments.
 bool IsTemplatizedType(const clang::Type* type);
 
+// Returns true if the type is a RecordType or a TemplateSpecializationType.
+bool IsClassType(const clang::Type* type);
+
 // Read past SubstTemplateTypeParmType to the underlying type, if type
 // is itself a SubstTemplateTypeParmType.  Thus: T is converted to int
 // if we are parsing a template instantiated with T being int.

@@ -19,11 +19,11 @@
 
 // Requires the full type because it does not obey rule (1)
 // IWYU: IndirectStruct1 needs a declaration
-// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h
+// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
 IndirectStruct1 DoesNotForwardDeclareFn();
 
 // This also does not obey rule (1): it's -d1 that does the fwd-declaring.
-// IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h
+// IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
 struct IndirectStructForwardDeclaredInD1 DoesNotForwardDeclareProperlyFn();
 
 // Requires the full type because it does not obey rule (2)
@@ -40,7 +40,7 @@ IndirectStruct2 DoesEverythingRightFn();
 // --- Now do it all again, with templates!
 
 // IWYU: TplIndirectStruct1 needs a declaration
-// IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h
+// IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
 TplIndirectStruct1<int> TplDoesNotForwardDeclareFn();
 
 // A bit of an asymmetry with the non-tpl case: 'struct
@@ -49,7 +49,7 @@ TplIndirectStruct1<int> TplDoesNotForwardDeclareFn();
 // to be forward-declared even when they're elaborated.
 // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
 struct TplIndirectStructForwardDeclaredInD1<int>
-// IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h
+// IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
 TplDoesNotForwardDeclareProperlyFn();
 
 template <typename T> struct TplDirectStruct1;

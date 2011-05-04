@@ -953,6 +953,11 @@ bool IsTemplatizedType(const Type* type) {
   return (type && isa<TemplateSpecializationType>(RemoveElaboration(type)));
 }
 
+bool IsClassType(const clang::Type* type) {
+  return (type && (isa<TemplateSpecializationType>(RemoveElaboration(type)) ||
+                   isa<RecordType>(RemoveElaboration(type))));
+}
+
 const Type* RemoveSubstTemplateTypeParm(const Type* type) {
   if (const SubstTemplateTypeParmType* subst_type = DynCastFrom(type))
     return subst_type->getReplacementType().getTypePtr();

@@ -201,7 +201,8 @@ typedef I1_Class Cc_typedef_array[kI1ConstInt];
 // definition of I2_Class.
 // IWYU: I1_Class needs a declaration
 // IWYU: I2_Class needs a declaration
-// IWYU: I1_TemplateClass is...*badinc-i1.h
+// IWYU: I1_TemplateClass is...*badinc-i1.h.*#included\.
+// IWYU: I1_TemplateClass is...*badinc-i1.h.*for autocast
 // IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
@@ -318,11 +319,11 @@ template<class T = I1_Class, I1_Enum E = I11> class Cc_DeclareOnlyTemplateClass;
 const I2_Class& Cc_Function(
     // IWYU: I1_Class needs a declaration
     const I1_Class& i1,
-    // IWYU: I2_Class is...*badinc-i2.h
+    // IWYU: I2_Class is...*badinc-i2.h.*for autocast
     // IWYU: I2_Class needs a declaration
     const I2_Class& i2,
     const class I1_Class& elaborated_i1,
-    // IWYU: I2_Class is...*badinc-i2.h
+    // IWYU: I2_Class is...*badinc-i2.h.*for autocast
     const class I2_Class& elaborated_i2,
     // A subtle c++ point: forward-declaring is ok for i2b, because
     // you can't do implicit conversion to a non-const reference
@@ -422,7 +423,7 @@ class I1_DefinedInCc_Class {
 // For function declarations, we don't need complete type info for
 // arguments.  But we do for the return type unless we explicitly
 // say we don't want to (by providing a forward-declare).
-// IWYU: I1_Class is...*badinc-i1.h
+// IWYU: I1_Class is...*badinc-i1.h.*for fn return type
 // IWYU: I1_Class needs a declaration
 // IWYU: I2_Struct needs a declaration
 I1_Class Cc_DeclareOnlyFn(I2_Struct i2_class);
