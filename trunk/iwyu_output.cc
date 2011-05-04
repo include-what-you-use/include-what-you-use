@@ -26,7 +26,7 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 // TODO(wan): remove this once the IWYU bug is fixed.
-// IWYU pragma no_include "foo/bar/baz.h"
+// IWYU pragma: no_include "foo/bar/baz.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
