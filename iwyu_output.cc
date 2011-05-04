@@ -1090,7 +1090,8 @@ void CalculateIwyuForForwardDeclareUse(
   bool dfn_is_in_actual_includes = false;
   if (dfn) {
     vector<string> headers
-      = GlobalIncludePicker().GetCandidateHeadersForFilepath(GetFilePath(dfn));
+      = GlobalIncludePicker().GetCandidateHeadersForFilepathIncludedFrom(
+          GetFilePath(dfn), GetFilePath(use->use_loc()));
     for (Each<string> header(&headers); !header.AtEnd(); ++header) {
       if (ContainsKey(desired_includes, *header))
         dfn_is_in_desired_includes = true;
