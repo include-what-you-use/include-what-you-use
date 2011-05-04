@@ -27,6 +27,7 @@
 #include "clang/Basic/SourceLocation.h"
 
 namespace clang {
+class ClassTemplateDecl;
 class CXXConstructExpr;
 class CXXConstructorDecl;
 class CXXDeleteExpr;
@@ -605,6 +606,12 @@ set<const clang::NamedDecl*> GetClassRedecls(const clang::NamedDecl* decl);
 // unit (that is, is the first one you'd see if you did 'cc -E').
 // Returns NULL if the input is not a RecordDecl or ClassTemplateDecl.
 const clang::NamedDecl* GetFirstRedecl(const clang::NamedDecl* decl);
+
+// Given a class or class template, returns the declaration of that
+// class that specifies the values of the default template arguments.
+// If there are no default template arguments, returns NULL.
+const clang::ClassTemplateDecl* GetClassRedeclSpecifyingDefaultTplArgs(
+    const clang::ClassTemplateDecl* decl);
 
 // Picks one redecl from GetClassRedecls() arbitrarily.
 // This is used to recover from the clang bug that mixes friend decls

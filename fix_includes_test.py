@@ -212,6 +212,14 @@ class FixIncludesBase(unittest.TestCase):
                                                         cmdline_files,
                                                         self.flags)
 
+    if expected_after != self.actual_after_contents:
+      print "=== Expected:"
+      for line in expected_after:
+        print line
+      print "=== Got:"
+      for line in self.actual_after_contents:
+        print line
+      print "==="
     self.assertListEqual(expected_after, self.actual_after_contents)
     if expected_num_modified_files is not None:
       self.assertEqual(expected_num_modified_files, num_modified_files)
@@ -1473,11 +1481,17 @@ class FileBClass;  // lines 9-9
 
 class FileAClass;   // kept for file A, not for file B
 class FileBClass;   // kept for file B, not for file A   ///-
+///+namespace foo {
+///+template <typename Arg1> ClassTemplate;
+///+}  // namespace foo
+///+template <typename Arg1> ClassTemplate;
 """
     iwyu_output = """\
 twice.cc should add these lines:
 #include <stdio.h>
 #include "include_this_file"  // for reason 1
+namespace foo { template <typename Arg1> ClassTemplate; }
+template <typename Arg1> ClassTemplate;
 
 twice.cc should remove these lines:
 - #include <notused.h>  // lines 3-3
@@ -1490,11 +1504,15 @@ The full include-list for twice.cc:
 #include <stdio.h>
 #include "include_this_file"  // for reason 1
 #include "used.h"
+namespace foo { template <typename Arg1> ClassTemplate; }
+template <typename Arg1> ClassTemplate;
 ---
 
 twice.cc should add these lines:
 #include "used2.h"
 #include "include_this_file"  // for reason 2
+namespace foo { template <typename Arg2> ClassTemplate; }
+template <typename Arg2> ClassTemplate;
 
 twice.cc should remove these lines:
 - #include <notused.h>  // lines 3-3
@@ -1507,6 +1525,8 @@ The full include-list for twice.cc:
 #include "used2.h"
 #include "used_only_in_file_a.h"
 class FileAClass;  // lines 8-8
+namespace foo { template <typename Arg2> ClassTemplate; }
+template <typename Arg2> ClassTemplate;
 ---
 """
     self.RegisterFileContents({'twice.cc': infile})
@@ -2189,19 +2209,23 @@ class FwdDecl;  // lines 7-7
     infile = """\
 // Copyright 2010
 
-///+namespace ns1 {class ForwardDeclared;}
-///+namespace ns2 {class ForwardDeclared;}
+///+namespace ns1 {
+///+class ForwardDeclared;
+///+}  // namespace ns1
+///+namespace ns2 {
+///+class ForwardDeclared;
+///+}  // namespace ns2
 """
     iwyu_output = """\
 identical_names should add these lines:
-namespace ns1 {class ForwardDeclared;}
-namespace ns2 {class ForwardDeclared;}
+namespace ns1 { class ForwardDeclared; }
+namespace ns2 { class ForwardDeclared; }
 
 identical_names should remove these lines:
 
 The full include-list for identical_names:
-namespace ns1 {class ForwardDeclared;}
-namespace ns2 {class ForwardDeclared;}
+namespace ns1 { class ForwardDeclared; }
+namespace ns2 { class ForwardDeclared; }
 ---
 """
     self.RegisterFileContents({'identical_names': infile})

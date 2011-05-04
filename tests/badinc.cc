@@ -1516,9 +1516,15 @@ int main() {
   // IWYU: I1_const_ptr is...*badinc-i1.h
   local_i1_const_ptr.indirect_del();
   // This calls *ptr_, but in a free function.
+  // TODO(chandlerc): The I1_Class requirement below may be necessary, but is
+  // not being added for the correct reasons even if so.
+  // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: operator== is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
   local_i1_const_ptr == i1_class;
+  // TODO(chandlerc): The I1_Class requirement below may be necessary, but is
+  // not being added for the correct reasons even if so.
+  // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: operator== is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
   i1_class == local_i1_const_ptr;
@@ -1564,6 +1570,7 @@ int main() {
        // IWYU: std::vector is...*<vector>
        // IWYU: std::vector<.*>::iterator is...*<vector>
        it != local_enum_vector.end(); ++it) {
+    // IWYU: I2_Enum is...*badinc-i2.h
     // IWYU: std::vector is...*<vector>
     std::find(local_enum_vector.begin(), local_enum_vector.end(), *it);
   }
