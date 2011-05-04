@@ -33,7 +33,6 @@ namespace include_what_you_use {
 using std::map;
 using std::pair;
 using std::set;
-using std::string;
 
 
 // This cache is used to store 'full use information' for a given

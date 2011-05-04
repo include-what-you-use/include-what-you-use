@@ -49,6 +49,7 @@ class ValueDecl;
 
 namespace include_what_you_use {
 
+using std::map;
 using std::set;
 using std::string;
 
