@@ -173,7 +173,8 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
 
 // Holds information about a single full or fwd-decl use of a symbol.
 OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
-               OneUse::UseKind use_kind, bool in_cxx_method_body)
+               OneUse::UseKind use_kind, bool in_cxx_method_body,
+               const char* comment)
     : symbol_name_(internal::GetQualifiedNameAsString(decl)),
       short_symbol_name_(internal::GetShortNameAsString(decl)),
       decl_(decl),
@@ -181,6 +182,7 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
       use_loc_(use_loc),
       use_kind_(use_kind),             // full use or fwd-declare use
       in_cxx_method_body_(in_cxx_method_body),
+      comment_(comment ? comment : ""),
       public_headers_(),
       suggested_header_(),             // figure that out later
       ignore_use_(false),
@@ -197,6 +199,7 @@ OneUse::OneUse(const string& symbol_name, const string& dfn_filepath,
       use_loc_(use_loc),
       use_kind_(kFullUse),
       in_cxx_method_body_(false),
+      comment_(),
       public_headers_(),
       suggested_header_(),
       ignore_use_(false),
@@ -469,12 +472,13 @@ static void LogSymbolUse(const string& prefix, const OneUse& use) {
 
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
                                        const NamedDecl* decl,
-                                       bool in_cxx_method_body) {
+                                       bool in_cxx_method_body,
+                                       const char* comment) {
   if (decl) {
     // Since we need the full symbol, we need the decl's definition-site.
     decl = GetDefinitionAsWritten(decl);
     symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kFullUse,
-                                  in_cxx_method_body));
+                                  in_cxx_method_body, comment));
     LogSymbolUse("Marked full-info use of decl", symbol_uses_.back());
   }
 }
@@ -494,7 +498,8 @@ void IwyuFileInfo::ReportIncludeFileUse(const string& quoted_include) {
 
 void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
                                            const NamedDecl* decl,
-                                           bool in_cxx_method_body) {
+                                           bool in_cxx_method_body,
+                                           const char* comment) {
   if (!decl)
     return;
   // Sometimes, a bug in clang (http://llvm.org/bugs/show_bug.cgi?id=8669)
@@ -502,24 +507,8 @@ void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
   // happened here, replace the friend with a real fwd decl.
   decl = GetNonfriendClassRedecl(decl);
   symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse,
-                                in_cxx_method_body));
+                                in_cxx_method_body, comment));
   LogSymbolUse("Marked fwd-decl use of decl", symbol_uses_.back());
-}
-
-// Converts the type into a decl, and reports that.
-void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
-                                           const Type* type,
-                                           bool in_cxx_method_body) {
-  if (!type)
-    return;
-  type = RemovePointersAndReferencesAsWritten(type);   // just in case
-  const NamedDecl* decl = TypeToDeclAsWritten(type);
-  if (decl) {
-    decl = GetNonfriendClassRedecl(decl);  // work around clang bug PR#8669
-    symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse,
-                                  in_cxx_method_body));
-    LogSymbolUse("Marked fwd-decl use of type", symbol_uses_.back());
-  }
 }
 
 // Given a collection of symbol-uses for symbols defined in various
@@ -1303,11 +1292,15 @@ static string GetWarningMsg(const OneUse& use) {
   string warning = PrintableLoc(spelling_loc) + ": warning: ";
   if (use.is_full_use()) {
     warning += (use.symbol_name() + " is defined in " + use.suggested_header()
-                + ", which isn't directly #included.\n");
+                + ", which isn't directly #included");
   } else {
     warning += (use.symbol_name() + " needs a declaration"
-                + ", but does not provide or directly #include one.\n");
+                + ", but does not provide or directly #include one");
   }
+  if (!use.comment().empty()) {
+    warning += " " + use.comment();
+  }
+  warning += ".\n";
   if (instantiation_loc != spelling_loc) {
     // Only set/print this if it's different from the spelling location.
     warning += PrintableLoc(instantiation_loc) + ": note: used here.\n";

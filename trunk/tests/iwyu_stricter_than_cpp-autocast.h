@@ -26,10 +26,10 @@ struct IndirectStruct2;
 void Fn(
     // Requires the full type because it does not obey rule (1)
     // IWYU: IndirectStruct1 needs a declaration
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     const IndirectStruct1& ic1,
     // This also does not obey rule (1): it's -d1 that does the fwd-declaring.
-    // IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h
+    // IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     const struct IndirectStructForwardDeclaredInD1& icfdid1,
     // Requires the full type because it does not obey rule (2)
     DirectStruct1 dc1,
@@ -45,7 +45,7 @@ template <typename T> struct TplIndirectStruct2;
 
 void TplFn(
     // IWYU: TplIndirectStruct1 needs a declaration
-    // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h
+    // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     const TplIndirectStruct1<char>& ic1,
     // A bit of an asymmetry with the non-tpl case: 'struct
     // IndirectStructForwardDeclaredInD1' does not need to be
@@ -54,7 +54,7 @@ void TplFn(
     // course, the fwd-decl requirement will be superceded by the
     // full-type requirement due to autocast, but we report both.)
     // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
-    // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h
+    // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     const struct TplIndirectStructForwardDeclaredInD1<char>& icfdid1,
     TplDirectStruct1<char> dc1,
     struct TplDirectStruct2<char> dc2,

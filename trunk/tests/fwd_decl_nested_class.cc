@@ -58,6 +58,7 @@ class Foo {
   class UsedFullyInMethod { };
   class UsedFullyInInitializer { };
   class UsedImplicitlyInInitializer { };
+  class UsedImplicitlyInInitializerNeverDeclared { };
   class UsedAsPtrArg { };
   class UsedAsPtrReturn { };
   class UsedAsPtrMember { };
@@ -65,6 +66,8 @@ class Foo {
 
   UsedFullyInInitializer init_;
   UsedImplicitlyInInitializer implicit_;
+  UsedImplicitlyInInitializerNeverDeclared implicit_never_declared_;
+  UsedImplicitlyInInitializerNeverDeclared* implicit_never_declared_ptr_;
 };
 
 class Foo::NoUsageDefinedOutOfLine {};
@@ -114,6 +117,7 @@ class Outer {
   template<typename T> class UsedFullyInMethod { };
   template<typename T> class UsedFullyInInitializer { };
   template<typename T> class UsedImplicitlyInInitializer { };
+  template<typename T> class UsedImplicitlyInInitializerNeverDeclared { };
   template<typename T> class UsedAsPtrArg { };
   template<typename T> class UsedAsPtrReturn { };
   template<typename T> class UsedAsPtrMember { };
@@ -121,6 +125,8 @@ class Outer {
 
   UsedFullyInInitializer<int> init_;
   UsedImplicitlyInInitializer<int> implicit_;
+  UsedImplicitlyInInitializerNeverDeclared<int> implicit_never_declared_;
+  UsedImplicitlyInInitializerNeverDeclared<int>* implicit_never_declared_ptr_;
 };
 
 template<typename T> class Outer::NoUsageDefinedOutOfLine {};

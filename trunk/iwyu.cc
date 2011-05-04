@@ -1536,7 +1536,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Checkers, that tell iwyu_output about uses of symbols.
   // We let, but don't require, subclasses to override these.
 
-  virtual void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl) {
+  // The comment, if not NULL, is extra text that is included along
+  // with the warning message that iwyu emits.
+  virtual void ReportDeclUseWithComment(SourceLocation used_loc,
+                                        const NamedDecl* decl,
+                                        const char* comment) {
     // Map private decls like __normal_iterator to their public counterpart.
     decl = MapPrivateDeclToPublicDecl(decl);
     if (CanIgnoreDecl(decl))
@@ -1548,7 +1552,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const FileEntry* used_in = GetFileEntry(used_loc);
 
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()));
+        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+        comment);
 
     // Sometimes using a decl drags in a few other uses as well:
 
@@ -1560,10 +1565,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // using-decl.
     // TODO(csilvers): maybe just insert our own using declaration
     // instead?  We can call it "Use what you use". :-)
+    // TODO(csilvers): check for using statements and namespace aliases too.
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-          used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()));
+          used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+          "(for using decl)");
     }
 
     // For typedefs, the user of the type is sometimes the one
@@ -1592,14 +1599,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
   }
 
-  virtual void ReportDeclsUse(SourceLocation used_loc,
-                              const set<const NamedDecl*>& decls) {
-    for (Each<const NamedDecl*> it(&decls); !it.AtEnd(); ++it)
-      ReportDeclUse(used_loc, *it);
-  }
-
-  virtual void ReportDeclForwardDeclareUse(SourceLocation used_loc,
-                                           const NamedDecl* decl) {
+  // The comment, if not NULL, is extra text that is included along
+  // with the warning message that iwyu emits.
+  virtual void ReportDeclForwardDeclareUseWithComment(SourceLocation used_loc,
+                                                      const NamedDecl* decl,
+                                                      const char* comment) {
     decl = MapPrivateDeclToPublicDecl(decl);
     if (CanIgnoreDecl(decl))
       return;
@@ -1609,21 +1613,43 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
 
+    preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
+        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+        comment);
+
     // If we're a use that depends on a using declaration, make sure
     // we #include the file with the using declaration.
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-          used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()));
+          used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+          "(for using decl)");
     }
+  }
 
-    preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()));
+  // Like ReportDeclUse, but for the common case of no comment.
+  void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl) {
+    return ReportDeclUseWithComment(used_loc, decl, NULL);
+  }
+
+  void ReportDeclForwardDeclareUse(SourceLocation used_loc,
+                                   const NamedDecl* decl) {
+    return ReportDeclForwardDeclareUseWithComment(used_loc, decl, NULL);
+  }
+
+  void ReportDeclsUse(SourceLocation used_loc,
+                      const set<const NamedDecl*>& decls) {
+    for (Each<const NamedDecl*> it(&decls); !it.AtEnd(); ++it)
+      ReportDeclUse(used_loc, *it);
   }
 
   // Called when the given type is fully used at used_loc, regardless
   // of the type being explicitly written in the source code or not.
-  virtual void ReportTypeUse(SourceLocation used_loc, const Type* type) {
+  // The comment, if not NULL, is extra text that is included along
+  // with the warning message that iwyu emits.
+  virtual void ReportTypeUseWithComment(SourceLocation used_loc,
+                                        const Type* type,
+                                        const char* comment) {
     // TODO(csilvers): figure out if/when calling CanIgnoreType() is correct.
     if (!type)
       return;
@@ -1636,20 +1662,25 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       type = RemovePointersAndReferencesAsWritten(type);
       if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
         VERRS(6) << "(For pointer type " << PrintableType(type) << "):\n";
-        IwyuBaseAstVisitor<Derived>::ReportDeclForwardDeclareUse(used_loc,
-                                                                 decl);
+        IwyuBaseAstVisitor<Derived>::ReportDeclForwardDeclareUseWithComment(
+            used_loc, decl, comment);
       }
     } else {
       if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
         decl = GetDefinitionAsWritten(decl);
         VERRS(6) << "(For type " << PrintableType(type) << "):\n";
-        IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl);
+        IwyuBaseAstVisitor<Derived>::ReportDeclUseWithComment(
+            used_loc, decl, comment);
       }
     }
   }
 
-  virtual void ReportTypesUse(SourceLocation used_loc,
-                              const set<const Type*>& types) {
+  // Like ReportTypeUse, but for the common case of no comment.
+  void ReportTypeUse(SourceLocation used_loc, const Type* type) {
+    return ReportTypeUseWithComment(used_loc, type, NULL);
+  }
+
+  void ReportTypesUse(SourceLocation used_loc, const set<const Type*>& types) {
     for (Each<const Type*> it(&types); !it.AtEnd(); ++it)
       ReportTypeUse(used_loc, *it);
   }
@@ -1725,7 +1756,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   //     implicit conversion (the 'autocast'), for instance, passing
   //     in a char* to Fn(const StringPiece& foo) { ... }
   // Both of these iwyu requirements can be overridden by the function
-  // author; for details, see CodeAuthorWantsJustAForwarDeclare.
+  // author; for details, see CodeAuthorWantsJustAForwardDeclare.
   bool VisitFunctionDecl(clang::FunctionDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
 
@@ -1742,10 +1773,20 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // ...except the return value.
     const Type* result_type
         = RemoveElaboration(decl->getResultType().getTypePtr());
-    if (!CanIgnoreType(result_type) &&
-        !IsPointerOrReferenceAsWritten(result_type) &&
-        !CodeAuthorWantsJustAForwardDeclare(result_type, GetLocation(decl))) {
-      ReportTypeUse(GetLocation(decl), result_type);
+    const bool is_responsible_for_result_type
+        = (!CanIgnoreType(result_type) &&
+           !IsPointerOrReferenceAsWritten(result_type) &&
+           !CodeAuthorWantsJustAForwardDeclare(result_type, GetLocation(decl)));
+    // Don't bother to report here, when the language agrees with us
+    // we need the full type; that will be reported elsewhere, so
+    // reporting here would be double-counting.
+    const bool type_use_reported_in_visit_function_type
+        = (!current_ast_node()->in_forward_declare_context() ||
+           !IsClassType(result_type));
+    if (is_responsible_for_result_type &&
+        !type_use_reported_in_visit_function_type) {
+      ReportTypeUseWithComment(GetLocation(decl), result_type,
+                               "(for fn return type)");
     }
 
     // ...and non-explicit, one-arg ('autocast') constructor types.
@@ -1771,7 +1812,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                                GetLocation(&param_tl)))
           continue;
         // This is a 'full type required' check, to 'turn off' fwd decl.
-        ReportTypeUse(GetLocation(&param_tl), deref_param_type);
+        // But don't bother to report in situations where we need the
+        // full type for other reasons; that's just double-reporting.
+        if (current_ast_node()->in_forward_declare_context() ||
+            IsPointerOrReferenceAsWritten(param_type)) {
+          ReportTypeUseWithComment(GetLocation(&param_tl), deref_param_type,
+                                   "(for autocast)");
+        }
       } else {
         VERRS(6) << "WARNING: NULL TypeSourceInfo for " << PrintableDecl(*param)
                  << " (type " << PrintableType(param_type) << ")\n";
@@ -2234,6 +2281,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Usually the function-author is responsible for providing the
     // full type information for the return type of the function, but
     // in cases where it's not, we have to take responsibility.
+    // TODO(csilvers): check the fn argument types as well.
     const Type* result_type = callee->getResultType().getTypePtr();
     if (ContainsKey(GetCallerResponsibleTypesForFnReturn(callee),
                     result_type)) {
@@ -2604,29 +2652,33 @@ class InstantiatedTemplateVisitor
   // provide" the decl, by #including the file that defines the decl
   // (if templates call other templates, we have to find the right
   // template).
-  virtual void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl) {
+  virtual void ReportDeclUseWithComment(SourceLocation used_loc,
+                                        const NamedDecl* decl,
+                                        const char* comment) {
     const SourceLocation actual_used_loc = GetLocOfTemplateThatProvides(decl);
     if (actual_used_loc.isValid()) {
       // If a template is responsible for this decl, then we don't add
       // it to the cache; the cache is only for decls that the
       // original caller is responsible for.
-      Base::ReportDeclUse(actual_used_loc, decl);
+      Base::ReportDeclUseWithComment(actual_used_loc, decl, comment);
     } else {
       // Let all the currently active types and decls know about this
       // report, so they can update their cache entries.
       for (Each<CacheStoringScope*> it(&cache_storers_); !it.AtEnd(); ++it)
         (*it)->NoteReportedDecl(decl);
-      Base::ReportDeclUse(caller_loc(), decl);
+      Base::ReportDeclUseWithComment(caller_loc(), decl, comment);
     }
   }
 
-  virtual void ReportTypeUse(SourceLocation used_loc, const Type* type) {
+  virtual void ReportTypeUseWithComment(SourceLocation used_loc,
+                                        const Type* type,
+                                        const char* comment) {
     // clang desugars template types, so Foo<MyTypedef>() gets turned
     // into Foo<UnderlyingType>().  Try to convert back.
     type = ResugarType(type);
     for (Each<CacheStoringScope*> it(&cache_storers_); !it.AtEnd(); ++it)
       (*it)->NoteReportedType(type);
-    Base::ReportTypeUse(caller_loc(), type);
+    Base::ReportTypeUseWithComment(caller_loc(), type, comment);
   }
 
   //------------------------------------------------------------
