@@ -64,15 +64,11 @@
 #include <vector>                       // for vector
 
 #include "iwyu_output.h"
-#include "port.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Token.h"
 
-namespace include_what_you_use {
-class IwyuAstConsumer;
-}
 namespace clang {
 class FileEntry;
 class MacroInfo;

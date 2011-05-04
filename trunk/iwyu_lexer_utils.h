@@ -14,9 +14,11 @@
 #include <string>                       // for string
 #include <vector>                       // for vector
 
-#include "port.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Lex/Token.h"
+
+namespace clang {
+class Token;
+}  // namespace clang
 
 namespace clang {
 class SourceManager;

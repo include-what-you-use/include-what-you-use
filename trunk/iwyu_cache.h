@@ -17,7 +17,6 @@
 
 #include <map>                          // for map
 #include <set>                          // for set
-#include <string>
 #include <utility>                      // for pair
 
 #include "iwyu_stl_util.h"
@@ -36,8 +35,6 @@ using std::pair;
 using std::set;
 using std::string;
 
-
-class IwyuPreprocessorInfo;
 
 // This cache is used to store 'full use information' for a given
 // templated function call or type instantiation:

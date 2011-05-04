@@ -19,8 +19,6 @@
 #include <utility>                      // for pair
 #include <vector>                       // for vector
 
-#include "port.h"
-
 namespace include_what_you_use {
 
 using std::map;

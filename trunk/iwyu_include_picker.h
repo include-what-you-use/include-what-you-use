@@ -47,10 +47,7 @@
 #include <map>                          // for map, map<>::value_compare
 #include <set>                          // for set
 #include <string>                       // for string
-#include <utility>
 #include <vector>                       // for vector
-
-#include "port.h"
 
 namespace include_what_you_use {
 
