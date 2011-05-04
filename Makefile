@@ -23,7 +23,7 @@ NO_INSTALL = 1
 TOOL_NO_EXPORTS = 1
 
 LINK_COMPONENTS = ipo
-USEDLIBS = clangFrontend.a clangSerialization.a clangDriver.a clangParse.a \
-           clangSema.a clangAnalysis.a clangAST.a clangLex.a clangBasic.a
+USEDLIBS = clangFrontend.a clangSerialization.a clangDriver.a clangSema.a \
+           clangAnalysis.a clangAST.a clangParse.a clangLex.a clangBasic.a
 
 include $(CLANG_LEVEL)/Makefile

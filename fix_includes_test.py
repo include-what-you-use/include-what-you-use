@@ -2560,49 +2560,6 @@ The full include-list for unwritable:
     # No files are written, because they are not writeable.
     self.ProcessAndTest(iwyu_output, unedited_files=['unwritable'])
 
-  def testCheckoutCommand(self):
-    """Test that files get checked out with checkout command if given."""
-    infile = """\
-// Copyright 2010
-
-#include <notused.h>  ///-
-///+#include <stdio.h>
-#include "used.h"
-///+#include "used2.h"
-
-int main() { return 0; }
-"""
-    iwyu_output = """\
-checkout should add these lines:
-#include <stdio.h>
-#include "used2.h"
-
-checkout should remove these lines:
-- #include <notused.h>  // lines 3-3
-
-The full include-list for checkout:
-#include <stdio.h>
-#include "used.h"
-#include "used2.h"
----
-"""
-    self.RegisterFileContents({'checkout': infile})
-    self.MakeFilesUnwriteable()
-    self.flags.checkout_command = 'g4 edit'
-    # Files are unwriteable, so they get checked out, then written.
-    self.ProcessAndTest(iwyu_output)
-    self.assertEqual('g4 edit -c 1234', self.fake_checkout_command.command)
-    self.assertEqual(['checkout'], self.fake_checkout_command.args)
-    self.assertEqual('g4 change -cc iwyu-dev -i',
-                     self.fake_cl_creation_command.command)
-    expected_change_description = """\
-Description:
-\tInclude-what-you-use fixit (http://goto/iwyu).
-\tThe following command was run to modify the files:
-\tiwyu.py my_targets
-"""
-    self.assertEqual(expected_change_description,
-                     self.fake_cl_creation_command.stdin)
 
   def testFileSpecifiedOnCommandline(self):
     """Test we limit editing to files specified on the commandline."""
