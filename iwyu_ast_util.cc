@@ -10,18 +10,23 @@
 // Utilities that make it easier to work with Clang's AST.
 
 #include "iwyu_ast_util.h"
+
 #include <set>
 #include <string>
-#include "port.h"
+#include <utility>
+
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
+#include "iwyu_path_util.h"
+#include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
+#include "port.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -31,8 +36,13 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+
+namespace clang {
+class FileEntry;
+class FriendDecl;
+}  // namespace clang
 
 using clang::BlockPointerType;
 using clang::CXXConstructExpr;

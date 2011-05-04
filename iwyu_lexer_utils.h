@@ -18,7 +18,9 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Token.h"
 
-namespace clang { class SourceManager; }
+namespace clang {
+class SourceManager;
+}  // namespace clang
 
 namespace include_what_you_use {
 

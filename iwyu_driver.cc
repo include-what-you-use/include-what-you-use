@@ -6,22 +6,31 @@
 
 // Everything below is adapted from clang/examples/clang-interpreter/main.cpp.
 
+#include <ctype.h>
+#include <stdint.h>
+#include <set>
+#include <string>
+#include <utility>
+
+#include "llvm/ADT/ArrayRef.h"  // IWYU pragma: keep
+#include "llvm/ADT/OwningPtr.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/PathV1.h"
+#include "llvm/Support/system_error.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
-#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/DiagnosticOptions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Frontend/FrontendDiagnostic.h"  // IWYU pragma: keep
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/OwningPtr.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/system_error.h"
+
+namespace llvm {
+class LLVMContext;
+}  // namespace llvm
 
 using clang::ASTFrontendAction;
 using clang::CompilerInstance;

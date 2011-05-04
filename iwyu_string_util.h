@@ -14,8 +14,10 @@
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
 
 #include <ctype.h>
+#include <stddef.h>
 #include <string>
 #include <vector>
+
 #include "port.h"
 
 namespace include_what_you_use {

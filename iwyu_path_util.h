@@ -20,8 +20,9 @@
 #include <unistd.h>  // for getcwd()
 #endif
 #include <string>
-#include "port.h"
+
 #include "iwyu_string_util.h"
+#include "port.h"
 
 namespace include_what_you_use {
 

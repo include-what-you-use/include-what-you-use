@@ -19,13 +19,14 @@
 #include <set>
 #include <string>
 #include <utility>  // for pair
-#include "port.h"
+
 #include "iwyu_stl_util.h"
+#include "port.h"
 
 namespace clang {
-class Type;
 class NamedDecl;
 class TemplateSpecializationType;
+class Type;
 }
 
 namespace include_what_you_use {

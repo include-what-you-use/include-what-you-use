@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "iwyu_cache.h"
+
 #include <set>
 #include <string>
-#include "iwyu_cache.h"
+
 #include "iwyu_ast_util.h"
-#include "iwyu_location_util.h"
-#include "iwyu_preprocessor.h"
 #include "iwyu_stl_util.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 
 using clang::ClassTemplateSpecializationDecl;

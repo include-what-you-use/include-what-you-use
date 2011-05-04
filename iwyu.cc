@@ -92,11 +92,13 @@
 #else
 #include <unistd.h>
 #endif
+#include <stddef.h>
 #include <stdio.h>   // for snprintf
 #include <stdlib.h>
-#include <string.h>
-
 #include <algorithm>
+#include <deque>
+#include <iterator>
+#include <list>
 #include <map>
 #include <set>
 #include <string>
@@ -106,33 +108,40 @@
 #include "iwyu_ast_util.h"
 #include "iwyu_cache.h"
 #include "iwyu_globals.h"
-#include "iwyu_include_picker.h"
-#include "iwyu_lexer_utils.h"
+#include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
-#include "iwyu_preprocessor.h"
+// This is needed for
+// preprocessor_info().PublicHeaderIntendsToProvide().  Somehow IWYU
+// removes it mistakenly.
+#include "iwyu_preprocessor.h"  // IWYU pragma: keep
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
+#include "port.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-#include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
-#include "clang/Lex/MacroInfo.h"
-#include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/Token.h"
 #include "clang/Sema/Sema.h"
+
+namespace clang {
+class FileEntry;
+class MacroInfo;
+class PPCallbacks;
+class SourceManager;
+class Token;
+}  // namespace clang
 
 namespace include_what_you_use {
 

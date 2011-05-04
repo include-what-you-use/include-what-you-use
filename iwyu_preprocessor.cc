@@ -8,8 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 
+#include "iwyu_preprocessor.h"
+
+#include <stddef.h>
 #include <string>
 #include <utility>
+
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
@@ -17,8 +21,11 @@
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
-#include "iwyu_preprocessor.h"
 #include "iwyu_stl_util.h"
+#include "iwyu_string_util.h"
+#include "port.h"
+#include "llvm/Support/raw_ostream.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Lex/MacroInfo.h"
 
 using clang::FileEntry;

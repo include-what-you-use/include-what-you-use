@@ -42,6 +42,9 @@
 
 #include <string.h>
 #include <string>
+
+#include "iwyu_globals.h"
+#include "iwyu_path_util.h"
 #include "port.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -50,9 +53,16 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Token.h"
-#include "iwyu_globals.h"
-#include "iwyu_path_util.h"
+
+namespace clang {
+class Decl;
+class NestedNameSpecifierLoc;
+class Stmt;
+class TemplateArgumentLoc;
+class TypeLoc;
+}  // namespace clang
 
 namespace include_what_you_use {
 

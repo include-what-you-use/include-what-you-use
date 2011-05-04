@@ -7,14 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "iwyu_location_util.h"
+
+#include "iwyu_ast_util.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/TemplateBase.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
-#include "iwyu_ast_util.h"
-#include "iwyu_location_util.h"
 
 using clang::BinaryOperator;
 using clang::CXXDependentScopeMemberExpr;

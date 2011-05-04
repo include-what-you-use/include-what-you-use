@@ -8,25 +8,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "iwyu_output.h"
+
 #include <stdio.h>
 #include <algorithm>  // for sort(), find()
+#include <iterator>   // TODO(wan): make sure IWYU doesn't suggest this.
 #include <map>
 #include <utility>    // for pair<>
 #include <vector>
+
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
-#include "iwyu_preprocessor.h"
+#include "iwyu_preprocessor.h"  // IWYU pragma: keep
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Type.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
+
+namespace clang {
+class NestedNameSpecifier;
+}  // namespace clang
 
 namespace include_what_you_use {
 
