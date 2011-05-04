@@ -155,6 +155,8 @@ const IncludePicker::IncludeMapEntry symbol_include_map[] = {
   // add them in by hand as I discover them.
   { "EOF", kPrivate, "<stdio.h>", kPublic },
   { "EOF", kPrivate, "<libio.h>", kPublic },
+  { "va_list", kPrivate, "<stdarg.h>", kPublic },
+  { "va_list", kPrivate, "<stdio.h>", kPublic },
   // These are symbols that could be defined in either stdlib.h or
   // malloc.h, but we always want the stdlib location.
   { "malloc", kPrivate, "<stdlib.h>", kPublic },
