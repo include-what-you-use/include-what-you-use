@@ -937,6 +937,55 @@ template <typename T> class Baz;  // lines 6-6
     self.RegisterFileContents({'add_fwd_decl_inside_namespace': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testAddForwardDeclareInsideNamespaceWithHeaderGuard(self):
+    """Tests that the header guard doesn't confuse our in-ns algorithm."""
+    infile = """\
+// Copyright 2010
+
+#ifndef HDR_GUARD
+#define HDR_GUARD
+
+#include "foo.h"
+
+class Bar;
+template <typename T> class Baz;
+
+namespace ns {
+
+  namespace  ns2   {   // we sure do love nesting our namespaces!
+
+class NsFoo;
+///+namespace ns3 {
+///+class NsBang;
+///+template <typename T> class NsBaz;
+///+}  // namespace ns3
+template <typename T> class NsBar;
+
+}
+}
+
+#endif // HDR_GUARD
+"""
+    iwyu_output = """\
+add_fwd_decl_with_hdr_guard should add these lines:
+namespace ns { namespace ns2 { namespace ns3 { class NsBang; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class NsBaz; } } }
+
+add_fwd_decl_with_hdr_guard should remove these lines:
+
+The full include-list for add_fwd_decl_with_hdr_guard:
+#include "foo.h"  // lines 6-6
+class Bar;  // lines 8-8
+namespace ns { namespace ns2 { class NsFoo; } }  // lines 15-15
+namespace ns { namespace ns2 { namespace ns3 { class NsBang; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class NsBaz; } } }
+namespace ns { namespace ns2 { template <typename T> class NsBar; } }  // lines 16-16
+template <typename T> class Baz;  // lines 9-9
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_with_hdr_guard': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testDoNotAddForwardDeclareInsideNamespaceWithContentfulLine(self):
     """Tests that for 'confusing' code, we keep fwd-decl at the top."""
     infile = """\
