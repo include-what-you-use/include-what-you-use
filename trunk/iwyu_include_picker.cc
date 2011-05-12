@@ -901,7 +901,8 @@ void IncludePicker::InsertIntoFilepathIncludeMap(
 // code (Google hides private headers in /internal/, much like glibc
 // hides them in /bits/.)
 void IncludePicker::AddDirectInclude(const string& includer_filepath,
-                                     const string& includee_filepath) {
+                                     const string& includee_filepath,
+                                     const string& quoted_include_as_typed) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   // Note: the includer may be a .cc file, which is unnecessary to add
@@ -910,6 +911,8 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   const string quoted_includee = ConvertToQuotedInclude(includee_filepath);
 
   quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
+  const pair<string, string> key(includer_filepath, includee_filepath);
+  include_path_to_include_as_typed_[key] = quoted_include_as_typed;
 
   // Mark the clang fake-file "<built-in>" as private, so we never try
   // to map anything to it.
@@ -1107,6 +1110,14 @@ vector<string> IncludePicker::GetPublicValues(
   return retval;
 }
 
+string IncludePicker::GetIncludeNameAsWritten(
+    const string& includer_filepath, const string& includee_filepath) const {
+  const pair<string, string> key(includer_filepath, includee_filepath);
+  // I want to use GetOrDefault here, but it has trouble deducing tpl args.
+  const string* value = FindInMap(&include_path_to_include_as_typed_, key);
+  return value ? *value : "";
+}
+
 vector<string> IncludePicker::GetCandidateHeadersForSymbol(
     const string& symbol) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
@@ -1130,16 +1141,34 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepath(
 // GetCandidateHeadersForFilepath.
 vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     const string& included_filepath, const string& including_filepath) const {
+  vector<string> retval;
   const string quoted_includer = ConvertToQuotedInclude(including_filepath);
+  const string quoted_includee = ConvertToQuotedInclude(included_filepath);
   const set<string>* headers_with_includer_as_friend =
       FindInMap(&friend_to_headers_map_, quoted_includer);
   if (headers_with_includer_as_friend != NULL &&
       ContainsKey(*headers_with_includer_as_friend, included_filepath)) {
-    vector<string> retval;
-    retval.push_back(ConvertToQuotedInclude(included_filepath));
-    return retval;
+    retval.push_back(quoted_includee);
+  } else {
+    retval = GetCandidateHeadersForFilepath(included_filepath);
   }
-  return GetCandidateHeadersForFilepath(included_filepath);
+
+  // We'll have called ConvertToQuotedInclude on members of retval,
+  // but sometimes we can do better -- if included_filepath is in
+  // retval, the iwyu-preprocessor may have stored the quoted-include
+  // as typed in including_filepath.  This is better to use than
+  // ConvertToQuotedInclude because it avoids trouble when the same
+  // file is accessible via different include search-paths.
+  const string& quoted_include_as_typed
+      = GetIncludeNameAsWritten(including_filepath, included_filepath);
+  if (!quoted_include_as_typed.empty()) {
+    for (vector<string>::iterator it = retval.begin(); it != retval.end(); ++it)
+      if (*it == quoted_includee) {
+        *it = quoted_include_as_typed;
+        break;
+      }
+  }
+  return retval;
 }
 
 bool IncludePicker::HasMapping(const string& map_from_filepath,

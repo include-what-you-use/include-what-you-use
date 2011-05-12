@@ -119,7 +119,7 @@ TEST(ConvertToQuotedInclude, Basic) {
 
 TEST(DynamicMapping, DoesMapping) {
   IncludePicker p;
-  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h");
+  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("project/internal/private.h"),
@@ -128,9 +128,9 @@ TEST(DynamicMapping, DoesMapping) {
 
 TEST(DynamicMapping, MultiplePublicFiles) {
   IncludePicker p;
-  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h");
-  p.AddDirectInclude("project/public/bar.h", "project/internal/private.h");
-  p.AddDirectInclude("project/public/bar.h", "project/internal/other.h");
+  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h", "");
+  p.AddDirectInclude("project/public/bar.h", "project/internal/private.h", "");
+  p.AddDirectInclude("project/public/bar.h", "project/internal/other.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("project/internal/private.h"),
@@ -139,9 +139,9 @@ TEST(DynamicMapping, MultiplePublicFiles) {
 
 TEST(DynamicMapping, TransitiveMapping) {
   IncludePicker p;
-  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h");
-  p.AddDirectInclude("project/internal/private.h",
-                     "project/internal/other.h");
+  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h", "");
+  p.AddDirectInclude("project/internal/private.h", "project/internal/other.h",
+                     "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("project/internal/other.h"),
@@ -150,13 +150,13 @@ TEST(DynamicMapping, TransitiveMapping) {
 
 TEST(DynamicMapping, MultipleTransitiveMapping) {
   IncludePicker p;
-  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h");
-  p.AddDirectInclude("project/public/bar.h", "project/internal/private.h");
-  p.AddDirectInclude("project/public/baz.h", "project/internal/private2.h");
-  p.AddDirectInclude("project/internal/private.h",
-                     "project/internal/other.h");
-  p.AddDirectInclude("project/internal/private2.h",
-                     "project/internal/other.h");
+  p.AddDirectInclude("project/public/foo.h", "project/internal/private.h", "");
+  p.AddDirectInclude("project/public/bar.h", "project/internal/private.h", "");
+  p.AddDirectInclude("project/public/baz.h", "project/internal/private2.h", "");
+  p.AddDirectInclude("project/internal/private.h", "project/internal/other.h",
+                     "");
+  p.AddDirectInclude("project/internal/private2.h", "project/internal/other.h",
+                     "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("project/internal/other.h"),
@@ -167,7 +167,7 @@ TEST(DynamicMapping, MultipleTransitiveMapping) {
 TEST(DynamicMapping, NormalizesAsm) {
   IncludePicker p;
   p.AddDirectInclude("/usr/include/types.h",
-                     "/usr/include/asm-cris/posix_types.h");
+                     "/usr/include/asm-cris/posix_types.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("/usr/src/linux-headers-2.6.24-gg23/"
@@ -236,11 +236,11 @@ TEST(GetCandidateHeadersForFilepath, CXX) {
 
 TEST(GetCandidateHeadersForFilepath, ThirdParty) {
   IncludePicker p;
-  p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h");
-  p.AddDirectInclude("b.h", "third_party/dynamic_annotations/a/b/c.h");
-  p.AddDirectInclude("c.h", "third_party/python2_4_3/includes/py.h");
-  p.AddDirectInclude("d.h", "third_party/isu/include/unicode/udraft.h");
-  p.AddDirectInclude("e.h", "third_party/isu/include/unicode/ukeep.h");
+  p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h", "");
+  p.AddDirectInclude("b.h", "third_party/dynamic_annotations/a/b/c.h", "");
+  p.AddDirectInclude("c.h", "third_party/python2_4_3/includes/py.h", "");
+  p.AddDirectInclude("d.h", "third_party/isu/include/unicode/udraft.h", "");
+  p.AddDirectInclude("e.h", "third_party/isu/include/unicode/ukeep.h", "");
   p.FinalizeAddedIncludes();
 
   EXPECT_VECTOR_STREQ(
@@ -266,10 +266,10 @@ TEST(GetCandidateHeadersForFilepath, ThirdParty) {
 TEST(GetCandidateHeadersForFilepath, ThirdPartyCycle) {
   IncludePicker p;
   // We should ignore the cycle here.
-  p.AddDirectInclude("myapp.h", "third_party/a.h");
-  p.AddDirectInclude("third_party/a.h", "third_party/b.h");
-  p.AddDirectInclude("third_party/b.h", "third_party/c.h");
-  p.AddDirectInclude("third_party/c.h", "third_party/a.h");  // cycle!
+  p.AddDirectInclude("myapp.h", "third_party/a.h", "");
+  p.AddDirectInclude("third_party/a.h", "third_party/b.h", "");
+  p.AddDirectInclude("third_party/b.h", "third_party/c.h", "");
+  p.AddDirectInclude("third_party/c.h", "third_party/a.h", "");  // cycle!
   p.FinalizeAddedIncludes();
 
   // We ignore the cycle, so the includes look like a -> b -> c.
@@ -288,7 +288,7 @@ TEST(GetCandidateHeadersForFilepath, GlobOverlap) {
   IncludePicker p;
   // It's ok if a header is specified in both a glob and non-glob rule.
   // For globs to work, we need to have actually seen the includes.
-  p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h");
+  p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h", "");
   p.AddMapping("\"third_party/dynamic_annotations/d.h\"",
                "\"third_party/dynamic_annotations/public.h\"");
   p.MarkIncludeAsPrivate("\"third_party/dynamic_annotations/d.h\"");
@@ -307,8 +307,8 @@ TEST(GetCandidateHeadersForFilepath, NoIdentityGlob) {
   p.AddMapping("\"mydir/*.h\"", "\"mydir/include.h\"");
   p.MarkIncludeAsPrivate("\"mydir/*.h\"");   // will *not* apply to include.h!
   // Add a direct include that should be mapped, and that already is.
-  p.AddDirectInclude("a.h", "mydir/internal.h");
-  p.AddDirectInclude("b.h", "mydir/include.h");
+  p.AddDirectInclude("a.h", "mydir/internal.h", "");
+  p.AddDirectInclude("b.h", "mydir/include.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("mydir/internal.h"),
@@ -320,13 +320,14 @@ TEST(GetCandidateHeadersForFilepath, NoIdentityGlob) {
 
 TEST(GetCandidateHeadersForFilepath, ImplicitThirdPartyMapping) {
   IncludePicker p;
-  p.AddDirectInclude("third_party/public.h", "third_party/private1.h");
-  p.AddDirectInclude("third_party/public.h", "third_party/private2.h");
-  p.AddDirectInclude("third_party/private1.h", "third_party/private11.h");
-  p.AddDirectInclude("third_party/public.h", "third_party/other_public.h");
-  p.AddDirectInclude("third_party/other_public.h", "third_party/oprivate.h");
-  p.AddDirectInclude("my_app.h", "third_party/public.h");
-  p.AddDirectInclude("my_app.h", "third_party/other_public.h");
+  p.AddDirectInclude("third_party/public.h", "third_party/private1.h", "");
+  p.AddDirectInclude("third_party/public.h", "third_party/private2.h", "");
+  p.AddDirectInclude("third_party/private1.h", "third_party/private11.h", "");
+  p.AddDirectInclude("third_party/public.h", "third_party/other_public.h", "");
+  p.AddDirectInclude("third_party/other_public.h", "third_party/oprivate.h",
+                     "");
+  p.AddDirectInclude("my_app.h", "third_party/public.h", "");
+  p.AddDirectInclude("my_app.h", "third_party/other_public.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("third_party/public.h"),
@@ -356,10 +357,12 @@ TEST(GetCandidateHeadersForFilepath, ImplicitExplicitThirdParty) {
   IncludePicker p;
   // These are controlled by third_party_include_map, not by
   // AddImplicitThirdPartyMappings().
-  p.AddDirectInclude("my_app.h", "third_party/dynamic_annotations/public.h");
+  p.AddDirectInclude("my_app.h", "third_party/dynamic_annotations/public.h",
+                     "");
   p.AddDirectInclude("third_party/dynamic_annotations/public.h",
-                     "third_party/dynamic_annotations/private.h");
-  p.AddDirectInclude("my_app.h", "third_party/icu/include/unicode/umachine.h");
+                     "third_party/dynamic_annotations/private.h", "");
+  p.AddDirectInclude("my_app.h", "third_party/icu/include/unicode/umachine.h",
+                     "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath(
@@ -406,8 +409,8 @@ TEST(GetCandidateHeadersForFilepath, PrivateValueInRecursion) {
 TEST(GetCandidateHeadersForFilepath, NoBuiltin) {
   // Make sure we never specify "<built-in>" as an #include mapping.
   IncludePicker p;
-  p.AddDirectInclude("<built-in>", "foo/bar/internal/code.cc");
-  p.AddDirectInclude("foo/bar/internal/code.cc", "foo/qux/internal/lib.h");
+  p.AddDirectInclude("<built-in>", "foo/bar/internal/code.cc", "");
+  p.AddDirectInclude("foo/bar/internal/code.cc", "foo/qux/internal/lib.h", "");
 
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
@@ -427,9 +430,9 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, NoInternal) {
 TEST(GetCandidateHeadersForFilepathIncludedFrom, Internal) {
   IncludePicker p;
   // clang always has <built-in> #including the file specified on the cmdline.
-  p.AddDirectInclude("<built-in>", "foo/bar/internal/code.cc");
-  p.AddDirectInclude("foo/bar/internal/code.cc", "foo/bar/public/code.h");
-  p.AddDirectInclude("foo/bar/public/code.h", "foo/bar/internal/hdr.h");
+  p.AddDirectInclude("<built-in>", "foo/bar/internal/code.cc", "");
+  p.AddDirectInclude("foo/bar/internal/code.cc", "foo/bar/public/code.h", "");
+  p.AddDirectInclude("foo/bar/public/code.h", "foo/bar/internal/hdr.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepathIncludedFrom("foo/bar/internal/hdr.h",
@@ -439,7 +442,7 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, Internal) {
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, OtherInternal) {
   IncludePicker p;
-  p.AddDirectInclude("foo/bar/public/code.h", "foo/bar/internal/hdr.h");
+  p.AddDirectInclude("foo/bar/public/code.h", "foo/bar/internal/hdr.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepathIncludedFrom("foo/bar/internal/hdr.h",
@@ -449,9 +452,9 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, OtherInternal) {
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, PublicToInternal) {
   IncludePicker p;
-  p.AddDirectInclude("foo/bar/public/code.cc", "foo/bar/public/code.h");
-  p.AddDirectInclude("foo/bar/public/code.cc", "foo/bar/public/code2.h");
-  p.AddDirectInclude("foo/bar/public/code.h", "foo/bar/internal/hdr.h");
+  p.AddDirectInclude("foo/bar/public/code.cc", "foo/bar/public/code.h", "");
+  p.AddDirectInclude("foo/bar/public/code.cc", "foo/bar/public/code2.h", "");
+  p.AddDirectInclude("foo/bar/public/code.h", "foo/bar/internal/hdr.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepathIncludedFrom("foo/bar/internal/hdr.h",
@@ -465,10 +468,10 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, PublicToInternal) {
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, FriendGlob) {
   IncludePicker p;
-  p.AddDirectInclude("baz.cc", "baz.h");
-  p.AddDirectInclude("baz.cc", "random.h");
-  p.AddDirectInclude("baz.h", "project/private/bar.h");
-  p.AddDirectInclude("random.h", "project/private/bar.h");
+  p.AddDirectInclude("baz.cc", "baz.h", "");
+  p.AddDirectInclude("baz.cc", "random.h", "");
+  p.AddDirectInclude("baz.h", "project/private/bar.h", "");
+  p.AddDirectInclude("random.h", "project/private/bar.h", "");
   p.AddMapping("\"project/private/bar.h\"", "\"foo.h\"");
   p.MarkIncludeAsPrivate("\"project/private/bar.h\"");
   p.AddFriendGlob("project/private/bar.h", "\"baz*\"");
@@ -481,6 +484,15 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, FriendGlob) {
       p.GetCandidateHeadersForFilepathIncludedFrom("project/private/bar.h",
                                                    "baz.h"),
       "\"project/private/bar.h\"");
+}
+
+TEST(GetCandidateHeadersForFilepathIncludedFrom, PreservesWrittenForm) {
+  IncludePicker p;
+  p.AddDirectInclude("baz.cc", "baz.h", "\"./././baz.h\"");
+  p.FinalizeAddedIncludes();
+  EXPECT_VECTOR_STREQ(
+      p.GetCandidateHeadersForFilepathIncludedFrom("baz.h", "baz.cc"),
+      "\"./././baz.h\"");
 }
 
 TEST(HasMapping, IncludeMatch) {
@@ -518,7 +530,7 @@ TEST(HasMapping, IncludeForThirdParty) {
   IncludePicker p;
   // For globs to work, we need to have actually seen the includes.
   p.AddDirectInclude("base/dynamic_annotations.h",
-                     "third_party/dynamic_annotations/foo/bar.h");
+                     "third_party/dynamic_annotations/foo/bar.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_TRUE(p.HasMapping("third_party/dynamic_annotations/foo/bar.h",
                            "base/dynamic_annotations.h"));
