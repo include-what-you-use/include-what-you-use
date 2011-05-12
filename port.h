@@ -26,12 +26,19 @@
 # include "Shlwapi.h"  // For PathMatchSpec
 
 # pragma comment(lib, "Shlwapi.lib")
-# define fnmatch(pattern, filepath, flags)  (!PathMatchSpec(filepath, pattern))
+
+inline int fnmatch(const char *pattern, const char *string, int flags) {
+  return !PathMatchSpec(filepath, pattern);
+}
 
 // FIXME: This undef is necessary to prevent conflicts between llvm
 //        and Windows headers.  Eventually fnmatch functionality
 //        should be wrapped inside llvm's PathV2 library.
 # undef interface    // used in Shlwapi.h
+
+#else  // #if defined(_MSC_VER)
+
+#include <fnmatch.h>  // IWYU pragma: export
 
 #endif  // #if defined(_MSC_VER)
 

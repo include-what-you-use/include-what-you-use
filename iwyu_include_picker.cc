@@ -11,9 +11,6 @@
 
 #include <stddef.h>                     // for size_t, NULL
 
-#ifndef _MSC_VER      // _MSC_VER gets its own fnmatch from ./port.h
-#include <fnmatch.h>                    // for fnmatch
-#endif
 #include <algorithm>                    // for find
 // TODO(wan): make sure IWYU doesn't suggest <iterator>.
 #include <iterator>                     // for find
@@ -28,6 +25,8 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "port.h"  // for CHECK_
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Regex.h"
 
 using std::find;
 using std::map;
@@ -46,14 +45,23 @@ namespace {
 // actually treated specially), etc.  They will all get inserted into
 // the same data structure, though.
 //
-// The entries below support limited globbing: '*' will match any
-// range of characters, *including slash* (unlike shell globbing).
-// So "bits/*" means "every file under bits, including bits/a/foo.h".
-// We support all the globbing metacharacters that fnmatch supports.
+// The key in an entry below can be either a quoted filepath or "@"
+// followed by a POSIX Extended Regular Expression that matches a
+// quoted filepath (for brevity, we'll refer to the key as a "quoted
+// filepath pattern").  The "@" marker serves to distinguish the two
+// cases.  Without using the marker, keys like "foo.cc" will be
+// ambiguous: is it a regular expression or not?
 //
 // Array entries below may be prefixed by a comment saying what shell
 // command I ran to produce the data.  I often would manually sanitize
 // the data afterwards, though.
+
+// Returns true if str is a valid quoted filepath pattern (i.e. either
+// a quoted filepath or "@" followed by a regex for matching a quoted
+// filepath).
+bool IsQuotedFilepathPattern(const string& str) {
+  return IsQuotedInclude(str) || StartsWith(str, "@");
+}
 
 // Shorter nicknames.
 const IncludePicker::Visibility kPrivate = IncludePicker::kPrivate;
@@ -657,7 +665,7 @@ const IncludePicker::IncludeMapEntry google_include_map[] = {
     "\"tests/badinc-inl.h\"",
     kPublic
   },
-  { "\"tests/keep_mapping-private*\"",
+  { "@\"tests/keep_mapping-private.*\"",
     kPrivate,
     "\"tests/keep_mapping-public.h\"",
     kPublic
@@ -671,15 +679,15 @@ const IncludePicker::IncludeMapEntry google_include_map[] = {
 
 
 // It's very common for third-party libraries to just expose one
-// header file.  So this map takes advantage of glob functionality.
+// header file.  So this map takes advantage of regex functionality.
 const IncludePicker::IncludeMapEntry third_party_include_map[] = {
-  { "\"third_party/dynamic_annotations/*\"", kPrivate,
+  { "@\"third_party/dynamic_annotations/.*\"", kPrivate,
     "\"base/dynamic_annotations.h\"", kPublic
   },
-  { "\"third_party/gmock/include/gmock/*\"", kPrivate,
+  { "@\"third_party/gmock/include/gmock/.*\"", kPrivate,
     "\"testing/base/public/gmock.h\"", kPublic
   },
-  { "\"third_party/python2_4_3/*\"", kPrivate, "<Python.h>", kPublic },
+  { "@\"third_party/python2_4_3/.*\"", kPrivate, "<Python.h>", kPublic },
   { "\"third_party/icu/include/unicode/umachine.h\"", kPrivate,
     "\"third_party/icu/include/unicode/utypes.h\"", kPublic
   },
@@ -874,21 +882,23 @@ IncludePicker::IncludePicker()
   }
 }
 
-void IncludePicker::MarkVisibility(const string& quoted_include,
-                                   IncludePicker::Visibility vis) {
+void IncludePicker::MarkVisibility(
+    const string& quoted_filepath_pattern,
+    IncludePicker::Visibility vis) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   // insert() leaves any old value alone, and only inserts if the key is new.
-  filepath_visibility_map_.insert(make_pair(quoted_include, vis));
-  CHECK_(filepath_visibility_map_[quoted_include] == vis &&
+  filepath_visibility_map_.insert(make_pair(quoted_filepath_pattern, vis));
+  CHECK_(filepath_visibility_map_[quoted_filepath_pattern] == vis &&
          "Same file seen with two different visibilities");
 }
 
 void IncludePicker::InsertIntoFilepathIncludeMap(
     const IncludePicker::IncludeMapEntry& e) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
-  // Verify that the key/value starts with < or ".
-  CHECK_(IsQuotedInclude(e.map_from) && "All map keys must be quoted includes");
+  // Verify that the key/value has the right format.
+  CHECK_(IsQuotedFilepathPattern(e.map_from)
+         && "All map keys must be quoted filepaths or @ followed by regex");
   CHECK_(IsQuotedInclude(e.map_to) && "All map values must be quoted includes");
   filepath_include_map_[e.map_from].push_back(e.map_to);
   MarkVisibility(e.map_from, e.from_visibility);
@@ -920,16 +930,17 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
     MarkIncludeAsPrivate("\"<built-in>\"");
 
   // Automatically mark files in foo/internal/bar as private, and map them.
-  // Then say that everyone else in foo/* is a friend, who is allowed to
+  // Then say that everyone else in foo/.* is a friend, who is allowed to
   // include the otherwise-private header.
   const size_t internal_pos = quoted_includee.find("internal/");
   if (internal_pos != string::npos &&
       (internal_pos == 0 || quoted_includee[internal_pos - 1] == '/')) {
     MarkIncludeAsPrivate(quoted_includee);
-    // The second argument here is a quoted include.  We get the opening
-    // quote from quoted_includee, and the closing quote as part of the *.
-    AddFriendGlob(includee_filepath,
-                  quoted_includee.substr(0, internal_pos) + "*");
+    // The second argument here is a regex for matching a quoted
+    // filepath.  We get the opening quote from quoted_includee, and
+    // the closing quote as part of the .*.
+    AddFriendRegex(includee_filepath,
+                   quoted_includee.substr(0, internal_pos) + ".*");
     AddMapping(quoted_includee, quoted_includer);
   }
 
@@ -945,65 +956,73 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
 
 void IncludePicker::AddMapping(const string& map_from, const string& map_to) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
-  CHECK_(IsQuotedInclude(map_from) && "All map keys must be quoted includes");
+  CHECK_(IsQuotedFilepathPattern(map_from)
+         && "All map keys must be quoted filepaths or @ followed by regex");
   CHECK_(IsQuotedInclude(map_to) && "All map values must be quoted includes");
   filepath_include_map_[map_from].push_back(map_to);
 }
 
-void IncludePicker::MarkIncludeAsPrivate(const string& quoted_include) {
+void IncludePicker::MarkIncludeAsPrivate(const string& quoted_filepath_pattern) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
-  CHECK_(IsQuotedInclude(quoted_include) && "MIAP takes a quoted_include");
-  MarkVisibility(quoted_include, kPrivate);
+  CHECK_(IsQuotedFilepathPattern(quoted_filepath_pattern)
+         && "MIAP takes a quoted filepath pattern");
+  MarkVisibility(quoted_filepath_pattern, kPrivate);
 }
 
-void IncludePicker::AddFriendGlob(const string& includee,
-                                  const string& quoted_friend_glob) {
-  friend_to_headers_map_[quoted_friend_glob].insert(includee);
+void IncludePicker::AddFriendRegex(const string& includee,
+                                   const string& friend_regex) {
+  friend_to_headers_map_["@" + friend_regex].insert(includee);
 }
 
 namespace {
-// Given a map keyed by string, return a vector containing the keys
-// that are globs.
-template <typename MapType> vector<string> ExtractGlobKeys(const MapType& m) {
-  vector<string> glob_keys;
+// Given a map keyed by quoted filepath patterns, return a vector
+// containing the @-regexes among the keys.
+template <typename MapType>
+vector<string> ExtractKeysMarkedAsRegexes(const MapType& m) {
+  vector<string> regex_keys;
   for (Each<typename MapType::value_type> it(&m); !it.AtEnd(); ++it) {
-    if (it->first.find_first_of("*[?") != string::npos)
-      glob_keys.push_back(it->first);
+    if (StartsWith(it->first, "@"))
+      regex_keys.push_back(it->first);
   }
-  return glob_keys;
+  return regex_keys;
 }
 }  // namespace
 
-// Given a map whose keys may have globs (* or [] or ?), expand the
-// globs by matching them against all #includes seen by iwyu.  For
-// each include that matches the glob, we add it to the map by copying
-// the glob entry and replacing the key with the seen #include.
-void IncludePicker::ExpandGlobs() {
-  // First, get the glob entries.
-  const vector<string> filepath_include_map_glob_keys =
-      ExtractGlobKeys(filepath_include_map_);
-  const vector<string> friend_to_headers_map_glob_keys =
-      ExtractGlobKeys(friend_to_headers_map_);
+// Expands the regex keys in filepath_include_map_ and
+// friend_to_headers_map_ by matching them against all source files
+// seen by iwyu.  For each include that matches the regex, we add it
+// to the map by copying the regex entry and replacing the key with
+// the seen #include.
+void IncludePicker::ExpandRegexes() {
+  // First, get the regex keys.
+  const vector<string> filepath_include_map_regex_keys =
+      ExtractKeysMarkedAsRegexes(filepath_include_map_);
+  const vector<string> friend_to_headers_map_regex_keys =
+      ExtractKeysMarkedAsRegexes(friend_to_headers_map_);
 
-  // Then, go through all #includes to see if they match the globs,
-  // discarding the identity mappings.
+  // Then, go through all #includes to see if they match the regexes,
+  // discarding the identity mappings.  TODO(wan): to improve
+  // performance, don't construct more than one Regex object for each
+  // element in the above vectors.
   for (Each<string, set<string> > incmap(&quoted_includes_to_quoted_includers_);
        !incmap.AtEnd(); ++incmap) {
     const string& hdr = incmap->first;
-    for (Each<string> it(&filepath_include_map_glob_keys); !it.AtEnd(); ++it) {
-      const string& glob_key = *it;
-      const vector<string>& map_to = filepath_include_map_[glob_key];
-      if (fnmatch(glob_key.c_str(), hdr.c_str(), 0) == 0 &&   // has a match
-          !ContainsValue(map_to, hdr)) {
-        Extend(&filepath_include_map_[hdr], filepath_include_map_[glob_key]);
-        MarkVisibility(hdr, filepath_visibility_map_[glob_key]);
+    for (Each<string> it(&filepath_include_map_regex_keys); !it.AtEnd(); ++it) {
+      const string& regex_key = *it;
+      const vector<string>& map_to = filepath_include_map_[regex_key];
+      // Enclose the regex in ^(...)$ for full match.
+      llvm::Regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
+      if (regex.match(hdr.c_str(), NULL) && !ContainsValue(map_to, hdr)) {
+        Extend(&filepath_include_map_[hdr], filepath_include_map_[regex_key]);
+        MarkVisibility(hdr, filepath_visibility_map_[regex_key]);
       }
     }
-    for (Each<string> it(&friend_to_headers_map_glob_keys);
+    for (Each<string> it(&friend_to_headers_map_regex_keys);
          !it.AtEnd(); ++it) {
-      const string& glob_key = *it;
-      if (fnmatch(glob_key.c_str(), hdr.c_str(), 0) == 0) {
-        InsertAllInto(friend_to_headers_map_[glob_key],
+      const string& regex_key = *it;
+      llvm::Regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
+      if (regex.match(hdr.c_str(), NULL)) {
+        InsertAllInto(friend_to_headers_map_[regex_key],
                       &friend_to_headers_map_[hdr]);
       }
     }
@@ -1062,14 +1081,14 @@ void IncludePicker::AddImplicitThirdPartyMappings() {
 
 // Handle work that's best done after we've seen all the mappings
 // (including dynamically-added ones) and all the include files.
-// For instance, we can now expand all the globs we've seen in
+// For instance, we can now expand all the regexes we've seen in
 // the mapping-keys, since we have the full list of #includes to
 // match them again.  We also transitively-close the maps.
 void IncludePicker::FinalizeAddedIncludes() {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't call FAI twice");
 
-  // The map keys may have *'s in them.  Match those to seen #includes now.
-  ExpandGlobs();
+  // The map keys may be regular expressions.  Match those to seen #includes now.
+  ExpandRegexes();
 
   // We treat third-party code specially, since it's difficult to add
   // iwyu pragmas to code we don't own.
@@ -1096,6 +1115,7 @@ void IncludePicker::FinalizeAddedIncludes() {
 // this is an implicit "self-map."
 vector<string> IncludePicker::GetPublicValues(
     const IncludePicker::IncludeMap& m, const string& key) const {
+  CHECK_(!StartsWith(key, "@"));
   vector<string> retval;
   const vector<string>* values = FindInMap(&m, key);
   if (!values || values->empty())
@@ -1104,6 +1124,7 @@ vector<string> IncludePicker::GetPublicValues(
   if (GetOrDefault(filepath_visibility_map_, key, kPublic) == kPublic)
     retval.push_back(key);                // we can map to ourself!
   for (Each<string> it(values); !it.AtEnd(); ++it) {
+    CHECK_(!StartsWith(*it, "@"));
     if (GetOrDefault(filepath_visibility_map_, *it, kPublic) == kPublic)
       retval.push_back(*it);
   }

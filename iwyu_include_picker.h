@@ -111,11 +111,12 @@ class IncludePicker {
   // mappings to map such includes to public (not-private) includs.
   void MarkIncludeAsPrivate(const string& quoted_include);
 
-  // Add this to say that "any file whose name matches the friend_glob
-  // is allowed to include includee_filepath".  The glob should
-  // be a quoted-include glob (starting and ending with "" or <>).
-  void AddFriendGlob(const string& includee_filepath,
-                     const string& quoted_friend_glob);
+  // Add this to say that "any file whose name matches the
+  // friend_regex is allowed to include includee_filepath".  The regex
+  // uses the POSIX Entended Regular Expression syntax and should
+  // match a quoted-include (starting and ending with "" or <>).
+  void AddFriendRegex(const string& includee_filepath,
+                      const string& quoted_friend_regex);
 
   // Call this after iwyu preprocessing is done.  No more calls to
   // AddDirectInclude() or AddMapping() are allowed after this.
@@ -160,9 +161,10 @@ class IncludePicker {
                   const string& map_to_filepath) const;
 
  private:
-  // Given a map whose keys may have globs (* or [] or ?), expand the
-  // globs by matching them against all #includes seen by iwyu.
-  void ExpandGlobs();
+  // Expands the regex keys in filepath_include_map_ and
+  // friend_to_headers_map_ by matching them against all source files
+  // seen by iwyu.
+  void ExpandRegexes();
 
   // Figure out mappings to add between third-party files, that we
   // guess based on the structure and use of third-party code.
@@ -186,8 +188,13 @@ class IncludePicker {
   string GetIncludeNameAsWritten(const string& includer_filepath,
                                  const string& includee_filepath) const;
 
-  // One map from symbols to includes, one from filepaths to includes.
+  // From symbols to includes.
   IncludeMap symbol_include_map_;
+
+  // From quoted filepath patterns to includes, where a pattern can be
+  // either a quoted filepath (e.g. "foo/bar.h" or <a/b.h>) or @
+  // followed by a regular expression for matching a quoted filepath
+  // (e.g. @"foo/.*").
   IncludeMap filepath_include_map_;
 
   // A map of all quoted-includes to whether they're public or private.
@@ -204,14 +211,14 @@ class IncludePicker {
   // they were written in the source, when possible.
   map<pair<string, string>, string> include_path_to_include_as_typed_;
 
-  // Map from filename or file glob to the set of files that used a
-  // pragma declaring it as a friend.  That is, if foo/bar/x.h has a line
-  // "// IWYU pragma: friend foo/bar/*" then "x.h" will be a member of
-  // friend_to_headers_map_["foo/bar/*"]. In a postprocessing step,
-  // files friend_to_headers_map_ will have globs expanded, i.e.
-  // if foo/bar/x.cc is processed, then
-  // friend_to_headers_map_["foo/bar/x.cc"] will be augmented with
-  // the contents of friend_to_headers_map_["foo/bar/*"].
+  // Maps from a quoted filepath pattern to the set of files that used
+  // a pragma declaring it as a friend.  That is, if foo/bar/x.h has a
+  // line "// IWYU pragma: friend foo/bar/.*" then "x.h" will be a
+  // member of friend_to_headers_map_["@\"foo/bar/.*\""]. In a
+  // postprocessing step, files friend_to_headers_map_ will have
+  // regular expressions expanded, e.g. if foo/bar/x.cc is processed,
+  // friend_to_headers_map_["foo/bar/x.cc"] will be augmented with the
+  // contents of friend_to_headers_map_["@\"foo/bar/.*\""].
   map<string, set<string> > friend_to_headers_map_;
 
   // Make sure we don't do any non-const operations after finalizing.

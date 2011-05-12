@@ -222,17 +222,16 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
     }
 
     if (MatchOneToken(tokens, "friend", 2, current_loc)) {
-      // 2nd token should be a glob.
-      string glob = tokens[1];
-      // Interally, the glob is stored as a quoted include.  If the
-      // user didn't put quotes, assume they wanted a non-system file.
-      if (!IsQuotedInclude(glob)) {
-        glob = "\"" + glob + "\"";
-      }
+      // 2nd token should be a regex.
+      string regex = tokens[1];
+      // The regex is expected to match a quoted include.  If the user
+      // didn't put quotes, assume they wanted a non-system file.
+      if (!IsQuotedInclude(regex))
+        regex = "\"(" + regex + ")\"";
       ERRSYM(GetFileEntry(current_loc))
-          << GetFilePath(current_loc) << " adding friend glob " << glob << "\n";
-      MutableGlobalIncludePicker()->AddFriendGlob(
-          GetFilePath(current_loc), glob);
+          << GetFilePath(current_loc) << " adding friend regex " << regex << "\n";
+      MutableGlobalIncludePicker()->AddFriendRegex(
+          GetFilePath(current_loc), regex);
       continue;
     }
 

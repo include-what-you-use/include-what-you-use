@@ -284,10 +284,10 @@ TEST(GetCandidateHeadersForFilepath, ThirdPartyCycle) {
       "\"third_party/c.h\"", "\"third_party/b.h\"", "\"third_party/a.h\"");
 }
 
-TEST(GetCandidateHeadersForFilepath, GlobOverlap) {
+TEST(GetCandidateHeadersForFilepath, RegexOverlap) {
   IncludePicker p;
-  // It's ok if a header is specified in both a glob and non-glob rule.
-  // For globs to work, we need to have actually seen the includes.
+  // It's ok if a header is specified in both a regex and non-regex rule.
+  // For regexes to work, we need to have actually seen the includes.
   p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h", "");
   p.AddMapping("\"third_party/dynamic_annotations/d.h\"",
                "\"third_party/dynamic_annotations/public.h\"");
@@ -299,13 +299,13 @@ TEST(GetCandidateHeadersForFilepath, GlobOverlap) {
       "\"base/dynamic_annotations.h\"");
 }
 
-TEST(GetCandidateHeadersForFilepath, NoIdentityGlob) {
+TEST(GetCandidateHeadersForFilepath, NoIdentityRegex) {
   IncludePicker p;
-  // Make sure we don't complain when the key of a mapping is a glob
+  // Make sure we don't complain when the key of a mapping is a regex
   // that includes the value (which would, naively, lead to an identity
   // mapping).
-  p.AddMapping("\"mydir/*.h\"", "\"mydir/include.h\"");
-  p.MarkIncludeAsPrivate("\"mydir/*.h\"");   // will *not* apply to include.h!
+  p.AddMapping("@\"mydir/.*\\.h\"", "\"mydir/include.h\"");
+  p.MarkIncludeAsPrivate("@\"mydir/.*\\.h\"");   // will *not* apply to include.h!
   // Add a direct include that should be mapped, and that already is.
   p.AddDirectInclude("a.h", "mydir/internal.h", "");
   p.AddDirectInclude("b.h", "mydir/include.h", "");
@@ -466,15 +466,18 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, PublicToInternal) {
       "\"foo/bar/internal/hdr.h\"");
 }
 
-TEST(GetCandidateHeadersForFilepathIncludedFrom, FriendGlob) {
+TEST(GetCandidateHeadersForFilepathIncludedFrom, FriendRegex) {
   IncludePicker p;
   p.AddDirectInclude("baz.cc", "baz.h", "");
+  p.AddDirectInclude("baz.cc", "abcde.h", "");
   p.AddDirectInclude("baz.cc", "random.h", "");
   p.AddDirectInclude("baz.h", "project/private/bar.h", "");
+  p.AddDirectInclude("abcde.h", "project/private/bar.h", "");
   p.AddDirectInclude("random.h", "project/private/bar.h", "");
   p.AddMapping("\"project/private/bar.h\"", "\"foo.h\"");
   p.MarkIncludeAsPrivate("\"project/private/bar.h\"");
-  p.AddFriendGlob("project/private/bar.h", "\"baz*\"");
+  p.AddFriendRegex("project/private/bar.h", "\"baz.*\"");
+  p.AddFriendRegex("project/private/bar.h", "\"a.c.+\\.h\"");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepathIncludedFrom("project/private/bar.h",
@@ -483,6 +486,10 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, FriendGlob) {
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepathIncludedFrom("project/private/bar.h",
                                                    "baz.h"),
+      "\"project/private/bar.h\"");
+  EXPECT_VECTOR_STREQ(
+      p.GetCandidateHeadersForFilepathIncludedFrom("project/private/bar.h",
+                                                   "abcde.h"),
       "\"project/private/bar.h\"");
 }
 
@@ -528,7 +535,7 @@ TEST(HasMapping, IncludeMatchDifferentMaps) {
 
 TEST(HasMapping, IncludeForThirdParty) {
   IncludePicker p;
-  // For globs to work, we need to have actually seen the includes.
+  // For regexes to work, we need to have actually seen the includes.
   p.AddDirectInclude("base/dynamic_annotations.h",
                      "third_party/dynamic_annotations/foo/bar.h", "");
   p.FinalizeAddedIncludes();
