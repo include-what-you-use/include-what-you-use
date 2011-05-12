@@ -1993,7 +1993,7 @@ def CreateCLForCheckoutCommand(checkout_command, invoking_command):
     return None
 
   input_text = ''.join(input_lines)
-  output =  _GetCommandOutputWithInput('%s change -cc iwyu-dev -i'
+  output =  _GetCommandOutputWithInput('%s change -i'
                                        % what4, input_text)
   # Parse output for "Changelist XXX created."
   m = re.match(r'Change (\d+) created.', output)
