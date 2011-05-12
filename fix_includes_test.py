@@ -2995,6 +2995,146 @@ The full include-list for dry_run:
     self.assertListEqual([], self.actual_after_contents)
     self.assertEqual(0, num_modified_files)
 
+  def testAddForwardDeclareAndKeepIwyuNamespaceFormat(self):
+    """Tests that --keep_iwyu_namespace_format writes namespace lines
+    using the IWYU one-line format.
+    Input code similar to case testAddForwardDeclareInNamespace."""
+    self.flags.keep_iwyu_namespace_format = True
+    infile = """\
+// Copyright 2010
+
+#include "foo.h"
+
+///+namespace ns { class Foo; }
+///+namespace ns { namespace ns2 { namespace ns3 { class Bar; } } }
+///+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class Bang; } } }
+///+namespace ns { namespace ns4 { class Baz; } }
+///+
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_declare_keep_iwyu_namespace should add these lines:
+namespace ns { class Foo; }
+namespace ns { namespace ns2 { namespace ns3 { class Bar; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class Bang; } } }
+namespace ns { namespace ns4 { class Baz; } }
+
+add_fwd_declare_keep_iwyu_namespace should remove these lines:
+
+The full include-list for add_fwd_declare_keep_iwyu_namespace:
+#include "foo.h"  // lines 3-3
+namespace ns { class Foo; }
+namespace ns { namespace ns2 { namespace ns3 { class Bar; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class Bang; } } }
+namespace ns { namespace ns4 { class Baz; } }
+---
+"""
+    self.RegisterFileContents({'add_fwd_declare_keep_iwyu_namespace': infile})
+    self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
+
+  def testAddNestedForwardDeclaresWithKeepIwyuNamespaceFormat(self):
+    """Tests that --keep_iwyu_namespace_format writes namespace lines
+    using the IWYU one-line format.
+    Input code similar to case
+    testAddForwardDeclareInsideNamespaceWithoutForwardDeclaresAlready."""
+    self.flags.keep_iwyu_namespace_format = True
+    infile = """\
+// Copyright 2010
+
+#include "foo.h"
+
+class Bar;
+///+class Foo;
+///+namespace ns1 { class NsFoo; }
+///+namespace ns1 { namespace ns2 { namespace ns3 { class NsBaz; } } }
+///+namespace ns1 { namespace ns2 { namespace ns3 { template <typename T> class NsBang; } } }
+template <typename T> class Baz;
+
+
+namespace ns {
+
+///+class NsFoo;
+///+namespace ns2 { namespace ns3 { class NsBaz; } }
+///+namespace ns2 { namespace ns3 { template <typename T> class NsBang; } }
+///+
+class NsBar;
+
+  namespace  ns2   {   // we sure do love nesting our namespaces!
+
+int MyFunction() { }
+
+}
+}
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_decl_with_keep_iwyu_format should add these lines:
+class Foo;
+namespace ns { class NsFoo; }
+namespace ns { namespace ns2 { namespace ns3 { class NsBaz; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class NsBang; } } }
+namespace ns1 { class NsFoo; }
+namespace ns1 { namespace ns2 { namespace ns3 { class NsBaz; } } }
+namespace ns1 { namespace ns2 { namespace ns3 { template <typename T> class NsBang; } } }
+
+add_fwd_decl_with_keep_iwyu_format should remove these lines:
+
+The full include-list for add_fwd_decl_with_keep_iwyu_format:
+#include "foo.h"  // lines 3-3
+class Bar;  // lines 5-5
+class Foo;
+namespace ns { class NsFoo; }
+namespace ns { namespace ns2 { class NsBar; } }
+namespace ns { namespace ns2 { namespace ns3 { class NsBaz; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class NsBang; } } }
+namespace ns1 { class NsFoo; }
+namespace ns1 { namespace ns2 { namespace ns3 { class NsBaz; } } }
+namespace ns1 { namespace ns2 { namespace ns3 { template <typename T> class NsBang; } } }
+template <typename T> class Baz;  // lines 6-6
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_with_keep_iwyu_format': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareInNamespaceWithKeepIwyuNamespaceFormat(self):
+    """Tests that --keep_iwyu_namespace_format writes namespace lines
+    using the IWYU one-line format.
+    Input code similar to case testAddForwardDeclareInNamespace."""
+    self.flags.keep_iwyu_namespace_format = True
+    infile = """\
+// Copyright 2010
+
+#include "foo.h"
+
+///+namespace ns { class Foo; }
+///+namespace ns { namespace ns2 { namespace ns3 { class Bar; } } }
+///+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class Bang; } } }
+///+namespace ns { namespace ns4 { class Baz; } }
+///+
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_declare_keep_iwyu_namespace should add these lines:
+namespace ns { class Foo; }
+namespace ns { namespace ns2 { namespace ns3 { class Bar; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class Bang; } } }
+namespace ns { namespace ns4 { class Baz; } }
+
+add_fwd_declare_keep_iwyu_namespace should remove these lines:
+
+The full include-list for add_fwd_declare_keep_iwyu_namespace:
+#include "foo.h"  // lines 3-3
+namespace ns { class Foo; }
+namespace ns { namespace ns2 { namespace ns3 { class Bar; } } }
+namespace ns { namespace ns2 { namespace ns3 { template <typename T> class Bang; } } }
+namespace ns { namespace ns4 { class Baz; } }
+---
+"""
+    self.RegisterFileContents({'add_fwd_declare_keep_iwyu_namespace': infile})
+    self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
 
   def testMain(self):
     """Make sure calling main doesn't crash.  Inspired by a syntax-error bug."""
