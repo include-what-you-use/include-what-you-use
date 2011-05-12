@@ -1884,11 +1884,13 @@ def FixFileLines(iwyu_record, file_lines, flags):
                                  decorated_move_spans[1], file_lines, flags)):
         new_lines.append('')
       decorated_move_spans = decorated_move_spans[1:]   # pop
-    # Now do the munging to convert namespace lines from the iwyu input
-    # format to the 'official style' format:
-    #    'namespace foo { class Bar; }\n' -> 'namespace foo {\nclass Bar;\n}'
-    # along with collecting multiple classes in the same namespace.
-    new_lines = _NormalizeNamespaceForwardDeclareLines(new_lines)
+
+    if not flags.keep_iwyu_namespace_format:
+      # Now do the munging to convert namespace lines from the iwyu input
+      # format to the 'official style' format:
+      #    'namespace foo { class Bar; }\n' -> 'namespace foo {\nclass Bar;\n}'
+      # along with collecting multiple classes in the same namespace.
+      new_lines = _NormalizeNamespaceForwardDeclareLines(new_lines)
     output_lines.extend(new_lines)
     line_number = current_reorder_span[1]               # go to end of span
 
@@ -2198,6 +2200,16 @@ def main(argv):
                     help=('Internal flag used by iwyu.py, It should be the'
                           ' command line used to invoke iwyu.py'))
 
+
+  parser.add_option('-m', '--keep_iwyu_namespace_format', action='store_true',
+                    default=False,
+                    help=('Keep forward-declaration namespaces in IWYU format, '
+                          'eg. namespace n1 { namespace n2 { class c1; } }.'
+                          ' Do not convert to "normalized" Google format: '
+                          'namespace n1 {\\nnamespace n2 {\\n class c1;'
+                          '\\n}\\n}.'))
+  parser.add_option('--nokeep_iwyu_namespace_format', action='store_false',
+                    dest='keep_iwyu_namespace_format')
 
   (flags, files_to_modify) = parser.parse_args(argv[1:])
   if files_to_modify:
