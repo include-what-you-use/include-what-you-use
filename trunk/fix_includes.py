@@ -121,6 +121,10 @@ _FORWARD_DECLARE_RE = re.compile(r'$.FORWARD_DECLARE_RE')
 # Likewise, used to mark an '#ifdef' line of a header guard, or other
 # #ifdef that covers an entire file.
 _HEADER_GUARD_RE = re.compile(r'$.HEADER_GUARD_RE')
+# Marks the '#define' line that comes after a header guard.  Since we
+# know the previous line was a header-guard line, we're not that picky
+# about this one.
+_HEADER_GUARD_DEFINE_RE = re.compile(r'\s*#\s*define\s+')
 
 # We annotate every line in the source file by the re it matches, or None.
 # Note that not all of the above RE's are represented here; for instance,
@@ -128,7 +132,8 @@ _HEADER_GUARD_RE = re.compile(r'$.HEADER_GUARD_RE')
 _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
                _NAMESPACE_START_RE, _NAMESPACE_END_RE,
                _IF_RE, _ELSE_RE, _ENDIF_RE,
-               _INCLUDE_RE, _FORWARD_DECLARE_RE, _HEADER_GUARD_RE,
+               _INCLUDE_RE, _FORWARD_DECLARE_RE,
+               _HEADER_GUARD_RE, _HEADER_GUARD_DEFINE_RE,
               ]
 
 # A regexp matching #include lines that should be a barrier for
@@ -596,6 +601,10 @@ def _MarkHeaderGuardIfPresent(file_lines):
 
   # We passed the gauntlet!
   file_lines[ifdef_start].type = _HEADER_GUARD_RE
+
+  # And the line after the header guard #ifdef is the '#define' (usually).
+  if _HEADER_GUARD_DEFINE_RE.match(file_lines[ifdef_start + 1].line):
+    file_lines[ifdef_start+1].type = _HEADER_GUARD_DEFINE_RE
 
 
 def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
@@ -1242,6 +1251,7 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
 
   for line_number in xrange(len(file_lines)):
     line_info = file_lines[line_number]
+
     if line_info.deleted:
       continue
 
@@ -1249,8 +1259,8 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
     # lines, which aren't 'contentful' for our purposes, and the
     # header guard, which is (by definition) the only kind of #ifdef
     # that we can be inside and still considered at the "top level".
-    if line_info.type in (_COMMENT_LINE_RE, _BLANK_LINE_RE,
-                          _INCLUDE_RE, _HEADER_GUARD_RE):
+    if line_info.type in (_COMMENT_LINE_RE, _BLANK_LINE_RE, _INCLUDE_RE,
+                          _HEADER_GUARD_RE, _HEADER_GUARD_DEFINE_RE):
       continue
 
     # If we're a 'contentful' line such as a (non-header-guard) #ifdef, bail.
