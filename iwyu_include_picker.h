@@ -47,11 +47,13 @@
 #include <map>                          // for map, map<>::value_compare
 #include <set>                          // for set
 #include <string>                       // for string
+#include <utility>                      // for pair
 #include <vector>                       // for vector
 
 namespace include_what_you_use {
 
 using std::map;
+using std::pair;
 using std::set;
 using std::string;
 
@@ -97,7 +99,8 @@ class IncludePicker {
   // include-picker can use this data to better suggest #includes,
   // perhaps.
   void AddDirectInclude(const string& includer_filepath,
-                        const string& includee_filepath);
+                        const string& includee_filepath,
+                        const string& quoted_include_as_written);
 
   // Add this to say "map_to re-exports everything in file map_from".
   // Both map_to and map_from should be quoted includes.
@@ -146,7 +149,6 @@ class IncludePicker {
   // candidate header when #included from "foo/internal/baz.h", but
   // not when #included from "qux/quux.h".  In the common case there's
   // no special-casing, and this falls back on
-  // GetCandidateHeadersForFilepath().
   vector<string> GetCandidateHeadersForFilepathIncludedFrom(
       const string& included_filepath, const string& including_filepath) const;
 
@@ -178,6 +180,12 @@ class IncludePicker {
   // map, filtering out private files.
   vector<string> GetPublicValues(const IncludeMap& m, const string& key) const;
 
+  // Given an includer-pathname and includee-pathname, return the
+  // quoted-include of the includee, as typed in the includer, or
+  // "" if it's not found for some reason.
+  string GetIncludeNameAsWritten(const string& includer_filepath,
+                                 const string& includee_filepath) const;
+
   // One map from symbols to includes, one from filepaths to includes.
   IncludeMap symbol_include_map_;
   IncludeMap filepath_include_map_;
@@ -189,6 +197,12 @@ class IncludePicker {
   // All the includes we've seen so far, to help with globbing and
   // other dynamic mapping.  For each file, we list who #includes it.
   map<string, set<string> > quoted_includes_to_quoted_includers_;
+
+  // Given the filepaths of an includer and includee, give the
+  // include-as-written (including <>'s or ""'s) that the includer
+  // used to refer to the includee.  We use this to return includes as
+  // they were written in the source, when possible.
+  map<pair<string, string>, string> include_path_to_include_as_typed_;
 
   // Map from filename or file glob to the set of files that used a
   // pragma declaring it as a friend.  That is, if foo/bar/x.h has a line
