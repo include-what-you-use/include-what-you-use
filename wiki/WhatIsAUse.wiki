@@ -1,4 +1,4 @@
-#summary A summary of IWYU's rules for deciding what is an IWYU violation
+#summary Summary of IWYU's rules for deciding what is an IWYU violation
 #labels Phase-Design
 
 = What Is a Use? =
