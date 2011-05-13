@@ -1,0 +1,32 @@
+#summary A summary of IWYU's rules for deciding what to #include
+#labels Phase-Design
+
+= What Is a Use? =
+
+[*Disclaimer:* the information here is accurate as of 12 May 2011, when it was written.  Specifics of IWYU's policy, and even philosophy, may have changed since then.  We'll try to remember to update this wiki page as that happens, but may occassionally forget.  The further we are from May 2011, the more you should take the below with a grain of salt.]
+
+IWYU has the policy that you should #include a declaration for every symbol you "use" in a file, or forward-declare it if possible.  But what does it mean to "use" a symbol?
+
+For the most part, IWYU considers a "use" the same as the compiler does: if you get a compiler error saying "Unknown symbol 'foo'", then you are using foo.  Whether the use is a 'full' use, that needs the definition of the symbol, or a 'forward-declare' use, that can get by with just a declaration of the symbol, likewise matches what the compiler allows.
+
+This makes it sound like IWYU does the moral equivalent of taking a source file, removing #include lines from it, seeing what the compiler complains about, and marking uses as appropriate.  This is not what IWYU does.  Instead, IWYU does a thought experiment: if the definition (or declaration) of a given type were not available, would the code compile?  Here is an example illustrating the difference:
+{{{
+foo.h:
+class Foo { ... }
+
+bar.h:
+#include "foo.h"
+Foo CreateFoo() { ... }
+void ConsumeFoo(const Foo& foo) { ... }
+
+baz.cc:
+#include "bar.h"
+ConsumeFoo(CreateFoo());
+}}}
+
+Is `baz.cc` "using" `Foo`, so that it should #include `foo.h`?  Naively, IWYU says yes, because if the definition of `Foo` were not available, `baz.cc` would not compile.  But wait a second!, you may be saying.  How could the definition of `Foo` be unavailable?  `bar.h` needs it in order to write `CreateFoo()`.
+
+This exactly illustrates the difference mentioned above.  If you remove `#include "bar.h"` from `baz.cc`, the compiler will complain, but it will complain about `ConsumeFoo` and `CreateFoo` being missing, not about `Foo` being missing.  But if you run the thought experiment, "Can baz.cc compile without `Foo`," you are forced to answer no, it cannot.
+
+But naively, we probably want to say that `baz.cc` does not need to #include `foo.h`, and indeed IWYU does not actually suggest that.  The sections below explain why, and under what circumstances iwyu reports the "use" of a type in a file.
+
