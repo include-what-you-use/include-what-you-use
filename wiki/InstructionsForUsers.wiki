@@ -60,6 +60,16 @@ clang as of the same revision number of the last include-what-you-use
 release.  You can find this revision number in comments at the top
 of the include-what-you-use Makefile.
 
+== How to Build on Windows ==
+
+(These instructions are compliments Philip Craig.)
+
+  # Build LLVM and Clang as it says to on the [http://clang.llvm.org/get_started.html Clang Windows Development HOWTO page]. You'll need [http://www.cmake.org/ cmake]. Once done, you'll have a Visual Studio solution with about 113 libraries for llvm and clang.
+  # Make a new IWYU .vcproj as part of that solution. Add the IWYU source to the IWYU .vcproj. Add the llvm and clang libraries mentioned in the [http://code.google.com/p/include-what-you-use/source/browse/trunk/Makefile IWYU makefile] to the list of link libraries, changing the suffix from the linux .a to the Windows .lib.
+  # Remove/replace linux-isms in the IWYU code that are non portable. Find a getopt replacement for Windows. Replace fnmatch with some other windows code (such as boost filesystem).
+  # Build, fix errors, repeat
+  # When running IWYU, you have to put standard C++ headers from cygwin on the include path, as Clang can't handle the non standard C++ constructs in the microsoft standard C++ headers.
+
 = How to Run =
 
 The easiest way to run IWYU over your codebase is to run
