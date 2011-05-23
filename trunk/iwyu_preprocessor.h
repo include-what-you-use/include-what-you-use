@@ -83,8 +83,8 @@ using std::pair;
 using std::set;
 using std::stack;
 using std::string;
-
 using std::vector;
+
 
 class IwyuPreprocessorInfo : public clang::PPCallbacks,
                              public clang::CommentHandler {
@@ -242,6 +242,10 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                                    set<const clang::FileEntry*>* retval) const;
   void PopulateIntendsToProvideMap();
   void PopulateTransitiveIncludeMap();
+
+  // Return true if at the current point in the parse of the given file,
+  // there is a pending "begin_exports" pragma.
+  bool HasOpenBeginExports(const clang::FileEntry* file_entry) const;
 
   // The C++ source file passed in as an argument to the compiler (as
   // opposed to other files seen via #includes).
