@@ -646,20 +646,31 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return;
 
     clang::Sema& sema = compiler_->getSema();
-    if (!decl->hasDeclaredDefaultConstructor())
-      sema.DefineImplicitDefaultConstructor(
-          CurrentLoc(), sema.DeclareImplicitDefaultConstructor(decl));
-#if 0  // TODO(csilvers): figure out why these crash clang sometimes
-    if (!decl->hasDeclaredCopyConstructor())
-      sema.DefineImplicitCopyConstructor(
-          CurrentLoc(), sema.DeclareImplicitCopyConstructor(decl), 0);
-    if (!decl->hasDeclaredCopyAssignment())
-      sema.DefineImplicitCopyAssignment(
-          CurrentLoc(), sema.DeclareImplicitCopyAssignment(decl));
-#endif
-    if (!decl->hasDeclaredDestructor())
-      sema.DefineImplicitDestructor(
-          CurrentLoc(), sema.DeclareImplicitDestructor(decl));
+    DeclContext::lookup_const_iterator it, end;
+    for (llvm::tie(it, end) = sema.LookupConstructors(decl); it != end; ++it) {
+      // Ignore templated constructors.
+      if (isa<FunctionTemplateDecl>(*it))
+        continue;
+      CXXConstructorDecl* ctor = cast<CXXConstructorDecl>(*it);
+      if (!ctor->hasBody() && ctor->isImplicit()) {
+        if (sema.getSpecialMember(ctor) == clang::Sema::CXXDefaultConstructor) {
+          sema.DefineImplicitDefaultConstructor(CurrentLoc(), ctor);
+        } else {
+          // TODO(nlewycky): enable this!
+          //sema.DefineImplicitCopyConstructor(CurrentLoc(), ctor);
+        }
+      }
+      sema.PendingInstantiations.push_back(make_pair(ctor, CurrentLoc()));
+    }
+
+    if (CXXDestructorDecl* dtor = sema.LookupDestructor(decl)) {
+      if (!dtor->hasBody() && dtor->isImplicit())
+        sema.DefineImplicitDestructor(CurrentLoc(), dtor);
+      sema.PendingInstantiations.push_back(make_pair(dtor, CurrentLoc()));
+    }
+
+    // TODO(nlewycky): copy assignment operator
+
     // clang queues up method instantiations.  We need to process them now.
     sema.PerformPendingInstantiations();
   }
