@@ -35,7 +35,7 @@ class CXXDestructorDecl;
 class CXXRecordDecl;
 class CallExpr;
 class CastExpr;
-class ExplicitTemplateArgumentList;
+struct ExplicitTemplateArgumentList;
 class Expr;
 class FunctionDecl;
 class NamedDecl;

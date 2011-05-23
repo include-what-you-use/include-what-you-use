@@ -27,10 +27,8 @@
 
 # pragma comment(lib, "Shlwapi.lib")
 
-#define FNM_PATHNAME (1<<0)
-
 inline int fnmatch(const char *pattern, const char *string, int flags) {
-  return !PathMatchSpec(string, pattern);
+  return !PathMatchSpec(filepath, pattern);
 }
 
 // FIXME: This undef is necessary to prevent conflicts between llvm
