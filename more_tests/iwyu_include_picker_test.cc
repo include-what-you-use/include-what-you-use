@@ -234,6 +234,22 @@ TEST(GetCandidateHeadersForFilepath, CXX) {
       "<hash_map>", "<hash_set>");
 }
 
+TEST(IsThirdPartyFile, ReturnsFalseForGoogleFile) {
+  EXPECT_FALSE(IsThirdPartyFile("\"foo/bar.h\""));
+  EXPECT_FALSE(IsThirdPartyFile("\"foo/third_party/bar.cc\""));
+}
+
+TEST(IsThirdPartyFile, ReturnsFalseForGoogleFileInThirdParty) {
+  EXPECT_FALSE(IsThirdPartyFile("\"third_party/car/car.h\""));
+  EXPECT_FALSE(IsThirdPartyFile("\"third_party/gtest/a.h\""));
+  EXPECT_FALSE(IsThirdPartyFile("\"third_party/gmock/b.h\""));
+}
+
+TEST(IsThirdPartyFile, ReturnsTrueForNonGoogleFileInThirdParty) {
+  EXPECT_TRUE(IsThirdPartyFile("\"third_party/tr1/tuple\""));
+  EXPECT_TRUE(IsThirdPartyFile("\"third_party/foo/bar.h\""));
+}
+
 TEST(GetCandidateHeadersForFilepath, ThirdParty) {
   IncludePicker p;
   p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h", "");
@@ -353,7 +369,21 @@ TEST(GetCandidateHeadersForFilepath, ImplicitThirdPartyMapping) {
       "\"third_party/oprivate.h\"", "\"third_party/other_public.h\"");
 }
 
-TEST(GetCandidateHeadersForFilepath, ImplicitExplicitThirdParty) {
+TEST(GetCandidateHeadersForFilepath, TreatsGTestAsNonThirdParty) {
+  IncludePicker p;
+  p.AddDirectInclude("foo/foo.cc", "testing/base/public/gunit.h", "");
+  p.AddDirectInclude("testing/base/public/gunit.h",
+                     "third_party/gtest/include/gtest/gtest.h", "");
+  p.FinalizeAddedIncludes();
+  EXPECT_VECTOR_STREQ(
+      p.GetCandidateHeadersForFilepath("third_party/gtest/include/gtest/gtest.h"),
+      "\"third_party/gtest/include/gtest/gtest.h\"");
+  EXPECT_VECTOR_STREQ(
+      p.GetCandidateHeadersForFilepath("testing/base/public/gunit.h"),
+      "\"testing/base/public/gunit.h\"");
+}
+
+TEST(GetCandidateHeadersForFilepath, ExplicitThirdPartyMapping) {
   IncludePicker p;
   // These are controlled by third_party_include_map, not by
   // AddImplicitThirdPartyMappings().
