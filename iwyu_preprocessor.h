@@ -27,12 +27,12 @@
 // constructs we look for:
 // Full-line constructs:
 //    a) // IWYU pragma: private, include "foo/bar/baz.h"
-//    b) // IWYU pragma: begin_exports
-//    c) // IWYU pragma: end_exports
-//    d) // IWYU pragma: no_include "foo/bar/baz.h"
-//    e) // IWYU pragma: friend foo/bar/*
-//       // IWYU pragma: friend "foo/quotes needed if spaces in path/*"
-//       // IWYU pragma: friend foo/just_one_file.cc
+//    b) // IWYU pragma: private
+//    c) // IWYU pragma: begin_exports
+//    d) // IWYU pragma: end_exports
+//    e) // IWYU pragma: no_include "foo/bar/baz.h"
+//    f) // IWYU pragma: friend <regexp>
+//       // IWYU pragma: friend "<regexp>" -- needed if spaces in regexp.
 // 'Annotation' constructs:
 //    d) #include "foo/bar/baz.h"  // IWYU pragma: export
 //    e) #include "foo/bar/baz.h"  // IWYU pragma: keep

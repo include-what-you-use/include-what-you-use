@@ -213,6 +213,15 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
       continue;
     }
 
+    if (MatchOneToken(tokens, "private", 1, current_loc)) {
+      const string quoted_include
+          = ConvertToQuotedInclude(GetFilePath(current_loc));
+      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_include);
+      ERRSYM(GetFileEntry(current_loc)) << "Adding private include: "
+                                        << quoted_include << "\n";
+      continue;
+    }
+
     if (MatchOneToken(tokens, "no_include", 2, current_loc)) {
       // 2nd token should be an quoted header.
       no_include_map_[GetFileEntry(current_loc)].insert(tokens[1]);
@@ -229,7 +238,8 @@ void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
       if (!IsQuotedInclude(regex))
         regex = "\"(" + regex + ")\"";
       ERRSYM(GetFileEntry(current_loc))
-          << GetFilePath(current_loc) << " adding friend regex " << regex << "\n";
+          << GetFilePath(current_loc)
+          << " adding friend regex " << regex << "\n";
       MutableGlobalIncludePicker()->AddFriendRegex(
           GetFilePath(current_loc), regex);
       continue;

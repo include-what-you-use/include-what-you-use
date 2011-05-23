@@ -62,6 +62,9 @@
 #include "tests/comment_pragmas-d1.h"
 #include "tests/comment_pragmas-d10.h"
 #include "tests/comment_pragmas-d11.h"
+#include "tests/comment_pragmas-d12.h"
+#include "tests/comment_pragmas-d13.h"
+#include "tests/comment_pragmas-d14.h"
 #include "tests/comment_pragmas-d2.h"
 #include "tests/comment_pragmas-d3.h"
 #include "tests/comment_pragmas-d4.h"
@@ -120,6 +123,18 @@ CommentPragmasI9 cpi9;
 // it.
 CommentPragmasD11 cpd11;
 
+// d11.h is a private file with no preferred includer.  It has a
+// pragma saying it's ok for comment_pragmas.cc to include it.
+CommentPragmasD12 cpd12;
+
+// i10.h is included by d13.h. There's a pragma in i10.h declaring
+// .*-d13.h friends.
+CommentPragmasI10 cpi10;
+
+// d14.h is a private file and we're not a friend.
+// IWYU doesn't modify the inclusion.
+CommentPragmasD14 cpd14;
+
 /**** IWYU_SUMMARY
 
 tests/comment_pragmas.cc should add these lines:
@@ -144,6 +159,9 @@ tests/comment_pragmas.cc should remove these lines:
 The full include-list for tests/comment_pragmas.cc:
 #include <some_system_header_file>  // for CommentPragmasD8, CommentPragmasD9
 #include "tests/comment_pragmas-d11.h"  // for CommentPragmasD11
+#include "tests/comment_pragmas-d12.h"  // for CommentPragmasD12
+#include "tests/comment_pragmas-d13.h"  // for CommentPragmasI10
+#include "tests/comment_pragmas-d14.h"  // for CommentPragmasD14
 #include "tests/comment_pragmas-d5.h"
 #include "tests/comment_pragmas-d6.h"
 #include "tests/comment_pragmas-i1.h"  // for CommentPragmasI2, CommentPragmasI3, CommentPragmasI4
