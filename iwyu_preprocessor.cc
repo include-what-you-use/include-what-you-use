@@ -149,12 +149,18 @@ bool MatchTwoTokens(const vector<string>& tokens,
   return true;
 }
 
-bool TopOfLocationStackIsInFile(const stack<SourceLocation>& loc_stack,
-                                const FileEntry* file) {
-  return !loc_stack.empty() && GetFileEntry(loc_stack.top()) == file;
-}
-
 }  // namespace
+
+// Call this function only when the given file is the one currently
+// being processed (or a file directly including it, when the current
+// file has not processed any comments yet). Return true if only if
+// there is an open begin_exports pragma in the current state of the
+// parse of the given file. Note that there may be open begin_exports
+// in including files. They don't matter for this function.
+bool IwyuPreprocessorInfo::HasOpenBeginExports(const FileEntry* file) const {
+  return !begin_exports_location_stack_.empty() &&
+      GetFileEntry(begin_exports_location_stack_.top()) == file;
+}
 
 bool IwyuPreprocessorInfo::HandleComment(Preprocessor& pp,
                                          SourceRange comment_range) {
@@ -176,8 +182,7 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
   }
   const vector<string> tokens =
       SplitOnWhiteSpacePreservingQuotes(pragma_text, 0);
-  if (TopOfLocationStackIsInFile(begin_exports_location_stack_,
-                                 this_file_entry)) {
+  if (HasOpenBeginExports(this_file_entry)) {
     if (MatchOneToken(tokens, "end_exports", 1, begin_loc)) {
       ERRSYM(this_file_entry) << "end_exports pragma seen\n";
       begin_exports_location_stack_.pop();
@@ -327,8 +332,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     protect_reason = "pragma_keep";
 
   } else if (IncludeLineHasText(includer_loc, "// IWYU pragma: export") ||
-             TopOfLocationStackIsInFile(begin_exports_location_stack_,
-                                        includer)) {
+             HasOpenBeginExports(includer)) {
     protect_reason = "pragma_export";
     const string quoted_includer =
         ConvertToQuotedInclude(GetFilePath(includer));
@@ -596,8 +600,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
 void IwyuPreprocessorInfo::FileChanged_ExitToFile(SourceLocation include_loc) {
   ERRSYM(GetFileEntry(include_loc)) << "[ Exiting to  ] "
                                     << PrintableLoc(include_loc) << "\n";
-  if (TopOfLocationStackIsInFile(begin_exports_location_stack_,
-                                 current_file_)) {
+  if (HasOpenBeginExports(current_file_)) {
     Warn(begin_exports_location_stack_.top(),
          "begin_exports without an end_exports");
     begin_exports_location_stack_.pop();
