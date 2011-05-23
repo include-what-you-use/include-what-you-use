@@ -9,16 +9,15 @@
 
 #include "iwyu_include_picker.h"
 
-#include <stddef.h>                     // for size_t, NULL
-
+#include <stddef.h>                     // for size_t
 #include <algorithm>                    // for find
 // TODO(wan): make sure IWYU doesn't suggest <iterator>.
 #include <iterator>                     // for find
 // not hash_map: it's not as portable and needs hash<string>.
-#include <map>                          // for map, _Rb_tree_iterator, etc
+#include <map>                          // for map, map<>::mapped_type, etc
 #include <string>                       // for string, basic_string, etc
 #include <utility>                      // for pair, make_pair
-#include <vector>                       // for vector
+#include <vector>                       // for vector, vector<>::iterator
 
 #include "iwyu_globals.h"
 #include "iwyu_output.h"
@@ -28,6 +27,7 @@
 #include "port.h"  // for CHECK_
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/raw_ostream.h"
 
 using std::find;
 using std::map;

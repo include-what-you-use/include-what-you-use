@@ -27,7 +27,6 @@
 #include "clang/Basic/SourceLocation.h"
 
 namespace clang {
-class ClassTemplateDecl;
 class CXXConstructExpr;
 class CXXConstructorDecl;
 class CXXDeleteExpr;
@@ -35,7 +34,7 @@ class CXXDestructorDecl;
 class CXXRecordDecl;
 class CallExpr;
 class CastExpr;
-struct ExplicitTemplateArgumentList;
+class ClassTemplateDecl;
 class Expr;
 class FunctionDecl;
 class NamedDecl;
@@ -45,6 +44,7 @@ class TemplateDecl;
 class TemplateName;
 class TypeDecl;
 class ValueDecl;
+struct ExplicitTemplateArgumentList;
 }  // namespace clang
 
 namespace include_what_you_use {
