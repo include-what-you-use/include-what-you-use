@@ -118,8 +118,6 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "port.h"  // for CHECK_
-// TODO(wan): remove this once the IWYU bug is fixed.
-// IWYU pragma: no_include "foo/bar/baz.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/ASTConsumer.h"
@@ -3594,6 +3592,7 @@ class IwyuAction : public ASTFrontendAction {
         = new IwyuAstConsumer(visitor_state);
 
     compiler.getPreprocessor().addPPCallbacks(preprocessor_consumer);
+    compiler.getPreprocessor().AddCommentHandler(preprocessor_consumer);
     return ast_consumer;
   }
 };

@@ -59,6 +59,7 @@
 
 #include <map>                          // for map
 #include <set>                          // for set
+#include <stack>                        // for stack
 #include <string>                       // for string
 #include <utility>                      // for pair
 #include <vector>                       // for vector
@@ -66,6 +67,7 @@
 #include "iwyu_output.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Token.h"
 
@@ -79,14 +81,17 @@ namespace include_what_you_use {
 using std::map;
 using std::pair;
 using std::set;
+using std::stack;
 using std::string;
+
 using std::vector;
 
-
-class IwyuPreprocessorInfo : public clang::PPCallbacks {
+class IwyuPreprocessorInfo : public clang::PPCallbacks,
+                             public clang::CommentHandler {
  public:
   IwyuPreprocessorInfo() : main_file_(NULL),
-                           empty_file_info_(NULL, this) {}
+                           empty_file_info_(NULL, this),
+                           current_file_(NULL) {}
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
   void HandlePreprocessingDone();
@@ -182,6 +187,12 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   void FileChanged_RenameFile(clang::SourceLocation new_file);
   void FileChanged_SystemHeaderPragma(clang::SourceLocation loc);
 
+  // CommentHandler callback.
+  // Clang doc: The handler shall return true if it has pushed any
+  // tokens to be read using e.g. EnterToken or EnterTokenStream.
+  virtual bool HandleComment(clang::Preprocessor& pp,
+                             clang::SourceRange comment_range);
+
  private:
   // Returns true if the given file is considered part of the main
   // compilation unit.  We always generate warnings for violations in
@@ -198,10 +209,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
                            const clang::FileEntry* includee,
                            const string& include_name_as_typed);
 
-  // Returns true if the include line is inside a
-  // "begin_exports"/"end_exports" pragma pair.
-  bool IncludeLineIsInExportedRange(clang::SourceLocation includer_loc) const;
-
   // Called whenever an #include is seen in the preprocessor output.
   void AddDirectInclude(clang::SourceLocation includer_loc,
                         const clang::FileEntry* includee,
@@ -212,8 +219,8 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   void AddExportedRange(const clang::FileEntry* file,
                         int begin_line, int end_line);
 
-  // Process IWYU pragmas in a file.
-  void ProcessPragmasInFile(clang::SourceLocation file_beginning);
+  // Determine if the comment is a pragma, and if so, process it.
+  void HandlePragmaComment(clang::SourceRange comment_range);
 
   // Process @headername directives in a file.
   void ProcessHeadernameDirectivesInFile(clang::SourceLocation file_beginning);
@@ -285,12 +292,15 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks {
   // is directed *not* to include via the "no_include" pragma.
   map<const clang::FileEntry*, set<string> > no_include_map_;
 
-  // Set of (file, line number) pairs that are enclosed by the pair of
-  // directives "IWYU pragma: begin exports" and "IWYU pragma: end
-  // exports".
-  set<pair<const clang::FileEntry*, int> > exported_lines_set_;
-
   const IwyuFileInfo empty_file_info_;
+
+  // The identity of the file currently being processed.
+  const clang::FileEntry* current_file_;
+
+  // For processing pragmas. It is the current stack of open
+  // "begin_exports".  There should be at most one item in this stack
+  // per file in the current inclusion chain..
+  stack<clang::SourceLocation> begin_exports_location_stack_;
 };
 
 }  // namespace include_what_you_use

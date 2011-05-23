@@ -32,6 +32,7 @@
 
 using clang::FileEntry;
 using clang::MacroInfo;
+using clang::Preprocessor;
 using clang::PresumedLoc;
 using clang::SourceLocation;
 using clang::SourceRange;
@@ -48,7 +49,6 @@ namespace SrcMgr = clang::SrcMgr;
 // method named ShouldPrintSymbolFromFile().
 #define ERRSYM(file_entry) \
   if (!ShouldPrintSymbolFromFile(file_entry)) ; else ::llvm::errs()
-
 
 namespace include_what_you_use {
 
@@ -93,21 +93,6 @@ static string GetName(const Token& token) {
 //------------------------------------------------------------
 // Utilities for handling iwyu-specific pragma comments.
 
-bool IwyuPreprocessorInfo::IncludeLineIsInExportedRange(
-    clang::SourceLocation includer_loc) const {
-  return ContainsKey(exported_lines_set_,
-                     make_pair(GetFileEntry(includer_loc),
-                               GetLineNumber(includer_loc)));
-}
-
-void IwyuPreprocessorInfo::AddExportedRange(const clang::FileEntry* file,
-                                            int begin_line, int end_line) {
-  // Crude algorithm - add every line in the range to a set.
-  for (int line_number = begin_line; line_number < end_line; ++line_number) {
-    exported_lines_set_.insert(make_pair(file, line_number));
-  }
-}
-
 namespace {
 
 // Given a vector of tokens, a token to match, and an expected number
@@ -115,6 +100,8 @@ namespace {
 // expected number and the first token matches the given token, else
 // false. In addition, if in the 'return true' case there are more
 // tokens than expected, warn if the first one doesn't start "//".
+// <loc>, which is only used for a warning message, should refer
+// to the beginning of the comment containing the tokens.
 bool MatchOneToken(const vector<string>& tokens,
                    const string& token,
                    size_t num_expected_tokens,
@@ -138,6 +125,8 @@ bool MatchOneToken(const vector<string>& tokens,
 // tokens, else false. In addition, if in the 'return true' case there
 // are more tokens than expected, warn if the first one doesn't start
 // "//".
+// <loc>, which is only used for a warning message, should refer
+// to the beginning of the comment containing the tokens.
 bool MatchTwoTokens(const vector<string>& tokens,
                     const string& token1,
                     const string& token2,
@@ -160,102 +149,104 @@ bool MatchTwoTokens(const vector<string>& tokens,
   return true;
 }
 
+bool TopOfLocationStackIsInFile(const stack<SourceLocation>& loc_stack,
+                                const FileEntry* file) {
+  return !loc_stack.empty() && GetFileEntry(loc_stack.top()) == file;
+}
+
 }  // namespace
 
-// IWYU pragma processing.
-void IwyuPreprocessorInfo::ProcessPragmasInFile(SourceLocation file_beginning) {
-  SourceLocation current_loc = file_beginning;
-  SourceLocation begin_exports_location;
+bool IwyuPreprocessorInfo::HandleComment(Preprocessor& pp,
+                                         SourceRange comment_range) {
+  HandlePragmaComment(comment_range);
+  return false;  // No tokens pushed.
+}
 
-  while (true) {
-    current_loc = GetLocationAfter(current_loc,
-                                   "// IWYU pragma: ",
-                                   DefaultDataGetter());
-    if (!current_loc.isValid()) {
-      break;
-    }
+void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
+  const SourceLocation begin_loc = comment_range.getBegin();
+  const SourceLocation end_loc = comment_range.getEnd();
+  const char* begin_text = DefaultDataGetter().GetCharacterData(begin_loc);
+  const char* end_text = DefaultDataGetter().GetCharacterData(end_loc);
+  string pragma_text(begin_text, end_text);
+  const FileEntry* const this_file_entry = GetFileEntry(begin_loc);
 
-    const string pragma_text = GetSourceTextUntilEndOfLine(current_loc,
-                                                           DefaultDataGetter());
-    vector<string> tokens = SplitOnWhiteSpacePreservingQuotes(pragma_text, 0);
-    if (begin_exports_location.isValid()) {
-      if (MatchOneToken(tokens, "end_exports", 1, current_loc)) {
-        AddExportedRange(GetFileEntry(file_beginning),
-                         GetLineNumber(begin_exports_location) + 1,
-                         GetLineNumber(current_loc));
-        begin_exports_location = SourceLocation();  // Invalidate it.
-      } else {
-        // No pragma allowed within "begin_exports" - "end_exports"
-        Warn(current_loc, "Expected end_exports pragma");
-      }
-      continue;
+  // Pragmas must start comments.
+  if (!StripLeft(&pragma_text, "// IWYU pragma: ")) {
+    return;
+  }
+  const vector<string> tokens =
+      SplitOnWhiteSpacePreservingQuotes(pragma_text, 0);
+  if (TopOfLocationStackIsInFile(begin_exports_location_stack_,
+                                 this_file_entry)) {
+    if (MatchOneToken(tokens, "end_exports", 1, begin_loc)) {
+      ERRSYM(this_file_entry) << "end_exports pragma seen\n";
+      begin_exports_location_stack_.pop();
+    } else {
+      // No pragma allowed within "begin_exports" - "end_exports"
+      Warn(begin_loc, "Expected end_exports pragma");
     }
-
-    if (MatchOneToken(tokens, "begin_exports", 1, current_loc)) {
-      begin_exports_location = current_loc;
-      continue;
-    }
-
-    if (MatchOneToken(tokens, "end_exports", 1, current_loc)) {
-      Warn(current_loc, "end_exports without a begin_exports");
-      continue;
-    }
-
-    if (MatchTwoTokens(tokens, "private,", "include", 3, current_loc)) {
-      // 3rd token should be a quoted header.
-      const string quoted_include
-          = ConvertToQuotedInclude(GetFilePath(current_loc));
-      MutableGlobalIncludePicker()->AddMapping(quoted_include, tokens[2]);
-      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_include);
-      ERRSYM(GetFileEntry(current_loc)) << "Adding private pragma-mapping: "
-                                        << quoted_include << " -> "
-                                        << tokens[2] << "\n";
-      continue;
-    }
-
-    if (MatchOneToken(tokens, "private", 1, current_loc)) {
-      const string quoted_include
-          = ConvertToQuotedInclude(GetFilePath(current_loc));
-      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_include);
-      ERRSYM(GetFileEntry(current_loc)) << "Adding private include: "
-                                        << quoted_include << "\n";
-      continue;
-    }
-
-    if (MatchOneToken(tokens, "no_include", 2, current_loc)) {
-      // 2nd token should be an quoted header.
-      no_include_map_[GetFileEntry(current_loc)].insert(tokens[1]);
-      ERRSYM(GetFileEntry(current_loc)) << "Inhibiting include of "
-                                        << tokens[1] << "\n";
-      continue;
-    }
-
-    if (MatchOneToken(tokens, "friend", 2, current_loc)) {
-      // 2nd token should be a regex.
-      string regex = tokens[1];
-      // The regex is expected to match a quoted include.  If the user
-      // didn't put quotes, assume they wanted a non-system file.
-      if (!IsQuotedInclude(regex))
-        regex = "\"(" + regex + ")\"";
-      ERRSYM(GetFileEntry(current_loc))
-          << GetFilePath(current_loc)
-          << " adding friend regex " << regex << "\n";
-      MutableGlobalIncludePicker()->AddFriendRegex(
-          GetFilePath(current_loc), regex);
-      continue;
-    }
-
-    // "keep" and "export" are handled in MaybeProtectInclude.
-    if (!MatchOneToken(tokens, "keep", 1, current_loc)
-        && !MatchOneToken(tokens, "export", 1, current_loc)) {
-      Warn(current_loc, "Unknown or malformed pragma (" + pragma_text + ")");
-      continue;
-    }
+    return;
   }
 
-  if (begin_exports_location.isValid()) {
-    Warn(begin_exports_location,
-         "begin_exports without an end_exports");
+  if (MatchOneToken(tokens, "begin_exports", 1, begin_loc)) {
+    ERRSYM(this_file_entry) << "begin_exports pragma seen\n";
+    begin_exports_location_stack_.push(begin_loc);
+    return;
+  }
+
+  if (MatchOneToken(tokens, "end_exports", 1, begin_loc)) {
+    Warn(begin_loc, "end_exports without a begin_exports");
+    return;
+  }
+
+  if (MatchTwoTokens(tokens, "private,", "include", 3, begin_loc)) {
+    // 3rd token should be a quoted header.
+    const string quoted_this_file
+        = ConvertToQuotedInclude(GetFilePath(begin_loc));
+    MutableGlobalIncludePicker()->AddMapping(quoted_this_file, tokens[2]);
+    MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_this_file);
+    ERRSYM(this_file_entry) << "Adding private pragma-mapping: "
+                            << quoted_this_file << " -> "
+                            << tokens[2] << "\n";
+    return;
+  }
+
+  if (MatchOneToken(tokens, "private", 1, begin_loc)) {
+    const string quoted_this_file
+        = ConvertToQuotedInclude(GetFilePath(begin_loc));
+    MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_this_file);
+    ERRSYM(this_file_entry) << "Adding private include: "
+                                    << quoted_this_file << "\n";
+    return;
+  }
+
+  if (MatchOneToken(tokens, "no_include", 2, begin_loc)) {
+    // 2nd token should be an quoted header.
+    no_include_map_[this_file_entry].insert(tokens[1]);
+    ERRSYM(this_file_entry) << "Inhibiting include of "
+                            << tokens[1] << "\n";
+    return;
+  }
+
+  if (MatchOneToken(tokens, "friend", 2, begin_loc)) {
+    // 2nd token should be a regex.
+    string regex = tokens[1];
+    // The regex is expected to match a quoted include.  If the user
+    // didn't put quotes, assume they wanted a non-system file.
+    if (!IsQuotedInclude(regex))
+      regex = "\"(" + regex + ")\"";
+    ERRSYM(this_file_entry) << GetFilePath(begin_loc)
+                            << " adding friend regex " << regex << "\n";
+    MutableGlobalIncludePicker()->AddFriendRegex(
+        GetFilePath(begin_loc), regex);
+    return;
+  }
+
+  // "keep" and "export" are handled in MaybeProtectInclude.
+  if (!MatchOneToken(tokens, "keep", 1, begin_loc)
+      && !MatchOneToken(tokens, "export", 1, begin_loc)) {
+    Warn(begin_loc, "Unknown or malformed pragma (" + pragma_text + ")");
+    return;
   }
 }
 
@@ -329,13 +320,18 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
 
   string protect_reason;
   // We always keep lines with pragmas "keep" or "export".
+  // TODO(user): As written "// // IWYU pragma: keep" is incorrectly
+  // interpreted as a pragma. Maybe do "keep" and "export" pragma handling
+  // in HandleComment?
   if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep")) {
     protect_reason = "pragma_keep";
 
   } else if (IncludeLineHasText(includer_loc, "// IWYU pragma: export") ||
-             IncludeLineIsInExportedRange(includer_loc)) {
+             TopOfLocationStackIsInFile(begin_exports_location_stack_,
+                                        includer)) {
     protect_reason = "pragma_export";
-    const string quoted_includer = ConvertToQuotedInclude(GetFilePath(includer));
+    const string quoted_includer =
+        ConvertToQuotedInclude(GetFilePath(includer));
     MutableGlobalIncludePicker()->AddMapping(include_name_as_typed,
                                              quoted_includer);
     ERRSYM(includer) << "Adding pragma-export mapping: "
@@ -559,6 +555,7 @@ void IwyuPreprocessorInfo::FileSkipped(const FileEntry& file,
 // Called when a file is #included.
 void IwyuPreprocessorInfo::FileChanged_EnterFile(
     SourceLocation file_beginning) {
+  current_file_ = GetFileEntry(file_beginning);
   // Get the location of the #include directive that resulted in the
   // include of the file that file_beginning is in.
   const PresumedLoc presumed =
@@ -579,7 +576,6 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   if (IsBuiltinOrCommandLineFile(new_file))
     return;
 
-  ProcessPragmasInFile(file_beginning);
   ProcessHeadernameDirectivesInFile(file_beginning);
 
   // The first non-special file entered is the main file.
@@ -600,6 +596,13 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
 void IwyuPreprocessorInfo::FileChanged_ExitToFile(SourceLocation include_loc) {
   ERRSYM(GetFileEntry(include_loc)) << "[ Exiting to  ] "
                                     << PrintableLoc(include_loc) << "\n";
+  if (TopOfLocationStackIsInFile(begin_exports_location_stack_,
+                                 current_file_)) {
+    Warn(begin_exports_location_stack_.top(),
+         "begin_exports without an end_exports");
+    begin_exports_location_stack_.pop();
+  }
+  current_file_ = GetFileEntry(include_loc);
 }
 
 void IwyuPreprocessorInfo::FileChanged_RenameFile(SourceLocation new_file) {
