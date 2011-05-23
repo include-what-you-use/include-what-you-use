@@ -13,7 +13,7 @@
 #include <algorithm>                    // for sort, find
 // TODO(wan): make sure IWYU doesn't suggest <iterator>.
 #include <iterator>                     // for find
-#include <map>                          // for map, etc
+#include <map>                          // for _Rb_tree_const_iterator, etc
 #include <utility>                      // for pair, make_pair, operator>
 #include <vector>                       // for vector, vector<>::iterator, etc
 
@@ -34,10 +34,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 
-namespace clang {
-class NestedNameSpecifier;
-}  // namespace clang
-
 namespace include_what_you_use {
 
 using clang::ClassTemplateDecl;
@@ -51,13 +47,10 @@ using clang::FullSourceLoc;
 using clang::FunctionDecl;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
-using clang::NestedNameSpecifier;
 using clang::RecordDecl;
 using clang::SourceRange;
-using clang::TagDecl;
 using clang::TemplateDecl;
 using clang::SourceLocation;
-using clang::Type;
 using llvm::errs;
 using llvm::raw_string_ostream;
 using std::find;
