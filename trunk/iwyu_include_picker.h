@@ -74,6 +74,10 @@ bool IsQuotedInclude(const string& s);
 // file, based on where it lives.
 bool IsSystemIncludeFile(const string& filepath);
 
+// Returns true if the given file is third-party.  Google-authored
+// code living in third_party/ is not considered third-party.
+bool IsThirdPartyFile(string quoted_path);
+
 class IncludePicker {
  public:
   enum Visibility { kUnusedVisibility, kPublic, kPrivate };
@@ -194,7 +198,9 @@ class IncludePicker {
   // From quoted filepath patterns to includes, where a pattern can be
   // either a quoted filepath (e.g. "foo/bar.h" or <a/b.h>) or @
   // followed by a regular expression for matching a quoted filepath
-  // (e.g. @"foo/.*").
+  // (e.g. @"foo/.*").  If key-value pair (pattern, headers) is in
+  // this map, it means that any header in 'headers' can be used to
+  // get symbols exported by a header matching 'pattern'.
   IncludeMap filepath_include_map_;
 
   // A map of all quoted-includes to whether they're public or private.

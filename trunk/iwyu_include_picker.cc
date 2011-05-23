@@ -21,6 +21,7 @@
 #include <vector>                       // for vector
 
 #include "iwyu_globals.h"
+#include "iwyu_output.h"
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
@@ -853,6 +854,22 @@ bool IsSystemIncludeFile(const string& filepath) {
   return ConvertToQuotedInclude(filepath)[0] == '<';
 }
 
+// Returns true if the given file is third-party.  Google-authored
+// code living in third_party/ is not considered third-party.
+bool IsThirdPartyFile(string quoted_path) {
+  if (!StripLeft(&quoted_path, "\"third_party/"))
+    return false;
+
+  // These are Google-authored libraries living in third_party/
+  // because of old licensing constraints.
+  if (StartsWith(quoted_path, "car/") ||
+      StartsWith(quoted_path, "gtest/") ||
+      StartsWith(quoted_path, "gmock/"))
+    return false;
+
+  return true;
+}
+
 #define IWYU_ARRAYSIZE(ar)  (sizeof(ar) / sizeof(*(ar)))
 
 IncludePicker::IncludePicker()
@@ -958,6 +975,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
 }
 
 void IncludePicker::AddMapping(const string& map_from, const string& map_to) {
+  VERRS(4) << "Adding mapping from " << map_from << " to " << map_to << "\n";
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
   CHECK_(IsQuotedFilepathPattern(map_from)
          && "All map keys must be quoted filepaths or @ followed by regex");
@@ -1047,22 +1065,18 @@ void IncludePicker::ExpandRegexes() {
 //    add a mapping from y.h to x.h, and make y.h private.  This
 //    means iwyu will never suggest adding y.h.
 void IncludePicker::AddImplicitThirdPartyMappings() {
-  // TODO(user): Refactor the third_party/car bit into
-  // living in third_party because of old licensing constraints.
-  set<string> headers_with_explicit_mappings;
+  set<string> third_party_headers_with_explicit_mappings;
   for (Each<IncludeMap::value_type>
            it(&filepath_include_map_); !it.AtEnd(); ++it) {
-    if (StartsWith(it->first, "\"third_party/") &&
-        !StartsWith(it->first, "\"third_party/car"))
-      headers_with_explicit_mappings.insert(it->first);
+    if (IsThirdPartyFile(it->first))
+      third_party_headers_with_explicit_mappings.insert(it->first);
   }
 
   set<string> headers_included_from_non_third_party;
   for (Each<string, set<string> >
            it(&quoted_includes_to_quoted_includers_); !it.AtEnd(); ++it) {
     for (Each<string> includer(&it->second); !includer.AtEnd(); ++includer) {
-      if (!StartsWith(*includer, "\"third_party/") ||
-          StartsWith(*includer, "\"third_party/car")) {
+      if (!IsThirdPartyFile(*includer)) {
         headers_included_from_non_third_party.insert(it->first);
         break;
       }
@@ -1071,13 +1085,16 @@ void IncludePicker::AddImplicitThirdPartyMappings() {
 
   for (Each<string, set<string> >
            it(&quoted_includes_to_quoted_includers_); !it.AtEnd(); ++it) {
-    if (ContainsKey(headers_with_explicit_mappings, it->first) ||
-        ContainsKey(headers_included_from_non_third_party, it->first)) {
+    const string& includee = it->first;
+    if (ContainsKey(third_party_headers_with_explicit_mappings, includee) ||
+        ContainsKey(headers_included_from_non_third_party, includee)) {
       continue;
     }
     for (Each<string> includer(&it->second); !includer.AtEnd(); ++includer) {
-      CHECK_(StartsWith(*includer, "\"third_party/") && "Why not nixed!");
-      AddMapping(it->first, *includer);
+      // From the 'if' statement above, we already know that includee
+      // is not included from non-third-party code.
+      CHECK_(IsThirdPartyFile(*includer) && "Why not nixed!");
+      AddMapping(includee, *includer);
     }
   }
 }
