@@ -642,6 +642,9 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // decl.  We're hoping it will always be safe to modify the AST
   // while it's being traversed!
   void InstantiateImplicitMethods(CXXRecordDecl* decl) {
+    if (decl->isDependentType())   // only instantiate if class is instantiated
+      return;
+
     clang::Sema& sema = compiler_->getSema();
     if (!decl->hasDeclaredDefaultConstructor())
       sema.DefineImplicitDefaultConstructor(
