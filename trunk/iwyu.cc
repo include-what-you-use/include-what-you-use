@@ -642,12 +642,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // decl.  We're hoping it will always be safe to modify the AST
   // while it's being traversed!
   void InstantiateImplicitMethods(CXXRecordDecl* decl) {
-    if (decl->isDependentType())   // only instantiate if class is instantiated
-      return;
-
     clang::Sema& sema = compiler_->getSema();
-    if (!decl->hasDeclaredDefaultConstructor() &&
-        !decl->hasUserDeclaredConstructor())
+    if (!decl->hasDeclaredDefaultConstructor())
       sema.DefineImplicitDefaultConstructor(
           CurrentLoc(), sema.DeclareImplicitDefaultConstructor(decl));
 #if 0  // TODO(csilvers): figure out why these crash clang sometimes
@@ -2388,8 +2384,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // known_fully_used_tpl_type_args_.  See if that solves the problem with
   // I1_TemplateClass<std::vector<I1_Class> > i1_nested_templateclass(...)
   void DetermineForwardDeclareStatusForTemplateArg(ASTNode* ast_node) {
-    const TemplateArgument* arg = ast_node->GetAs<TemplateArgument>();
-    CHECK_(arg && "Should only pass in a template arg to DFDSFTA");
+    CHECK_(ast_node->IsA<TemplateArgument>() &&
+           "Should only pass in a template arg to DFDSFTA");
 
     if (!IsDefaultTemplateTemplateArg(ast_node)) {
       ast_node->set_in_forward_declare_context(true);
