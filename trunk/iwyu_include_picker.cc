@@ -27,7 +27,6 @@
 #include "port.h"  // for CHECK_
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/raw_ostream.h"
 
 using std::find;
 using std::map;
@@ -1192,6 +1191,14 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     retval.push_back(quoted_includee);
   } else {
     retval = GetCandidateHeadersForFilepath(included_filepath);
+    if (retval.size() == 1) {
+      const string& quoted_header = retval[0];
+      if (GetVisibility(quoted_header) == IncludePicker::kPrivate) {
+        VERRS(0) << "Warning: "
+                 << "No public header found to replace the private header "
+                 << quoted_header << "\n";
+      }
+    }
   }
 
   // We'll have called ConvertToQuotedInclude on members of retval,
@@ -1227,6 +1234,12 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
     }
   }
   return quoted_to == quoted_from;   // indentity mapping, why not?
+}
+
+IncludePicker::Visibility IncludePicker::GetVisibility(
+    const string& quoted_include) const {
+  return GetOrDefault(
+      filepath_visibility_map_, quoted_include, kUnusedVisibility);
 }
 
 }  // namespace include_what_you_use

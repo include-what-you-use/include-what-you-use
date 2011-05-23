@@ -181,6 +181,10 @@ class IncludePicker {
   void MarkVisibility(const string& quoted_include,
                       IncludePicker::Visibility vis);
 
+  // Return the visibility of a given quoted_include if known, else
+  // kUnusedVisibility.
+  Visibility GetVisibility(const string& quoted_include) const;
+
   // For the given key, return the vector of values associated with
   // that key, or an empty vector if the key does not exist in the
   // map, filtering out private files.
