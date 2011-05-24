@@ -22,15 +22,12 @@
 # define getcwd _getcwd
 # define snprintf _snprintf
 
-// Get a windows-equivalent fnmatch()
-# include "Shlwapi.h"  // For PathMatchSpec
+# include "Shlwapi.h"  // for PathMatchSpec
 
 # pragma comment(lib, "Shlwapi.lib")
 
-#define FNM_PATHNAME (1<<0)   // normally defined in fnmatch.h
-
-inline int fnmatch(const char *pattern, const char *string, int /*flags*/) {
-  return !PathMatchSpec(string, pattern);
+inline bool GlobMatchesPath(const char *glob, const char *path) {
+  return PathMatchSpec(path, glob);
 }
 
 // FIXME: This undef is necessary to prevent conflicts between llvm
@@ -40,7 +37,11 @@ inline int fnmatch(const char *pattern, const char *string, int /*flags*/) {
 
 #else  // #if defined(_MSC_VER)
 
-#include <fnmatch.h>  // IWYU pragma: export
+#include <fnmatch.h>
+
+inline bool GlobMatchesPath(const char *glob, const char *path) {
+  return fnmatch(glob, path, FNM_PATHNAME) == 0;
+}
 
 #endif  // #if defined(_MSC_VER)
 
