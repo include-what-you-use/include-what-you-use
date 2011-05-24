@@ -32,6 +32,3 @@ add_clang_executable(include-what-you-use
   iwyu_output.cc
   iwyu_preprocessor.cc
 )
-
-install(TARGETS include-what-you-use
-  RUNTIME DESTINATION bin)

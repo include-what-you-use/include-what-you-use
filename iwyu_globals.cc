@@ -249,7 +249,7 @@ void AddGlobToReportIWYUViolationsFor(const string& glob) {
 bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file) {
   const string filepath = GetFilePath(file);
   for (Each<string> it(&GlobalFlags().check_also); !it.AtEnd(); ++it)
-    if (fnmatch(it->c_str(), filepath.c_str(), FNM_PATHNAME) == 0)
+    if (GlobMatchesPath(it->c_str(), filepath.c_str()))
       return true;
   return false;
 }
