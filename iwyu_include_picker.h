@@ -154,6 +154,7 @@ class IncludePicker {
   // candidate header when #included from "foo/internal/baz.h", but
   // not when #included from "qux/quux.h".  In the common case there's
   // no special-casing, and this falls back on
+  // GetCandidateHeadersForFilepath().
   vector<string> GetCandidateHeadersForFilepathIncludedFrom(
       const string& included_filepath, const string& including_filepath) const;
 
@@ -193,8 +194,8 @@ class IncludePicker {
   // Given an includer-pathname and includee-pathname, return the
   // quoted-include of the includee, as typed in the includer, or
   // "" if it's not found for some reason.
-  string GetIncludeNameAsWritten(const string& includer_filepath,
-                                 const string& includee_filepath) const;
+  string MaybeGetIncludeNameAsWritten(const string& includer_filepath,
+                                      const string& includee_filepath) const;
 
   // From symbols to includes.
   IncludeMap symbol_include_map_;
@@ -219,7 +220,7 @@ class IncludePicker {
   // include-as-written (including <>'s or ""'s) that the includer
   // used to refer to the includee.  We use this to return includes as
   // they were written in the source, when possible.
-  map<pair<string, string>, string> include_path_to_include_as_typed_;
+  map<pair<string, string>, string> includer_and_includee_to_include_as_typed_;
 
   // Maps from a quoted filepath pattern to the set of files that used
   // a pragma declaring it as a friend.  That is, if foo/bar/x.h has a
