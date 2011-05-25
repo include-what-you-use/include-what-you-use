@@ -941,7 +941,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
 
   quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
   const pair<string, string> key(includer_filepath, includee_filepath);
-  include_path_to_include_as_typed_[key] = quoted_include_as_typed;
+  includer_and_includee_to_include_as_typed_[key] = quoted_include_as_typed;
 
   // Mark the clang fake-file "<built-in>" as private, so we never try
   // to map anything to it.
@@ -1150,11 +1150,12 @@ vector<string> IncludePicker::GetPublicValues(
   return retval;
 }
 
-string IncludePicker::GetIncludeNameAsWritten(
+string IncludePicker::MaybeGetIncludeNameAsWritten(
     const string& includer_filepath, const string& includee_filepath) const {
   const pair<string, string> key(includer_filepath, includee_filepath);
   // I want to use GetOrDefault here, but it has trouble deducing tpl args.
-  const string* value = FindInMap(&include_path_to_include_as_typed_, key);
+  const string* value = FindInMap(&includer_and_includee_to_include_as_typed_,
+                                  key);
   return value ? *value : "";
 }
 
@@ -1206,15 +1207,15 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
   // retval, the iwyu-preprocessor may have stored the quoted-include
   // as typed in including_filepath.  This is better to use than
   // ConvertToQuotedInclude because it avoids trouble when the same
-  // file is accessible via different include search-paths.
+  // file is accessible via different include search-paths, or is
+  // accessed via a symlink.
   const string& quoted_include_as_typed
-      = GetIncludeNameAsWritten(including_filepath, included_filepath);
+      = MaybeGetIncludeNameAsWritten(including_filepath, included_filepath);
   if (!quoted_include_as_typed.empty()) {
-    for (vector<string>::iterator it = retval.begin(); it != retval.end(); ++it)
-      if (*it == quoted_includee) {
-        *it = quoted_include_as_typed;
-        break;
-      }
+    vector<string>::iterator it = std::find(retval.begin(), retval.end(),
+                                            quoted_includee);
+    if (it != retval.end())
+      *it = quoted_include_as_typed;
   }
   return retval;
 }
