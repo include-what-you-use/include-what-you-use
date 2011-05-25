@@ -376,8 +376,11 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
       is_desired_(false), is_present_(false), symbol_counts_(),
       quoted_include_(), fwd_decl_(fwd_decl) {
   const SourceRange decl_lines = GetSourceRangeOfClassDecl(fwd_decl);
-  start_linenum_ = GetLineNumber(decl_lines.getBegin());
-  end_linenum_ = GetLineNumber(decl_lines.getEnd());
+  // We always want to use the instantiation line numbers: for code like
+  //     FORWARD_DECLARE_CLASS(MyClass);
+  // we care about where this macro is called, not where it's defined.
+  start_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
+  end_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
 }
 
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
