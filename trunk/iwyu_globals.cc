@@ -9,7 +9,6 @@
 
 #include "iwyu_globals.h"
 
-#include <getopt.h>                     // for optarg, required_argument, etc
 #include <stdio.h>                      // for printf
 #include <stdlib.h>                     // for atoi, exit, getenv
 #include <algorithm>                    // for sort, make_pair
@@ -19,6 +18,7 @@
 #include <utility>                      // for make_pair, pair
 
 #include "iwyu_cache.h"
+#include "iwyu_getopt.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
