@@ -658,13 +658,15 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
           //sema.DefineImplicitCopyConstructor(CurrentLoc(), ctor);
         }
       }
-      sema.PendingInstantiations.push_back(make_pair(ctor, CurrentLoc()));
+      if (ctor->getTemplateInstantiationPattern())
+        sema.PendingInstantiations.push_back(make_pair(ctor, CurrentLoc()));
     }
 
     if (CXXDestructorDecl* dtor = sema.LookupDestructor(decl)) {
       if (!dtor->hasBody() && dtor->isImplicit())
         sema.DefineImplicitDestructor(CurrentLoc(), dtor);
-      sema.PendingInstantiations.push_back(make_pair(dtor, CurrentLoc()));
+      if (dtor->getTemplateInstantiationPattern())
+        sema.PendingInstantiations.push_back(make_pair(dtor, CurrentLoc()));
     }
 
     // TODO(nlewycky): copy assignment operator
