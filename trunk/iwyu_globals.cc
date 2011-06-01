@@ -91,7 +91,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
   };
   static const char shortopts[] = "d::p:v:c:";
   const char* optarg = NULL;
-  int optind = -1;
+  int optind = 0;
   while (true) {
     switch (GetOptLong(argc, argv, shortopts, longopts, &optarg, &optind)) {
       case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
