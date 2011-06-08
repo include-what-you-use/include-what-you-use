@@ -1618,8 +1618,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                    << typedef_decl->getQualifiedNameAsString()
                    << " owns the underlying type:\n";
           // If any of the used types are themselves typedefs, this will
-          // result in a recursive expansion.
-          ReportTypesUse(used_loc, underlying_types);
+          // result in a recursive expansion.  Note we are careful to
+          // recurse inside this class, and not go back to subclasses.
+          for (Each<const Type*> it(&underlying_types); !it.AtEnd(); ++it)
+            IwyuBaseAstVisitor<Derived>::ReportTypeUseWithComment(used_loc, *it,
+                                                                  NULL);
         }
       }
     }
