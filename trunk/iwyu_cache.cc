@@ -39,7 +39,6 @@ static const char* const kFullUseTypes[] = {
   "__gnu_cxx::hash_multimap",
   "__gnu_cxx::hash_multiset",
   "__gnu_cxx::hash_set",
-  "std::bitset",
   "std::deque",
   "std::list",
   "std::map",

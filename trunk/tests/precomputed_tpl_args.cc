@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <set>
+#include <bitset>
 #include "tests/precomputed_tpl_args-d1.h"
 
 template <typename T> struct Identity {
@@ -49,6 +50,9 @@ typedef std::set<int> IntSet;
 // Call the constructor to cause it to be instantiated, so iwyu visits it.
 IntSet int_set;
 
+// bitset should not be precomputed, since it has a non-class arg.
+std::bitset<5> bitset;
+
 
 /**** IWYU_SUMMARY
 
@@ -58,6 +62,7 @@ tests/precomputed_tpl_args.cc should add these lines:
 tests/precomputed_tpl_args.cc should remove these lines:
 
 The full include-list for tests/precomputed_tpl_args.cc:
+#include <bitset>  // for bitset
 #include <set>  // for set
 #include <vector>  // for vector
 #include "tests/precomputed_tpl_args-d1.h"  // for D1SpecializationClass, less
