@@ -2038,8 +2038,10 @@ def FixManyFiles(iwyu_records, flags):
   # It's much faster to check out all the files at once.
   if flags.checkout_command and files_to_checkout:
     checkout_command = flags.checkout_command
-    # If no files to fix are writable and a checkout command was
-    # specified and we can figure out how to create a CL, do it.
+    # If --create_cl_if_possible was specified, AND if all files that
+    # need fixing are not writable (not opened for edit in this
+    # client), try to create a CL to contain those edits.  This is to
+    # avoid inadvertently creating multiple CLs.
     if (flags.create_cl_if_possible and
         len(files_to_checkout) == len(file_and_fix_pairs)):
       cl = CreateCLForCheckoutCommand(flags.checkout_command,
@@ -2047,6 +2049,12 @@ def FixManyFiles(iwyu_records, flags):
       if cl:
         # Assumption: the checkout command supports the '-c <CL#>' syntax.
         checkout_command += (' -c ' + cl)
+    # Else if --append_to_cl was specified, add the files that need
+    # editing to the specified (existing) CL.
+    # NOTE: If one or more of these files is already open, this will
+    # presumably fail.
+    elif flags.append_to_cl:
+      checkout_command += (' -c %d' % flags.append_to_cl)
     _RunCommand(checkout_command, files_to_checkout)
 
   for filename, fixed_lines in file_and_fix_pairs:
@@ -2187,6 +2195,11 @@ def main(argv):
   parser.add_option('--nocreate_cl_if_possible', action='store_false',
                     dest='create_cl_if_possible')
 
+  parser.add_option('--append_to_cl', action='store',
+                    default=None, type='int', dest='append_to_cl',
+                    help=('If provided, with a checkout_command, add files'
+                          ' that need fixing to the specified existing CL.'))
+
   parser.add_option('--separate_project_includes', default=None,
                     help=('Sort #includes for current project separately'
                           ' from all other #includes.  This flag specifies'
@@ -2221,6 +2234,10 @@ def main(argv):
       not flags.separate_project_includes.startswith('<') and  # 'special' vals
       not flags.separate_project_includes.endswith(os.path.sep)):
     flags.separate_project_includes += os.path.sep
+
+  if flags.append_to_cl and flags.create_cl_if_possible:
+    sys.exit('FATAL ERROR: At most one of --append_to_cl and '
+             '--create_cl_if_possible allowed')
 
   if flags.sort_only:
     if not files_to_modify:
