@@ -56,6 +56,16 @@ clang as of the same revision number of the last include-what-you-use
 release.  You can find this revision number in comments at the top
 of the include-what-you-use Makefile.
 
+-- BUILDING AGAINST LLVM 2.9
+
+These are the commands I ran, which worked for me:
+
+1) Visit http://llvm.org/releases/download.html#2.9
+2) Download the appropriate binaries ("Clang Binaries for Linux/x86_64")
+3) Untar the download file, cd to its root directory
+4) Run this command:
+      g++ -D_DEBUG -D_GNU_SOURCE -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -fno-rtti -I include -L lib ~/devel/llvm/tools/clang/tools/include-what-you-use/*.cc -lclangFrontend -lclangSerialization -lclangDriver -lclangSema -lclangAnalysis -lclangAST -lclangParse -lclangLex -lclangBasic -lLLVMipo -lLLVMScalarOpts -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAnalysis -lLLVMTarget -lLLVMMC -lLLVMCore -lLLVMSupport -lpthread -ldl -lm -o include-what-you-use
+
 ==========
 How to Run
 ==========
