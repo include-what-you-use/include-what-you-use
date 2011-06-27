@@ -813,7 +813,8 @@ bool IsFriendDecl(const Decl* decl) {
 }
 
 bool IsForwardDecl(const clang::TagDecl* decl) {
-  return (!decl->isDefinition() && !IsFriendDecl(decl) &&
+  return (isa<RecordDecl>(decl) &&   // not an enum
+          !decl->isDefinition() && !IsFriendDecl(decl) &&
           !decl->isEmbeddedInDeclarator());
 }
 
