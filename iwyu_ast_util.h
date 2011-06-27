@@ -573,6 +573,7 @@ bool IsFriendDecl(const clang::Decl* decl);
 // Returns true if a Record-decl looks like a forward-declaration of a
 // class (rather than a definition, a friend declaration, or an 'in
 // place' declaration like 'struct Foo' in 'void MyFunc(struct Foo*);'
+// Always returns false for enums.
 bool IsForwardDecl(const clang::TagDecl* decl);
 
 // Returns true if this decl is defined inside another class/struct.
