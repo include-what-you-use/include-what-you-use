@@ -197,9 +197,8 @@ TEST(GetCandidateHeadersForSymbol, Basic) {
                       "<locale.h>", "<stdio.h>", "<stdlib.h>", "<string.h>",
                       "<time.h>", "<wchar.h>"
                       );
-  EXPECT_VECTOR_STREQ(p.GetCandidateHeadersForSymbol("std::ios"),
-                      "<ios>", "<istream>", "<fstream>", "<iostream>",
-                      "<sstream>", "<ostream>", "\"base/logging.h\"");
+  EXPECT_VECTOR_STREQ(p.GetCandidateHeadersForSymbol("std::allocator"),
+                      "<memory>", "<string>", "<vector>", "<map>", "<set>");
   EXPECT_EQ(0, p.GetCandidateHeadersForSymbol("foo").size());
 }
 

@@ -191,27 +191,6 @@ const IncludePicker::IncludeMapEntry symbol_include_map[] = {
   { "NULL", kPrivate, "<time.h>", kPublic },
   { "NULL", kPrivate, "<wchar.h>", kPublic },
 
-  // These are c++ symbol maps that handle the forwarding headers
-  // that define classes as typedefs.  Because gcc uses typedefs for
-  // these, we are tricked into thinking the classes are defined
-  // there, rather than just declared there.  This maps each symbol
-  // to where it's defined (I had to fix up ios manually, and add in
-  // iostream and string which are defined unusually in gcc headers):
-  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1; find . -name '*fwd*' | xargs grep -oh 'typedef basic_[^ <]*' | sort -u | sed "s/typedef basic_//" | while read class; do echo -n "$class "; grep -lR "^ *class basic_$class " *; echo | head -n1; done | grep . | perl -lane 'print qq@    { "std::$F[0]", kPrivate, "<$F[1]>", kPublic },@;' )
-  { "std::filebuf", kPrivate, "<fstream>", kPublic },
-  { "std::fstream", kPrivate, "<fstream>", kPublic },
-  { "std::ifstream", kPrivate, "<fstream>", kPublic },
-  { "std::ios", kPrivate, "<ios>", kPublic },
-  { "std::iostream", kPrivate, "<iostream>", kPublic },
-  { "std::istream", kPrivate, "<istream>", kPublic },
-  { "std::istringstream", kPrivate, "<sstream>", kPublic },
-  { "std::ofstream", kPrivate, "<fstream>", kPublic },
-  { "std::ostream", kPrivate, "<ostream>", kPublic },
-  { "std::ostringstream", kPrivate, "<sstream>", kPublic },
-  { "std::streambuf", kPrivate, "<streambuf>", kPublic },
-  { "std::string", kPrivate, "<string>", kPublic },
-  { "std::stringbuf", kPrivate, "<sstream>", kPublic },
-  { "std::stringstream", kPrivate, "<sstream>", kPublic },
   // Kludge time: almost all STL types take an allocator, but they
   // almost always use the default value.  Usually we detect that
   // and don't try to do IWYU, but sometimes it passes through.
@@ -640,9 +619,11 @@ const IncludePicker::IncludeMapEntry cpp_include_map[] = {
   // #including each other (eg <iostream> #includes <istream>).  We
   // are pretty forgiving: if a user specifies any public header, we
   // generally don't require the others.
-  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && egrep '^ *# *include <(istream|ostream|iostream|fstream|sstream|streambuf|ios)>' *stream* ios | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ and print qq@    { "<$2>", kPublic, "<$1>", kPublic },@' | sort -u )
+  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && egrep '^ *# *include <(istream|ostream|iostream|fstream|sstream|streambuf|ios|iosfwd)>' *stream* ios | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ and print qq@    { "<$2>", kPublic, "<$1>", kPublic },@' | sort -u )
   { "<ios>", kPublic, "<istream>", kPublic },
   { "<ios>", kPublic, "<ostream>", kPublic },
+  { "<iosfwd>", kPublic, "<ios>", kPublic },
+  { "<iosfwd>", kPublic, "<streambuf>", kPublic },
   { "<istream>", kPublic, "<fstream>", kPublic },
   { "<istream>", kPublic, "<iostream>", kPublic },
   { "<istream>", kPublic, "<sstream>", kPublic },
