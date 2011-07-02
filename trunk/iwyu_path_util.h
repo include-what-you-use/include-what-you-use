@@ -57,6 +57,14 @@ inline string NormalizeFilePath(const string& path) {
   return result;
 }
 
+inline string Basename(const string& path) {
+  string::size_type last_slash = path.rfind('/');
+  if (last_slash != string::npos) {
+    return path.substr(last_slash + 1);
+  }
+  return path;
+}
+
 inline string CanonicalizeFilePath(const string& path) {
   string result = path;
 

@@ -62,15 +62,16 @@ class OneIwyuTest(unittest.TestCase):
   def RunOneTest(self, filename):
     logging.info('Testing iwyu on %s', filename)
     # Split full/path/to/foo.cc into full/path/to/foo and .cc.
-    (basename, _) = os.path.splitext(filename)
+    (all_but_extension, _) = os.path.splitext(filename)
+    (dirname, basename) = os.path.split(all_but_extension)
     # Generate diagnostics on all foo-* files (well, not other
     # foo-*.cc files, which is not kosher but is legal), in addition
     # to foo.h (if present) and foo.cc.
-    files_to_check = [f for f in glob.glob(basename + '-*')
-                      if not f.endswith('.cc')]
-    h_file = basename + '.h'
-    if os.path.exists(h_file):
-      files_to_check.append(h_file)
+    all_files = (glob.glob('%s-*' % all_but_extension) +
+                 glob.glob('%s/*/%s-*' % (dirname, basename)) +
+                 glob.glob('%s.h' % all_but_extension) +
+                 glob.glob('%s/*/%s.h' % (dirname, basename)))
+    files_to_check = [f for f in all_files if not f.endswith('.cc')]
     files_to_check.append(filename)
 
     iwyu_flags = self._iwyu_flags_map.get(filename, None)

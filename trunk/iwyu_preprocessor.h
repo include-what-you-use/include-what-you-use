@@ -194,10 +194,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                              clang::SourceRange comment_range);
 
  private:
-  // Returns true if the given file is considered part of the main
+  // Returns true if includee is considered part of the main
   // compilation unit.  We always generate warnings for violations in
   // files are part of the main compilation unit.
-  bool BelongsToMainCompilationUnit(const clang::FileEntry* file) const;
+  bool BelongsToMainCompilationUnit(const clang::FileEntry* includer,
+                                    const clang::FileEntry* includee) const;
 
   // Helper function that returns iwyu_file_info_map_[file_entry] if
   // it already exists, or creates a new one and returns it otherwise.
@@ -274,6 +275,9 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   map<string, const clang::FileEntry*> include_to_fileentry_map_;
 
   map<const clang::FileEntry*, IwyuFileInfo> iwyu_file_info_map_;
+
+  // How many #include lines we've encountered from the given file.
+  map<const clang::FileEntry*, int> num_includes_seen_;
 
   // Maps from a FileEntry* to all files that this file "intends" to
   // provide the symbols from.  For now, we say a file intentionally
