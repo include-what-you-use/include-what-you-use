@@ -407,6 +407,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
     CHECK_(includee != NULL);
     CHECK_(!include_name_as_typed.empty());
   }
+  ++num_includes_seen_[includer];
 
   GetFromFileInfoMap(includer)->AddInclude(
       includee, include_name_as_typed, GetLineNumber(includer_loc));
@@ -416,7 +417,8 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   // We have a rule that if foo.h #includes bar.h, foo.cc doesn't need
   // to #include bar.h as well, but instead gets it 'automatically' via
   // foo.h.  We say that 'foo.h' is an "internal header" for foo.cc.
-  if (includer == main_file_ && BelongsToMainCompilationUnit(includee))
+  if (includer == main_file_ &&
+      BelongsToMainCompilationUnit(includer, includee))
     GetFromFileInfoMap(includer)->AddInternalHeader(
         GetFromFileInfoMap(includee));
 
@@ -586,7 +588,8 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   if (main_file_ == NULL)
     main_file_ = new_file;
 
-  if (main_file_ != NULL && BelongsToMainCompilationUnit(new_file)) {
+  if (main_file_ != NULL &&
+      BelongsToMainCompilationUnit(GetFileEntry(include_loc), new_file)) {
     VERRS(5) << "Added to main compilation unit: "
              << GetFilePath(new_file) << "\n";
     AddGlobToReportIWYUViolationsFor(GetFilePath(new_file));
@@ -814,10 +817,25 @@ void IwyuPreprocessorInfo::HandlePreprocessingDone() {
   PopulateTransitiveIncludeMap();
 }
 
-bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(const FileEntry* file)
-    const {
-  return file && (GetCanonicalName(GetFilePath(file)) ==
-                  GetCanonicalName(GetFilePath(main_file_)));
+bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(
+    const FileEntry* includer, const FileEntry* includee) const {
+  if (!includee)
+    return false;
+  if (GetCanonicalName(GetFilePath(includee)) ==
+      GetCanonicalName(GetFilePath(main_file_)))
+    return true;
+  // Heuristic: if the main compilation unit's *first* include is
+  // a file with the same basename, assume that it's the 'related'
+  // .h file, even if the canonical names differ.  This catches
+  // cases like 'foo/x.cc' #includes 'foo/public/x.h', or
+  // 'foo/mailserver/x.cc' #includes 'foo/public/x.h'.
+  if (includer == main_file_ &&
+      ContainsKeyValue(num_includes_seen_, includer, 1)) {
+    if (GetCanonicalName(Basename(GetFilePath(includee))) ==
+        GetCanonicalName(Basename(GetFilePath(main_file_))))
+      return true;
+  }
+  return false;
 }
 
 const FileEntry* IwyuPreprocessorInfo::IncludeToFileEntry(
