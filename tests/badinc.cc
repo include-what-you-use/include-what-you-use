@@ -2042,7 +2042,7 @@ The full include-list for tests/badinc.cc:
 #include <stddef.h>  // for offsetof, size_t
 #include <stdlib.h>  // for rand
 #include <algorithm>  // for find
-#include <fstream>  // for basic_fstream, fstream
+#include <fstream>  // for fstream
 #include <list>  // for list
 #include <new>  // for operator new
 #include <string>  // for allocator, basic_string, basic_string<>::iterator, char_traits, operator+, string
