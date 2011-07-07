@@ -267,9 +267,8 @@ The full include-list for simple:
     infile = """\
 // Copyright 2010
 
-///+#include <ctype.h>
 #include <stdio.h>
-#include <ctype.h>   ///-
+#include <ctype.h>  // iwyu will not reorder, even though non-alphabetical
 
 namespace Foo;
 
@@ -279,8 +278,13 @@ int main() { return 0; }
 """
     iwyu_output = "(nodiffs.h has correct #includes/fwd-decls)\n"
     self.RegisterFileContents({'nodiffs.h': infile})
-    # We still say there's a modified file because we reordered the #includes
-    self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
+    # fix_includes gives special output when there are no changes, so
+    # we can't use the normal ProcessAndTest.
+    iwyu_output_as_file = cStringIO.StringIO(iwyu_output)
+    num_modified_files = fix_includes.ProcessIWYUOutput(iwyu_output_as_file,
+                                                        None, self.flags)
+    self.assertListEqual([], self.actual_after_contents)  # 'no diffs'
+    self.assertEqual(0, num_modified_files)
 
   def testNodiffOutputWithNoSorting(self):
     """Tests 'correct #includes' iwyu output, but does not need reordering."""

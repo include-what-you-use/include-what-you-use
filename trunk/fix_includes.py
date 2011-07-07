@@ -213,6 +213,11 @@ class IWYUOutputRecord(object):
         other.includes_and_forward_declares_to_add)
     self.full_include_lines.update(other.full_include_lines)
 
+  def HasContentfulChanges(self):
+    """Returns true iff this record has at least one add or delete."""
+    return (self.includes_and_forward_declares_to_add or
+            self.lines_to_delete)
+
   def __str__(self):
     return ('--- iwyu record ---\n  FILENAME: %s\n  LINES TO DELETE: %s\n'
             '  (SOME) INCLUDE LINES: %s\n  (SOME) FWD-DECL LINES: %s\n'
@@ -2137,6 +2142,9 @@ def ProcessIWYUOutput(f, files_to_process, flags):
     if flags.ignore_re and re.search(flags.ignore_re, filename):
       print '(skipping %s: it matches --ignore_re, which is %s)' % (
           filename, flags.ignore_re)
+      continue
+    if not iwyu_record.HasContentfulChanges():
+      print '(skipping %s: iwyu reports no contentful changes)' % filename
       continue
 
     if filename in iwyu_output_records:
