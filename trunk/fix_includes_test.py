@@ -2854,6 +2854,70 @@ The full include-list for barrier_includes.h:
     self.RegisterFileContents({'barrier_includes.h': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testSortingMainCUIncludeInSameDirectory(self):
+    """Check that we identify when first .h file is a main-cu #include."""
+    infile = """\
+#include <stdio.h>
+#include "me/subdir0/foo.h"
+#include "other/baz.h"
+"""
+    expected_output = """\
+#include "me/subdir0/foo.h"
+#include <stdio.h>
+#include "other/baz.h"
+"""
+    self.RegisterFileContents({'me/subdir0/foo.cc': infile})
+    num_files_modified = fix_includes.SortIncludesInFiles(
+        ['me/subdir0/foo.cc'], self.flags)
+    self.assertListEqual(expected_output.strip().split('\n'),
+                         self.actual_after_contents)
+    self.assertEqual(1, num_files_modified)
+
+  def testSortingMainCUIncludeInSameDirectoryWithInl(self):
+    """Check that we identify when first -inl.h file is a main-cu #include."""
+    infile = """\
+#include <stdio.h>
+#include "me/subdir0/foo-inl.h"
+#include "other/baz.h"
+"""
+    expected_output = """\
+#include "me/subdir0/foo-inl.h"
+#include <stdio.h>
+#include "other/baz.h"
+"""
+    self.RegisterFileContents({'me/subdir0/foo.cc': infile})
+    num_files_modified = fix_includes.SortIncludesInFiles(
+        ['me/subdir0/foo.cc'], self.flags)
+    self.assertListEqual(expected_output.strip().split('\n'),
+                         self.actual_after_contents)
+    self.assertEqual(1, num_files_modified)
+
+  def testSortingMainCUIncludeInDifferentDirectory(self):
+    """Check that we identify when first .h file is a main-cu #include."""
+    infile = """\
+#include "me/subdir0/foo.h"
+#include <stdio.h>
+#include "other/baz.h"
+"""
+    self.RegisterFileContents({'me/other_subdir/foo.cc': infile})
+    num_files_modified = fix_includes.SortIncludesInFiles(
+        ['me/other_subdir/foo.cc'], self.flags)
+    self.assertListEqual([], self.actual_after_contents)
+    self.assertEqual(0, num_files_modified)
+
+  def testSortingMainCUIncludeInDifferentDirectoryWhenNotFirst(self):
+    """Check that we don't let second .h be a main-cu #include."""
+    infile = """\
+#include <stdio.h>
+#include "me/subdir0/foo.h"
+#include "other/baz.h"
+"""
+    self.RegisterFileContents({'me/other_subdir/foo.cc': infile})
+    num_files_modified = fix_includes.SortIncludesInFiles(
+        ['me/other_subdir/foo.cc'], self.flags)
+    self.assertListEqual([], self.actual_after_contents)
+    self.assertEqual(0, num_files_modified)
+
   def testSortingProjectIncludesAuto(self):
     """Check that project includes can be sorted separately."""
     infile = """\

@@ -419,6 +419,10 @@ class LineInfo(object):
     # does not match any regular expression in _LINE_TYPES.
     self.type = None
 
+    # True if no lines processed before this one have the same type
+    # as this line.
+    self.is_first_line_of_this_type = False
+
     # Set to true if we want to delete/ignore this line in the output
     # (for instance, because iwyu says to delete this line).  At the
     # start, the only line to delete is the 'dummy' line 0.
@@ -616,6 +620,9 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
   seen_forward_declare_lines to identify those lines.  In fact,
   that's the only data source we use for forward-declare lines.
 
+  Sets file_line.type and file_line.is_first_line_of_this_type for
+  each file_line in file_lines.
+
   Arguments:
     file_lines: an array of LineInfo objects with .line fields filled in.
     iwyu_record: the IWYUOutputRecord struct for this source file.
@@ -626,6 +633,7 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
       it says line 12 is an #include, but we say it's a blank line,
       or the file only has 11 lines.)
   """
+  seen_types = set()
   in_c_style_comment = False
   for line_info in file_lines:
     if line_info.line is None:
@@ -660,6 +668,9 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
           break
       else:    # for/else
         line_info.type = None   # means we didn't match any re
+
+    line_info.is_first_line_of_this_type = (line_info.type not in seen_types)
+    seen_types.add(line_info.type)
 
   # Now double-check against iwyu that we got all the #include lines right.
   for line_number in iwyu_record.some_include_lines:
@@ -1322,8 +1333,20 @@ def _IsMainCUInclude(line_info, filename):
   For instance, if we are editing foo.cc, foo.h is a main-CU #include, as
   is foo-inl.h.  The same holds if we are editing foo_test.cc.
 
+  The algorithm is like so: first, remove the following extensions
+  from both the includer and includee to get the 'canonical' name:
+     -inl.h  .h  _unittest.cc  _regtest.cc  _test.cc  .cc  .c
+
+  Rule 1: If the canonical names (filenames after removal) match --
+  including all directories -- the .h file is a main-cu #include.
+
+  Rule 2: If the basenames of the canonnical names match -- that is,
+  ignoring all directories -- the .h file is a main-cu #include *if*
+  it is the first #include seen.
+
   Arguments:
-    line_info: a LineInfo structure with .type and .key filled in.
+    line_info: a LineInfo structure with .type,
+       .is_first_line_of_this_type, and .key filled in.
     filename: the name of the file being edited.
 
   Returns:
@@ -1340,7 +1363,16 @@ def _IsMainCUInclude(line_info, filename):
                           '', filename)
   # .h files in /public/ match .cc files in /internal/.
   canonical_include2 = re.sub(r'/public/', '/internal/', canonical_include)
-  return canonical_file in (canonical_include, canonical_include2)
+
+  # Rule 1:
+  if canonical_file in (canonical_include, canonical_include2):
+    return True
+  # Rule 2:
+  if (line_info.is_first_line_of_this_type and
+      os.path.basename(canonical_file) == os.path.basename(canonical_include)):
+    return True
+
+  return False
 
 
 def _IsSameProject(line_info, edited_file, project):
