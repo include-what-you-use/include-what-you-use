@@ -91,11 +91,13 @@ inline string GetFilePath(const clang::FileEntry* file) {
 // Helper functions for SourceLocation and FullSourceLoc.
 
 inline clang::FullSourceLoc GetSpellingLoc(clang::SourceLocation loc) {
-  return clang::FullSourceLoc(loc, *GlobalSourceManager()).getSpellingLoc();
+  clang::FullSourceLoc fullloc(loc, *GlobalSourceManager());
+  return fullloc.isValid() ? fullloc.getSpellingLoc() : fullloc;
 }
 
 inline clang::FullSourceLoc GetInstantiationLoc(clang::SourceLocation loc) {
-  return clang::FullSourceLoc(loc, *GlobalSourceManager()).getInstantiationLoc();
+  clang::FullSourceLoc fullloc(loc, *GlobalSourceManager());
+  return fullloc.isValid() ? fullloc.getInstantiationLoc() : fullloc;
 }
 
 inline bool IsInMacro(clang::SourceLocation loc) {
