@@ -65,6 +65,8 @@
 #include "tests/comment_pragmas-d12.h"
 #include "tests/comment_pragmas-d13.h"
 #include "tests/comment_pragmas-d14.h"
+#include "tests/comment_pragmas-d15.h" /* IWYU pragma: keep */ /* check C-style comments */
+#include "tests/comment_pragmas-d16.h"
 #include "tests/comment_pragmas-d2.h"
 #include "tests/comment_pragmas-d3.h"
 #include "tests/comment_pragmas-d4.h"
@@ -131,6 +133,10 @@ CommentPragmasD12 cpd12;
 // .*-d13.h friends.
 CommentPragmasI10 cpi10;
 
+// i11.h is included by d16.h. There's a c-style pragma in i11.h declaring
+// .*-d16.h friends.
+CommentPragmasI11 cpi11;
+
 // d14.h is a private file and we're not a friend.
 // IWYU doesn't modify the inclusion.
 CommentPragmasD14 cpd14;
@@ -162,6 +168,8 @@ The full include-list for tests/comment_pragmas.cc:
 #include "tests/comment_pragmas-d12.h"  // for CommentPragmasD12
 #include "tests/comment_pragmas-d13.h"  // for CommentPragmasI10
 #include "tests/comment_pragmas-d14.h"  // for CommentPragmasD14
+#include "tests/comment_pragmas-d15.h"
+#include "tests/comment_pragmas-d16.h"  // for CommentPragmasI11
 #include "tests/comment_pragmas-d5.h"
 #include "tests/comment_pragmas-d6.h"
 #include "tests/comment_pragmas-i1.h"  // for CommentPragmasI2, CommentPragmasI3, CommentPragmasI4
