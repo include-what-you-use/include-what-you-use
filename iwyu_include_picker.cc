@@ -755,9 +755,14 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
     // third-party code sometimes has #include cycles (*cough* boost
     // *cough*).  Because we add many implicit third-party mappings,
     // we may add a cycle without meaning to.  The best we can do is
-    // to ignore the mapping that causes the cycle.
-    if (StartsWith(key, "\"third_party/"))
+    // to ignore the mapping that causes the cycle.  Same with code
+    // in /internal/.  We could CHECK-fail in such a case, but it's
+    // probably better to just keep going.
+    if (StartsWith(key, "\"third_party/") ||
+        key.find("internal/") != string::npos) {
+      VERRS(4) << "Ignoring a cyclical mapping involving " << key << "\n";
       return;
+    }
   }
   CHECK_(status != kCalculating && "Cycle in include-mapping");
   if (status == kDone)
