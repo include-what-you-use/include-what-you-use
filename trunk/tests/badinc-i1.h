@@ -10,6 +10,7 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I1_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I1_H_
 
+#include <stddef.h>  // For offsetof (in badinc.cc).
 #include <stdlib.h>  // also included from badinc-d1.h -- before this file
 #include <stdio.h>   // also included from badinc-d3.h -- after this file
 #include "tests/badinc-d2.h"
