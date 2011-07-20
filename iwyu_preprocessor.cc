@@ -177,8 +177,7 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
   const FileEntry* const this_file_entry = GetFileEntry(begin_loc);
 
   // Pragmas must start comments.
-  if (!StripLeft(&pragma_text, "// IWYU pragma: ") &&
-      !StripLeft(&pragma_text, "/* IWYU pragma: ")) {
+  if (!StripLeft(&pragma_text, "// IWYU pragma: ")) {
     return;
   }
   const vector<string> tokens =
@@ -329,12 +328,10 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   // TODO(user): As written "// // IWYU pragma: keep" is incorrectly
   // interpreted as a pragma. Maybe do "keep" and "export" pragma handling
   // in HandleComment?
-  if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep") ||
-      IncludeLineHasText(includer_loc, "/* IWYU pragma: keep")) {
+  if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep")) {
     protect_reason = "pragma_keep";
 
   } else if (IncludeLineHasText(includer_loc, "// IWYU pragma: export") ||
-             IncludeLineHasText(includer_loc, "/* IWYU pragma: export") ||
              HasOpenBeginExports(includer)) {
     protect_reason = "pragma_export";
     const string quoted_includer =
