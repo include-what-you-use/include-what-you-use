@@ -17,6 +17,6 @@ IncludeCycleD1 d1;
 
 /**** IWYU_SUMMARY
 
-(tests/internal/include_cycle.cc has correct #includes/fwd-decls)
+(tests/include_cycle.cc has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */
