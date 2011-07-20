@@ -99,7 +99,8 @@ namespace {
 // of tokens, return true if the number of tokens is at least the
 // expected number and the first token matches the given token, else
 // false. In addition, if in the 'return true' case there are more
-// tokens than expected, warn if the first one doesn't start "//".
+// tokens than expected, warn if the first one doesn't start "//" or
+// "*/", the latter presumably closing a C-style comment.
 // <loc>, which is only used for a warning message, should refer
 // to the beginning of the comment containing the tokens.
 bool MatchOneToken(const vector<string>& tokens,
@@ -113,7 +114,8 @@ bool MatchOneToken(const vector<string>& tokens,
     return false;
   }
   if (tokens.size() > num_expected_tokens &&
-      !StartsWith(tokens[num_expected_tokens], "//")) {
+      !StartsWith(tokens[num_expected_tokens], "//") &&
+      !StartsWith(tokens[num_expected_tokens], "*/")) {
     Warn(loc, "Extra tokens on pragma line");
   }
   return true;
@@ -142,7 +144,8 @@ bool MatchTwoTokens(const vector<string>& tokens,
     return false;
   }
   if (tokens.size() > num_expected_tokens &&
-      !StartsWith(tokens[num_expected_tokens], "//")) {
+      !StartsWith(tokens[num_expected_tokens], "//") &&
+      !StartsWith(tokens[num_expected_tokens], "*/")) {
     // Accept but warn.
     Warn(loc, "Extra tokens on pragma line");
   }
