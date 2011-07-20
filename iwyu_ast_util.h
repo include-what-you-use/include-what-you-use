@@ -236,11 +236,11 @@ class ASTNode {
   // template arg and in the method parameter.
   template<typename To> const To* DynCast(const clang::Decl*) const {
     if (kind_ != kDeclKind) return NULL;
-    return dyn_cast<To>(as_decl_);
+    return ::llvm::dyn_cast<To>(as_decl_);
   }
   template<typename To> const To* DynCast(const clang::Stmt*) const {
     if (kind_ != kStmtKind) return NULL;
-    return dyn_cast<To>(as_stmt_);
+    return ::llvm::dyn_cast<To>(as_stmt_);
   }
   template<typename To> const To* DynCast(const clang::Type*) const {
     // We also will cast ourselves to a type if we're a typeloc.
@@ -249,13 +249,13 @@ class ASTNode {
     // it should check for typelocs first:
     //   if (node.IsA<FooTypeLoc>()) ... else if (node.IsA<FooType>()) ...
     if (kind_ == kTypelocKind)
-      return dyn_cast<To>(as_typeloc_->getTypePtr());
+      return ::llvm::dyn_cast<To>(as_typeloc_->getTypePtr());
     if (kind_ != kTypeKind) return NULL;
-    return dyn_cast<To>(as_type_);
+    return ::llvm::dyn_cast<To>(as_type_);
   }
   template<typename To> const To* DynCast(const clang::TypeLoc*) const {
     if (kind_ != kTypelocKind) return NULL;
-    return dyn_cast<To>(as_typeloc_);
+    return ::llvm::dyn_cast<To>(as_typeloc_);
   }
   template<typename To> const To* DynCast(
       const clang::NestedNameSpecifier*) const {

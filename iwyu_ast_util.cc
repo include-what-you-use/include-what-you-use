@@ -118,8 +118,10 @@ using clang::UsingDirectiveDecl;
 using clang::ValueDecl;
 using clang::VarDecl;
 using llvm::PointerUnion;
+using llvm::cast;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
+using llvm::isa;
 using llvm::raw_string_ostream;
 
 namespace include_what_you_use {
