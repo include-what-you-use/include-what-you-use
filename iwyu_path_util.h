@@ -90,6 +90,9 @@ inline string GetCanonicalName(string file_path) {
   file_path = CanonicalizeFilePath(file_path);
 
   StripRight(&file_path, ".h")
+      || StripRight(&file_path, ".hpp")
+      || StripRight(&file_path, ".hxx")
+      || StripRight(&file_path, ".hh")
       || StripRight(&file_path, ".cxx")
       || StripRight(&file_path, ".cpp")
       || StripRight(&file_path, ".cc")
