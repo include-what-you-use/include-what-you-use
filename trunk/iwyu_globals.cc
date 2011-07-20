@@ -244,7 +244,7 @@ FullUseCache* ClassMembersFullUseCache() {
 
 void AddGlobToReportIWYUViolationsFor(const string& glob) {
   CHECK_(commandline_flags && "Call ParseIwyuCommandlineFlags() before this");
-  commandline_flags->check_also.insert(glob);
+  commandline_flags->check_also.insert(CanonicalizeFilePath(glob));
 }
 
 bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file) {
