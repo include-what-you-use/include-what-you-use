@@ -31,6 +31,7 @@
 // IWYU pragma: no_include "foo/bar/baz.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/MacroInfo.h"
 
 using clang::FileEntry;
@@ -38,6 +39,7 @@ using clang::FileEntryRef;
 using clang::FileID;
 using clang::MacroDefinition;
 using clang::MacroDirective;
+using clang::InclusionDirective;
 using clang::MacroInfo;
 using clang::Preprocessor;
 using clang::SourceLocation;
@@ -485,7 +487,8 @@ static void ProtectReexportIncludes(
 // use it to fine-tune its include-picking algorithms.
 void IwyuPreprocessorInfo::AddDirectInclude(
     SourceLocation includer_loc, const FileEntry* includee,
-    const string& include_name_as_written) {
+    const string& include_name_as_written,
+    InclusionDirective::InclusionKind kind) {
   if (IsBuiltinOrCommandLineFile(includee))
     return;
 
@@ -499,8 +502,8 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   }
   ++num_includes_seen_[includer];
 
-  GetFromFileInfoMap(includer)->AddInclude(
-      includee, include_name_as_written, GetLineNumber(includer_loc));
+  GetFromFileInfoMap(includer)->AddInclude(includee, include_name_as_written,
+                                           GetLineNumber(includer_loc), kind);
   // Make sure the includee has a file-info-map entry too.
   InsertIntoFileInfoMap(includee, include_name_as_written);
 
@@ -676,6 +679,14 @@ void IwyuPreprocessorInfo::InclusionDirective(
     const clang::Module* imported,
     SrcMgr::CharacteristicKind file_type) {
   include_filename_loc_ = filename_range.getBegin();
+
+  // among additional inclusion directives we handle only Objective-C #import
+  if (include_token.is(clang::tok::identifier) &&
+      (include_token.getIdentifierInfo()->getPPKeywordID() ==
+       clang::tok::pp_import))
+    current_inclusion_kind_ = InclusionDirective::Import;
+  else
+    current_inclusion_kind_ = InclusionDirective::Include;
 }
 
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
@@ -717,7 +728,8 @@ void IwyuPreprocessorInfo::FileSkipped(const FileEntryRef& file,
       << "[ (#include)  ] " << include_name_as_written
       << " (" << GetFilePath(&file.getFileEntry()) << ")\n";
 
-  AddDirectInclude(include_loc, &file.getFileEntry(), include_name_as_written);
+  AddDirectInclude(include_loc, &file.getFileEntry(), include_name_as_written,
+                   current_inclusion_kind_);
   if (ShouldReportIWYUViolationsFor(&file.getFileEntry())) {
     files_to_report_iwyu_violations_for_.insert(&file.getFileEntry());
   }
@@ -742,7 +754,8 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
 
   const FileEntry* const new_file = GetFileEntry(file_beginning);
   if (new_file)
-    AddDirectInclude(include_loc, new_file, include_name_as_written);
+    AddDirectInclude(include_loc, new_file, include_name_as_written,
+                     current_inclusion_kind_);
 
   if (IsBuiltinOrCommandLineFile(new_file))
     return;

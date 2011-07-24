@@ -46,6 +46,7 @@ using clang::DeclContext;
 using clang::EnumDecl;
 using clang::FileEntry;
 using clang::FunctionDecl;
+using clang::InclusionDirective;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
 using clang::RecordDecl;
@@ -232,6 +233,22 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
     ostream << "(anonymous)";
 
   return ostream.str();
+}
+
+string GetInclusionKindAsString(InclusionDirective::InclusionKind kind) {
+  CHECK_(kind != InclusionDirective::IncludeMacros);
+  CHECK_(kind != InclusionDirective::IncludeNext);
+  switch (kind) {
+    case InclusionDirective::Include:
+      return "#include";
+    case InclusionDirective::Import:
+      return "#import";
+    case InclusionDirective::IncludeMacros:
+      return "#__include_macros";
+    case InclusionDirective::IncludeNext:
+      return "#include_next";
+  }
+  CHECK_UNREACHABLE_("Potentially uninitialized InclusionKind");
 }
 
 }  // namespace internal
@@ -484,8 +501,9 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
 }
 
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
-    const FileEntry* included_file, const string& quoted_include, int linenum)
-    : line_("#include " + quoted_include),
+    const FileEntry* included_file, const string& quoted_include, int linenum,
+    InclusionDirective::InclusionKind kind)
+    : line_(internal::GetInclusionKindAsString(kind) + " " + quoted_include),
       start_linenum_(linenum),
       end_linenum_(linenum),
       is_desired_(false),
@@ -507,7 +525,10 @@ void OneIncludeOrForwardDeclareLine::AddSymbolUse(const string& symbol_name) {
 bool OneIncludeOrForwardDeclareLine::IsIncludeLine() const {
   // Since we construct line_, we know it's in canonical form, and
   // can't look like '  #   include   <foo.h>' or some such.
-  return StartsWith(line_, "#include");
+  return StartsWith(line_, internal::GetInclusionKindAsString(
+                               InclusionDirective::Include)) ||
+         StartsWith(line_, internal::GetInclusionKindAsString(
+                               InclusionDirective::Import));
 }
 
 string OneIncludeOrForwardDeclareLine::LineNumberString() const {
@@ -534,9 +555,10 @@ void IwyuFileInfo::AddAssociatedHeader(const IwyuFileInfo* other) {
 }
 
 void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
-                              const string& quoted_includee, int linenumber) {
+                              const string& quoted_includee, int linenumber,
+                              InclusionDirective::InclusionKind kind) {
   OneIncludeOrForwardDeclareLine new_include(includee, quoted_includee,
-                                             linenumber);
+                                             linenumber, kind);
   new_include.set_present();
 
   // It's possible for the same #include to be seen multiple times
@@ -1701,7 +1723,8 @@ void CalculateDesiredIncludesAndForwardDeclares(
       CHECK_(use.has_suggested_header() && "Full uses should have #includes");
       if (!Contains(*lines, use.suggested_header())) { // must be added
         lines->push_back(OneIncludeOrForwardDeclareLine(
-            use.decl_file(), use.suggested_header(), -1));
+            use.decl_file(), use.suggested_header(), -1,
+            InclusionDirective::Include));
       }
     } else if (!use.has_suggested_header()) {
       // Forward-declare uses that are already satisfied by an #include
