@@ -15,7 +15,7 @@
 #include <string>
 
 
-// TODO(user): using string for MOE.
+// TODO(dsturtevant): using string for MOE.
 
 namespace iwyu = include_what_you_use;
 using iwyu::SplitOnWhiteSpace;

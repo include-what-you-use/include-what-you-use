@@ -12,7 +12,7 @@
 
 #include "tests/fwd_decl_class_template-i1.h"
 
-// TODO(user): No iwyu violation is reported here, since there
+// TODO(dsturtevant): No iwyu violation is reported here, since there
 // is none (the definition is in included file). However, iwyu
 // recommends the inclusion be replaced by a forward declaration. It
 // seems like some sort of diagnostic to that effect would be useful.

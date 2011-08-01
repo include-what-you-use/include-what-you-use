@@ -53,7 +53,7 @@ namespace SrcMgr = clang::SrcMgr;
 namespace include_what_you_use {
 
 namespace {
-// TODO(user): Perhaps make this method accessible iwyu-wide.
+// TODO(dsturtevant): Perhaps make this method accessible iwyu-wide.
 // At first blush, iwyu_output is the place to put it, but that would
 // introduce a circular dependency between iwyu_output and
 // iwyu_ast_util.
@@ -265,7 +265,7 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
   SourceLocation begin_exports_location;
 
   while (true) {
-    // TODO(user): Maybe place restrictions on the
+    // TODO(dsturtevant): Maybe place restrictions on the
     // placement. E.g., in a comment, before any code, or perhaps only
     // when in the same comment as an @file directive.
     current_loc = GetLocationAfter(current_loc,
@@ -329,7 +329,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
 
   string protect_reason;
   // We always keep lines with pragmas "keep" or "export".
-  // TODO(user): As written "// // IWYU pragma: keep" is incorrectly
+  // TODO(dsturtevant): As written "// // IWYU pragma: keep" is incorrectly
   // interpreted as a pragma. Maybe do "keep" and "export" pragma handling
   // in HandleComment?
   if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep") ||

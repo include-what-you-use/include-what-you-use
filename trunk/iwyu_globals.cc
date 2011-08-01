@@ -161,10 +161,8 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
   for (clang::HeaderSearch::search_dir_iterator
            it = header_search->system_dir_begin();
        it != header_search->system_dir_end(); ++it) {
-    if (const DirectoryEntry* entry = it->getDir()) {
-      const string path = CanonicalizeFilePath(entry->getName());
-      search_path_map[path] = HeaderSearchPath::kSystemPath;
-    }
+    if (const DirectoryEntry* entry = it->getDir())
+      search_path_map[entry->getName()] = HeaderSearchPath::kSystemPath;
   }
   for (clang::HeaderSearch::search_dir_iterator
            it = header_search->search_dir_begin();
@@ -173,8 +171,8 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
       // search_dir_begin()/end() includes both system and user paths.
       // If it's a system path, it's already in the map, so everything
       // new is a user path.  The insert only 'takes' for new entries.
-      const string path = CanonicalizeFilePath(entry->getName());
-      search_path_map.insert(make_pair(path, HeaderSearchPath::kUserPath));
+      search_path_map.insert(make_pair(entry->getName(),
+                                       HeaderSearchPath::kUserPath));
     }
   }
   return NormalizeHeaderSearchPaths(search_path_map);

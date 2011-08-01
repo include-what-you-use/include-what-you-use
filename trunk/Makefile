@@ -27,7 +27,3 @@ USEDLIBS = clangFrontend.a clangSerialization.a clangDriver.a clangParse.a \
            clangSema.a clangAnalysis.a clangAST.a clangLex.a clangBasic.a
 
 include $(CLANG_LEVEL)/Makefile
-
-check-iwyu:: all
-	./run_iwyu_tests.py
-	./fix_includes_test.py
