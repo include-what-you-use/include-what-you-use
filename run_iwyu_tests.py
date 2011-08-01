@@ -11,7 +11,7 @@
 
 """A test harness for IWYU testing."""
 
-
+__author__ = 'dsturtevant@google.com (Dean Sturtevant)'
 
 import glob
 import os
@@ -73,12 +73,6 @@ class OneIwyuTest(unittest.TestCase):
                  glob.glob('%s/*/%s.h' % (dirname, basename)))
     files_to_check = [f for f in all_files if not f.endswith('.cc')]
     files_to_check.append(filename)
-
-    # IWYU emits summaries with canonicalized filepaths, where all the
-    # directory separators are set to '/'. In order for the testsuite to 
-    # correctly match up file summaries, we must canonicalize the filepaths
-    # in the same way here.
-    files_to_check = [f.replace(os.sep, '/') for f in files_to_check]
 
     iwyu_flags = self._iwyu_flags_map.get(filename, None)
     if iwyu_flags:

@@ -50,12 +50,12 @@
 //     cpi9's type is defined in i9.h, included by d10.h.
 //     d10.h will be deemed unnecessary, which is ok, and i9.h will
 //     not be suggested.
-// TODO(user): Tests where both the defining public file and an
+// TODO(dsturtevant): Tests where both the defining public file and an
 // exporting public file are included, once it's clear what the policy
 // should be.
 // 17. "friend" pragma: cpd11's type is defined in d11.h which is private
 //     but declares this file as a friend.
-// TODO(user): More tests of "friend": globs, header files,
+// TODO(dsturtevant): More tests of "friend": globs, header files,
 // quoted globs, more than one friend pragma in one file, file with more
 // than one file befriending it.
 

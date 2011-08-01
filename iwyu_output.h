@@ -211,7 +211,7 @@ class IwyuFileInfo {
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
                            const string& dfn_filepath,
                            const string& symbol);
-  // TODO(user): Can we determine in_cxx_method_body? Do we care?
+  // TODO(dsturtevant): Can we determine in_cxx_method_body? Do we care?
 
   // We only allow forward-declaring of decls, not arbitrary symbols.
   void ReportForwardDeclareUse(clang::SourceLocation use_loc,
