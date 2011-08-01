@@ -50,13 +50,6 @@ inline string GetCWD() {
   return "";
 }
 
-inline string NormalizeFilePath(const string& path) {
-  string result = path;
-  while (StripLeft(&result, "./")) {
-  }
-  return result;
-}
-
 inline string Basename(const string& path) {
   string::size_type last_slash = path.rfind('/');
   if (last_slash != string::npos) {
@@ -107,6 +100,13 @@ inline string GetCanonicalName(string file_path) {
     file_path = (file_path.substr(0, internal_pos) + "/public/" +
                  file_path.substr(internal_pos + strlen("/internal/")));
   return file_path;
+}
+
+inline string NormalizeFilePath(const string& path) {
+  string result = CanonicalizeFilePath(path);
+  while (StripLeft(&result, "./")) {
+  }
+  return result;
 }
 
 }  // namespace include_what_you_use

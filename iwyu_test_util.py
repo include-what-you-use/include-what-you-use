@@ -9,7 +9,20 @@
 #
 ##===-----------------------------------------------------------------------===##
 
-"""Utilities for writing tests for IWYU."""
+"""Utilities for writing tests for IWYU.
+
+This script has been tested with python 2.4, 2.7 and 3.2.
+In order to support all of these platforms there are a few unusual constructs:
+ * print statements require parentheses
+ * standard output must be decoded as utf-8
+ * range() must be used in place of xrange()
+
+There is more detail on some of these issues at:
+http://diveintopython3.org/porting-code-to-python-3-with-2to3.html
+
+There is one final TODO in order to get this code running cleanly on python 3.2,
+namely that the use of generator.next() must be called as next(generator).
+"""
 
 __author__ = 'wan@google.com (Zhanyong Wan)'
 
@@ -39,6 +52,8 @@ _NODIFFS_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 def _GetIwyuPath(iwyu_paths):
   """Returns the path to IWYU or raises IOError if it cannot be found."""
   for path in iwyu_paths:
+    if sys.platform == 'win32':
+      path = os.path.normpath(path) + '.exe'
     if os.path.exists(path):
       return path
   raise IOError('Failed to locate IWYU.\nSearched %s' % iwyu_paths)
@@ -66,9 +81,9 @@ def _GetCommandOutput(command):
   p = subprocess.Popen(command,
                        shell=True,
                        stdout=subprocess.PIPE,
-                       stderr=subprocess.STDOUT,
-                       close_fds=True)
-  return p.stdout.readlines()
+                       stderr=subprocess.STDOUT)
+  lines = [line.decode("utf-8") for line in p.stdout.readlines()]
+  return lines
 
 
 def _GetExpectedDiagnosticRegexes(expected_diagnostic_specs):
@@ -202,7 +217,8 @@ def _GetExpectedSummaries(files):
   expected_summaries = {}
   for f in files:
     in_summary = False
-    for line in open(f):
+    fh = open(f)
+    for line in fh:
       if _EXPECTED_SUMMARY_START_RE.match(line):
         in_summary = True
         expected_summaries[f] = []
@@ -212,6 +228,7 @@ def _GetExpectedSummaries(files):
         pass   # ignore comment lines
       elif in_summary:
         expected_summaries[f].append(line)
+    fh.close()
 
   # Get rid of blank lines at the beginning and end of the each summary.
   for loc in expected_summaries:
@@ -265,8 +282,8 @@ def _VerifyDiagnosticsAtLoc(loc_str, regexes, diagnostics):
   """Verify the diagnostics at the given location; return a list of failures."""
 
   # Find out which regexes match a diagnostic and vice versa.
-  matching_regexes = [[] for unused_i in xrange(len(diagnostics))]
-  matched_diagnostics = [[] for unused_i in xrange(len(regexes))]
+  matching_regexes = [[] for unused_i in range(len(diagnostics))]
+  matched_diagnostics = [[] for unused_i in range(len(regexes))]
   for (r_index, regex) in enumerate(regexes):
     for (d_index, diagnostic) in enumerate(diagnostics):
       if regex.search(diagnostic):
@@ -326,6 +343,8 @@ def _CompareExpectedAndActualSummaries(expected_summaries, actual_summaries):
     this_failure = difflib.unified_diff(expected_summaries.get(loc, []),
                                         actual_summaries.get(loc, []))
     try:
+      # TODO(pholden) this call is incompatible with python 3.2, and needs to be
+      # implemented as next(this_failure)
       this_failure.next()     # read past the 'what files are this' header
       failures.append('\n')
       failures.append('Unexpected summary diffs for %s:\n' % loc)
@@ -360,9 +379,9 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
   # TODO(csilvers): verify that has exit-status 0.
   cmd = '%s %s -I . %s' % (_IWYU_PATH, ' '.join(iwyu_flags), cc_file)
   if verbose:
-    print '>>> Running %s' % cmd
+    print('>>> Running %s' % cmd)
   output = _GetCommandOutput(cmd)
-  print ''.join(output)
+  print(''.join(output))
   sys.stdout.flush()      # don't commingle this output with the failure output
 
   expected_diagnostics = _GetCommandOutput('grep -n -H "^ *// *IWYU" %s' %
@@ -376,7 +395,7 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
       _GetExpectedSummaries(cpp_files_to_check),
       _GetActualSummaries(output))
 
-  test_case.assert_(not failures, ''.join(failures))
+  test_case.assertTrue(not failures, ''.join(failures))
 
 
 # TODO(dsturtevant): Move all tests using this function to the test directory
