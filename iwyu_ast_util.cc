@@ -149,7 +149,7 @@ SourceLocation ASTNode::GetLocation() const {
             source_manager_.getFileID(full_loc.getSpellingLoc()));
     const FileEntry* instantiation_file =
         source_manager_.getFileEntryForID(
-            source_manager_.getFileID(full_loc.getInstantiationLoc()));
+            source_manager_.getFileID(full_loc.getExpansionLoc()));
     if (spelling_file != instantiation_file)
       return SourceLocation();
   }
