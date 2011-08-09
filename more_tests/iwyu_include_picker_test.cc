@@ -253,7 +253,7 @@ TEST(GetCandidateHeadersForFilepath, ThirdParty) {
   IncludePicker p;
   p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h", "");
   p.AddDirectInclude("b.h", "third_party/dynamic_annotations/a/b/c.h", "");
-  p.AddDirectInclude("c.h", "third_party/python2_4_3/includes/py.h", "");
+  p.AddDirectInclude("c.h", "third_party/python_runtime/includes/py.h", "");
   p.AddDirectInclude("d.h", "third_party/isu/include/unicode/udraft.h", "");
   p.AddDirectInclude("e.h", "third_party/isu/include/unicode/ukeep.h", "");
   p.FinalizeAddedIncludes();
@@ -266,7 +266,7 @@ TEST(GetCandidateHeadersForFilepath, ThirdParty) {
           "third_party/dynamic_annotations/a/b/c.h"),
       "\"base/dynamic_annotations.h\"");
   EXPECT_VECTOR_STREQ(
-      p.GetCandidateHeadersForFilepath("third_party/python2_4_3/includes/py.h"),
+      p.GetCandidateHeadersForFilepath("third_party/python_runtime/includes/py.h"),
       "<Python.h>");
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath(

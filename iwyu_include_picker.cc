@@ -674,7 +674,12 @@ const IncludePicker::IncludeMapEntry third_party_include_map[] = {
   { "@\"third_party/gmock/include/gmock/.*\"", kPrivate,
     "\"testing/base/public/gmock.h\"", kPublic
   },
+  // Old location for Python. TODO(csilvers): remove when
+  // //third_party/python2_4_3 is gone.
   { "@\"third_party/python2_4_3/.*\"", kPrivate,
+    "<Python.h>", kPublic },
+  // New location for Python.
+  { "@\"third_party/python_runtime/.*\"", kPrivate,
     "<Python.h>", kPublic },
   { "\"third_party/icu/include/unicode/umachine.h\"", kPrivate,
     "\"third_party/icu/include/unicode/utypes.h\"", kPublic
