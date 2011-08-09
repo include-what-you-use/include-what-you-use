@@ -97,7 +97,7 @@ inline clang::FullSourceLoc GetSpellingLoc(clang::SourceLocation loc) {
 
 inline clang::FullSourceLoc GetInstantiationLoc(clang::SourceLocation loc) {
   clang::FullSourceLoc fullloc(loc, *GlobalSourceManager());
-  return fullloc.isValid() ? fullloc.getExpansionLoc() : fullloc;
+  return fullloc.isValid() ? fullloc.getInstantiationLoc() : fullloc;
 }
 
 inline bool IsInMacro(clang::SourceLocation loc) {
@@ -116,7 +116,7 @@ inline int GetLineNumber(clang::SourceLocation loc) {
   bool invalid = false;
   int retval = fullloc.getSpellingLineNumber(&invalid);
   if (invalid)
-    retval = fullloc.getExpansionLineNumber(&invalid);
+    retval = fullloc.getInstantiationLineNumber(&invalid);
   if (invalid)
     retval = -1;
   return retval;
