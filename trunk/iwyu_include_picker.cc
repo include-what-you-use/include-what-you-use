@@ -632,6 +632,10 @@ const IncludePicker::IncludeMapEntry cpp_include_map[] = {
   { "<ostream>", kPublic, "<istream>", kPublic },
   { "<ostream>", kPublic, "<sstream>", kPublic },
   { "<streambuf>", kPublic, "<ios>", kPublic },
+  // The location of exception_defines.h varies by GCC version.  It should
+  // never be included directly.
+  { "<bits/exception_defines.h>", kPrivate, "<exception>", kPublic },
+  { "<exception_defines.h>", kPrivate, "<exception>", kPublic },
 };
 
 const IncludePicker::IncludeMapEntry google_include_map[] = {
