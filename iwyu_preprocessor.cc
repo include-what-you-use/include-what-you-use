@@ -421,9 +421,11 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   (void)GetFromFileInfoMap(includee);
 
   // We have a rule that if foo.h #includes bar.h, foo.cc doesn't need
-  // to #include bar.h as well, but instead gets it 'automatically' via
-  // foo.h.  We say that 'foo.h' is an "internal header" for foo.cc.
-  if (includer == main_file_ &&
+  // to #include bar.h as well, but instead gets it 'automatically'
+  // via foo.h.  We say that 'foo.h' is an "internal header" for
+  // foo.cc.  Make sure we ignore self-includes, though!
+  // iwyu_output.cc gets upset if a file is its own internal header.
+  if (includer == main_file_ && includee != includer &&
       BelongsToMainCompilationUnit(includer, includee))
     GetFromFileInfoMap(includer)->AddInternalHeader(
         GetFromFileInfoMap(includee));
