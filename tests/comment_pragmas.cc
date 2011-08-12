@@ -55,6 +55,9 @@
 // should be.
 // 17. "friend" pragma: cpd11's type is defined in d11.h which is private
 //     but declares this file as a friend.
+// 18. "keep" keeps a "private" file: cpd17's type is defined in d17.h
+//     which is private but this file declares it "keep". d17.h is still
+//     included, and its suggested file is not.
 // TODO(dsturtevant): More tests of "friend": globs, header files,
 // quoted globs, more than one friend pragma in one file, file with more
 // than one file befriending it.
@@ -67,6 +70,7 @@
 #include "tests/comment_pragmas-d14.h"
 #include "tests/comment_pragmas-d15.h" /* IWYU pragma: keep */ /* check C-style comments */
 #include "tests/comment_pragmas-d16.h"
+#include "tests/comment_pragmas-d17.h"  // IWYU pragma: keep
 #include "tests/comment_pragmas-d2.h"
 #include "tests/comment_pragmas-d3.h"
 #include "tests/comment_pragmas-d4.h"
@@ -76,7 +80,7 @@
 #include "tests/comment_pragmas-d8.h"
 #include "tests/comment_pragmas-d9.h"
 // IWYU pragma: no_include "tests/comment_pragmas-i9.h"  // another test of comments
-
+// IWYU pragma: no_include "tests/no_such_file_d17.h"
 
 // The following classes are all defined in public files exported by i2.h.
 // IWYU: CommentPragmasI2 is...*comment_pragmas-i1.h
@@ -137,9 +141,15 @@ CommentPragmasI10 cpi10;
 // .*-d16.h friends.
 CommentPragmasI11 cpi11;
 
-// d14.h is a private file and we're not a friend.
+// d14.h is a private file with friend "nobody" and no suggested includes.
 // IWYU doesn't modify the inclusion.
 CommentPragmasD14 cpd14;
+
+// d17.h is a private file with suggested include "no_such_file_d17.h".
+// IWYU wants to include no_such_file_d17.h, even though it wants to
+// keep d17.h, but is prohibited from doing so by a no_include pragma.
+// IWYU: CommentPragmasD17 is...*no_such_file_d17.h
+CommentPragmasD17 cpd17;
 
 /**** IWYU_SUMMARY
 
@@ -170,6 +180,7 @@ The full include-list for tests/comment_pragmas.cc:
 #include "tests/comment_pragmas-d14.h"  // for CommentPragmasD14
 #include "tests/comment_pragmas-d15.h"
 #include "tests/comment_pragmas-d16.h"  // for CommentPragmasI11
+#include "tests/comment_pragmas-d17.h"
 #include "tests/comment_pragmas-d5.h"
 #include "tests/comment_pragmas-d6.h"
 #include "tests/comment_pragmas-i1.h"  // for CommentPragmasI2, CommentPragmasI3, CommentPragmasI4
