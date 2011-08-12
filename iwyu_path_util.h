@@ -86,19 +86,27 @@ inline string GetCanonicalName(string file_path) {
       || StripRight(&file_path, ".hpp")
       || StripRight(&file_path, ".hxx")
       || StripRight(&file_path, ".hh")
+      || StripRight(&file_path, ".inl")
       || StripRight(&file_path, ".cxx")
       || StripRight(&file_path, ".cpp")
       || StripRight(&file_path, ".cc")
       || StripRight(&file_path, ".c");
   StripRight(&file_path, "_unittest")
       || StripRight(&file_path, "_regtest")
-      || StripRight(&file_path, "_test");
+      || StripRight(&file_path, "_test")
+      || StripLeft(&file_path, "test_headercompile_");
   StripRight(&file_path, "-inl");
   // .h files in /public/ match .cc files in /internal/
   const string::size_type internal_pos = file_path.find("/internal/");
   if (internal_pos != string::npos)
     file_path = (file_path.substr(0, internal_pos) + "/public/" +
                  file_path.substr(internal_pos + strlen("/internal/")));
+
+  // .h files in /include/ match .cc files in /src/
+  const string::size_type include_pos = file_path.find("/include/");
+  if (include_pos != string::npos)
+    file_path = (file_path.substr(0, include_pos) + "/src/" +
+                 file_path.substr(include_pos + strlen("/include/")));
   return file_path;
 }
 
