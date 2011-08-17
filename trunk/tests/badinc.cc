@@ -583,7 +583,6 @@ MultipleInheritanceSubclass cc_multipleinheritancesubclass;
 int cc_template_function_val = Cc_TemplateFunction<I1_Class, I11>();
 int cc_tricky_template_function_val =
     // IWYU: I1_Class needs a declaration
-    // IWYU: I1_Class is...*badinc-i1.h
     // IWYU: kI1ConstInt is...*badinc-i1.h
     // IWYU: I12 is...*badinc-i1.h
     // IWYU: I13 is...*badinc-i1.h
