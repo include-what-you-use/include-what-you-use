@@ -3209,7 +3209,15 @@ class IwyuAstConsumer
   // for whatever reason.  For instance, we can ignore nodes that are
   // neither in the file we're compiling nor in its associated .h file.
   virtual bool CanIgnoreCurrentASTNode() const {
-    if (!ShouldReportIWYUViolationsFor(CurrentFileEntry()))
+    // If we're in a macro expansion, we always want to treat this as
+    // being in the expansion location, never the as-written location,
+    // since that's what the compiler does.  CanIgnoreCurrentASTNode()
+    // is an optimization, so we want to be conservative about what we
+    // ignore.
+    const FileEntry* file_entry_after_macro_expansion
+        = GetFileEntry(GetInstantiationLoc(current_ast_node()->GetLocation()));
+    if (!ShouldReportIWYUViolationsFor(CurrentFileEntry()) &&
+        !ShouldReportIWYUViolationsFor(file_entry_after_macro_expansion))
       return true;               // ignore symbols used outside foo.{h,cc}
 
     // If we're a field of a typedef type, ignore us: our rule is that
