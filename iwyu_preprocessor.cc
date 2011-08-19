@@ -459,7 +459,8 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 // FOO, and 'macro_def' containing more information about FOO's
 // definition.
 void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
-                                        const MacroInfo* macro_def) {
+                                        const MacroInfo* macro_def,
+                                        SourceRange range) {
   const FileEntry* macro_file = GetFileEntry(macro_use_token);
   if (ShouldPrintSymbolFromFile(macro_file)) {
     errs() << "[ Use macro   ] "
