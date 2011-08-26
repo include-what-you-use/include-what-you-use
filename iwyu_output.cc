@@ -728,9 +728,12 @@ set<string> CalculateMinimalIncludes(
 //     decision: we've decided never to forward-declare anything in
 //     a system namespace, because it's best not to expose the internals
 //     of system headers in user code, if possible.
-// A4) If a nested class, discard this use (the parent class declaration
+// A4) If the file containing the use has a pragma inhibiting the forward
+//     declaration of the symbol, change the use to a full info use in order
+//     to make sure that the compiler can see some declaration of the symbol.
+// A5) If a nested class, discard this use (the parent class declaration
 //     is sufficient).
-// A5) If any of the redeclarations of this declaration is in the same
+// A6) If any of the redeclarations of this declaration is in the same
 //     file as the use (and before it), and is actually a definition,
 //     discard the forward-declare use.
 
@@ -791,7 +794,8 @@ set<string> CalculateMinimalIncludes(
 // E2) If the desired include-file for this symbols is not in the
 //     current includes, mark as an iwyu violation.
 
-void ProcessForwardDeclare(OneUse* use) {
+void ProcessForwardDeclare(OneUse* use,
+                           const IwyuPreprocessorInfo* preprocessor_info) {
   CHECK_(use->decl() && "Must call ProcessForwardDeclare on a decl");
   CHECK_(!use->is_full_use() && "Must call ProcessForwardDeclare on fwd-decl");
   if (use->ignore_use())   // we're already ignoring it
@@ -839,7 +843,20 @@ void ProcessForwardDeclare(OneUse* use) {
     // No return here: (A4) or (A5) may cause us to ignore this decl entirely.
   }
 
-  // (A4) If using a nested class, discard this use.
+  // (A4) If the file containing the use has a pragma inhibiting the forward
+  // declaration of the symbol, change the use to a full info use in order
+  // to make sure that the compiler can see some declaration of the symbol.
+  if (!use->is_full_use()) {
+    if (preprocessor_info->ForwardDeclareIsInhibited(
+            GetFileEntry(use->use_loc()), use->symbol_name())) {
+      VERRS(6) << "Changing fwd-decl use of " << use->symbol_name()
+               << " (" << use->PrintableUseLoc()
+               << ") to a full-info use: no_forward_declare pragma\n";
+      use->set_full_use();
+    }
+  }
+
+  // (A5) If using a nested class, discard this use.
   if (IsNestedClass(record_decl)) {
     // iwyu will require the full type of the parent class when it
     // recurses on the qualifier (any use of Foo::Bar requires the
@@ -860,7 +877,7 @@ void ProcessForwardDeclare(OneUse* use) {
     }
   }
 
-  // (A5) If a definition exists earlier in this file, discard this use.
+  // (A6) If a definition exists earlier in this file, discard this use.
   // Note: for the 'earlier' checks, what matters is the *instantiation*
   // location.
   const set<const NamedDecl*> redecls = GetClassRedecls(record_decl);
@@ -1243,7 +1260,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // too.  Note we can't use Each<> because it returns a const-iterator.
   for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
     if (!it->is_full_use() && it->decl())
-      internal::ProcessForwardDeclare(&*it);
+      internal::ProcessForwardDeclare(&*it, preprocessor_info_);
   }
   for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
     if (it->is_full_use() && it->decl())

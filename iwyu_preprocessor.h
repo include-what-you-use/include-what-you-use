@@ -31,11 +31,12 @@
 //    c) // IWYU pragma: begin_exports
 //    d) // IWYU pragma: end_exports
 //    e) // IWYU pragma: no_include "foo/bar/baz.h"
-//    f) // IWYU pragma: friend <regexp>
+//    f) // IWYU pragma: no_forward_declare foo::Bar
+//    g) // IWYU pragma: friend <regexp>
 //       // IWYU pragma: friend "<regexp>" -- needed if spaces in regexp.
 // 'Annotation' constructs:
-//    d) #include "foo/bar/baz.h"  // IWYU pragma: export
-//    e) #include "foo/bar/baz.h"  // IWYU pragma: keep
+//    h) #include "foo/bar/baz.h"  // IWYU pragma: export
+//    i) #include "foo/bar/baz.h"  // IWYU pragma: keep
 //
 // 4) Process doxygen @headername directives. In later versions of GCC,
 //    these directives are like IWYU pragma private directives:
@@ -154,10 +155,15 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   bool FileTransitivelyIncludes(const string& quoted_includer,
                                 const clang::FileEntry* includee) const;
 
-  // Return true if the given file has an iwyu_pragma
-  // "no_include <other_filename>".
+  // Return true if the given file has
+  // "// IWYU pragma: no_include <other_filename>".
   bool IncludeIsInhibited(const clang::FileEntry* file,
                           const string& other_filename) const;
+
+  // Return true if the given file has
+  // "// IWYU pragma: no_forward_declare <qualified_symbol_name>".
+  bool ForwardDeclareIsInhibited(
+      const clang::FileEntry* file, const string& qualified_symbol_name) const;
 
  protected:
   // Preprocessor event handlers called by Clang.
@@ -300,6 +306,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Maps from a FileEntry* to the quoted names of files that its file
   // is directed *not* to include via the "no_include" pragma.
   map<const clang::FileEntry*, set<string> > no_include_map_;
+
+  // Maps from a FileEntry* to the qualified names of symbols that its
+  // file is directed *not* to forward-declare via the
+  // "no_forward_declare" pragma.
+  map<const clang::FileEntry*, set<string> > no_forward_declare_map_;
 
   const IwyuFileInfo empty_file_info_;
 
