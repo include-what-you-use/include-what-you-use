@@ -237,6 +237,14 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
     return;
   }
 
+  if (MatchOneToken(tokens, "no_forward_declare", 2, begin_loc)) {
+    // 2nd token should be the qualified name of a symbol.
+    no_forward_declare_map_[this_file_entry].insert(tokens[1]);
+    ERRSYM(this_file_entry) << "Inhibiting forward-declare of "
+                            << tokens[1] << "\n";
+    return;
+  }
+
   if (MatchOneToken(tokens, "friend", 2, begin_loc)) {
     // 2nd token should be a regex.
     string regex = tokens[1];
@@ -910,6 +918,14 @@ bool IwyuPreprocessorInfo::IncludeIsInhibited(
   const set<string>* inhibited_includes = FindInMap(&no_include_map_, file);
   return (inhibited_includes != NULL) &&
       ContainsKey(*inhibited_includes, other_filename);
+}
+
+bool IwyuPreprocessorInfo::ForwardDeclareIsInhibited(
+    const clang::FileEntry* file, const string& qualified_symbol_name) const {
+  const set<string>* inhibited_forward_declares =
+      FindInMap(&no_forward_declare_map_, file);
+  return (inhibited_forward_declares != NULL) &&
+      ContainsKey(*inhibited_forward_declares, qualified_symbol_name);
 }
 
 }  // namespace include_what_you_use

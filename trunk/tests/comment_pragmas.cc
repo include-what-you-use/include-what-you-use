@@ -61,7 +61,10 @@
 // TODO(dsturtevant): More tests of "friend": globs, header files,
 // quoted globs, more than one friend pragma in one file, file with more
 // than one file befriending it.
-
+// 19. "no_forward_declare" pragma: cpd18 is used in a way that can
+//     be forward declared, but that forward declare is inhibited.
+// 20. "no_forward_declare" pragam: cpd19 is used in a forward-declarable
+//      way, but is forward declared anyway even though inhibited.
 #include "tests/comment_pragmas-d1.h"
 #include "tests/comment_pragmas-d10.h"
 #include "tests/comment_pragmas-d11.h"
@@ -71,6 +74,8 @@
 #include "tests/comment_pragmas-d15.h" /* IWYU pragma: keep */ /* check C-style comments */
 #include "tests/comment_pragmas-d16.h"
 #include "tests/comment_pragmas-d17.h"  // IWYU pragma: keep
+#include "tests/comment_pragmas-d18.h"
+#include "tests/comment_pragmas-d19.h"
 #include "tests/comment_pragmas-d2.h"
 #include "tests/comment_pragmas-d3.h"
 #include "tests/comment_pragmas-d4.h"
@@ -81,6 +86,10 @@
 #include "tests/comment_pragmas-d9.h"
 // IWYU pragma: no_include "tests/comment_pragmas-i9.h"  // another test of comments
 // IWYU pragma: no_include "tests/no_such_file_d17.h"
+// IWYU pragma: no_forward_declare CommentPragmasD18
+// IWYU pragma: no_forward_declare CommentPragmasD19
+
+class CommentPragmasD19;
 
 // The following classes are all defined in public files exported by i2.h.
 // IWYU: CommentPragmasI2 is...*comment_pragmas-i1.h
@@ -151,6 +160,12 @@ CommentPragmasD14 cpd14;
 // IWYU: CommentPragmasD17 is...*no_such_file_d17.h
 CommentPragmasD17 cpd17;
 
+// Use cpd18 and cpd19 in a way that IWYU would normally want to suggest a
+// forward declaration for. However, there's a no_forward_declare
+// pragma in this file inhibiting the forward declarations.
+CommentPragmasD18* cpd18;
+CommentPragmasD19* cpd19;
+
 /**** IWYU_SUMMARY
 
 tests/comment_pragmas.cc should add these lines:
@@ -171,6 +186,7 @@ tests/comment_pragmas.cc should remove these lines:
 - #include "tests/comment_pragmas-d7.h"  // lines XX-XX
 - #include "tests/comment_pragmas-d8.h"  // lines XX-XX
 - #include "tests/comment_pragmas-d9.h"  // lines XX-XX
+- class CommentPragmasD19;  // lines XX-XX
 
 The full include-list for tests/comment_pragmas.cc:
 #include <some_system_header_file>  // for CommentPragmasD8, CommentPragmasD9
@@ -181,6 +197,8 @@ The full include-list for tests/comment_pragmas.cc:
 #include "tests/comment_pragmas-d15.h"
 #include "tests/comment_pragmas-d16.h"  // for CommentPragmasI11
 #include "tests/comment_pragmas-d17.h"
+#include "tests/comment_pragmas-d18.h"  // for CommentPragmasD18
+#include "tests/comment_pragmas-d19.h"  // for CommentPragmasD19
 #include "tests/comment_pragmas-d5.h"
 #include "tests/comment_pragmas-d6.h"
 #include "tests/comment_pragmas-i1.h"  // for CommentPragmasI2, CommentPragmasI3, CommentPragmasI4
