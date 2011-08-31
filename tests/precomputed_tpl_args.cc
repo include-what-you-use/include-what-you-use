@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <set>
+#include <map>
 #include <bitset>
 #include "tests/precomputed_tpl_args-d1.h"
 
@@ -54,6 +55,31 @@ IntSet int_set;
 std::bitset<5> bitset;
 
 
+// When considering a precomputed type (like map<>) inside a templated
+// class, make sure that we only consider the precomputed args that
+// are part of the instantiation of the templated class.  That is,
+// for map<T, SpecializationClass>, we should only consider T.
+
+template<typename T> class TemplatedClass {
+  // TODO(csilvers): IWYU: SpecializationClass is...*precomputed_tpl_args-i1.h
+  // TODO(csilvers): IWYU: std::less is...*precomputed_tpl_args-i1.h
+  // IWYU: SpecializationClass needs a declaration
+  std::map<SpecializationClass, T> t1;
+  // TODO(csilvers): IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  // IWYU: IndirectClass needs a declaration
+  std::map<T, IndirectClass> t3;
+};
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+TemplatedClass<IndirectClass> tc_ic;
+
+// TODO(csilvers): IWYU: std::less is...*precomputed_tpl_args-i1.h
+// IWYU: SpecializationClass needs a declaration
+// IWYU: SpecializationClass is...*precomputed_tpl_args-i1.h
+TemplatedClass<SpecializationClass> tc_sc;
+
+
 /**** IWYU_SUMMARY
 
 tests/precomputed_tpl_args.cc should add these lines:
@@ -63,6 +89,7 @@ tests/precomputed_tpl_args.cc should remove these lines:
 
 The full include-list for tests/precomputed_tpl_args.cc:
 #include <bitset>  // for bitset
+#include <map>  // for map
 #include <set>  // for set
 #include <vector>  // for vector
 #include "tests/precomputed_tpl_args-d1.h"  // for D1SpecializationClass, less

@@ -56,6 +56,20 @@ bool ContainsKeyValue(const Container& container,
   return false;
 }
 
+// Returns true if the associative container contains any key in the
+// given set.
+template <class AssociativeContainer>
+bool ContainsAnyKey(
+    const AssociativeContainer& container,
+    const set<typename AssociativeContainer::key_type>& keys) {
+  for (typename set<typename AssociativeContainer::key_type>::const_iterator
+           it = keys.begin(); it != keys.end(); ++it) {
+    if (ContainsKey(container, *it))
+      return true;
+  }
+  return false;
+}
+
 // Returns a_map[key] if key is in a_map; otherwise returns default_value.
 template <class Map>
 const typename Map::mapped_type& GetOrDefault(

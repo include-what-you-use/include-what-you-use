@@ -640,6 +640,11 @@ const clang::Type* GetTypeOf(const clang::TypeDecl* decl);
 // Template parameters are always reduced to the canonical type.
 const clang::Type* GetCanonicalType(const clang::Type* type);
 
+// A 'component' of a type is a type beneath it in the AST tree.
+// So 'Foo*' has component 'Foo', as does 'vector<Foo>', while
+// vector<pair<Foo, Bar> > has components pair<Foo,Bar>, Foo, and Bar.
+set<const clang::Type*> GetComponentsOfType(const clang::Type* type);
+
 // The ElaborationType -- which says whether a type is preceded by
 // 'class' or 'struct' ('class Foo'), or whether the type-name has a
 // namespace ('ns::Foo') -- often pops where it's not wanted.  This
