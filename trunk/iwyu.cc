@@ -3035,12 +3035,28 @@ class InstantiatedTemplateVisitor
   // does *not* traverse the methods.
   bool TraverseDataAndTypeMembersOfClassHelper(
       const TemplateSpecializationType* type) {
-    // No point in doing traversal if we're not fully instantiated.
-    if (!type || type->isDependentType())
+    if (!type)
       return true;
-    // Or if we're forward-declared.
+
+    // No point in doing traversal if we're forward-declared
     if (current_ast_node()->in_forward_declare_context())
       return true;
+
+    // If we're a dependent type, we only try to be analyzed if we're
+    // in the precomputed list -- in general, the only thing clang
+    // tells us about dependent types is their name (which is all we
+    // need for the precomputed list!).  This means iwyu will properly
+    // analyze the use of SomeClass in code like 'map<T, SomeClass>',
+    // but not in 'MyMap<T, SomeClass>', since we have precomputed
+    // information about the STL map<>, but not the user type MyMap.
+    // TODO(csilvers): do better here.
+    if (type->isDependentType()) {
+      // TODO(csilvers): This is currently always a noop; need to fix
+      // GetTplTypeResugarMapForClassNoComponentTypes to do something
+      // useful for dependent types.
+      ReplayClassMemberUsesFromPrecomputedList(type);   // best-effort
+      return true;
+    }
 
     const ClassTemplateSpecializationDecl* class_decl
         = DynCastFrom(TypeToDeclAsWritten(type));
@@ -3114,42 +3130,61 @@ class InstantiatedTemplateVisitor
   // Returns true iff we did appropriate reporting for this type.
   bool ReplayClassMemberUsesFromPrecomputedList(
       const TemplateSpecializationType* tpl_type) {
-    CHECK_(!tpl_type->isDependentType() && "Replay only instantiated types");
     if (current_ast_node() && current_ast_node()->in_forward_declare_context())
       return true;   // never depend on any types if a fwd-decl
 
     const NamedDecl* tpl_decl = TypeToDeclAsWritten(tpl_type);
-    const map<const Type*, const Type*>& resugar_map =
+
+    // This says how the template-args are used by this hard-coded type
+    // (a set<>, or map<>, or ...), to avoid having to recurse into them.
+    const map<const Type*, const Type*>& resugar_map_for_precomputed_type =
         FullUseCache::GetPrecomputedResugarMap(tpl_type);
-    if (!resugar_map.empty()) {
-      VERRS(6) << "(Using pre-computed list of full-use information for "
-               << tpl_decl->getQualifiedNameAsString() << ")\n";
-      // For entries with a non-NULL value, we report the value, which
-      // is the unsugared type, as being fully used.  Entries with a
-      // NULL value are default template args, and we only report them
-      // if the template class doesn't intend-to-provide them.
-      for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
-        const Type* resugared_type = NULL;
-        if (it->second) {
-          resugared_type = it->second;
-        } else {
-          const NamedDecl* resugared_decl = TypeToDeclAsWritten(it->first);
-          if (!preprocessor_info().PublicHeaderIntendsToProvide(
-                  GetFileEntry(tpl_decl), GetFileEntry(resugared_decl)))
-            resugared_type = it->first;
-        }
-        if (resugared_type && !resugared_type->isPointerType()) {
-          ReportTypeUse(caller_loc(), resugared_type);
-          // For a templated type, check the template args as well.
-          if (const TemplateSpecializationType* spec_type
-              = DynCastFrom(resugared_type)) {
-            TraverseDataAndTypeMembersOfClassHelper(spec_type);
-          }
+    // But we need to reconcile that with the types-of-interest, as
+    // stored in resugar_map_.  To do this, we take only those entries
+    // from resugar_map_for_precomputed_type that are also present in
+    // resugar_map_.  We consider type components, so if
+    // resugar_map_for_precomputed_type has less_than<Foo> or hash<Foo>,
+    // we'll add those in even if resugar_map_ only includes 'Foo'.
+    map<const Type*, const Type*> resugar_map;
+    for (Each<const Type*, const Type*> it(&resugar_map_for_precomputed_type);
+         !it.AtEnd(); ++it) {
+      // TODO(csilvers): for default template args, it->first is sometimes
+      // a RecordType even when it's a template specialization.  Figure out
+      // how to get the proper type components in that situation.
+      const set<const Type*> type_components = GetComponentsOfType(it->first);
+      if (ContainsAnyKey(resugar_map_, type_components)) {
+        resugar_map.insert(*it);
+      }
+    }
+    if (resugar_map.empty())
+      return false;
+
+    VERRS(6) << "(Using pre-computed list of full-use information for "
+             << tpl_decl->getQualifiedNameAsString() << ")\n";
+    // For entries with a non-NULL value, we report the value, which
+    // is the unsugared type, as being fully used.  Entries with a
+    // NULL value are default template args, and we only report them
+    // if the template class doesn't intend-to-provide them.
+    for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
+      const Type* resugared_type = NULL;
+      if (it->second) {
+        resugared_type = it->second;
+      } else {
+        const NamedDecl* resugared_decl = TypeToDeclAsWritten(it->first);
+        if (!preprocessor_info().PublicHeaderIntendsToProvide(
+                GetFileEntry(tpl_decl), GetFileEntry(resugared_decl)))
+          resugared_type = it->first;
+      }
+      if (resugared_type && !resugared_type->isPointerType()) {
+        ReportTypeUse(caller_loc(), resugared_type);
+        // For a templated type, check the template args as well.
+        if (const TemplateSpecializationType* spec_type
+            = DynCastFrom(resugared_type)) {
+          TraverseDataAndTypeMembersOfClassHelper(spec_type);
         }
       }
-      return true;
     }
-    return false;
+    return true;
   }
 
   //------------------------------------------------------------

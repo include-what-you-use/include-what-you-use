@@ -19,6 +19,7 @@
 #include "clang/AST/Type.h"
 
 using clang::ClassTemplateSpecializationDecl;
+using clang::NamedDecl;
 using clang::Type;
 using clang::TemplateArgument;
 using clang::TemplateArgumentList;
@@ -64,18 +65,20 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
   static const set<string> fulluse_types(kFullUseTypes,
                                          kFullUseTypes + fulluse_size);
 
-  const ClassTemplateSpecializationDecl* tpl_decl
-      = DynCastFrom(TypeToDeclAsWritten(tpl_type));
-  CHECK_(tpl_decl && "tpl-type decl is not a tpl specialization?");
+  const NamedDecl* tpl_decl = TypeToDeclAsWritten(tpl_type);
   if (!ContainsKey(fulluse_types, tpl_decl->getQualifiedNameAsString()))
     return map<const Type*, const Type*>();
 
   // The code below doesn't handle template-template args/etc.  None
-  // of the types in kFullUseTypes should have those.  Just verify.
-  const TemplateArgumentList& all_tpl_args = tpl_decl->getTemplateArgs();
-  for (unsigned i = 0; i < all_tpl_args.size(); ++i) {
-    CHECK_((all_tpl_args.get(i).getKind() == TemplateArgument::Type)
-           && "kFullUseType types must contain only 'type' template args");
+  // of the types in kFullUseTypes should have those.  Just verify,
+  // when we can.
+  if (const ClassTemplateSpecializationDecl* tpl_spec_decl
+      = DynCastFrom(tpl_decl)) {
+    const TemplateArgumentList& all_tpl_args = tpl_spec_decl->getTemplateArgs();
+    for (unsigned i = 0; i < all_tpl_args.size(); ++i) {
+      CHECK_((all_tpl_args.get(i).getKind() == TemplateArgument::Type)
+             && "kFullUseType types must contain only 'type' template args");
+    }
   }
 
   // The default resugar-map works correctly for all these types (by

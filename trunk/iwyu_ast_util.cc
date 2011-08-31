@@ -501,6 +501,14 @@ class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
   set<const Type*> seen_types_;
 };
 
+// A 'component' of a type is a type beneath it in the AST tree.
+// So 'Foo*' has component 'Foo', as does 'vector<Foo>', while
+// vector<pair<Foo, Bar> > has components pair<Foo,Bar>, Foo, and Bar.
+set<const Type*> GetComponentsOfType(const Type* type) {
+  TypeEnumerator type_enumerator;
+  return type_enumerator.Enumerate(type);
+}
+
 // --- Utilities for Decl.
 
 bool IsTemplatizedFunctionDecl(const FunctionDecl* decl) {
@@ -580,9 +588,8 @@ SourceRange GetSourceRangeOfClassDecl(const Decl* decl) {
 static map<const Type*, const Type*> ResugarTypeComponents(
     const map<const Type*, const Type*>& resugar_map) {
   map<const Type*, const Type*> retval = resugar_map;
-  TypeEnumerator type_enumerator;
   for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
-    const set<const Type*>& components = type_enumerator.Enumerate(it->second);
+    const set<const Type*>& components = GetComponentsOfType(it->second);
     for (Each<const Type*> component_type(&components);
          !component_type.AtEnd(); ++component_type) {
       const Type* desugared_type = GetCanonicalType(*component_type);
@@ -704,11 +711,10 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   // TODO(csilvers): if the GetArg(i) expr has an implicit cast
   //                 under it, take the pre-cast type instead?
   set<const Type*> fn_arg_types;
-  TypeEnumerator type_enumerator;
   for (unsigned i = 0; i < num_args; ++i) {
     const Type* argtype = GetTypeOf(fn_args[i]);
     // TODO(csilvers): handle RecordTypes that are a TemplateSpecializationDecl
-    InsertAllInto(type_enumerator.Enumerate(argtype), &fn_arg_types);
+    InsertAllInto(GetComponentsOfType(argtype), &fn_arg_types);
   }
 
   for (Each<const Type*> it(&fn_arg_types); !it.AtEnd(); ++it) {
