@@ -11,6 +11,9 @@
 // compilers seem to require the full type information for the class
 // (though the behavior is technically undefined).  Test that IWYU
 // notices this.  (It only matters for references, of course.)
+//
+// TODO(csilvers): Clarify what the intended behavior here is; see discussion on
+// OCL 23543695.
 
 #include "tests/direct.h"
 
@@ -27,11 +30,11 @@ int main() {
   // IWYU: IndirectClass needs a declaration
   const IndirectClass& ref = ic;
   // IWYU: IndirectClass is...*indirect.h
-  Function(1, 2, ref);
+  (void)sizeof(Function(1, 2, ref));
   // IWYU: IndirectClass is...*indirect.h
-  (*function_p)(1, 2, ref);
+  (void)sizeof((*function_p)(1, 2, ref));
   // IWYU: IndirectClass is...*indirect.h
-  (*function_p)(1, 2, 3, 4, 5, ref);
+  (void)sizeof((*function_p)(1, 2, 3, 4, 5, ref));
 }
 
 /**** IWYU_SUMMARY
