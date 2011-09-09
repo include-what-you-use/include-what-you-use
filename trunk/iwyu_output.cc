@@ -915,11 +915,22 @@ void ProcessFullUse(OneUse* use,
   if (GetFileEntry(use->use_loc()) == GetFileEntry(use->decl()) &&
       !DeclIsVisibleToUseInSameFile(use->decl(), *use) &&
       DeclCanBeForwardDeclared(use->decl())) {
+    if (preprocessor_info->ForwardDeclareIsInhibited(
+            GetFileEntry(use->use_loc()), use->symbol_name())) {
+      // There is no include we could recommend for any full use, so just
+      // ignore the use.
+      VERRS(6) << "Ignoring use of " << use->symbol_name()
+               << ": definition found later in file"
+               << " and no_forward_declare pragma present("
+               << use->PrintableUseLoc() << ")\n";
+      use->set_ignore_use();
+      return;
+    }
+    // Just change us to a forward-declare use.  Later, we'll decide
+    // which forward-declare is the best one to keep.
     VERRS(6) << "Moving " << use->symbol_name()
              << " from full use to fwd-decl: definition found later in file"
              << " (" << use->PrintableUseLoc() << ")\n";
-    // Just change us to a forward-declare use.  Later, we'll decide
-    // which forward-declare is the best one to keep.
     use->set_forward_declare_use();
     return;
   }
