@@ -63,8 +63,11 @@
 // than one file befriending it.
 // 19. "no_forward_declare" pragma: cpd18 is used in a way that can
 //     be forward declared, but that forward declare is inhibited.
-// 20. "no_forward_declare" pragam: cpd19 is used in a forward-declarable
+// 20. "no_forward_declare" pragma: cpd19 is used in a forward-declarable
 //      way, but is forward declared anyway even though inhibited.
+// 21. "no_forward_declare" pragma: Test21a is defined after a typedef,
+//     which requires a forward declaration. This case is different because
+//     internally IWYU wants a full-use which it downgrades to a forward-decl.
 #include "tests/comment_pragmas-d1.h"
 #include "tests/comment_pragmas-d10.h"
 #include "tests/comment_pragmas-d11.h"
@@ -88,8 +91,10 @@
 // IWYU pragma: no_include "tests/no_such_file_d17.h"
 // IWYU pragma: no_forward_declare CommentPragmasD18
 // IWYU pragma: no_forward_declare CommentPragmasD19
+// IWYU pragma: no_forward_declare CommentPragmasTest21a
 
-class CommentPragmasD19;
+class CommentPragmasD19;  // Needed, but removed due to no_forward_declare.
+class CommentPragmasTest21a;  // Needed but removed due to no_forward_declare.
 
 // The following classes are all defined in public files exported by i2.h.
 // IWYU: CommentPragmasI2 is...*comment_pragmas-i1.h
@@ -165,6 +170,13 @@ CommentPragmasD17 cpd17;
 // pragma in this file inhibiting the forward declarations.
 CommentPragmasD18* cpd18;
 CommentPragmasD19* cpd19;
+// This is a case where IWYU wants the full definition of
+// CommentPragmasTest21a due to the typedef, but then downgrades to
+// requiring a forward declaration since the definition appears later
+// in the same file. This forward declaration is inhibited due to a
+// no_forward_declare pragma at the top of this file.
+typedef CommentPragmasTest21a CommentPragmasTest21b;
+class CommentPragmasTest21a {};
 
 /**** IWYU_SUMMARY
 
@@ -187,6 +199,7 @@ tests/comment_pragmas.cc should remove these lines:
 - #include "tests/comment_pragmas-d8.h"  // lines XX-XX
 - #include "tests/comment_pragmas-d9.h"  // lines XX-XX
 - class CommentPragmasD19;  // lines XX-XX
+- class CommentPragmasTest21a;  // lines XX-XX
 
 The full include-list for tests/comment_pragmas.cc:
 #include <some_system_header_file>  // for CommentPragmasD8, CommentPragmasD9
