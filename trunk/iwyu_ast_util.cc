@@ -538,8 +538,10 @@ const NamedDecl* GetDefinitionForClass(const Decl* decl) {
       // If we started this fn as a template, convert back to a template now.
       if (is_templated_decl) {
         CHECK_(isa<CXXRecordDecl>(record_dfn) && "A non-C++ template class?");
-        CHECK_(cast<CXXRecordDecl>(record_dfn)->getDescribedClassTemplate());
-        return cast<CXXRecordDecl>(record_dfn)->getDescribedClassTemplate();
+        const ClassTemplateDecl* tpl_decl  =
+            cast<CXXRecordDecl>(record_dfn)->getDescribedClassTemplate();
+        CHECK_(tpl_decl);
+        return tpl_decl;
       }
       return record_dfn;
     }
@@ -554,8 +556,31 @@ const NamedDecl* GetDefinitionForClass(const Decl* decl) {
               clang::TSK_ExplicitSpecialization)
              && "A declared template-specialization lacks a definition?");
       as_tpl = spec_decl->getSpecializedTemplate();
-      if (as_tpl->getTemplatedDecl()->isDefinition())
+      if (as_tpl->getTemplatedDecl()->isDefinition()) {
         return as_tpl;
+      } else {
+        // This might be a template specialization that has been
+        // forward declared from a template whose definition is known.
+        // The following code appears to handle that case.
+        PointerUnion<ClassTemplateDecl*,
+            ClassTemplatePartialSpecializationDecl*>
+            instantiated_from = spec_decl->getSpecializedTemplateOrPartial();
+        if (const ClassTemplatePartialSpecializationDecl*
+            partial_spec_decl =
+            instantiated_from.dyn_cast<
+            ClassTemplatePartialSpecializationDecl*>()) {
+          // decl would be instantiated from a template partial
+          // specialization.
+          if (partial_spec_decl->isDefinition())
+            return partial_spec_decl;
+        } else if (const ClassTemplateDecl* tpl_decl =
+                   instantiated_from.dyn_cast<ClassTemplateDecl*>()) {
+          // decl would be instantiated from a non-specialized
+          // template.
+          if (tpl_decl->getTemplatedDecl()->hasDefinition())
+            return tpl_decl->getTemplatedDecl()->getDefinition();
+        }
+      }
     }
   }
   return NULL;
