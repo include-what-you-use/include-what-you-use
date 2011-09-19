@@ -1944,13 +1944,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         VERRS(3) << "WARNING: Unexpected cast that involves a non-pointer: "
                  << expr->getCastKindName() << "\n";
         break;
-      case clang::CK_AnyPointerToObjCPointerCast:
       case clang::CK_AnyPointerToBlockPointerCast:
+      case clang::CK_ARCConsumeObject:
+      case clang::CK_ARCExtendBlockObject:
+      case clang::CK_ARCProduceObject:
+      case clang::CK_ARCReclaimReturnedObject:
+      case clang::CK_BlockPointerToObjCPointerCast:
+      case clang::CK_CPointerToObjCPointerCast:
       case clang::CK_GetObjCProperty:
       case clang::CK_ObjCObjectLValueCast:
-      case clang::CK_ObjCConsumeObject:
-      case clang::CK_ObjCProduceObject:
-      case clang::CK_ObjCReclaimReturnedObject:
       case clang::CK_VectorSplat:
         CHECK_(false && "TODO(csilvers): for objc and clang lang extensions");
         break;
