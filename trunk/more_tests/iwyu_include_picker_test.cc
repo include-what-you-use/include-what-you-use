@@ -287,16 +287,19 @@ TEST(GetCandidateHeadersForFilepath, ThirdPartyCycle) {
   p.AddDirectInclude("third_party/c.h", "third_party/a.h", "");  // cycle!
   p.FinalizeAddedIncludes();
 
-  // We ignore the cycle, so the includes look like a -> b -> c.
+  // We ignore the cycle, so the includes look like a -> b -> c.  In
+  // each case, a.h is the only public header file in the bunch; the
+  // rest are private because they're only #included from other
+  // third_party files.
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("third_party/a.h"),
       "\"third_party/a.h\"");
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("third_party/b.h"),
-      "\"third_party/b.h\"", "\"third_party/a.h\"");
+      "\"third_party/a.h\"");
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("third_party/c.h"),
-      "\"third_party/c.h\"", "\"third_party/b.h\"", "\"third_party/a.h\"");
+      "\"third_party/a.h\"");
 }
 
 TEST(GetCandidateHeadersForFilepath, RegexOverlap) {
@@ -349,13 +352,12 @@ TEST(GetCandidateHeadersForFilepath, ImplicitThirdPartyMapping) {
       "\"third_party/public.h\"");
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("third_party/private1.h"),
-      "\"third_party/private1.h\"", "\"third_party/public.h\"");
+      "\"third_party/public.h\"");
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("third_party/private2.h"),
-      "\"third_party/private2.h\"", "\"third_party/public.h\"");
+      "\"third_party/public.h\"");
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("third_party/private11.h"),
-      "\"third_party/private11.h\"", "\"third_party/private1.h\"",
       "\"third_party/public.h\"");
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("third_party/other_public.h"),
@@ -365,7 +367,7 @@ TEST(GetCandidateHeadersForFilepath, ImplicitThirdPartyMapping) {
   // considered a public include (since it is #included from my_app.h).
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("third_party/oprivate.h"),
-      "\"third_party/oprivate.h\"", "\"third_party/other_public.h\"");
+      "\"third_party/other_public.h\"");
 }
 
 TEST(GetCandidateHeadersForFilepath, TreatsGTestAsNonThirdParty) {
