@@ -1089,6 +1089,7 @@ void IncludePicker::AddImplicitThirdPartyMappings() {
       // is not included from non-third-party code.
       CHECK_(IsThirdPartyFile(*includer) && "Why not nixed!");
       AddMapping(includee, *includer);
+      MarkIncludeAsPrivate(includee);
     }
   }
 }
