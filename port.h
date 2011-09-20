@@ -11,8 +11,41 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
 
-#include <assert.h>
-#define CHECK_(x)  assert(x)
+#include <stdlib.h>  // for abort
+#include <iostream>
+
+namespace include_what_you_use {
+
+// Helper class that allows programmers to log extra information in CHECK_s.
+class FatalMessageEmitter {
+ public:
+  FatalMessageEmitter(const char* file, int line, const char* message) {
+    stream() << file << ":" << line << ": Assertion failed: " << message;
+  }
+  ~FatalMessageEmitter() {
+    stream() << ::std::endl;
+    ::abort();
+  }
+  ::std::ostream& stream() { return ::std::cerr; }
+};
+
+// Helper class that allows an ostream to 'appear' as a void expression.
+class OstreamVoidifier {
+ public:
+  // This has to be an operator with a precedence lower than << but
+  // higher than ?:
+  void operator&(::std::ostream&) {}
+};
+
+}  // namespace include_what_you_use
+
+// Usage: CHECK_(condition) << extra << information;
+// The file, line, condition and extra information will be printed to cerr,
+// then the program will abort.
+#define CHECK_(x)  (x) ? (void)0 : \
+  ::include_what_you_use::OstreamVoidifier() & \
+  ::include_what_you_use::FatalMessageEmitter( \
+      __FILE__, __LINE__, #x).stream()
 
 #if defined(_MSC_VER)
 
