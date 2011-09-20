@@ -903,8 +903,13 @@ void IncludePicker::MarkVisibility(
 
   // insert() leaves any old value alone, and only inserts if the key is new.
   filepath_visibility_map_.insert(make_pair(quoted_filepath_pattern, vis));
-  CHECK_(filepath_visibility_map_[quoted_filepath_pattern] == vis &&
-         "Same file seen with two different visibilities");
+  CHECK_(filepath_visibility_map_[quoted_filepath_pattern] == vis)
+      << " Same file seen with two different visibilities: "
+      << quoted_filepath_pattern
+      << " Old vis: "
+      << filepath_visibility_map_[quoted_filepath_pattern]
+      << " New vis: "
+      << vis;
 }
 
 void IncludePicker::InsertIntoFilepathIncludeMap(
