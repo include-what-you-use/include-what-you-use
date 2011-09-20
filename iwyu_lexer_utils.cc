@@ -66,7 +66,7 @@ SourceLocation GetLocationAfter(
   const char* needle_loc = strstr(data, needle.c_str());
   if (!needle_loc)
     return SourceLocation();   // invalid source location
-  return start_loc.getFileLocWithOffset(needle_loc - data + needle.length());
+  return start_loc.getLocWithOffset(needle_loc - data + needle.length());
 }
 
 string GetIncludeNameAsTyped(SourceLocation include_loc,
