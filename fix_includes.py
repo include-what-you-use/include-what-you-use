@@ -665,6 +665,12 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
       line_info.type = _COMMENT_LINE_RE
     else:
       for type_re in _LINE_TYPES:
+        # header-guard-define-re has a two-part decision criterion: it
+        # matches the RE, *and* it comes after a header guard line.
+        # That's too complex to figure out now, so we skip over it now
+        # and fix it up later in _MarkHeaderGuardIfPresent().
+        if type_re in (_HEADER_GUARD_DEFINE_RE,):
+          continue
         m = type_re.match(line_info.line)
         if m:
           line_info.type = type_re

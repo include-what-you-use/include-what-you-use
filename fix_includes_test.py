@@ -2122,6 +2122,39 @@ The full include-list for simple_with_comment.h:
     self.RegisterFileContents({'simple_with_comment.h': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testIdentifyingHeaderGuardLines(self):
+    """Test that not all #defines look like header guards."""
+    infile = """\
+// Copyright 2010
+
+#ifndef IDENTIFYING_HEADER_GUARD_LINES_H_
+#define IDENTIFYING_HEADER_GUARD_LINES_H_
+
+namespace foo {
+// The namespace decl should come before this #define, not after.
+// It will, unless we wrongly say the #define is a header-guard define.
+///+namespace bar {
+///+class Baz;
+///+}  // namespace bar
+///+
+#define NOT_A_HEADER_GUARD_LINE 1
+}
+
+#endif
+"""
+    iwyu_output = """\
+identifying_header_guard_lines.h should add these lines:
+namespace foo { namespace bar { class Baz; } }
+
+identifying_header_guard_lines.h should remove these lines:
+
+The full include-list for identifying_header_guard_lines.h:
+namespace foo { namespace bar { class Baz; } }
+---
+"""
+    self.RegisterFileContents({'identifying_header_guard_lines.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testIncludeOfCcFile(self):
     """Test that iwyu leaves .cc #includes alone."""
     infile = """\
