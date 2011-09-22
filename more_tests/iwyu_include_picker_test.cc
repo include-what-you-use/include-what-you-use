@@ -405,6 +405,25 @@ TEST(GetCandidateHeadersForFilepath, ExplicitThirdPartyMapping) {
       "\"third_party/icu/include/unicode/utypes.h\"");
 }
 
+TEST(GetCandidateHeadersForFilepath, ExplicitVsImplicitThirdPartyMapping) {
+  IncludePicker p;
+  // Here, the includees are all explicitly marked as public.
+  p.AddDirectInclude("my_app.h", "third_party/icu/include/unicode/foo.h", "");
+  p.AddDirectInclude("third_party/icu/include/unicode/foo.h",
+                     "third_party/icu/include/unicode/utypes.h", "");
+  p.AddDirectInclude("third_party/icu/include/unicode/foo.h",
+                     "/usr/include/stdio.h", "");
+  p.FinalizeAddedIncludes();
+  EXPECT_VECTOR_STREQ(
+      p.GetCandidateHeadersForFilepath("/usr/include/stdio.h"),
+      "<stdio.h>", "<cstdio>");
+  EXPECT_VECTOR_STREQ(
+      p.GetCandidateHeadersForFilepath(
+          "third_party/icu/include/unicode/utypes.h"),
+      "\"third_party/icu/include/unicode/utypes.h\"",
+      "\"third_party/icu/include/unicode/foo.h\"");
+}
+
 TEST(GetCandidateHeadersForFilepath, NotInAnyMap) {
   IncludePicker p;
   p.FinalizeAddedIncludes();
