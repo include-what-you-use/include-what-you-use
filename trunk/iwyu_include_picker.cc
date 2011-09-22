@@ -1055,13 +1055,14 @@ void IncludePicker::ExpandRegexes() {
 // #include x.h to get symbols from y.h, then assume that's how the
 // third-party authors wanted it.  This boils down to the following
 // rules:
-// 1) If there's already a mapping for third_party/x.h, do not
+// 1) If there's already a mapping for third_party/y.h, do not
 //    add any implicit maps for it.
 // 2) if not_third_party/x.{h,cc} #includes third_party/y.h,
 //    assume y.h is supposed to be included directly, and do not
 //    add any implicit maps for it.
 // 3) Otherwise, if third_party/x.h #includes third_party/y.h,
-//    add a mapping from y.h to x.h, and make y.h private.  This
+//    add a mapping from y.h to x.h.  Unless y.h already has
+//    a hard-coded visibility set, make y.h private.  This
 //    means iwyu will never suggest adding y.h.
 void IncludePicker::AddImplicitThirdPartyMappings() {
   set<string> third_party_headers_with_explicit_mappings;
@@ -1085,7 +1086,8 @@ void IncludePicker::AddImplicitThirdPartyMappings() {
   for (Each<string, set<string> >
            it(&quoted_includes_to_quoted_includers_); !it.AtEnd(); ++it) {
     const string& includee = it->first;
-    if (ContainsKey(third_party_headers_with_explicit_mappings, includee) ||
+    if (!IsThirdPartyFile(includee) ||
+        ContainsKey(third_party_headers_with_explicit_mappings, includee) ||
         ContainsKey(headers_included_from_non_third_party, includee)) {
       continue;
     }
@@ -1093,8 +1095,11 @@ void IncludePicker::AddImplicitThirdPartyMappings() {
       // From the 'if' statement above, we already know that includee
       // is not included from non-third-party code.
       CHECK_(IsThirdPartyFile(*includer) && "Why not nixed!");
+      CHECK_(IsThirdPartyFile(includee) && "Why not nixed!");
       AddMapping(includee, *includer);
-      MarkIncludeAsPrivate(includee);
+      if (GetVisibility(includee) == kUnusedVisibility) {
+        MarkIncludeAsPrivate(includee);
+      }
     }
   }
 }
