@@ -526,60 +526,36 @@ bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
   return false;
 }
 
-const NamedDecl* GetDefinitionForClass(const Decl* decl) {
+const RecordDecl* GetDefinitionForClass(const Decl* decl) {
   const RecordDecl* as_record = DynCastFrom(decl);
   const ClassTemplateDecl* as_tpl = DynCastFrom(decl);
-  const bool is_templated_decl = (as_tpl != NULL);
   if (as_tpl) {  // Convert the template to its underlying class defn.
     as_record = dyn_cast_or_null<RecordDecl>(as_tpl->getTemplatedDecl());
   }
   if (as_record) {
     if (const RecordDecl* record_dfn = as_record->getDefinition()) {
-      // If we started this fn as a template, convert back to a template now.
-      if (is_templated_decl) {
-        CHECK_(isa<CXXRecordDecl>(record_dfn) && "A non-C++ template class?");
-        const ClassTemplateDecl* tpl_decl  =
-            cast<CXXRecordDecl>(record_dfn)->getDescribedClassTemplate();
-        CHECK_(tpl_decl);
-        return tpl_decl;
-      }
       return record_dfn;
     }
     // If we're a templated class that was never instantiated (because
     // we were never "used"), then getDefinition() will return NULL.
-    // In that case, use the definition-as-written.
     if (const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(decl)) {
-      // When we fake-instantiate typedefs, we can get explicit
-      // instantiations with no definition as well.
-      CHECK_((spec_decl->getSpecializationKind() == clang::TSK_Undeclared ||
-              spec_decl->getSpecializationKind() ==
-              clang::TSK_ExplicitSpecialization)
-             && "A declared template-specialization lacks a definition?");
-      as_tpl = spec_decl->getSpecializedTemplate();
-      if (as_tpl->getTemplatedDecl()->isDefinition()) {
-        return as_tpl;
-      } else {
-        // This might be a template specialization that has been
-        // forward declared from a template whose definition is known.
-        // The following code appears to handle that case.
-        PointerUnion<ClassTemplateDecl*,
-            ClassTemplatePartialSpecializationDecl*>
-            instantiated_from = spec_decl->getSpecializedTemplateOrPartial();
-        if (const ClassTemplatePartialSpecializationDecl*
-            partial_spec_decl =
-            instantiated_from.dyn_cast<
-            ClassTemplatePartialSpecializationDecl*>()) {
-          // decl would be instantiated from a template partial
-          // specialization.
-          if (partial_spec_decl->isDefinition())
-            return partial_spec_decl;
-        } else if (const ClassTemplateDecl* tpl_decl =
-                   instantiated_from.dyn_cast<ClassTemplateDecl*>()) {
-          // decl would be instantiated from a non-specialized
-          // template.
-          if (tpl_decl->getTemplatedDecl()->hasDefinition())
-            return tpl_decl->getTemplatedDecl()->getDefinition();
-        }
+      PointerUnion<ClassTemplateDecl*,
+          ClassTemplatePartialSpecializationDecl*>
+          specialized_decl = spec_decl->getSpecializedTemplateOrPartial();
+      if (const ClassTemplatePartialSpecializationDecl*
+          partial_spec_decl =
+          specialized_decl.dyn_cast<
+          ClassTemplatePartialSpecializationDecl*>()) {
+        // decl would be instantiated from a template partial
+        // specialization.
+        CHECK_(partial_spec_decl->hasDefinition());
+        return partial_spec_decl->getDefinition();
+      } else if (const ClassTemplateDecl* tpl_decl =
+                 specialized_decl.dyn_cast<ClassTemplateDecl*>()) {
+        // decl would be instantiated from a non-specialized
+        // template.
+        if (tpl_decl->getTemplatedDecl()->hasDefinition())
+          return tpl_decl->getTemplatedDecl()->getDefinition();
       }
     }
   }
