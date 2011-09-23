@@ -438,8 +438,24 @@ void IwyuFileInfo::AddInternalHeader(const IwyuFileInfo* other) {
 
 void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
                               const string& quoted_includee, int linenumber) {
-  lines_.push_back(OneIncludeOrForwardDeclareLine(quoted_includee, linenumber));
-  lines_.back().set_present();
+  OneIncludeOrForwardDeclareLine new_include(quoted_includee, linenumber);
+  new_include.set_present();
+
+  // It's possible for the same #include to be seen multiple times
+  // (for instance, if we include a .h file twice, and that .h file
+  // does not have a header guard).  Ignore all but the first.
+  // TODO(csilvers): could rewrite this so it's constant-time.
+  for (Each<OneIncludeOrForwardDeclareLine> line(&lines_); !line.AtEnd();
+       ++line) {
+    if (line->LineNumbersMatch(new_include)) {
+      VERRS(6) << "Ignoring repeated include: "
+               << GetFilePath(file_) << ":" << linenumber
+               << " -> " << GetFilePath(includee) << "\n";
+      return;
+    }
+  }
+
+  lines_.push_back(new_include);
   // Store in a few other ways as well.
   direct_includes_as_fileentries_.insert(includee);
   direct_includes_.insert(quoted_includee);
