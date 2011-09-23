@@ -1628,6 +1628,48 @@ template <typename Arg2> ClassTemplate;
     self.RegisterFileContents({'twice.cc': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testListingTheSameFileTwiceAndOnceIsANoop(self):
+    """Test when foo.cc is specified twice, once with 'all correct'."""
+    infile = """\
+// Copyright 2010
+
+#include <notused.h>
+///+#include <stdio.h>
+///+#include "include_this_file"  // for reason 1
+#include "used.h"
+#include "used_only_in_file_a.h"
+
+class FileAClass;
+///+namespace foo {
+///+template <typename Arg1> ClassTemplate;
+///+}  // namespace foo
+///+template <typename Arg1> ClassTemplate;
+"""
+    iwyu_output = """\
+twice.cc should add these lines:
+#include <stdio.h>
+#include "include_this_file"  // for reason 1
+namespace foo { template <typename Arg1> ClassTemplate; }
+template <typename Arg1> ClassTemplate;
+
+twice.cc should remove these lines:
+- #include <notused.h>  // lines 3-3
+- #include "used_only_in_file_a.h"  // lines 5-5
+- class FileAClass;  // lines 7-7
+
+The full include-list for twice.cc:
+#include <stdio.h>
+#include "include_this_file"  // for reason 1
+#include "used.h"
+namespace foo { template <typename Arg1> ClassTemplate; }
+template <typename Arg1> ClassTemplate;
+---
+
+(twice.cc has correct #includes/fwd-decls)
+"""
+    self.RegisterFileContents({'twice.cc': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testAddForwardDeclare(self):
     """Test adding a forward-declare, rather than keeping one."""
     infile = """\
