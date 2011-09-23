@@ -438,7 +438,7 @@ void PrintASTNode(const ASTNode* node) {
     errs() << "[TemplateArgument] "
                  << PrintableTemplateArgument(*tpl_arg) << "\n";
   } else {
-    CHECK_(!"Unknown kind for ASTNode");
+    CHECK_(false && "Unknown kind for ASTNode");
   }
 }
 
@@ -574,7 +574,7 @@ SourceRange GetSourceRangeOfClassDecl(const Decl* decl) {
     return tag_decl->getSourceRange();
   if (const TemplateDecl* tpl_decl = DynCastFrom(decl))
     return tpl_decl->getSourceRange();
-  CHECK_(!"Cannot get source range for this decl type");
+  CHECK_(false && "Cannot get source range for this decl type");
   return SourceRange();
 }
 
