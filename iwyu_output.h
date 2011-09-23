@@ -153,6 +153,11 @@ class OneIncludeOrForwardDeclareLine {
   void AddSymbolUse(const string& symbol_name);
   bool HasSymbolUse(const string& symbol_name) const;
 
+  bool LineNumbersMatch(const OneIncludeOrForwardDeclareLine& that) const {
+    return (this->start_linenum_ == that.start_linenum_ &&
+            this->end_linenum_ == that.end_linenum_);
+  }
+
  private:
   string line_;                     // '#include XXX' or 'class YYY;'
   int start_linenum_;
