@@ -556,7 +556,7 @@ void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
       FileChanged_SystemHeaderPragma(loc);
       break;
     default:
-      CHECK_(!"Unknown file change reason");
+      CHECK_(false && "Unknown file change reason");
   }
 }
 
