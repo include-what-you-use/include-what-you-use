@@ -2149,17 +2149,25 @@ def ProcessIWYUOutput(f, files_to_process, flags):
       print '(skipping %s: it matches --ignore_re, which is %s)' % (
           filename, flags.ignore_re)
       continue
-    if not iwyu_record.HasContentfulChanges():
-      print '(skipping %s: iwyu reports no contentful changes)' % filename
-      continue
 
     if filename in iwyu_output_records:
       iwyu_output_records[filename].Merge(iwyu_record)
     else:
       iwyu_output_records[filename] = iwyu_record
 
+  # Now ignore all the files that never had any contentful changes
+  # seen for them.  (We have to wait until we're all done, since a .h
+  # file may have a contentful change when #included from one .cc
+  # file, but not another, and we need to have merged them above.)
+  for filename in iwyu_output_records:
+    if not iwyu_output_records[filename].HasContentfulChanges():
+      print '(skipping %s: iwyu reports no contentful changes)' % filename
+      # Mark that we're skipping this file by setting the record to None
+      iwyu_output_records[filename] = None
+
   # Now do all the fixing, and return the number of files modified
-  return FixManyFiles(iwyu_output_records.itervalues(), flags)
+  contentful_records = [ior for ior in iwyu_output_records.values() if ior]
+  return FixManyFiles(contentful_records, flags)
 
 
 def SortIncludesInFiles(files_to_process, flags):
