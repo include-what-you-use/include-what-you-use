@@ -44,7 +44,7 @@ class TemplateDecl;
 class TemplateName;
 class TypeDecl;
 class ValueDecl;
-struct ExplicitTemplateArgumentList;
+struct ASTTemplateArgumentListInfo;
 }  // namespace clang
 
 namespace include_what_you_use {
@@ -778,7 +778,7 @@ bool IsCastToReferenceType(const clang::CastExpr* expr);
 
 // Returns the list of explicit template args for all exprs that support
 // such a concept (declrefexpr, memberexpr), and NULL if none is present.
-const clang::ExplicitTemplateArgumentList* GetExplicitTplArgs(
+const clang::ASTTemplateArgumentListInfo* GetExplicitTplArgs(
     const clang::Expr* expr);
 
 }  // namespace include_what_you_use
