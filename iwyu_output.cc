@@ -1722,9 +1722,22 @@ void CalculateDesiredIncludesAndForwardDeclares(
     if (use.is_full_use()) {
       CHECK_(use.has_suggested_header() && "Full uses should have #includes");
       if (!Contains(*lines, use.suggested_header())) { // must be added
+        const string& header = use.suggested_header();
+        InclusionDirective::InclusionKind inclusion_kind =
+            InclusionDirective::Include;
+        const IncludePicker& picker = GlobalIncludePicker();  // short alias
+        if (picker.HasInclusionKind(header)) {
+          inclusion_kind = picker.GetInclusionKindForInclude(header);
+        } else {
+          // TODO(vsapsai): here I am cutting corners, just use #include instead
+          // of trying to figure out if #import should be used for use->decl().
+          // Try iwyu with actual code and see how often iwyu recommends
+          // #include instead of #import.
+          VERRS(6) << "No inclusion kind for " << header << ". Use #include\n";
+        }
+
         lines->push_back(OneIncludeOrForwardDeclareLine(
-            use.decl_file(), use.suggested_header(), -1,
-            InclusionDirective::Include));
+            use.decl_file(), use.suggested_header(), -1, inclusion_kind));
       }
     } else if (!use.has_suggested_header()) {
       // Forward-declare uses that are already satisfied by an #include
