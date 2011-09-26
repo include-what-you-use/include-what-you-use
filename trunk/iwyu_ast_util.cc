@@ -68,7 +68,7 @@ using clang::DependentTemplateSpecializationType;
 using clang::ElaboratedType;
 using clang::EnumDecl;
 using clang::ExplicitCastExpr;
-using clang::ASTTemplateArgumentListInfo;
+using clang::ExplicitTemplateArgumentList;
 using clang::Expr;
 using clang::ExprWithCleanups;
 using clang::FileEntry;
@@ -626,7 +626,7 @@ static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
 static map<const Type*, const Type*>
 GetTplTypeResugarMapForFunctionExplicitTplArgs(
     const FunctionDecl* decl,
-    const ASTTemplateArgumentListInfo* explicit_tpl_list) {
+    const ExplicitTemplateArgumentList* explicit_tpl_list) {
   map<const Type*, const Type*> retval;
   if (explicit_tpl_list) {
     for (unsigned i = 0; i < explicit_tpl_list->NumTemplateArgs; ++i) {
@@ -677,7 +677,7 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     fn_args = const_cast<CallExpr*>(call_expr)->getArgs();
     num_args = call_expr->getNumArgs();
     const Expr* callee_expr = call_expr->getCallee()->IgnoreParenCasts();
-    if (const ASTTemplateArgumentListInfo* explicit_tpl_args
+    if (const ExplicitTemplateArgumentList* explicit_tpl_args
         = GetExplicitTplArgs(callee_expr)) {
       retval = GetTplTypeResugarMapForFunctionExplicitTplArgs(
           decl, explicit_tpl_args);
@@ -685,7 +685,7 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     }
   } else {
     // If calling_expr has explicit template args, then consider them.
-    if (const ASTTemplateArgumentListInfo* explicit_tpl_args
+    if (const ExplicitTemplateArgumentList* explicit_tpl_args
         = GetExplicitTplArgs(calling_expr)) {
       retval = GetTplTypeResugarMapForFunctionExplicitTplArgs(
           decl, explicit_tpl_args);
@@ -1240,7 +1240,7 @@ bool IsCastToReferenceType(const CastExpr* expr) {
   }
 }
 
-const ASTTemplateArgumentListInfo* GetExplicitTplArgs(const Expr* expr) {
+const ExplicitTemplateArgumentList* GetExplicitTplArgs(const Expr* expr) {
   if (const DeclRefExpr* decl_ref = DynCastFrom(expr))
     return decl_ref->getExplicitTemplateArgsOpt();
   if (const MemberExpr* member_expr = DynCastFrom(expr))
