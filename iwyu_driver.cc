@@ -35,7 +35,7 @@ class LLVMContext;
 using clang::ASTFrontendAction;
 using clang::CompilerInstance;
 using clang::CompilerInvocation;
-using clang::DiagnosticsEngine;
+using clang::Diagnostic;
 using clang::DiagnosticIDs;
 using clang::DiagnosticOptions;
 using clang::TextDiagnosticPrinter;
@@ -156,7 +156,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
     new TextDiagnosticPrinter(errs(), DiagnosticOptions());
 
   IntrusiveRefCntPtr<DiagnosticIDs> diagnostic_id(new DiagnosticIDs());
-  DiagnosticsEngine diagnostics(diagnostic_id, diagnostic_client);
+  Diagnostic diagnostics(diagnostic_id, diagnostic_client);
   Driver driver(path.str(), getHostTriple(), "a.out",
                 false, false, diagnostics);
   driver.setTitle("include what you use");

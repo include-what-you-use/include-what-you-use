@@ -68,6 +68,8 @@
 // 21. "no_forward_declare" pragma: Test21a is defined after a typedef,
 //     which requires a forward declaration. This case is different because
 //     internally IWYU wants a full-use which it downgrades to a forward-decl.
+// 22. "no_forward_declare" pragma: cpd20a and cpd20b are defined inside an
+//     anonymous namespace.
 #include "tests/comment_pragmas-d1.h"
 #include "tests/comment_pragmas-d10.h"
 #include "tests/comment_pragmas-d11.h"
@@ -80,6 +82,7 @@
 #include "tests/comment_pragmas-d18.h"
 #include "tests/comment_pragmas-d19.h"
 #include "tests/comment_pragmas-d2.h"
+#include "tests/comment_pragmas-d20.h"
 #include "tests/comment_pragmas-d3.h"
 #include "tests/comment_pragmas-d4.h"
 #include "tests/comment_pragmas-d5.h"  // IWYU pragma: keep
@@ -91,6 +94,9 @@
 // IWYU pragma: no_include "tests/no_such_file_d17.h"
 // IWYU pragma: no_forward_declare CommentPragmasD18
 // IWYU pragma: no_forward_declare CommentPragmasD19
+// IWYU pragma: no_forward_declare CommentPragmasD20a
+// IWYU pragma: no_forward_declare Foo::CommentPragmasD20b
+// IWYU pragma: no_forward_declare ::CommentPragmasD20c
 // IWYU pragma: no_forward_declare CommentPragmasTest21a
 
 class CommentPragmasD19;  // Needed, but removed due to no_forward_declare.
@@ -165,11 +171,15 @@ CommentPragmasD14 cpd14;
 // IWYU: CommentPragmasD17 is...*no_such_file_d17.h
 CommentPragmasD17 cpd17;
 
-// Use cpd18 and cpd19 in a way that IWYU would normally want to suggest a
-// forward declaration for. However, there's a no_forward_declare
-// pragma in this file inhibiting the forward declarations.
+// Use cpd18,cpd19,cpd20a,cpd20b,cpd20c in ways that IWYU would normally want
+// to suggest a forward declaration for. However, there's a
+// no_forward_declare pragma in this file inhibiting the forward
+// declarations.
 CommentPragmasD18* cpd18;
 CommentPragmasD19* cpd19;
+CommentPragmasD20a* cpd20a;
+Foo::CommentPragmasD20b* cpd20b;
+CommentPragmasD20c* cpd20c;
 // This is a case where IWYU wants the full definition of
 // CommentPragmasTest21a due to the typedef, but then downgrades to
 // requiring a forward declaration since the definition appears later
@@ -212,6 +222,7 @@ The full include-list for tests/comment_pragmas.cc:
 #include "tests/comment_pragmas-d17.h"
 #include "tests/comment_pragmas-d18.h"  // for CommentPragmasD18
 #include "tests/comment_pragmas-d19.h"  // for CommentPragmasD19
+#include "tests/comment_pragmas-d20.h"  // for CommentPragmasD20a, CommentPragmasD20b, CommentPragmasD20c
 #include "tests/comment_pragmas-d5.h"
 #include "tests/comment_pragmas-d6.h"
 #include "tests/comment_pragmas-i1.h"  // for CommentPragmasI2, CommentPragmasI3, CommentPragmasI4

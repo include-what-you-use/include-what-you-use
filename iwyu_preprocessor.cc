@@ -60,6 +60,26 @@ namespace {
 void Warn(SourceLocation loc, const string& message) {
   errs() << PrintableLoc(loc) << ": warning: " << message << "\n";
 }
+
+// For use with no_forward_declare. Allow people to specify forward
+// declares with or without the leading "::", and don't make them use
+// <anonymous namespace>.
+string NormalizeNamespaces(string symbol) {
+  if (StartsWith(symbol, "::")) {
+    symbol = symbol.substr(2);
+  }
+  const char kAnonymousNamespaceQualifier[] = "<anonymous namespace>::";
+  for (;;) {
+    int index = symbol.find(kAnonymousNamespaceQualifier);
+    if (index == string::npos) {
+      break;
+    }
+    symbol = symbol.substr(0, index) +
+        symbol.substr(index + strlen(kAnonymousNamespaceQualifier));
+  }
+  return symbol;
+}
+
 }  // namespace
 
 //------------------------------------------------------------
@@ -239,9 +259,10 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
 
   if (MatchOneToken(tokens, "no_forward_declare", 2, begin_loc)) {
     // 2nd token should be the qualified name of a symbol.
-    no_forward_declare_map_[this_file_entry].insert(tokens[1]);
+    const string normalized_symbol = NormalizeNamespaces(tokens[1]);
+    no_forward_declare_map_[this_file_entry].insert(normalized_symbol);
     ERRSYM(this_file_entry) << "Inhibiting forward-declare of "
-                            << tokens[1] << "\n";
+                            << normalized_symbol << "\n";
     return;
   }
 
@@ -922,10 +943,12 @@ bool IwyuPreprocessorInfo::IncludeIsInhibited(
 
 bool IwyuPreprocessorInfo::ForwardDeclareIsInhibited(
     const clang::FileEntry* file, const string& qualified_symbol_name) const {
+  const string normalized_symbol_name =
+      NormalizeNamespaces(qualified_symbol_name);
   const set<string>* inhibited_forward_declares =
       FindInMap(&no_forward_declare_map_, file);
   return (inhibited_forward_declares != NULL) &&
-      ContainsKey(*inhibited_forward_declares, qualified_symbol_name);
+      ContainsKey(*inhibited_forward_declares, normalized_symbol_name);
 }
 
 }  // namespace include_what_you_use
