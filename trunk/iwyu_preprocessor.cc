@@ -70,12 +70,12 @@ string NormalizeNamespaces(string symbol) {
   }
   const char kAnonymousNamespaceQualifier[] = "<anonymous namespace>::";
   for (;;) {
-    int index = symbol.find(kAnonymousNamespaceQualifier);
+    const string::size_type index = symbol.find(kAnonymousNamespaceQualifier);
     if (index == string::npos) {
       break;
     }
-    symbol = symbol.substr(0, index) +
-        symbol.substr(index + strlen(kAnonymousNamespaceQualifier));
+    symbol = (symbol.substr(0, index) +
+              symbol.substr(index + strlen(kAnonymousNamespaceQualifier)));
   }
   return symbol;
 }
