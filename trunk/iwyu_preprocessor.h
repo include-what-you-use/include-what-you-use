@@ -91,7 +91,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                              public clang::CommentHandler {
  public:
   IwyuPreprocessorInfo() : main_file_(NULL),
-                           empty_file_info_(NULL, this),
+                           empty_file_info_(NULL, this, ""),
                            current_file_(NULL) {}
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
@@ -207,8 +207,17 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   bool BelongsToMainCompilationUnit(const clang::FileEntry* includer,
                                     const clang::FileEntry* includee) const;
 
+  // Creates a new iwyu_file_info_map_[file_entry] if it doesn't exist,
+  // or a noop otherwise.  quoted_include_name is used to create the
+  // new entry if necessary.
+  void InsertIntoFileInfoMap(const clang::FileEntry* file,
+                             const string& quoted_include_name);
+
   // Helper function that returns iwyu_file_info_map_[file_entry] if
   // it already exists, or creates a new one and returns it otherwise.
+  // If it creates a new one, it generates the quoted_include_name
+  // from the file-path for 'file'.
+  // TODO(csilvers): see if, in practice, all uses in here are just 'get's.
   IwyuFileInfo* GetFromFileInfoMap(const clang::FileEntry* file);
 
   // Helper for AddDirectInclude.  Checks if we should protect the

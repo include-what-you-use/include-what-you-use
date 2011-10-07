@@ -182,7 +182,8 @@ class IwyuFileInfo {
   // TODO(csilvers): also take iwyufileinfos for 'associated' files (.h's).
   // And a source-manager.
   IwyuFileInfo(const clang::FileEntry* this_file,
-               const IwyuPreprocessorInfo* preprocessor_info);
+               const IwyuPreprocessorInfo* preprocessor_info,
+               const string& quoted_include_name);
 
   // An 'internal' header is a header that this file #includes
   // (possibly indirectly) that we should treat as being logically

@@ -334,16 +334,27 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
 //------------------------------------------------------------
 // Utilities for adding #includes.
 
+
 // Helper function that returns iwyu_file_info_map_[file_entry] if
 // it already exists, or creates a new one and returns it otherwise.
 IwyuFileInfo* IwyuPreprocessorInfo::GetFromFileInfoMap(const FileEntry* file) {
   IwyuFileInfo* iwyu_file_info = FindInMap(&iwyu_file_info_map_, file);
   if (!iwyu_file_info) {
-    iwyu_file_info_map_.insert(make_pair(file, IwyuFileInfo(file, this)));
+    const string quoted_include = ConvertToQuotedInclude(GetFilePath(file));
+    iwyu_file_info_map_.insert(
+        make_pair(file, IwyuFileInfo(file, this, quoted_include)));
     iwyu_file_info = FindInMap(&iwyu_file_info_map_, file);
     CHECK_(iwyu_file_info);   // should succeed this time!
   }
   return iwyu_file_info;
+}
+
+void IwyuPreprocessorInfo::InsertIntoFileInfoMap(
+    const FileEntry* file, const string& quoted_include_name) {
+  if (!FindInMap(&iwyu_file_info_map_, file)) {
+    iwyu_file_info_map_.insert(
+        make_pair(file, IwyuFileInfo(file, this, quoted_include_name)));
+  }
 }
 
 // Sometimes, we can tell just by looking at an #include line
@@ -447,7 +458,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   GetFromFileInfoMap(includer)->AddInclude(
       includee, include_name_as_typed, GetLineNumber(includer_loc));
   // Make sure the includee has a file-info-map entry too.
-  (void)GetFromFileInfoMap(includee);
+  InsertIntoFileInfoMap(includee, include_name_as_typed);
 
   // We have a rule that if foo.h #includes bar.h, foo.cc doesn't need
   // to #include bar.h as well, but instead gets it 'automatically'
