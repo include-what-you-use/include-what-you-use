@@ -416,10 +416,11 @@ string OneIncludeOrForwardDeclareLine::LineNumberString() const {
 
 
 IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
-                           const IwyuPreprocessorInfo* preprocessor_info)
+                           const IwyuPreprocessorInfo* preprocessor_info,
+                           const string& quoted_include_name)
   : file_(this_file),
     preprocessor_info_(preprocessor_info),
-    quoted_file_(ConvertToQuotedInclude(GetFilePath(file_))),
+    quoted_file_(quoted_include_name),
     internal_headers_(),
     symbol_uses_(),
     lines_(),
