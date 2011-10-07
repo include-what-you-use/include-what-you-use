@@ -900,7 +900,7 @@ void ProcessForwardDeclare(OneUse* use,
   for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
     CHECK_(isa<RecordDecl>(*it) && "GetClassRedecls has redecls of wrong type");
     const SourceLocation defined_loc = GetLocation(*it);
-    if (cast<RecordDecl>(*it)->isDefinition() &&
+    if (cast<RecordDecl>(*it)->isCompleteDefinition() &&
         DeclIsVisibleToUseInSameFile(*it, *use)) {
       VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "): dfn is present: "
