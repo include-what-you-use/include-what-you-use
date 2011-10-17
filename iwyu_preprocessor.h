@@ -184,8 +184,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // virtual void Endif();
 
   virtual void FileChanged(clang::SourceLocation loc, FileChangeReason reason,
-                           clang::SrcMgr::CharacteristicKind file_type,
-                           clang::FileID exit_from);
+                           clang::SrcMgr::CharacteristicKind file_type);
   virtual void FileSkipped(const clang::FileEntry& file,
                            const clang::Token &filename,
                            clang::SrcMgr::CharacteristicKind file_type);

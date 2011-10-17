@@ -757,6 +757,7 @@ enum TransitiveStatus { kUnused = 0, kCalculating, kDone };
 // does not invalidate any filename_map iterators.
 void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
                         map<string, TransitiveStatus>* seen_nodes,
+                        vector<string>* node_stack,  // used for debugging
                         const string& key) {
   // If we've already calculated this node's transitive closure, we're done.
   const TransitiveStatus status = (*seen_nodes)[key];
@@ -773,7 +774,13 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
       return;
     }
   }
-  CHECK_(status != kCalculating && "Cycle in include-mapping");
+  if (status == kCalculating) {
+    VERRS(0) << "Cycle in include-mapping:\n";
+    for (size_t i = 0; i < node_stack->size(); ++i)
+      VERRS(0) << "  " << (*node_stack)[i] << " ->\n";
+    VERRS(0) << "  " << key << "\n";
+    CHECK_(false && "Cycle in include-mapping");  // cycle is a fatal error
+  }
   if (status == kDone)
     return;
 
@@ -786,7 +793,9 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
   // Keep track of node->second as we update it, to avoid duplicates.
   (*seen_nodes)[key] = kCalculating;
   for (Each<string> child(&node->second); !child.AtEnd(); ++child) {
-    MakeNodeTransitive(filename_map, seen_nodes, *child);
+    node_stack->push_back(*child);
+    MakeNodeTransitive(filename_map, seen_nodes, node_stack, *child);
+    node_stack->pop_back();
   }
   (*seen_nodes)[key] = kDone;
 
@@ -802,8 +811,9 @@ void MakeMapTransitive(IncludePicker::IncludeMap* filename_map) {
   // Insert keys of filename_map here once we know their value is
   // the complete transitive closure.
   map<string, TransitiveStatus> seen_nodes;
+  vector<string> node_stack;
   for (Each<string, vector<string> > it(filename_map); !it.AtEnd(); ++it)
-    MakeNodeTransitive(filename_map, &seen_nodes, it->first);
+    MakeNodeTransitive(filename_map, &seen_nodes, &node_stack, it->first);
 }
 
 
