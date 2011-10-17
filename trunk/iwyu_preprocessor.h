@@ -91,8 +91,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                              public clang::CommentHandler {
  public:
   IwyuPreprocessorInfo() : main_file_(NULL),
-                           empty_file_info_(NULL, this, ""),
-                           current_file_(NULL) {}
+                           empty_file_info_(NULL, this, "") {}
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
   void HandlePreprocessingDone();
@@ -191,7 +190,8 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                            clang::SrcMgr::CharacteristicKind file_type);
   // FileChanged is actually a multi-plexer for 4 different callbacks.
   void FileChanged_EnterFile(clang::SourceLocation file_beginning);
-  void FileChanged_ExitToFile(clang::SourceLocation include_loc);
+  void FileChanged_ExitToFile(clang::SourceLocation include_loc,
+                              clang::FileID exiting_from);
   void FileChanged_RenameFile(clang::SourceLocation new_file);
   void FileChanged_SystemHeaderPragma(clang::SourceLocation loc);
 
@@ -323,9 +323,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   map<const clang::FileEntry*, set<string> > no_forward_declare_map_;
 
   const IwyuFileInfo empty_file_info_;
-
-  // The identity of the file currently being processed.
-  const clang::FileEntry* current_file_;
 
   // For processing pragmas. It is the current stack of open
   // "begin_exports".  There should be at most one item in this stack

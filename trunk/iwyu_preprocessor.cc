@@ -574,13 +574,13 @@ void IwyuPreprocessorInfo::Ifndef(const Token& id) {
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
                                        FileChangeReason reason,
                                        SrcMgr::CharacteristicKind file_type,
-                                       FileID PrevFID) {
+                                       FileID exiting_from) {
   switch (reason) {
     case EnterFile:
       FileChanged_EnterFile(loc);
       break;
     case ExitFile:
-      FileChanged_ExitToFile(loc);
+      FileChanged_ExitToFile(loc, exiting_from);
       break;
     case RenameFile:
       FileChanged_RenameFile(loc);
@@ -612,7 +612,6 @@ void IwyuPreprocessorInfo::FileSkipped(const FileEntry& file,
 // Called when a file is #included.
 void IwyuPreprocessorInfo::FileChanged_EnterFile(
     SourceLocation file_beginning) {
-  current_file_ = GetFileEntry(file_beginning);
   // Get the location of the #include directive that resulted in the
   // include of the file that file_beginning is in.
   const PresumedLoc presumed =
@@ -651,15 +650,17 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
 }
 
 // Called when done with an #included file and returning to the parent file.
-void IwyuPreprocessorInfo::FileChanged_ExitToFile(SourceLocation include_loc) {
+void IwyuPreprocessorInfo::FileChanged_ExitToFile(SourceLocation include_loc,
+                                                  FileID exiting_from_id) {
   ERRSYM(GetFileEntry(include_loc)) << "[ Exiting to  ] "
                                     << PrintableLoc(include_loc) << "\n";
-  if (HasOpenBeginExports(current_file_)) {
+  const FileEntry* exiting_from = GlobalSourceManager()->getFileEntryForID(
+      exiting_from_id);
+  if (HasOpenBeginExports(exiting_from)) {
     Warn(begin_exports_location_stack_.top(),
          "begin_exports without an end_exports");
     begin_exports_location_stack_.pop();
   }
-  current_file_ = GetFileEntry(include_loc);
 }
 
 void IwyuPreprocessorInfo::FileChanged_RenameFile(SourceLocation new_file) {
