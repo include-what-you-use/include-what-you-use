@@ -155,11 +155,11 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
       if (!record_decl->getIdentifier())
         ostream << "<anonymous " << record_decl->getKindName() << ">::";
       else
-        ostream << record_decl << "::";
+        ostream << *record_decl << "::";
     } else if (const FunctionDecl *function_decl = DynCastFrom(*it)) {
-      ostream << function_decl << "::";   // could also add in '<< "()"'
+      ostream << *function_decl << "::";   // could also add in '<< "()"'
     } else {
-      ostream << cast<NamedDecl>(*it) << "::";
+      ostream << *(cast<NamedDecl>(*it)) << "::";
     }
   }
   // Due to the way DeclarationNameInfo::printName() is written, this
@@ -167,7 +167,7 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
   // destructors.  Since iwyu only shows these when they're defined in
   // a -inl.h file, I'm not going to worry about it.
   if (named_decl->getDeclName())
-    ostream << named_decl;
+    ostream << *named_decl;
   else
     ostream << "<anonymous>";
 
