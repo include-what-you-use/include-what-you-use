@@ -31,7 +31,6 @@
 #include "clang/Lex/MacroInfo.h"
 
 using clang::FileEntry;
-using clang::FileID;
 using clang::MacroInfo;
 using clang::Preprocessor;
 using clang::PresumedLoc;
@@ -573,14 +572,12 @@ void IwyuPreprocessorInfo::Ifndef(const Token& id) {
 
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
                                        FileChangeReason reason,
-                                       SrcMgr::CharacteristicKind file_type,
-                                       FileID exit_from) {
+                                       SrcMgr::CharacteristicKind file_type) {
   switch (reason) {
     case EnterFile:
       FileChanged_EnterFile(loc);
       break;
     case ExitFile:
-      // TODO(csilvers): pass in exit_from and get rid of current_file_
       FileChanged_ExitToFile(loc);
       break;
     case RenameFile:
