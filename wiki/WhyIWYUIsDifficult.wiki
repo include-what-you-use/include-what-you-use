@@ -26,7 +26,7 @@ In the above case, it's pretty easy for iwyu to tell that we can
 safely forward-declare `MyClass`. But now consider
 {{{
    vector<MyClass> foo;        // requires full definition of MyClass
-   scoped_ptr<MyClass> foo;    // forward-declaring MyClass is ok
+   scoped_ptr<MyClass> foo;    // forward-declaring MyClass is often ok
 }}}
 To distinguish these, clang has to instantiate the vector and
 scoped_ptr template classes, including analyzing all member variables
