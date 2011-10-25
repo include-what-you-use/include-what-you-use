@@ -9,8 +9,10 @@
 
 // This file has various faulty pragmas.
 
+/** @file tests/comment_pragmas-d7.h
+ */
 // IWYU: @headername directive missing a closing brace
-/** @file comment_pragmas-d7.h @headername{missing_close_brace
+/*  @headername{missing_close_brace
 */
 
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D7_H_

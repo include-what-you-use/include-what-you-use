@@ -305,7 +305,12 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     }
     const string filename = GetSourceTextUntilEndOfLine(current_loc,
                                                         DefaultDataGetter());
-    const string quoted_private_include = "<" + filename + ">";
+    // Use "" or <> based on where the file lives.
+    string quoted_private_include;
+    if (IsSystemIncludeFile(GetFilePath(current_loc)))
+      quoted_private_include = "<" + filename + ">";
+    else
+      quoted_private_include = "\"" + filename + "\"";
 
     // TODO(dsturtevant): Maybe place restrictions on the
     // placement. E.g., in a comment, before any code, or perhaps only
