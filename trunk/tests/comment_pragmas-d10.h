@@ -9,7 +9,7 @@
 
 // This is a private file included directly by comment_pragmas.cc.
 
-/** @file comment_pragmas-d10.h
+/** @file tests/comment_pragmas-d10.h
  *  This is an internal header file, included by other library headers
  *  Do not attempt to use it directly.
  *  @headername{some_system_header_file, some_other_sytem_header_file}
