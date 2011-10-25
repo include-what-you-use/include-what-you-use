@@ -295,6 +295,18 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
   SourceLocation begin_exports_location;
 
   while (true) {
+    // Figure out the canonical name of this file.  We can't use
+    // GetFilePath() because it may not interact properly with -I.
+    current_loc = GetLocationAfter(current_loc,
+                                   "@file ",
+                                   DefaultDataGetter());
+    if (!current_loc.isValid()) {
+      break;
+    }
+    const string filename = GetSourceTextUntilEndOfLine(current_loc,
+                                                        DefaultDataGetter());
+    const string quoted_private_include = "<" + filename + ">";
+
     // TODO(dsturtevant): Maybe place restrictions on the
     // placement. E.g., in a comment, before any code, or perhaps only
     // when in the same comment as an @file directive.
@@ -315,8 +327,6 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     after_text = after_text.substr(0, close_brace_pos);
     vector<string> public_includes = Split(after_text, ",", 0);
 
-    const string quoted_private_include
-        = ConvertToQuotedInclude(GetFilePath(current_loc));
     for (string::size_type i = 0; i < public_includes.size(); ++i) {
       StripWhiteSpace(&public_includes[i]);
       const string quoted_header_name = "<" + public_includes[i] + ">";
