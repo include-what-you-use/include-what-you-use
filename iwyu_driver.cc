@@ -56,7 +56,7 @@ using llvm::cast;
 using llvm::errs;
 using llvm::isa;
 using llvm::raw_svector_ostream;
-using llvm::sys::getHostTriple;
+using llvm::sys::getDefaultTargetTriple;
 using llvm::sys::Path;
 using std::set;
 
@@ -157,7 +157,8 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
 
   IntrusiveRefCntPtr<DiagnosticIDs> diagnostic_id(new DiagnosticIDs());
   DiagnosticsEngine diagnostics(diagnostic_id, diagnostic_client);
-  Driver driver(path.str(), getHostTriple(), "a.out", false, diagnostics);
+  Driver driver(path.str(), getDefaultTargetTriple(), "a.out", false,
+                diagnostics);
   driver.setTitle("include what you use");
 
   // Expand out any response files passed on the command line
