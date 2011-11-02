@@ -266,6 +266,7 @@ class MultipleInheritanceSubclass : public I2_ThisClassIsOnlySubclassed,
                                     // IWYU: I2_Class is...*badinc-i2.h
                                     virtual I2_Class {
  public:
+  // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I2_Struct is...*badinc-i2.h
   // IWYU: I2_MACRO is...*badinc-i2.h
   MultipleInheritanceSubclass() : I2_Class(I2_Struct().a + I2_MACRO) { }
