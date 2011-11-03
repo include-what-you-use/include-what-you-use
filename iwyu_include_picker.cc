@@ -599,6 +599,7 @@ const IncludePicker::IncludeMapEntry cpp_include_map[] = {
   // I don't think we want to be having people move to 'backward/'
   // yet.  (These hold deprecated STL classes that we still use
   // actively.)  These are the ones that turned up in an analysis of
+  { "<backward/auto_ptr.h>", kPrivate, "<memory>", kPublic },
   { "<backward/binders.h>", kPrivate, "<functional>", kPublic },
   { "<backward/hash_fun.h>", kPrivate, "<hash_map>", kPublic },
   { "<backward/hash_fun.h>", kPrivate, "<hash_set>", kPublic },
@@ -607,6 +608,7 @@ const IncludePicker::IncludeMapEntry cpp_include_map[] = {
   { "<backward/strstream>", kPrivate, "<strstream>", kPublic },
   // We have backward as part of the -I search path now, so have the
   // non-backwards-prefix version as well.
+  { "<auto_ptr.h>", kPrivate, "<memory>", kPublic },
   { "<binders.h>", kPrivate, "<functional>", kPublic },
   { "<hash_fun.h>", kPrivate, "<hash_map>", kPublic },
   { "<hash_fun.h>", kPrivate, "<hash_set>", kPublic },
