@@ -10,10 +10,11 @@
 
 #include "iwyu_lexer_utils.h"
 
+#include <string.h>
 #include <string>
 #include <vector>
 
-#include "iwyu_output.h"
+#include "iwyu_verrs.h"
 #include "port.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/Basic/LangOptions.h"

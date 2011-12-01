@@ -95,6 +95,7 @@
 #include <stddef.h>                     // for size_t
 #include <stdio.h>                      // for snprintf
 #include <stdlib.h>                     // for atoi, exit
+#include <string.h>
 #include <algorithm>                    // for swap, find, make_pair
 #include <deque>                        // for swap
 #include <iterator>                     // for find
@@ -117,6 +118,7 @@
 #include "iwyu_preprocessor.h"  // IWYU pragma: keep
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
+#include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
