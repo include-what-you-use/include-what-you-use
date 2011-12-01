@@ -15,18 +15,19 @@
 #include <iterator>                     // for find
 // not hash_map: it's not as portable and needs hash<string>.
 #include <map>                          // for map, map<>::mapped_type, etc
+#include <ostream>
 #include <string>                       // for string, basic_string, etc
 #include <utility>                      // for pair, make_pair
 #include <vector>                       // for vector, vector<>::iterator
 
-#include "iwyu_globals.h"
-#include "iwyu_output.h"
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
+#include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/raw_ostream.h"
 
 using std::find;
 using std::map;
@@ -818,63 +819,7 @@ void MakeMapTransitive(IncludePicker::IncludeMap* filename_map) {
     MakeNodeTransitive(filename_map, &seen_nodes, &node_stack, it->first);
 }
 
-
 }  // namespace
-
-// Converts a file-path, such as /usr/include/stdio.h, to a
-// quoted include, such as <stdio.h>.
-string ConvertToQuotedInclude(const string& filepath) {
-  // First, get rid of leading ./'s and the like.
-  string path = NormalizeFilePath(filepath);
-
-  // Case 1: Uses an explicit entry on the search path (-I) list.
-  const vector<HeaderSearchPath>& search_paths = GlobalHeaderSearchPaths();
-  // GlobalHeaderSearchPaths is sorted to be longest-first, so this
-  // loop will prefer the longest prefix: /usr/include/c++/4.4/foo
-  // will be mapped to <foo>, not <c++/4.4/foo>.
-  for (Each<HeaderSearchPath> it(&search_paths); !it.AtEnd(); ++it) {
-    if (StripLeft(&path, it->path)) {
-      StripLeft(&path, "/");
-      if (it->path_type == HeaderSearchPath::kSystemPath)
-        return "<" + path + ">";
-      else
-        return "\"" + path + "\"";
-    }
-  }
-
-
-  // Case 2: Uses the implicit "-I." entry on the search path.  Always local.
-  return "\"" + path + "\"";
-}
-
-bool IsQuotedInclude(const string& s) {
-  if (s.size() < 2)
-    return false;
-  return ((StartsWith(s, "<") && EndsWith(s, ">")) ||
-          (StartsWith(s, "\"") && EndsWith(s, "\"")));
-}
-
-// Returns whether this is a system (as opposed to user) include file,
-// based on where it lives.
-bool IsSystemIncludeFile(const string& filepath) {
-  return ConvertToQuotedInclude(filepath)[0] == '<';
-}
-
-// Returns true if the given file is third-party.  Google-authored
-// code living in third_party/ is not considered third-party.
-bool IsThirdPartyFile(string quoted_path) {
-  if (!StripLeft(&quoted_path, "\"third_party/"))
-    return false;
-
-  // These are Google-authored libraries living in third_party/
-  // because of old licensing constraints.
-  if (StartsWith(quoted_path, "car/") ||
-      StartsWith(quoted_path, "gtest/") ||
-      StartsWith(quoted_path, "gmock/"))
-    return false;
-
-  return true;
-}
 
 #define IWYU_ARRAYSIZE(ar)  (sizeof(ar) / sizeof(*(ar)))
 
