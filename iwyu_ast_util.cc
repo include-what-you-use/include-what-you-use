@@ -224,7 +224,9 @@ bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
     }
     if (const CXXMethodDecl* method_decl =
         ast_node->GetParentAs<CXXMethodDecl>()) {
-      return ast_node->ContentIs(method_decl->getBody());
+      if (ast_node->ContentIs(method_decl->getBody())) {
+        return true;
+      }
     }
   }
   return false;
