@@ -1908,6 +1908,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
       // These casts don't require any iwyu action.
       case clang::CK_LValueToRValue:
+      case clang::CK_AtomicToNonAtomic:
+      case clang::CK_NonAtomicToAtomic:
         break;
 
       // We shouldn't be seeing any of these kinds.
