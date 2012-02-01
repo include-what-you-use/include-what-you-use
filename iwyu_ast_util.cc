@@ -1244,7 +1244,7 @@ bool IsCastToReferenceType(const CastExpr* expr) {
 
 const ASTTemplateArgumentListInfo* GetExplicitTplArgs(const Expr* expr) {
   if (const DeclRefExpr* decl_ref = DynCastFrom(expr))
-    return decl_ref->getExplicitTemplateArgsOpt();
+    return decl_ref->getOptionalExplicitTemplateArgs();
   if (const MemberExpr* member_expr = DynCastFrom(expr))
     return member_expr->getOptionalExplicitTemplateArgs();
   // Ugh, annoying casts needed because no const methods exist.
