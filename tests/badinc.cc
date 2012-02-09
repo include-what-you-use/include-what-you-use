@@ -131,8 +131,6 @@ int i1_macro_symbol_with_value_and_value2_var2;
 #if __LINE__ || __STDC__ || defined(__cplusplus)
 #endif
 
-extern "C" std::string Flag3Value() { return 0; }
-
 // Using declarations and statements.
 // TODO(csilvers): I don't see a consistent way to say whether
 // "i1_ns2" is an iwyu violation or not, since namespaces can be
