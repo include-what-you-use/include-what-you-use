@@ -22,10 +22,9 @@
 #include "iwyu_getopt.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
-#include "iwyu_path_util.h"
+#include "iwyu_output.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
-#include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_, etc
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -42,6 +41,7 @@ namespace include_what_you_use {
 
 static CommandlineFlags* commandline_flags = NULL;
 static clang::SourceManager* source_manager = NULL;
+static vector<HeaderSearchPath>* search_paths = NULL;
 static IncludePicker* include_picker = NULL;
 static const clang::LangOptions default_lang_options;
 static const clang::PrintingPolicy default_print_policy(default_lang_options);
@@ -117,7 +117,6 @@ int ParseIwyuCommandlineFlags(int argc, char** argv) {
   CHECK_(commandline_flags == NULL && "Only parse commandline flags once");
   commandline_flags = new CommandlineFlags;
   const int retval = commandline_flags->ParseArgv(argc, argv);
-  SetVerboseLevel(commandline_flags->verbose);
 
 if (!commandline_flags->cwd.empty()) {
      printf("-p/--cwd not yet implemented\n");
@@ -185,14 +184,13 @@ void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
   CHECK_(sm && "InitGlobals() needs a non-NULL SourceManager");
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
-  vector<HeaderSearchPath> search_paths =
-      ComputeHeaderSearchPaths(header_search);
-  SetHeaderSearchPaths(search_paths);
+  search_paths = new vector<HeaderSearchPath>(
+      ComputeHeaderSearchPaths(header_search));
   include_picker = new IncludePicker;
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 
-  for (Each<HeaderSearchPath> it(&search_paths); !it.AtEnd(); ++it) {
+  for (Each<HeaderSearchPath> it(search_paths); !it.AtEnd(); ++it) {
     const char* path_type_name
         = (it->path_type == HeaderSearchPath::kSystemPath ? "system" : "user");
     VERRS(6) << "Search path: " << it->path << " (" << path_type_name << ")\n";
@@ -212,6 +210,11 @@ CommandlineFlags* MutableGlobalFlagsForTesting() {
 clang::SourceManager* GlobalSourceManager() {
   CHECK_(source_manager && "Must call InitGlobals() before calling this");
   return source_manager;
+}
+
+const vector<HeaderSearchPath>& GlobalHeaderSearchPaths() {
+  assert(search_paths && "Must call InitGlobals() before calling this");
+  return *search_paths;
 }
 
 const IncludePicker& GlobalIncludePicker() {
@@ -272,7 +275,8 @@ void InitGlobalsAndFlagsForTesting() {
   search_path_map["."] = HeaderSearchPath::kUserPath;
   search_path_map["/usr/src/linux-headers-2.6.24-gg23/include"] = HeaderSearchPath::kSystemPath;
 
-  SetHeaderSearchPaths(NormalizeHeaderSearchPaths(search_path_map));
+  search_paths = new vector<HeaderSearchPath>(
+      NormalizeHeaderSearchPaths(search_path_map));
 }
 
 }  // namespace include_what_you_use

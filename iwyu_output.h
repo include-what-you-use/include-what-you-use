@@ -11,7 +11,7 @@
 // iwyu plug-in.  This includes functions to sanitize include-files
 // (though most of the underlying logic is in iwyu_sanitize_filepath),
 // to sanitize symbol names, to emit desired include-lines properly,
-// etc.
+// etc.  It also controls logging and verbosity levels.
 
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
@@ -21,8 +21,10 @@
 #include <string>                       // for string, operator<
 #include <vector>                       // for vector
 
+#include "iwyu_globals.h"
 #include "iwyu_stl_util.h"
 #include "port.h"  // for CHECK_
+#include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
 
@@ -40,6 +42,24 @@ using std::vector;
 
 
 class IwyuPreprocessorInfo;
+
+// Returns true if we should print a message at the given verbosity level.
+inline bool ShouldPrint(int verbose_level) {
+  return verbose_level <= GlobalFlags().verbose;
+}
+
+// Returns true if we should print information about a symbol in the
+// given file, at the current verbosity level.  For instance, at most
+// normal verbosities, we don't print information about symbols in
+// system header files.
+bool ShouldPrintSymbolFromFile(const clang::FileEntry* file);
+
+// VERRS(n) << blah;
+// prints blah to errs() if the verbose level is >= n.
+#define VERRS(verbose_level) \
+  if (!::include_what_you_use::ShouldPrint( \
+          verbose_level)) ; else ::llvm::errs()
+
 
 // This data structure holds information about a single use.  Not all
 // fields will be filled for all uses.

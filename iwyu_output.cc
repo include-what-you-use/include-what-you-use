@@ -25,7 +25,6 @@
 #include "iwyu_preprocessor.h"  // IWYU pragma: keep
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
-#include "iwyu_verrs.h"
 // TODO(wan): remove this once the IWYU bug is fixed.
 // IWYU pragma: no_include "foo/bar/baz.h"
 #include "llvm/Support/Casting.h"
@@ -62,6 +61,18 @@ using std::multimap;
 using std::pair;
 using std::sort;
 using std::vector;
+
+bool ShouldPrintSymbolFromFile(const FileEntry* file) {
+  if (GlobalFlags().verbose < 5) {
+    return false;
+  } else if (GlobalFlags().verbose < 10) {
+    return ShouldReportIWYUViolationsFor(file);
+  } else if (GlobalFlags().verbose < 11) {
+    return !IsSystemIncludeFile(GetFilePath(file));
+  } else {
+    return true;
+  }
+}
 
 namespace internal {
 

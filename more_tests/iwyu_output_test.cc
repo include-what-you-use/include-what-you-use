@@ -11,15 +11,14 @@
 
 #include "iwyu_output.h"
 
-#include <stddef.h>
 #include <set>
 
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
-#include "iwyu_verrs.h"
 #include "testing/base/public/gunit.h"
 
 #undef ATTRIBUTE_UNUSED
+#include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
 
 using clang::NamedDecl;
@@ -233,7 +232,7 @@ TEST(CalculateDesiredIncludesAndForwardDeclaresTest, Works) {
 // between tests to prevent leaking side effects.
 class VerboseTest : public ::testing::Test {
  protected:
-  VerboseTest() : old_verbose_level_(GetVerboseLevel()) {
+  VerboseTest() : old_verbose_level_(GlobalFlags().verbose) {
     // 2 is the default verbose level for tests that don't care much
     // about the level.
     SetVerboseLevel(2);
@@ -241,6 +240,10 @@ class VerboseTest : public ::testing::Test {
 
   ~VerboseTest() {
     SetVerboseLevel(old_verbose_level_);
+  }
+
+  void SetVerboseLevel(int level) {
+    MutableGlobalFlagsForTesting()->verbose = level;
   }
 
  private:

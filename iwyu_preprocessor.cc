@@ -11,7 +11,6 @@
 #include "iwyu_preprocessor.h"
 
 #include <stddef.h>                     // for size_t
-#include <string.h>
 #include <string>                       // for string, basic_string, etc
 #include <utility>                      // for pair, make_pair
 
@@ -24,7 +23,6 @@
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
-#include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
 // TODO(wan): remove this once the IWYU bug is fixed.
 // IWYU pragma: no_include "foo/bar/baz.h"

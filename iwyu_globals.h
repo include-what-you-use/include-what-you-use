@@ -76,11 +76,22 @@ struct CommandlineFlags {
   int verbose;             // -v: how much information to emit as we parse
 };
 
+// One entry in the search-path list of where to find #include files.
+struct HeaderSearchPath {
+  enum Type { kUnusedPath = 0, kSystemPath, kUserPath };
+  HeaderSearchPath(const string& p, Type pt) : path(p), path_type(pt) { }
+  string path;      // the path-entry as specified on the commandline (via -I)
+  Type path_type;
+};
+
 const CommandlineFlags& GlobalFlags();
 // Used by tests as an easy way to simulate calling with different --flags.
 CommandlineFlags* MutableGlobalFlagsForTesting();
 
 clang::SourceManager* GlobalSourceManager();
+
+// The directories to look for #includes in, including from -I, -isystem, etc.
+const vector<HeaderSearchPath>& GlobalHeaderSearchPaths();
 
 const IncludePicker& GlobalIncludePicker();
 IncludePicker* MutableGlobalIncludePicker();   // only use at great need!

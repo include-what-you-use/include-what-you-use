@@ -31,9 +31,7 @@ add_clang_executable(include-what-you-use
   iwyu_lexer_utils.cc
   iwyu_location_util.cc
   iwyu_output.cc
-  iwyu_path_util.cc
   iwyu_preprocessor.cc
-  iwyu_verrs.cc
 )
 
 install(TARGETS include-what-you-use

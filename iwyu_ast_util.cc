@@ -17,10 +17,10 @@
 
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
+#include "iwyu_output.h"
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
-#include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -224,9 +224,7 @@ bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
     }
     if (const CXXMethodDecl* method_decl =
         ast_node->GetParentAs<CXXMethodDecl>()) {
-      if (ast_node->ContentIs(method_decl->getBody())) {
-        return true;
-      }
+      return ast_node->ContentIs(method_decl->getBody());
     }
   }
   return false;
@@ -1244,7 +1242,7 @@ bool IsCastToReferenceType(const CastExpr* expr) {
 
 const ASTTemplateArgumentListInfo* GetExplicitTplArgs(const Expr* expr) {
   if (const DeclRefExpr* decl_ref = DynCastFrom(expr))
-    return decl_ref->getOptionalExplicitTemplateArgs();
+    return decl_ref->getExplicitTemplateArgsOpt();
   if (const MemberExpr* member_expr = DynCastFrom(expr))
     return member_expr->getOptionalExplicitTemplateArgs();
   // Ugh, annoying casts needed because no const methods exist.

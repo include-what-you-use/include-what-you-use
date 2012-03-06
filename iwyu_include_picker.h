@@ -59,6 +59,25 @@ using std::string;
 
 using std::vector;
 
+// Below, we talk 'quoted' includes.  A quoted include is something
+// that would be written on an #include line, complete with the <> or
+// "".  In the line '#include <time.h>', "<time.h>" is the quoted
+// include.
+
+// Converts a file-path, such as /usr/include/stdio.h, to a
+// quoted include, such as <stdio.h>.
+string ConvertToQuotedInclude(const string& filepath);
+
+bool IsQuotedInclude(const string& s);
+
+// Returns whether this is a system (as opposed to user) include
+// file, based on where it lives.
+bool IsSystemIncludeFile(const string& filepath);
+
+// Returns true if the given file is third-party.  Google-authored
+// code living in third_party/ is not considered third-party.
+bool IsThirdPartyFile(string quoted_path);
+
 class IncludePicker {
  public:
   enum Visibility { kUnusedVisibility, kPublic, kPrivate };

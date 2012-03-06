@@ -95,7 +95,6 @@
 #include <stddef.h>                     // for size_t
 #include <stdio.h>                      // for snprintf
 #include <stdlib.h>                     // for atoi, exit
-#include <string.h>
 #include <algorithm>                    // for swap, find, make_pair
 #include <deque>                        // for swap
 #include <iterator>                     // for find
@@ -118,7 +117,6 @@
 #include "iwyu_preprocessor.h"  // IWYU pragma: keep
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
-#include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1908,8 +1906,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
       // These casts don't require any iwyu action.
       case clang::CK_LValueToRValue:
-      case clang::CK_AtomicToNonAtomic:
-      case clang::CK_NonAtomicToAtomic:
         break;
 
       // We shouldn't be seeing any of these kinds.
@@ -1955,6 +1951,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_ARCReclaimReturnedObject:
       case clang::CK_BlockPointerToObjCPointerCast:
       case clang::CK_CPointerToObjCPointerCast:
+      case clang::CK_GetObjCProperty:
       case clang::CK_ObjCObjectLValueCast:
       case clang::CK_VectorSplat:
         CHECK_(false && "TODO(csilvers): for objc and clang lang extensions");
