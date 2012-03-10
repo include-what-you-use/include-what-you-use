@@ -894,7 +894,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       if (!this->getDerived().HandleFunctionCall(operator_new, op_parent, expr))
         return false;
     }
-    return this->getDerived().HandleFunctionCall(expr->getConstructor(),
+   
+    return this->getDerived().HandleFunctionCall(GetConstructor(expr),
                                                  parent_type, expr);
   }
 
@@ -2307,9 +2308,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // We also need to do a varargs check, like for other function calls.
     if (CanIgnoreCurrentASTNode())  return true;
-    ReportIfReferenceVararg(expr->getConstructorArgs(),
-                            expr->getNumConstructorArgs(),
-                            expr->getConstructor());
+    // ... only if this NewExpr involves a constructor call 
+    const Expr *Init = expr->getInitializer(); 
+    if (const CXXConstructExpr *CCE = 
+        dyn_cast_or_null<CXXConstructExpr>(Init)){
+      ReportIfReferenceVararg(CCE->getArgs(),
+                              CCE->getNumArgs(),
+                              CCE->getConstructor());
+    }
     return true;
   }
 
