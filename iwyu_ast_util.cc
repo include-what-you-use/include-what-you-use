@@ -671,10 +671,6 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   if (const CXXConstructExpr* ctor_expr = DynCastFrom(calling_expr)) {
     fn_args = ctor_expr->getArgs();
     num_args = ctor_expr->getNumArgs();
-  } else if (const CXXNewExpr* new_expr = DynCastFrom(calling_expr)) {
-    // Ugh, CXXNewExpr doesn't have a const version.  I promise not to mutate...
-    fn_args = const_cast<CXXNewExpr*>(new_expr)->getConstructorArgs();
-    num_args = new_expr->getNumConstructorArgs();
   } else if (const CallExpr* call_expr = DynCastFrom(calling_expr)) {
     fn_args = const_cast<CallExpr*>(call_expr)->getArgs();
     num_args = call_expr->getNumArgs();
@@ -1256,5 +1252,16 @@ const ASTTemplateArgumentListInfo* GetExplicitTplArgs(const Expr* expr) {
         ->getOptionalExplicitTemplateArgs();
   return NULL;
 }
+   
+   
+clang::CXXConstructorDecl * GetConstructor(clang::CXXNewExpr* expr) {
+  const Expr *Init = expr->getInitializer(); 
+  if (const CXXConstructExpr *CCE = 
+      dyn_cast_or_null<CXXConstructExpr>(Init)){
+    return CCE->getConstructor();
+  }
+  return NULL;
+} 
+  
 
 }  // namespace include_what_you_use

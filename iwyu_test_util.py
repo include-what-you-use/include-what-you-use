@@ -61,6 +61,9 @@ _IWYU_PATHS = [
     '../../../../Debug+Asserts/bin/include-what-you-use',
     '../../../../Release+Asserts/bin/include-what-you-use',
     '../../../../Release/bin/include-what-you-use',
+    '../../../../build/Debug+Asserts/bin/include-what-you-use',
+    '../../../../build/Release+Asserts/bin/include-what-you-use',
+    '../../../../build/Release/bin/include-what-you-use',
     ]
 _IWYU_PATH = _GetIwyuPath(_IWYU_PATHS)
 
