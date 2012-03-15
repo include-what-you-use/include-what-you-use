@@ -14,6 +14,7 @@ set(LLVM_USED_LIBS
   clangAST
   clangLex
   clangBasic
+  clangEdit
 )
 
 set(LLVM_LINK_COMPONENTS
