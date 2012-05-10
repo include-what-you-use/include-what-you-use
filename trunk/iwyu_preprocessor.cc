@@ -560,28 +560,30 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
   }
 }
 
-void IwyuPreprocessorInfo::If(SourceRange range) {
-  ERRSYM(GetFileEntry(range.getBegin()))
+void IwyuPreprocessorInfo::If(SourceLocation loc, SourceRange condition_range) {
+  ERRSYM(GetFileEntry(condition_range.getBegin()))
       << " [ #if         ] "
-      << PrintableSourceRange(range) << "\n";
-  CheckIfOrElif(range);
+      << PrintableSourceRange(condition_range) << "\n";
+  CheckIfOrElif(condition_range);
 }
 
-void IwyuPreprocessorInfo::Elif(SourceRange range) {
-  ERRSYM(GetFileEntry(range.getBegin()))
+void IwyuPreprocessorInfo::Elif(SourceLocation loc,
+                                SourceRange condition_range,
+                                SourceLocation if_loc) {
+  ERRSYM(GetFileEntry(condition_range.getBegin()))
       << " [ #elif       ] "
-      << PrintableSourceRange(range) << "\n";
-  CheckIfOrElif(range);
+      << PrintableSourceRange(condition_range) << "\n";
+  CheckIfOrElif(condition_range);
 }
 
-void IwyuPreprocessorInfo::Ifdef(const Token& id) {
+void IwyuPreprocessorInfo::Ifdef(SourceLocation loc, const Token& id) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifdef      ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
   FindAndReportMacroUse(GetName(id), id.getLocation());
 }
 
-void IwyuPreprocessorInfo::Ifndef(const Token& id) {
+void IwyuPreprocessorInfo::Ifndef(SourceLocation loc, const Token& id) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifndef     ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
