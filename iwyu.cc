@@ -613,7 +613,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     const CXXRecordDecl* record = decl->getParent();
     for (clang::RecordDecl::field_iterator it = record->field_begin();
          it != record->field_end(); ++it) {
-      member_types.insert((*it)->getType().getTypePtr());
+      member_types.insert(it->getType().getTypePtr());
     }
     for (clang::CXXRecordDecl::base_class_const_iterator
              it = record->bases_begin(); it != record->bases_end(); ++it) {
@@ -715,7 +715,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // several: implicit default constructor, implicit copy constructor.
     for (CXXRecordDecl::ctor_iterator it = decl->ctor_begin();
          it != decl->ctor_end(); ++it) {
-      CXXConstructorDecl* ctor = *it;
+      CXXConstructorDecl* ctor = &(*it);
       if (ctor->isImplicit()) {
         if (!TraverseImplicitDeclHelper(ctor))
           return false;
@@ -1955,6 +1955,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_ARCProduceObject:
       case clang::CK_ARCReclaimReturnedObject:
       case clang::CK_BlockPointerToObjCPointerCast:
+      case clang::CK_CopyAndAutoreleaseBlockObject:
       case clang::CK_CPointerToObjCPointerCast:
       case clang::CK_ObjCObjectLValueCast:
       case clang::CK_VectorSplat:

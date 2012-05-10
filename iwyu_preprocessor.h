@@ -174,10 +174,13 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Not needed for iwyu:
   // virtual void MacroUndefined(const clang::Token&, const clang::MacroInfo*);
 
-  virtual void If(clang::SourceRange range);
-  virtual void Elif(clang::SourceRange range);
-  virtual void Ifdef(const clang::Token& id);
-  virtual void Ifndef(const clang::Token& id);
+  virtual void If(clang::SourceLocation loc,
+                  clang::SourceRange condition_range);
+  virtual void Elif(clang::SourceLocation loc,
+                    clang::SourceRange condition_range,
+                    clang::SourceLocation if_loc);
+  virtual void Ifdef(clang::SourceLocation loc, const clang::Token& id);
+  virtual void Ifndef(clang::SourceLocation loc, const clang::Token& id);
   // Not needed for iwyu:
   // virtual void Else();
   // virtual void Endif();
