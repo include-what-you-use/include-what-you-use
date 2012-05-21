@@ -49,16 +49,12 @@ Or, alternately, get the project directly from
    llvm/tools/clang/tools$ svn co http://include-what-you-use.googlecode.com/svn/trunk/ include-what-you-use
 }}}
 
-Then `cd` into the include-what-you-use directory (under tools) and type
-`make`.
-
-(Advanced user tip: if 'make' fails because your source and build directories differ, you can instead edit `tools/clang/tools/Makefile` and add `include-what-you-use` to the `DIRS` variable.  Or, if you're using `cmake`, add `add_subdirectory(include-what-you-use)` to `tools/clang/tools/CMakeLists.txt`.  That should allow you to call `make` from the `tools` directory.)
+  # Edit tools/clang/tools/Makefile and add include-what-you-use to the DIRS variable.
+  # Edit tools/clang/tools/CMakeLists.txt and add_subdirectory(include-what-you-use)
+  # 'cd' into the build directory (the directory you ran llvm/configure from) and type 'make'
 
 Include what you use makes heavy use of clang internals, and will
-occasionally break when clang is updated.  For best results, download
-clang as of the same revision number of the last include-what-you-use
-release.  You can find this revision number in comments at the top
-of the include-what-you-use Makefile.
+occasionally break when clang is updated.  See the include-what-you-use Makefile for instructions on how to keep them in sync.
 
 == How to Build on Windows ==
 
