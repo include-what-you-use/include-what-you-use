@@ -715,7 +715,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // several: implicit default constructor, implicit copy constructor.
     for (CXXRecordDecl::ctor_iterator it = decl->ctor_begin();
          it != decl->ctor_end(); ++it) {
-      CXXConstructorDecl* ctor = &(*it);
+      CXXConstructorDecl* ctor = *it;
       if (ctor->isImplicit()) {
         if (!TraverseImplicitDeclHelper(ctor))
           return false;
