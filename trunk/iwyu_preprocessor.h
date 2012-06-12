@@ -185,6 +185,15 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // virtual void Else();
   // virtual void Endif();
 
+  virtual void InclusionDirective(clang::SourceLocation hash_loc,
+                                 const clang::Token& include_token,
+                                 llvm::StringRef filename,
+                                 bool is_angled,
+                                 const clang::FileEntry* file,
+                                 clang::SourceLocation last_include_token_loc,
+                                 llvm::StringRef search_path,
+                                 llvm::StringRef relative_path);
+
   virtual void FileChanged(clang::SourceLocation loc, FileChangeReason reason,
                            clang::SrcMgr::CharacteristicKind file_type,
                            clang::FileID PrevFID);
@@ -331,6 +340,13 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // "begin_exports".  There should be at most one item in this stack
   // per file in the current inclusion chain..
   stack<clang::SourceLocation> begin_exports_location_stack_;
+
+  // Filename spelling location in the last encountered inclusion directive.
+  // Should be used only in FileChanged_EnterFile, FileSkipped when
+  // corresponding callback is caused by inclusion directive.  Don't use in
+  // other places because it is unclear which inclusion directive filename
+  // location corresponds to.
+  clang::SourceLocation include_filename_loc_;
 };
 
 }  // namespace include_what_you_use
