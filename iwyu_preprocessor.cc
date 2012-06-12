@@ -36,11 +36,11 @@ using clang::FileEntry;
 using clang::FileID;
 using clang::MacroInfo;
 using clang::Preprocessor;
-using clang::PresumedLoc;
 using clang::SourceLocation;
 using clang::SourceRange;
 using clang::Token;
 using llvm::errs;
+using llvm::StringRef;
 using std::make_pair;
 using std::string;
 
@@ -590,6 +590,21 @@ void IwyuPreprocessorInfo::Ifndef(SourceLocation loc, const Token& id) {
   FindAndReportMacroUse(GetName(id), id.getLocation());
 }
 
+void IwyuPreprocessorInfo::InclusionDirective(
+    SourceLocation hash_loc,
+    const Token& include_token,
+    StringRef filename,
+    bool is_angled,
+    const FileEntry* file,
+    SourceLocation last_include_token_loc,
+    StringRef search_path,
+    StringRef relative_path) {
+  if (last_include_token_loc.isMacroID())
+    include_filename_loc_ = GetMacroStartSpellingLoc(last_include_token_loc);
+  else
+    include_filename_loc_ = last_include_token_loc;
+}
+
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
                                        FileChangeReason reason,
                                        SrcMgr::CharacteristicKind file_type,
@@ -619,8 +634,12 @@ void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
 void IwyuPreprocessorInfo::FileSkipped(const FileEntry& file,
                                        const Token &filename,
                                        SrcMgr::CharacteristicKind file_type) {
-  const SourceLocation include_loc = filename.getLocation();
-  const string include_name_as_typed = GetIncludeNameAsTyped(include_loc);
+  CHECK_(include_filename_loc_.isValid() &&
+         "Must skip file only for actual inclusion directive");
+  const string include_name_as_typed =
+      GetIncludeNameAsTyped(include_filename_loc_);
+  const SourceLocation include_loc =
+      GetInstantiationLoc(filename.getLocation());
   ERRSYM(GetFileEntry(include_loc))
       << "[ (#include)  ] " << include_name_as_typed
       << " (" << GetFilePath(&file) << ")\n";
@@ -633,12 +652,13 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
     SourceLocation file_beginning) {
   // Get the location of the #include directive that resulted in the
   // include of the file that file_beginning is in.
-  const PresumedLoc presumed =
-      GlobalSourceManager()->getPresumedLoc(file_beginning);
-  const SourceLocation include_loc = presumed.getIncludeLoc();
+  const SourceLocation include_loc = GlobalSourceManager()->getIncludeLoc(
+      GlobalSourceManager()->getFileID(file_beginning));
   string include_name_as_typed = "";
   if (!IsBuiltinOrCommandLineFile(GetFileEntry(include_loc))) {
-    include_name_as_typed = GetIncludeNameAsTyped(include_loc);
+    CHECK_(include_filename_loc_.isValid() &&
+           "Include from not built-in file must have inclusion directive");
+    include_name_as_typed = GetIncludeNameAsTyped(include_filename_loc_);
   }
   ERRSYM(GetFileEntry(include_loc))
       << "[ #include    ] " << include_name_as_typed

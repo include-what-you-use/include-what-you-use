@@ -36,6 +36,22 @@ using clang::UnresolvedMemberExpr;
 
 namespace include_what_you_use {
 
+// Instead of returning spelling location of 'macro_loc', obtain expansion info
+// for macro at this location and return spelling location of expansion info.
+SourceLocation GetMacroStartSpellingLoc(SourceLocation macro_loc) {
+  CHECK_(macro_loc.isValid() && macro_loc.isMacroID()
+         && "Must call GetMacroStartSpellingLoc with valid macro location");
+  std::pair<clang::FileID, unsigned> macro_loc_info =
+      GlobalSourceManager()->getDecomposedLoc(macro_loc);
+  bool invalid = false;
+  const clang::SrcMgr::SLocEntry& loc_entry =
+      GlobalSourceManager()->getSLocEntry(macro_loc_info.first, &invalid);
+  CHECK_(!invalid && loc_entry.isExpansion()
+         && "Should be able to obtain expansion info for macro location");
+  const clang::SrcMgr::ExpansionInfo& expansion_info = loc_entry.getExpansion();
+  return expansion_info.getSpellingLoc();
+}
+
 // This works around two bugs(?) in clang where decl->getLocation()
 // can be wrong for implicit template instantiations and functions.
 // (1) Consider the following code:
