@@ -69,6 +69,15 @@ _IWYU_PATHS = [
     '../../../../build/Debug+Asserts/bin/include-what-you-use',
     '../../../../build/Release+Asserts/bin/include-what-you-use',
     '../../../../build/Release/bin/include-what-you-use',
+    # Linux/Mac OS X default out-of-tree paths.
+    '../../../../../build/Debug+Asserts/bin/include-what-you-use',
+    '../../../../../build/Release+Asserts/bin/include-what-you-use',
+    '../../../../../build/Release/bin/include-what-you-use',
+    # Windows default out-of-tree paths.
+    '../../../../../build/bin/Debug/include-what-you-use',
+    '../../../../../build/bin/Release/include-what-you-use',
+    '../../../../../build/bin/MinSizeRel/include-what-you-use',
+    '../../../../../build/bin/RelWithDebInfo/include-what-you-use',
     ]
 _IWYU_PATH = _GetIwyuPath(_IWYU_PATHS)
 
