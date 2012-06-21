@@ -3657,7 +3657,7 @@ class IwyuAction : public ASTFrontendAction {
         = new IwyuAstConsumer(visitor_state);
 
     compiler.getPreprocessor().addPPCallbacks(preprocessor_consumer);
-    compiler.getPreprocessor().AddCommentHandler(preprocessor_consumer);
+    compiler.getPreprocessor().addCommentHandler(preprocessor_consumer);
     return ast_consumer;
   }
 };
