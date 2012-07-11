@@ -4,23 +4,6 @@ if( MSVC )
    add_definitions( /D_POSIX_=1 )
 endif()
 
-set(LLVM_USED_LIBS
-  clangFrontend
-  clangSerialization
-  clangDriver
-  clangParse
-  clangSema
-  clangAnalysis
-  clangAST
-  clangLex
-  clangBasic
-  clangEdit
-)
-
-set(LLVM_LINK_COMPONENTS
-  ipo
-)
-
 add_clang_executable(include-what-you-use
   iwyu.cc
   iwyu_ast_util.cc
@@ -35,6 +18,19 @@ add_clang_executable(include-what-you-use
   iwyu_path_util.cc
   iwyu_preprocessor.cc
   iwyu_verrs.cc
+)
+
+target_link_libraries(include-what-you-use
+  clangFrontend
+  clangSerialization
+  clangDriver
+  clangParse
+  clangSema
+  clangAnalysis
+  clangAST
+  clangLex
+  clangBasic
+  clangEdit
 )
 
 install(TARGETS include-what-you-use
