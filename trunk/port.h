@@ -47,7 +47,7 @@ class OstreamVoidifier {
   ::include_what_you_use::FatalMessageEmitter( \
       __FILE__, __LINE__, #x).stream()
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 
 # define NOMINMAX
 # include <windows.h>
@@ -56,8 +56,6 @@ class OstreamVoidifier {
 # define snprintf _snprintf
 
 # include "Shlwapi.h"  // for PathMatchSpec
-
-# pragma comment(lib, "Shlwapi.lib")
 
 inline bool GlobMatchesPath(const char *glob, const char *path) {
   return PathMatchSpec(path, glob);
@@ -68,7 +66,7 @@ inline bool GlobMatchesPath(const char *glob, const char *path) {
 //        should be wrapped inside llvm's PathV2 library.
 # undef interface    // used in Shlwapi.h
 
-#else  // #if defined(_MSC_VER)
+#else  // #if defined(_WIN32)
 
 #include <fnmatch.h>
 
@@ -76,6 +74,6 @@ inline bool GlobMatchesPath(const char *glob, const char *path) {
   return fnmatch(glob, path, FNM_PATHNAME) == 0;
 }
 
-#endif  // #if defined(_MSC_VER)
+#endif  // #if defined(_WIN32)
 
 #endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
