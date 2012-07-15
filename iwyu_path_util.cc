@@ -68,7 +68,7 @@ string Basename(const string& path) {
 string CanonicalizeFilePath(const string& path) {
   string result = path;
 
-#ifdef _MSC_VER
+#ifdef _WIN32
   // canonicalise directory separators (forward slashes considered canonical)
   for (size_t i = 0; i < result.size(); ++i) {
     if (result[i] == '\\')

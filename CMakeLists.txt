@@ -1,7 +1,7 @@
 project(include-what-you-use)
 
 if( MSVC )
-   add_definitions( /D_POSIX_=1 )
+  add_definitions( /D_POSIX_=1 )
 endif()
 
 add_clang_executable(include-what-you-use
@@ -32,6 +32,12 @@ target_link_libraries(include-what-you-use
   clangBasic
   clangEdit
 )
+
+if( WIN32 )
+  target_link_libraries(include-what-you-use
+    shlwapi
+  )
+endif()
 
 install(TARGETS include-what-you-use
   RUNTIME DESTINATION bin)
