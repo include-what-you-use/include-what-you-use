@@ -48,9 +48,9 @@ _NODIFFS_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 
 
 def _PortableNext(iterator):
-  try:
+  if hasattr(iterator, 'next'):
     iterator.next()  # Python 2.4-2.6
-  except AttributeError:
+  else:
     next(iterator)   # Python 3
 
 
