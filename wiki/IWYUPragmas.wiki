@@ -77,6 +77,7 @@ main.cc:
 }}}
 
 Using the type `Private` in `main.cc` will cause IWYU to suggest that you include `public.h`.
+
 Using the type `Internal` in `main.cc`  will cause IWYU to suggest that you include `internal.h`, but will also result in a warning that there's no public header for `internal.h`.
 
 
@@ -87,17 +88,22 @@ This pragma applies to the current source file. It declares that the named file 
 internal.h:
  struct Internal {};
 
+unrelated.h:
+ #include "internal.h"
+ ...
+
 main.cc:
- #include "unrelated.h" // includes internal.h
+ #include "unrelated.h"
  // IWYU pragma: no_include "internal.h"
 
  Internal i;
 }}}
 
-IWYU will fail to compile `main.cc` because symbol `Internal` requires including `internal.h`, but it will not suggest adding an `#include` of it. Note also that if you had included `internal.h` in `main.cc`, IWYU would suggest that the `#include` be removed.
+The use of `Internal` requires including `internal.h`, but due to the `no_include` pragma IWYU will not suggest `internal.h` for inclusion. Note also that if you had included `internal.h` in `main.cc`, IWYU would suggest that the `#include` be removed.
 
 This is useful when you know a symbol definition is already available via some unrelated header, and you want to preserve that implicit dependency.
 
+The `no_include` pragma is somewhat similar to `private`, but is employed at point of use rather than at point of declaration.
 
 ==IWYU pragma: no_forward_declare==
 This pragma applies to the current source file. It says that the named symbol should not be suggested for forward-declaration by IWYU.
