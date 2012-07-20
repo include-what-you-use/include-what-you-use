@@ -112,17 +112,20 @@ This pragma applies to the current source file. It says that the named symbol sh
 public.h:
  struct Public {};
 
+unrelated.h:
+ struct Public;
+ ...
+
 main.cc:
  #include "unrelated.h" // declares Public
  // IWYU pragma: no_forward_declare Public
- struct Public;
+
  Public* i;
 }}}
 
-IWYU will suggest removing the forward declaration of `Public`, or would avoid suggesting adding it if it wasn't already there.
+IWYU would normally suggest forward-declaring `Public` directly in `main.cc`, but `no_forward_declare` suppresses that suggestion. A forward-declaration for `Public` is already available from `unrelated.h`.
 
 This is useful when you know a symbol declaration is already available in a source file via some unrelated header and you want to preserve that implicit dependency, or when IWYU does not correctly understand that the definition is necessary.
-
 
 ==IWYU pragma: friend==
 This pragma applies to the current header file. It says that any file matching the given regular expression will be considered a friend, and is allowed to include this header even if it's private. Conceptually similar to `friend` in C++.
