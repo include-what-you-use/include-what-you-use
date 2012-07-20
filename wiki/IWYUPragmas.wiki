@@ -56,50 +56,50 @@ facade.h:
 This pragma applies to the current header file. It says that any symbol from this file will be provided by another, optionally named, file.
 
 {{{
-internal.h:
- // IWYU pragma: private
- struct Internal {};
-
 private.h:
  // IWYU pragma: private, include "public.h"
  struct Private {};
 
+private2.h:
+ // IWYU pragma: private
+ struct Private2 {};
+
 public.h:
  #include "private.h"
- #include "internal.h"
+ #include "private2.h"
 
 main.cc:
  #include "private.h"
- #include "internal.h"
+ #include "private2.h"
 
  Private p;
- Internal i;
+ Private2 i;
 }}}
 
 Using the type `Private` in `main.cc` will cause IWYU to suggest that you include `public.h`.
 
-Using the type `Internal` in `main.cc`  will cause IWYU to suggest that you include `internal.h`, but will also result in a warning that there's no public header for `internal.h`.
+Using the type `Private2` in `main.cc`  will cause IWYU to suggest that you include `private2.h`, but will also result in a warning that there's no public header for `private2.h`.
 
 
 ==IWYU pragma: no_include==
 This pragma applies to the current source file. It declares that the named file should not be suggested for inclusion by IWYU.
 
 {{{
-internal.h:
- struct Internal {};
+private.h:
+ struct Private {};
 
 unrelated.h:
- #include "internal.h"
+ #include "private.h"
  ...
 
 main.cc:
  #include "unrelated.h"
- // IWYU pragma: no_include "internal.h"
+ // IWYU pragma: no_include "private.h"
 
- Internal i;
+ Private i;
 }}}
 
-The use of `Internal` requires including `internal.h`, but due to the `no_include` pragma IWYU will not suggest `internal.h` for inclusion. Note also that if you had included `internal.h` in `main.cc`, IWYU would suggest that the `#include` be removed.
+The use of `Private` requires including `private.h`, but due to the `no_include` pragma IWYU will not suggest `private.h` for inclusion. Note also that if you had included `private.h` in `main.cc`, IWYU would suggest that the `#include` be removed.
 
 This is useful when you know a symbol definition is already available via some unrelated header, and you want to preserve that implicit dependency.
 
@@ -138,7 +138,7 @@ detail/private.h:
  // IWYU pragma: friend "detail/.*"
  struct Private {};
 
-detail/other.h:
+detail/alsoprivate.h:
  #include "detail/private.h"
 
  // IWYU pragma: private
@@ -146,7 +146,7 @@ detail/other.h:
  struct AlsoPrivate : Private {};
 
 main.cc:
- #include "detail/other.h"
+ #include "detail/alsoprivate.h"
 
  AlsoPrivate p;
 }}}
