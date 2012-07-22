@@ -150,3 +150,27 @@ main.cc:
 
  AlsoPrivate p;
 }}}
+
+
+==Which pragma should I use?==
+Ideally, IWYU should be smart enough to understand your intentions (and intentions of the authors of libraries you use), so the first answer should always be: none.
+
+In practice, intentions are not so clear -- it might be ambiguous whether an `#include` is there by clever design or by mistake, whether an `#include` serves to export symbols from a private header through a public facade or if it's just a left-over after some clean-up. Even when intent is obviuous, IWYU can make mistakes due to bugs or not-yet-implemented policies.
+
+IWYU pragmas have some overlap, so it can sometimes be hard to choose one over the other. Here's a guide based on how I understand them at the moment:
+
+  * Use `IWYU pragma: keep` to force IWYU to keep any `#include` statement that would be discarded under its normal policies.
+  * Use `IWYU pragma: export` to tell IWYU that one header serves as the provider for all symbols in another, included header (e.g. facade headers). Use `IWYU pragma: begin_exports/end_exports` for a whole group of included headers.
+  * Use `IWYU pragma: no_include` to tell IWYU that the file in which the pragma is defined should never `#include` a specific header (the header may already be included via some other `#include`.)
+  * Use `IWYU pragma: no_forward_declare` to tell IWYU that the file in which the pragma is defined should never forward-declare a specific symbol (a forward declaration may already be available via some other `#include`.)
+  * Use `IWYU pragma: private` to tell IWYU that the header in which the pragma is defined is private, and should not be included directly.
+  * Use `IWYU pragma: private, include "public.h"` to tell IWYU that the header in which the pragma is defined is private, and `public.h` should always be included instead.
+  * Use `IWYU pragma: friend ".*favorites.*"` to override `IWYU pragma: private` selectively, so that a set of files identified by a regex can include the file even if it's private.
+
+The pragmas come in three different classes;
+
+  # Ones that apply to a single `#include` statement (keep, export)
+  # Ones that apply to a file being included (private, friend)
+  # Ones that apply to a file including other headers (no_include, no_forward_declare)
+
+Some files are both included and include others, so it can make sense to mix and match.
