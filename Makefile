@@ -22,7 +22,8 @@ NO_INSTALL = 1
 # No plugins, optimize startup time.
 TOOL_NO_EXPORTS = 1
 
-LINK_COMPONENTS = ipo
+include $(CLANG_LEVEL)/../../Makefile.config
+LINK_COMPONENTS = $(TARGETS_TO_BUILD) asmparser ipo
 USEDLIBS = clangFrontend.a clangSerialization.a clangDriver.a clangParse.a \
            clangSema.a clangAnalysis.a clangAST.a clangLex.a clangBasic.a \
            clangEdit.a
