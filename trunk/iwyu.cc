@@ -849,12 +849,15 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
                                                expr))
       return false;
 
-    // When creating a local variable or a temporary, the constructor
-    // is also responsible for destruction (which happens implicitly
-    // when the variable goes out of scope).  Only when initializing
+    // When creating a local variable or a temporary, but not a pointer, the
+    // constructor is also responsible for destruction (which happens
+    // implicitly when the variable goes out of scope).  Only when initializing
     // a field of a class does the constructor not have to worry
     // about destruction.  It turns out it's easier to check for that.
-    if (!IsCXXConstructExprInInitializer(current_ast_node())) {
+    bool willCallImplicitDestructorOnLeavingScope =
+        !IsCXXConstructExprInInitializer(current_ast_node()) &&
+        !IsCXXConstructExprInNewExpr(current_ast_node());
+    if (willCallImplicitDestructorOnLeavingScope) {
       // Create the destructor if it hasn't been lazily created yet.
       InstantiateImplicitMethods(expr->getConstructor()->getParent());
       if (const CXXDestructorDecl* dtor_decl = GetSiblingDestructorFor(expr)) {
@@ -895,9 +898,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       if (!this->getDerived().HandleFunctionCall(operator_new, op_parent, expr))
         return false;
     }
-   
-    return this->getDerived().HandleFunctionCall(GetConstructor(expr),
-                                                 parent_type, expr);
+    return true;
   }
 
   bool TraverseCXXDeleteExpr(clang::CXXDeleteExpr* expr) {
@@ -2310,9 +2311,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // We also need to do a varargs check, like for other function calls.
     if (CanIgnoreCurrentASTNode())  return true;
-    // ... only if this NewExpr involves a constructor call 
-    const Expr *Init = expr->getInitializer(); 
-    if (const CXXConstructExpr *CCE = 
+    // ... only if this NewExpr involves a constructor call.
+    const Expr* Init = expr->getInitializer();
+    if (const CXXConstructExpr* CCE =
         dyn_cast_or_null<CXXConstructExpr>(Init)){
       ReportIfReferenceVararg(CCE->getArgs(),
                               CCE->getNumArgs(),
