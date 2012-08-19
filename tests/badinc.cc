@@ -1161,7 +1161,7 @@ int main() {
   fprintf(stdout, "%d", local_cc_struct.a);  // test a global in stdio.h too
   // IWYU: printf is...*<stdio.h>
   printf("%d", local_cc_struct.a);
-  Cc_typedef(4);
+  (void)Cc_typedef(4);
   // Not an iwyu violation, because Cc_typedef is responsible for its members.
   Cc_typedef::s();
   Cc_typedef::I1_Class_int Cc_typedef_int = 0;
@@ -1538,7 +1538,7 @@ int main() {
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
-  I1_const_ptr<I1_Class>(NULL);
+  (void)I1_const_ptr<I1_Class>(NULL);
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_const_ptr is...*badinc-i1.h
   I1_const_ptr<I1_Class*> local_i1_const_ptrptr(NULL);
