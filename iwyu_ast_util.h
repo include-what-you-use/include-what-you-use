@@ -29,7 +29,6 @@
 namespace clang {
 class CXXConstructExpr;
 class CXXConstructorDecl;
-class CXXNewExpr;
 class CXXDeleteExpr;
 class CXXDestructorDecl;
 class CXXRecordDecl;
@@ -401,6 +400,9 @@ bool IsDefaultTemplateTemplateArg(const ASTNode* ast_node);
 // construct a field in a class (that is, it's part of a constructor
 // initializer list).
 bool IsCXXConstructExprInInitializer(const ASTNode* ast_node);
+
+// Returns true if this node is a CXXConstructExpr in CXXNewExpr.
+bool IsCXXConstructExprInNewExpr(const ASTNode* ast_node);
 
 // If ASTNode is of a kind that has a qualifier (something that
 // comes before the ::), return that, else return NULL.
@@ -781,13 +783,6 @@ bool IsCastToReferenceType(const clang::CastExpr* expr);
 // such a concept (declrefexpr, memberexpr), and NULL if none is present.
 const clang::ASTTemplateArgumentListInfo* GetExplicitTplArgs(
     const clang::Expr* expr);
-   
-// --- Misc Utilities
-
-// CXXNewExpr does not have a CXXConstructorDecl any more. 
-// This function will fetch the corresponding one if it exists, 
-// or return NULL if not.
-clang::CXXConstructorDecl * GetConstructor(clang::CXXNewExpr* expr);
 
 }  // namespace include_what_you_use
 

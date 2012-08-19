@@ -266,6 +266,14 @@ bool IsCXXConstructExprInInitializer(const ASTNode* ast_node) {
            ast_node->AncestorIsA<CXXConstructorDecl>(2)));
 }
 
+bool IsCXXConstructExprInNewExpr(const ASTNode* ast_node) {
+  if (!ast_node->IsA<CXXConstructExpr>())
+    return false;
+
+  CHECK_(ast_node->parent() && "Constructor should not be a top-level node!");
+  return ast_node->ParentIsA<CXXNewExpr>();
+}
+
 template<typename T>
 NestedNameSpecifier* TryGetQualifier(const ASTNode* ast_node) {
   if (ast_node->IsA<T>())
@@ -1252,16 +1260,5 @@ const ASTTemplateArgumentListInfo* GetExplicitTplArgs(const Expr* expr) {
         ->getOptionalExplicitTemplateArgs();
   return NULL;
 }
-   
-   
-clang::CXXConstructorDecl * GetConstructor(clang::CXXNewExpr* expr) {
-  const Expr *Init = expr->getInitializer(); 
-  if (const CXXConstructExpr *CCE = 
-      dyn_cast_or_null<CXXConstructExpr>(Init)){
-    return CCE->getConstructor();
-  }
-  return NULL;
-} 
-  
 
 }  // namespace include_what_you_use
