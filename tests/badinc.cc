@@ -179,11 +179,11 @@ Cc_OnlySpecializedStruct<int>* cc_onlyspecializedstruct_ptr;
 
 // Try a type that only needs a forward-declare because of the language linkage.
 extern "C" struct Cc_C_Struct;
-struct CC_C_Struct* cc_c_struct_ptr = NULL;
+struct Cc_C_Struct* cc_c_struct_ptr = NULL;
 
 // And one that only needs a forward-declare because of attributes
 struct __attribute__((aligned (16))) Cc_AttrStruct;
-struct CC_AttrStruct* cc_attrstruct_ptr = NULL;
+struct Cc_AttrStruct* cc_attrstruct_ptr = NULL;
 
 // The types.
 typedef std::string Cc_string;   // Nobody should use this.
