@@ -595,14 +595,16 @@ void IwyuPreprocessorInfo::InclusionDirective(
     const Token& include_token,
     StringRef filename,
     bool is_angled,
+    clang::CharSourceRange filename_range,
     const FileEntry* file,
-    SourceLocation last_include_token_loc,
     StringRef search_path,
-    StringRef relative_path) {
-  if (last_include_token_loc.isMacroID())
-    include_filename_loc_ = GetMacroStartSpellingLoc(last_include_token_loc);
+    StringRef relative_path,
+    const clang::Module* imported) {
+  const SourceLocation filename_loc = filename_range.getBegin();
+  if (filename_loc.isMacroID())
+    include_filename_loc_ = GetMacroStartSpellingLoc(filename_loc);
   else
-    include_filename_loc_ = last_include_token_loc;
+    include_filename_loc_ = filename_loc;
 }
 
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,

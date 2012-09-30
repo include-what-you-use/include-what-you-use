@@ -189,10 +189,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                                  const clang::Token& include_token,
                                  llvm::StringRef filename,
                                  bool is_angled,
+                                 clang::CharSourceRange filename_range,
                                  const clang::FileEntry* file,
-                                 clang::SourceLocation last_include_token_loc,
                                  llvm::StringRef search_path,
-                                 llvm::StringRef relative_path);
+                                 llvm::StringRef relative_path,
+                                 const clang::Module* imported);
 
   virtual void FileChanged(clang::SourceLocation loc, FileChangeReason reason,
                            clang::SrcMgr::CharacteristicKind file_type,
