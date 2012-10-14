@@ -74,6 +74,7 @@ struct CommandlineFlags {
   string cwd;              // -p: what directory was iwyu invoked from?
   bool transitive_includes_only;   // -t: don't add 'new' #includes to files
   int verbose;             // -v: how much information to emit as we parse
+  vector<string> mapping_files; // -m: mapping files
 };
 
 const CommandlineFlags& GlobalFlags();

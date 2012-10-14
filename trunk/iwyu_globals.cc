@@ -63,6 +63,7 @@ static void PrintHelp(const char* extra_msg) {
          "   --howtodebug[=<filename>]: with no arg, prints instructions on\n"
          "        how to run iwyu under gdb for the input file, and exits.\n"
          "        With an arg, prints only when input file matches the arg.\n"
+         "   --mapping_file=<filename>: gives iwyu a mapping file.\n"
          "   --transitive_includes_only: do not suggest that a file add\n"
          "        foo.h unless foo.h is already visible in the file's\n"
          "        transitive includes.\n"
@@ -87,9 +88,10 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"cwd", required_argument, NULL, 'p'},
     {"transitive_includes_only", no_argument, NULL, 't'},
     {"verbose", required_argument, NULL, 'v'},
+    {"mapping_file", required_argument, NULL, 'm'},
     {0, 0, 0, 0}
   };
-  static const char shortopts[] = "d::p:v:c:";
+  static const char shortopts[] = "d::p:v:c:m:";
   while (true) {
     switch (getopt_long(argc, argv, shortopts, longopts, NULL)) {
       case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
@@ -98,6 +100,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case 'p': cwd = optarg; break;
       case 't': transitive_includes_only = true; break;
       case 'v': verbose = atoi(optarg); break;
+      case 'm': mapping_files.push_back(optarg); break;
       case -1: return optind;   // means 'no more input'
       default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
     }
@@ -194,6 +197,10 @@ void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
     const char* path_type_name
         = (it->path_type == HeaderSearchPath::kSystemPath ? "system" : "user");
     VERRS(6) << "Search path: " << it->path << " (" << path_type_name << ")\n";
+  }
+
+  for (Each<string> it(&GlobalFlags().mapping_files); !it.AtEnd(); ++it) {
+    include_picker->AddMappingsFromFile(*it);
   }
 }
 
