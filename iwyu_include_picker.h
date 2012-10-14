@@ -63,17 +63,6 @@ class IncludePicker {
  public:
   enum Visibility { kUnusedVisibility, kPublic, kPrivate };
 
-  // If we map from A to B, it means that every time we need a
-  // symbol from A, we can also get it from B.  Another way
-  // to think about it is that map_to "re-exports" all the
-  // symbols from map_from.
-  struct IncludeMapEntry {      // A POD so we can make the input static
-    const char* map_from;       // A quoted-include, or a symbol name
-    Visibility from_visibility;
-    const char* map_to;         // A quoted-include
-    Visibility to_visibility;
-  };
-
   typedef map<string, vector<string> > IncludeMap;  // map_from to <map_to,...>
 
   IncludePicker();
@@ -146,7 +135,21 @@ class IncludePicker {
   bool HasMapping(const string& map_from_filepath,
                   const string& map_to_filepath) const;
 
+  // Parses a YAML/JSON file containing mapping directives of various types.
+  void AddMappingsFromFile(const string& filename);
+
  private:
+  // Adds a mapping from a one header to another, typically
+  // from a private to a public quoted include.
+  void AddIncludeMapping(const string& map_from, Visibility from_visibility, 
+     const string& map_to, Visibility to_visibility);
+
+  // Adds a mapping from a a symbol to a quoted include. We use this to 
+  // maintain mappings of documented types, e.g.
+  //  For std::map<>, include <map>.
+  void AddSymbolMapping(const string& map_from, Visibility from_visibility, 
+    const string& map_to, Visibility to_visibility);
+
   // Expands the regex keys in filepath_include_map_ and
   // friend_to_headers_map_ by matching them against all source files
   // seen by iwyu.
@@ -156,12 +159,13 @@ class IncludePicker {
   // guess based on the structure and use of third-party code.
   void AddImplicitThirdPartyMappings();
 
-  // Helper routine to parse the internal, hard-coded mappings.
-  void InsertIntoFilepathIncludeMap(const IncludePicker::IncludeMapEntry& e);
-
   // Adds an entry to filepath_visibility_map_, with error checking.
   void MarkVisibility(const string& quoted_include,
                       IncludePicker::Visibility vis);
+
+  // Parse visibility from a string. Returns kUnusedVisibility if
+  // string is not recognized.
+  Visibility ParseVisibility(const string& visibility_str) const;
 
   // Return the visibility of a given quoted_include if known, else
   // kUnusedVisibility.
