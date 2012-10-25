@@ -19,12 +19,12 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PathV1.h"
 #include "llvm/Support/system_error.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/DiagnosticOptions.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendDiagnostic.h"  // IWYU pragma: keep
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -153,11 +153,14 @@ void ExpandArgv(int argc, const char **argv,
 CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   void* main_addr = (void*) (intptr_t) GetExecutablePath;
   Path path = GetExecutablePath(argv[0]);
+  IntrusiveRefCntPtr<DiagnosticOptions> diagnostic_options =
+    new DiagnosticOptions;
   TextDiagnosticPrinter* diagnostic_client =
-    new TextDiagnosticPrinter(errs(), DiagnosticOptions());
+    new TextDiagnosticPrinter(errs(), &*diagnostic_options);
 
   IntrusiveRefCntPtr<DiagnosticIDs> diagnostic_id(new DiagnosticIDs());
-  DiagnosticsEngine diagnostics(diagnostic_id, diagnostic_client);
+  DiagnosticsEngine diagnostics(diagnostic_id, &*diagnostic_options,
+                                diagnostic_client);
   Driver driver(path.str(), getDefaultTargetTriple(), "a.out", false,
                 diagnostics);
   driver.setTitle("include what you use");
