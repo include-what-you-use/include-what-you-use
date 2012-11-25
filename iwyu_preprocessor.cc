@@ -1,4 +1,4 @@
-//===--- iwyu_preprocessor.cpp - handle #includes/#defines for iwyu -------===//
+//===--- iwyu_preprocessor.cc - handle #includes/#defines for iwyu --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

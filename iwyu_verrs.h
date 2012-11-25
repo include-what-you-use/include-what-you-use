@@ -1,4 +1,4 @@
-//===--- iwyu_verrs.h - debug output for include-what-you-use ----===//
+//===--- iwyu_verrs.h - debug output for include-what-you-use -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

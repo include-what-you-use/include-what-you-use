@@ -1,4 +1,4 @@
-//===--- iwyu_location_util.cpp - SourceLoc-related utilities for iwyu ----===//
+//===--- iwyu_location_util.cc - SourceLoc-related utilities for iwyu -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //

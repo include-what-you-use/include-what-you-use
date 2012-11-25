@@ -1,4 +1,4 @@
-//===--- iwyu_string_util_test.cpp - test iwyu_string_util.h -------------===//
+//===--- iwyu_string_util_test.cc - test iwyu_string_util.h ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

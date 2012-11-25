@@ -1,4 +1,4 @@
-//===--- comment_pragmas-d1.h - test input file for iwyu ------------------===//
+//===--- comment_pragmas-d2.h - test input file for iwyu ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

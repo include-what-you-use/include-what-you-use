@@ -1,4 +1,4 @@
-//===--- iwyu_lexer_utils_test.cpp - test iwyu_lexer_utils.{cc,h} ---------===//
+//===--- iwyu_lexer_utils_test.cc - test iwyu_lexer_utils.{cc,h} ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

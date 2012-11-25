@@ -1,4 +1,4 @@
-//===--- iwyu_path_util.cc - path utilities for iwyu ----===//
+//===--- iwyu_path_util.cc - file-path utilities for include-what-you-use -===//
 //
 //                     The LLVM Compiler Infrastructure
 //

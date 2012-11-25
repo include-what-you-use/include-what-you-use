@@ -1,4 +1,4 @@
-//===--- iwyu_output_test.cpp - test iwyu_output.{h,cc} -------------------===//
+//===--- iwyu_output_test.cc - test iwyu_output.{h,cc} --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

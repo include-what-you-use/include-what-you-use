@@ -1,4 +1,4 @@
-//===--- include_with_using-d1.h - test input file for iwyu ---------------===//
+//===--- include_with_using-d2.h - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -1,4 +1,4 @@
-//===--- iwyu_string_util.h - global variables for include-what-you-use ---===//
+//===--- iwyu_globals.h - global variables for include-what-you-use -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
