@@ -163,35 +163,35 @@ The codebase is strewn with TODOs of known problems, and also language
 constructs that aren't adequately tested yet.  So there's plenty to
 do!  Here's a brief guide through the codebase:
 
-* iwyu.cpp: the main file, it includes the logic for deciding when a
+* iwyu.cc: the main file, it includes the logic for deciding when a
   symbol has been 'used', and whether it's a full use (definition
   required) or forward-declare use (only a declaration required).  It
   also inclues the logic for following uses through template
   instantiations.
 
-* iwyu_output.cpp: the file that translates from 'uses' into iwyu
+* iwyu_output.cc: the file that translates from 'uses' into iwyu
   violations.  This has the logic for deciding if a use is covered by
   an existing #include (or is a built-in).  It also, as the name
   suggests, prints the iwyu output.
 
-* iwyu_preprocessor.cpp: handles the preprocessor directives, the
+* iwyu_preprocessor.cc: handles the preprocessor directives, the
   #includes and #ifdefs, to construct the existing include-tree.  This
   is obviously essential for include-what-you-use analysis.  This file
   also handles the iwyu pragma-comments.
 
-* iwyu_include_picker.cpp: this finds canonical #includes, handling
+* iwyu_include_picker.cc: this finds canonical #includes, handling
   hard-coded private->public mappings (like bits/stl_vector.h ->
   vector) and symbols with multiple possible #includes (like NULL).
 
-* iwyu_cache.cpp: holds the cache of instantiated templates (may hold
+* iwyu_cache.cc: holds the cache of instantiated templates (may hold
   other cached info later).  This is data that is expensive to compute
   and may be used more than once.
 
-* iwyu_globals.cpp: holds various global variables.  We used to think
+* iwyu_globals.cc: holds various global variables.  We used to think
   globals were bad, until we saw how much having this file simplified
   the code...
 
-* iwyu_*_util(s).h and .cpp: utility functions of various types.  The
+* iwyu_*_util(s).h and .cc: utility functions of various types.  The
   most interesting, perhaps, is iwyu_ast_util.h, which has routines
   that make it easier to navigate and analyze the clang AST.  There
   are also some STL helpers, string helpers, filesystem helpers, etc.
