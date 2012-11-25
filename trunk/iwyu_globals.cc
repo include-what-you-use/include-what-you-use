@@ -49,7 +49,6 @@ static SourceManagerCharacterDataGetter* data_getter = NULL;
 static FullUseCache* function_calls_full_use_cache = NULL;
 static FullUseCache* class_members_full_use_cache = NULL;
 
-
 static void PrintHelp(const char* extra_msg) {
   printf("USAGE: iwyu [-Xiwyu --iwyu_opt]... <clang opts> <source file>\n"
          "Here are the <opts> you can specify:\n"
@@ -182,7 +181,9 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
   return NormalizeHeaderSearchPaths(search_path_map);
 }
 
-void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
+void InitGlobals(clang::SourceManager* sm,
+                 clang::HeaderSearch* header_search,
+                 const std::string& executable_path) {
   CHECK_(sm && "InitGlobals() needs a non-NULL SourceManager");
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
@@ -199,6 +200,11 @@ void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
     VERRS(6) << "Search path: " << it->path << " (" << path_type_name << ")\n";
   }
 
+  // Set up mapping file search paths.
+  include_picker->AddMappingFileSearchPath(".");
+  include_picker->AddMappingFileSearchPath(GetParentPath(executable_path));
+
+  // Add mappings.
   for (Each<string> it(&GlobalFlags().mapping_files); !it.AtEnd(); ++it) {
     include_picker->AddMappingsFromFile(*it);
   }

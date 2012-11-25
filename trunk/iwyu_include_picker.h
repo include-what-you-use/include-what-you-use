@@ -50,6 +50,13 @@
 #include <utility>                      // for pair
 #include <vector>                       // for vector
 
+#include "llvm/ADT/OwningPtr.h"
+#include "llvm/Support/MemoryBuffer.h"
+
+namespace llvm {
+  class error_code;
+}
+
 namespace include_what_you_use {
 
 using std::map;
@@ -58,6 +65,10 @@ using std::set;
 using std::string;
 
 using std::vector;
+
+using llvm::OwningPtr;
+using llvm::MemoryBuffer;
+using llvm::error_code;
 
 class IncludePicker {
  public:
@@ -75,6 +86,9 @@ class IncludePicker {
   void AddDirectInclude(const string& includer_filepath,
                         const string& includee_filepath,
                         const string& quoted_include_as_written);
+
+  // Add a mapping file search path.
+  void AddMappingFileSearchPath(const string& path);
 
   // Add this to say "map_to re-exports everything in file map_from".
   // Both map_to and map_from should be quoted includes.
@@ -182,6 +196,11 @@ class IncludePicker {
   string MaybeGetIncludeNameAsWritten(const string& includer_filepath,
                                       const string& includee_filepath) const;
 
+  // Scan the search paths for filename. If it exists, put file contents
+  // in buffer. If not, return the error code.
+  error_code TryReadMappingFile(const string& filename, 
+                                OwningPtr<MemoryBuffer>& buffer) const;
+
   // From symbols to includes.
   IncludeMap symbol_include_map_;
 
@@ -216,6 +235,8 @@ class IncludePicker {
   // friend_to_headers_map_["foo/bar/x.cc"] will be augmented with the
   // contents of friend_to_headers_map_["@\"foo/bar/.*\""].
   map<string, set<string> > friend_to_headers_map_;
+
+  vector<string> mapping_file_search_path_;
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;

@@ -62,10 +62,19 @@ string CanonicalizeFilePath(const string& path);
 // platforms.
 string GetCanonicalName(string file_path);
 
-
 // "Canonicals" the name on Microsoft platforms, then recursively
 // removes all "./" prefixes.
 string NormalizeFilePath(const string& path);
+
+// Is path absolute?
+bool IsAbsolutePath(const string& path);
+
+// Get absolute version of path.
+string MakeAbsolutePath(const string& path);
+string MakeAbsolutePath(const string& base_path, const string& relative_path);
+
+// Get the parent of path.
+string GetParentPath(const string& path);
 
 // Below, we talk 'quoted' includes.  A quoted include is something
 // that would be written on an #include line, complete with the <> or

@@ -13,6 +13,12 @@
 
 #include "iwyu_stl_util.h"
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/PathV2.h"
+#include "llvm/Support/system_error.h"
+
 namespace include_what_you_use {
 
 namespace {
@@ -121,6 +127,30 @@ string NormalizeFilePath(const string& path) {
   while (StripLeft(&result, "./")) {
   }
   return result;
+}
+
+bool IsAbsolutePath(const string& path) {
+  return llvm::sys::path::is_absolute(path);
+}
+
+string MakeAbsolutePath(const string& path) {
+  llvm::SmallString<128> absolute_path(path.c_str());
+  llvm::error_code error = llvm::sys::fs::make_absolute(absolute_path);
+  CHECK_(!error);
+
+  return absolute_path.str();
+}
+
+string MakeAbsolutePath(const string& base_path, const string& relative_path) {
+  llvm::SmallString<128> absolute_path(base_path.c_str());
+  llvm::sys::path::append(absolute_path, relative_path);
+
+  return absolute_path.str();
+}
+
+string GetParentPath(const string& path) {
+  llvm::StringRef parent = llvm::sys::path::parent_path(path);
+  return parent.str();
 }
 
 // Converts a file-path, such as /usr/include/stdio.h, to a
