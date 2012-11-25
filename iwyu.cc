@@ -3644,12 +3644,19 @@ class IwyuAstConsumer
 
 // We use an ASTFrontendAction to hook up IWYU with Clang.
 class IwyuAction : public ASTFrontendAction {
+ public:
+   IwyuAction(const char* executable_path)
+     : executable_path_(executable_path)
+   {
+   }
+
  protected:
   virtual ASTConsumer* CreateASTConsumer(CompilerInstance& compiler,  // NOLINT
                                          llvm::StringRef /* dummy */) {
     // Do this first thing after getting our hands on a CompilerInstance.
     InitGlobals(&compiler.getSourceManager(),
-                &compiler.getPreprocessor().getHeaderSearchInfo());
+                &compiler.getPreprocessor().getHeaderSearchInfo(),
+                executable_path_);
 
     IwyuPreprocessorInfo* const preprocessor_consumer
         = new IwyuPreprocessorInfo();
@@ -3662,6 +3669,9 @@ class IwyuAction : public ASTFrontendAction {
     compiler.getPreprocessor().addCommentHandler(preprocessor_consumer);
     return ast_consumer;
   }
+
+ private:
+  std::string executable_path_;
 };
 
 
@@ -3704,7 +3714,7 @@ int main(int argc, char **argv) {
   CHECK_(compiler && "Failed to process argv");
 
   // Create and execute the frontend to generate an LLVM bitcode module.
-  llvm::OwningPtr<clang::ASTFrontendAction> action(new IwyuAction);
+  llvm::OwningPtr<clang::ASTFrontendAction> action(new IwyuAction(clang_argv[0]));
   if (!compiler->ExecuteAction(*action))
     return 1;
 

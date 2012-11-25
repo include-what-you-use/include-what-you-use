@@ -26,10 +26,9 @@
 #include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
 
-#include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
@@ -279,6 +278,16 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   }
 }
 
+void IncludePicker::AddMappingFileSearchPath(const string& path) {
+  string absolute_path = MakeAbsolutePath(path);
+  if (std::find(mapping_file_search_path_.begin(),
+                mapping_file_search_path_.end(),
+                absolute_path) == mapping_file_search_path_.end()) {
+    VERRS(6) << "Adding mapping file search path: " << absolute_path << "\n";
+    mapping_file_search_path_.push_back(absolute_path);
+  }
+}
+
 void IncludePicker::AddMapping(const string& map_from, const string& map_to) {
   VERRS(4) << "Adding mapping from " << map_from << " to " << map_to << "\n";
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
@@ -493,6 +502,33 @@ string IncludePicker::MaybeGetIncludeNameAsWritten(
   return value ? *value : "";
 }
 
+error_code IncludePicker::TryReadMappingFile(
+    const string& filename,
+    OwningPtr<MemoryBuffer>& buffer) const {
+  string absolute_path;
+  if (IsAbsolutePath(filename)) {
+    VERRS(5) << "Absolute mapping filename: " << filename << ".\n";
+    absolute_path = filename;
+  } else {
+    VERRS(5) << "Relative mapping filename: " << filename << ". "
+      << "Scanning search path.\n";
+    // Scan search path
+    for (Each<string> it(&mapping_file_search_path_); !it.AtEnd(); ++it) {
+      string candidate = MakeAbsolutePath(*it, filename);
+      if (llvm::sys::fs::exists(candidate)) {
+        absolute_path = candidate;
+        VERRS(5) << "Found mapping file: " << candidate << ".\n";
+        break;
+      }
+    }
+  }
+
+  error_code error = MemoryBuffer::getFile(absolute_path, buffer);
+  VERRS(5) << "Opened mapping file: " << filename << "? "
+    << error.message() << "\n";
+  return error;
+}
+
 vector<string> IncludePicker::GetCandidateHeadersForSymbol(
     const string& symbol) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
@@ -579,13 +615,11 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
 // We use this to maintain mappings externally, to make it easier
 // to update/adjust to local circumstances.
 void IncludePicker::AddMappingsFromFile(const string& filename) {
-  // TODO(kimgr): Resolve absolute mapping path along some search path
-  // e.g. look also next to IWYU binary.
   OwningPtr<MemoryBuffer> buffer;
-  llvm::error_code result = MemoryBuffer::getFile(filename, buffer);
-  if (result != 0) {
+  error_code error = TryReadMappingFile(filename, buffer);
+  if (error) {
     errs() << "Cannot open mapping file '" << filename << "': "
-      << result.message() << ".\n";
+      << error.message() << ".\n";
     return;
   }
 
@@ -680,7 +714,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
           mapping[2],
           to_visibility);
       } else if (directive == "ref") {
-        // Mapping ref, recurse.
+        // Mapping ref.
         string ref_file = GetScalarValue(it->getValue());
         if (ref_file.empty()) {
           errs() << MappingDiag(source_manager, filename, current_node,
@@ -688,6 +722,11 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
           return;
         }
 
+        // Add the path of the file we're currently processing
+        // to the search path. Allows refs to be relative to referrer.
+        AddMappingFileSearchPath(GetParentPath(filename));
+
+        // Recurse.
         AddMappingsFromFile(ref_file);
       } else {
         errs() << MappingDiag(source_manager, filename, current_node,
