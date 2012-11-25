@@ -1,4 +1,4 @@
-//===--- internal_files.cc - test input file for iwyu ---------------------===//
+//===--- private.h - test input file for iwyu -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

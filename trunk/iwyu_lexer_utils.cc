@@ -1,4 +1,4 @@
-//===--- iwyu_lexer_utils.cpp - clang-lexer utilities for iwyu ------------===//
+//===--- iwyu_lexer_utils.cc - clang-lexer utilities for iwyu -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

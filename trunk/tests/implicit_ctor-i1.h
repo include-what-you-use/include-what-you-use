@@ -1,4 +1,4 @@
-//===--- implicit_ctor-i1.h - test input file for iwyu ---------------------===//
+//===--- implicit_ctor-i1.h - test input file for iwyu --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

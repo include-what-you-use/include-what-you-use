@@ -1,4 +1,4 @@
-//===--- iwyu_ast_util.h - clang-AST utilities for include-what-you-use ---===//
+//===--- iwyu_ast_util.cc - clang-AST utilities for include-what-you-use --===//
 //
 //                     The LLVM Compiler Infrastructure
 //

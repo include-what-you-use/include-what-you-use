@@ -1,4 +1,4 @@
-//===--- iwyu.cpp - main logic and driver for include-what-you-use --------===//
+//===--- iwyu.cc - main logic and driver for include-what-you-use ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

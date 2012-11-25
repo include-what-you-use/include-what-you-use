@@ -1,4 +1,4 @@
-//===--- iwyu_output.cpp - output-emitting code for include-what-you-use --===//
+//===--- iwyu_output.cc - output-emitting code for include-what-you-use ---===//
 //
 //                     The LLVM Compiler Infrastructure
 //

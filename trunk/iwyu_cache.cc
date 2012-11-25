@@ -1,4 +1,4 @@
-//===--- iwyu_cache.cpp - cache of AST-derived information, for iwyu ------===//
+//===--- iwyu_cache.cc - cache of AST-derived information, for iwyu -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

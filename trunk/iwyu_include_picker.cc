@@ -1,4 +1,4 @@
-//===--- iwyu_include_picker.cpp - map to canonical #includes for iwyu ----===//
+//===--- iwyu_include_picker.cc - map to canonical #includes for iwyu -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //

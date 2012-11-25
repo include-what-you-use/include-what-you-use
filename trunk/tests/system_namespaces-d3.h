@@ -1,4 +1,4 @@
-//===--- system_namespaces-d1.h - test input file for iwyu ----------------===//
+//===--- system_namespaces-d3.h - test input file for iwyu ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
