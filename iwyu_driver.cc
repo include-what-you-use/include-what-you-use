@@ -161,8 +161,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   IntrusiveRefCntPtr<DiagnosticIDs> diagnostic_id(new DiagnosticIDs());
   DiagnosticsEngine diagnostics(diagnostic_id, &*diagnostic_options,
                                 diagnostic_client);
-  Driver driver(path.str(), getDefaultTargetTriple(), "a.out", false,
-                diagnostics);
+  Driver driver(path.str(), getDefaultTargetTriple(), "a.out", diagnostics);
   driver.setTitle("include what you use");
 
   // Expand out any response files passed on the command line
