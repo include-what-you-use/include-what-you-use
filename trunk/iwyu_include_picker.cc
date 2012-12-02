@@ -186,23 +186,6 @@ vector<string> GetSequenceValue(Node* node) {
   return result;
 }
 
-// Build a diagnostic string for an error in a mapping file.
-// TODO(kimgr): Try to fix YAML parser to be able to use proper diagnostic
-// infrastructure, for colored output, etc.
-string MappingDiag(const SourceMgr& source_manager,
-    const string& filename, const Node& node, const char* message) {
-  pair<unsigned, unsigned> printable_loc
-    = source_manager.getLineAndColumn(node.getSourceRange().Start);
-
-  string buf;
-  llvm::raw_string_ostream os(buf);
-  os << filename << ":"
-    << printable_loc.first << ":" << printable_loc.second << ": "
-    << message;
-
-  return os.str();
-}
-
 }  // namespace
 
 IncludePicker::IncludePicker()
@@ -624,7 +607,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
   }
 
   SourceMgr source_manager;
-  Stream json_stream(buffer->getBuffer(), source_manager);
+  Stream json_stream(buffer.take(), source_manager);
 
   document_iterator stream_begin = json_stream.begin();
   if (stream_begin == json_stream.end())
@@ -634,8 +617,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
   Node* root = stream_begin->getRoot();
   SequenceNode *array = llvm::dyn_cast<SequenceNode>(root);
   if (array == NULL) {
-    errs() << MappingDiag(source_manager, filename, *root,
-      "Root element must be an array.\n");
+    json_stream.printError(root, "Root element must be an array.");
     return;
   }
 
@@ -645,8 +627,8 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
     // Every item must be a JSON object ("mapping" in YAML terms.)
     MappingNode* mapping = llvm::dyn_cast<MappingNode>(&current_node);
     if (mapping == NULL) {
-      errs() << MappingDiag(source_manager, filename, current_node,
-        "Mapping directives must be objects.\n");
+      json_stream.printError(&current_node,
+        "Mapping directives must be objects.");
       return;
     }
 
@@ -659,23 +641,23 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
         // Symbol mapping.
         vector<string> mapping = GetSequenceValue(it->getValue());
         if (mapping.size() != 4) {
-          errs() << MappingDiag(source_manager, filename, current_node,
+          json_stream.printError(&current_node,
             "Symbol mapping expects a value on the form "
-            "'[from, visibility, to, visibility]'.\n");
+            "'[from, visibility, to, visibility]'.");
           return;
         }
 
         Visibility from_visibility = ParseVisibility(mapping[1]);
         if (from_visibility == kUnusedVisibility) {
-          errs() << MappingDiag(source_manager, filename, current_node,
-            "Unknown visibility '") << mapping[1] << "'.\n";
+          json_stream.printError(&current_node,
+            "Unknown visibility '" + mapping[1] + "'.");
           return;
         }
 
         Visibility to_visibility = ParseVisibility(mapping[3]);
         if (to_visibility == kUnusedVisibility) {
-          errs() << MappingDiag(source_manager, filename, current_node,
-            "Unknown visibility '") << mapping[3] << "'.\n";
+          json_stream.printError(&current_node,
+            "Unknown visibility '" + mapping[3] + "'.");
           return;
         }
 
@@ -688,23 +670,23 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
         // Include mapping.
         vector<string> mapping = GetSequenceValue(it->getValue());
         if (mapping.size() != 4) {
-          errs() << MappingDiag(source_manager, filename, current_node,
+          json_stream.printError(&current_node,
             "Include mapping expects a value on the form "
-            "'[from, visibility, to, visibility]'.\n");
+            "'[from, visibility, to, visibility]'.");
           return;
         }
 
         Visibility from_visibility = ParseVisibility(mapping[1]);
         if (from_visibility == kUnusedVisibility) {
-          errs() << MappingDiag(source_manager, filename, current_node,
-            "Unknown visibility '") << mapping[1] << "'.\n";
+          json_stream.printError(&current_node,
+            "Unknown visibility '" + mapping[1] + "'.");
           return;
         }
 
         Visibility to_visibility = ParseVisibility(mapping[3]);
         if (to_visibility == kUnusedVisibility) {
-          errs() << MappingDiag(source_manager, filename, current_node,
-            "Unknown visibility '") << mapping[3] << "'.\n";
+          json_stream.printError(&current_node,
+            "Unknown visibility '" + mapping[3] + "'.");
           return;
         }
 
@@ -717,8 +699,8 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
         // Mapping ref.
         string ref_file = GetScalarValue(it->getValue());
         if (ref_file.empty()) {
-          errs() << MappingDiag(source_manager, filename, current_node,
-            "Mapping ref expects a single filename value.\n");
+          json_stream.printError(&current_node,
+            "Mapping ref expects a single filename value.");
           return;
         }
 
@@ -729,8 +711,8 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
         // Recurse.
         AddMappingsFromFile(ref_file);
       } else {
-        errs() << MappingDiag(source_manager, filename, current_node,
-          "Unknown directive '") << directive << "'.\n";
+        json_stream.printError(&current_node,
+          "Unknown directive '" + directive + "'.");
         return;
       }
     }
