@@ -24,6 +24,7 @@
 #include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/AST/CanonicalType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
