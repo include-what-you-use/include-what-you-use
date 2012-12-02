@@ -600,11 +600,7 @@ void IwyuPreprocessorInfo::InclusionDirective(
     StringRef search_path,
     StringRef relative_path,
     const clang::Module* imported) {
-  const SourceLocation filename_loc = filename_range.getBegin();
-  if (filename_loc.isMacroID())
-    include_filename_loc_ = GetMacroStartSpellingLoc(filename_loc);
-  else
-    include_filename_loc_ = filename_loc;
+  include_filename_loc_ = filename_range.getBegin();
 }
 
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,

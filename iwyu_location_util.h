@@ -122,10 +122,6 @@ inline int GetLineNumber(clang::SourceLocation loc) {
   return retval;
 }
 
-// For macro at macro_loc returns spelling location of macro start.
-// macro_loc can point anywhere in macro.
-clang::SourceLocation GetMacroStartSpellingLoc(clang::SourceLocation macro_loc);
-
 // The rest of this section of the file is for returning the
 // FileEntry* corresponding to a source location: the file that the
 // location is in.  This is a surprising amount of work.
