@@ -723,20 +723,16 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       }
     }
     // Check the (single) destructor.
-    bool hasImplicitDeclaredDestructor = (!decl->needsImplicitDestructor() &&
-                                          !decl->hasUserDeclaredDestructor());
-    if (hasImplicitDeclaredDestructor) {
+    if (decl->hasDeclaredDestructor() && !decl->hasUserDeclaredDestructor()) {
       if (!TraverseImplicitDeclHelper(decl->getDestructor()))
         return false;
     }
     // There can actually be two operator='s: one const and one not.
-    bool hasImplicitDeclaredCopyAssignment =
-        (!decl->needsImplicitCopyAssignment() &&
-         !decl->hasUserDeclaredCopyAssignment());
-    if (hasImplicitDeclaredCopyAssignment) {
+    if (decl->hasDeclaredCopyAssignment() &&
+        !decl->hasUserDeclaredCopyAssignment()) {
       if (!TraverseImplicitDeclHelper(decl->getCopyAssignmentOperator(true)) ||
           !TraverseImplicitDeclHelper(decl->getCopyAssignmentOperator(false)))
-        return false;
+          return false;
     }
     return true;
   }

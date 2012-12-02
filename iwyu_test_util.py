@@ -388,6 +388,7 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
   # variable, or by iwyu_flags, for easy debugging.  (We put the
   # envvar-based flag first, so user flags can override it later.)
   iwyu_flags = ['--verbose=%s' % os.getenv('IWYU_VERBOSE', '3')] + iwyu_flags
+  iwyu_flags = ['--mapping_file=iwyu.gcc.imp'] + iwyu_flags
 
   # clang reads iwyu flags after the -Xiwyu clang flag: '-Xiwyu --verbose=6'
   iwyu_flags = ['-Xiwyu ' + flag for flag in iwyu_flags]
