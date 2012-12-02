@@ -731,12 +731,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     }
     // There can actually be two operator='s: one const and one not.
     bool hasImplicitDeclaredCopyAssignment =
-      (!decl->needsImplicitCopyAssignment() &&
-       !decl->hasUserDeclaredCopyAssignment());
+        (!decl->needsImplicitCopyAssignment() &&
+         !decl->hasUserDeclaredCopyAssignment());
     if (hasImplicitDeclaredCopyAssignment) {
       if (!TraverseImplicitDeclHelper(decl->getCopyAssignmentOperator(true)) ||
           !TraverseImplicitDeclHelper(decl->getCopyAssignmentOperator(false)))
-          return false;
+        return false;
     }
     return true;
   }
