@@ -208,6 +208,10 @@ void InitGlobals(clang::SourceManager* sm,
   for (Each<string> it(&GlobalFlags().mapping_files); !it.AtEnd(); ++it) {
     include_picker->AddMappingsFromFile(*it);
   }
+
+  if (GlobalFlags().mapping_files.empty()) {
+    include_picker->AddMappingsFromFile("iwyu.gcc.imp");
+  }
 }
 
 const CommandlineFlags& GlobalFlags() {
