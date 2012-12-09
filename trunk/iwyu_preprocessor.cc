@@ -576,14 +576,18 @@ void IwyuPreprocessorInfo::Elif(SourceLocation loc,
   CheckIfOrElif(condition_range);
 }
 
-void IwyuPreprocessorInfo::Ifdef(SourceLocation loc, const Token& id) {
+void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
+                                 const Token& id,
+                                 const MacroInfo* macro) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifdef      ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
   FindAndReportMacroUse(GetName(id), id.getLocation());
 }
 
-void IwyuPreprocessorInfo::Ifndef(SourceLocation loc, const Token& id) {
+void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
+                                  const Token& id,
+                                  const MacroInfo* macro) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifndef     ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
