@@ -14,6 +14,20 @@
 #include <stdlib.h>  // for abort
 #include <iostream>
 
+// Portable stub for Clang's __has_feature.
+#ifndef __has_feature
+# define __has_feature(x) 0
+#endif
+
+// Portable override keyword.
+// Use to mark virtual methods as overriding a base class method,
+// compiler will complain if method does not exist in base class.
+#if (defined(_MSC_VER) || __has_feature(cxx_override_control))
+#define IWYU_OVERRIDE override
+#else
+#define IWYU_OVERRIDE
+#endif
+
 namespace include_what_you_use {
 
 // Helper class that allows programmers to log extra information in CHECK_s.
