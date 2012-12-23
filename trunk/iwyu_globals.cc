@@ -50,7 +50,8 @@ static FullUseCache* function_calls_full_use_cache = NULL;
 static FullUseCache* class_members_full_use_cache = NULL;
 
 static void PrintHelp(const char* extra_msg) {
-  printf("USAGE: iwyu [-Xiwyu --iwyu_opt]... <clang opts> <source file>\n"
+  printf("USAGE: include-what-you-use [-Xiwyu --iwyu_opt]... <clang opts>"
+         " <source file>\n"
          "Here are the <opts> you can specify:\n"
          "   --check_also=<glob>: tells iwyu to print iwyu-violation info\n"
          "        for all files matching the given glob pattern (in addition\n"
