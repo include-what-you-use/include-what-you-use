@@ -3707,6 +3707,8 @@ int main(int argc, char **argv) {
   for (int i = 1; i < argc; ++i) {
     if (i < argc - 1 && strcmp(argv[i], "-Xiwyu") == 0)
       iwyu_argv[iwyu_argc++] = argv[++i];   // the word after -Xiwyu
+    else if (strcmp(argv[i], "--help") == 0)
+      iwyu_argv[iwyu_argc++] = argv[i];     // send --help straight to IWYU
     else
       clang_argv[clang_argc++] = argv[i];
   }
