@@ -3721,12 +3721,11 @@ int main(int argc, char **argv) {
 
   clang::CompilerInstance* compiler = CreateCompilerInstance(clang_argc,
                                                              clang_argv);
-  CHECK_(compiler && "Failed to process argv");
-
-  // Create and execute the frontend to generate an LLVM bitcode module.
-  llvm::OwningPtr<clang::ASTFrontendAction> action(new IwyuAction(clang_argv[0]));
-  if (!compiler->ExecuteAction(*action))
-    return 1;
+  if (compiler != NULL) {
+    // Create and execute the frontend to generate an LLVM bitcode module.
+    llvm::OwningPtr<clang::ASTFrontendAction> action(new IwyuAction(clang_argv[0]));
+    compiler->ExecuteAction(*action);
+  }
 
   llvm::llvm_shutdown();
 
