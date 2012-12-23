@@ -649,8 +649,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return;
 
     clang::Sema& sema = compiler_->getSema();
-    DeclContext::lookup_const_iterator it, end;
-    for (llvm::tie(it, end) = sema.LookupConstructors(decl); it != end; ++it) {
+    DeclContext::lookup_const_result ctors = sema.LookupConstructors(decl);
+    for (Each<NamedDecl*> it(&ctors); !it.AtEnd(); ++it) {
       // Ignore templated constructors.
       if (isa<FunctionTemplateDecl>(*it))
         continue;
