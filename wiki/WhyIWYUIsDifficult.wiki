@@ -16,17 +16,16 @@ great. And, you're probably not actually programming in C++...
 Include-what-you-use has to be able to tell when a symbol is being
 used in a way that you can forward-declare it. Otherwise, if you wrote
 {{{
-   vector<MyClass*> foo;
+  vector<MyClass*> foo;
 }}}
 iwyu would tell you to `#include "myclass.h"`, when perhaps the whole
-reason you're using a pointer here is to avoid the need for that
-#include.
+reason you're using a pointer here is to avoid the need for that #include.
 
 In the above case, it's pretty easy for iwyu to tell that we can
 safely forward-declare `MyClass`. But now consider
 {{{
-   vector<MyClass> foo;        // requires full definition of MyClass
-   scoped_ptr<MyClass> foo;    // forward-declaring MyClass is often ok
+  vector<MyClass> foo;        // requires full definition of MyClass
+  scoped_ptr<MyClass> foo;    // forward-declaring MyClass is often ok
 }}}
 To distinguish these, clang has to instantiate the vector and
 scoped_ptr template classes, including analyzing all member variables
@@ -38,11 +37,11 @@ keep track of which symbols come from template arguments and which
 don't. For instance, suppose you call `MyFunc<MyClass>()`, where `MyFunc`
 looks like this:
 {{{
-   template<typename T> void MyFunc() {
-      T* t;
-      MyClass myclass;
-      ...
-   }
+  template<typename T> void MyFunc() {
+    T* t;
+    MyClass myclass;
+    ...
+  }
 }}}
 In this case, the caller of `MyFunc` is not using the full type of
 `MyClass`, because the template parameter is only used as a pointer. On
@@ -54,13 +53,13 @@ forward-declare `MyClass`, but the file defining `MyFunc` has to `#include "mycl
 
 Even figuring out what types are 'used' with a template can be difficult. Consider the following two declarations:
 {{{
-   vector<MyClass> v;
-   hash_set<MyClass> h;
+  vector<MyClass> v;
+  hash_set<MyClass> h;
 }}}
 These both have default template arguments, so are parsed like
 {{{
-   vector<MyClass, alloc<MyClass> > v;
-   hash_set<MyClass, hash<MyClass>, equal_to<MyClass>, alloc<MyClass> > h;
+  vector<MyClass, alloc<MyClass> > v;
+  hash_set<MyClass, hash<MyClass>, equal_to<MyClass>, alloc<MyClass> > h;
 }}}
 What symbols should we say are used? If we say `alloc<MyClass>` is used
 when you declare a vector, then every file that #includes `<vector>`
@@ -76,7 +75,8 @@ get very complex.
 Even normal template arguments can be confusing. Consider this
 templated function:
 {{{
-template<typename A, typename B, typename C> void MyFunc(A (*fn)(B,C)) { ... }
+  template<typename A, typename B, typename C> void MyFunc(A (*fn)(B,C))
+  { ... }
 }}}
 and you call `MyFunc(FunctionReturningAFunctionPointer())`. What types
 are being used where, in this case?
@@ -101,11 +101,11 @@ cases from each other, and from the vector case, can be difficult.
 
 Now suppose there's a template function like this:
 {{{
-   template<typename T> void MyFunc(T t) {
-      strcat(t, 'a');
-      strchr(t, 'a');
-      cerr << t;
-   }
+  template<typename T> void MyFunc(T t) {
+    strcat(t, 'a');
+    strchr(t, 'a');
+    cerr << t;
+  }
 }}}
 If you call `MyFunc(some_char_star)`, which of these symbols are you
 responsible for, and which is the author of `MyFunc` responsible for:
@@ -137,9 +137,9 @@ difficult. To get it exactly right would require re-implementing C++'s
 
 Let's say you have a function
 {{{
-   template<template<typename U> T> void MyFunc() {
-     T<string> t;
-   }
+  template<template<typename U> T> void MyFunc() {
+    T<string> t;
+  }
 }}}
 And you call `MyFunc<hash_set>`. Who is responsible for the 'use' of
 `hash<string>`, and thus needs to `#include "myhash.h"`? I think
@@ -151,7 +151,7 @@ also rather rare.
 
 Suppose you #include a file `"foo.h"` that has typedef `hash_map<Foo, Bar> MyMap;`. And you have this code:
 {{{
-   for (MyMap::iterator it = ...)
+  for (MyMap::iterator it = ...)
 }}}
 Who, if anyone, is using the symbol `hash_map<Foo, Bar>::iterator`? If
 we say you, as the author of the for-loop, are the user, then you must
@@ -168,8 +168,8 @@ say, the class uses SFINAE).
 Worse, when the language auto-derives template types, it loses typedef
 information. Suppose you wrote this:
 {{{
-   MyMap m;
-   find(m.begin(), m.end(), some_foo);
+  MyMap m;
+  find(m.begin(), m.end(), some_foo);
 }}}
 The compiler sees this as syntactic sugar for `find<hash_map<Foo, Bar, hash<Foo>, equal_to<Foo>, alloc<Foo> >(m.begin(), m.end(), some_foo);`
 
@@ -177,8 +177,7 @@ Not only is the template argument `hash_map` instead of `MyMap`, it
 includes all the default template arguments, with no indication
 they're default arguments. All the tricks we used above to
 intelligently ignore default template arguments are worthless here. We
-have to jump through lots of hoops so this code doesn't require you to
-#include not only `<hash_map>`, but `<alloc>` and `<utility>` as well.
+have to jump through lots of hoops so this code doesn't require you to #include not only `<hash_map>`, but `<alloc>` and `<utility>` as well.
 
 ==Macros==
 
@@ -196,10 +195,13 @@ when the caller of the macro is responsible.
 While not a major problem, this indicates the myriad "gotchas" that exist around include-what-you-use: removing an #include and replacing it with a forward-declare may be dangerous even if no symbols are fully used from the #include.  Consider the following code:
 
 {{{
-foo.h: namespace ns { class Foo {}; }
-       using ns::Foo;
-foo.cc: #include "foo.h"
-        Foo* foo;`
+foo.h:
+  namespace ns { class Foo {}; }
+  using ns::Foo;
+
+foo.cc:
+  #include "foo.h"
+  Foo* foo;`
 }}}
 
 If iwyu just blindly replaces the `#include` with a forward declare such as `namespace ns { class Foo; }`, the code will break because of the lost using declaration.  Include-what-you-use has to watch out for this case.
@@ -207,8 +209,8 @@ If iwyu just blindly replaces the `#include` with a forward declare such as `nam
 Another case is a header file like this:
 {{{
 foo.h:
-   #define MODULE_NAME MyModule
-   #include "module_writer.h"
+  #define MODULE_NAME MyModule
+  #include "module_writer.h"
 }}}
 
 We might think we can remove an #include of `foo.h` and replace it by  `#include module_writer.h`, but that is likely to break the build if `module_writer.h` requires `MODULE_NAME` be defined.  Since my file doesn't participate in this dependency at all, it won't even notice it.  IWYU needs to keep track of dependencies between files it's not even trying to analyze!
@@ -238,13 +240,12 @@ involved.
 Conditional #includes are a problem for iwyu when the condition is
 false:
 {{{
-#if _MSC_VER
-#include <foo>
-#endif
+  #if _MSC_VER
+  #include <foo>
+  #endif
 }}}
 If we're not running under windows (and iwyu does not currently run
-under windows), we have no way of telling if foo is a necessary
-#include or not.
+under windows), we have no way of telling if foo is a necessary #include or not.
 
 ==Placing New Includes and Forward-Declares==
 
