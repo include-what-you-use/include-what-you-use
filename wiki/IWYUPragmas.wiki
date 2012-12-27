@@ -11,7 +11,7 @@ This pragma applies to a single `#include` statement. It forces IWYU to keep an 
 
 {{{
 main.cc:
- #include <vector> // IWYU pragma: keep
+  #include <vector> // IWYU pragma: keep
 }}}
 
 In this case, `std::vector` isn't used, so `<vector>` would normally be discarded, but the pragma instructs IWYU to leave it.
@@ -22,15 +22,15 @@ This pragma applies to a single `#include` statement. It says that the current f
 
 {{{
 facade.h:
- #include "detail/constants.h" // IWYU pragma: export
- #include "detail/types.h" // IWYU pragma: export
- #include <vector> // don't export stuff from <vector>
+  #include "detail/constants.h" // IWYU pragma: export
+  #include "detail/types.h" // IWYU pragma: export
+  #include <vector> // don't export stuff from <vector>
 
 main.cc:
- #include "facade.h"
+  #include "facade.h"
 
- // Assuming Thing comes from detail/types.h and MAX_THINGS from detail/constants.h
- std::vector<Thing> things(MAX_THINGS);
+  // Assuming Thing comes from detail/types.h and MAX_THINGS from detail/constants.h
+  std::vector<Thing> things(MAX_THINGS);
 }}}
 
 Here, since `detail/constants.h` and `detail/types.h` have both been exported, IWYU is happy with the `facade.h` include for `Thing` and `MAX_THINGS`.
@@ -44,12 +44,12 @@ This is the same as decorating every `#include` statement with `IWYU pragma: exp
 
 {{{
 facade.h:
- // IWYU pragma: begin_exports
- #include "detail/constants.h"
- #include "detail/types.h"
- // IWYU pragma: end_exports 
+  // IWYU pragma: begin_exports
+  #include "detail/constants.h"
+  #include "detail/types.h"
+  // IWYU pragma: end_exports 
 
- #include <vector> // don't export stuff from <vector>
+  #include <vector> // don't export stuff from <vector>
 }}}
 
 ==IWYU pragma: private==
@@ -57,23 +57,23 @@ This pragma applies to the current header file. It says that any symbol from thi
 
 {{{
 private.h:
- // IWYU pragma: private, include "public.h"
- struct Private {};
+  // IWYU pragma: private, include "public.h"
+  struct Private {};
 
 private2.h:
- // IWYU pragma: private
- struct Private2 {};
+  // IWYU pragma: private
+  struct Private2 {};
 
 public.h:
- #include "private.h"
- #include "private2.h"
+  #include "private.h"
+  #include "private2.h"
 
 main.cc:
- #include "private.h"
- #include "private2.h"
+  #include "private.h"
+  #include "private2.h"
 
- Private p;
- Private2 i;
+  Private p;
+  Private2 i;
 }}}
 
 Using the type `Private` in `main.cc` will cause IWYU to suggest that you include `public.h`.
@@ -86,17 +86,17 @@ This pragma applies to the current source file. It declares that the named file 
 
 {{{
 private.h:
- struct Private {};
+  struct Private {};
 
 unrelated.h:
- #include "private.h"
- ...
+  #include "private.h"
+  ...
 
 main.cc:
- #include "unrelated.h"
- // IWYU pragma: no_include "private.h"
+  #include "unrelated.h"
+  // IWYU pragma: no_include "private.h"
 
- Private i;
+  Private i;
 }}}
 
 The use of `Private` requires including `private.h`, but due to the `no_include` pragma IWYU will not suggest `private.h` for inclusion. Note also that if you had included `private.h` in `main.cc`, IWYU would suggest that the `#include` be removed.
@@ -110,17 +110,17 @@ This pragma applies to the current source file. It says that the named symbol sh
 
 {{{
 public.h:
- struct Public {};
+  struct Public {};
 
 unrelated.h:
- struct Public;
- ...
+  struct Public;
+  ...
 
 main.cc:
- #include "unrelated.h" // declares Public
- // IWYU pragma: no_forward_declare Public
+  #include "unrelated.h" // declares Public
+  // IWYU pragma: no_forward_declare Public
 
- Public* i;
+  Public* i;
 }}}
 
 IWYU would normally suggest forward-declaring `Public` directly in `main.cc`, but `no_forward_declare` suppresses that suggestion. A forward-declaration for `Public` is already available from `unrelated.h`.
@@ -134,21 +134,21 @@ If the expression contains spaces, it must be enclosed in quotes.
 
 {{{
 detail/private.h:
- // IWYU pragma: private
- // IWYU pragma: friend "detail/.*"
- struct Private {};
+  // IWYU pragma: private
+  // IWYU pragma: friend "detail/.*"
+  struct Private {};
 
 detail/alsoprivate.h:
- #include "detail/private.h"
+  #include "detail/private.h"
 
- // IWYU pragma: private
- // IWYU pragma: friend "main\.cc"
- struct AlsoPrivate : Private {};
+  // IWYU pragma: private
+  // IWYU pragma: friend "main\.cc"
+  struct AlsoPrivate : Private {};
 
 main.cc:
- #include "detail/alsoprivate.h"
+  #include "detail/alsoprivate.h"
 
- AlsoPrivate p;
+  AlsoPrivate p;
 }}}
 
 
