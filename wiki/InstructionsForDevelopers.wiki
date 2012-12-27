@@ -1,11 +1,13 @@
 #summary Introduction to Include What You Use for developers and bug-fixers
 #labels Featured,Phase-Implementation
 
-= Submitting Patches =
+= Instructions for Developers =
+
+== Submitting Patches ==
 
 We're still working this part out.  For now, you can create patches against svn-head and submit them as [http://code.google.com/p/include-what-you-use/issues/list new issues].  Probably, we'll move to a scheme where people can submit patches directly to the SVN repository.
 
-= Running the Tests =
+== Running the Tests ==
 
 If fixing a bug in clang, please add a test to the test suite!  You
 can create a file called `whatever.cc` (_not_ .cpp), and, if necessary, `whatever.h`, and
@@ -29,7 +31,7 @@ When fixing `fix_includes.py`, add a test case to `fix_includes_test.py` and run
    python fix_includes_test.py
 }}}
 
-= Debugging =
+== Debugging ==
 
 It's possible to run `include-what-you-use` in `gdb`, to debug that way.
 Another useful tool -- especially in combination with `gdb` -- is to get
@@ -42,7 +44,7 @@ iwyu decisions made as it goes -- but very useful for that:
    make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use 2>&1 > /tmp/iwyu.verbose
 }}}
 
-= A Quick Tour of the Codebase =
+== A Quick Tour of the Codebase ==
 
 The codebase is strewn with TODOs of known problems, and also language constructs that aren't adequately tested yet.  So there's plenty to do!  Here's a brief guide through the codebase:
 
