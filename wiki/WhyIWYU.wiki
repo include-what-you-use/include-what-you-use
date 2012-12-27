@@ -40,7 +40,7 @@ Again, this makes the most sense for large code-bases.  Suppose your binaries ar
 Once you know where a symbol is used in your binary, you can see how practical it is to remove that use, perhaps by breaking up the relevant .h files into two parts, and fixing up all callers.  Again it's iwyu to the rescue: with include-what-you-use, figuring out the callers that need fixing is easy.
 
 
-= Why Forward-Declare? =
+== Why Forward-Declare? ==
 
 Include-what-you-use tries very hard to figure out when a forward-declare can be used instead of an #include (iwyu would be about 90% less code if it didn't bother with trying to forward-declare).
 
