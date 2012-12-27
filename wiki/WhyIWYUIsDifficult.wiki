@@ -11,7 +11,7 @@ Include-what-you-use has the most problems with templates and
 macros. If your code doesn't use either, iwyu will probably do
 great. And, you're probably not actually programming in C++...
 
-==Use Versus Forward Declare==
+== Use Versus Forward Declare ==
 
 Include-what-you-use has to be able to tell when a symbol is being
 used in a way that you can forward-declare it. Otherwise, if you wrote
@@ -34,8 +34,7 @@ superclasses).
 
 But that's not enough: when instantiating the templates, we need to
 keep track of which symbols come from template arguments and which
-don't. For instance, suppose you call `MyFunc<MyClass>()`, where `MyFunc`
-looks like this:
+don't. For instance, suppose you call `MyFunc<MyClass>()`, where `MyFunc` looks like this:
 {{{
   template<typename T> void MyFunc() {
     T* t;
@@ -49,7 +48,7 @@ the other hand, the file that defines `MyFunc` is using the full type
 information for `MyClass`. The end result is that the caller can
 forward-declare `MyClass`, but the file defining `MyFunc` has to `#include "myclass.h"`.
 
-==Handling Template Arguments==
+== Handling Template Arguments ==
 
 Even figuring out what types are 'used' with a template can be difficult. Consider the following two declarations:
 {{{
@@ -81,7 +80,7 @@ templated function:
 and you call `MyFunc(FunctionReturningAFunctionPointer())`. What types
 are being used where, in this case?
 
-==Who is Responsible for Dependent Template Types?==
+== Who is Responsible for Dependent Template Types? ==
 
 If you say `vector<MyClass> v;`, it's clear that you, and not `vector.h`
 are responsible for the use of `MyClass`, even though all the functions
@@ -133,7 +132,7 @@ As you can imagine, distinguishing all these cases is extremely
 difficult. To get it exactly right would require re-implementing C++'s
 (byzantine) lookup rules, which we have not yet tackled.
 
-==Template Template Types==
+== Template Template Types ==
 
 Let's say you have a function
 {{{
@@ -147,7 +146,7 @@ it has to be the caller, even if the caller never uses the string type
 in its file at all. This is rather counter-intuitive. Luckily, it's
 also rather rare.
 
-==Typedefs==
+== Typedefs ==
 
 Suppose you #include a file `"foo.h"` that has typedef `hash_map<Foo, Bar> MyMap;`. And you have this code:
 {{{
@@ -179,7 +178,7 @@ they're default arguments. All the tricks we used above to
 intelligently ignore default template arguments are worthless here. We
 have to jump through lots of hoops so this code doesn't require you to #include not only `<hash_map>`, but `<alloc>` and `<utility>` as well.
 
-==Macros==
+== Macros ==
 
 It's no surprise macros cause a huge problem for
 include-what-you-use. Basically, all the problems of templates also
@@ -190,7 +189,7 @@ isolation. As a result, we have very few tools to distinguish when the
 author of a macro is responsible for a symbol used in a macro, and
 when the caller of the macro is responsible.
 
-==Includes with Side Effects==
+== Includes with Side Effects ==
 
 While not a major problem, this indicates the myriad "gotchas" that exist around include-what-you-use: removing an #include and replacing it with a forward-declare may be dangerous even if no symbols are fully used from the #include.  Consider the following code:
 
@@ -215,7 +214,7 @@ foo.h:
 
 We might think we can remove an #include of `foo.h` and replace it by  `#include module_writer.h`, but that is likely to break the build if `module_writer.h` requires `MODULE_NAME` be defined.  Since my file doesn't participate in this dependency at all, it won't even notice it.  IWYU needs to keep track of dependencies between files it's not even trying to analyze!
 
-==Private Includes==
+== Private Includes ==
 
 Suppose you write `vector<int> v;`. You are using vector, and thus have
 to `#include <vector>`. Even this seemingly easy case is difficult,
@@ -235,7 +234,7 @@ use `NULL`, what #include file should iwyu suggest? We have rules to try
 to minimize the number of #includes you have to add; it can get rather
 involved.
 
-==Unparsed Code==
+== Unparsed Code ==
 
 Conditional #includes are a problem for iwyu when the condition is
 false:
@@ -247,7 +246,7 @@ false:
 If we're not running under windows (and iwyu does not currently run
 under windows), we have no way of telling if foo is a necessary #include or not.
 
-==Placing New Includes and Forward-Declares==
+== Placing New Includes and Forward-Declares ==
 
 Figuring out where to insert new #includes and forward-declares is a
 complex problem of its own (one that is the responsibility of
