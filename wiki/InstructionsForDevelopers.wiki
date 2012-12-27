@@ -10,25 +10,19 @@ We're still working this part out.  For now, you can create patches against svn-
 == Running the Tests ==
 
 If fixing a bug in clang, please add a test to the test suite!  You
-can create a file called `whatever.cc` (_not_ .cpp), and, if necessary, `whatever.h`, and
-`whatever-<extension>.h`.  You may be able to get away without adding
-any `.h` files, and just #including `direct.h` -- see, for instance,
-`tests/remove_fwd_decl_when_including.cc`.
+can create a file called `whatever.cc` (_not_ .cpp), and, if necessary, `whatever.h`, and `whatever-<extension>.h`.  You may be able to get away without adding any `.h` files, and just #including `direct.h` -- see, for instance, `tests/remove_fwd_decl_when_including.cc`.
 
 To run the iwyu tests, run
 {{{
-   python run_iwyu_tests.py
+  python run_iwyu_tests.py
 }}}
 
-It runs one test for each `.cc` file in the `tests/` directory.  (We have
-additional tests in `more_tests/`, but have not yet gotten the testing
-framework set up for those tests.)  The output can be a bit hard to
-read, but if a test fails, the reason why will be listed after the
+It runs one test for each `.cc` file in the `tests/` directory.  (We have additional tests in `more_tests/`, but have not yet gotten the testing framework set up for those tests.)  The output can be a bit hard to read, but if a test fails, the reason why will be listed after the
 `ERROR:root:Test failed for xxx` line.
 
 When fixing `fix_includes.py`, add a test case to `fix_includes_test.py` and run
 {{{
-   python fix_includes_test.py
+  python fix_includes_test.py
 }}}
 
 == Debugging ==
@@ -40,8 +34,8 @@ description of the verbose levels.  Level 7 is very verbose -- it
 dumps basically the entire AST as it's being traversed, along with
 iwyu decisions made as it goes -- but very useful for that:
 {{{
-   env IWYU_VERBOSE=7
-   make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use 2>&1 > /tmp/iwyu.verbose
+  env IWYU_VERBOSE=7
+  make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use 2>&1 > /tmp/iwyu.verbose
 }}}
 
 == A Quick Tour of the Codebase ==
