@@ -1,7 +1,7 @@
 #summary How to install and run include what you use
 #labels Featured,Phase-Deploy
 
-= Include What You Use  =
+= Instructions for Users  =
 
 "Include what you use" means this: for every symbol (type, function,
 variable, or macro) that you use in foo.cc (or foo.cpp), either foo.cc
