@@ -1,12 +1,12 @@
 #summary IWYU pragmas described
 
-=IWYU pragmas=
+= IWYU pragmas =
 
 IWYU pragmas are used to give IWYU information that isn't obvious from the source code, such as how different files relate to each other and which #includes to never remove or include.
 
 All pragmas start with `"// IWYU pragma: "` or `"/* IWYU pragma: "`. They are case-sensitive and spaces are significant.
 
-==IWYU pragma: keep==
+== IWYU pragma: keep ==
 This pragma applies to a single `#include` statement. It forces IWYU to keep an inclusion even if it is deemed unnecessary.
 
 {{{
@@ -17,7 +17,7 @@ main.cc:
 In this case, `std::vector` isn't used, so `<vector>` would normally be discarded, but the pragma instructs IWYU to leave it.
 
 
-==IWYU pragma: export==
+== IWYU pragma: export ==
 This pragma applies to a single `#include` statement. It says that the current file is to be considered the provider of any symbol from the included file.
 
 {{{
@@ -38,7 +38,7 @@ Here, since `detail/constants.h` and `detail/types.h` have both been exported, I
 In contrast, since `<vector>` has not been exported from `facade.h`, it will be suggested as an additional include.
 
 
-==IWYU pragma: begin_exports/end_exports==
+== IWYU pragma: begin_exports/end_exports ==
 This pragma applies to a set of `#include` statements. It declares that the including file is to be considered the provider of any symbol from these included files.
 This is the same as decorating every `#include` statement with `IWYU pragma: export`.
 
@@ -52,7 +52,7 @@ facade.h:
   #include <vector> // don't export stuff from <vector>
 }}}
 
-==IWYU pragma: private==
+== IWYU pragma: private ==
 This pragma applies to the current header file. It says that any symbol from this file will be provided by another, optionally named, file.
 
 {{{
@@ -81,7 +81,7 @@ Using the type `Private` in `main.cc` will cause IWYU to suggest that you includ
 Using the type `Private2` in `main.cc`  will cause IWYU to suggest that you include `private2.h`, but will also result in a warning that there's no public header for `private2.h`.
 
 
-==IWYU pragma: no_include==
+== IWYU pragma: no_include ==
 This pragma applies to the current source file. It declares that the named file should not be suggested for inclusion by IWYU.
 
 {{{
@@ -105,7 +105,7 @@ This is useful when you know a symbol definition is already available via some u
 
 The `no_include` pragma is somewhat similar to `private`, but is employed at point of use rather than at point of declaration.
 
-==IWYU pragma: no_forward_declare==
+== IWYU pragma: no_forward_declare ==
 This pragma applies to the current source file. It says that the named symbol should not be suggested for forward-declaration by IWYU.
 
 {{{
@@ -127,7 +127,7 @@ IWYU would normally suggest forward-declaring `Public` directly in `main.cc`, bu
 
 This is useful when you know a symbol declaration is already available in a source file via some unrelated header and you want to preserve that implicit dependency, or when IWYU does not correctly understand that the definition is necessary.
 
-==IWYU pragma: friend==
+== IWYU pragma: friend ==
 This pragma applies to the current header file. It says that any file matching the given regular expression will be considered a friend, and is allowed to include this header even if it's private. Conceptually similar to `friend` in C++.
 
 If the expression contains spaces, it must be enclosed in quotes.
@@ -152,7 +152,7 @@ main.cc:
 }}}
 
 
-==Which pragma should I use?==
+== Which pragma should I use? ==
 Ideally, IWYU should be smart enough to understand your intentions (and intentions of the authors of libraries you use), so the first answer should always be: none.
 
 In practice, intentions are not so clear -- it might be ambiguous whether an `#include` is there by clever design or by mistake, whether an `#include` serves to export symbols from a private header through a public facade or if it's just a left-over after some clean-up. Even when intent is obvious, IWYU can make mistakes due to bugs or not-yet-implemented policies.
