@@ -145,6 +145,12 @@ _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
 # added; it just affects the reordering of existing #includes.)
 _BARRIER_INCLUDES = re.compile(r'^\s*#\s*include\s+(<linux/)')
 
+# A list of all known extensions for C++ source files, used to
+# guess if a filename is a source file or a header.
+# Please keep this in sync with source_extensions in iwyu_path_util.cc.
+_SOURCE_EXTENSIONS = [".c", ".C", ".cc", ".CC", ".cxx", ".CXX",
+                      ".cpp", ".CPP", ".c++", ".C++", ".cp"]
+
 
 def _MayBeHeaderFile(filename):
   """Tries to figure out if filename is a C++ header file.  Defaults to yes."""
@@ -152,7 +158,7 @@ def _MayBeHeaderFile(filename):
   # extension at all.  So we say everything is a header file unless it
   # has a known extension that's not.
   extension = os.path.splitext(filename)[1]
-  return extension not in ('.c', '.cc', '.cxx', '.cpp', '.C', '.CC')
+  return extension not in _SOURCE_EXTENSIONS
 
 
 class FixIncludesError(Exception):
