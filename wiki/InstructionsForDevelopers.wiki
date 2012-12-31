@@ -34,8 +34,7 @@ description of the verbose levels.  Level 7 is very verbose -- it
 dumps basically the entire AST as it's being traversed, along with
 iwyu decisions made as it goes -- but very useful for that:
 {{{
-  env IWYU_VERBOSE=7
-  make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use 2>&1 > /tmp/iwyu.verbose
+  env IWYU_VERBOSE=7 make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use 2>&1 > /tmp/iwyu.verbose
 }}}
 
 == A Quick Tour of the Codebase ==
