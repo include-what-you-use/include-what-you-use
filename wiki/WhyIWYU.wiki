@@ -1,9 +1,11 @@
 #summary Why Bother with Include-What-You-Use?
 #labels Featured,Phase-Design
 
+
 = Why Include What You Use? =
 
 "Include what you use" means for every symbol (type, function, variable, or macro) that you use in a source file, the file should #include a .h file that exports the declaration of that symbol, or (if possible) forward-declare the symbol.  Why is this a good idea?
+
 
 == Faster Compiles ==
 
@@ -11,11 +13,13 @@ Every .h file you bring in when compiling a source file lengthens the time to co
 
 Here, the main benefit of include-what-you-use comes from the flip side: "don't include what you don't use."
 
+
 == Fewer Recompiles ==
 
 Many build tools, such as `make`, provide a mechanism for automatically figuring out what .h files a .cc file depends on.  These mechanisms typically look at #include lines.  When unnecessary #includes are listed, the build system is more likely to recompile in cases where it's not necessary.
 
 Again, the main advantage here is from "don't include what you don't use."
+
 
 == Allow Refactoring ==
 
@@ -25,6 +29,7 @@ This is most compelling for a very large codebase (such as Google's).  In a smal
 
 Here, it's the actual 'include what you use' policy that saves the day.  If everyone who uses vector is #including `<vector>` themselves, then you can remove `<vector>` without fear of breaking anything.
 
+
 == Self-documentation ==
 
 When you can trust the #include lines to accurately reflect what is used in the file, you can use them to help you understand the code.  Looking at them, in itself, can help you understand what this file needs in order to do its work.  If you use the optional 'commenting' feature of `fix_includes.py`, you can see what symbols -- what functions and classes -- are used by this code.  It's like a pared-down version of doxygen markup, but totally automated and present where the code is (rather than in a separate web browser).
@@ -32,6 +37,7 @@ When you can trust the #include lines to accurately reflect what is used in the 
 The 'commented' #include lines can also make it simpler to match function calls and classes to the files that define them, without depending on a particular IDE.
 
 (The downside, of course, is the comments can get out of date as the code changes, so unless you run iwyu often, you still have to take the comments with a grain of salt.  Nothing is free. :-) )
+
 
 == Dependency Cutting ==
 
