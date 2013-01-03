@@ -82,18 +82,6 @@ _IWYU_PATHS = [
 _IWYU_PATH = _GetIwyuPath(_IWYU_PATHS)
 
 
-def _IsCppSource(file_path):
-  return (file_path.endswith('.h') or file_path.endswith('.cc') or
-          file_path.endswith('.c'))
-
-
-def _GetAllCppFilesUnderDir(root_dir):
-  cpp_files = []
-  for (dir, _, files) in os.walk(root_dir):   # iterates over all dirs
-    cpp_files += [os.path.join(dir, f) for f in files if _IsCppSource(f)]
-  return cpp_files
-
-
 def _GetCommandOutput(command):
   p = subprocess.Popen(command,
                        shell=True,
@@ -371,7 +359,7 @@ def _CompareExpectedAndActualSummaries(expected_summaries, actual_summaries):
 
 
 def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
-                           iwyu_flags=None, verbose=False):
+                           iwyu_flags=None, clang_flags=None, verbose=False):
   """Checks running IWYU on the given .cc file.
 
   Args:
@@ -380,8 +368,13 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
     cpp_files_to_check: A list of filenames for the files
               to check the diagnostics on, relative to the current dir.
     iwyu_flags: Extra command-line flags to pass to iwyu.
+    clang_flags: Extra command-line flags to pass to clang, for example
+              "-std=c++11".
+    verbose: Whether to display verbose output.
   """
   iwyu_flags = iwyu_flags or []  # Make sure iwyu_flags is a list.
+  clang_flags = clang_flags or []  # Make sure clang_flags is a list.
+  clang_flags = ['-I .'] + clang_flags  # Default header search path for tests.
 
   # Require verbose level 3 so that we can verify the individual diagnostics.
   # We allow the level to be overriden by the IWYU_VERBOSE environment
@@ -393,7 +386,8 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
   iwyu_flags = ['-Xiwyu ' + flag for flag in iwyu_flags]
 
   # TODO(csilvers): verify that has exit-status 0.
-  cmd = '%s %s -I . %s' % (_IWYU_PATH, ' '.join(iwyu_flags), cc_file)
+  cmd = '%s %s %s %s' % (
+      _IWYU_PATH, ' '.join(iwyu_flags), ' '.join(clang_flags), cc_file)
   if verbose:
     print('>>> Running %s' % cmd)
   output = _GetCommandOutput(cmd)
@@ -412,14 +406,3 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
       _GetActualSummaries(output))
 
   test_case.assertTrue(not failures, ''.join(failures))
-
-
-# TODO(dsturtevant): Move all tests using this function to the test directory
-# harness, then get rid of it.
-def TestIwyuOnFile(test_case, relative_test_dir, cc_file, iwyu_flags=None):
-  """Checks running IWYU on the .cc file in the given directory."""
-
-  TestIwyuOnRelativeFile(test_case,
-                         os.path.join(relative_test_dir, cc_file),
-                         _GetAllCppFilesUnderDir(relative_test_dir),
-                         iwyu_flags)

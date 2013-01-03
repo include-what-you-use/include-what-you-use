@@ -55,9 +55,14 @@ class OneIwyuTest(unittest.TestCase):
       'no_h_includes_cc.cc': [CheckAlsoExtension('.c')],
       'overloaded_class.cc': [CheckAlsoExtension('-i1.h')],
     }
+    clang_flags_map = {
+      'auto_type_within_template.cc': ['-std=c++11'],
+    }
     # Internally, we like it when the paths start with TEST_ROOTDIR.
     self._iwyu_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
                                 for (k,v) in flags_map.items())
+    self._clang_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
+                                 for (k,v) in clang_flags_map.items())
 
   def RunOneTest(self, filename):
     logging.info('Testing iwyu on %s', filename)
@@ -84,8 +89,12 @@ class OneIwyuTest(unittest.TestCase):
     if iwyu_flags:
       logging.info('%s: Using iwyu flags %s', filename, str(iwyu_flags))
 
+    clang_flags = self._clang_flags_map.get(filename, None)
+    if clang_flags:
+      logging.info('%s: Using clang flags %s', filename, str(clang_flags))
+
     iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
-                                          iwyu_flags, verbose=True)
+                                          iwyu_flags, clang_flags, verbose=True)
 
 
 def RegisterFilesForTesting():

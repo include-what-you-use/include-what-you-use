@@ -363,6 +363,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseType(QualType qualtype) {
+    if (qualtype.isNull())
+      return Base::TraverseType(qualtype);
     const Type* type = qualtype.getTypePtr();
     if (current_ast_node_->StackContainsContent(type))
       return true;               // avoid recursion
