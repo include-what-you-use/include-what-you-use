@@ -4,7 +4,7 @@
 
 = Why Include What You Use? =
 
-"Include what you use" means for every symbol (type, function, variable, or macro) that you use in a source file, the file should #include a .h file that exports the declaration of that symbol, or (if possible) forward-declare the symbol.  Why is this a good idea?
+Are there any concrete benefits to a strict include-what-you-use policy? We like to think so.
 
 
 == Faster Compiles ==
