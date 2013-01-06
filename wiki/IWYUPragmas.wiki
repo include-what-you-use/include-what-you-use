@@ -150,6 +150,7 @@ main.cc:
 }}}
 
 == Which pragma should I use? ==
+
 Ideally, IWYU should be smart enough to understand your intentions (and intentions of the authors of libraries you use), so the first answer should always be: none.
 
 In practice, intentions are not so clear -- it might be ambiguous whether an `#include` is there by clever design or by mistake, whether an `#include` serves to export symbols from a private header through a public facade or if it's just a left-over after some clean-up. Even when intent is obvious, IWYU can make mistakes due to bugs or not-yet-implemented policies.
