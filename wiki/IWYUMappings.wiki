@@ -5,7 +5,7 @@
 
 One of the difficult problems for IWYU is distinguishing between which header contains a symbol definition and which header is the actual documented header to include for that symbol.
 
-For example, in GCC's libstdc++, `std::unique_ptr<T>` is defined in <bits/unique_ptr.h>, but the documented way to get it is to `#include <memory>`.
+For example, in GCC's libstdc++, `std::unique_ptr<T>` is defined in `<bits/unique_ptr.h>`, but the documented way to get it is to `#include <memory>`.
 
 Another example is `NULL`. Its authoritative header is `<cstddef>`, but for practical purposes `NULL` is more of a keyword, and according to the standard it's acceptable to assume it comes with `<cstring>`, `<clocale>`, `<cwchar>`, `<ctime>`, `<cstdio>` or `<cstdlib>`. In fact, almost every standard library header pulls in `NULL` one way or another, and we probably shouldn't force people to `#include <cstddef>`.
 
@@ -20,19 +20,19 @@ IWYU's original target environment was GCC, so the set of mapping files shipped 
 
 == Mapping File Format ==
 
-The mapping files conventionally use the `.imp` file extension, for "Iwyu MaPping" (terrible, I know). They use a [http://json.org/ JSON] meta-format with the following general form:
+The mapping files conventionally use the `.imp` file extension, for "Iwyu !MaPping" (terrible, I know). They use a [http://json.org/ JSON] meta-format with the following general form:
 {{{
 [
   { <directive>: <data> },
   { <directive>: <data> }
 ]
 }}}
-<directive>s can be one of the literal strings:
+Directives can be one of the literal strings:
   * include
   * symbol
   * ref
 
-and <data> varies between the directives, see below.
+and data varies between the directives, see below.
 
 Note that you can mix directives of different kinds within the same mapping file.
 
@@ -40,7 +40,7 @@ Note that you can mix directives of different kinds within the same mapping file
 
 The `include` directive specifies a mapping between two include names (relative path, including quotes or angle brackets.)
 
-This is typically used to map from a private implementation detail header to a public facade header, such as our <bits/unique_ptr.h> to <memory> example above.
+This is typically used to map from a private implementation detail header to a public facade header, such as our `<bits/unique_ptr.h>` to `<memory>` example above.
 
 Data for this directive is a list of four strings containing:
   * The include name to map from
@@ -76,9 +76,7 @@ The symbol visibility is largely redundant -- it must always be `private`. It is
 
 === Mapping Refs ===
 
-The last kind of directive, `ref`, is used to pull in another mapping file, much like the C preprocessor's `#include` directive.
-
-Data for this directive is a single string: the filename to include.
+The last kind of directive, `ref`, is used to pull in another mapping file, much like the C preprocessor's `#include` directive. Data for this directive is a single string: the filename to include.
 
 For example;
 {{{
@@ -99,8 +97,8 @@ The switch can be added multiple times to add more than one mapping file.
 There is a single aggregate mapping called `iwyu.gcc.imp` which is the default mapping used if nothing else is specified on the command-line.
 
 Both command-line arguments and `ref` directives use the same search path for mapping files. They are, in order:
-* The current directory, .
-* The directory in which the include-what-you-use binary is located
-* Any path from which a `ref` is loaded
+  * The current directory, .
+  * The directory in which the include-what-you-use binary is located
+  * Any path from which a `ref` is loaded
 
 The last clause allows `ref` directives to be relative to the referring mapping file.
