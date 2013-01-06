@@ -4,7 +4,7 @@
 
 = Why Include What You Use Is Difficult =
 
-This page is informational, for folks who are wondering why include-what-you-use requires so much code and yet still has so many
+This section is informational, for folks who are wondering why include-what-you-use requires so much code and yet still has so many
 errors.
 
 Include-what-you-use has the most problems with templates and macros. If your code doesn't use either, iwyu will probably do great. And, you're probably not actually programming in C++...
