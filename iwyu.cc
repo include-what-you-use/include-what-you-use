@@ -1923,6 +1923,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_LValueToRValue:
       case clang::CK_AtomicToNonAtomic:
       case clang::CK_NonAtomicToAtomic:
+      case clang::CK_ReinterpretMemberPointer:
+      case clang::CK_BuiltinFnToFnPtr:
         break;
 
       // We shouldn't be seeing any of these kinds.
