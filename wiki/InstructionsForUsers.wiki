@@ -28,8 +28,8 @@ You will need the Clang and LLVM trees on your system, such as by [http://clang.
   # or checkout from SVN
   llvm/tools/clang/tools$ svn co http://include-what-you-use.googlecode.com/svn/trunk/ include-what-you-use
 }}}
-  # Edit tools/clang/tools/Makefile and add include-what-you-use to the DIRS variable
-  # Edit tools/clang/tools/CMakeLists.txt and add_subdirectory(include-what-you-use)
+  # Edit tools/clang/tools/Makefile and add include-what-you-use to the `DIRS` variable
+  # Edit tools/clang/tools/CMakeLists.txt and `add_subdirectory(include-what-you-use)`
   # Once this is done, IWYU is recognized and picked up by both autoconf and CMake workflows as described in the Clang Getting Started guide
 
 Include what you use makes heavy use of Clang internals, and will occasionally break when Clang is updated. See the include-what-you-use Makefile for instructions on how to keep them in sync.
