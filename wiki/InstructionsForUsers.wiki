@@ -18,35 +18,23 @@ While we work to get IWYU quality up, we will be stinting new features, and will
 
 == How to Build ==
 
-You will need the clang and llvm trees on your system, such as by [http://clang.llvm.org/get_started.html checking out] their SVN trees.
-   
-Then [http://code.google.com/p/include-what-you-use/downloads/list download] the include-what-you-use tarball and unpack it your `/path/to/llvm/tools/clang/tools` directory:
+You will need the Clang and LLVM trees on your system, such as by [http://clang.llvm.org/get_started.html checking out] their SVN trees (but don't configure or build before you've done the following.)
+
+  # Put include-what-you-use in the source tree. Either [http://code.google.com/p/include-what-you-use/downloads/list download] the include-what-you-use tarball and unpack it your `/path/to/llvm/tools/clang/tools` directory, or get the project directly from [http://code.google.com/p/include-what-you-use/source/checkout svn]:
 {{{
+  # Unpack tarball
   llvm/tools/clang/tools$ tar xfz include-what-you-use-<version>.tar.gz
-}}}
-Or, alternately, get the project directly from [http://code.google.com/p/include-what-you-use/source/checkout svn]:
-{{{
+
+  # or checkout from SVN
   llvm/tools/clang/tools$ svn co http://include-what-you-use.googlecode.com/svn/trunk/ include-what-you-use
 }}}
-
-  # Edit tools/clang/tools/Makefile and add include-what-you-use to the DIRS variable.
+  # Edit tools/clang/tools/Makefile and add include-what-you-use to the DIRS variable
   # Edit tools/clang/tools/CMakeLists.txt and add_subdirectory(include-what-you-use)
-  # 'cd' into the build directory (the directory you ran llvm/configure from) and type 'make'
+  # Once this is done, IWYU is recognized and picked up by both autoconf and CMake workflows as described in the Clang Getting Started guide
 
-Include what you use makes heavy use of clang internals, and will occasionally break when clang is updated.  See the include-what-you-use Makefile for instructions on how to keep them in sync.
+Include what you use makes heavy use of Clang internals, and will occasionally break when Clang is updated. See the include-what-you-use Makefile for instructions on how to keep them in sync.
 
-
-=== How to Build on Windows ===
-
-(These instructions are compliments Philip Craig.)
-
-  # Build LLVM and Clang as it says to on the [http://clang.llvm.org/get_started.html Clang Windows Development HOWTO page]. You'll need [http://www.cmake.org/ cmake]. Once done, you'll have a Visual Studio solution with about 113 libraries for llvm and clang.
-  # Make a new IWYU .vcproj as part of that solution. Add the IWYU source to the IWYU .vcproj. Add the llvm and clang libraries mentioned in the [http://code.google.com/p/include-what-you-use/source/browse/trunk/Makefile IWYU makefile] to the list of link libraries, changing the suffix from the linux .a to the Windows .lib.
-  # Remove/replace linux-isms in the IWYU code that are non portable. Find a getopt replacement for Windows. Replace fnmatch with some other windows code (such as boost filesystem).
-  # Build, fix errors, repeat.
-  # When running IWYU, you have to put standard C++ headers from cygwin on the include path, as Clang can't handle the non standard C++ constructs in the microsoft standard C++ headers.
-
-A similar approach, which uses MinGW instead of cygwin, is available [http://groups.google.com/group/include-what-you-use/msg/b97a395e92459d41 here].
+IWYU, like Clang, does not yet handle some of the non-standard constructs in Microsoft's STL headers. A discussion on how to use MinGW or Cygwin headers with IWYU is available on the [https://groups.google.com/group/include-what-you-use/msg/a4d08378440edafd mailing list].
 
 
 == How to Run ==
