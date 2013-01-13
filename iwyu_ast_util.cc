@@ -530,7 +530,7 @@ bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
   for (CXXRecordDecl::ctor_iterator ctor = cxx_class->ctor_begin();
        ctor != cxx_class->ctor_end(); ++ctor) {
     if (ctor->isExplicit() || ctor->getNumParams() != 1 ||
-        ctor->isCopyConstructor())
+        ctor->isCopyConstructor() || ctor->isMoveConstructor())
       continue;
     return true;
   }
