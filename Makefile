@@ -25,8 +25,8 @@ TOOL_NO_EXPORTS = 1
 include $(CLANG_LEVEL)/../../Makefile.config
 LINK_COMPONENTS = $(TARGETS_TO_BUILD) asmparser ipo
 USEDLIBS = clangFrontend.a clangSerialization.a clangDriver.a clangParse.a \
-           clangSema.a clangAnalysis.a clangAST.a clangLex.a clangBasic.a \
-           clangEdit.a
+           clangSema.a clangAnalysis.a clangAST.a clangEdit.a clangLex.a \
+           clangBasic.a
 
 include $(CLANG_LEVEL)/Makefile
 
