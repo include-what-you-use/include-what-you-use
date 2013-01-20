@@ -12,11 +12,17 @@
 
 #include "tests/direct.h"
 
-// IWYU: IndirectClass needs a declaration
-char Foo(IndirectClass);
-
 // IWYU: IndirectClass is...*indirect.h
-IndirectClass ic;
+IndirectClass ic;  // this triggers generation of implicit move constructor
+
+// IWYU: IndirectClass needs a declaration
+char Foo(IndirectClass); // this checks if IndirectClass has an implicit
+                         // conversion constructor, which misfires because
+                         // there's an implicit move constructor.
+
+// The patch to issue #89 fixes this by having iwyu_ast_util.cc's
+// HasImplicitConversionCtor not treat implicit move constructors as
+// implicit conversion constructors.
 
 /**** IWYU_SUMMARY
 
