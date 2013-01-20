@@ -20,7 +20,7 @@ While we work to get IWYU quality up, we will be stinting new features, and will
 
 You will need the Clang and LLVM trees on your system, such as by [http://clang.llvm.org/get_started.html checking out] their SVN trees (but don't configure or build before you've done the following.)
 
-  # Put include-what-you-use in the source tree. Either [http://code.google.com/p/include-what-you-use/downloads/list download] the include-what-you-use tarball and unpack it your `/path/to/llvm/tools/clang/tools` directory, or get the project directly from [http://code.google.com/p/include-what-you-use/source/checkout svn]:
+  * Put include-what-you-use in the source tree. Either [http://code.google.com/p/include-what-you-use/downloads/list download] the include-what-you-use tarball and unpack it your `/path/to/llvm/tools/clang/tools` directory, or get the project directly from [http://code.google.com/p/include-what-you-use/source/checkout svn]:
 {{{
   # Unpack tarball
   llvm/tools/clang/tools$ tar xfz include-what-you-use-<version>.tar.gz
@@ -28,11 +28,11 @@ You will need the Clang and LLVM trees on your system, such as by [http://clang.
   # or checkout from SVN
   llvm/tools/clang/tools$ svn co http://include-what-you-use.googlecode.com/svn/trunk/ include-what-you-use
 }}}
-  # Edit tools/clang/tools/Makefile and add include-what-you-use to the `DIRS` variable
-  # Edit tools/clang/tools/CMakeLists.txt and `add_subdirectory(include-what-you-use)`
-  # Once this is done, IWYU is recognized and picked up by both autoconf and CMake workflows as described in the Clang Getting Started guide
+  * Edit tools/clang/tools/Makefile and add include-what-you-use to the `DIRS` variable
+  * Edit tools/clang/tools/CMakeLists.txt and `add_subdirectory(include-what-you-use)`
+  * Once this is done, IWYU is recognized and picked up by both autoconf and CMake workflows as described in the Clang Getting Started guide
 
-Include what you use makes heavy use of Clang internals, and will occasionally break when Clang is updated. See the include-what-you-use Makefile for instructions on how to keep them in sync.
+Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. See the include-what-you-use Makefile for instructions on how to keep them in sync.
 
 IWYU, like Clang, does not yet handle some of the non-standard constructs in Microsoft's STL headers. A discussion on how to use MinGW or Cygwin headers with IWYU is available on the [https://groups.google.com/group/include-what-you-use/msg/a4d08378440edafd mailing list].
 
@@ -64,9 +64,9 @@ WARNING: include-what-you-use only analyzes .cc (or .cpp) files built by `make`,
 
 == How to Correct IWYU Mistakes ==
 
-  # If fix_includes.py has removed an #include you actually need, add it back in with the comment '`// IWYU pragma: keep`' at the end of the #include line.  Note that the comment is case-sensitive.
-  # If fix_includes has added an #include you don't need, just take it out.  We hope to come up with a more permanent way of fixing later.
-  # If fix_includes has wrongly added or removed a forward-declare, just fix it up manually.
-  # If fix_includes has suggested a private header file (such as `<bits/stl_vector.h>`) instead of the proper public header file (`<vector>`), you can fix this by inserting a specially crafted comment near top of the private file (assuming you can write to it): '`// IWYU pragma: private, include "the/public/file.h"`'.  
+  * If fix_includes.py has removed an #include you actually need, add it back in with the comment '`// IWYU pragma: keep`' at the end of the #include line.  Note that the comment is case-sensitive.
+  * If fix_includes has added an #include you don't need, just take it out.  We hope to come up with a more permanent way of fixing later.
+  * If fix_includes has wrongly added or removed a forward-declare, just fix it up manually.
+  * If fix_includes has suggested a private header file (such as `<bits/stl_vector.h>`) instead of the proper public header file (`<vector>`), you can fix this by inserting a specially crafted comment near top of the private file (assuming you can write to it): '`// IWYU pragma: private, include "the/public/file.h"`'.  
 
 All current IWYU pragmas (as of July 2012) are described in [IWYUPragmas].
