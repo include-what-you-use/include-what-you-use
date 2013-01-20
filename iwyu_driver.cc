@@ -221,7 +221,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   compiler->setInvocation(invocation.take());
 
   // Create the compilers actual diagnostics engine.
-  compiler->createDiagnostics(args_end - args_start, args_start);
+  compiler->createDiagnostics();
   if (!compiler->hasDiagnostics())
     return NULL;
 
