@@ -22,11 +22,11 @@ You will need the Clang and LLVM trees on your system, such as by [http://clang.
 
   * Put include-what-you-use in the source tree. Either [http://code.google.com/p/include-what-you-use/downloads/list download] the include-what-you-use tarball and unpack it your `/path/to/llvm/tools/clang/tools` directory, or get the project directly from [http://code.google.com/p/include-what-you-use/source/checkout svn]:
 {{{
-  # Unpack tarball
-  llvm/tools/clang/tools$ tar xfz include-what-you-use-<version>.tar.gz
+    # Unpack tarball
+    llvm/tools/clang/tools$ tar xfz include-what-you-use-<version>.tar.gz
 
-  # or checkout from SVN
-  llvm/tools/clang/tools$ svn co http://include-what-you-use.googlecode.com/svn/trunk/ include-what-you-use
+    # or checkout from SVN
+    llvm/tools/clang/tools$ svn co http://include-what-you-use.googlecode.com/svn/trunk/ include-what-you-use
 }}}
   * Edit tools/clang/tools/Makefile and add include-what-you-use to the `DIRS` variable
   * Edit tools/clang/tools/CMakeLists.txt and `add_subdirectory(include-what-you-use)`
