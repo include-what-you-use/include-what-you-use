@@ -87,7 +87,7 @@ def unwikified(filename):
 
 
 def heading():
-  now = datetime.now().replace(microsecond=0)
+  now = datetime.utcnow().replace(microsecond=0)
 
   buf = []
   buf.append('-' * 80)
@@ -95,7 +95,7 @@ def heading():
   buf.append('-' * 80)
   buf.append('')
   buf.append('This README was generated from the Wiki contents at')
-  buf.append('http://code.google.com/p/include-what-you-use/w/ on %s.'
+  buf.append('http://code.google.com/p/include-what-you-use/w/ on %s UTC.'
                  % now.isoformat(' '))
 
   return '\n'.join(buf)
