@@ -33,37 +33,37 @@ include-what-you-use$ ./make_readme.py ./wiki > README.txt
 # - take a line and return one or more lines as a single string
 # - return None if the line is to be deleted
 # - return an empty string if the line is to be left blank
-def fix_codeblock(line):
+def FixCodeBlock(line):
   if line.startswith('{{{') or line.startswith('}}}'):
     return ''
 
   return line
 
 
-def fix_newline(line):
+def FixNewLine(line):
   return line.strip('\r').strip('\n')
 
 
-def fix_directives(line):
+def FixDirectives(line):
   if line.startswith('#summary') or line.startswith('#labels'):
     return None
 
   return line
 
 
-def fix_links(line):
+def FixLinks(line):
   return re.sub(R'\[.*?\s(.*?)\]', R'\1', line)
 
 
-def fix_backticks(line):
+def FixBackticks(line):
   return line.replace('`', '')
 
 
-def fix_linewrap(line):
+def FixLinewrap(line):
   return textwrap.fill(line, 80)
 
 
-def apply_fixes(line, fixes):
+def ApplyFixes(line, fixes):
   for fix in fixes:
     if line:
       line = fix(line)
@@ -71,22 +71,22 @@ def apply_fixes(line, fixes):
   return line
 
 
-def unwikified(filename):
-  fixes = [fix_codeblock, fix_directives, fix_links, fix_backticks,
-           fix_newline, fix_linewrap]
+def Unwikified(filename):
+  fixes = [FixCodeBlock, FixDirectives, FixLinks, FixBackticks,
+           FixNewLine, FixLinewrap]
 
   readme = []
 
   with open(filename, 'r') as stream:
     for line in stream.readlines():
-      line = apply_fixes(line, fixes)
+      line = ApplyFixes(line, fixes)
       if line is not None:
         readme.append(line)
 
   return '\n'.join(readme)
 
 
-def heading():
+def Heading():
   now = datetime.utcnow().replace(microsecond=0)
 
   buf = []
@@ -101,8 +101,8 @@ def heading():
   return '\n'.join(buf)
 
 
-def list_wiki_pages(wiki_pattern):
-  def prioritize(path):
+def ListWikiPages(wiki_pattern):
+  def Prioritize(path):
     name = os.path.basename(path)
     prioritized = ['InstructionsForUsers.wiki',
                    'InstructionsForDevelopers.wiki',
@@ -120,23 +120,23 @@ def list_wiki_pages(wiki_pattern):
                 for filename in glob.iglob(wiki_pattern)
                 if not os.path.basename(filename) in excluded]
 
-  return sorted(page_paths, key=prioritize)
+  return sorted(page_paths, key=Prioritize)
 
 
-def main():
-  if len(sys.argv) != 2:
+def main(argv):
+  if len(argv) != 2:
     print(_USAGE)
     return 1
 
-  print(heading())
+  print(Heading())
 
-  path = sys.argv[1]
+  path = argv[1]
   pattern = os.path.join(path, '*.wiki')
-  for page_path in list_wiki_pages(pattern):
-    print(unwikified(page_path))
+  for page_path in ListWikiPages(pattern):
+    print(Unwikified(page_path))
 
   return 0
 
 
 if __name__ == '__main__':
-  sys.exit(main())
+  sys.exit(main(sys.argv))
