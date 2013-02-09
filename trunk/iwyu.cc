@@ -235,38 +235,6 @@ using std::vector;
 
 namespace {
 
-class WarningLessThan {
- public:
-  struct Warning {
-    Warning(const string& f, int ln, int cn, const string& m, int c)
-        : filename(f), line_num(ln), column_num(cn), message(m), count(c) { }
-    const string filename;
-    const int line_num;
-    const int column_num;
-    const string message;
-    const int count;
-  };
-
-  static Warning ParseWarning(const pair<string, int>& warning_and_count) {
-    // Lines look like file:lineno:colno: text.
-    const vector<string> segs = Split(warning_and_count.first, ":", 4);
-    CHECK_(segs.size() == 4);
-    return Warning(segs[0], atoi(segs[1].c_str()), atoi(segs[2].c_str()),
-                   segs[3], warning_and_count.second);
-  }
-
-  bool operator()(const pair<string, int>& a,
-                  const pair<string, int>& b) const {
-    const Warning& w1 = ParseWarning(a);
-    const Warning& w2 = ParseWarning(b);
-    if (w1.filename != w2.filename)  return w1.filename < w2.filename;
-    if (w1.line_num != w2.line_num)  return w1.line_num < w2.line_num;
-    if (w1.column_num != w2.column_num)  return w1.column_num < w2.column_num;
-    if (w1.message != w2.message)  return w1.message < w2.message;
-    return w1.count < w2.count;
-  }
-};
-
 string IntToString(int i) {
   char buf[64];   // big enough for any number
   snprintf(buf, sizeof(buf), "%d", i);
