@@ -31,6 +31,7 @@ class CXXConstructExpr;
 class CXXConstructorDecl;
 class CXXDeleteExpr;
 class CXXDestructorDecl;
+class CXXMethodDecl;
 class CXXRecordDecl;
 class CallExpr;
 class CastExpr;
@@ -484,6 +485,10 @@ bool IsTemplatizedFunctionDecl(const clang::FunctionDecl* decl);
 // Returns true if the given class has at least one implicit
 // conversion constructor.
 bool HasImplicitConversionCtor(const clang::CXXRecordDecl* cxx_class);
+
+// Returns true if the given method is an override with covariant return type
+// compared to its base.
+bool HasCovariantReturnType(const clang::CXXMethodDecl* method_decl);
 
 // If this decl is a (possibly templatized) class, return the decl
 // that defines the class, if present.  Otherwise return NULL.

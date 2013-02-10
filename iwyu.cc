@@ -1841,6 +1841,28 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  // Special handling for C++ methods to detect covariant return types.
+  // These are defined as a derived class overriding a method with a different
+  // return type from the base.
+  bool VisitCXXMethodDecl(CXXMethodDecl* method_decl) {
+    if (CanIgnoreCurrentASTNode()) return true;
+
+    if (HasCovariantReturnType(method_decl)) {
+      const Type* return_type = RemovePointersAndReferencesAsWritten(
+          method_decl->getResultType().getTypePtr());
+
+      VERRS(3) << "Found covariant return type in "
+               << method_decl->getQualifiedNameAsString()
+               << ", needs complete type of "
+               << PrintableType(return_type)
+               << ".\n";
+
+      ReportTypeUse(CurrentLoc(), return_type);
+    }
+
+    return Base::VisitCXXMethodDecl(method_decl);
+  }
+
   //------------------------------------------------------------
   // Visitors of types derived from clang::Stmt.
 
