@@ -28,6 +28,9 @@
 #define IWYU_OVERRIDE
 #endif
 
+// Count of statically allocated array.
+#define IWYU_ARRAYSIZE(arr) sizeof(arr) / sizeof(*arr)
+
 namespace include_what_you_use {
 
 // Helper class that allows programmers to log extra information in CHECK_s.
