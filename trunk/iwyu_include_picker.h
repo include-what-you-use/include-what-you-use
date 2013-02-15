@@ -70,10 +70,12 @@ using llvm::OwningPtr;
 using llvm::MemoryBuffer;
 using llvm::error_code;
 
+struct IncludeMapEntry;
+
+enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
+
 class IncludePicker {
  public:
-  enum Visibility { kUnusedVisibility, kPublic, kPrivate };
-
   typedef map<string, vector<string> > IncludeMap;  // map_from to <map_to,...>
 
   IncludePicker();
@@ -155,14 +157,20 @@ class IncludePicker {
  private:
   // Adds a mapping from a one header to another, typically
   // from a private to a public quoted include.
-  void AddIncludeMapping(const string& map_from, Visibility from_visibility, 
-     const string& map_to, Visibility to_visibility);
+  void AddIncludeMapping(
+      const string& map_from, IncludeVisibility from_visibility, 
+      const string& map_to, IncludeVisibility to_visibility);
 
   // Adds a mapping from a a symbol to a quoted include. We use this to 
   // maintain mappings of documented types, e.g.
   //  For std::map<>, include <map>.
-  void AddSymbolMapping(const string& map_from, Visibility from_visibility, 
-    const string& map_to, Visibility to_visibility);
+  void AddSymbolMapping(
+      const string& map_from, const string& map_to,
+      IncludeVisibility to_visibility);
+
+  // Adds mappings from sized arrays of IncludeMapEntry.
+  void AddIncludeMappings(const IncludeMapEntry* entries, size_t count);
+  void AddSymbolMappings(const IncludeMapEntry* entries, size_t count);
 
   // Expands the regex keys in filepath_include_map_ and
   // friend_to_headers_map_ by matching them against all source files
@@ -174,16 +182,15 @@ class IncludePicker {
   void AddImplicitThirdPartyMappings();
 
   // Adds an entry to filepath_visibility_map_, with error checking.
-  void MarkVisibility(const string& quoted_include,
-                      IncludePicker::Visibility vis);
+  void MarkVisibility(const string& quoted_include, IncludeVisibility vis);
 
   // Parse visibility from a string. Returns kUnusedVisibility if
   // string is not recognized.
-  Visibility ParseVisibility(const string& visibility_str) const;
+  IncludeVisibility ParseVisibility(const string& visibility_str) const;
 
   // Return the visibility of a given quoted_include if known, else
   // kUnusedVisibility.
-  Visibility GetVisibility(const string& quoted_include) const;
+  IncludeVisibility GetVisibility(const string& quoted_include) const;
 
   // For the given key, return the vector of values associated with
   // that key, or an empty vector if the key does not exist in the
@@ -214,7 +221,7 @@ class IncludePicker {
 
   // A map of all quoted-includes to whether they're public or private.
   // Quoted-includes that are not present in this map are assumed public.
-  map<string, Visibility> filepath_visibility_map_;
+  map<string, IncludeVisibility> filepath_visibility_map_;
 
   // All the includes we've seen so far, to help with globbing and
   // other dynamic mapping.  For each file, we list who #includes it.
