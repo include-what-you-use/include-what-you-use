@@ -102,9 +102,6 @@
   { include: ["<tr1_impl/cwctype>", private, "<tr1/cwctype>", public ] },
   { include: ["<tr1_impl/functional>", private, "<functional>", public ] },
   { include: ["<tr1_impl/functional>", private, "<tr1/functional>", public ] },
-  { include: ["<tr1_impl/functional_hash.h>", private,
-    "<tr1/functional_hash.h>", public ] },
-  { include: ["<tr1_impl/hashtable>", private, "<tr1/hashtable.h>", public ] },
   { include: ["<tr1_impl/random>", private, "<random>", public ] },
   { include: ["<tr1_impl/random>", private, "<tr1/random>", public ] },
   { include: ["<tr1_impl/regex>", private, "<regex>", public ] },
@@ -120,6 +117,17 @@
   # This didn't come from the grep, but seems to be where swap()
   # is defined?
   { include: ["<bits/move.h>", private, "<algorithm>", public ] },   # for swap<>()
+  # Hash and hashtable-based containers.
+  { include: ["<tr1_impl/functional_hash.h>", private, "<tr1/functional>", public ] },
+  { include: ["<tr1_impl/functional_hash.h>", private, "<tr1/unordered_map>", public ] },
+  { include: ["<tr1_impl/functional_hash.h>", private, "<tr1/unordered_set>", public ] },
+  { include: ["<tr1/functional_hash.h>", private, "<tr1/functional>", public ] },
+  { include: ["<tr1/functional_hash.h>", private, "<tr1/unordered_map>", public ] },
+  { include: ["<tr1/functional_hash.h>", private, "<tr1/unordered_set>", public ] },
+  { include: ["<tr1_impl/hashtable>", private, "<tr1/unordered_map>", public ] },
+  { include: ["<tr1_impl/hashtable>", private, "<tr1/unordered_set>", public ] },
+  { include: ["<tr1/hashtable.h>", private, "<tr1/unordered_map>", public ] },
+  { include: ["<tr1/hashtable.h>", private, "<tr1/unordered_set>", public ] },
   # All .tcc files are gcc internal-include files.  We get them from
   # ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep -R '^ *# *include.*tcc' * | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ && print qq@    { include: ["<$2>", private, "<$1>", public ] },@' | sort )
   # I had to manually edit some of the entries to say the map-to is private.
