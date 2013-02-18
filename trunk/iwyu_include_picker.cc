@@ -520,9 +520,6 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<tr1_impl/cwctype>", kPrivate, "<tr1/cwctype>", kPublic },
   { "<tr1_impl/functional>", kPrivate, "<functional>", kPublic },
   { "<tr1_impl/functional>", kPrivate, "<tr1/functional>", kPublic },
-  { "<tr1_impl/functional_hash.h>", kPrivate,
-    "<tr1/functional_hash.h>", kPublic },
-  { "<tr1_impl/hashtable>", kPrivate, "<tr1/hashtable.h>", kPublic },
   { "<tr1_impl/random>", kPrivate, "<random>", kPublic },
   { "<tr1_impl/random>", kPrivate, "<tr1/random>", kPublic },
   { "<tr1_impl/regex>", kPrivate, "<regex>", kPublic },
@@ -538,6 +535,17 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   // This didn't come from the grep, but seems to be where swap()
   // is defined?
   { "<bits/move.h>", kPrivate, "<algorithm>", kPublic },   // for swap<>()
+  // Hash and hashtable-based containers.
+  { "<tr1_impl/functional_hash.h>", kPrivate, "<tr1/functional>", kPublic },
+  { "<tr1_impl/functional_hash.h>", kPrivate, "<tr1/unordered_map>", kPublic },
+  { "<tr1_impl/functional_hash.h>", kPrivate, "<tr1/unordered_set>", kPublic },
+  { "<tr1/functional_hash.h>", kPrivate, "<tr1/functional>", kPublic },
+  { "<tr1/functional_hash.h>", kPrivate, "<tr1/unordered_map>", kPublic },
+  { "<tr1/functional_hash.h>", kPrivate, "<tr1/unordered_set>", kPublic },
+  { "<tr1_impl/hashtable>", kPrivate, "<tr1/unordered_map>", kPublic },
+  { "<tr1_impl/hashtable>", kPrivate, "<tr1/unordered_set>", kPublic },
+  { "<tr1/hashtable.h>", kPrivate, "<tr1/unordered_map>", kPublic },
+  { "<tr1/hashtable.h>", kPrivate, "<tr1/unordered_set>", kPublic },
   // All .tcc files are gcc internal-include files.  We get them from
   // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep -R '^ *# *include.*tcc' * | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ && print qq@    { "<$2>", kPrivate, "<$1>", kPublic },@' | sort )
   // I had to manually edit some of the entries to say the map-to is private.
