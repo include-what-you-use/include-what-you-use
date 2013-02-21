@@ -355,7 +355,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // system, off to the side.  We don't care about qualifier
     // positions, so avoid the need for special-casing by just
     // traversing the unqualified version instead.
-    if (isa<QualifiedTypeLoc>(typeloc)) {
+    if (typeloc.getAs<QualifiedTypeLoc>()) {
       typeloc = typeloc.getUnqualifiedLoc();
     }
     if (current_ast_node_->StackContainsContent(&typeloc))
