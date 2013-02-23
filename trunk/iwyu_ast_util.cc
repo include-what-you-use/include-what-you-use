@@ -409,14 +409,19 @@ string PrintableTemplateName(const TemplateName& tpl_name) {
 }
 
 string PrintableTemplateArgument(const TemplateArgument& arg) {
-  return TemplateSpecializationType::PrintTemplateArgumentList(
-      &arg, 1, DefaultPrintPolicy());
+  std::string buffer;
+  raw_string_ostream ostream(buffer);
+  TemplateSpecializationType::PrintTemplateArgumentList(
+      ostream, &arg, 1, DefaultPrintPolicy());
+  return ostream.str();
 }
 
-string PrintableTemplateArgumentLoc(
-    const TemplateArgumentLoc& arg) {
-  return TemplateSpecializationType::PrintTemplateArgumentList(
-      &arg, 1, DefaultPrintPolicy());
+string PrintableTemplateArgumentLoc(const TemplateArgumentLoc& arg) {
+  std::string buffer;
+  raw_string_ostream ostream(buffer);
+  TemplateSpecializationType::PrintTemplateArgumentList(
+      ostream, &arg, 1, DefaultPrintPolicy());
+  return ostream.str();
 }
 
 // This prints to errs().  It's useful for debugging (e.g. inside gdb).
