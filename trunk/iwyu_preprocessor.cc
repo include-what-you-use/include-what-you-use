@@ -515,7 +515,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 // Called whenever a macro is expanded.  Example: when FOO(a, b) is
 // seen in the source code, where FOO() is a macro #defined earlier,
 // MacroExpands() will be called once with 'macro_use_token' being
-// FOO, and 'macro_def' containing more information about FOO's
+// FOO, and 'directive' containing more information about FOO's
 // definition.
 void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
                                         const MacroDirective* directive,
