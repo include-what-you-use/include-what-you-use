@@ -34,6 +34,7 @@
 
 using clang::FileEntry;
 using clang::FileID;
+using clang::MacroDirective;
 using clang::MacroInfo;
 using clang::Preprocessor;
 using clang::SourceLocation;
@@ -517,9 +518,10 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 // FOO, and 'macro_def' containing more information about FOO's
 // definition.
 void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
-                                        const MacroInfo* macro_def,
+                                        const MacroDirective* directive,
                                         SourceRange range) {
   const FileEntry* macro_file = GetFileEntry(macro_use_token);
+  const MacroInfo* macro_def = directive->getInfo();
   if (ShouldPrintSymbolFromFile(macro_file)) {
     errs() << "[ Use macro   ] "
            << PrintableLoc(macro_use_token.getLocation())
@@ -533,7 +535,8 @@ void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
 }
 
 void IwyuPreprocessorInfo::MacroDefined(const Token& id,
-                                        const MacroInfo* macro) {
+                                        const MacroDirective* directive) {
+  const MacroInfo* macro = directive->getInfo();
   const SourceLocation macro_loc = macro->getDefinitionLoc();
   ERRSYM(GetFileEntry(macro_loc))
       << "[ #define     ] " << PrintableLoc(macro_loc)
@@ -578,7 +581,7 @@ void IwyuPreprocessorInfo::Elif(SourceLocation loc,
 
 void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
                                  const Token& id,
-                                 const MacroInfo* macro) {
+                                 const MacroDirective*) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifdef      ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
@@ -587,7 +590,7 @@ void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
 
 void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
                                   const Token& id,
-                                  const MacroInfo* macro) {
+                                  const MacroDirective*) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifndef     ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
