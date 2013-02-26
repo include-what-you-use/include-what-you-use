@@ -183,8 +183,7 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
 }
 
 void InitGlobals(clang::SourceManager* sm,
-                 clang::HeaderSearch* header_search,
-                 const std::string& executable_path) {
+                 clang::HeaderSearch* header_search) {
   CHECK_(sm && "InitGlobals() needs a non-NULL SourceManager");
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
@@ -203,7 +202,6 @@ void InitGlobals(clang::SourceManager* sm,
 
   // Set up mapping file search paths.
   include_picker->AddMappingFileSearchPath(".");
-  include_picker->AddMappingFileSearchPath(GetParentPath(executable_path));
 
   // Add mappings.
   for (Each<string> it(&GlobalFlags().mapping_files); !it.AtEnd(); ++it) {
