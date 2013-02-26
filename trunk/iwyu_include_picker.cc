@@ -789,6 +789,50 @@ vector<string> GetSequenceValue(Node* node) {
   return result;
 }
 
+// If new_path doesn't already exist in search_path, makes a copy of search_path
+// and adds new_path to it.
+// Returns the original or extended search path.
+vector<string> ExtendMappingFileSearchPath(const vector<string>& search_path,
+                                           const string& new_path) {
+  CHECK_(IsAbsolutePath(new_path));
+
+  if (std::find(search_path.begin(),
+                search_path.end(),
+                new_path) == search_path.end()) {
+    vector<string> extended(search_path);
+    extended.push_back(new_path);
+    return extended;
+  }
+
+  return search_path;
+}
+
+// Scans search_path for existing files with filename.
+// If filename is absolute and exists, return it.
+// If filename is relative and exists based on cwd, return it in absolute form.
+// If filename is relative and doesn't exist, try to find it along search_path.
+// Returns an absolute filename if file is found, otherwise filename untouched.
+string FindFileInSearchPath(const vector<string>& search_path,
+                            const string& filename) {
+  if (llvm::sys::fs::exists(filename)) {
+    // If the file exists, no matter if its path is relative or absolute,
+    // return it in absolute form.
+    return MakeAbsolutePath(filename);
+  } else if (!IsAbsolutePath(filename)) {
+    // If it's relative, scan search path.
+    for (Each<string> it(&search_path); !it.AtEnd(); ++it) {
+      string candidate = MakeAbsolutePath(*it, filename);
+      if (llvm::sys::fs::exists(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  // This is proven not to exist, so handle the error when
+  // we attempt to open it.
+  return filename;
+}
+
 }  // namespace
 
 IncludePicker::IncludePicker()
@@ -870,16 +914,6 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
     StripPast(&public_header, "/");   // read past "asm-whatever/"
     public_header = "<asm/" + public_header;   // now it's <asm/something.h>
     AddMapping(quoted_includee, public_header);
-  }
-}
-
-void IncludePicker::AddMappingFileSearchPath(const string& path) {
-  string absolute_path = MakeAbsolutePath(path);
-  if (std::find(mapping_file_search_path_.begin(),
-                mapping_file_search_path_.end(),
-                absolute_path) == mapping_file_search_path_.end()) {
-    VERRS(6) << "Adding mapping file search path: " << absolute_path << "\n";
-    mapping_file_search_path_.push_back(absolute_path);
   }
 }
 
@@ -1114,33 +1148,6 @@ string IncludePicker::MaybeGetIncludeNameAsWritten(
   return value ? *value : "";
 }
 
-error_code IncludePicker::TryReadMappingFile(
-    const string& filename,
-    OwningPtr<MemoryBuffer>& buffer) const {
-  string absolute_path;
-  if (IsAbsolutePath(filename)) {
-    VERRS(5) << "Absolute mapping filename: " << filename << ".\n";
-    absolute_path = filename;
-  } else {
-    VERRS(5) << "Relative mapping filename: " << filename << ". "
-      << "Scanning search path.\n";
-    // Scan search path
-    for (Each<string> it(&mapping_file_search_path_); !it.AtEnd(); ++it) {
-      string candidate = MakeAbsolutePath(*it, filename);
-      if (llvm::sys::fs::exists(candidate)) {
-        absolute_path = candidate;
-        VERRS(5) << "Found mapping file: " << candidate << ".\n";
-        break;
-      }
-    }
-  }
-
-  error_code error = MemoryBuffer::getFile(absolute_path, buffer);
-  VERRS(5) << "Opened mapping file: " << filename << "? "
-    << error.message() << "\n";
-  return error;
-}
-
 vector<string> IncludePicker::GetCandidateHeadersForSymbol(
     const string& symbol) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
@@ -1219,21 +1226,32 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
   return quoted_to == quoted_from;   // indentity mapping, why not?
 }
 
+// Parses a YAML/JSON file containing mapping directives of various types.
+void IncludePicker::AddMappingsFromFile(const string& filename) {
+  vector<string> default_search_path;
+  return AddMappingsFromFile(filename, default_search_path);
+}
+
 // Parses a YAML/JSON file containing mapping directives of various types:
 //  symbol   - symbol name -> quoted include
 //  include  - private quoted include -> public quoted include
 //  ref      - include mechanism for mapping files, to allow project-specific
 //             groupings
-// We use this to maintain mappings externally, to make it easier
-// to update/adjust to local circumstances.
-void IncludePicker::AddMappingsFromFile(const string& filename) {
+// This private implementation method is recursive and builds the search path
+// incrementally.
+void IncludePicker::AddMappingsFromFile(const string& filename,
+                                        const vector<string>& search_path) {
+  string absolute_path = FindFileInSearchPath(search_path, filename);
+
   OwningPtr<MemoryBuffer> buffer;
-  error_code error = TryReadMappingFile(filename, buffer);
+  error_code error = MemoryBuffer::getFile(absolute_path, buffer);
   if (error) {
-    errs() << "Cannot open mapping file '" << filename << "': "
-      << error.message() << ".\n";
+    errs() << "Cannot open mapping file '" << absolute_path << "': "
+           << error.message() << ".\n";
     return;
   }
+
+  VERRS(5) << "Adding mappings from file '" << absolute_path << "'.\n";
 
   SourceMgr source_manager;
   Stream json_stream(buffer.take(), source_manager);
@@ -1251,18 +1269,18 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
   }
 
   for (SequenceNode::iterator it = array->begin(); it != array->end(); ++it) {
-    Node& current_node = *it;
+    Node* current_node = &(*it);
 
     // Every item must be a JSON object ("mapping" in YAML terms.)
-    MappingNode* mapping = llvm::dyn_cast<MappingNode>(&current_node);
+    MappingNode* mapping = llvm::dyn_cast<MappingNode>(current_node);
     if (mapping == NULL) {
-      json_stream.printError(&current_node,
-        "Mapping directives must be objects.");
+      json_stream.printError(current_node,
+          "Mapping directives must be objects.");
       return;
     }
 
     for (MappingNode::iterator it = mapping->begin();
-         it != mapping->end(); ++it) {
+        it != mapping->end(); ++it) {
       // General form is { directive: <data> }.
       const string directive = GetScalarValue(it->getKey());
 
@@ -1270,9 +1288,9 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
         // Symbol mapping.
         vector<string> mapping = GetSequenceValue(it->getValue());
         if (mapping.size() != 4) {
-          json_stream.printError(&current_node,
-            "Symbol mapping expects a value on the form "
-            "'[from, visibility, to, visibility]'.");
+          json_stream.printError(current_node,
+              "Symbol mapping expects a value on the form "
+              "'[from, visibility, to, visibility]'.");
           return;
         }
 
@@ -1281,62 +1299,60 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
 
         IncludeVisibility to_visibility = ParseVisibility(mapping[3]);
         if (to_visibility == kUnusedVisibility) {
-          json_stream.printError(&current_node,
-            "Unknown visibility '" + mapping[3] + "'.");
+          json_stream.printError(current_node,
+              "Unknown visibility '" + mapping[3] + "'.");
           return;
         }
 
-        AddSymbolMapping(
-          mapping[0],
-          mapping[2],
-          to_visibility);
+        AddSymbolMapping(mapping[0], mapping[2], to_visibility);
       } else if (directive == "include") {
         // Include mapping.
         vector<string> mapping = GetSequenceValue(it->getValue());
         if (mapping.size() != 4) {
-          json_stream.printError(&current_node,
-            "Include mapping expects a value on the form "
-            "'[from, visibility, to, visibility]'.");
+          json_stream.printError(current_node,
+              "Include mapping expects a value on the form "
+              "'[from, visibility, to, visibility]'.");
           return;
         }
 
         IncludeVisibility from_visibility = ParseVisibility(mapping[1]);
         if (from_visibility == kUnusedVisibility) {
-          json_stream.printError(&current_node,
-            "Unknown visibility '" + mapping[1] + "'.");
+          json_stream.printError(current_node,
+              "Unknown visibility '" + mapping[1] + "'.");
           return;
         }
 
         IncludeVisibility to_visibility = ParseVisibility(mapping[3]);
         if (to_visibility == kUnusedVisibility) {
-          json_stream.printError(&current_node,
-            "Unknown visibility '" + mapping[3] + "'.");
+          json_stream.printError(current_node,
+              "Unknown visibility '" + mapping[3] + "'.");
           return;
         }
 
-        AddIncludeMapping(
-          mapping[0],
-          from_visibility,
-          mapping[2],
-          to_visibility);
+        AddIncludeMapping(mapping[0],
+            from_visibility,
+            mapping[2],
+            to_visibility);
       } else if (directive == "ref") {
         // Mapping ref.
         string ref_file = GetScalarValue(it->getValue());
         if (ref_file.empty()) {
-          json_stream.printError(&current_node,
-            "Mapping ref expects a single filename value.");
+          json_stream.printError(current_node,
+              "Mapping ref expects a single filename value.");
           return;
         }
 
         // Add the path of the file we're currently processing
         // to the search path. Allows refs to be relative to referrer.
-        AddMappingFileSearchPath(GetParentPath(filename));
+        vector<string> extended_search_path = 
+            ExtendMappingFileSearchPath(search_path,
+                                        GetParentPath(absolute_path));
 
         // Recurse.
-        AddMappingsFromFile(ref_file);
+        AddMappingsFromFile(ref_file, extended_search_path);
       } else {
-        json_stream.printError(&current_node,
-          "Unknown directive '" + directive + "'.");
+        json_stream.printError(current_node,
+            "Unknown directive '" + directive + "'.");
         return;
       }
     }

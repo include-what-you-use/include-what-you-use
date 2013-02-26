@@ -89,9 +89,6 @@ class IncludePicker {
                         const string& includee_filepath,
                         const string& quoted_include_as_written);
 
-  // Add a mapping file search path.
-  void AddMappingFileSearchPath(const string& path);
-
   // Add this to say "map_to re-exports everything in file map_from".
   // Both map_to and map_from should be quoted includes.
   void AddMapping(const string& map_from, const string& map_to);
@@ -155,6 +152,12 @@ class IncludePicker {
   void AddMappingsFromFile(const string& filename);
 
  private:
+  // Private implementation of mapping file parser, which takes
+  // mapping file search path to allow recursion that builds up
+  // search path incrementally.
+  void AddMappingsFromFile(const string& filename,
+                           const vector<string>& search_path);
+
   // Adds a mapping from a one header to another, typically
   // from a private to a public quoted include.
   void AddIncludeMapping(
@@ -203,11 +206,6 @@ class IncludePicker {
   string MaybeGetIncludeNameAsWritten(const string& includer_filepath,
                                       const string& includee_filepath) const;
 
-  // Scan the search paths for filename. If it exists, put file contents
-  // in buffer. If not, return the error code.
-  error_code TryReadMappingFile(const string& filename, 
-                                OwningPtr<MemoryBuffer>& buffer) const;
-
   // From symbols to includes.
   IncludeMap symbol_include_map_;
 
@@ -242,8 +240,6 @@ class IncludePicker {
   // friend_to_headers_map_["foo/bar/x.cc"] will be augmented with the
   // contents of friend_to_headers_map_["@\"foo/bar/.*\""].
   map<string, set<string> > friend_to_headers_map_;
-
-  vector<string> mapping_file_search_path_;
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;
