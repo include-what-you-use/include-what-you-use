@@ -42,8 +42,7 @@ class SourceManagerCharacterDataGetter;
 int ParseIwyuCommandlineFlags(int argc, char** argv);
 
 void InitGlobals(clang::SourceManager* source_manager,
-                 clang::HeaderSearch* header_search,
-                 const std::string& executable_path);
+                 clang::HeaderSearch* header_search);
 
 // Can be called by tests -- doesn't need a SourceManager or
 // argc/argv.  Note that GlobalSourceManager() and DefaultDataGetter()
