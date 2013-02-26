@@ -200,9 +200,6 @@ void InitGlobals(clang::SourceManager* sm,
     VERRS(6) << "Search path: " << it->path << " (" << path_type_name << ")\n";
   }
 
-  // Set up mapping file search paths.
-  include_picker->AddMappingFileSearchPath(".");
-
   // Add mappings.
   for (Each<string> it(&GlobalFlags().mapping_files); !it.AtEnd(); ++it) {
     include_picker->AddMappingsFromFile(*it);
