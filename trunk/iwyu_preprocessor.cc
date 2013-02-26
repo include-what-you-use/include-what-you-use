@@ -581,7 +581,7 @@ void IwyuPreprocessorInfo::Elif(SourceLocation loc,
 
 void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
                                  const Token& id,
-                                 const MacroDirective*) {
+                                 const MacroDirective* /*directive*/) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifdef      ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
@@ -590,7 +590,7 @@ void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
 
 void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
                                   const Token& id,
-                                  const MacroDirective*) {
+                                  const MacroDirective* /*directive*/) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifndef     ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
