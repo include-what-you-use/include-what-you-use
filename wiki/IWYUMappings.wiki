@@ -9,16 +9,19 @@ For example, in GCC's libstdc++, `std::unique_ptr<T>` is defined in `<bits/uniqu
 
 Another example is `NULL`. Its authoritative header is `<cstddef>`, but for practical purposes `NULL` is more of a keyword, and according to the standard it's acceptable to assume it comes with `<cstring>`, `<clocale>`, `<cwchar>`, `<ctime>`, `<cstdio>` or `<cstdlib>`. In fact, almost every standard library header pulls in `NULL` one way or another, and we probably shouldn't force people to `#include <cstddef>`.
 
-These mappings are all toolchain- and version-dependent. Symbol homes and `#include` dependencies change between releases of GCC and are dramatically different for the standard libraries shipped with Microsoft Visual C++.
+To simplify IWYU deployment and command-line interface, many of these mappings are compiled into the executable. These constitute the _default mappings_.
 
-Finally, mappings such as these are usually necessary for third-party libraries (e.g. Boost, Qt) or even project-local symbols and headers as well.
+However, many mappings are toolchain- and version-dependent. Symbol homes and `#include` dependencies change between releases of GCC and are dramatically different for the standard libraries shipped with Microsoft Visual C++. Also, mappings such as these are usually necessary for third-party libraries (e.g. Boost, Qt) or even project-local symbols and headers as well.
 
-The original design had mappings hard-coded in `iwyu_include_picker.cc`, which made it difficult to experiment and almost impossible to create local or alternative mappings. To ease porting to non-GCC platforms and make it easier for users to test patches, we pulled the mappings out into external files parsed at run-time.
-
-IWYU's original target environment was GCC, so the set of mapping files shipped by default are currently very GCC-oriented.
+Any mappings outside of the default set can therefore be specified as external _mapping files_.
 
 
-== Mapping File Format ==
+== Default Mappings ==
+
+IWYU's default mappings are hard-coded in `iwyu_include_picker.cc`, and are very GCC-centric. There are both symbol- and include mappings for GNU libstdc++ and libc.
+
+
+== Mapping Files ==
 
 The mapping files conventionally use the `.imp` file extension, for "Iwyu !MaPping" (terrible, I know). They use a [http://json.org/ JSON] meta-format with the following general form:
 {{{
@@ -50,7 +53,7 @@ Data for this directive is a list of four strings containing:
 
 For example;
 {{{
-  { include: ['<bits/unique_ptr.h>', private, '<memory>', public] }
+  { include: ["<bits/unique_ptr.h>", "private", "<memory>", "public"] }
 }}}
 Most of the original mappings were generated with shell scripts (as evident from the embedded comments) so there are several multi-step mappings from one private header to another, to a third and finally to a public header. This reflects the `#include` chain in the actual library headers.
 
@@ -69,7 +72,7 @@ Data for this directive is a list of four strings containing:
 
 For example;
 {{{
-  { symbol: ['NULL', private, '<cstddef>', public] }
+  { symbol: ["NULL", "private", "<cstddef>", "public"] }
 }}}
 The symbol visibility is largely redundant -- it must always be `private`. It isn't entirely clear why symbol visibility needs to be specified, and it might be removed moving forward.
 
@@ -80,13 +83,13 @@ The last kind of directive, `ref`, is used to pull in another mapping file, much
 
 For example;
 {{{
-  { ref: more.symbols.imp },
-  { ref: '/usr/lib/other.includes.imp' }
+  { ref: "more.symbols.imp" },
+  { ref: "/usr/lib/other.includes.imp" }
 }}}
 The rationale for the `ref` directive was to make it easier to compose project-specific mappings from a set of library-oriented mapping files. For example, IWYU might ship with mapping files for [http://www.boost.org Boost], the SCL, various C standard libraries, the Windows API, the [http://pocoproject.org Poco Library], etc. Depending on what your specific project uses, you could easily create an aggregate mapping file with refs to the relevant mappings.
 
 
-== Specifying Mapping Files ==
+=== Specifying Mapping Files ===
 
 Mapping files are specified on the command-line using the `--mapping_file` switch:
 {{{
@@ -94,11 +97,6 @@ Mapping files are specified on the command-line using the `--mapping_file` switc
 }}}
 The switch can be added multiple times to add more than one mapping file.
 
-There is a single aggregate mapping called `iwyu.gcc.imp` which is the default mapping used if nothing else is specified on the command-line.
+If the mapping filename is relative, it will be looked up relative to the current directory.
 
-Both command-line arguments and `ref` directives use the same search path for mapping files. They are, in order:
-  * The current directory, .
-  * The directory in which the include-what-you-use binary is located
-  * Any path from which a `ref` is loaded
-
-The last clause allows `ref` directives to be relative to the referring mapping file.
+`ref` directives are first looked up relative to the current directory and if not found, relative to the referring mapping file.
