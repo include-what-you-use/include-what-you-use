@@ -647,19 +647,6 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<exception_defines.h>", kPrivate, "<exception>", kPublic },
 };
 
-// These are just here for the tests.
-// TODO(kimgr): Move these to one or two external mapping files.
-const IncludeMapEntry iwyu_tests_include_map[] = {
-  { "\"tests/badinc-private.h\"", kPrivate,
-    "\"tests/badinc-inl.h\"", kPublic },
-  { "\"tests/badinc-private2.h\"", kPrivate,
-    "\"tests/badinc-inl.h\"", kPublic },
-  { "@\"tests/keep_mapping-private.*\"", kPrivate,
-    "\"tests/keep_mapping-public.h\"", kPublic },
-  { "\"tests/keep_mapping-priv.h\"", kPrivate,
-    "\"tests/keep_mapping-public.h\"", kPublic },
-};
-
 // Returns true if str is a valid quoted filepath pattern (i.e. either
 // a quoted filepath or "@" followed by a regex for matching a quoted
 // filepath).
@@ -848,8 +835,6 @@ IncludePicker::IncludePicker()
       IWYU_ARRAYSIZE(libc_include_map));
   AddIncludeMappings(libstdcpp_include_map,
       IWYU_ARRAYSIZE(libstdcpp_include_map));
-  AddIncludeMappings(iwyu_tests_include_map,
-      IWYU_ARRAYSIZE(iwyu_tests_include_map));
 }
 
 void IncludePicker::MarkVisibility(

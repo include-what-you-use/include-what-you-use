@@ -34,6 +34,11 @@ def CheckAlsoExtension(extension):
   return '--check_also="%s"' % os.path.join(TEST_ROOTDIR, '*' + extension)
 
 
+def MappingFile(filename):
+  """Return a suitable iwyu flag for adding the given mapping file."""
+  return '--mapping_file=%s' % os.path.join(TEST_ROOTDIR, filename)
+
+
 class OneIwyuTest(unittest.TestCase):
   """Superclass for tests.  A subclass per test-file is created at runtime."""
 
@@ -44,11 +49,13 @@ class OneIwyuTest(unittest.TestCase):
     # key=cc-filename (relative to TEST_ROOTDIR), value=list of flags.
     flags_map = {
       'backwards_includes.cc': [CheckAlsoExtension('-d*.h')],
+      'badinc.cc': [MappingFile('badinc.imp')],
       'check_also.cc': [CheckAlsoExtension('-d1.h')],
       'implicit_ctor.cc': [CheckAlsoExtension('-d1.h')],
       'iwyu_stricter_than_cpp.cc': [CheckAlsoExtension('-*[^0-9].h'),
                                     CheckAlsoExtension('-d2.h')],
-      'keep_mapping.cc': [CheckAlsoExtension('-public.h')],
+      'keep_mapping.cc': [CheckAlsoExtension('-public.h'), 
+                          MappingFile('keep_mapping.imp')],
       'macro_location.cc': [CheckAlsoExtension('-d2.h')],
       'non_transitive_include.cc': [CheckAlsoExtension('-d*.h'),
                                     '--transitive_includes_only'],
