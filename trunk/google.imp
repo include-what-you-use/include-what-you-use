@@ -1,8 +1,0 @@
-# Google-specific header mappings
-[
-  # These two are here just for unittesting.
-  { include: ["\"tests/badinc-private.h\"", private, "\"tests/badinc-inl.h\"", public] },
-  { include: ["\"tests/badinc-private2.h\"", private, "\"tests/badinc-inl.h\"", public] },
-  { include: ["@\"tests/keep_mapping-private.*\"", private, "\"tests/keep_mapping-public.h\"", public ] },
-  { include: ["\"tests/keep_mapping-priv.h\"", private, "\"tests/keep_mapping-public.h\"", public ] }
-]
