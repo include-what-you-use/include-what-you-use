@@ -822,12 +822,18 @@ string FindFileInSearchPath(const vector<string>& search_path,
 
 }  // namespace
 
-IncludePicker::IncludePicker()
+IncludePicker::IncludePicker(bool no_default_mappings)
     : symbol_include_map_(),
       filepath_include_map_(),
       filepath_visibility_map_(),
       quoted_includes_to_quoted_includers_(),
       has_called_finalize_added_include_lines_(false) {
+  if (!no_default_mappings) {
+    AddDefaultMappings();
+  }
+}
+
+void IncludePicker::AddDefaultMappings() {
   AddSymbolMappings(libc_symbol_map, IWYU_ARRAYSIZE(libc_symbol_map));
   AddSymbolMappings(libstdcpp_symbol_map, IWYU_ARRAYSIZE(libstdcpp_symbol_map));
 

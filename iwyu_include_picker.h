@@ -78,7 +78,7 @@ class IncludePicker {
  public:
   typedef map<string, vector<string> > IncludeMap;  // map_from to <map_to,...>
 
-  IncludePicker();
+  explicit IncludePicker(bool no_default_mappings);
 
   // ----- Routines to dynamically modify the include-picker
 
@@ -157,6 +157,9 @@ class IncludePicker {
   // search path incrementally.
   void AddMappingsFromFile(const string& filename,
                            const vector<string>& search_path);
+
+  // Adds all hard-coded default mappings.
+  void AddDefaultMappings();
 
   // Adds a mapping from a one header to another, typically
   // from a private to a public quoted include.

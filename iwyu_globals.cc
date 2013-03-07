@@ -64,6 +64,7 @@ static void PrintHelp(const char* extra_msg) {
          "        how to run iwyu under gdb for the input file, and exits.\n"
          "        With an arg, prints only when input file matches the arg.\n"
          "   --mapping_file=<filename>: gives iwyu a mapping file.\n"
+         "   --no_default_mappings: do not add iwyu's default mappings.\n"
          "   --transitive_includes_only: do not suggest that a file add\n"
          "        foo.h unless foo.h is already visible in the file's\n"
          "        transitive includes.\n"
@@ -77,7 +78,8 @@ CommandlineFlags::CommandlineFlags()
       howtodebug(CommandlineFlags::kUnspecified),
       cwd(""),
       transitive_includes_only(false),
-      verbose(getenv("IWYU_VERBOSE") ? atoi(getenv("IWYU_VERBOSE")) : 1) {
+      verbose(getenv("IWYU_VERBOSE") ? atoi(getenv("IWYU_VERBOSE")) : 1),
+      no_default_mappings(false) {
 }
 
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
@@ -89,9 +91,10 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"transitive_includes_only", no_argument, NULL, 't'},
     {"verbose", required_argument, NULL, 'v'},
     {"mapping_file", required_argument, NULL, 'm'},
+    {"no_default_mappings", no_argument, NULL, 'n'},
     {0, 0, 0, 0}
   };
-  static const char shortopts[] = "d::p:v:c:m:";
+  static const char shortopts[] = "d::p:v:c:m:n";
   while (true) {
     switch (getopt_long(argc, argv, shortopts, longopts, NULL)) {
       case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
@@ -101,6 +104,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case 't': transitive_includes_only = true; break;
       case 'v': verbose = atoi(optarg); break;
       case 'm': mapping_files.push_back(optarg); break;
+      case 'n': no_default_mappings = true; break;
       case -1: return optind;   // means 'no more input'
       default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
     }
@@ -190,7 +194,7 @@ void InitGlobals(clang::SourceManager* sm,
   vector<HeaderSearchPath> search_paths =
       ComputeHeaderSearchPaths(header_search);
   SetHeaderSearchPaths(search_paths);
-  include_picker = new IncludePicker;
+  include_picker = new IncludePicker(GlobalFlags().no_default_mappings);
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 
@@ -267,7 +271,7 @@ void InitGlobalsAndFlagsForTesting() {
   commandline_flags = new CommandlineFlags;
   source_manager = NULL;
   data_getter = NULL;
-  include_picker = new IncludePicker;
+  include_picker = new IncludePicker(GlobalFlags().no_default_mappings);
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 

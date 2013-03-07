@@ -75,6 +75,7 @@ struct CommandlineFlags {
   bool transitive_includes_only;   // -t: don't add 'new' #includes to files
   int verbose;             // -v: how much information to emit as we parse
   vector<string> mapping_files; // -m: mapping files
+  bool no_default_mappings;     // -n: no default mappings
 };
 
 const CommandlineFlags& GlobalFlags();
