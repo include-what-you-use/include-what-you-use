@@ -86,12 +86,6 @@
 //     case it is.  For example, if foo.cc desires bar.h, but can
 //     already get it via foo.h, IWYU won't recommend foo.cc to
 //     #include bar.h, unless it already does so.
-
-#if defined(_MSC_VER)
-#include <direct.h>
-#else
-#include <unistd.h>                     // for chdir
-#endif
 #include <stddef.h>                     // for size_t
 #include <stdio.h>                      // for snprintf
 #include <stdlib.h>                     // for atoi, exit
