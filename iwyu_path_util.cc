@@ -10,6 +10,7 @@
 #include "iwyu_path_util.h"
 
 #include <stddef.h>
+#include <string.h>                     // for strlen
 
 #include "iwyu_stl_util.h"
 
@@ -69,13 +70,6 @@ bool IsHeaderFile(string path) {
   }
 
   return true;
-}
-
-string GetCWD() {
-  char cwd[PATH_MAX];
-  if (getcwd(cwd, sizeof(cwd)))
-    return cwd;
-  return "";
 }
 
 string Basename(const string& path) {

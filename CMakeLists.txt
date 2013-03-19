@@ -1,9 +1,5 @@
 project(include-what-you-use)
 
-if( MSVC )
-  add_definitions( /D_POSIX_=1 )
-endif()
-
 add_clang_executable(include-what-you-use
   iwyu.cc
   iwyu_ast_util.cc
