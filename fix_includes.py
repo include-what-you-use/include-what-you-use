@@ -499,18 +499,35 @@ def _ReadWriteableFile(filename, ignore_writeable):
   return None
 
 
-def _WriteFileContentsToFileObject(f, file_lines):
+def _WriteFileContentsToFileObject(f, file_lines, line_ending):
   """Write the given file-lines to the file."""
-  f.write('\n'.join(file_lines))
-  f.write('\n')
+  f.write(line_ending.join(file_lines))
+  f.write(line_ending)
 
+def _DetectLineEndings(filename):
+  """Detect line ending of given file."""
+
+  # Find out which file ending is used first. The
+  # first lines indicate the line ending for the whole file
+  # so pathological files with mixed endings aren't handled properly!
+  f = open(filename, 'U')
+  try:
+    while f.newlines is None:
+      if f.readline() == '':
+        break
+    return f.newlines if f.newlines != None and \
+        type(f.newlines) is not tuple else '\n'
+  finally:
+    f.close()
 
 def _WriteFileContents(filename, file_lines):
   """Write the given file-lines to the file."""
   try:
-    f = open(filename, 'w')
+    line_ending = _DetectLineEndings(filename)
+    # Open file in binary mode to preserve line endings
+    f = open(filename, 'wb')
     try:
-      _WriteFileContentsToFileObject(f, file_lines)
+      _WriteFileContentsToFileObject(f, file_lines, line_ending)
     finally:
       f.close()
   except (IOError, OSError), why:
