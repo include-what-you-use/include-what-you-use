@@ -521,7 +521,7 @@ void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
                                         const MacroDirective* directive,
                                         SourceRange range) {
   const FileEntry* macro_file = GetFileEntry(macro_use_token);
-  const MacroInfo* macro_def = directive->getInfo();
+  const MacroInfo* macro_def = directive->getMacroInfo();
   if (ShouldPrintSymbolFromFile(macro_file)) {
     errs() << "[ Use macro   ] "
            << PrintableLoc(macro_use_token.getLocation())
@@ -536,7 +536,7 @@ void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
 
 void IwyuPreprocessorInfo::MacroDefined(const Token& id,
                                         const MacroDirective* directive) {
-  const MacroInfo* macro = directive->getInfo();
+  const MacroInfo* macro = directive->getMacroInfo();
   const SourceLocation macro_loc = macro->getDefinitionLoc();
   ERRSYM(GetFileEntry(macro_loc))
       << "[ #define     ] " << PrintableLoc(macro_loc)
