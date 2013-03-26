@@ -26,9 +26,11 @@
 #include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
 
+#include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
@@ -45,6 +47,7 @@ using std::vector;
 using llvm::MemoryBuffer;
 using llvm::OwningPtr;
 using llvm::SourceMgr;
+using llvm::error_code;
 using llvm::errs;
 using llvm::yaml::MappingNode;
 using llvm::yaml::Node;

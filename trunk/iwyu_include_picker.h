@@ -50,13 +50,6 @@
 #include <utility>                      // for pair
 #include <vector>                       // for vector
 
-#include "llvm/ADT/OwningPtr.h"
-#include "llvm/Support/MemoryBuffer.h"
-
-namespace llvm {
-  class error_code;
-}
-
 namespace include_what_you_use {
 
 using std::map;
@@ -65,10 +58,6 @@ using std::set;
 using std::string;
 
 using std::vector;
-
-using llvm::OwningPtr;
-using llvm::MemoryBuffer;
-using llvm::error_code;
 
 struct IncludeMapEntry;
 
