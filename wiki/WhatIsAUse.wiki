@@ -4,7 +4,7 @@
 
 = What Is a Use? =
 
-(*Disclaimer:* the information here is accurate as of 12 May 2011, when it was written.  Specifics of IWYU's policy, and even philosophy, may have changed since then.  We'll try to remember to update this wiki page as that happens, but may occassionally forget.  The further we are from May 2011, the more you should take the below with a grain of salt.)
+(*Disclaimer:* the information here is accurate as of 12 May 2011, when it was written.  Specifics of IWYU's policy, and even philosophy, may have changed since then.  We'll try to remember to update this wiki page as that happens, but may occasionally forget.  The further we are from May 2011, the more you should take the below with a grain of salt.)
 
 IWYU has the policy that you should #include a declaration for every symbol you "use" in a file, or forward-declare it if possible.  But what does it mean to "use" a symbol?
 
