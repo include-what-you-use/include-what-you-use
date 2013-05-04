@@ -170,7 +170,8 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Preprocessor event handlers called by Clang.
   virtual void MacroExpands(const clang::Token& id,
                             const clang::MacroDirective* directive,
-                            clang::SourceRange range) IWYU_OVERRIDE;
+                            clang::SourceRange range,
+                            const clang::MacroArgs* args) IWYU_OVERRIDE;
   virtual void MacroDefined(
       const clang::Token& id,
       const clang::MacroDirective* directive) IWYU_OVERRIDE;

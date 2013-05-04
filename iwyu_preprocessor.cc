@@ -519,7 +519,8 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 // definition.
 void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
                                         const MacroDirective* directive,
-                                        SourceRange range) {
+                                        SourceRange range,
+                                        const clang::MacroArgs* /*args*/) {
   const FileEntry* macro_file = GetFileEntry(macro_use_token);
   const MacroInfo* macro_def = directive->getMacroInfo();
   if (ShouldPrintSymbolFromFile(macro_file)) {
