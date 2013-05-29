@@ -30,6 +30,11 @@ USEDLIBS = clangFrontend.a clangSerialization.a clangDriver.a clangParse.a \
 
 include $(CLANG_LEVEL)/Makefile
 
+# Link with import library for shlwapi.dll on Windows.
+ifneq (,$(filter $(HOST_OS), Cygwin MingW))
+  LIBS += -lshlwapi
+endif
+
 check-iwyu:: all
 	./run_iwyu_tests.py
 	./fix_includes_test.py
