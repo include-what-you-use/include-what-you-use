@@ -18,6 +18,46 @@ While we work to get IWYU quality up, we will be stinting new features, and will
 
 == How to Build ==
 
+Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. See the include-what-you-use Makefile for instructions on how to keep them in sync.
+
+IWYU, like Clang, does not yet handle some of the non-standard constructs in Microsoft's STL headers. A discussion on how to use MinGW or Cygwin headers with IWYU is available on the [https://groups.google.com/group/include-what-you-use/msg/a4d08378440edafd mailing list].
+
+We support two build configurations: out-of-tree and in-tree.
+ 
+
+=== Building out-of-tree ===
+
+In an out-of-tree configuration, we assume you already have compiled LLVM and Clang headers and libs somewhere on your filesystem, such as via the `libclang-dev` package. Out-of-tree builds are only supported with CMake (patches very welcome for the Make system).
+
+  * Create a directory for IWYU development, e.g. `iwyu-trunk`
+  * Get the IWYU source code, either from a [http://code.google.com/p/include-what-you-use/downloads/list published tarball] or directly from [http://code.google.com/p/include-what-you-use/source/checkout svn]
+{{{
+    # Unpack tarball
+    iwyu-trunk$ tar xfz include-what-you-use-<version>.tar.gz
+
+    # or checkout from SVN
+    iwyu-trunk$ svn co http://include-what-you-use.googlecode.com/svn/trunk/ include-what-you-use
+}}}
+  * Create a build root
+{{{
+    iwyu-trunk$ mkdir build && cd build
+}}}
+  * Run CMake and specify the location of LLVM/Clang prebuilts
+{{{
+    # This example uses the Makefile generator,
+    # but anything should work.
+    iwyu-trunk/build$ cmake -G "Unix Makefiles" -DLLVM_PATH=/usr/lib/llvm-3.4 ../include-what-you-use
+}}}
+  * Once CMake has generated a build system, you can invoke it directly from `build`, e.g.
+{{{
+    iwyu-trunk/build$ make
+}}}
+
+This configuration is more useful if you want to get IWYU up and running quickly without building Clang and LLVM from scratch.
+
+
+=== Building in-tree ===
+
 You will need the Clang and LLVM trees on your system, such as by [http://clang.llvm.org/get_started.html checking out] their SVN trees (but don't configure or build before you've done the following.)
 
   * Put include-what-you-use in the source tree. Either [http://code.google.com/p/include-what-you-use/downloads/list download] the include-what-you-use tarball and unpack it your `/path/to/llvm/tools/clang/tools` directory, or get the project directly from [http://code.google.com/p/include-what-you-use/source/checkout svn]:
@@ -32,9 +72,7 @@ You will need the Clang and LLVM trees on your system, such as by [http://clang.
   * Edit tools/clang/tools/CMakeLists.txt and `add_subdirectory(include-what-you-use)`
   * Once this is done, IWYU is recognized and picked up by both autoconf and CMake workflows as described in the Clang Getting Started guide
 
-Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. See the include-what-you-use Makefile for instructions on how to keep them in sync.
-
-IWYU, like Clang, does not yet handle some of the non-standard constructs in Microsoft's STL headers. A discussion on how to use MinGW or Cygwin headers with IWYU is available on the [https://groups.google.com/group/include-what-you-use/msg/a4d08378440edafd mailing list].
+This configuration is more useful if you're actively developing IWYU against Clang trunk.
 
 
 == How to Run ==
