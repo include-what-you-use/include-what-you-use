@@ -98,6 +98,7 @@ target_link_libraries(include-what-you-use
   LLVMCore
   LLVMSupport
   LLVMBitReader
+  LLVMOption
 )
 
 # Platform dependencies.
