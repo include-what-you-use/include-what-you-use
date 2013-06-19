@@ -12,6 +12,13 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
 
+#include <limits.h>                     // for PATH_MAX
+#include <string.h>                     // for strlen
+#if defined(_MSC_VER)
+#include <direct.h>
+#else
+#include <unistd.h>                     // for getcwd
+#endif
 #include <string>                       // for string, allocator, etc
 #include <vector>
 
@@ -38,6 +45,9 @@ const vector<HeaderSearchPath>& HeaderSearchPaths();
 // Returns true if 'path' is a path of a (possibly enclosed in double
 // quotes or <>) C++ header file.
 bool IsHeaderFile(string path);
+
+// Return the current working directory of this process.
+string GetCWD();
 
 // If the path has a slash, return the part after the last slash,
 // else return the input path.

@@ -1,5 +1,0 @@
-# Header mappings for IWYU tests.
-[
-  { include: ["@\"tests/keep_mapping-private.*\"", "private", "\"tests/keep_mapping-public.h\"", "public"] },
-  { include: ["\"tests/keep_mapping-priv.h\"", "private", "\"tests/keep_mapping-public.h\"", "public"] }
-]

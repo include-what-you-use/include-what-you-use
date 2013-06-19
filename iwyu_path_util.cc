@@ -10,37 +10,19 @@
 #include "iwyu_path_util.h"
 
 #include <stddef.h>
-#include <string.h>                     // for strlen
 
 #include "iwyu_stl_util.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
+#include "llvm/Support/PathV2.h"
 #include "llvm/Support/system_error.h"
 
 namespace include_what_you_use {
 
 namespace {
 vector<HeaderSearchPath>* header_search_paths;
-
-// Please keep this in sync with _SOURCE_EXTENSIONS in fix_includes.py.
-const char* source_extensions[] = {
-  ".c",
-  ".C",
-  ".cc",
-  ".CC",
-  ".cxx",
-  ".CXX",
-  ".cpp",
-  ".CPP"
-  ".c++",
-  ".C++",
-  ".cp"
-};
-
 }  // namespace
 
 void SetHeaderSearchPaths(const vector<HeaderSearchPath>& search_paths) {
@@ -57,6 +39,10 @@ const vector<HeaderSearchPath>& HeaderSearchPaths() {
   return *header_search_paths;
 }
 
+namespace {
+
+}  // namespace
+
 bool IsHeaderFile(string path) {
   if (EndsWith(path, "\"") || EndsWith(path, ">"))
     path = path.substr(0, path.length() - 1);
@@ -64,12 +50,17 @@ bool IsHeaderFile(string path) {
   // Some headers don't have an extension (e.g. <string>), or have an
   // unusual one (the compiler doesn't care), so it's safer to
   // enumerate non-header extensions instead.
-  for (size_t i = 0; i < llvm::array_lengthof(source_extensions); ++i) {
-    if (EndsWith(path, source_extensions[i]))
-      return false;
-  }
-
+  if (EndsWith(path, ".cc") || EndsWith(path, ".c") ||
+      EndsWith(path, ".cxx") || EndsWith(path, ".cpp"))
+    return false;
   return true;
+}
+
+string GetCWD() {
+  char cwd[PATH_MAX];
+  if (getcwd(cwd, sizeof(cwd)))
+    return cwd;
+  return "";
 }
 
 string Basename(const string& path) {
@@ -103,18 +94,15 @@ string GetCanonicalName(string file_path) {
 
   file_path = CanonicalizeFilePath(file_path);
 
-  bool stripped_ext = StripRight(&file_path, ".h")
+  StripRight(&file_path, ".h")
       || StripRight(&file_path, ".hpp")
       || StripRight(&file_path, ".hxx")
       || StripRight(&file_path, ".hh")
-      || StripRight(&file_path, ".inl");
-  if (!stripped_ext) {
-    for (size_t i = 0; i < llvm::array_lengthof(source_extensions); ++i) {
-      if (StripRight(&file_path, source_extensions[i]))
-        break;
-    }
-  }
-
+      || StripRight(&file_path, ".inl")
+      || StripRight(&file_path, ".cxx")
+      || StripRight(&file_path, ".cpp")
+      || StripRight(&file_path, ".cc")
+      || StripRight(&file_path, ".c");
   StripRight(&file_path, "_unittest")
       || StripRight(&file_path, "_regtest")
       || StripRight(&file_path, "_test")

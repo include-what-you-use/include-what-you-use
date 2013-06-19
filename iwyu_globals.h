@@ -42,7 +42,8 @@ class SourceManagerCharacterDataGetter;
 int ParseIwyuCommandlineFlags(int argc, char** argv);
 
 void InitGlobals(clang::SourceManager* source_manager,
-                 clang::HeaderSearch* header_search);
+                 clang::HeaderSearch* header_search,
+                 const std::string& executable_path);
 
 // Can be called by tests -- doesn't need a SourceManager or
 // argc/argv.  Note that GlobalSourceManager() and DefaultDataGetter()
@@ -75,7 +76,6 @@ struct CommandlineFlags {
   bool transitive_includes_only;   // -t: don't add 'new' #includes to files
   int verbose;             // -v: how much information to emit as we parse
   vector<string> mapping_files; // -m: mapping files
-  bool no_default_mappings;     // -n: no default mappings
 };
 
 const CommandlineFlags& GlobalFlags();

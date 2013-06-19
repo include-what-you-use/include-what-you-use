@@ -34,7 +34,6 @@
 
 using clang::FileEntry;
 using clang::FileID;
-using clang::MacroDirective;
 using clang::MacroInfo;
 using clang::Preprocessor;
 using clang::SourceLocation;
@@ -515,14 +514,12 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 // Called whenever a macro is expanded.  Example: when FOO(a, b) is
 // seen in the source code, where FOO() is a macro #defined earlier,
 // MacroExpands() will be called once with 'macro_use_token' being
-// FOO, and 'directive' containing more information about FOO's
+// FOO, and 'macro_def' containing more information about FOO's
 // definition.
 void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
-                                        const MacroDirective* directive,
-                                        SourceRange range,
-                                        const clang::MacroArgs* /*args*/) {
+                                        const MacroInfo* macro_def,
+                                        SourceRange range) {
   const FileEntry* macro_file = GetFileEntry(macro_use_token);
-  const MacroInfo* macro_def = directive->getMacroInfo();
   if (ShouldPrintSymbolFromFile(macro_file)) {
     errs() << "[ Use macro   ] "
            << PrintableLoc(macro_use_token.getLocation())
@@ -536,8 +533,7 @@ void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
 }
 
 void IwyuPreprocessorInfo::MacroDefined(const Token& id,
-                                        const MacroDirective* directive) {
-  const MacroInfo* macro = directive->getMacroInfo();
+                                        const MacroInfo* macro) {
   const SourceLocation macro_loc = macro->getDefinitionLoc();
   ERRSYM(GetFileEntry(macro_loc))
       << "[ #define     ] " << PrintableLoc(macro_loc)
@@ -580,18 +576,14 @@ void IwyuPreprocessorInfo::Elif(SourceLocation loc,
   CheckIfOrElif(condition_range);
 }
 
-void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
-                                 const Token& id,
-                                 const MacroDirective* /*directive*/) {
+void IwyuPreprocessorInfo::Ifdef(SourceLocation loc, const Token& id) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifdef      ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
   FindAndReportMacroUse(GetName(id), id.getLocation());
 }
 
-void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
-                                  const Token& id,
-                                  const MacroDirective* /*directive*/) {
+void IwyuPreprocessorInfo::Ifndef(SourceLocation loc, const Token& id) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifndef     ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";

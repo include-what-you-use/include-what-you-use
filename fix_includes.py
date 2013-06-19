@@ -145,12 +145,6 @@ _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
 # added; it just affects the reordering of existing #includes.)
 _BARRIER_INCLUDES = re.compile(r'^\s*#\s*include\s+(<linux/)')
 
-# A list of all known extensions for C++ source files, used to
-# guess if a filename is a source file or a header.
-# Please keep this in sync with source_extensions in iwyu_path_util.cc.
-_SOURCE_EXTENSIONS = [".c", ".C", ".cc", ".CC", ".cxx", ".CXX",
-                      ".cpp", ".CPP", ".c++", ".C++", ".cp"]
-
 
 def _MayBeHeaderFile(filename):
   """Tries to figure out if filename is a C++ header file.  Defaults to yes."""
@@ -158,7 +152,7 @@ def _MayBeHeaderFile(filename):
   # extension at all.  So we say everything is a header file unless it
   # has a known extension that's not.
   extension = os.path.splitext(filename)[1]
-  return extension not in _SOURCE_EXTENSIONS
+  return extension not in ('.c', '.cc', '.cxx', '.cpp', '.C', '.CC')
 
 
 class FixIncludesError(Exception):
@@ -499,35 +493,18 @@ def _ReadWriteableFile(filename, ignore_writeable):
   return None
 
 
-def _WriteFileContentsToFileObject(f, file_lines, line_ending):
+def _WriteFileContentsToFileObject(f, file_lines):
   """Write the given file-lines to the file."""
-  f.write(line_ending.join(file_lines))
-  f.write(line_ending)
+  f.write('\n'.join(file_lines))
+  f.write('\n')
 
-def _DetectLineEndings(filename):
-  """Detect line ending of given file."""
-
-  # Find out which file ending is used first. The
-  # first lines indicate the line ending for the whole file
-  # so pathological files with mixed endings aren't handled properly!
-  f = open(filename, 'U')
-  try:
-    while f.newlines is None:
-      if f.readline() == '':
-        break
-    return f.newlines if f.newlines != None and \
-        type(f.newlines) is not tuple else '\n'
-  finally:
-    f.close()
 
 def _WriteFileContents(filename, file_lines):
   """Write the given file-lines to the file."""
   try:
-    line_ending = _DetectLineEndings(filename)
-    # Open file in binary mode to preserve line endings
-    f = open(filename, 'wb')
+    f = open(filename, 'w')
     try:
-      _WriteFileContentsToFileObject(f, file_lines, line_ending)
+      _WriteFileContentsToFileObject(f, file_lines)
     finally:
       f.close()
   except (IOError, OSError), why:

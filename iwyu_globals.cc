@@ -50,9 +50,8 @@ static FullUseCache* function_calls_full_use_cache = NULL;
 static FullUseCache* class_members_full_use_cache = NULL;
 
 static void PrintHelp(const char* extra_msg) {
-  printf("USAGE: include-what-you-use [-Xiwyu --iwyu_opt]... <clang opts>"
-         " <source file>\n"
-         "Here are the <iwyu_opts> you can specify (e.g. -Xiwyu --verbose=3):\n"
+  printf("USAGE: iwyu [-Xiwyu --iwyu_opt]... <clang opts> <source file>\n"
+         "Here are the <opts> you can specify:\n"
          "   --check_also=<glob>: tells iwyu to print iwyu-violation info\n"
          "        for all files matching the given glob pattern (in addition\n"
          "        to the default of reporting for the input .cc file and its\n"
@@ -64,7 +63,6 @@ static void PrintHelp(const char* extra_msg) {
          "        how to run iwyu under gdb for the input file, and exits.\n"
          "        With an arg, prints only when input file matches the arg.\n"
          "   --mapping_file=<filename>: gives iwyu a mapping file.\n"
-         "   --no_default_mappings: do not add iwyu's default mappings.\n"
          "   --transitive_includes_only: do not suggest that a file add\n"
          "        foo.h unless foo.h is already visible in the file's\n"
          "        transitive includes.\n"
@@ -78,8 +76,7 @@ CommandlineFlags::CommandlineFlags()
       howtodebug(CommandlineFlags::kUnspecified),
       cwd(""),
       transitive_includes_only(false),
-      verbose(getenv("IWYU_VERBOSE") ? atoi(getenv("IWYU_VERBOSE")) : 1),
-      no_default_mappings(false) {
+      verbose(getenv("IWYU_VERBOSE") ? atoi(getenv("IWYU_VERBOSE")) : 1) {
 }
 
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
@@ -91,10 +88,9 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"transitive_includes_only", no_argument, NULL, 't'},
     {"verbose", required_argument, NULL, 'v'},
     {"mapping_file", required_argument, NULL, 'm'},
-    {"no_default_mappings", no_argument, NULL, 'n'},
     {0, 0, 0, 0}
   };
-  static const char shortopts[] = "d::p:v:c:m:n";
+  static const char shortopts[] = "d::p:v:c:m:";
   while (true) {
     switch (getopt_long(argc, argv, shortopts, longopts, NULL)) {
       case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
@@ -104,7 +100,6 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case 't': transitive_includes_only = true; break;
       case 'v': verbose = atoi(optarg); break;
       case 'm': mapping_files.push_back(optarg); break;
-      case 'n': no_default_mappings = true; break;
       case -1: return optind;   // means 'no more input'
       default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
     }
@@ -187,14 +182,15 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
 }
 
 void InitGlobals(clang::SourceManager* sm,
-                 clang::HeaderSearch* header_search) {
+                 clang::HeaderSearch* header_search,
+                 const std::string& executable_path) {
   CHECK_(sm && "InitGlobals() needs a non-NULL SourceManager");
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
   vector<HeaderSearchPath> search_paths =
       ComputeHeaderSearchPaths(header_search);
   SetHeaderSearchPaths(search_paths);
-  include_picker = new IncludePicker(GlobalFlags().no_default_mappings);
+  include_picker = new IncludePicker;
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 
@@ -204,9 +200,17 @@ void InitGlobals(clang::SourceManager* sm,
     VERRS(6) << "Search path: " << it->path << " (" << path_type_name << ")\n";
   }
 
+  // Set up mapping file search paths.
+  include_picker->AddMappingFileSearchPath(".");
+  include_picker->AddMappingFileSearchPath(GetParentPath(executable_path));
+
   // Add mappings.
   for (Each<string> it(&GlobalFlags().mapping_files); !it.AtEnd(); ++it) {
     include_picker->AddMappingsFromFile(*it);
+  }
+
+  if (GlobalFlags().mapping_files.empty()) {
+    include_picker->AddMappingsFromFile("iwyu.gcc.imp");
   }
 }
 
@@ -271,7 +275,7 @@ void InitGlobalsAndFlagsForTesting() {
   commandline_flags = new CommandlineFlags;
   source_manager = NULL;
   data_getter = NULL;
-  include_picker = new IncludePicker(GlobalFlags().no_default_mappings);
+  include_picker = new IncludePicker;
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 

@@ -24,7 +24,6 @@
 #include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-#include "clang/AST/CanonicalType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -409,19 +408,14 @@ string PrintableTemplateName(const TemplateName& tpl_name) {
 }
 
 string PrintableTemplateArgument(const TemplateArgument& arg) {
-  std::string buffer;
-  raw_string_ostream ostream(buffer);
-  TemplateSpecializationType::PrintTemplateArgumentList(
-      ostream, &arg, 1, DefaultPrintPolicy());
-  return ostream.str();
+  return TemplateSpecializationType::PrintTemplateArgumentList(
+      &arg, 1, DefaultPrintPolicy());
 }
 
-string PrintableTemplateArgumentLoc(const TemplateArgumentLoc& arg) {
-  std::string buffer;
-  raw_string_ostream ostream(buffer);
-  TemplateSpecializationType::PrintTemplateArgumentList(
-      ostream, &arg, 1, DefaultPrintPolicy());
-  return ostream.str();
+string PrintableTemplateArgumentLoc(
+    const TemplateArgumentLoc& arg) {
+  return TemplateSpecializationType::PrintTemplateArgumentList(
+      &arg, 1, DefaultPrintPolicy());
 }
 
 // This prints to errs().  It's useful for debugging (e.g. inside gdb).
@@ -535,33 +529,10 @@ bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
   for (CXXRecordDecl::ctor_iterator ctor = cxx_class->ctor_begin();
        ctor != cxx_class->ctor_end(); ++ctor) {
     if (ctor->isExplicit() || ctor->getNumParams() != 1 ||
-        ctor->isCopyConstructor() || ctor->isMoveConstructor())
+        ctor->isCopyConstructor())
       continue;
     return true;
   }
-  return false;
-}
-
-// C++ [class.virtual]p8:
-//   If the return type of D::f differs from the return type of B::f, the 
-//   class type in the return type of D::f shall be complete at the point of
-//   declaration of D::f or shall be the class type D.
-bool HasCovariantReturnType(const CXXMethodDecl* method_decl) {
-  QualType derived_result_type = method_decl->getResultType();
-
-  for (CXXMethodDecl::method_iterator
-       it = method_decl->begin_overridden_methods(); 
-       it != method_decl->end_overridden_methods(); ++it) {
-    // There are further constraints on covariant return types as such
-    // (e.g. parents must be related, derived override must have return type
-    // derived from base override, etc.) but the only _valid_ case I can think
-    // of where return type differs is when they're actually covariant.
-    // That is, if Clang can already compile this code without errors, and
-    // return types differ, it can only be due to covariance.
-    if ((*it)->getResultType() != derived_result_type)
-      return true;
-  }
-
   return false;
 }
 

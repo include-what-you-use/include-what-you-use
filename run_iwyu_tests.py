@@ -34,11 +34,6 @@ def CheckAlsoExtension(extension):
   return '--check_also="%s"' % os.path.join(TEST_ROOTDIR, '*' + extension)
 
 
-def MappingFile(filename):
-  """Return a suitable iwyu flag for adding the given mapping file."""
-  return '--mapping_file=%s' % os.path.join(TEST_ROOTDIR, filename)
-
-
 class OneIwyuTest(unittest.TestCase):
   """Superclass for tests.  A subclass per test-file is created at runtime."""
 
@@ -49,28 +44,20 @@ class OneIwyuTest(unittest.TestCase):
     # key=cc-filename (relative to TEST_ROOTDIR), value=list of flags.
     flags_map = {
       'backwards_includes.cc': [CheckAlsoExtension('-d*.h')],
-      'badinc.cc': [MappingFile('badinc.imp')],
       'check_also.cc': [CheckAlsoExtension('-d1.h')],
       'implicit_ctor.cc': [CheckAlsoExtension('-d1.h')],
       'iwyu_stricter_than_cpp.cc': [CheckAlsoExtension('-*[^0-9].h'),
                                     CheckAlsoExtension('-d2.h')],
-      'keep_mapping.cc': [CheckAlsoExtension('-public.h'), 
-                          MappingFile('keep_mapping.imp')],
+      'keep_mapping.cc': [CheckAlsoExtension('-public.h')],
       'macro_location.cc': [CheckAlsoExtension('-d2.h')],
       'non_transitive_include.cc': [CheckAlsoExtension('-d*.h'),
                                     '--transitive_includes_only'],
       'no_h_includes_cc.cc': [CheckAlsoExtension('.c')],
       'overloaded_class.cc': [CheckAlsoExtension('-i1.h')],
     }
-    clang_flags_map = {
-      'auto_type_within_template.cc': ['-std=c++11'],
-      'conversion_ctor.cc': ['-std=c++11'],
-    }
     # Internally, we like it when the paths start with TEST_ROOTDIR.
     self._iwyu_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
                                 for (k,v) in flags_map.items())
-    self._clang_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
-                                 for (k,v) in clang_flags_map.items())
 
   def RunOneTest(self, filename):
     logging.info('Testing iwyu on %s', filename)
@@ -97,12 +84,8 @@ class OneIwyuTest(unittest.TestCase):
     if iwyu_flags:
       logging.info('%s: Using iwyu flags %s', filename, str(iwyu_flags))
 
-    clang_flags = self._clang_flags_map.get(filename, None)
-    if clang_flags:
-      logging.info('%s: Using clang flags %s', filename, str(clang_flags))
-
     iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
-                                          iwyu_flags, clang_flags, verbose=True)
+                                          iwyu_flags, verbose=True)
 
 
 def RegisterFilesForTesting():

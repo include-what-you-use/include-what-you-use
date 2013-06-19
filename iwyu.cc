@@ -86,6 +86,12 @@
 //     case it is.  For example, if foo.cc desires bar.h, but can
 //     already get it via foo.h, IWYU won't recommend foo.cc to
 //     #include bar.h, unless it already does so.
+
+#if defined(_MSC_VER)
+#include <direct.h>
+#else
+#include <unistd.h>                     // for chdir
+#endif
 #include <stddef.h>                     // for size_t
 #include <stdio.h>                      // for snprintf
 #include <stdlib.h>                     // for atoi, exit
@@ -229,6 +235,38 @@ using std::vector;
 
 namespace {
 
+class WarningLessThan {
+ public:
+  struct Warning {
+    Warning(const string& f, int ln, int cn, const string& m, int c)
+        : filename(f), line_num(ln), column_num(cn), message(m), count(c) { }
+    const string filename;
+    const int line_num;
+    const int column_num;
+    const string message;
+    const int count;
+  };
+
+  static Warning ParseWarning(const pair<string, int>& warning_and_count) {
+    // Lines look like file:lineno:colno: text.
+    const vector<string> segs = Split(warning_and_count.first, ":", 4);
+    CHECK_(segs.size() == 4);
+    return Warning(segs[0], atoi(segs[1].c_str()), atoi(segs[2].c_str()),
+                   segs[3], warning_and_count.second);
+  }
+
+  bool operator()(const pair<string, int>& a,
+                  const pair<string, int>& b) const {
+    const Warning& w1 = ParseWarning(a);
+    const Warning& w2 = ParseWarning(b);
+    if (w1.filename != w2.filename)  return w1.filename < w2.filename;
+    if (w1.line_num != w2.line_num)  return w1.line_num < w2.line_num;
+    if (w1.column_num != w2.column_num)  return w1.column_num < w2.column_num;
+    if (w1.message != w2.message)  return w1.message < w2.message;
+    return w1.count < w2.count;
+  }
+};
+
 string IntToString(int i) {
   char buf[64];   // big enough for any number
   snprintf(buf, sizeof(buf), "%d", i);
@@ -325,8 +363,6 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseType(QualType qualtype) {
-    if (qualtype.isNull())
-      return Base::TraverseType(qualtype);
     const Type* type = qualtype.getTypePtr();
     if (current_ast_node_->StackContainsContent(type))
       return true;               // avoid recursion
@@ -349,7 +385,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // system, off to the side.  We don't care about qualifier
     // positions, so avoid the need for special-casing by just
     // traversing the unqualified version instead.
-    if (typeloc.getAs<QualifiedTypeLoc>()) {
+    if (isa<QualifiedTypeLoc>(typeloc)) {
       typeloc = typeloc.getUnqualifiedLoc();
     }
     if (current_ast_node_->StackContainsContent(&typeloc))
@@ -613,8 +649,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return;
 
     clang::Sema& sema = compiler_->getSema();
-    DeclContext::lookup_const_result ctors = sema.LookupConstructors(decl);
-    for (Each<NamedDecl*> it(&ctors); !it.AtEnd(); ++it) {
+    DeclContext::lookup_const_iterator it, end;
+    for (llvm::tie(it, end) = sema.LookupConstructors(decl); it != end; ++it) {
       // Ignore templated constructors.
       if (isa<FunctionTemplateDecl>(*it))
         continue;
@@ -686,26 +722,18 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
           return false;
       }
     }
-
     // Check the (single) destructor.
-    bool hasImplicitDeclaredDestructor = (!decl->needsImplicitDestructor() &&
-                                          !decl->hasUserDeclaredDestructor());
-    if (hasImplicitDeclaredDestructor) {
+    if (decl->hasDeclaredDestructor() && !decl->hasUserDeclaredDestructor()) {
       if (!TraverseImplicitDeclHelper(decl->getDestructor()))
         return false;
     }
-
-    // Check copy and move assignment operators.
-    for (CXXRecordDecl::method_iterator it = decl->method_begin();
-         it != decl->method_end(); ++it) {
-      bool isAssignmentOperator = it->isCopyAssignmentOperator() ||
-                                  it->isMoveAssignmentOperator();
-      if (isAssignmentOperator && it->isImplicit()) {
-        if (!TraverseImplicitDeclHelper(*it))
+    // There can actually be two operator='s: one const and one not.
+    if (decl->hasDeclaredCopyAssignment() &&
+        !decl->hasUserDeclaredCopyAssignment()) {
+      if (!TraverseImplicitDeclHelper(decl->getCopyAssignmentOperator(true)) ||
+          !TraverseImplicitDeclHelper(decl->getCopyAssignmentOperator(false)))
           return false;
-      }
     }
-
     return true;
   }
 
@@ -1835,28 +1863,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  // Special handling for C++ methods to detect covariant return types.
-  // These are defined as a derived class overriding a method with a different
-  // return type from the base.
-  bool VisitCXXMethodDecl(CXXMethodDecl* method_decl) {
-    if (CanIgnoreCurrentASTNode()) return true;
-
-    if (HasCovariantReturnType(method_decl)) {
-      const Type* return_type = RemovePointersAndReferencesAsWritten(
-          method_decl->getResultType().getTypePtr());
-
-      VERRS(3) << "Found covariant return type in "
-               << method_decl->getQualifiedNameAsString()
-               << ", needs complete type of "
-               << PrintableType(return_type)
-               << ".\n";
-
-      ReportTypeUse(CurrentLoc(), return_type);
-    }
-
-    return Base::VisitCXXMethodDecl(method_decl);
-  }
-
   //------------------------------------------------------------
   // Visitors of types derived from clang::Stmt.
 
@@ -1907,9 +1913,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_LValueToRValue:
       case clang::CK_AtomicToNonAtomic:
       case clang::CK_NonAtomicToAtomic:
-      case clang::CK_ReinterpretMemberPointer:
-      case clang::CK_BuiltinFnToFnPtr:
-      case clang::CK_ZeroToOCLEvent: // OpenCL event_t is a built-in type.
         break;
 
       // We shouldn't be seeing any of these kinds.
@@ -3641,12 +3644,19 @@ class IwyuAstConsumer
 
 // We use an ASTFrontendAction to hook up IWYU with Clang.
 class IwyuAction : public ASTFrontendAction {
+ public:
+   IwyuAction(const char* executable_path)
+     : executable_path_(executable_path)
+   {
+   }
+
  protected:
   virtual ASTConsumer* CreateASTConsumer(CompilerInstance& compiler,  // NOLINT
                                          llvm::StringRef /* dummy */) {
     // Do this first thing after getting our hands on a CompilerInstance.
     InitGlobals(&compiler.getSourceManager(),
-                &compiler.getPreprocessor().getHeaderSearchInfo());
+                &compiler.getPreprocessor().getHeaderSearchInfo(),
+                executable_path_);
 
     IwyuPreprocessorInfo* const preprocessor_consumer
         = new IwyuPreprocessorInfo();
@@ -3659,6 +3669,9 @@ class IwyuAction : public ASTFrontendAction {
     compiler.getPreprocessor().addCommentHandler(preprocessor_consumer);
     return ast_consumer;
   }
+
+ private:
+  std::string executable_path_;
 };
 
 
@@ -3686,8 +3699,6 @@ int main(int argc, char **argv) {
   for (int i = 1; i < argc; ++i) {
     if (i < argc - 1 && strcmp(argv[i], "-Xiwyu") == 0)
       iwyu_argv[iwyu_argc++] = argv[++i];   // the word after -Xiwyu
-    else if (strcmp(argv[i], "--help") == 0)
-      iwyu_argv[iwyu_argc++] = argv[i];     // send --help straight to IWYU
     else
       clang_argv[clang_argc++] = argv[i];
   }
@@ -3700,11 +3711,12 @@ int main(int argc, char **argv) {
 
   clang::CompilerInstance* compiler = CreateCompilerInstance(clang_argc,
                                                              clang_argv);
-  if (compiler != NULL) {
-    // Create and execute the frontend to generate an LLVM bitcode module.
-    llvm::OwningPtr<clang::ASTFrontendAction> action(new IwyuAction);
-    compiler->ExecuteAction(*action);
-  }
+  CHECK_(compiler && "Failed to process argv");
+
+  // Create and execute the frontend to generate an LLVM bitcode module.
+  llvm::OwningPtr<clang::ASTFrontendAction> action(new IwyuAction(clang_argv[0]));
+  if (!compiler->ExecuteAction(*action))
+    return 1;
 
   llvm::llvm_shutdown();
 

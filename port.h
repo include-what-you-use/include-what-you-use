@@ -14,23 +14,6 @@
 #include <stdlib.h>  // for abort
 #include <iostream>
 
-// Portable stub for Clang's __has_feature.
-#ifndef __has_feature
-# define __has_feature(x) 0
-#endif
-
-// Portable override keyword.
-// Use to mark virtual methods as overriding a base class method,
-// compiler will complain if method does not exist in base class.
-#if (defined(_MSC_VER) || __has_feature(cxx_override_control))
-#define IWYU_OVERRIDE override
-#else
-#define IWYU_OVERRIDE
-#endif
-
-// Count of statically allocated array.
-#define IWYU_ARRAYSIZE(arr) sizeof(arr) / sizeof(*arr)
-
 namespace include_what_you_use {
 
 // Helper class that allows programmers to log extra information in CHECK_s.
@@ -66,19 +49,22 @@ class OstreamVoidifier {
 
 #if defined(_WIN32)
 
-#define snprintf _snprintf
+# define NOMINMAX
+# include <windows.h>
 
-#define NOMINMAX  // Prevent Windows headers from redefining min/max.
-#include "Shlwapi.h"  // for PathMatchSpec
+# define getcwd _getcwd
+# define snprintf _snprintf
 
-// This undef is necessary to prevent conflicts between llvm
-// and Windows headers.
-// objbase.h has #define interface struct.
-#undef interface
+# include "Shlwapi.h"  // for PathMatchSpec
 
 inline bool GlobMatchesPath(const char *glob, const char *path) {
   return PathMatchSpec(path, glob);
 }
+
+// FIXME: This undef is necessary to prevent conflicts between llvm
+//        and Windows headers.  Eventually fnmatch functionality
+//        should be wrapped inside llvm's PathV2 library.
+# undef interface    // used in Shlwapi.h
 
 #else  // #if defined(_WIN32)
 

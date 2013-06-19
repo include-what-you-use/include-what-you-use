@@ -23,17 +23,12 @@ NO_INSTALL = 1
 TOOL_NO_EXPORTS = 1
 
 include $(CLANG_LEVEL)/../../Makefile.config
-LINK_COMPONENTS = $(TARGETS_TO_BUILD) asmparser bitreader ipo option
+LINK_COMPONENTS = $(TARGETS_TO_BUILD) asmparser ipo
 USEDLIBS = clangFrontend.a clangSerialization.a clangDriver.a clangParse.a \
-           clangSema.a clangAnalysis.a clangAST.a clangEdit.a clangLex.a \
-           clangBasic.a
+           clangSema.a clangAnalysis.a clangAST.a clangLex.a clangBasic.a \
+           clangEdit.a
 
 include $(CLANG_LEVEL)/Makefile
-
-# Link with import library for shlwapi.dll on Windows.
-ifneq (,$(filter $(HOST_OS), Cygwin MingW))
-  LIBS += -lshlwapi
-endif
 
 check-iwyu:: all
 	./run_iwyu_tests.py

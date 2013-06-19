@@ -66,8 +66,6 @@
 #include <vector>                       // for vector
 
 #include "iwyu_output.h"
-#include "port.h"
-
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
@@ -169,26 +167,20 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
  protected:
   // Preprocessor event handlers called by Clang.
   virtual void MacroExpands(const clang::Token& id,
-                            const clang::MacroDirective* directive,
-                            clang::SourceRange range,
-                            const clang::MacroArgs* args) IWYU_OVERRIDE;
-  virtual void MacroDefined(
-      const clang::Token& id,
-      const clang::MacroDirective* directive) IWYU_OVERRIDE;
+                            const clang::MacroInfo* macro,
+                            clang::SourceRange range);
+  virtual void MacroDefined(const clang::Token& id,
+                            const clang::MacroInfo* macro);
   // Not needed for iwyu:
   // virtual void MacroUndefined(const clang::Token&, const clang::MacroInfo*);
 
   virtual void If(clang::SourceLocation loc,
-                  clang::SourceRange condition_range) IWYU_OVERRIDE;
+                  clang::SourceRange condition_range);
   virtual void Elif(clang::SourceLocation loc,
                     clang::SourceRange condition_range,
-                    clang::SourceLocation if_loc) IWYU_OVERRIDE;
-  virtual void Ifdef(clang::SourceLocation loc,
-                     const clang::Token& id,
-                     const clang::MacroDirective* directive) IWYU_OVERRIDE;
-  virtual void Ifndef(clang::SourceLocation loc,
-                      const clang::Token& id,
-                      const clang::MacroDirective* directive) IWYU_OVERRIDE;
+                    clang::SourceLocation if_loc);
+  virtual void Ifdef(clang::SourceLocation loc, const clang::Token& id);
+  virtual void Ifndef(clang::SourceLocation loc, const clang::Token& id);
   // Not needed for iwyu:
   // virtual void Else();
   // virtual void Endif();
@@ -201,15 +193,14 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                                  const clang::FileEntry* file,
                                  llvm::StringRef search_path,
                                  llvm::StringRef relative_path,
-                                 const clang::Module* imported) IWYU_OVERRIDE;
+                                 const clang::Module* imported);
 
   virtual void FileChanged(clang::SourceLocation loc, FileChangeReason reason,
                            clang::SrcMgr::CharacteristicKind file_type,
-                           clang::FileID PrevFID) IWYU_OVERRIDE;
-  virtual void FileSkipped(
-      const clang::FileEntry& file,
-      const clang::Token &filename,
-      clang::SrcMgr::CharacteristicKind file_type) IWYU_OVERRIDE;
+                           clang::FileID PrevFID);
+  virtual void FileSkipped(const clang::FileEntry& file,
+                           const clang::Token &filename,
+                           clang::SrcMgr::CharacteristicKind file_type);
   // FileChanged is actually a multi-plexer for 4 different callbacks.
   void FileChanged_EnterFile(clang::SourceLocation file_beginning);
   void FileChanged_ExitToFile(clang::SourceLocation include_loc,
@@ -221,7 +212,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Clang doc: The handler shall return true if it has pushed any
   // tokens to be read using e.g. EnterToken or EnterTokenStream.
   virtual bool HandleComment(clang::Preprocessor& pp,
-                             clang::SourceRange comment_range) IWYU_OVERRIDE;
+                             clang::SourceRange comment_range);
 
  private:
   // Returns true if includee is considered part of the main

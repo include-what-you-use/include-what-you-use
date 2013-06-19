@@ -50,6 +50,13 @@
 #include <utility>                      // for pair
 #include <vector>                       // for vector
 
+#include "llvm/ADT/OwningPtr.h"
+#include "llvm/Support/MemoryBuffer.h"
+
+namespace llvm {
+  class error_code;
+}
+
 namespace include_what_you_use {
 
 using std::map;
@@ -59,15 +66,17 @@ using std::string;
 
 using std::vector;
 
-struct IncludeMapEntry;
-
-enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
+using llvm::OwningPtr;
+using llvm::MemoryBuffer;
+using llvm::error_code;
 
 class IncludePicker {
  public:
+  enum Visibility { kUnusedVisibility, kPublic, kPrivate };
+
   typedef map<string, vector<string> > IncludeMap;  // map_from to <map_to,...>
 
-  explicit IncludePicker(bool no_default_mappings);
+  IncludePicker();
 
   // ----- Routines to dynamically modify the include-picker
 
@@ -77,6 +86,9 @@ class IncludePicker {
   void AddDirectInclude(const string& includer_filepath,
                         const string& includee_filepath,
                         const string& quoted_include_as_written);
+
+  // Add a mapping file search path.
+  void AddMappingFileSearchPath(const string& path);
 
   // Add this to say "map_to re-exports everything in file map_from".
   // Both map_to and map_from should be quoted includes.
@@ -141,31 +153,16 @@ class IncludePicker {
   void AddMappingsFromFile(const string& filename);
 
  private:
-  // Private implementation of mapping file parser, which takes
-  // mapping file search path to allow recursion that builds up
-  // search path incrementally.
-  void AddMappingsFromFile(const string& filename,
-                           const vector<string>& search_path);
-
-  // Adds all hard-coded default mappings.
-  void AddDefaultMappings();
-
   // Adds a mapping from a one header to another, typically
   // from a private to a public quoted include.
-  void AddIncludeMapping(
-      const string& map_from, IncludeVisibility from_visibility, 
-      const string& map_to, IncludeVisibility to_visibility);
+  void AddIncludeMapping(const string& map_from, Visibility from_visibility, 
+     const string& map_to, Visibility to_visibility);
 
   // Adds a mapping from a a symbol to a quoted include. We use this to 
   // maintain mappings of documented types, e.g.
   //  For std::map<>, include <map>.
-  void AddSymbolMapping(
-      const string& map_from, const string& map_to,
-      IncludeVisibility to_visibility);
-
-  // Adds mappings from sized arrays of IncludeMapEntry.
-  void AddIncludeMappings(const IncludeMapEntry* entries, size_t count);
-  void AddSymbolMappings(const IncludeMapEntry* entries, size_t count);
+  void AddSymbolMapping(const string& map_from, Visibility from_visibility, 
+    const string& map_to, Visibility to_visibility);
 
   // Expands the regex keys in filepath_include_map_ and
   // friend_to_headers_map_ by matching them against all source files
@@ -177,15 +174,16 @@ class IncludePicker {
   void AddImplicitThirdPartyMappings();
 
   // Adds an entry to filepath_visibility_map_, with error checking.
-  void MarkVisibility(const string& quoted_include, IncludeVisibility vis);
+  void MarkVisibility(const string& quoted_include,
+                      IncludePicker::Visibility vis);
 
   // Parse visibility from a string. Returns kUnusedVisibility if
   // string is not recognized.
-  IncludeVisibility ParseVisibility(const string& visibility_str) const;
+  Visibility ParseVisibility(const string& visibility_str) const;
 
   // Return the visibility of a given quoted_include if known, else
   // kUnusedVisibility.
-  IncludeVisibility GetVisibility(const string& quoted_include) const;
+  Visibility GetVisibility(const string& quoted_include) const;
 
   // For the given key, return the vector of values associated with
   // that key, or an empty vector if the key does not exist in the
@@ -197,6 +195,11 @@ class IncludePicker {
   // "" if it's not found for some reason.
   string MaybeGetIncludeNameAsWritten(const string& includer_filepath,
                                       const string& includee_filepath) const;
+
+  // Scan the search paths for filename. If it exists, put file contents
+  // in buffer. If not, return the error code.
+  error_code TryReadMappingFile(const string& filename, 
+                                OwningPtr<MemoryBuffer>& buffer) const;
 
   // From symbols to includes.
   IncludeMap symbol_include_map_;
@@ -211,7 +214,7 @@ class IncludePicker {
 
   // A map of all quoted-includes to whether they're public or private.
   // Quoted-includes that are not present in this map are assumed public.
-  map<string, IncludeVisibility> filepath_visibility_map_;
+  map<string, Visibility> filepath_visibility_map_;
 
   // All the includes we've seen so far, to help with globbing and
   // other dynamic mapping.  For each file, we list who #includes it.
@@ -232,6 +235,8 @@ class IncludePicker {
   // friend_to_headers_map_["foo/bar/x.cc"] will be augmented with the
   // contents of friend_to_headers_map_["@\"foo/bar/.*\""].
   map<string, set<string> > friend_to_headers_map_;
+
+  vector<string> mapping_file_search_path_;
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;
