@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 
 This README was generated from the Wiki contents at
-http://code.google.com/p/include-what-you-use/w/ on 2013-01-21 04:38:51 UTC.
+http://code.google.com/p/include-what-you-use/w/ on 2013-06-24 19:37:41 UTC.
 
 
 = Instructions for Users  =
@@ -37,6 +37,58 @@ a unittest case that verifies the fix)!
 
 == How to Build ==
 
+Include-what-you-use makes heavy use of Clang internals, and will occasionally
+break when Clang is updated. See the include-what-you-use Makefile for
+instructions on how to keep them in sync.
+
+IWYU, like Clang, does not yet handle some of the non-standard constructs in
+Microsoft's STL headers. A discussion on how to use MinGW or Cygwin headers with
+IWYU is available on the mailing list.
+
+We support two build configurations: out-of-tree and in-tree.
+
+
+=== Building out-of-tree ===
+
+In an out-of-tree configuration, we assume you already have compiled LLVM and
+Clang headers and libs somewhere on your filesystem, such as via the libclang-
+dev package. Out-of-tree builds are only supported with CMake (patches very
+welcome for the Make system).
+
+  * Create a directory for IWYU development, e.g. iwyu-trunk
+  * Get the IWYU source code, either from a published tarball or directly from
+svn
+
+    # Unpack tarball
+    iwyu-trunk$ tar xfz include-what-you-use-<version>.tar.gz
+
+    # or checkout from SVN
+    iwyu-trunk$ svn co http://include-what-you-use.googlecode.com/svn/trunk/
+include-what-you-use
+
+  * Create a build root
+
+    iwyu-trunk$ mkdir build && cd build
+
+  * Run CMake and specify the location of LLVM/Clang prebuilts
+
+    # This example uses the Makefile generator,
+    # but anything should work.
+    iwyu-trunk/build$ cmake -G "Unix Makefiles" -DLLVM_PATH=/usr/lib/llvm-3.4
+../include-what-you-use
+
+  * Once CMake has generated a build system, you can invoke it directly from
+build, e.g.
+
+    iwyu-trunk/build$ make
+
+
+This configuration is more useful if you want to get IWYU up and running quickly
+without building Clang and LLVM from scratch.
+
+
+=== Building in-tree ===
+
 You will need the Clang and LLVM trees on your system, such as by checking out
 their SVN trees (but don't configure or build before you've done the following.)
 
@@ -58,13 +110,8 @@ use)
   * Once this is done, IWYU is recognized and picked up by both autoconf and
 CMake workflows as described in the Clang Getting Started guide
 
-Include-what-you-use makes heavy use of Clang internals, and will occasionally
-break when Clang is updated. See the include-what-you-use Makefile for
-instructions on how to keep them in sync.
-
-IWYU, like Clang, does not yet handle some of the non-standard constructs in
-Microsoft's STL headers. A discussion on how to use MinGW or Cygwin headers with
-IWYU is available on the mailing list.
+This configuration is more useful if you're actively developing IWYU against
+Clang trunk.
 
 
 == How to Run ==
@@ -330,24 +377,27 @@ acceptable to assume it comes with <cstring>, <clocale>, <cwchar>, <ctime>,
 NULL one way or another, and we probably shouldn't force people to #include
 <cstddef>.
 
-These mappings are all toolchain- and version-dependent. Symbol homes and
+To simplify IWYU deployment and command-line interface, many of these mappings
+are compiled into the executable. These constitute the _default mappings_.
+
+However, many mappings are toolchain- and version-dependent. Symbol homes and
 #include dependencies change between releases of GCC and are dramatically
-different for the standard libraries shipped with Microsoft Visual C++.
+different for the standard libraries shipped with Microsoft Visual C++. Also,
+mappings such as these are usually necessary for third-party libraries (e.g.
+Boost, Qt) or even project-local symbols and headers as well.
 
-Finally, mappings such as these are usually necessary for third-party libraries
-(e.g. Boost, Qt) or even project-local symbols and headers as well.
-
-The original design had mappings hard-coded in iwyu_include_picker.cc, which
-made it difficult to experiment and almost impossible to create local or
-alternative mappings. To ease porting to non-GCC platforms and make it easier
-for users to test patches, we pulled the mappings out into external files parsed
-at run-time.
-
-IWYU's original target environment was GCC, so the set of mapping files shipped
-by default are currently very GCC-oriented.
+Any mappings outside of the default set can therefore be specified as external
+_mapping files_.
 
 
-== Mapping File Format ==
+== Default Mappings ==
+
+IWYU's default mappings are hard-coded in iwyu_include_picker.cc, and are very
+GCC-centric. There are both symbol- and include mappings for GNU libstdc++ and
+libc.
+
+
+== Mapping Files ==
 
 The mapping files conventionally use the .imp file extension, for "Iwyu
 !MaPping" (terrible, I know). They use a JSON meta-format with the following
@@ -368,6 +418,16 @@ and data varies between the directives, see below.
 Note that you can mix directives of different kinds within the same mapping
 file.
 
+IWYU uses LLVM's YAML/JSON parser to interpret the mapping files, and it has
+some idiosyncrasies:
+  * Comments use a Python-style # prefix, not Javascript's //
+  * Single-word strings can be left un-quoted
+
+If the YAML parser is ever made more rigorous, it might be wise not to lean on
+non-standard behavior, so apart from comment style, try to keep  mapping files
+in line with the JSON spec.
+
+
 === Include Mappings ===
 
 The include directive specifies a mapping between two include names (relative
@@ -384,7 +444,7 @@ Data for this directive is a list of four strings containing:
 
 For example;
 
-  { include: private, '<memory>', public }
+  { include: "private", "<memory>", "public" }
 
 Most of the original mappings were generated with shell scripts (as evident from
 the embedded comments) so there are several multi-step mappings from one private
@@ -408,7 +468,7 @@ Data for this directive is a list of four strings containing:
 
 For example;
 
-  { symbol: private, '<cstddef>', public }
+  { symbol: "private", "<cstddef>", "public" }
 
 The symbol visibility is largely redundant -- it must always be private. It
 isn't entirely clear why symbol visibility needs to be specified, and it might
@@ -423,8 +483,8 @@ single string: the filename to include.
 
 For example;
 
-  { ref: more.symbols.imp },
-  { ref: '/usr/lib/other.includes.imp' }
+  { ref: "more.symbols.imp" },
+  { ref: "/usr/lib/other.includes.imp" }
 
 The rationale for the ref directive was to make it easier to compose project-
 specific mappings from a set of library-oriented mapping files. For example,
@@ -434,7 +494,7 @@ specific project uses, you could easily create an aggregate mapping file with
 refs to the relevant mappings.
 
 
-== Specifying Mapping Files ==
+=== Specifying Mapping Files ===
 
 Mapping files are specified on the command-line using the --mapping_file switch:
 
@@ -442,17 +502,11 @@ Mapping files are specified on the command-line using the --mapping_file switch:
 
 The switch can be added multiple times to add more than one mapping file.
 
-There is a single aggregate mapping called iwyu.gcc.imp which is the default
-mapping used if nothing else is specified on the command-line.
+If the mapping filename is relative, it will be looked up relative to the
+current directory.
 
-Both command-line arguments and ref directives use the same search path for
-mapping files. They are, in order:
-  * The current directory, .
-  * The directory in which the include-what-you-use binary is located
-  * Any path from which a ref is loaded
-
-The last clause allows ref directives to be relative to the referring mapping
-file.
+ref directives are first looked up relative to the current directory and if not
+found, relative to the referring mapping file.
 
 
 = IWYU pragmas =
@@ -683,7 +737,7 @@ match.
 (*Disclaimer:* the information here is accurate as of 12 May 2011, when it was
 written.  Specifics of IWYU's policy, and even philosophy, may have changed
 since then.  We'll try to remember to update this wiki page as that happens, but
-may occassionally forget.  The further we are from May 2011, the more you should
+may occasionally forget.  The further we are from May 2011, the more you should
 take the below with a grain of salt.)
 
 IWYU has the policy that you should #include a declaration for every symbol you
