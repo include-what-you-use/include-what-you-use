@@ -16,8 +16,8 @@
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/PathV1.h"
 #include "llvm/Support/system_error.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
@@ -58,18 +58,17 @@ using llvm::errs;
 using llvm::isa;
 using llvm::raw_svector_ostream;
 using llvm::sys::getDefaultTargetTriple;
-using llvm::sys::Path;
 using std::set;
 
 namespace include_what_you_use {
 
 namespace {
 
-Path GetExecutablePath(const char *Argv0) {
+std::string GetExecutablePath(const char *Argv0) {
   // This just needs to be some symbol in the binary; C++ doesn't
   // allow taking the address of ::main however.
   void *main_addr = (void*) (intptr_t) GetExecutablePath;
-  return Path::GetMainExecutable(Argv0, main_addr);
+  return llvm::sys::fs::getMainExecutable(Argv0, main_addr);
 }
 
 const char *SaveStringInSet(std::set<std::string> &SavedStrings, StringRef S) {
@@ -152,7 +151,7 @@ void ExpandArgv(int argc, const char **argv,
 
 CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   void* main_addr = (void*) (intptr_t) GetExecutablePath;
-  Path path = GetExecutablePath(argv[0]);
+  std::string path = GetExecutablePath(argv[0]);
   IntrusiveRefCntPtr<DiagnosticOptions> diagnostic_options =
     new DiagnosticOptions;
   TextDiagnosticPrinter* diagnostic_client =
@@ -161,7 +160,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   IntrusiveRefCntPtr<DiagnosticIDs> diagnostic_id(new DiagnosticIDs());
   DiagnosticsEngine diagnostics(diagnostic_id, &*diagnostic_options,
                                 diagnostic_client);
-  Driver driver(path.str(), getDefaultTargetTriple(), "a.out", diagnostics);
+  Driver driver(path, getDefaultTargetTriple(), "a.out", diagnostics);
   driver.setTitle("include what you use");
 
   // Expand out any response files passed on the command line
