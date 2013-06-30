@@ -3668,12 +3668,19 @@ class IwyuAction : public ASTFrontendAction {
 #include "clang/Frontend/FrontendAction.h"
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/TargetSelect.h"
 
 using include_what_you_use::ParseIwyuCommandlineFlags;
 using include_what_you_use::IwyuAction;
 using include_what_you_use::CreateCompilerInstance;
 
 int main(int argc, char **argv) {
+  // If we have a native target, initialize it to ensure it is linked in and
+  // usable by the JIT.
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+  llvm::InitializeNativeTargetAsmParser();
+
   // This code has various memory leaks, but we're in main, so who cares?
 
   // Separate out iwyu and clang flags.  iwyu flags are "-Xiwyu <iwyu_flag>"
