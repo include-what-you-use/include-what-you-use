@@ -3675,10 +3675,11 @@ using include_what_you_use::IwyuAction;
 using include_what_you_use::CreateCompilerInstance;
 
 int main(int argc, char **argv) {
-  // If we have a native target, initialize it to ensure it is linked in and
-  // usable by the JIT.
+  // A native target is required for inline assembly parsing.
+  // If no target is initialized, IWYU will crash when trying to parse inline
+  // assembly. This has only been spotted on Windows (winnt.h contains some x86
+  // assembly), but could presumably happen on any platform.
   llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetAsmParser();
 
   // This code has various memory leaks, but we're in main, so who cares?
