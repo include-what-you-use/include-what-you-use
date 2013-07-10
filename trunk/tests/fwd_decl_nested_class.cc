@@ -16,7 +16,6 @@ template<typename T> void TplFn() { T t; (void)t; }
 class Foo {
   class NoUsage;  // Unnecessary -- defined inline later in the class.
   class NoUsageDefinedOutOfLine;  // Necessary -- part of the public API.
-  class NoUsageDefinedOutOfLine;  // Unnecessary -- second fwd declare.
   class UsedAsPtrInMethod;  // Unnecessary -- all uses see the later dfn.
   class UsedFullyInMethod;  // Unnecessary -- all uses see the later dfn.
   class UsedFullyInInitializer;  // Unnecessary -- same as in a method.
@@ -137,7 +136,6 @@ tests/fwd_decl_nested_class.cc should add these lines:
 
 tests/fwd_decl_nested_class.cc should remove these lines:
 - class Foo::NoUsage;  // lines XX-XX
-- class Foo::NoUsageDefinedOutOfLine;  // lines XX-XX
 - class Foo::UsedAsPtrInMethod;  // lines XX-XX
 - class Foo::UsedFullyInInitializer;  // lines XX-XX
 - class Foo::UsedFullyInMethod;  // lines XX-XX
