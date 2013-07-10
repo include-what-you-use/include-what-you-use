@@ -3425,6 +3425,12 @@ class IwyuAstConsumer
       // the first forward-declaration.
       } else if (IsNestedClassAsWritten(current_ast_node())) {
         if (!decl->getDefinition() || decl->getDefinition()->isOutOfLine()) {
+          // TODO(kimgr): Member class redeclarations are illegal, per C++
+          // standard DR85, so this check for first redecl can be removed.
+          // Nested classes should always be definitely kept. More details here:
+          // http://comments.gmane.org/gmane.comp.compilers.clang.scm/74782
+          // GCC and MSVC both still allow redeclarations of nested classes,
+          // though, so it seems hygienic to remove all but one.
           if (const NamedDecl* first_decl = GetFirstRedecl(decl)) {
             // Check if we're the decl with the smallest line number.
             if (decl == first_decl)
