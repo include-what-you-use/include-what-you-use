@@ -3406,17 +3406,22 @@ class IwyuAstConsumer
       // situations we can do this, described below.
       bool definitely_keep_fwd_decl = false;
 
-      // (1) If the forward-decl has a linkage spec ('extern "C"') or
-      // has gcc-style __attributes__, then it can't be removed, since
-      // that information probably isn't encoded anywhere else.
+      // (1) If the forward-decl has a linkage spec ('extern "C"')
+      // then it can't be removed, since that information probably
+      // isn't encoded anywhere else.
       // (Surprisingly classes can have linkage specs! -- they are
       // applied to all static methods of the class.  See
       // http://msdn.microsoft.com/en-us/library/ms882260.aspx.)
-      if (current_ast_node()->ParentIsA<LinkageSpecDecl>() ||
-          decl->hasAttrs()) {
+      if (current_ast_node()->ParentIsA<LinkageSpecDecl>()) {
         definitely_keep_fwd_decl = true;
 
-      // (2) If we're a nested class ("class A { class SubA; };"),
+      // (2) GCC-style __attributes__ work the same way: we can't assume
+      // that attributes are consistent between declarations, so we can't
+      // remove a decl with attributes.
+      } else if (decl->hasAttrs()) {
+        definitely_keep_fwd_decl = true;
+
+      // (3) If we're a nested class ("class A { class SubA; };"),
       // then we can't necessary be removed either, since we're part
       // of the public API of the enclosing class -- it's illegal to
       // have a nested class and not at least declare it in the
