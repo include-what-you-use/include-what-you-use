@@ -181,10 +181,6 @@ Cc_OnlySpecializedStruct<int>* cc_onlyspecializedstruct_ptr;
 extern "C" struct Cc_C_Struct;
 struct Cc_C_Struct* cc_c_struct_ptr = NULL;
 
-// And one that only needs a forward-declare because of attributes
-struct __attribute__((aligned (16))) Cc_AttrStruct;
-struct Cc_AttrStruct* cc_attrstruct_ptr = NULL;
-
 // The types.
 typedef std::string Cc_string;   // Nobody should use this.
 // IWYU: I1_Class is...*badinc-i1.h
@@ -2061,7 +2057,6 @@ namespace d3_namespace { struct D3_Struct; }
 namespace i3_ns1 { namespace i3_ns2 { namespace i3_ns3 { struct I3_ForwardDeclareNamespaceStruct; } } }  // lines XX-XX
 namespace i3_ns1 { namespace i3_ns2 { namespace i3_ns3 { template <typename A, int B> struct I3_ForwardDeclareNamespaceTemplateStruct; } } }
 namespace i3_ns1 { namespace { struct I3_UnnamedNamespaceStruct; } }
-struct Cc_AttrStruct;  // lines XX-XX
 struct Cc_C_Struct;  // lines XX-XX
 struct I3_ForwardDeclareStruct;
 template <class T> struct Cc_OnlySpecializedStruct;  // lines XX-XX
