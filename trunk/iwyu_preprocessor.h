@@ -179,9 +179,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // virtual void MacroUndefined(const clang::Token&, const clang::MacroInfo*);
 
   virtual void If(clang::SourceLocation loc,
-                  clang::SourceRange condition_range) IWYU_OVERRIDE;
+                  clang::SourceRange condition_range,
+                  bool condition_value) IWYU_OVERRIDE;
   virtual void Elif(clang::SourceLocation loc,
                     clang::SourceRange condition_range,
+                    bool condition_value,
                     clang::SourceLocation if_loc) IWYU_OVERRIDE;
   virtual void Ifdef(clang::SourceLocation loc,
                      const clang::Token& id,
