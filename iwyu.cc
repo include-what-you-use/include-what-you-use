@@ -148,6 +148,7 @@ using clang::ArrayType;
 using clang::ASTConsumer;
 using clang::ASTContext;
 using clang::ASTFrontendAction;
+using clang::Attr;
 using clang::CallExpr;
 using clang::ClassTemplateDecl;
 using clang::ClassTemplateSpecializationDecl;
@@ -3417,9 +3418,15 @@ class IwyuAstConsumer
 
       // (2) GCC-style __attributes__ work the same way: we can't assume
       // that attributes are consistent between declarations, so we can't
-      // remove a decl with attributes.
+      // remove a decl with attributes unless they're inherited, i.e. propagated
+      // from another redeclaration as opposed to explicitly written.
       } else if (decl->hasAttrs()) {
-        definitely_keep_fwd_decl = true;
+        for (Each<const Attr*> it(&decl->getAttrs()); !it.AtEnd(); ++it) {
+          if (!(*it)->isInherited()) {
+            definitely_keep_fwd_decl = true;
+            break;
+          }
+        }
 
       // (3) If we're a nested class ("class A { class SubA; };"),
       // then we can't necessary be removed either, since we're part
