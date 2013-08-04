@@ -1,5 +1,11 @@
-// Copyright 2011 Google Inc. All Rights Reserved.
-// Author: csilvers@google.com (Craig Silverstein)
+//===--- iwyu_driver.cc - iwyu driver implementation ----------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
 
 // Driver, used to set up a clang CompilerInstance based on argc and
 // argv.
