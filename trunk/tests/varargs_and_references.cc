@@ -19,10 +19,10 @@
 
 // Just to make things more complicated, put a default argument before
 // the varargs.
-void Function(int x, int y = 5, ...) { }
+int Function(int x, int y = 5, ...) { return 0; }
 
 // To make things even *more* complicated, try a function pointer.
-void (*function_p)(int, int, ...) = &Function;
+int (*function_p)(int, int, ...) = &Function;
 
 int main() {
   // IWYU: IndirectClass is...*indirect.h
