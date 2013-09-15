@@ -191,7 +191,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   if (jobs.size() != 1 || !isa<Command>(*jobs.begin())) {
     SmallString<256> msg;
     raw_svector_ostream out(msg);
-    compilation->PrintJob(out, compilation->getJobs(), "; ", true);
+    jobs.Print(out, "; ", true);
     diagnostics.Report(clang::diag::err_fe_expected_compiler_job) << out.str();
     return NULL;
   }
@@ -214,7 +214,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   // Show the invocation, with -v.
   if (invocation->getHeaderSearchOpts().Verbose) {
     errs() << "clang invocation:\n";
-    compilation->PrintJob(errs(), compilation->getJobs(), "\n", true);
+    jobs.Print(errs(), "\n", true);
     errs() << "\n";
   }
 
