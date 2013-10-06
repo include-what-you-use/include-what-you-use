@@ -62,9 +62,13 @@ For example;
 {{{
   { include: ["<bits/unique_ptr.h>", "private", "<memory>", "public"] }
 }}}
-Most of the original mappings were generated with shell scripts (as evident from the embedded comments) so there are several multi-step mappings from one private header to another, to a third and finally to a public header. This reflects the `#include` chain in the actual library headers.
+Most of the original mappings were generated with shell scripts (as evident from the embedded comments) so there are several multi-step mappings from one private header to another, to a third and finally to a public header. This reflects the `#include` chain in the actual library headers. A hand-written mapping could be reduced to one mapping per private header to its corresponding public header.
 
-A hand-written mapping could be reduced to one mapping per private header to its corresponding public header.
+Include mappings support a special wildcard syntax for the first entry:
+{{{
+  { include: ["@<internal/.*>", "private", "<public>", "public"] }
+}}}
+The `@` prefix is a signal that the remaining content is a regex, and can be used to re-map a whole subdirectory of private headers to a public facade header.
 
 
 === Symbol Mappings ===
@@ -82,6 +86,8 @@ For example;
   { symbol: ["NULL", "private", "<cstddef>", "public"] }
 }}}
 The symbol visibility is largely redundant -- it must always be `private`. It isn't entirely clear why symbol visibility needs to be specified, and it might be removed moving forward.
+
+Like `include`, `symbol` directives support the `@`-prefixed regex syntax in the first entry.
 
 
 === Mapping Refs ===
