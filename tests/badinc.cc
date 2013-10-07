@@ -317,17 +317,12 @@ const I2_Class& Cc_Function(
     // IWYU: I2_Class is...*badinc-i2.h.*for autocast
     // IWYU: I2_Class needs a declaration
     const I2_Class& i2,
-    const class I1_Class& elaborated_i1,
-    // IWYU: I2_Class is...*badinc-i2.h.*for autocast
-    const class I2_Class& elaborated_i2,
     // A subtle c++ point: forward-declaring is ok for i2b, because
     // you can't do implicit conversion to a non-const reference
     // (implicit conversion involves creating a temporary, which
     // doesn't bind to non-const references).
     // IWYU: I2_Class needs a declaration
     I2_Class& i2_nonconst,
-    class I2_Class& elaborated_i2_nonconst,
-    struct i3_ns1::i3_ns2::i3_ns3::I3_ForwardDeclareNamespaceStruct* i3_forward,
     // Forward-declaring is ok because we a const reference to a *pointer*.
     // IWYU: I2_Class needs a declaration
     I2_Class* const & i2_ptrref,
@@ -897,11 +892,6 @@ i3_ns1::i3_ns2::i3_ns3::I3_ForwardDeclareNamespaceStruct* i3_fdns_struct;
 // IWYU: I3_ForwardDeclareNamespaceTemplateStruct needs a declaration
 i3_ns1::i3_ns2::i3_ns3::I3_ForwardDeclareNamespaceTemplateStruct<H_Enum, 2>*
   i3_fdtns_struct;
-// Even with elaboration, we still need fwd decl.
-// IWYU: I3_ForwardDeclareNamespaceTemplateStruct needs a declaration
-struct i3_ns1::i3_ns2::i3_ns3::I3_ForwardDeclareNamespaceTemplateStruct<H_Enum,
-                                                                        3>*
-  i3_elaborated_fdtns_struct;
 
 // IWYU: I3_UnnamedNamespaceStruct needs a declaration
 i3_ns1::I3_UnnamedNamespaceStruct* i3_unnamed_namespace_struct;
