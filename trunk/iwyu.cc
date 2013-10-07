@@ -166,6 +166,7 @@ using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::ElaboratedType;
+using clang::EnumType;
 using clang::Expr;
 using clang::FileEntry;
 using clang::FriendDecl;
@@ -2450,6 +2451,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // this the canonical place to figure out if we can forward-declare.
   bool CanForwardDeclareType(const ASTNode* ast_node) const {
     CHECK_(ast_node->IsA<Type>());
+    // Cannot forward-declare an enum even if it's in a forward-declare context.
+    // TODO(vsapsai): make enums forward-declarable in C++11.
+    if (ast_node->IsA<EnumType>())
+      return false;
     // If we're in a forward-declare context, well then, there you have it.
     if (ast_node->in_forward_declare_context())
       return true;
@@ -3563,6 +3568,8 @@ class IwyuAstConsumer
     // needed: just forward-declare.  If we're already elaborated
     // ('class Foo x') but not namespace-qualified ('class ns::Foo x')
     // there's no need even to forward-declare!
+    // Note that enums are never forward-declarable, so elaborated enums are
+    // handled in CanForwardDeclareType.
     if (CanForwardDeclareType(current_ast_node())) {
       current_ast_node()->set_in_forward_declare_context(true);
       if (!IsElaborationNode(current_ast_node()->parent()) ||
