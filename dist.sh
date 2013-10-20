@@ -1,3 +1,4 @@
+#!/bin/sh
 ##===--------- dist.sh - package up binary distribution of IWYU -----------===##
 #
 #                      The LLVM Compiler Infrastructure
@@ -6,6 +7,8 @@
 # License. See LICENSE.TXT for details.
 #
 ##===----------------------------------------------------------------------===##
+
+set -eu
 
 # Create clean dist directory
 rm -rf dist
