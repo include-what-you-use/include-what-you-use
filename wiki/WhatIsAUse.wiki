@@ -151,13 +151,14 @@ In this case, IWYU will say that `baz.cc` does not need to `#include "foo.h"`, s
 Consider the following code:
 {{{
 foo.h:
-  class Foo() {
+  class Foo {
+   public:
     Foo(int i) { ... };    // note: not an explicit constructor!
   };
 
 bar.h:
   class Foo;
-  MyFunc(Foo foo);
+  void MyFunc(Foo foo);
 
 baz.cc:
   #include "bar.h"
@@ -168,18 +169,18 @@ The above code does not compile, because the code to convert `11` to a `Foo` is 
 The same rule applies as before:
 {{{
   #include "foo.h"
-  Func1(Foo foo);   // IWYU says you intend to re-export Foo
+  void Func1(Foo foo);   // IWYU says you intend to re-export Foo
 
   class Foo;
-  Func2(Foo foo);   // IWYU says you do not intend to re-export Foo
+  void Func2(Foo foo);   // IWYU says you do not intend to re-export Foo
 
   #include "file_including_foo.h"
-  Func3(Foo foo);   // IWYU says you do not intend to re-export Foo
+  void Func3(Foo foo);   // IWYU says you do not intend to re-export Foo
 }}}
 As before, if iwyu decides you do not intend to re-export `Foo`, then all callers (in this case, `baz.cc`) need to.
 
 The rule here applies even to const references (which can also be automatically converted):
 {{{
   #include "foo.h"
-  Func1(const Foo& foo);   // IWYU says you intend to re-export Foo
+  void Func1(const Foo& foo);   // IWYU says you intend to re-export Foo
 }}}
