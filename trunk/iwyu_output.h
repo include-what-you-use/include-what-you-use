@@ -240,6 +240,13 @@ class IwyuFileInfo {
     return associated_file_entries;
   }
 
+  set<string> AssociatedDesiredIncludes() const {
+    set<string> associated_desired_includes;
+    for (Each<const IwyuFileInfo*> it(&internal_headers_); !it.AtEnd(); ++it)
+      InsertAllInto((*it)->desired_includes(), &associated_desired_includes);
+    return associated_desired_includes;
+  }
+
   // Populates uses with full data, including is_iwyu_violation_.
   void CalculateIwyuViolations(vector<OneUse>* uses);
   // Uses uses to emit warning messages (at high enough verbosity).

@@ -1318,8 +1318,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // NOTE: this depends on our internal headers having had their
   // iwyu analysis done before us.
   set<string> effective_desired_includes = desired_includes();
-  for (Each<const IwyuFileInfo*> it(&internal_headers_); !it.AtEnd(); ++it)
-    InsertAllInto((*it)->desired_includes(), &effective_desired_includes);
+  InsertAllInto(AssociatedDesiredIncludes(), &effective_desired_includes);
 
   // Now that we've figured out desired_includes, figure out iwyu violations.
   for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
@@ -1634,10 +1633,7 @@ int IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // bar.h and foo.h is adding it, we don't need to add it ourself.
   // On the other hand, if foo.h used to have it but is removing it,
   // we *do* need to add it.
-  set<string> associated_desired_includes;
-  for (Each<const IwyuFileInfo*> it(&internal_headers_); !it.AtEnd(); ++it) {
-    InsertAllInto((*it)->desired_includes(), &associated_desired_includes);
-  }
+  set<string> associated_desired_includes = AssociatedDesiredIncludes();
 
   CalculateIwyuViolations(&symbol_uses_);
   const int retval = EmitWarningMessages(symbol_uses_);
