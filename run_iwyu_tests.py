@@ -67,6 +67,7 @@ class OneIwyuTest(unittest.TestCase):
     clang_flags_map = {
       'auto_type_within_template.cc': ['-std=c++11'],
       'conversion_ctor.cc': ['-std=c++11'],
+      'ms_inline_asm.cc': ['-fms-extensions'],
     }
     # Internally, we like it when the paths start with TEST_ROOTDIR.
     self._iwyu_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
