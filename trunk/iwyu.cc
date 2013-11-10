@@ -3700,12 +3700,12 @@ using include_what_you_use::IwyuAction;
 using include_what_you_use::CreateCompilerInstance;
 
 int main(int argc, char **argv) {
-  // A native target is required for inline assembly parsing.
-  // If no target is initialized, IWYU will crash when trying to parse inline
-  // assembly. This has only been spotted on Windows (winnt.h contains some x86
-  // assembly), but could presumably happen on any platform.
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmParser();
+  // Must initialize X86 target to be able to parse Microsoft inline
+  // assembly. We do this unconditionally, because it allows an IWYU
+  // built for non-X86 targets to parse MS inline asm without choking.
+  LLVMInitializeX86TargetInfo();
+  LLVMInitializeX86TargetMC();
+  LLVMInitializeX86AsmParser();
 
   // This code has various memory leaks, but we're in main, so who cares?
 
