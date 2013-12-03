@@ -86,6 +86,11 @@ target_link_libraries(include-what-you-use
 
 # LLVM dependencies.
 target_link_libraries(include-what-you-use
+  LLVMX86AsmParser # MC, MCParser, Support, X86Desc, X86Info
+  LLVMX86Desc # MC, Support, X86AsmPrinter, X86Info
+  LLVMX86AsmPrinter # MC, Support, X86Utils
+  LLVMX86Info # MC, Support, Target
+  LLVMX86Utils # Core, Support
   LLVMipo
   LLVMScalarOpts
   LLVMInstCombine
@@ -93,9 +98,10 @@ target_link_libraries(include-what-you-use
   LLVMipa
   LLVMAnalysis
   LLVMTarget
-  LLVMMC
-  LLVMMCParser
-  LLVMCore
+  LLVMMC # Object, Support
+  LLVMMCParser # MC, Support
+  LLVMObject # Support
+  LLVMCore # Support
   LLVMSupport
   LLVMBitReader
   LLVMOption
@@ -110,6 +116,7 @@ else()
   target_link_libraries(include-what-you-use
     pthread
     dl
+    curses
   )
 endif()
 
