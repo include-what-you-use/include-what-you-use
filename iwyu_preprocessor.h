@@ -180,10 +180,10 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
   virtual void If(clang::SourceLocation loc,
                   clang::SourceRange condition_range,
-                  bool condition_value) IWYU_OVERRIDE;
+                  ConditionValueKind condition_value) IWYU_OVERRIDE;
   virtual void Elif(clang::SourceLocation loc,
                     clang::SourceRange condition_range,
-                    bool condition_value,
+                    ConditionValueKind condition_value,
                     clang::SourceLocation if_loc) IWYU_OVERRIDE;
   virtual void Ifdef(clang::SourceLocation loc,
                      const clang::Token& id,
