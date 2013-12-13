@@ -40,6 +40,10 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
       -we4238 # Promote 'nonstandard extension used : class rvalue used as lvalue' to error.
     )
   endif()
+
+  if( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden")
+  endif()
 else()
   message(STATUS "IWYU in-tree configuration")
 endif()
