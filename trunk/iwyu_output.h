@@ -106,7 +106,8 @@ class OneUse {
 class OneIncludeOrForwardDeclareLine {
  public:
   explicit OneIncludeOrForwardDeclareLine(const clang::NamedDecl* fwd_decl);
-  OneIncludeOrForwardDeclareLine(const string& quoted_include, int linenum);
+  OneIncludeOrForwardDeclareLine(const clang::FileEntry* included_file,
+                                 const string& quoted_include, int linenum);
 
   const string& line() const { return line_; }
   bool IsIncludeLine() const;           // vs forward-declare line
@@ -119,9 +120,15 @@ class OneIncludeOrForwardDeclareLine {
     CHECK_(!fwd_decl_ && "quoted_include and fwd_decl are mutually exclusive");
     return quoted_include_;
   }
+  const clang::FileEntry* included_file() const {
+    CHECK_(IsIncludeLine() && "Must call included_file() on include lines");
+    CHECK_(!fwd_decl_ && "included_file and fwd_decl are mutually exclusive");
+    return included_file_;
+  }
   const clang::NamedDecl* fwd_decl() const {
     CHECK_(!IsIncludeLine() && "Must call fwd_decl() on forward-declare lines");
-    CHECK_(quoted_include_.empty() && "quoted_include and fwd_decl don't mix");
+    CHECK_(quoted_include_.empty() && !included_file_ &&
+          "quoted_include and fwd_decl don't mix");
     return fwd_decl_;
   }
 
@@ -145,9 +152,11 @@ class OneIncludeOrForwardDeclareLine {
   bool is_desired_;                 // IWYU will recommend this line
   bool is_present_;                 // line was present before the IWYU run
   map<string, int> symbol_counts_;  // how many times we referenced each symbol
-  // Only one of the following two is ever set a given line.
-  string quoted_include_;           // the file we're including, for includes
-  const clang::NamedDecl* fwd_decl_;  // or the fwd-decl we're emitting
+  // Only either two following members are set for includes
+  string quoted_include_;           // quoted file name we're including
+  const clang::FileEntry* included_file_;  // the file we're including
+  // ...or this member is set for the fwd-decl we're emitting.
+  const clang::NamedDecl* fwd_decl_;
 };
 
 
@@ -164,6 +173,9 @@ class IwyuFileInfo {
   IwyuFileInfo(const clang::FileEntry* this_file,
                const IwyuPreprocessorInfo* preprocessor_info,
                const string& quoted_include_name);
+
+  bool is_prefix_header() const { return is_prefix_header_; }
+  void set_prefix_header() { is_prefix_header_ = true; }
 
   // An 'internal' header is a header that this file #includes
   // (possibly indirectly) that we should treat as being logically
@@ -261,6 +273,9 @@ class IwyuFileInfo {
   const IwyuPreprocessorInfo* preprocessor_info_;
 
   string quoted_file_;
+
+  // Prefix header means included from command line via -include option.
+  bool is_prefix_header_;
 
   // internal_headers_ are the files 'associated' with this file: if
   // this file is foo.cc, internal_headers_ are the IwyuFileInfo's for

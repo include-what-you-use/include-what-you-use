@@ -63,11 +63,21 @@ class OneIwyuTest(unittest.TestCase):
                                     '--transitive_includes_only'],
       'no_h_includes_cc.cc': [CheckAlsoExtension('.c')],
       'overloaded_class.cc': [CheckAlsoExtension('-i1.h')],
+      'prefix_header_includes_add.cc': ['--prefix_header_includes=add'],
+      'prefix_header_includes_keep.cc': ['--prefix_header_includes=keep'],
+      'prefix_header_includes_remove.cc': ['--prefix_header_includes=remove'],
     }
+    prefix_headers = ['-include', 'tests/prefix_header_includes-d1.h',
+                      '-include', 'tests/prefix_header_includes-d2.h',
+                      '-include', 'tests/prefix_header_includes-d3.h',
+                      '-include', 'tests/prefix_header_includes-d4.h']
     clang_flags_map = {
       'auto_type_within_template.cc': ['-std=c++11'],
       'conversion_ctor.cc': ['-std=c++11'],
       'ms_inline_asm.cc': ['-fms-extensions'],
+      'prefix_header_includes_add.cc': prefix_headers,
+      'prefix_header_includes_keep.cc': prefix_headers,
+      'prefix_header_includes_remove.cc': prefix_headers,
     }
     # Internally, we like it when the paths start with TEST_ROOTDIR.
     self._iwyu_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
