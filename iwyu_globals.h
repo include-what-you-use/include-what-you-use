@@ -65,7 +65,6 @@ void InitGlobalsAndFlagsForTesting();
 //  10: like 7, and add tons more debug info (for all non-system header files).
 //  11: like 10, and add tons *more* debug info (for all header files).
 struct CommandlineFlags {
-  enum PrefixHeaderIncludePolicy { kAdd, kKeep, kRemove };
   CommandlineFlags();                     // sets flags to default values
   int ParseArgv(int argc, char** argv);   // parses flags from argv
   static const char kUnspecified[];  // for -d, which takes an optional arg
@@ -77,8 +76,6 @@ struct CommandlineFlags {
   int verbose;             // -v: how much information to emit as we parse
   vector<string> mapping_files; // -m: mapping files
   bool no_default_mappings;     // -n: no default mappings
-  // Policy regarding files included via -include option.  No short option.
-  PrefixHeaderIncludePolicy prefix_header_include_policy;
 };
 
 const CommandlineFlags& GlobalFlags();

@@ -365,7 +365,7 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
     : line_(internal::MungedForwardDeclareLine(fwd_decl)),
       start_linenum_(-1), end_linenum_(-1),     // set 'for real' below
       is_desired_(false), is_present_(false), symbol_counts_(),
-      quoted_include_(), included_file_(NULL), fwd_decl_(fwd_decl) {
+      quoted_include_(), fwd_decl_(fwd_decl) {
   const SourceRange decl_lines = GetSourceRangeOfClassDecl(fwd_decl);
   // We always want to use the instantiation line numbers: for code like
   //     FORWARD_DECLARE_CLASS(MyClass);
@@ -375,12 +375,11 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
 }
 
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
-    const FileEntry* included_file, const string& quoted_include, int linenum)
+    const string& quoted_include, int linenum)
     : line_("#include " + quoted_include),
       start_linenum_(linenum), end_linenum_(linenum),
       is_desired_(false), is_present_(false), symbol_counts_(),
-      quoted_include_(quoted_include), included_file_(included_file),
-      fwd_decl_(NULL) {
+      quoted_include_(quoted_include), fwd_decl_(NULL) {
 }
 
 bool OneIncludeOrForwardDeclareLine::HasSymbolUse(const string& symbol_name)
@@ -411,7 +410,6 @@ IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
   : file_(this_file),
     preprocessor_info_(preprocessor_info),
     quoted_file_(quoted_include_name),
-    is_prefix_header_(false),
     internal_headers_(),
     symbol_uses_(),
     lines_(),
@@ -430,8 +428,7 @@ void IwyuFileInfo::AddInternalHeader(const IwyuFileInfo* other) {
 
 void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
                               const string& quoted_includee, int linenumber) {
-  OneIncludeOrForwardDeclareLine new_include(includee, quoted_includee,
-                                             linenumber);
+  OneIncludeOrForwardDeclareLine new_include(quoted_includee, linenumber);
   new_include.set_present();
 
   // It's possible for the same #include to be seen multiple times
@@ -1402,8 +1399,8 @@ void CalculateDesiredIncludesAndForwardDeclares(
     if (use->is_full_use()) {
       CHECK_(use->has_suggested_header() && "Full uses should have #includes");
       if (!ContainsKey(include_map, use->suggested_header())) {  // must be added
-        lines->push_back(OneIncludeOrForwardDeclareLine(
-            GetFileEntry(use->decl()), use->suggested_header(), -1));
+        lines->push_back(OneIncludeOrForwardDeclareLine(use->suggested_header(),
+                                                        -1));
         include_map[use->suggested_header()] = lines->size() - 1;
       }
       const int index = include_map[use->suggested_header()];
@@ -1450,49 +1447,6 @@ void CalculateDesiredIncludesAndForwardDeclares(
     if (it->is_desired() && !it->is_present() && it->IsIncludeLine() &&
         ContainsKey(associated_desired_includes, it->quoted_include())) {
       it->clear_desired();
-    }
-  }
-}
-
-bool IsPrefixHeader(const FileEntry* file_entry,
-                    const IwyuPreprocessorInfo* preprocessor_info) {
-  if (file_entry) {
-    IwyuFileInfo* file_info = preprocessor_info->FileInfoFor(file_entry);
-    if (file_info)
-      return file_info->is_prefix_header();
-  }
-  return false;
-}
-
-void CleanupPrefixHeaderIncludes(
-    const IwyuPreprocessorInfo* preprocessor_info,
-    vector<OneIncludeOrForwardDeclareLine>* lines) {
-  CommandlineFlags::PrefixHeaderIncludePolicy policy =
-      GlobalFlags().prefix_header_include_policy;
-  if (policy == CommandlineFlags::kAdd)
-    return;
-
-  for (vector<OneIncludeOrForwardDeclareLine>::iterator it = lines->begin();
-       it != lines->end(); ++it) {
-    if (!it->is_desired())
-      continue;
-    if (it->is_present() && (policy == CommandlineFlags::kKeep))
-      continue;  // Keep present line according to policy.
-
-    const FileEntry* file_entry = NULL;
-    if (it->IsIncludeLine()) {
-      file_entry = it->included_file();
-      CHECK_(file_entry && "Valid file_entry is expected");
-    } else {
-      const RecordDecl* dfn = GetDefinitionForClass(it->fwd_decl());
-      file_entry = GetFileEntry(dfn);
-    }
-    if (IsPrefixHeader(file_entry, preprocessor_info)) {
-      CHECK_(file_entry && "FileEntry should exist to be prefix header");
-      it->clear_desired();
-      VERRS(6) << "Ignoring '" << it->line()
-               << "': is superseded by command line include "
-               << file_entry->getName() << "\n";
     }
   }
 }
@@ -1695,8 +1649,6 @@ int IwyuFileInfo::CalculateAndReportIwyuViolations() {
       it->clear_desired();
     }
   }
-
-  internal::CleanupPrefixHeaderIncludes(preprocessor_info_, &lines_);
 
   EmitDiffs(lines_);
   return retval;

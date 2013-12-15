@@ -68,16 +68,6 @@ static void PrintHelp(const char* extra_msg) {
          "   --transitive_includes_only: do not suggest that a file add\n"
          "        foo.h unless foo.h is already visible in the file's\n"
          "        transitive includes.\n"
-         "   --prefix_header_includes=<value>: tells iwyu what to do with\n"
-         "        in-source includes and forward declarations involving\n"
-         "        prefix headers.  Prefix header is a file included via\n"
-         "        command-line option -include.  If prefix header makes\n"
-         "        include or forward declaration obsolete, presence of such\n"
-         "        include can be controlled with the following values\n"
-         "          add:    new lines are added\n"
-         "          keep:   new lines aren't added, existing are kept intact\n"
-         "          remove: new lines aren't added, existing are removed\n"
-         "        Default value is 'add'.\n"
          "   --verbose=<level>: the higher the level, the more output.\n");
   if (extra_msg)
     printf("\n%s\n\n", extra_msg);
@@ -89,8 +79,7 @@ CommandlineFlags::CommandlineFlags()
       cwd(""),
       transitive_includes_only(false),
       verbose(getenv("IWYU_VERBOSE") ? atoi(getenv("IWYU_VERBOSE")) : 1),
-      no_default_mappings(false),
-      prefix_header_include_policy(CommandlineFlags::kAdd) {
+      no_default_mappings(false) {
 }
 
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
@@ -103,7 +92,6 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"verbose", required_argument, NULL, 'v'},
     {"mapping_file", required_argument, NULL, 'm'},
     {"no_default_mappings", no_argument, NULL, 'n'},
-    {"prefix_header_includes", required_argument, NULL, 'x'},
     {0, 0, 0, 0}
   };
   static const char shortopts[] = "d::p:v:c:m:n";
@@ -117,18 +105,6 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case 'v': verbose = atoi(optarg); break;
       case 'm': mapping_files.push_back(optarg); break;
       case 'n': no_default_mappings = true; break;
-      case 'x':
-        if (strcmp(optarg, "add") == 0) {
-          prefix_header_include_policy = CommandlineFlags::kAdd;
-        } else if (strcmp(optarg, "keep") == 0) {
-          prefix_header_include_policy = CommandlineFlags::kKeep;
-        } else if (strcmp(optarg, "remove") == 0) {
-          prefix_header_include_policy = CommandlineFlags::kRemove;
-        } else {
-          PrintHelp("FATAL ERROR: unknown --prefix_header_includes value.");
-          exit(1);
-        }
-        break;
       case -1: return optind;   // means 'no more input'
       default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
     }
