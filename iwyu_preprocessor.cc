@@ -694,6 +694,23 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   if (ShouldReportIWYUViolationsFor(new_file)) {
     files_to_report_iwyu_violations_for_.insert(new_file);
   }
+
+  // Mark is_prefix_header.
+  CHECK_(new_file && "is_prefix_header is applicable to usual files only");
+  IwyuFileInfo *includee_file_info = GetFromFileInfoMap(new_file);
+  const FileEntry* includer_file = GetFileEntry(include_loc);
+  bool is_prefix_header = false;
+  if (includer_file) {
+    // File included from another prefix header file is prefix header too.
+    IwyuFileInfo *includer_file_info = GetFromFileInfoMap(includer_file);
+    is_prefix_header = includer_file_info->is_prefix_header();
+  } else {
+    // Files included from command line are prefix headers, unless it's the
+    // main file.
+    is_prefix_header = (new_file != main_file_);
+  }
+  if (is_prefix_header)
+    includee_file_info->set_prefix_header();
 }
 
 // Called when done with an #included file and returning to the parent file.
