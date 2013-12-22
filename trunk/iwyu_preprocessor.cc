@@ -481,12 +481,12 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 
   // We have a rule that if foo.h #includes bar.h, foo.cc doesn't need
   // to #include bar.h as well, but instead gets it 'automatically'
-  // via foo.h.  We say that 'foo.h' is an "internal header" for
+  // via foo.h.  We say that 'foo.h' is an "associated header" for
   // foo.cc.  Make sure we ignore self-includes, though!
-  // iwyu_output.cc gets upset if a file is its own internal header.
+  // iwyu_output.cc gets upset if a file is its own associated header.
   if (includer == main_file_ && includee != includer &&
       BelongsToMainCompilationUnit(includer, includee))
-    GetFromFileInfoMap(includer)->AddInternalHeader(
+    GetFromFileInfoMap(includer)->AddAssociatedHeader(
         GetFromFileInfoMap(includee));
 
   // Also keep track of what FileEntry we ended up using for this name.
@@ -833,7 +833,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   // direct includes), you bring in all its includes as well.
   // Basically, a public header is really an equivalence class of
   // itself and all its direct includes.
-  // TODO(csilvers): use AddInternalHeaders() to get includes here.
+  // TODO(csilvers): use AddAssociatedHeaders() to get includes here.
   for (Each<const FileEntry*, IwyuFileInfo> it(&iwyu_file_info_map_);
        !it.AtEnd(); ++it) {
     const FileEntry* file = it->first;

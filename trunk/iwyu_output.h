@@ -177,14 +177,14 @@ class IwyuFileInfo {
   bool is_prefix_header() const { return is_prefix_header_; }
   void set_prefix_header() { is_prefix_header_ = true; }
 
-  // An 'internal' header is a header that this file #includes
+  // An 'associated' header is a header that this file #includes
   // (possibly indirectly) that we should treat as being logically
   // part of this file.  In particular, when computing the direct
   // includes of this file, we also include the direct includes of all
-  // internal headers.  Examples: vector has bits/stl_vector.h as an
-  // internal header; foo.cc has foo.h and foo-inl.h as internal
-  // headers.  TODO(csilvers): name this better.
-  void AddInternalHeader(const IwyuFileInfo* other);
+  // associated headers.  Examples: vector has bits/stl_vector.h as an
+  // associated header; foo.cc has foo.h and foo-inl.h as associated
+  // headers.
+  void AddAssociatedHeader(const IwyuFileInfo* other);
 
   // Use these to register an iwyu declaration: either an #include or
   // a forward-declaration.
@@ -240,21 +240,21 @@ class IwyuFileInfo {
   }
   set<string> AssociatedQuotedIncludes() const {
     set<string> associated_quoted_includes;
-    for (Each<const IwyuFileInfo*> it(&internal_headers_); !it.AtEnd(); ++it)
+    for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it)
       associated_quoted_includes.insert((*it)->quoted_file_);
     return associated_quoted_includes;
   }
 
   set<const clang::FileEntry*> AssociatedFileEntries() const {
     set<const clang::FileEntry*> associated_file_entries;
-    for (Each<const IwyuFileInfo*> it(&internal_headers_); !it.AtEnd(); ++it)
+    for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it)
       associated_file_entries.insert((*it)->file_);
     return associated_file_entries;
   }
 
   set<string> AssociatedDesiredIncludes() const {
     set<string> associated_desired_includes;
-    for (Each<const IwyuFileInfo*> it(&internal_headers_); !it.AtEnd(); ++it)
+    for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it)
       InsertAllInto((*it)->desired_includes(), &associated_desired_includes);
     return associated_desired_includes;
   }
@@ -277,10 +277,10 @@ class IwyuFileInfo {
   // Prefix header means included from command line via -include option.
   bool is_prefix_header_;
 
-  // internal_headers_ are the files 'associated' with this file: if
-  // this file is foo.cc, internal_headers_ are the IwyuFileInfo's for
+  // associated_headers_ are the files 'associated' with this file: if
+  // this file is foo.cc, associated_headers_ are the IwyuFileInfo's for
   // foo.h and foo-inl.h, if present.
-  set<const IwyuFileInfo*> internal_headers_;
+  set<const IwyuFileInfo*> associated_headers_;
 
   // Holds all the uses that are reported.
   vector<OneUse> symbol_uses_;
