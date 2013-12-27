@@ -54,32 +54,47 @@ def _PortableNext(iterator):
     next(iterator)   # Python 3
 
 
+def _Which(program, paths):
+    """Searches specified paths for program."""
+    if sys.platform == 'win32' and not program.lower().endswith('.exe'):
+        program += '.exe'
+
+    for path in paths:
+        candidate = os.path.join(os.path.normpath(path), program)
+        if os.path.isfile(candidate):
+            return candidate
+
+    return None
+
+
 def _GetIwyuPath(iwyu_paths):
   """Returns the path to IWYU or raises IOError if it cannot be found."""
-  for path in iwyu_paths:
-    if sys.platform == 'win32':
-      path = os.path.normpath(path) + '.exe'
-    if os.path.exists(path):
-      return path
-  raise IOError('Failed to locate IWYU.\nSearched %s' % iwyu_paths)
+  iwyu_path = _Which('include-what-you-use', iwyu_paths)
+  if iwyu_path:
+      return iwyu_path
+
+  raise IOError('Failed to locate IWYU.\nSearched\n %s' % '\n '.join(iwyu_paths))
+
+
+_SYSTEM_PATHS = [p.strip('"') for p in os.environ["PATH"].split(os.pathsep)]
 _IWYU_PATHS = [
-    '../../../../Debug+Asserts/bin/include-what-you-use',
-    '../../../../Release+Asserts/bin/include-what-you-use',
-    '../../../../Release/bin/include-what-you-use',
-    '../../../../build/Debug+Asserts/bin/include-what-you-use',
-    '../../../../build/Release+Asserts/bin/include-what-you-use',
-    '../../../../build/Release/bin/include-what-you-use',
+    '../../../../Debug+Asserts/bin',
+    '../../../../Release+Asserts/bin',
+    '../../../../Release/bin',
+    '../../../../build/Debug+Asserts/bin',
+    '../../../../build/Release+Asserts/bin',
+    '../../../../build/Release/bin',
     # Linux/Mac OS X default out-of-tree paths.
-    '../../../../../build/Debug+Asserts/bin/include-what-you-use',
-    '../../../../../build/Release+Asserts/bin/include-what-you-use',
-    '../../../../../build/Release/bin/include-what-you-use',
+    '../../../../../build/Debug+Asserts/bin',
+    '../../../../../build/Release+Asserts/bin',
+    '../../../../../build/Release/bin',
     # Windows default out-of-tree paths.
-    '../../../../../build/bin/Debug/include-what-you-use',
-    '../../../../../build/bin/Release/include-what-you-use',
-    '../../../../../build/bin/MinSizeRel/include-what-you-use',
-    '../../../../../build/bin/RelWithDebInfo/include-what-you-use',
+    '../../../../../build/bin/Debug',
+    '../../../../../build/bin/Release',
+    '../../../../../build/bin/MinSizeRel',
+    '../../../../../build/bin/RelWithDebInfo',
     ]
-_IWYU_PATH = _GetIwyuPath(_IWYU_PATHS)
+_IWYU_PATH = _GetIwyuPath(_IWYU_PATHS + _SYSTEM_PATHS)
 
 
 def _GetCommandOutput(command):
