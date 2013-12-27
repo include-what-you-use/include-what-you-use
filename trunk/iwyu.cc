@@ -1912,6 +1912,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_ReinterpretMemberPointer:
       case clang::CK_BuiltinFnToFnPtr:
       case clang::CK_ZeroToOCLEvent: // OpenCL event_t is a built-in type.
+      case clang::CK_AddressSpaceConversion:  // Address spaces are associated
+                                              // with pointers, so no need for
+                                              // the full type.
         break;
 
       // We shouldn't be seeing any of these kinds.
