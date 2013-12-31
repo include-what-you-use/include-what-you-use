@@ -81,7 +81,7 @@ string GetIncludeNameAsTyped(SourceLocation include_loc,
   } else if (data[0] == '"') {
     endpos = data.find('"', 1);
   } else {
-    CHECK_(false && "Unexpected token being #included");
+    CHECK_UNREACHABLE_("Unexpected token being #included");
   }
   CHECK_(endpos != string::npos && "No end-character found for #include");
   return data.substr(0, endpos+1);
