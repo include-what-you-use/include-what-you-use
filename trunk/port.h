@@ -13,6 +13,7 @@
 
 #include <stdlib.h>  // for abort
 #include <iostream>
+#include "llvm/Support/Compiler.h"
 
 // Portable stub for Clang's __has_feature.
 #ifndef __has_feature
@@ -39,9 +40,14 @@ class FatalMessageEmitter {
   FatalMessageEmitter(const char* file, int line, const char* message) {
     stream() << file << ":" << line << ": Assertion failed: " << message;
   }
-  ~FatalMessageEmitter() {
+  LLVM_ATTRIBUTE_NORETURN ~FatalMessageEmitter() {
     stream() << ::std::endl;
     ::abort();
+#ifdef LLVM_BUILTIN_UNREACHABLE
+    // Windows systems and possibly others don't declare abort() to be noreturn,
+    // so use the unreachable builtin to avoid a Clang self-host warning.
+    LLVM_BUILTIN_UNREACHABLE;
+#endif
   }
   ::std::ostream& stream() { return ::std::cerr; }
 };
@@ -63,6 +69,11 @@ class OstreamVoidifier {
   ::include_what_you_use::OstreamVoidifier() & \
   ::include_what_you_use::FatalMessageEmitter( \
       __FILE__, __LINE__, #x).stream()
+// Instead of CHECK_(false && "message") use CHECK_UNREACHABLE_("message").
+#define CHECK_UNREACHABLE_(message) \
+  ::include_what_you_use::OstreamVoidifier() & \
+  ::include_what_you_use::FatalMessageEmitter( \
+      __FILE__, __LINE__, message).stream()
 
 #if defined(_WIN32)
 
