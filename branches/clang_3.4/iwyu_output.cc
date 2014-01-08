@@ -304,7 +304,7 @@ string PrintForwardDeclare(const NamedDecl* decl,
       // A local class (class defined inside a function).
       fwd_decl = std::string(fn->getName()) + "::" + fwd_decl;
     } else {
-      CHECK_(false && "Unexpected decoration for type");
+      CHECK_UNREACHABLE_("Unexpected decoration for type");
     }
   }
 
@@ -354,8 +354,7 @@ string MungedForwardDeclareLine(const NamedDecl* decl) {
     return MungedForwardDeclareLineForNontemplates(rec_decl);
   else if (const TemplateDecl* template_decl = DynCastFrom(decl))
     return MungedForwardDeclareLineForTemplates(template_decl);
-  CHECK_(false && "Unexpected decl type for MungedForwardDeclareLine");
-  return "<error>";
+  CHECK_UNREACHABLE_("Unexpected decl type for MungedForwardDeclareLine");
 }
 
 }  // namespace internal
