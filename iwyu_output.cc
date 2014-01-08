@@ -412,7 +412,7 @@ IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
     preprocessor_info_(preprocessor_info),
     quoted_file_(quoted_include_name),
     is_prefix_header_(false),
-    internal_headers_(),
+    associated_headers_(),
     symbol_uses_(),
     lines_(),
     direct_includes_(),
@@ -422,10 +422,10 @@ IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
     desired_includes_have_been_calculated_(false)
 {}
 
-void IwyuFileInfo::AddInternalHeader(const IwyuFileInfo* other) {
+void IwyuFileInfo::AddAssociatedHeader(const IwyuFileInfo* other) {
   VERRS(6) << "Adding " << GetFilePath(other->file_)
-           << " as internal header for " << GetFilePath(file_) << "\n";
-  internal_headers_.insert(other);
+           << " as associated header for " << GetFilePath(file_) << "\n";
+  associated_headers_.insert(other);
 }
 
 void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
@@ -1293,7 +1293,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
 
   // (C1) Compute the direct includes of 'associated' files.
   set<string> associated_direct_includes;
-  for (Each<const IwyuFileInfo*> it(&internal_headers_); !it.AtEnd(); ++it) {
+  for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it) {
     ReportIncludeFileUse((*it)->quoted_file_);
     InsertAllInto((*it)->direct_includes(), &associated_direct_includes);
   }
@@ -1318,7 +1318,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // The 'effective' desired includes are defined to be the desired
   // includes of associated, plus us.  These are used to decide if a
   // particular use will be satisfied after fixing the #includes.
-  // NOTE: this depends on our internal headers having had their
+  // NOTE: this depends on our associated headers having had their
   // iwyu analysis done before us.
   set<string> effective_desired_includes = desired_includes();
   InsertAllInto(AssociatedDesiredIncludes(), &effective_desired_includes);
@@ -1594,7 +1594,7 @@ LineSortKey GetSortKey(const OneIncludeOrForwardDeclareLine& line,
 }
 
 // filename is "this" filename: the file being emitted.
-// associated_filepaths are the quoted-include form of internal_headers_.
+// associated_filepaths are the quoted-include form of associated_headers_.
 string PrintableDiffs(const string& filename,
                       const set<string>& associated_quoted_includes,
                       const vector<OneIncludeOrForwardDeclareLine>& lines) {
