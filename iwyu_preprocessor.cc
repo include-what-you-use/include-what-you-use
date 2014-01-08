@@ -632,7 +632,7 @@ void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
       FileChanged_SystemHeaderPragma(loc);
       return;
   }
-  CHECK_(false && "Unknown file change reason");
+  CHECK_UNREACHABLE_("Unknown file change reason");
 }
 
 // Called when we see an #include, but decide we don't need to

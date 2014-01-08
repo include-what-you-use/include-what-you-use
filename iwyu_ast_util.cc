@@ -182,8 +182,7 @@ bool ASTNode::FillLocationIfKnown(SourceLocation* loc) const {
     case kTemplateArgumentKind:
       return false;
   }
-  CHECK_(false && "Unexpected kind of ASTNode");
-  return false;
+  CHECK_UNREACHABLE_("Unexpected kind of ASTNode");
 }
 
 // --- Utilities for ASTNode.
@@ -453,7 +452,7 @@ void PrintASTNode(const ASTNode* node) {
     errs() << "[TemplateArgument] "
                  << PrintableTemplateArgument(*tpl_arg) << "\n";
   } else {
-    CHECK_(false && "Unknown kind for ASTNode");
+    CHECK_UNREACHABLE_("Unknown kind for ASTNode");
   }
 }
 
@@ -612,8 +611,7 @@ SourceRange GetSourceRangeOfClassDecl(const Decl* decl) {
     return tag_decl->getSourceRange();
   if (const TemplateDecl* tpl_decl = DynCastFrom(decl))
     return tpl_decl->getSourceRange();
-  CHECK_(false && "Cannot get source range for this decl type");
-  return SourceRange();
+  CHECK_UNREACHABLE_("Cannot get source range for this decl type");
 }
 
 // Helper for the Get*ResugarMap*() functions.  Given a map from
@@ -1268,10 +1266,8 @@ bool IsCastToReferenceType(const CastExpr* expr) {
     return explicit_cast->getTypeAsWritten()->isReferenceType();
   } else if (const ImplicitCastExpr* implicit_cast = DynCastFrom(expr)) {
     return implicit_cast->getValueKind() == clang::VK_LValue;
-  } else {
-    CHECK_(false && "Unexpected type of cast expression");
-    return false;
   }
+  CHECK_UNREACHABLE_("Unexpected type of cast expression");
 }
 
 const ASTTemplateArgumentListInfo* GetExplicitTplArgs(const Expr* expr) {

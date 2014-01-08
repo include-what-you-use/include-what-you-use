@@ -715,7 +715,7 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
     for (size_t i = 0; i < node_stack->size(); ++i)
       VERRS(0) << "  " << (*node_stack)[i] << " ->\n";
     VERRS(0) << "  " << key << "\n";
-    CHECK_(false && "Cycle in include-mapping");  // cycle is a fatal error
+    CHECK_UNREACHABLE_("Cycle in include-mapping");  // cycle is a fatal error
   }
   if (status == kDone)
     return;

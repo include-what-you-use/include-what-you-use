@@ -1960,7 +1960,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_CPointerToObjCPointerCast:
       case clang::CK_ObjCObjectLValueCast:
       case clang::CK_VectorSplat:
-        CHECK_(false && "TODO(csilvers): for objc and clang lang extensions");
+        CHECK_UNREACHABLE_(
+            "TODO(csilvers): for objc and clang lang extensions");
         break;
 
       // Kinds for reinterpret_cast and const_cast, which need no full types.
