@@ -620,20 +620,19 @@ void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
   switch (reason) {
     case EnterFile:
       FileChanged_EnterFile(loc);
-      break;
+      return;
     case ExitFile:
       FileChanged_ExitToFile(loc, exiting_from);
-      break;
+      return;
     case RenameFile:
       FileChanged_RenameFile(loc);
-      break;
+      return;
     case SystemHeaderPragma:
       // We see "#pragma GCC system_header".
       FileChanged_SystemHeaderPragma(loc);
-      break;
-    default:
-      CHECK_(false && "Unknown file change reason");
+      return;
   }
+  CHECK_(false && "Unknown file change reason");
 }
 
 // Called when we see an #include, but decide we don't need to
