@@ -65,6 +65,11 @@ add_executable(include-what-you-use
 )
 
 if( MSVC )
+  # Disable warnings for IWYU
+  add_definitions(
+    -wd4722 # Suppress ''destructor'' : destructor never returns, potential memory leak
+  )
+
   # Put project in solution folder
   set_target_properties(include-what-you-use
     PROPERTIES FOLDER "Clang executables"
