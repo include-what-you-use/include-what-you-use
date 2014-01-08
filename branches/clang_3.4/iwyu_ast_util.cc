@@ -181,10 +181,9 @@ bool ASTNode::FillLocationIfKnown(SourceLocation* loc) const {
     case kTemplateNameKind:
     case kTemplateArgumentKind:
       return false;
-    default:
-      CHECK_(false && "Unexpected kind of ASTNode");
-      return false;
   }
+  CHECK_(false && "Unexpected kind of ASTNode");
+  return false;
 }
 
 // --- Utilities for ASTNode.

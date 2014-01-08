@@ -304,8 +304,9 @@ class ASTNode {
       case kTemplateNameKind:  return as_template_name_;
       case kTemplateArgumentKind:  return as_template_arg_;
       case kTemplateArgumentLocKind:  return as_template_argloc_;
-      default: CHECK_(false && "Unknown kind"); return NULL;
     }
+    CHECK_(false && "Unknown kind");
+    return NULL;
   }
 
   // If this node is of a type that knows its location, sets loc and
