@@ -103,6 +103,7 @@ def _GetCommandOutput(command):
                        stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT)
   lines = [line.decode("utf-8") for line in p.stdout.readlines()]
+  lines = [line.replace(os.linesep, '\n') for line in lines]
   return lines
 
 
