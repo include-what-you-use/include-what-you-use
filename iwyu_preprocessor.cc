@@ -565,7 +565,7 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
 }
 
 void IwyuPreprocessorInfo::If(SourceLocation loc, SourceRange condition_range,
-                              ConditionValueKind condition_value) {
+                              bool condition_value) {
   ERRSYM(GetFileEntry(condition_range.getBegin()))
       << " [ #if         ] "
       << PrintableSourceRange(condition_range) << "\n";
@@ -574,7 +574,7 @@ void IwyuPreprocessorInfo::If(SourceLocation loc, SourceRange condition_range,
 
 void IwyuPreprocessorInfo::Elif(SourceLocation loc,
                                 SourceRange condition_range,
-                                ConditionValueKind condition_value,
+                                bool condition_value,
                                 SourceLocation if_loc) {
   ERRSYM(GetFileEntry(condition_range.getBegin()))
       << " [ #elif       ] "
