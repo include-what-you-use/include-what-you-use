@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 
 This README was generated from the Wiki contents at
-http://code.google.com/p/include-what-you-use/w/ on 2013-06-24 19:37:41 UTC.
+http://code.google.com/p/include-what-you-use/w/ on 2014-01-21 20:11:08 UTC.
 
 
 = Instructions for Users  =
@@ -449,10 +449,15 @@ For example;
 Most of the original mappings were generated with shell scripts (as evident from
 the embedded comments) so there are several multi-step mappings from one private
 header to another, to a third and finally to a public header. This reflects the
-#include chain in the actual library headers.
+#include chain in the actual library headers. A hand-written mapping could be
+reduced to one mapping per private header to its corresponding public header.
 
-A hand-written mapping could be reduced to one mapping per private header to its
-corresponding public header.
+Include mappings support a special wildcard syntax for the first entry:
+
+  { include: "private", "<public>", "public" }
+
+The @ prefix is a signal that the remaining content is a regex, and can be used
+to re-map a whole subdirectory of private headers to a public facade header.
 
 
 === Symbol Mappings ===
@@ -473,6 +478,9 @@ For example;
 The symbol visibility is largely redundant -- it must always be private. It
 isn't entirely clear why symbol visibility needs to be specified, and it might
 be removed moving forward.
+
+Like include, symbol directives support the @-prefixed regex syntax in the first
+entry.
 
 
 === Mapping Refs ===
@@ -951,13 +959,14 @@ bar.h re-exports it.
 Consider the following code:
 
 foo.h:
-  class Foo() {
+  class Foo {
+   public:
     Foo(int i) { ... };    // note: not an explicit constructor!
   };
 
 bar.h:
   class Foo;
-  MyFunc(Foo foo);
+  void MyFunc(Foo foo);
 
 baz.cc:
   #include "bar.h"
@@ -970,13 +979,13 @@ conversion constructor visible where MyFunc is being called.
 The same rule applies as before:
 
   #include "foo.h"
-  Func1(Foo foo);   // IWYU says you intend to re-export Foo
+  void Func1(Foo foo);   // IWYU says you intend to re-export Foo
 
   class Foo;
-  Func2(Foo foo);   // IWYU says you do not intend to re-export Foo
+  void Func2(Foo foo);   // IWYU says you do not intend to re-export Foo
 
   #include "file_including_foo.h"
-  Func3(Foo foo);   // IWYU says you do not intend to re-export Foo
+  void Func3(Foo foo);   // IWYU says you do not intend to re-export Foo
 
 As before, if iwyu decides you do not intend to re-export Foo, then all callers
 (in this case, baz.cc) need to.
@@ -985,7 +994,7 @@ The rule here applies even to const references (which can also be automatically
 converted):
 
   #include "foo.h"
-  Func1(const Foo& foo);   // IWYU says you intend to re-export Foo
+  void Func1(const Foo& foo);   // IWYU says you intend to re-export Foo
 
 
 
