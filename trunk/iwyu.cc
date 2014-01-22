@@ -2153,7 +2153,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   void ReportIfReferenceVararg(Expr** args, unsigned num_args,
                                const FunctionProtoType* callee_type) {
     if (callee_type && callee_type->isVariadic()) {
-      const unsigned first_vararg_index = callee_type->getNumArgs();
+      const unsigned first_vararg_index = callee_type->getNumParams();
       for (unsigned i = first_vararg_index; i < num_args; i++) {
         // We only care about reporting for references, but it's ok if
         // we catch a few non-ref types too (it's just redundant).
