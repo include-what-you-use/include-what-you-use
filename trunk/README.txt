@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 
 This README was generated from the Wiki contents at
-http://code.google.com/p/include-what-you-use/w/ on 2014-01-21 20:11:08 UTC.
+http://code.google.com/p/include-what-you-use/w/ on 2014-01-22 20:43:44 UTC.
 
 
 = Instructions for Users  =
@@ -424,8 +424,8 @@ some idiosyncrasies:
   * Single-word strings can be left un-quoted
 
 If the YAML parser is ever made more rigorous, it might be wise not to lean on
-non-standard behavior, so apart from comment style, try to keep  mapping files
-in line with the JSON spec.
+non-standard behavior, so apart from comment style, try to keep mapping files in
+line with the JSON spec.
 
 
 === Include Mappings ===
@@ -444,7 +444,7 @@ Data for this directive is a list of four strings containing:
 
 For example;
 
-  { include: "private", "<memory>", "public" }
+  { include: ["<bits/unique_ptr.h>", "private", "<memory>", "public"] }
 
 Most of the original mappings were generated with shell scripts (as evident from
 the embedded comments) so there are several multi-step mappings from one private
@@ -454,7 +454,7 @@ reduced to one mapping per private header to its corresponding public header.
 
 Include mappings support a special wildcard syntax for the first entry:
 
-  { include: "private", "<public>", "public" }
+  { include: ["@<internal/.*>", "private", "<public>", "public"] }
 
 The @ prefix is a signal that the remaining content is a regex, and can be used
 to re-map a whole subdirectory of private headers to a public facade header.
@@ -473,7 +473,7 @@ Data for this directive is a list of four strings containing:
 
 For example;
 
-  { symbol: "private", "<cstddef>", "public" }
+  { symbol: ["NULL", "private", "<cstddef>", "public"] }
 
 The symbol visibility is largely redundant -- it must always be private. It
 isn't entirely clear why symbol visibility needs to be specified, and it might
