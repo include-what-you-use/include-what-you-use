@@ -52,6 +52,11 @@ def FixDirectives(line):
 
 
 def FixLinks(line):
+  # Heuristic: preserve code lines
+  isCode = line.startswith('  ') and not line.startswith('  *')
+  if isCode:
+    return line
+
   return re.sub(R'\[.*?\s(.*?)\]', R'\1', line)
 
 
