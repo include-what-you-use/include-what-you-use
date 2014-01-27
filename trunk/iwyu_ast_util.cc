@@ -545,7 +545,7 @@ bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
 //   class type in the return type of D::f shall be complete at the point of
 //   declaration of D::f or shall be the class type D.
 bool HasCovariantReturnType(const CXXMethodDecl* method_decl) {
-  QualType derived_result_type = method_decl->getResultType();
+  QualType derived_return_type = method_decl->getReturnType();
 
   for (CXXMethodDecl::method_iterator
        it = method_decl->begin_overridden_methods(); 
@@ -556,7 +556,7 @@ bool HasCovariantReturnType(const CXXMethodDecl* method_decl) {
     // of where return type differs is when they're actually covariant.
     // That is, if Clang can already compile this code without errors, and
     // return types differ, it can only be due to covariance.
-    if ((*it)->getResultType() != derived_result_type)
+    if ((*it)->getReturnType() != derived_return_type)
       return true;
   }
 
