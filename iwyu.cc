@@ -1530,10 +1530,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   set<const Type*> GetCallerResponsibleTypesForFnReturn(
       const FunctionDecl* decl) {
     set<const Type*> retval;
-    const Type* result_type
-        = RemoveElaboration(decl->getResultType().getTypePtr());
-    if (CodeAuthorWantsJustAForwardDeclare(result_type, GetLocation(decl))) {
-      retval.insert(result_type);
+    const Type* return_type
+        = RemoveElaboration(decl->getReturnType().getTypePtr());
+    if (CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl))) {
+      retval.insert(return_type);
       // TODO(csilvers): include template type-args if appropriate.
     }
     return retval;
@@ -1781,21 +1781,21 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     // ...except the return value.
-    const Type* result_type
-        = RemoveElaboration(decl->getResultType().getTypePtr());
-    const bool is_responsible_for_result_type
-        = (!CanIgnoreType(result_type) &&
-           !IsPointerOrReferenceAsWritten(result_type) &&
-           !CodeAuthorWantsJustAForwardDeclare(result_type, GetLocation(decl)));
+    const Type* return_type
+        = RemoveElaboration(decl->getReturnType().getTypePtr());
+    const bool is_responsible_for_return_type
+        = (!CanIgnoreType(return_type) &&
+           !IsPointerOrReferenceAsWritten(return_type) &&
+           !CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl)));
     // Don't bother to report here, when the language agrees with us
     // we need the full type; that will be reported elsewhere, so
     // reporting here would be double-counting.
     const bool type_use_reported_in_visit_function_type
         = (!current_ast_node()->in_forward_declare_context() ||
-           !IsClassType(result_type));
-    if (is_responsible_for_result_type &&
+           !IsClassType(return_type));
+    if (is_responsible_for_return_type &&
         !type_use_reported_in_visit_function_type) {
-      ReportTypeUseWithComment(GetLocation(decl), result_type,
+      ReportTypeUseWithComment(GetLocation(decl), return_type,
                                "(for fn return type)");
     }
 
@@ -1845,7 +1845,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     if (HasCovariantReturnType(method_decl)) {
       const Type* return_type = RemovePointersAndReferencesAsWritten(
-          method_decl->getResultType().getTypePtr());
+          method_decl->getReturnType().getTypePtr());
 
       VERRS(3) << "Found covariant return type in "
                << method_decl->getQualifiedNameAsString()
@@ -2345,10 +2345,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // full type information for the return type of the function, but
     // in cases where it's not, we have to take responsibility.
     // TODO(csilvers): check the fn argument types as well.
-    const Type* result_type = callee->getResultType().getTypePtr();
+    const Type* return_type = callee->getReturnType().getTypePtr();
     if (ContainsKey(GetCallerResponsibleTypesForFnReturn(callee),
-                    result_type)) {
-      ReportTypeUse(CurrentLoc(), result_type);
+                    return_type)) {
+      ReportTypeUse(CurrentLoc(), return_type);
     }
 
     return true;
