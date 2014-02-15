@@ -1,0 +1,5 @@
+# Header mappings for IWYU tests.
+[
+  { include: ["\"tests/cxx/badinc-private.h\"", "private", "\"tests/cxx/badinc-inl.h\"", "public"] },
+  { include: ["\"tests/cxx/badinc-private2.h\"", "private", "\"tests/cxx/badinc-inl.h\"", "public"] }
+]

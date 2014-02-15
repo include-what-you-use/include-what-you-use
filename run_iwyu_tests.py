@@ -26,7 +26,7 @@ FLAGS = Flags()
 import iwyu_test_util
 
 
-TEST_ROOTDIR = 'tests'
+TEST_ROOTDIR = 'tests/cxx'
 
 
 def CheckAlsoExtension(extension):
@@ -67,10 +67,10 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_keep.cc': ['--prefix_header_includes=keep'],
       'prefix_header_includes_remove.cc': ['--prefix_header_includes=remove'],
     }
-    prefix_headers = ['-include', 'tests/prefix_header_includes-d1.h',
-                      '-include', 'tests/prefix_header_includes-d2.h',
-                      '-include', 'tests/prefix_header_includes-d3.h',
-                      '-include', 'tests/prefix_header_includes-d4.h']
+    prefix_headers = ['-include', 'tests/cxx/prefix_header_includes-d1.h',
+                      '-include', 'tests/cxx/prefix_header_includes-d2.h',
+                      '-include', 'tests/cxx/prefix_header_includes-d3.h',
+                      '-include', 'tests/cxx/prefix_header_includes-d4.h']
     clang_flags_map = {
       'auto_type_within_template.cc': ['-std=c++11'],
       'conversion_ctor.cc': ['-std=c++11'],
