@@ -33,13 +33,22 @@ class FullUseCache;
 class IncludePicker;
 class SourceManagerCharacterDataGetter;
 
-// The following two routines are called to set up the global state --
-// the first one right when main starts, and the second after the
-// clang infrastructure is set up.  The rest of this file is
-// accessors to the data structures set up by these two routines.
+// To set up the global state you need to parse options with OptionsParser when
+// main starts and to call InitGlobals after the clang infrastructure is set up.
+// The rest of this file is accessors to the data structures set up by these two
+// routines.
 
-// Returns the index into argv past all the iwyu commandline flags.
-int ParseIwyuCommandlineFlags(int argc, char** argv);
+class OptionsParser {
+ public:
+  OptionsParser(int argc, char** argv);
+  ~OptionsParser();
+
+  int clang_argc() const { return clang_argc_; }
+  const char** clang_argv() const { return clang_argv_; }
+ private:
+  int clang_argc_;
+  const char** clang_argv_;
+};
 
 void InitGlobals(clang::SourceManager* source_manager,
                  clang::HeaderSearch* header_search);

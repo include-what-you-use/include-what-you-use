@@ -3699,7 +3699,7 @@ class IwyuAction : public ASTFrontendAction {
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
-using include_what_you_use::ParseIwyuCommandlineFlags;
+using include_what_you_use::OptionsParser;
 using include_what_you_use::IwyuAction;
 using include_what_you_use::CreateCompilerInstance;
 
@@ -3711,33 +3711,13 @@ int main(int argc, char **argv) {
   LLVMInitializeX86TargetMC();
   LLVMInitializeX86AsmParser();
 
-  // This code has various memory leaks, but we're in main, so who cares?
-
-  // Separate out iwyu and clang flags.  iwyu flags are "-Xiwyu <iwyu_flag>"
-  char** iwyu_argv = new char*[argc + 1];  // iwyu-specific flags
-  iwyu_argv[0] = argv[0];
-  int iwyu_argc = 1;
-  const char** clang_argv = new const char*[argc + 1];
-  clang_argv[0] = argv[0];
-  int clang_argc = 1;
-  for (int i = 1; i < argc; ++i) {
-    if (i < argc - 1 && strcmp(argv[i], "-Xiwyu") == 0)
-      iwyu_argv[iwyu_argc++] = argv[++i];   // the word after -Xiwyu
-    else if (strcmp(argv[i], "--help") == 0)
-      iwyu_argv[iwyu_argc++] = argv[i];     // send --help straight to IWYU
-    else
-      clang_argv[clang_argc++] = argv[i];
-  }
-  iwyu_argv[iwyu_argc] = NULL;    // argv should be NULL-terminated
-  clang_argv[clang_argc] = NULL;
-
   // The command line should look like
   //   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu --other_iwyu_flag]... CLANG_FLAGS... foo.cc
-  ParseIwyuCommandlineFlags(iwyu_argc, iwyu_argv);
+  OptionsParser options_parser(argc, argv);
 
-  clang::CompilerInstance* compiler = CreateCompilerInstance(clang_argc,
-                                                             clang_argv);
-  if (compiler != NULL) {
+  llvm::OwningPtr<clang::CompilerInstance> compiler(CreateCompilerInstance(
+      options_parser.clang_argc(), options_parser.clang_argv()));
+  if (compiler) {
     // Create and execute the frontend to generate an LLVM bitcode module.
     llvm::OwningPtr<clang::ASTFrontendAction> action(new IwyuAction);
     compiler->ExecuteAction(*action);

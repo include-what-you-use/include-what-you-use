@@ -26,10 +26,12 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
+#include "iwyu_version.h"
 #include "port.h"  // for CHECK_, etc
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/Version.h"
 #include "clang/Lex/HeaderSearch.h"
 
 using clang::DirectoryEntry;
@@ -48,6 +50,8 @@ static const clang::PrintingPolicy default_print_policy(default_lang_options);
 static SourceManagerCharacterDataGetter* data_getter = NULL;
 static FullUseCache* function_calls_full_use_cache = NULL;
 static FullUseCache* class_members_full_use_cache = NULL;
+static int ParseIwyuCommandlineFlags(int argc, char** argv);
+static int ParseInterceptedCommandlineFlags(int argc, char** argv);
 
 static void PrintHelp(const char* extra_msg) {
   printf("USAGE: include-what-you-use [-Xiwyu --iwyu_opt]... <clang opts>"
@@ -59,7 +63,6 @@ static void PrintHelp(const char* extra_msg) {
          "        associated .h files).  This flag may be specified multiple\n"
          "        times to specify multiple glob patterns.\n"
          "   --cwd=<dir>: tells iwyu what the current working directory is.\n"
-         "   --help: prints this help and exits.\n"
          "   --howtodebug[=<filename>]: with no arg, prints instructions on\n"
          "        how to run iwyu under gdb for the input file, and exits.\n"
          "        With an arg, prints only when input file matches the arg.\n"
@@ -78,9 +81,64 @@ static void PrintHelp(const char* extra_msg) {
          "          keep:   new lines aren't added, existing are kept intact\n"
          "          remove: new lines aren't added, existing are removed\n"
          "        Default value is 'add'.\n"
-         "   --verbose=<level>: the higher the level, the more output.\n");
+         "   --verbose=<level>: the higher the level, the more output.\n"
+         "\n"
+         "In addition to IWYU-specific options you can specify the following\n"
+         "options without -Xiwyu prefix:\n"
+         "   --help: prints this help and exits.\n"
+         "   --version: prints version and exits.\n");
   if (extra_msg)
     printf("\n%s\n\n", extra_msg);
+}
+
+static void PrintVersion() {
+  llvm::outs() << "include-what-you-use " << IWYU_VERSION_STRING;
+  // IWYU_SVN_REVISION should be provided by build system.
+  string iwyu_svn_revision = IWYU_SVN_REVISION;
+  if (!iwyu_svn_revision.empty()) {
+    llvm::outs() << " (" << iwyu_svn_revision << ")";
+  }
+  llvm::outs() << " based on " << clang::getClangFullVersion()
+               << "\n";
+}
+
+OptionsParser::OptionsParser(int argc, char** argv) {
+  // Separate out iwyu-specific, intercepted, and clang flags.  iwyu-specific
+  // flags are "-Xiwyu <iwyu_flag>", intercepted flags are usual clang flags
+  // like --version, --help, which we intercept to  provide custom handling.
+  char** iwyu_argv = new char*[argc + 1];
+  iwyu_argv[0] = argv[0];
+  int iwyu_argc = 1;
+  char** intercepted_argv = new char*[argc + 1];
+  intercepted_argv[0] = argv[0];
+  int intercepted_argc = 1;
+  clang_argv_ = new const char*[argc + 1];
+  clang_argv_[0] = argv[0];
+  clang_argc_ = 1;
+  for (int i = 1; i < argc; ++i) {
+    if (i < argc - 1 && strcmp(argv[i], "-Xiwyu") == 0)
+      iwyu_argv[iwyu_argc++] = argv[++i];   // the word after -Xiwyu
+    else if (strcmp(argv[i], "--help") == 0)
+      intercepted_argv[intercepted_argc++] = argv[i];     // intercept --help
+    else if (strcmp(argv[i], "--version") == 0)
+      intercepted_argv[intercepted_argc++] = argv[i];     // intercept --version
+    else
+      clang_argv_[clang_argc_++] = argv[i];
+  }
+  // argv should be NULL-terminated
+  iwyu_argv[iwyu_argc] = NULL;
+  intercepted_argv[intercepted_argc] = NULL;
+  clang_argv_[clang_argc_] = NULL;
+
+  ParseInterceptedCommandlineFlags(intercepted_argc, intercepted_argv);
+  ParseIwyuCommandlineFlags(iwyu_argc, iwyu_argv);
+
+  delete [] iwyu_argv;
+  delete [] intercepted_argv;
+}
+
+OptionsParser::~OptionsParser() {
+  delete [] clang_argv_;
 }
 
 CommandlineFlags::CommandlineFlags()
@@ -97,7 +155,6 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
   static const struct option longopts[] = {
     {"check_also", required_argument, NULL, 'c'},  // can be specified >once
     {"howtodebug", optional_argument, NULL, 'd'},
-    {"help", no_argument, NULL, 'h'},
     {"cwd", required_argument, NULL, 'p'},
     {"transitive_includes_only", no_argument, NULL, 't'},
     {"verbose", required_argument, NULL, 'v'},
@@ -111,7 +168,6 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     switch (getopt_long(argc, argv, shortopts, longopts, NULL)) {
       case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
       case 'd': howtodebug = optarg ? optarg : ""; break;
-      case 'h': PrintHelp(""); exit(0); break;
       case 'p': cwd = optarg; break;
       case 't': transitive_includes_only = true; break;
       case 'v': verbose = atoi(optarg); break;
@@ -136,13 +192,37 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
   return optind;  // unreachable
 }
 
+// Though option -v prints version too, it isn't intercepted because it also
+// provides other functionality like printing clang invocation, header search
+// paths.
+// TODO(vsapsai): provide IWYU version in Driver::PrintVersion when version
+// callbacks are supported (see FIXME in Driver::PrintVersion).
+static int ParseInterceptedCommandlineFlags(int argc, char** argv) {
+  static const struct option longopts[] = {
+    {"help", no_argument, NULL, 'h'},
+    {"version", no_argument, NULL, 'v'},
+    {0, 0, 0, 0}
+  };
+  static const char shortopts[] = "";
+  while (true) {
+    switch (getopt_long(argc, argv, shortopts, longopts, NULL)) {
+      case 'h': PrintHelp(""); exit(0); break;
+      case 'v': PrintVersion(); exit(0); break;
+      case -1: return optind;   // means 'no more input'
+      default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
+    }
+  }
+  return optind;  // unreachable
+}
+
 // The default value for the --howtodebug flag.  Indicates that the
 // flag isn't present.  It's a special, reserved value, and a user
 // isn't expected to type it directly.
 const char CommandlineFlags::kUnspecified[] = "<flag-unspecified>";
 
-// Handles all iwyu-specific flags, like --verbose.
-int ParseIwyuCommandlineFlags(int argc, char** argv) {
+// Handles all iwyu-specific flags, like --verbose.  Returns the index into
+// argv past all the iwyu commandline flags.
+static int ParseIwyuCommandlineFlags(int argc, char** argv) {
   CHECK_(commandline_flags == NULL && "Only parse commandline flags once");
   commandline_flags = new CommandlineFlags;
   const int retval = commandline_flags->ParseArgv(argc, argv);
