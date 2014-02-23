@@ -48,6 +48,13 @@ else()
   message(STATUS "IWYU in-tree configuration")
 endif()
 
+# Pick up SVN revision so we can report it
+# in version information.
+Subversion_WC_INFO(${CMAKE_CURRENT_SOURCE_DIR} IWYU)
+add_definitions(
+  -DIWYU_SVN_REVISION="${IWYU_WC_REVISION}"
+)
+
 add_executable(include-what-you-use
   iwyu.cc
   iwyu_ast_util.cc
