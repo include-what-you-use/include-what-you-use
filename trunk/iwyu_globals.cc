@@ -228,13 +228,13 @@ static int ParseIwyuCommandlineFlags(int argc, char** argv) {
   const int retval = commandline_flags->ParseArgv(argc, argv);
   SetVerboseLevel(commandline_flags->verbose);
 
-if (!commandline_flags->cwd.empty()) {
-     printf("-p/--cwd not yet implemented\n");
-     exit(1);
+  if (!commandline_flags->cwd.empty()) {
+    printf("-p/--cwd not yet implemented\n");
+    exit(1);
   }
   if (commandline_flags->howtodebug != CommandlineFlags::kUnspecified) {
-     printf("-d/--howtodebug not yet implemented\n");
-     exit(1);
+    printf("-d/--howtodebug not yet implemented\n");
+    exit(1);
   }
 
   VERRS(4) << "Setting verbose-level to " << commandline_flags->verbose << "\n";
