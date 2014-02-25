@@ -20,9 +20,6 @@ import sys
 import unittest
 import logging
 logging.basicConfig(level=logging.INFO)
-class Flags(object):
-   def __init__(self): self.test_files = []
-FLAGS = Flags()
 import iwyu_test_util
 
 
