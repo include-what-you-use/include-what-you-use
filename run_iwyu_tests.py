@@ -1,13 +1,13 @@
 #!/usr/bin/python
 
-##===--- run_iwyu_tests.py - include-what-you-use test framework driver ----===##
+##===--- run_iwyu_tests.py - include-what-you-use test framework driver ---===##
 #
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 #
-##===-----------------------------------------------------------------------===##
+##===----------------------------------------------------------------------===##
 
 """A test harness for IWYU testing."""
 
@@ -20,54 +20,59 @@ import sys
 import unittest
 import logging
 logging.basicConfig(level=logging.INFO)
+from fnmatch import fnmatch
 import iwyu_test_util
 
 
-TEST_ROOTDIR = 'tests/cxx'
-
-
-def CheckAlsoExtension(extension):
-  """Return a suitable iwyu flag for checking files with the given extension."""
-  return '--check_also="%s"' % os.path.join(TEST_ROOTDIR, '*' + extension)
-
-
-def MappingFile(filename):
-  """Return a suitable iwyu flag for adding the given mapping file."""
-  return '--mapping_file=%s' % os.path.join(TEST_ROOTDIR, filename)
+TEST_ROOTDIR_CXX = 'tests/cxx'
+TEST_ROOTDIR_C = 'tests/c'
 
 
 class OneIwyuTest(unittest.TestCase):
   """Superclass for tests.  A subclass per test-file is created at runtime."""
 
+  def CheckAlsoExtension(self, extension):
+    """Return a suitable iwyu flag for checking files with the given extension.
+    """
+    return '--check_also="%s"' % os.path.join(self.rootdir, '*' + extension)
+
+  def MappingFile(self, filename):
+    """Return a suitable iwyu flag for adding the given mapping file."""
+    return '--mapping_file=%s' % os.path.join(self.rootdir, filename)
+
+  def Include(self, filename):
+    """Return a -include switch for clang to force include of file."""
+    return '-include %s' % os.path.join(self.rootdir, filename)
+
   def setUp(self):
     # Iwyu flags for specific tests.
     # Map from filename to flag list. If any test requires special
     # iwyu flags to run properly, add an entry to the map with
-    # key=cc-filename (relative to TEST_ROOTDIR), value=list of flags.
+    # key=cc-filename (relative to self.rootdir), value=list of flags.
     flags_map = {
-      'backwards_includes.cc': [CheckAlsoExtension('-d*.h')],
-      'badinc.cc': [MappingFile('badinc.imp')],
-      'check_also.cc': [CheckAlsoExtension('-d1.h')],
-      'implicit_ctor.cc': [CheckAlsoExtension('-d1.h')],
-      'iwyu_stricter_than_cpp.cc': [CheckAlsoExtension('-autocast.h'),
-                                    CheckAlsoExtension('-fnreturn.h'),
-                                    CheckAlsoExtension('-typedefs.h'),
-                                    CheckAlsoExtension('-d2.h')],
-      'keep_mapping.cc': [CheckAlsoExtension('-public.h'), 
-                          MappingFile('keep_mapping.imp')],
-      'macro_location.cc': [CheckAlsoExtension('-d2.h')],
-      'non_transitive_include.cc': [CheckAlsoExtension('-d*.h'),
+      'backwards_includes.cc': [self.CheckAlsoExtension('-d*.h')],
+      'badinc.cc': [self.MappingFile('badinc.imp')],
+      'check_also.cc': [self.CheckAlsoExtension('-d1.h')],
+      'implicit_ctor.cc': [self.CheckAlsoExtension('-d1.h')],
+      'iwyu_stricter_than_cpp.cc': [self.CheckAlsoExtension('-autocast.h'),
+                                    self.CheckAlsoExtension('-fnreturn.h'),
+                                    self.CheckAlsoExtension('-typedefs.h'),
+                                    self.CheckAlsoExtension('-d2.h')],
+      'keep_mapping.cc': [self.CheckAlsoExtension('-public.h'), 
+                          self.MappingFile('keep_mapping.imp')],
+      'macro_location.cc': [self.CheckAlsoExtension('-d2.h')],
+      'non_transitive_include.cc': [self.CheckAlsoExtension('-d*.h'),
                                     '--transitive_includes_only'],
-      'no_h_includes_cc.cc': [CheckAlsoExtension('.c')],
-      'overloaded_class.cc': [CheckAlsoExtension('-i1.h')],
+      'no_h_includes_cc.cc': [self.CheckAlsoExtension('.c')],
+      'overloaded_class.cc': [self.CheckAlsoExtension('-i1.h')],
       'prefix_header_includes_add.cc': ['--prefix_header_includes=add'],
       'prefix_header_includes_keep.cc': ['--prefix_header_includes=keep'],
       'prefix_header_includes_remove.cc': ['--prefix_header_includes=remove'],
     }
-    prefix_headers = ['-include', 'tests/cxx/prefix_header_includes-d1.h',
-                      '-include', 'tests/cxx/prefix_header_includes-d2.h',
-                      '-include', 'tests/cxx/prefix_header_includes-d3.h',
-                      '-include', 'tests/cxx/prefix_header_includes-d4.h']
+    prefix_headers = [self.Include('prefix_header_includes-d1.h'),
+                      self.Include('prefix_header_includes-d2.h'),
+                      self.Include('prefix_header_includes-d3.h'),
+                      self.Include('prefix_header_includes-d4.h')]
     clang_flags_map = {
       'auto_type_within_template.cc': ['-std=c++11'],
       'conversion_ctor.cc': ['-std=c++11'],
@@ -76,10 +81,10 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_keep.cc': prefix_headers,
       'prefix_header_includes_remove.cc': prefix_headers,
     }
-    # Internally, we like it when the paths start with TEST_ROOTDIR.
-    self._iwyu_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
+    # Internally, we like it when the paths start with rootdir.
+    self._iwyu_flags_map = dict((os.path.join(self.rootdir, k), v)
                                 for (k,v) in flags_map.items())
-    self._clang_flags_map = dict((os.path.join(TEST_ROOTDIR, k), v)
+    self._clang_flags_map = dict((os.path.join(self.rootdir, k), v)
                                  for (k,v) in clang_flags_map.items())
 
   def RunOneTest(self, filename):
@@ -94,7 +99,7 @@ class OneIwyuTest(unittest.TestCase):
                  glob.glob('%s/*/%s-*' % (dirname, basename)) +
                  glob.glob('%s.h' % all_but_extension) +
                  glob.glob('%s/*/%s.h' % (dirname, basename)))
-    files_to_check = [f for f in all_files if not f.endswith('.cc')]
+    files_to_check = [f for f in all_files if not fnmatch(f, self.pattern)]
     files_to_check.append(filename)
 
     # IWYU emits summaries with canonicalized filepaths, where all the
@@ -115,17 +120,21 @@ class OneIwyuTest(unittest.TestCase):
                                           iwyu_flags, clang_flags, verbose=True)
 
 
-def RegisterFilesForTesting():
-  """Create a test-class for every .cc file in TEST_ROOTDIR."""
-  module = sys.modules[__name__]
+def RegisterFilesForTesting(rootdir, pattern):
+  """Create a test-class for every file in rootdir matching pattern."""
   filenames = []
-  for (dirpath, dirs, files) in os.walk(TEST_ROOTDIR):
+  for (dirpath, dirs, files) in os.walk(rootdir):
     filenames.extend(os.path.join(dirpath, f) for f in files
-                     if f.endswith('.cc'))
+                     if fnmatch(f, pattern))
   if not filenames:
-    sys.exit('No tests found in %s!' % os.path.abspath(TEST_ROOTDIR))
+    print('No tests found in %s!' % os.path.abspath(rootdir))
+    return
+
+  module = sys.modules[__name__]
+
   for filename in filenames:
-    basename = os.path.basename(filename[:-len('.cc')])
+    all_but_extension = os.path.splitext(filename)[0]
+    basename = os.path.basename(all_but_extension)
     class_name = re.sub('[^0-9a-zA-Z_]', '_', basename)  # python-clean
     if class_name[0].isdigit():            # classes can't start with a number
       class_name = '_' + class_name
@@ -135,12 +144,14 @@ def RegisterFilesForTesting():
     logging.info('Registering %s to test %s', class_name, filename)
     test_class = type(class_name,          # class name
                       (OneIwyuTest,),      # superclass
-                      # and methods.  f=filename is required for proper scoping
-                      {'runTest': lambda self, f=filename: self.RunOneTest(f)})
+                      # and attrs. f=filename is required for proper scoping
+                      {'runTest': lambda self, f=filename: self.RunOneTest(f),
+                       'rootdir': rootdir,
+                       'pattern': pattern})
     setattr(module, test_class.__name__, test_class)
 
 
 if __name__ == '__main__':
-
-  RegisterFilesForTesting()
+  RegisterFilesForTesting(TEST_ROOTDIR_CXX, '*.cc')
+  RegisterFilesForTesting(TEST_ROOTDIR_C, '*.c')
   unittest.main()
