@@ -3584,7 +3584,7 @@ class IwyuAstConsumer
           ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
       } else {
         // In C, there are no exceptions to the rules, we always need to forward
-        // declare
+        // declare.
         ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
       }
       return Base::VisitTagType(type);
