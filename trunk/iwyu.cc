@@ -3569,15 +3569,22 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())  return true;
 
     // If we're forward-declarable, then no complicated checking is
-    // needed: just forward-declare.  If we're already elaborated
-    // ('class Foo x') but not namespace-qualified ('class ns::Foo x')
-    // there's no need even to forward-declare!
-    // Note that enums are never forward-declarable, so elaborated enums are
-    // handled in CanForwardDeclareType.
+    // needed: just forward-declare.
     if (CanForwardDeclareType(current_ast_node())) {
       current_ast_node()->set_in_forward_declare_context(true);
-      if (!IsElaborationNode(current_ast_node()->parent()) ||
-          IsNamespaceQualifiedNode(current_ast_node()->parent())) {
+
+      if (compiler()->getLangOpts().CPlusPlus) {
+        // In C++, if we're already elaborated ('class Foo x') but not
+        // namespace-qualified ('class ns::Foo x') there's no need even to
+        // forward-declare.
+        // Note that enums are never forward-declarable, so elaborated enums are
+        // short-circuited in CanForwardDeclareType.
+        const ASTNode* parent = current_ast_node()->parent();
+        if (!IsElaborationNode(parent) || IsNamespaceQualifiedNode(parent))
+          ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
+      } else {
+        // In C, there are no exceptions to the rules, we always need to forward
+        // declare
         ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
       }
       return Base::VisitTagType(type);
