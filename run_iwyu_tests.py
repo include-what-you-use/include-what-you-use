@@ -25,6 +25,11 @@ from fnmatch import fnmatch
 import iwyu_test_util
 
 
+def PosixPath(path):
+    """Normalize Windows path separators to POSIX path separators."""
+    return path.replace('\\', '/')
+
+
 class OneIwyuTest(unittest.TestCase):
   """Superclass for tests.  A subclass per test-file is created at runtime."""
 
@@ -103,7 +108,7 @@ class OneIwyuTest(unittest.TestCase):
     # directory separators are set to '/'. In order for the testsuite to
     # correctly match up file summaries, we must canonicalize the filepaths
     # in the same way here.
-    files_to_check = [f.replace(os.sep, '/') for f in files_to_check]
+    files_to_check = [PosixPath(f) for f in files_to_check]
 
     iwyu_flags = self._iwyu_flags_map.get(filename, None)
     if iwyu_flags:
@@ -121,7 +126,7 @@ def RegisterFilesForTesting(rootdir, pattern):
   """Create a test-class for every file in rootdir matching pattern."""
   filenames = []
   for (dirpath, dirs, files) in os.walk(rootdir):
-    dirpath = dirpath.replace('\\', '/')  # Normalize to posix-style paths.
+    dirpath = PosixPath(dirpath)  # Normalize path separators.
     filenames.extend(posixpath.join(dirpath, f) for f in files
                      if fnmatch(f, pattern))
   if not filenames:
