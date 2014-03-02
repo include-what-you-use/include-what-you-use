@@ -20,6 +20,7 @@ import sys
 import unittest
 import logging
 logging.basicConfig(level=logging.INFO)
+import posixpath
 from fnmatch import fnmatch
 import iwyu_test_util
 
@@ -34,15 +35,15 @@ class OneIwyuTest(unittest.TestCase):
   def CheckAlsoExtension(self, extension):
     """Return a suitable iwyu flag for checking files with the given extension.
     """
-    return '--check_also="%s"' % os.path.join(self.rootdir, '*' + extension)
+    return '--check_also="%s"' % posixpath.join(self.rootdir, '*' + extension)
 
   def MappingFile(self, filename):
     """Return a suitable iwyu flag for adding the given mapping file."""
-    return '--mapping_file=%s' % os.path.join(self.rootdir, filename)
+    return '--mapping_file=%s' % posixpath.join(self.rootdir, filename)
 
   def Include(self, filename):
     """Return a -include switch for clang to force include of file."""
-    return '-include %s' % os.path.join(self.rootdir, filename)
+    return '-include %s' % posixpath.join(self.rootdir, filename)
 
   def setUp(self):
     # Iwyu flags for specific tests.
@@ -82,9 +83,9 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_remove.cc': prefix_headers,
     }
     # Internally, we like it when the paths start with rootdir.
-    self._iwyu_flags_map = dict((os.path.join(self.rootdir, k), v)
+    self._iwyu_flags_map = dict((posixpath.join(self.rootdir, k), v)
                                 for (k,v) in flags_map.items())
-    self._clang_flags_map = dict((os.path.join(self.rootdir, k), v)
+    self._clang_flags_map = dict((posixpath.join(self.rootdir, k), v)
                                  for (k,v) in clang_flags_map.items())
 
   def RunOneTest(self, filename):
@@ -124,7 +125,8 @@ def RegisterFilesForTesting(rootdir, pattern):
   """Create a test-class for every file in rootdir matching pattern."""
   filenames = []
   for (dirpath, dirs, files) in os.walk(rootdir):
-    filenames.extend(os.path.join(dirpath, f) for f in files
+    dirpath = dirpath.replace('\\', '/')  # Normalize to posix-style paths.
+    filenames.extend(posixpath.join(dirpath, f) for f in files
                      if fnmatch(f, pattern))
   if not filenames:
     print('No tests found in %s!' % os.path.abspath(rootdir))
