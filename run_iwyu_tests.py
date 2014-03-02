@@ -25,10 +25,6 @@ from fnmatch import fnmatch
 import iwyu_test_util
 
 
-TEST_ROOTDIR_CXX = 'tests/cxx'
-TEST_ROOTDIR_C = 'tests/c'
-
-
 class OneIwyuTest(unittest.TestCase):
   """Superclass for tests.  A subclass per test-file is created at runtime."""
 
@@ -154,6 +150,6 @@ def RegisterFilesForTesting(rootdir, pattern):
 
 
 if __name__ == '__main__':
-  RegisterFilesForTesting(TEST_ROOTDIR_CXX, '*.cc')
-  RegisterFilesForTesting(TEST_ROOTDIR_C, '*.c')
+  RegisterFilesForTesting('tests/cxx', '*.cc')
+  RegisterFilesForTesting('tests/c', '*.c')
   unittest.main()
