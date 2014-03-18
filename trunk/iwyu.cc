@@ -2150,7 +2150,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // a) we need type-specific caller information anyway, and b)
   // HandleFunctionCall isn't called for calls via function-pointers,
   // which we want.
-  void ReportIfReferenceVararg(Expr** args, unsigned num_args,
+  void ReportIfReferenceVararg(const Expr* const* args, unsigned num_args,
                                const FunctionProtoType* callee_type) {
     if (callee_type && callee_type->isVariadic()) {
       const unsigned first_vararg_index = callee_type->getNumParams();
@@ -2167,7 +2167,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
     }
   }
-  void ReportIfReferenceVararg(Expr** args, unsigned num_args,
+  void ReportIfReferenceVararg(const Expr* const* args, unsigned num_args,
                                const FunctionDecl* callee) {
     if (callee) {
       const FunctionProtoType* callee_type =

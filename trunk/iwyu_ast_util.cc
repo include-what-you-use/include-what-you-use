@@ -699,14 +699,14 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   // arguments might be explicit, and others implicit.  Otherwise,
   // it's a type that doesn't take function template args at all (like
   // CXXDeleteExpr) or only takes explicit args (like DeclRefExpr).
-  Expr** fn_args = NULL;
+  const Expr* const* fn_args = NULL;
   unsigned num_args = 0;
   unsigned start_of_implicit_args = 0;
   if (const CXXConstructExpr* ctor_expr = DynCastFrom(calling_expr)) {
     fn_args = ctor_expr->getArgs();
     num_args = ctor_expr->getNumArgs();
   } else if (const CallExpr* call_expr = DynCastFrom(calling_expr)) {
-    fn_args = const_cast<CallExpr*>(call_expr)->getArgs();
+    fn_args = call_expr->getArgs();
     num_args = call_expr->getNumArgs();
     const Expr* callee_expr = call_expr->getCallee()->IgnoreParenCasts();
     if (const ASTTemplateArgumentListInfo* explicit_tpl_args
