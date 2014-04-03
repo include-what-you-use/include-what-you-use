@@ -67,12 +67,12 @@ void Warn(SourceLocation loc, const string& message) {
 
 // For use with no_forward_declare. Allow people to specify forward
 // declares with or without the leading "::", and don't make them use
-// <anonymous namespace>.
+// (anonymous namespace).
 string NormalizeNamespaces(string symbol) {
   if (StartsWith(symbol, "::")) {
     symbol = symbol.substr(2);
   }
-  const char kAnonymousNamespaceQualifier[] = "<anonymous namespace>::";
+  const char kAnonymousNamespaceQualifier[] = "(anonymous namespace)::";
   for (;;) {
     const string::size_type index = symbol.find(kAnonymousNamespaceQualifier);
     if (index == string::npos) {

@@ -142,7 +142,7 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
       // We don't want to include namespaces in our shortname.
     } else if (const RecordDecl *record_decl = DynCastFrom(*it)) {
       if (!record_decl->getIdentifier())
-        ostream << "<anonymous " << record_decl->getKindName() << ">::";
+        ostream << "(anonymous " << record_decl->getKindName() << ")::";
       else
         ostream << *record_decl << "::";
     } else if (const FunctionDecl *function_decl = DynCastFrom(*it)) {
@@ -158,7 +158,7 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
   if (named_decl->getDeclName())
     ostream << *named_decl;
   else
-    ostream << "<anonymous>";
+    ostream << "(anonymous)";
 
   return ostream.str();
 }
