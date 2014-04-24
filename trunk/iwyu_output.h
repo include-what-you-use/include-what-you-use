@@ -52,13 +52,20 @@ class OneUse {
          UseKind use_kind,
          bool in_cxx_method_body,
          const char* comment);
+  // Both dfn_file and dfn_filepath are specified to allow to create OneUse
+  // with dfn_filepath and without dfn_file.  For example, in
+  // IwyuBaseAstVisitor::VisitCXXNewExpr we make a guess that placement
+  // operator new is called (which is defined in <new>), but we don't have
+  // <new> FileEntry.
   OneUse(const string& symbol_name,
+         const clang::FileEntry* dfn_file,
          const string& dfn_filepath,
          clang::SourceLocation use_loc);
 
   const string& symbol_name() const { return symbol_name_; }
   const string& short_symbol_name() const { return short_symbol_name_; }
   const clang::NamedDecl* decl() const  { return decl_; }
+  const clang::FileEntry* decl_file() const { return decl_file_; }
   const string& decl_filepath() const { return decl_filepath_; }
   clang::SourceLocation use_loc() const { return use_loc_; }
   bool is_full_use() const { return use_kind_ == kFullUse; }
@@ -73,7 +80,7 @@ class OneUse {
     return suggested_header_;
   }
 
-  void reset_decl(const clang::NamedDecl* decl) { decl_ = decl; }
+  void reset_decl(const clang::NamedDecl* decl);
   void set_full_use() { use_kind_ = kFullUse; }
   void set_forward_declare_use() { use_kind_ = kForwardDeclareUse; }
   void set_ignore_use() { ignore_use_ = true; }
@@ -92,6 +99,7 @@ class OneUse {
   string symbol_name_;             // the symbol being used
   string short_symbol_name_;       // 'short' form of the symbol being used
   const clang::NamedDecl* decl_;   // decl of the symbol, if we know it
+  const clang::FileEntry* decl_file_;  // file entry where the symbol lives
   string decl_filepath_;           // filepath where the symbol lives
   clang::SourceLocation use_loc_;  // where the symbol is used from
   UseKind use_kind_;               // kFullUse or kForwardDeclareUse
@@ -205,11 +213,17 @@ class IwyuFileInfo {
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
                            const clang::NamedDecl* decl,
                            bool in_cxx_method_body, const char* comment);
-  // This will mostly be used for macro tokens.
+  // This is used for symbols with a made up dfn_filepath.  Currently it's used
+  // only for placement operator new in templates (see
+  // IwyuBaseAstVisitor::VisitCXXNewExpr).
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
                            const string& dfn_filepath,
                            const string& symbol);
   // TODO(dsturtevant): Can we determine in_cxx_method_body? Do we care?
+
+  void ReportMacroUse(clang::SourceLocation use_loc,
+                      clang::SourceLocation dfn_loc,
+                      const string& symbol);
 
   // We only allow forward-declaring of decls, not arbitrary symbols.
   void ReportForwardDeclareUse(clang::SourceLocation use_loc,
@@ -219,7 +233,8 @@ class IwyuFileInfo {
   // This is used when we see a // NOLINT comment, for instance.  It says
   // '#include this header file as-is, without any public-header mapping.'
   // Input is the include-line as desired: '<string.h>' or '"ads/foo.h"'.
-  void ReportIncludeFileUse(const string& quoted_include);
+  void ReportIncludeFileUse(const clang::FileEntry* included_file,
+                            const string& quoted_include);
 
   // This is used only in iwyu_preprocessor.cc.  TODO(csilvers): revamp?
   const set<const clang::FileEntry*>& direct_includes_as_fileentries() const {
