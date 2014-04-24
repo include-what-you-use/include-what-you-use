@@ -172,6 +172,7 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
     : symbol_name_(internal::GetQualifiedNameAsString(decl)),
       short_symbol_name_(internal::GetShortNameAsString(decl)),
       decl_(decl),
+      decl_file_(GetFileEntry(decl)),
       decl_filepath_(GetFilePath(decl)),
       use_loc_(use_loc),
       use_kind_(use_kind),             // full use or fwd-declare use
@@ -184,11 +185,12 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
 }
 
 // This constructor always creates a full use.
-OneUse::OneUse(const string& symbol_name, const string& dfn_filepath,
-               SourceLocation use_loc)
+OneUse::OneUse(const string& symbol_name, const FileEntry* dfn_file,
+               const string& dfn_filepath, SourceLocation use_loc)
     : symbol_name_(symbol_name),
       short_symbol_name_(symbol_name),
       decl_(NULL),
+      decl_file_(dfn_file),
       decl_filepath_(dfn_filepath),
       use_loc_(use_loc),
       use_kind_(kFullUse),
@@ -204,6 +206,14 @@ OneUse::OneUse(const string& symbol_name, const string& dfn_filepath,
   CHECK_(!decl_filepath_.empty() && "Must pass a real filepath to OneUse");
   if (decl_filepath_[0] == '"' || decl_filepath_[0] == '<')
     suggested_header_ = decl_filepath_;
+}
+
+void OneUse::reset_decl(const clang::NamedDecl* decl) {
+    CHECK_(decl_ && "Need existing decl to reset it");
+    CHECK_(decl && "Need to reset decl with existing decl");
+    decl_ = decl;
+    decl_file_ = GetFileEntry(decl);
+    decl_filepath_ = GetFilePath(decl);
 }
 
 int OneUse::UseLinenum() const {
@@ -502,12 +512,22 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
                                        const string& dfn_filepath,
                                        const string& symbol) {
-  symbol_uses_.push_back(OneUse(symbol, dfn_filepath, use_loc));
+  symbol_uses_.push_back(OneUse(symbol, NULL, dfn_filepath, use_loc));
   LogSymbolUse("Marked full-info use of symbol", symbol_uses_.back());
 }
 
-void IwyuFileInfo::ReportIncludeFileUse(const string& quoted_include) {
-  symbol_uses_.push_back(OneUse("", quoted_include, SourceLocation()));
+void IwyuFileInfo::ReportMacroUse(clang::SourceLocation use_loc,
+                                  clang::SourceLocation dfn_loc,
+                                  const string& symbol) {
+  symbol_uses_.push_back(OneUse(symbol, GetFileEntry(dfn_loc),
+                                GetFilePath(dfn_loc), use_loc));
+  LogSymbolUse("Marked full-info use of macro", symbol_uses_.back());
+}
+
+void IwyuFileInfo::ReportIncludeFileUse(const clang::FileEntry* included_file,
+                                        const string& quoted_include) {
+  symbol_uses_.push_back(OneUse("", included_file, quoted_include,
+                                SourceLocation()));
   LogSymbolUse("Marked use of include-file", symbol_uses_.back());
 }
 
@@ -1293,7 +1313,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // (C1) Compute the direct includes of 'associated' files.
   set<string> associated_direct_includes;
   for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it) {
-    ReportIncludeFileUse((*it)->quoted_file_);
+    ReportIncludeFileUse((*it)->file_, (*it)->quoted_file_);
     InsertAllInto((*it)->direct_includes(), &associated_direct_includes);
   }
   // The 'effective' direct includes are defined to be the current
@@ -1402,7 +1422,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
       CHECK_(use->has_suggested_header() && "Full uses should have #includes");
       if (!ContainsKey(include_map, use->suggested_header())) {  // must be added
         lines->push_back(OneIncludeOrForwardDeclareLine(
-            GetFileEntry(use->decl()), use->suggested_header(), -1));
+            use->decl_file(), use->suggested_header(), -1));
         include_map[use->suggested_header()] = lines->size() - 1;
       }
       const int index = include_map[use->suggested_header()];
@@ -1481,7 +1501,11 @@ void CleanupPrefixHeaderIncludes(
     const FileEntry* file_entry = NULL;
     if (it->IsIncludeLine()) {
       file_entry = it->included_file();
-      CHECK_(file_entry && "Valid file_entry is expected");
+      if (!file_entry)
+        file_entry = preprocessor_info->IncludeToFileEntry(
+            it->quoted_include());
+      // At this point it's OK if file_entry is NULL.  It means we've never
+      // seen quoted_include.  And that's why it cannot be prefix header.
     } else {
       const RecordDecl* dfn = GetDefinitionForClass(it->fwd_decl());
       file_entry = GetFileEntry(dfn);

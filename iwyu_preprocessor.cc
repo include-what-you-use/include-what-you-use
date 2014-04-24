@@ -422,7 +422,8 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
 
   if (!protect_reason.empty()) {
     CHECK_(ContainsKey(iwyu_file_info_map_, includer));
-    GetFromFileInfoMap(includer)->ReportIncludeFileUse(include_name_as_typed);
+    GetFromFileInfoMap(includer)->ReportIncludeFileUse(includee,
+                                                       include_name_as_typed);
     ERRSYM(includer) << "Marked dep: " << GetFilePath(includer)
                      << " needs to keep " << include_name_as_typed
                      << " (reason: " << protect_reason << ")\n";
@@ -439,7 +440,8 @@ static void ProtectReexportIncludes(
     for (Each<const FileEntry*> include(&incs); !include.AtEnd(); ++include) {
       const string includee_path = GetFilePath(*include);
       if (GlobalIncludePicker().HasMapping(includee_path, includer_path)) {
-        includer.ReportIncludeFileUse(ConvertToQuotedInclude(includee_path));
+        includer.ReportIncludeFileUse(*include,
+                                      ConvertToQuotedInclude(includee_path));
         ERRSYM(it->first) << "Marked dep: " << includer_path << " needs to keep"
                           << " " << includee_path << " (reason: re-exports)\n";
       }
@@ -744,7 +746,6 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
                                           SourceLocation usage_location,
                                           SourceLocation dfn_location) {
   const FileEntry* used_in = GetFileEntry(usage_location);
-  const string defined_path = GetFilePath(dfn_location);
 
   if (!ShouldReportIWYUViolationsFor(used_in))
     return;             // ignore symbols used outside foo.{h,cc}
@@ -763,8 +764,8 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
   // #include foo.h -- adding that #include could break bang.cc.
   // I think the solution is to have a 'soft' use -- don't remove it
   // if it's there, but don't add it if it's not.  Or something.
-  GetFromFileInfoMap(used_in)->ReportFullSymbolUse(usage_location,
-                                                   defined_path, name);
+  GetFromFileInfoMap(used_in)->ReportMacroUse(usage_location, dfn_location,
+                                              name);
 }
 
 // As above, but get the definition location from macros_definition_loc_.
