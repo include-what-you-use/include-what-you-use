@@ -215,6 +215,8 @@ using clang::TypedefType;
 using clang::UsingShadowDecl;
 using clang::RecursiveASTVisitor;
 using clang::UsingDecl;
+using clang::ValueDecl;
+using clang::VarDecl;
 using llvm::cast;
 using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
@@ -2489,7 +2491,27 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     while (ast_node->ParentIsA<ElaboratedType>()) {
       ast_node = ast_node->parent();
     }
+
+    // Now there are two options: either we have a type or we have a declaration
+    // involving a type.
     const Type* parent_type = ast_node->GetParentAs<Type>();
+    if (parent_type == NULL) {
+      // Since it's not a type, it must be a decl.
+      // Our target here is record members, all of which derive from ValueDecl.
+      if (const ValueDecl *decl = ast_node->GetParentAs<ValueDecl>()) {
+        // We can shortcircuit static data member declarations immediately,
+        // they can always be forward-declared.
+        if (const VarDecl *var_decl = DynCastFrom(decl)) {
+          if (!var_decl->isThisDeclarationADefinition() &&
+              var_decl->isStaticDataMember()) {
+            return true;
+          }
+        }
+
+        parent_type = GetTypeOf(decl);
+      }
+    }
+
     // TODO(csilvers): should probably just be IsPointerOrReference
     return parent_type && IsPointerOrReferenceAsWritten(parent_type);
   }
