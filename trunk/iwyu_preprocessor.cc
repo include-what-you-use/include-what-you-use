@@ -413,6 +413,10 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   } else if (!IsHeaderFile(GetFilePath(includee))) {
     protect_reason = ".cc include";
 
+  // If the includee is marked as pch-in-code, it can never be removed.
+  } else if (FileInfoFor(includee)->is_pch_in_code()) {
+    protect_reason = "pch in code";
+
   // There's one more place we keep the #include: if our file re-exports it.
   // (A decision to re-export an #include counts as a "use" of it.)
   // But we need to finalize all #includes before we can test that,
@@ -480,6 +484,21 @@ void IwyuPreprocessorInfo::AddDirectInclude(
       includee, include_name_as_typed, GetLineNumber(includer_loc));
   // Make sure the includee has a file-info-map entry too.
   InsertIntoFileInfoMap(includee, include_name_as_typed);
+
+  // The first #include in every translation unit might be a precompiled header
+  // and we need to mark it as such for later analysis.
+  if (num_include_directives_ == 1) {
+    CHECK_(includee && "The first #include must be an actual file.");
+
+    // Now we know includee is the first included header file. Mark it as
+    // pch-in-code if the user requested it on command-line.
+    if (GlobalFlags().pch_in_code) {
+      IwyuFileInfo *includee_file_info = GetFromFileInfoMap(includee);
+      includee_file_info->set_pch_in_code();
+      includee_file_info->set_prefix_header();
+      VERRS(4) << "Marked " << GetFilePath(includee) << " as pch-in-code.\n";
+    }
+  }
 
   // We have a rule that if foo.h #includes bar.h, foo.cc doesn't need
   // to #include bar.h as well, but instead gets it 'automatically'
@@ -613,6 +632,7 @@ void IwyuPreprocessorInfo::InclusionDirective(
     StringRef relative_path,
     const clang::Module* imported) {
   include_filename_loc_ = filename_range.getBegin();
+  ++num_include_directives_;
 }
 
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,

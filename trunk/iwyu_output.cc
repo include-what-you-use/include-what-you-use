@@ -421,6 +421,7 @@ IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
     preprocessor_info_(preprocessor_info),
     quoted_file_(quoted_include_name),
     is_prefix_header_(false),
+    is_pch_in_code_(false),
     associated_headers_(),
     symbol_uses_(),
     lines_(),
@@ -1473,12 +1474,12 @@ void CalculateDesiredIncludesAndForwardDeclares(
   }
 }
 
-bool IsPrefixHeader(const FileEntry* file_entry,
-                    const IwyuPreprocessorInfo* preprocessor_info) {
+bool IsRemovablePrefixHeader(const FileEntry* file_entry,
+                             const IwyuPreprocessorInfo* preprocessor_info) {
   if (file_entry) {
     IwyuFileInfo* file_info = preprocessor_info->FileInfoFor(file_entry);
     if (file_info)
-      return file_info->is_prefix_header();
+      return file_info->is_prefix_header() && !file_info->is_pch_in_code();
   }
   return false;
 }
@@ -1510,7 +1511,7 @@ void CleanupPrefixHeaderIncludes(
       const RecordDecl* dfn = GetDefinitionForClass(it->fwd_decl());
       file_entry = GetFileEntry(dfn);
     }
-    if (IsPrefixHeader(file_entry, preprocessor_info)) {
+    if (IsRemovablePrefixHeader(file_entry, preprocessor_info)) {
       CHECK_(file_entry && "FileEntry should exist to be prefix header");
       it->clear_desired();
       VERRS(6) << "Ignoring '" << it->line()
@@ -1598,12 +1599,15 @@ typedef pair<int, string> LineSortKey;
 
 // The sort key of an include/forward-declare line is an (int, string)
 // pair.  The string is always the line itself.  The int is a category:
-// 1: associated .h, 2: associated -inl.h, 3: C header, 4: c++ header,
-// 5: other header, 6: forward-declare.
+// 0: PCH in code, 1: associated .h, 2: associated -inl.h, 3: C header,
+// 4: c++ header, 5: other header, 6: forward-declare.
 LineSortKey GetSortKey(const OneIncludeOrForwardDeclareLine& line,
-                       const set<string>& associated_quoted_includes) {
+                       const set<string>& associated_quoted_includes,
+                       const IwyuFileInfo* file_info) {
   if (!line.IsIncludeLine())
     return LineSortKey(6, line.line());
+  if (file_info && file_info->is_pch_in_code())
+    return LineSortKey(0, line.line());
   if (ContainsKey(associated_quoted_includes, line.quoted_include())) {
     if (EndsWith(line.quoted_include(), "-inl.h\""))
       return LineSortKey(2, line.line());
@@ -1619,6 +1623,7 @@ LineSortKey GetSortKey(const OneIncludeOrForwardDeclareLine& line,
 // filename is "this" filename: the file being emitted.
 // associated_filepaths are the quoted-include form of associated_headers_.
 string PrintableDiffs(const string& filename,
+                      const IwyuPreprocessorInfo* preprocessor_info,
                       const set<string>& associated_quoted_includes,
                       const vector<OneIncludeOrForwardDeclareLine>& lines) {
   const set<string>& aqi = associated_quoted_includes;  // short alias
@@ -1629,7 +1634,11 @@ string PrintableDiffs(const string& filename,
   // because some headers might be listed twice in the source file.)
   multimap<LineSortKey, const OneIncludeOrForwardDeclareLine*> sorted_lines;
   for (Each<OneIncludeOrForwardDeclareLine> it(&lines); !it.AtEnd(); ++it) {
-    sorted_lines.insert(make_pair(GetSortKey(*it, aqi), &*it));
+    const IwyuFileInfo* file_info = NULL;
+    if (it->IsIncludeLine())
+      file_info = preprocessor_info->FileInfoFor(it->included_file());
+
+    sorted_lines.insert(make_pair(GetSortKey(*it, aqi, file_info), &*it));
   }
 
   // First, check if there are no adds or deletes.  If so, we print a
@@ -1691,9 +1700,8 @@ string PrintableDiffs(const string& filename,
 
 void IwyuFileInfo::EmitDiffs(
     const vector<OneIncludeOrForwardDeclareLine>& lines) {
-  errs() << internal::PrintableDiffs(GetFilePath(file_),
-                                     AssociatedQuotedIncludes(),
-                                     lines);
+  errs() << internal::PrintableDiffs(GetFilePath(file_), preprocessor_info_,
+                                     AssociatedQuotedIncludes(), lines);
 }
 
 int IwyuFileInfo::CalculateAndReportIwyuViolations() {

@@ -88,6 +88,7 @@ struct CommandlineFlags {
   bool no_default_mappings;     // -n: no default mappings
   // Policy regarding files included via -include option.  No short option.
   PrefixHeaderIncludePolicy prefix_header_include_policy;
+  bool pch_in_code;  // Treat the first seen include as a PCH. No short option.
 };
 
 const CommandlineFlags& GlobalFlags();
