@@ -185,6 +185,9 @@ class IwyuFileInfo {
   bool is_prefix_header() const { return is_prefix_header_; }
   void set_prefix_header() { is_prefix_header_ = true; }
 
+  bool is_pch_in_code() const { return is_pch_in_code_; }
+  void set_pch_in_code() { is_pch_in_code_ = true; }
+
   // An 'associated' header is a header that this file #includes
   // (possibly indirectly) that we should treat as being logically
   // part of this file.  In particular, when computing the direct
@@ -291,6 +294,12 @@ class IwyuFileInfo {
 
   // Prefix header means included from command line via -include option.
   bool is_prefix_header_;
+
+  // PCH in code refers to an #include directive that acts as a marker for
+  // precompiled header inclusion. This pattern can be used with GCC and is
+  // standard practice on MSVC, whereas Clang forces PCHs to be listed as prefix
+  // headers.
+  bool is_pch_in_code_;
 
   // associated_headers_ are the files 'associated' with this file: if
   // this file is foo.cc, associated_headers_ are the IwyuFileInfo's for

@@ -81,6 +81,12 @@ static void PrintHelp(const char* extra_msg) {
          "          keep:   new lines aren't added, existing are kept intact\n"
          "          remove: new lines aren't added, existing are removed\n"
          "        Default value is 'add'.\n"
+         "   --pch_in_code: mark the first include in a translation unit as a\n"
+         "        precompiled header.  Use --pch_in_code to prevent IWYU from\n"
+         "        removing necessary PCH includes.  Though Clang forces PCHs\n"
+         "        to be listed as prefix headers, the PCH-in-code pattern can\n"
+         "        be used with GCC and is standard practice on MSVC\n"
+         "        (e.g. stdafx.h).\n"
          "   --verbose=<level>: the higher the level, the more output.\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
@@ -148,7 +154,8 @@ CommandlineFlags::CommandlineFlags()
       transitive_includes_only(false),
       verbose(getenv("IWYU_VERBOSE") ? atoi(getenv("IWYU_VERBOSE")) : 1),
       no_default_mappings(false),
-      prefix_header_include_policy(CommandlineFlags::kAdd) {
+      prefix_header_include_policy(CommandlineFlags::kAdd),
+      pch_in_code(false) {
 }
 
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
@@ -161,6 +168,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"mapping_file", required_argument, NULL, 'm'},
     {"no_default_mappings", no_argument, NULL, 'n'},
     {"prefix_header_includes", required_argument, NULL, 'x'},
+    {"pch_in_code", no_argument, NULL, 'h'},
     {0, 0, 0, 0}
   };
   static const char shortopts[] = "d::p:v:c:m:n";
@@ -185,6 +193,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
           exit(1);
         }
         break;
+      case 'h': pch_in_code = true; break;
       case -1: return optind;   // means 'no more input'
       default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
     }
