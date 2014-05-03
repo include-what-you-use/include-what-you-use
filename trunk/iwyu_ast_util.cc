@@ -127,6 +127,37 @@ using llvm::raw_string_ostream;
 
 namespace include_what_you_use {
 
+namespace {
+
+void DumpASTNode(llvm::raw_ostream& ostream, const ASTNode* node) {
+  if (const Decl *decl = node->GetAs<Decl>()) {
+    ostream << "[" << decl->getDeclKindName() << "Decl] "
+            << PrintableDecl(decl);
+  } else if (const Stmt *stmt = node->GetAs<Stmt>()) {
+    ostream << "[" << stmt->getStmtClassName() << "] " << PrintableStmt(stmt);
+  } else if (const Type *type = node->GetAs<Type>()) { // +typeloc
+    ostream << "[" << type->getTypeClassName()
+            << (node->IsA<TypeLoc>() ? "TypeLoc" : "Type") << "] "
+            << PrintableType(type);
+  } else if (const NestedNameSpecifier *nns =
+                 node->GetAs<NestedNameSpecifier>()) {
+    ostream << "[NestedNameSpecifier] " << PrintableNestedNameSpecifier(nns);
+  } else if (const TemplateName *tpl_name = node->GetAs<TemplateName>()) {
+    ostream << "[TemplateName] " << PrintableTemplateName(*tpl_name);
+  } else if (const TemplateArgumentLoc *tpl_argloc =
+                 node->GetAs<TemplateArgumentLoc>()) {
+    ostream << "[TemplateArgumentLoc] "
+            << PrintableTemplateArgumentLoc(*tpl_argloc);
+  } else if (const TemplateArgument *tpl_arg =
+                 node->GetAs<TemplateArgument>()) {
+    ostream << "[TemplateArgument] " << PrintableTemplateArgument(*tpl_arg);
+  } else {
+    CHECK_UNREACHABLE_("Unknown kind for ASTNode");
+  }
+}
+
+}
+
 //------------------------------------------------------------
 // ASTNode and associated utilities.
 
@@ -379,6 +410,13 @@ string PrintableDecl(const Decl* decl) {
   return ostream.str();
 }
 
+string PrintableStmt(const Stmt* stmt) {
+  std::string buffer;
+  raw_string_ostream ostream(buffer);
+  stmt->dump(ostream, *GlobalSourceManager());
+  return ostream.str();
+}
+
 void PrintStmt(const Stmt* stmt) {
   stmt->dump(*GlobalSourceManager());  // This prints to errs().
 }
@@ -422,38 +460,17 @@ string PrintableTemplateArgumentLoc(const TemplateArgumentLoc& arg) {
   return ostream.str();
 }
 
+string PrintableASTNode(const ASTNode* node) {
+  std::string buffer;
+  raw_string_ostream ostream(buffer);
+  DumpASTNode(ostream, node);
+  return ostream.str();
+}
+
 // This prints to errs().  It's useful for debugging (e.g. inside gdb).
 void PrintASTNode(const ASTNode* node) {
-  if (const Decl* decl = node->GetAs<Decl>()) {
-    errs() << "[" << decl->getDeclKindName() << "Decl] "
-                 << PrintableDecl(decl) << "\n";
-  } else if (const Stmt* stmt = node->GetAs<Stmt>()) {
-    errs() << "[" << stmt->getStmtClassName() << "] ";
-    PrintStmt(stmt);
-    errs() << "\n";
-  } else if (const Type* type = node->GetAs<Type>()) { // +typeloc
-    errs() << "[" << type->getTypeClassName()
-                 << (node->IsA<TypeLoc>() ? "TypeLoc" : "Type") << "] "
-                 << PrintableType(type) << "\n";
-  } else if (const NestedNameSpecifier* nns
-             = node->GetAs<NestedNameSpecifier>()) {
-    errs() << "[NestedNameSpecifier] "
-                 << PrintableNestedNameSpecifier(nns) << "\n";
-  } else if (const TemplateName* tpl_name
-             = node->GetAs<TemplateName>()) {
-    errs() << "[TemplateName] "
-                 << PrintableTemplateName(*tpl_name) << "\n";
-  } else if (const TemplateArgumentLoc* tpl_argloc
-             = node->GetAs<TemplateArgumentLoc>()) {
-    errs() << "[TemplateArgumentLoc] "
-                 << PrintableTemplateArgumentLoc(*tpl_argloc) << "\n";
-  } else if (const TemplateArgument* tpl_arg
-             = node->GetAs<TemplateArgument>()) {
-    errs() << "[TemplateArgument] "
-                 << PrintableTemplateArgument(*tpl_arg) << "\n";
-  } else {
-    CHECK_UNREACHABLE_("Unknown kind for ASTNode");
-  }
+  DumpASTNode(errs(), node);
+  errs() << "\n";
 }
 
 // --- Utilities for Template Arguments.

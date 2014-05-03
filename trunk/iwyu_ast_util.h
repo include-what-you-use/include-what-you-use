@@ -426,15 +426,17 @@ const clang::DeclContext* GetDeclContext(const ASTNode* ast_node);
 string PrintableLoc(clang::SourceLocation loc);
 string PrintableSourceRange(clang::SourceRange range);
 string PrintableDecl(const clang::Decl* decl);
-void PrintStmt(const clang::Stmt* stmt);
+string PrintableStmt(const clang::Stmt* stmt);
 string PrintableType(const clang::Type* type);
 string PrintableTypeLoc(const clang::TypeLoc& typeloc);
 string PrintableNestedNameSpecifier(const clang::NestedNameSpecifier* nns);
 string PrintableTemplateName(const clang::TemplateName& tpl_name);
 string PrintableTemplateArgument(const clang::TemplateArgument& arg);
 string PrintableTemplateArgumentLoc(const clang::TemplateArgumentLoc& arg);
+string PrintableASTNode(const ASTNode* node);
 // This prints to errs().  It's useful for debugging (e.g. inside gdb).
 void PrintASTNode(const ASTNode* node);
+void PrintStmt(const clang::Stmt* stmt);
 
 // --- Type conversion utilities.
 
