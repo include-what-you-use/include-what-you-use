@@ -1,4 +1,7 @@
 # Mappings for GNU libc
+# ( cd /usr/include && grep '^ *# *include' {sys/,net/,}* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { include: [ "<$2>", private, "<$1>", public ] },@' | grep bits/ | sort )
+# When I saw more than one mapping for these, I typically picked
+# what I thought was the "best" one.
 [
   { include: [ "<bits/a.out.h>", private, "<a.out.h>", public ] },
   { include: [ "<bits/byteswap.h>", private, "<byteswap.h>", public ] },

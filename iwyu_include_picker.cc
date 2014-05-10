@@ -76,6 +76,19 @@ namespace {
 
 // Symbol -> include mappings for GNU libc
 const IncludeMapEntry libc_symbol_map[] = {
+  // For library symbols that can be defined in more than one header
+  // file, maps from symbol-name to legitimate header files.
+  // This list was generated via
+  // grep -R '__.*_defined' /usr/include | perl -nle 'm,/usr/include/([^:]*):#\s*\S+ __(.*)_defined, and print qq@    { "$2", kPublic, "<$1>", kPublic },@' | sort -u
+  // I ignored all entries that only appeared once on the list (eg uint32_t).
+  // I then added in NULL, which according to [diff.null] C.2.2.3, can
+  // be defined in <clocale>, <cstddef>, <cstdio>, <cstdlib>,
+  // <cstring>, <ctime>, or <cwchar>.  We also allow their C
+  // equivalents.
+  // In each case, I ordered them so <sys/types.h> was first, if it was
+  // an option for this type.  That's the preferred #include all else
+  // equal.  The visibility on the symbol-name is ignored; by convension
+  // we always set it to kPrivate.
   { "blksize_t", kPrivate, "<sys/types.h>", kPublic },
   { "blkcnt_t", kPrivate, "<sys/stat.h>", kPublic },
   { "blkcnt_t", kPrivate, "<sys/types.h>", kPublic },
