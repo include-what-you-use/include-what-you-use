@@ -3,6 +3,5 @@
   { ref: gcc.libc.imp },
   { ref: gcc.symbols.imp },
   { ref: gcc.stl.headers.imp },
-  { ref: google.imp },
   { ref: third_party.imp }
 ]
