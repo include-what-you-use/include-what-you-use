@@ -72,9 +72,10 @@ add_executable(include-what-you-use
 )
 
 if( MSVC )
-  # Disable warnings for IWYU
+  # Disable warnings for IWYU, and disable exceptions in MSVC's STL.
   add_definitions(
     -wd4722 # Suppress ''destructor'' : destructor never returns, potential memory leak
+    -D_HAS_EXCEPTIONS=0
   )
 
   # Put project in solution folder
