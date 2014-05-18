@@ -1357,7 +1357,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   //    #define SIZE_IN_FOOS(ptr)  ( sizeof(*ptr) / sizeof(Foo) )
   // Here the type of *ptr is the responsibility of the caller, while the
   // type of Foo is the responsibility of the author, even though the
-  // Epxrs for *ptr and Foo are both located inside the macro (the Expr
+  // Exprs for *ptr and Foo are both located inside the macro (the Expr
   // for ptr is located at the macro-calling site, but not for *ptr).
   // To help us guess the owner, we use this rule: if the macro-file
   // intends-to-provide the type, then we keep ownership of the type
@@ -2958,7 +2958,7 @@ class InstantiatedTemplateVisitor
   //   We say the template-as-written does provide the decl if it, or
   // any other header seen since we started instantiating the
   // template, sees it.  The latter requirement is to deal with a
-  // sitaution like this: we have a templated class that #includes
+  // situation like this: we have a templated class that #includes
   // "foo.h" and has a scoped_ptr<Foo>; we say the templated class
   // provides Foo, even though it's scoped_ptr.h that's actually
   // trying to call Foo::Foo and Foo::~Foo.
