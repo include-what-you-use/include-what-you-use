@@ -14,12 +14,12 @@
 
 #include <ctype.h>
 #include <stdint.h>
+#include <memory>
 #include <set>
 #include <string>
 #include <utility>
 
 #include "llvm/ADT/ArrayRef.h"  // IWYU pragma: keep
-#include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/FileSystem.h"
@@ -53,7 +53,6 @@ using clang::driver::Driver;
 using clang::driver::JobList;
 using llvm::IntrusiveRefCntPtr;
 using llvm::LLVMContext;
-using llvm::OwningPtr;
 using llvm::SmallString;
 using llvm::SmallVector;
 using llvm::SmallVectorImpl;
@@ -65,6 +64,7 @@ using llvm::isa;
 using llvm::raw_svector_ostream;
 using llvm::sys::getDefaultTargetTriple;
 using std::set;
+using std::unique_ptr;
 
 namespace include_what_you_use {
 
@@ -85,7 +85,7 @@ void ExpandArgsFromBuf(const char *Arg,
                        SmallVectorImpl<const char*> &ArgVector,
                        set<std::string> &SavedStrings) {
   const char *FName = Arg + 1;
-  OwningPtr<MemoryBuffer> MemBuf;
+  unique_ptr<MemoryBuffer> MemBuf;
   if (MemoryBuffer::getFile(FName, MemBuf)) {
     ArgVector.push_back(SaveStringInSet(SavedStrings, Arg));
     return;
@@ -179,7 +179,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   // recognize. We need to extend the driver library to support this use model
   // (basically, exactly one input, and the operation mode is hard wired).
   args.push_back("-fsyntax-only");
-  OwningPtr<Compilation> compilation(driver.BuildCompilation(args));
+  unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
   if (!compilation)
     return NULL;
 
@@ -206,7 +206,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   const ArgStringList &cc_arguments = command->getArguments();
   const char** args_start = const_cast<const char**>(cc_arguments.data());
   const char** args_end = args_start + cc_arguments.size();
-  OwningPtr<CompilerInvocation> invocation(new CompilerInvocation);
+  unique_ptr<CompilerInvocation> invocation(new CompilerInvocation);
   CompilerInvocation::CreateFromArgs(*invocation,
                                      args_start, args_end, diagnostics);
   invocation->getFrontendOpts().DisableFree = false;
@@ -223,7 +223,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   // Create a compiler instance to handle the actual work.
   // The caller will be responsible for freeing this.
   CompilerInstance* compiler = new CompilerInstance;
-  compiler->setInvocation(invocation.take());
+  compiler->setInvocation(invocation.release());
 
   // Create the compilers actual diagnostics engine.
   compiler->createDiagnostics();

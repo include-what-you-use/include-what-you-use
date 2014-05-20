@@ -3722,9 +3722,9 @@ class IwyuAction : public ASTFrontendAction {
 
 } // namespace include_what_you_use
 
+#include <memory>
 #include "iwyu_driver.h"
 #include "clang/Frontend/FrontendAction.h"
-#include "llvm/ADT/OwningPtr.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -3744,11 +3744,11 @@ int main(int argc, char **argv) {
   //   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu --other_iwyu_flag]... CLANG_FLAGS... foo.cc
   OptionsParser options_parser(argc, argv);
 
-  llvm::OwningPtr<clang::CompilerInstance> compiler(CreateCompilerInstance(
+  std::unique_ptr<clang::CompilerInstance> compiler(CreateCompilerInstance(
       options_parser.clang_argc(), options_parser.clang_argv()));
   if (compiler) {
     // Create and execute the frontend to generate an LLVM bitcode module.
-    llvm::OwningPtr<clang::ASTFrontendAction> action(new IwyuAction);
+    std::unique_ptr<clang::ASTFrontendAction> action(new IwyuAction);
     compiler->ExecuteAction(*action);
   }
 
