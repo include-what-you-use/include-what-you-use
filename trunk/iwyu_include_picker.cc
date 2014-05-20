@@ -15,6 +15,7 @@
 #include <iterator>                     // for find
 // not hash_map: it's not as portable and needs hash<string>.
 #include <map>                          // for map, map<>::mapped_type, etc
+#include <memory>
 #include <ostream>
 #include <string>                       // for string, basic_string, etc
 #include <utility>                      // for pair, make_pair
@@ -26,7 +27,6 @@
 #include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
 
-#include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileSystem.h"
@@ -42,10 +42,10 @@ using std::make_pair;
 using std::map;
 using std::pair;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 using llvm::MemoryBuffer;
-using llvm::OwningPtr;
 using llvm::SourceMgr;
 using llvm::error_code;
 using llvm::errs;
@@ -1283,7 +1283,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
                                         const vector<string>& search_path) {
   string absolute_path = FindFileInSearchPath(search_path, filename);
 
-  OwningPtr<MemoryBuffer> buffer;
+  unique_ptr<MemoryBuffer> buffer;
   error_code error = MemoryBuffer::getFile(absolute_path, buffer);
   if (error) {
     errs() << "Cannot open mapping file '" << absolute_path << "': "
@@ -1294,7 +1294,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
   VERRS(5) << "Adding mappings from file '" << absolute_path << "'.\n";
 
   SourceMgr source_manager;
-  Stream json_stream(buffer.take(), source_manager);
+  Stream json_stream(buffer.release(), source_manager);
 
   document_iterator stream_begin = json_stream.begin();
   if (stream_begin == json_stream.end())
