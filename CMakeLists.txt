@@ -125,16 +125,23 @@ target_link_libraries(include-what-you-use
 )
 
 # Platform dependencies.
-if( WIN32 )
+if( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   target_link_libraries(include-what-you-use
     shlwapi
   )
 else()
+  # POSIX
   target_link_libraries(include-what-you-use
     pthread
-    dl
     curses
   )
+
+  # Only Linux targets need dl for dynamic linking.
+  if( CMAKE_SYSTEM_NAME MATCHES "Linux" )
+    target_link_libraries(include-what-you-use
+      dl
+    )
+  endif()
 endif()
 
 install(TARGETS include-what-you-use
