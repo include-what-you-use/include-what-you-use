@@ -631,14 +631,13 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
           //sema.DefineImplicitCopyConstructor(CurrentLoc(), ctor);
         }
       }
-      if (ctor->getTemplateInstantiationPattern())
-        sema.PendingInstantiations.push_back(make_pair(ctor, CurrentLoc()));
+      // Unreferenced template constructors stay uninstantiated on purpose.
     }
 
     if (CXXDestructorDecl* dtor = sema.LookupDestructor(decl)) {
       if (!dtor->hasBody() && dtor->isImplicit())
         sema.DefineImplicitDestructor(CurrentLoc(), dtor);
-      if (dtor->getTemplateInstantiationPattern())
+      if (!dtor->isDefined() && dtor->getTemplateInstantiationPattern())
         sema.PendingInstantiations.push_back(make_pair(dtor, CurrentLoc()));
     }
 
