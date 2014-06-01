@@ -438,6 +438,12 @@ string PrintableASTNode(const ASTNode* node);
 void PrintASTNode(const ASTNode* node);
 void PrintStmt(const clang::Stmt* stmt);
 
+// Written name means name without unwritten scopes.  Unwritten scopes are
+// anonymous and inline namespaces.  Always consider using
+// GetWrittenQualifiedNameAsString instead of
+// NamedDecl::getQualifiedNameAsString.
+string GetWrittenQualifiedNameAsString(const clang::NamedDecl* named_decl);
+
 // --- Type conversion utilities.
 
 namespace internal {

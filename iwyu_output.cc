@@ -110,7 +110,7 @@ string GetQualifiedNameAsString(const clang::NamedDecl* named_decl) {
   if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
     return fake->qual_name();
   }
-  return named_decl->getQualifiedNameAsString();
+  return GetWrittenQualifiedNameAsString(named_decl);
 }
 
 // Name we put in the comments next to an #include.
