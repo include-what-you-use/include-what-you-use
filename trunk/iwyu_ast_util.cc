@@ -24,6 +24,7 @@
 #include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -471,6 +472,16 @@ string PrintableASTNode(const ASTNode* node) {
 void PrintASTNode(const ASTNode* node) {
   DumpASTNode(errs(), node);
   errs() << "\n";
+}
+
+string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl) {
+  std::string retval;
+  llvm::raw_string_ostream ostream(retval);
+  clang::PrintingPolicy printing_policy =
+      named_decl->getASTContext().getPrintingPolicy();
+  printing_policy.SuppressUnwrittenScope = true;
+  named_decl->printQualifiedName(ostream, printing_policy);
+  return ostream.str();
 }
 
 // --- Utilities for Template Arguments.
