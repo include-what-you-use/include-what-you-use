@@ -1409,6 +1409,21 @@ def _IsMainCUInclude(line_info, filename):
   return False
 
 
+def _GetPathRoot(path):
+  """ Return the root of a path, i.e. the first path component.
+  We allow / as an alternative path separator on Windows because it helps with
+  testing and forward slashes are common even on Windows in portable codebases.
+  """
+  first_sep = path.find(os.path.sep)
+  if os.path.sep != '/' and first_sep == -1:
+    first_sep = path.find('/')
+
+  if first_sep == -1:
+    return None
+
+  return path[0:first_sep]
+
+
 def _IsSameProject(line_info, edited_file, project):
   """Return true if included file and edited file are in the same project.
 
@@ -1432,10 +1447,9 @@ def _IsSameProject(line_info, edited_file, project):
   included_file = line_info.key[1:]
   if project != '<tld>':
     return included_file.startswith(project)
-  included_root = included_file.find(os.path.sep)
-  edited_root = edited_file.find(os.path.sep)
-  return (included_root > -1 and edited_root > -1 and
-          included_file[0:included_root] == edited_file[0:edited_root])
+  included_root = _GetPathRoot(included_file)
+  edited_root = _GetPathRoot(edited_file)
+  return (included_root and edited_root and included_root == edited_root)
 
 
 def _GetLineKind(file_line, filename, separate_project_includes):
@@ -2309,7 +2323,8 @@ def main(argv):
 
   if (flags.separate_project_includes and
       not flags.separate_project_includes.startswith('<') and  # 'special' vals
-      not flags.separate_project_includes.endswith(os.path.sep)):
+      not flags.separate_project_includes.endswith(os.path.sep) and
+      not flags.separate_project_includes.endswith('/')):
     flags.separate_project_includes += os.path.sep
 
   if flags.append_to_cl and flags.create_cl_if_possible:
