@@ -50,7 +50,10 @@ endif()
 
 # Pick up SVN revision so we can report it
 # in version information.
-Subversion_WC_INFO(${CMAKE_CURRENT_SOURCE_DIR} IWYU)
+include(FindSubversion)
+if( Subversion_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.svn" )
+  Subversion_WC_INFO(${CMAKE_CURRENT_SOURCE_DIR} IWYU)
+endif()
 add_definitions(
   -DIWYU_SVN_REVISION="${IWYU_WC_REVISION}"
 )
@@ -83,8 +86,8 @@ if( MSVC )
     PROPERTIES FOLDER "Clang executables"
   )
 else()
-  # Disable RTTI to be compatible with LLVM/Clang libraries.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+  # Disable RTTI, use C++11 to be compatible with LLVM/Clang libraries.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -std=c++11")
 endif()
 
 # Clang dependencies.
@@ -115,13 +118,13 @@ target_link_libraries(include-what-you-use
   LLVMipa
   LLVMAnalysis
   LLVMTarget
-  LLVMMC # Object, Support
+  LLVMOption # Support
   LLVMMCParser # MC, Support
-  LLVMObject # Support
+  LLVMMC # Object, Support
+  LLVMObject # BitReader, Core, Support
+  LLVMBitReader # Core, Support
   LLVMCore # Support
   LLVMSupport
-  LLVMBitReader
-  LLVMOption
 )
 
 # Platform dependencies.
@@ -131,9 +134,11 @@ if( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   )
 else()
   # POSIX
+  include(FindCurses)
   target_link_libraries(include-what-you-use
     pthread
-    curses
+    z
+    ${CURSES_LIBRARIES}
   )
 
   # Only Linux targets need dl for dynamic linking.
