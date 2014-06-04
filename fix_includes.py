@@ -1367,9 +1367,13 @@ def _IsMainCUInclude(line_info, filename):
   For instance, if we are editing foo.cc, foo.h is a main-CU #include, as
   is foo-inl.h.  The same holds if we are editing foo_test.cc.
 
-  The algorithm is like so: first, remove the following extensions
-  from both the includer and includee to get the 'canonical' name:
-     -inl.h  .h  _unittest.cc  _regtest.cc  _test.cc  .cc  .c
+  The algorithm is like so: first, canonicalize the includee by removing the
+  following suffixes:
+     -inl.h  .h
+
+  Then canonicalize the includer by removing file extension and then the
+  following suffixes:
+     _unittest  _regtest  _test
 
   Rule 1: If the canonical names (filenames after removal) match --
   including all directories -- the .h file is a main-cu #include.
@@ -1388,13 +1392,13 @@ def _IsMainCUInclude(line_info, filename):
   """
   if line_info.type != _INCLUDE_RE or _IsSystemInclude(line_info):
     return False
-  # First, normalize the filenames by getting rid of -inl.h and .h
-  # suffixes (for the #include) and _test.cc and .cc extensions (for
-  # the filename).  We also get rid of the "'s around the #include line.
+  # First, normalize the includee by getting rid of -inl.h and .h
+  # suffixes (for the #include) and the "'s around the #include line.
   canonical_include = re.sub(r'(-inl\.h|\.h)$',
                              '', line_info.key.replace('"', ''))
-  canonical_file = re.sub(r'(_unittest\.cc|_regtest\.cc|_test\.cc|\.cc|\.c)$',
-                          '', filename)
+  # Then normalize includer by stripping extension and Google's test suffixes.
+  canonical_file, _ = os.path.splitext(filename)
+  canonical_file = re.sub(r'(_unittest|_regtest|_test)$', '', canonical_file)
   # .h files in /public/ match .cc files in /internal/.
   canonical_include2 = re.sub(r'/public/', '/internal/', canonical_include)
 
