@@ -9,8 +9,8 @@
 
 // We have special-case code to deal with foo::iterator, for various
 // STL classes foo.  They are complicated because they often map to
-// __normal_iterator<foo>, and we have to map back.  There are also
-// issues with reverse_iterator.
+// __normal_iterator<foo> or __wrap_iter<>, and we have to map back.
+// There are also issues with reverse_iterator.
 //
 // Basically, we don't want any of the code below to result in an
 // #include of <iterator>
