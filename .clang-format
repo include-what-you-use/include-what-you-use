@@ -1,1 +1,3 @@
 BasedOnStyle: Google
+AllowShortBlocksOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: false
