@@ -1246,7 +1246,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // IWYU logic.
 
   // Helper for MapPrivateDeclToPublicDecl.  Returns true if the decl
-  // is a template specialization whose (fully qualified) name matches
+  // is a template specialization whose (written qualified) name matches
   // the given name, has the given number of template arguments, and
   // whose specified tpl argument is a type.
   bool DeclIsTemplateWithNameAndNumArgsAndTypeArg(
@@ -1255,7 +1255,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const ClassTemplateSpecializationDecl* tpl_decl = DynCastFrom(decl);
     if (!tpl_decl)
       return false;
-    const string actual_name = tpl_decl->getQualifiedNameAsString();
+    const string actual_name = GetWrittenQualifiedNameAsString(tpl_decl);
     if (name != actual_name)
       return false;
     const TemplateArgumentList& tpl_args = tpl_decl->getTemplateArgs();
@@ -1276,27 +1276,28 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return tpl_args.get(type_arg_idx).getAsType().getTypePtr();
   }
 
-  // Some types, such as __gnu_cxx::__normal_iterator, are private
-  // types that should not be exposed to the user.  Instead, they're
+  // Some types, such as __gnu_cxx::__normal_iterator or std::__wrap_iter, are
+  // private types that should not be exposed to the user.  Instead, they're
   // exposed to the user via typedefs, like vector::iterator.
   // Sometimes, the typedef gets lost (such as for find(myvec.begin(),
   // myvec.end(), foo)), so we need to manually map back.  We map
-  // __normal_iterator<foo, vector> to vector<>, assuming that the
-  // vector<> class includes the typedef.  Likewise, we map any free
-  // function taking a __normal_iterator<foo, vector> (such as
-  // operator==) to vector<>, assuming that that (templatized)
-  // function is instantiated as part of the vector class.
-  //    We do something similar for _List_iterator and
-  // _List_const_iterator.  These private names are defined in stl_list.h,
-  // so we don't need to re-map them, but we do want to re-map
-  // reverse_iterator<_List_iterator> to something in stl_list.h.
+  // __normal_iterator<foo, vector> to vector<> and __wrap_iter<foo> to foo,
+  // assuming that the vector<> class includes the typedef.  Likewise, we map
+  // any free function taking a private iterator (such as operator==) the
+  // same way, assuming that that (templatized) function is instantiated
+  // as part of the vector class.
+  //    We do something similar for _List_iterator and _List_const_iterator
+  // from GNU libstdc++, and for __list_iterator and __list_const_iterator
+  // from libc++.  These private names are defined in stl_list.h and list
+  // respectively, so we don't need to re-map them, but we do want to re-map
+  // reverse_iterator<_List_iterator> to something in list header.
   //    If the input decl does not correspond to one of these private
   // decls, we return NULL.  This method is actually a helper for
   // MapPrivateDeclToPublicDecl() and MapPrivateTypeToPublicType().
   const Type* MapPrivateDeclToPublicType(const NamedDecl* decl) const {
     const NamedDecl* class_decl = decl;
-    // If we're a member method, then the __normal_iterator will be
-    // the parent: __normal_iterator::operator=.  If we're a free
+    // If we're a member method, then the __normal_iterator or __wrap_iter will
+    // be the parent: __normal_iterator::operator=.  If we're a free
     // overloaded operator, then the __normal_iterator will be the
     // first argument: operator==(__normal_iterator<...>& lhs, ...);
     if (const CXXMethodDecl* method_decl = DynCastFrom(class_decl)) {
@@ -1309,27 +1310,37 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
     }
 
-    // In addition to __normal_iterator<x>, we want to handle
-    // reverse_iterator<__normal_iterator<x>>, and in the same way.
+    // In addition to __normal_iterator<x> and __wrap_iter<x>, we want
+    // to handle reverse_iterator<__normal_iterator<x>>, and in the same way.
     if (DeclIsTemplateWithNameAndNumArgsAndTypeArg(
             class_decl, "std::reverse_iterator", 1, 0)) {
-      const Type* ni_type = GetTplTypeArg(class_decl, 0);
-      // Gets class_decl to be '__normal_iterator<x>'.
-      class_decl = TypeToDeclAsWritten(ni_type);
+      const Type* reversed_iterator_type = GetTplTypeArg(class_decl, 0);
+      // Gets class_decl to be reversed iterator.
+      class_decl = TypeToDeclAsWritten(reversed_iterator_type);
 
       // If it's reverse_iterator<_List_iterator>, map to
-      // _List_iterator, which is defined in stl_list like we want.
+      // _List_iterator, which is defined in stl_list like we want.  Also map
+      // reverse_iterator<__list_iterator> to __list_iterator which is defined
+      // in list.
       if (DeclIsTemplateWithNameAndNumArgsAndTypeArg(
               class_decl, "std::_List_iterator", 1, 0) ||
           DeclIsTemplateWithNameAndNumArgsAndTypeArg(
-              class_decl, "std::_List_const_iterator", 1, 0)) {
-        return ni_type;
+              class_decl, "std::_List_const_iterator", 1, 0) ||
+          DeclIsTemplateWithNameAndNumArgsAndTypeArg(
+              class_decl, "std::__list_iterator", 2, 0) ||
+          DeclIsTemplateWithNameAndNumArgsAndTypeArg(
+              class_decl, "std::__list_const_iterator", 2, 0)) {
+        return reversed_iterator_type;
       }
     }
 
     if (DeclIsTemplateWithNameAndNumArgsAndTypeArg(
             class_decl, "__gnu_cxx::__normal_iterator", 2, 1)) {
       return GetTplTypeArg(class_decl, 1);
+    }
+    if (DeclIsTemplateWithNameAndNumArgsAndTypeArg(
+            class_decl, "std::__wrap_iter", 1, 0)) {
+      return GetTplTypeArg(class_decl, 0);
     }
 
     return NULL;
