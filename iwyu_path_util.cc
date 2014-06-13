@@ -11,6 +11,7 @@
 
 #include <stddef.h>
 #include <string.h>                     // for strlen
+#include <system_error>
 
 #include "iwyu_stl_util.h"
 
@@ -19,7 +20,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/system_error.h"
 
 namespace include_what_you_use {
 
@@ -147,7 +147,7 @@ bool IsAbsolutePath(const string& path) {
 
 string MakeAbsolutePath(const string& path) {
   llvm::SmallString<128> absolute_path(path.c_str());
-  llvm::error_code error = llvm::sys::fs::make_absolute(absolute_path);
+  std::error_code error = llvm::sys::fs::make_absolute(absolute_path);
   CHECK_(!error);
 
   return absolute_path.str();

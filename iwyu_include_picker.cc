@@ -18,6 +18,7 @@
 #include <memory>
 #include <ostream>
 #include <string>                       // for string, basic_string, etc
+#include <system_error>                 // for error_code
 #include <utility>                      // for pair, make_pair
 #include <vector>                       // for vector, vector<>::iterator
 
@@ -35,7 +36,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/system_error.h"
 
 using std::find;
 using std::make_pair;
@@ -47,7 +47,6 @@ using std::vector;
 
 using llvm::MemoryBuffer;
 using llvm::SourceMgr;
-using llvm::error_code;
 using llvm::errs;
 using llvm::yaml::MappingNode;
 using llvm::yaml::Node;
@@ -1284,7 +1283,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
   string absolute_path = FindFileInSearchPath(search_path, filename);
 
   unique_ptr<MemoryBuffer> buffer;
-  error_code error = MemoryBuffer::getFile(absolute_path, buffer);
+  std::error_code error = MemoryBuffer::getFile(absolute_path, buffer);
   if (error) {
     errs() << "Cannot open mapping file '" << absolute_path << "': "
            << error.message() << ".\n";
