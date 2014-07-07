@@ -30,6 +30,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
@@ -1282,9 +1283,9 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
                                         const vector<string>& search_path) {
   string absolute_path = FindFileInSearchPath(search_path, filename);
 
-  unique_ptr<MemoryBuffer> buffer;
-  std::error_code error = MemoryBuffer::getFile(absolute_path, buffer);
-  if (error) {
+  llvm::ErrorOr<unique_ptr<MemoryBuffer> > bufferOrError =
+      MemoryBuffer::getFile(absolute_path);
+  if (std::error_code error = bufferOrError.getError()) {
     errs() << "Cannot open mapping file '" << absolute_path << "': "
            << error.message() << ".\n";
     return;
@@ -1293,7 +1294,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
   VERRS(5) << "Adding mappings from file '" << absolute_path << "'.\n";
 
   SourceMgr source_manager;
-  Stream json_stream(buffer.release(), source_manager);
+  Stream json_stream(bufferOrError.get().release(), source_manager);
 
   document_iterator stream_begin = json_stream.begin();
   if (stream_begin == json_stream.end())

@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/ArrayRef.h"  // IWYU pragma: keep
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -50,6 +51,7 @@ using clang::driver::Command;
 using clang::driver::Compilation;
 using clang::driver::Driver;
 using clang::driver::JobList;
+using llvm::ErrorOr;
 using llvm::IntrusiveRefCntPtr;
 using llvm::LLVMContext;
 using llvm::SmallString;
@@ -84,13 +86,13 @@ void ExpandArgsFromBuf(const char *Arg,
                        SmallVectorImpl<const char*> &ArgVector,
                        set<std::string> &SavedStrings) {
   const char *FName = Arg + 1;
-  unique_ptr<MemoryBuffer> MemBuf;
-  if (MemoryBuffer::getFile(FName, MemBuf)) {
+  ErrorOr<unique_ptr<MemoryBuffer> > MemBufOrErr = MemoryBuffer::getFile(FName);
+  if (!MemBufOrErr) {
     ArgVector.push_back(SaveStringInSet(SavedStrings, Arg));
     return;
   }
 
-  const char *Buf = MemBuf->getBufferStart();
+  const char *Buf = MemBufOrErr.get()->getBufferStart();
   char InQuote = ' ';
   std::string CurArg;
 
