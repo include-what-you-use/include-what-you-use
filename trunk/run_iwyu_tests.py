@@ -79,6 +79,7 @@ class OneIwyuTest(unittest.TestCase):
                       self.Include('prefix_header_includes-d3.h'),
                       self.Include('prefix_header_includes-d4.h')]
     clang_flags_map = {
+      'alias_template.cc': ['-std=c++11'],
       'auto_type_within_template.cc': ['-std=c++11'],
       'conversion_ctor.cc': ['-std=c++11'],
       'ms_inline_asm.cc': ['-fms-extensions'],
