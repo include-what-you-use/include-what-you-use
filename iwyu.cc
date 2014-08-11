@@ -95,6 +95,7 @@
 #include <iterator>                     // for find
 #include <list>                         // for swap
 #include <map>                          // for map, swap, etc
+#include <memory>                       // for unique_ptr
 #include <set>                          // for set, set<>::iterator, swap
 #include <string>                       // for string, operator+, etc
 #include <utility>                      // for pair, make_pair
@@ -3716,29 +3717,27 @@ class IwyuAstConsumer
 // We use an ASTFrontendAction to hook up IWYU with Clang.
 class IwyuAction : public ASTFrontendAction {
  protected:
-  virtual ASTConsumer* CreateASTConsumer(CompilerInstance& compiler,  // NOLINT
-                                         llvm::StringRef /* dummy */) {
+  virtual std::unique_ptr<ASTConsumer> CreateASTConsumer(
+      CompilerInstance& compiler,  // NOLINT
+      llvm::StringRef /* dummy */) {
     // Do this first thing after getting our hands on a CompilerInstance.
     InitGlobals(&compiler.getSourceManager(),
                 &compiler.getPreprocessor().getHeaderSearchInfo());
 
     IwyuPreprocessorInfo* const preprocessor_consumer
         = new IwyuPreprocessorInfo();
-    VisitorState* const visitor_state
-        = new VisitorState(&compiler, *preprocessor_consumer);
-    IwyuAstConsumer* const ast_consumer
-        = new IwyuAstConsumer(visitor_state);
-
     compiler.getPreprocessor().addPPCallbacks(preprocessor_consumer);
     compiler.getPreprocessor().addCommentHandler(preprocessor_consumer);
-    return ast_consumer;
+
+    VisitorState* const visitor_state
+        = new VisitorState(&compiler, *preprocessor_consumer);
+    return std::unique_ptr<IwyuAstConsumer>(new IwyuAstConsumer(visitor_state));
   }
 };
 
 
 } // namespace include_what_you_use
 
-#include <memory>
 #include "iwyu_driver.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "llvm/Support/ManagedStatic.h"
