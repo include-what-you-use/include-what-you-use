@@ -487,7 +487,8 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 
   // The first #include in every translation unit might be a precompiled header
   // and we need to mark it as such for later analysis.
-  if (num_include_directives_ == 1) {
+  bool is_includer_main_compilation_unit = main_file_ && includer == main_file_;
+  if (is_includer_main_compilation_unit && num_includes_seen_[includer] == 1) {
     CHECK_(includee && "The first #include must be an actual file.");
 
     // Now we know includee is the first included header file. Mark it as
@@ -632,7 +633,6 @@ void IwyuPreprocessorInfo::InclusionDirective(
     StringRef relative_path,
     const clang::Module* imported) {
   include_filename_loc_ = filename_range.getBegin();
-  ++num_include_directives_;
 }
 
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
