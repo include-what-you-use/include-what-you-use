@@ -186,6 +186,7 @@ using clang::NamedDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::OverloadExpr;
+using clang::ParmVarDecl;
 using clang::PPCallbacks;
 using clang::PointerType;
 using clang::QualType;
@@ -3611,7 +3612,6 @@ class IwyuAstConsumer
     // needed: just forward-declare.
     if (CanForwardDeclareType(current_ast_node())) {
       current_ast_node()->set_in_forward_declare_context(true);
-
       if (compiler()->getLangOpts().CPlusPlus) {
         // In C++, if we're already elaborated ('class Foo x') but not
         // namespace-qualified ('class ns::Foo x') there's no need even to
@@ -3622,9 +3622,16 @@ class IwyuAstConsumer
         if (!IsElaborationNode(parent) || IsNamespaceQualifiedNode(parent))
           ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
       } else {
-        // In C, there are no exceptions to the rules, we always need to forward
-        // declare.
-        ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
+        // In C, all struct references are elaborated, so we really never need
+        // to forward-declare. But there's one case where an elaborated struct
+        // decl in a parameter list causes Clang to warn about constrained
+        // visibility, so we recommend forward declaration to avoid the warning.
+        // E.g.
+        //    void init(struct mystruct* s);
+        //      warning: declaration of 'struct mystruct' will not be visible
+        //      outside of this function [-Wvisibility]
+        if (current_ast_node()->template HasAncestorOfType<ParmVarDecl>())
+          ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
       }
       return Base::VisitTagType(type);
     }
