@@ -23,6 +23,10 @@
 // --pch_in_code.
 
 #include "tests/cxx/pch.h"  // this is the precompiled header
+// Associated header needs to be in a subdirectory to provoke
+// first-include-with-same-basename heuristic, which is sensitive to the
+// presence of a PCH.
+#include "tests/cxx/public/pch_in_code.h"
 #include <stdlib.h>  // unused
 #include <stdint.h>  // for int8_t
 #include "tests/cxx/indirect.h"
@@ -40,6 +44,7 @@ tests/cxx/pch_in_code.cc should remove these lines:
 
 The full include-list for tests/cxx/pch_in_code.cc:
 #include "tests/cxx/pch.h"
+#include "tests/cxx/public/pch_in_code.h"
 #include <stdint.h>  // for int8_t
 
 ***** IWYU_SUMMARY */
