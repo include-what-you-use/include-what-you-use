@@ -43,6 +43,7 @@ class SourceManager;
 class TagDecl;
 class TemplateDecl;
 class TemplateName;
+class TranslationUnitDecl;
 class TypeDecl;
 class ValueDecl;
 struct ASTTemplateArgumentListInfo;
@@ -506,6 +507,10 @@ const clang::RecordDecl* GetDefinitionForClass(const clang::Decl* decl);
 // of the class declaration (including template<> prefix, etc) to the
 // class name.  Used to determine where forward-declares are.
 clang::SourceRange GetSourceRangeOfClassDecl(const clang::Decl* decl);
+
+// Collect all late-parsed function templates in a translation unit.
+set<clang::FunctionDecl*> GetLateParsedFunctionDecls(
+    clang::TranslationUnitDecl* decl);
 
 // One can't have partial template specialization or default template
 // args for function templates, but they're complicated in their own
