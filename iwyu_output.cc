@@ -1398,65 +1398,116 @@ int IwyuFileInfo::EmitWarningMessages(const vector<OneUse>& uses) {
 }
 
 namespace internal {
+template <class IncludeOrFwdDecl>
+bool Contains(const vector<OneIncludeOrForwardDeclareLine>& lines,
+              const IncludeOrFwdDecl& item) {
+  return std::any_of(lines.begin(), lines.end(),
+                     [&](const OneIncludeOrForwardDeclareLine& line) {
+    return line.matches(item);
+  });
+}
+
+template <class ContainerType>
+void ClearDesiredForSurplusIncludesOrForwardDeclares(ContainerType& container) {
+  // Traverse multimap key by key.
+  for (typename ContainerType::iterator k = container.begin();
+       k != container.end(); k = container.upper_bound(k->first)) {
+    // For each key, mark all but the first value as undesirable.
+    typename ContainerType::iterator v = ++container.lower_bound(k->first);
+    typename ContainerType::iterator vend = container.upper_bound(k->first);
+    for (; v != vend; ++v) {
+      v->second->clear_desired();
+    }
+  }
+}
+
 void CalculateDesiredIncludesAndForwardDeclares(
     const vector<OneUse>& uses,
     const set<string>& associated_desired_includes,
     vector<OneIncludeOrForwardDeclareLine>* lines) {
-  // We'll want to be able to map from decl or fwd-declare to the
-  // line where we found it.  We store an index into lines.
-  map<string, int> include_map;
-  map<const NamedDecl*, int> fwd_decl_map;
-  int index = 0;
-  for (Each<OneIncludeOrForwardDeclareLine> it(lines); !it.AtEnd(); ++it) {
-    if (it->IsIncludeLine())
-      include_map[it->quoted_include()] = index;
-    else
-      fwd_decl_map[it->fwd_decl()] = index;
-    ++index;
-  }
-
-  for (Each<OneUse> use(&uses); !use.AtEnd(); ++use) {
-    if (use->ignore_use())
+  // First make sure all uses' includes and fwd decls are reflected in lines.
+  for (const OneUse& use : uses) {
+    if (use.ignore_use())
       continue;
-    // Update the appropriate map depending on the type of use.
-    if (use->is_full_use()) {
-      CHECK_(use->has_suggested_header() && "Full uses should have #includes");
-      if (!ContainsKey(include_map, use->suggested_header())) {  // must be added
-        lines->push_back(OneIncludeOrForwardDeclareLine(
-            use->decl_file(), use->suggested_header(), -1));
-        include_map[use->suggested_header()] = lines->size() - 1;
-      }
-      const int index = include_map[use->suggested_header()];
-      (*lines)[index].set_desired();
-      (*lines)[index].AddSymbolUse(use->short_symbol_name());
 
-    // Forward-declare uses that are already satisfied by an #include
-    // have that as their suggested_header.  For the rest, we need to
-    // make sure there's a forward-declare in the current file.
-    } else if (!use->has_suggested_header()) {
-      if (!ContainsKey(fwd_decl_map, use->decl())) {  // must be added
-        lines->push_back(OneIncludeOrForwardDeclareLine(use->decl()));
+    if (use.is_full_use()) {
+      CHECK_(use.has_suggested_header() && "Full uses should have #includes");
+      if (!Contains(*lines, use.suggested_header())) { // must be added
+        lines->push_back(OneIncludeOrForwardDeclareLine(
+            use.decl_file(), use.suggested_header(), -1));
+      }
+    } else if (!use.has_suggested_header()) {
+      // Forward-declare uses that are already satisfied by an #include
+      // have that as their suggested_header.  For the rest, we need to
+      // make sure there's a forward-declare in the current file.
+      if (!Contains(*lines, use.decl())) { // must be added
         // The OneIncludeOrForwardDeclareLine ctor sets up line
         // numbers, but they're for some other file!  Clear them.
+        lines->push_back(OneIncludeOrForwardDeclareLine(use.decl()));
         lines->back().clear_line_numbers();
-        fwd_decl_map[use->decl()] = lines->size() - 1;
       }
-      const int index = fwd_decl_map[use->decl()];
-      (*lines)[index].set_desired();
     }
   }
 
-  // If we satisfy a forward-declare use from a file, let the file
-  // know (this is just for logging).  We do this after the above so
-  // we can make sure include_map is fully populated -- we don't want
+  // From this point on, lines is stable and we can refer to its
+  // OneIncludeOrForwardDeclareLine objects by pointer.
+
+  // We'll want to be able to map from an include or fwd-declare to the
+  // lines where we found them.  There can be multiple includes or fwd-declares
+  // providing the same symbol, so use multimaps for these reverse lookups.
+  typedef multimap<string, OneIncludeOrForwardDeclareLine*> IncludeMap;
+  typedef multimap<const NamedDecl*, OneIncludeOrForwardDeclareLine*>
+      FwdDeclMap;
+
+  IncludeMap include_map;
+  FwdDeclMap fwd_decl_map;
+  for (OneIncludeOrForwardDeclareLine& line : *lines) {
+    if (line.IsIncludeLine())
+      include_map.insert(std::make_pair(line.quoted_include(), &line));
+    else
+      fwd_decl_map.insert(std::make_pair(line.fwd_decl(), &line));
+  }
+
+  // Now run over all full uses and mark used includes as desired.
+  for (const OneUse& use : uses) {
+    if (use.ignore_use())
+      continue;
+
+    if (use.is_full_use()) {
+      // Full uses need a proper include, so mark all corresponding include
+      // lines as desired.
+      auto range = include_map.equal_range(use.suggested_header());
+      for (auto it = range.first; it != range.second; ++it) {
+        it->second->set_desired();
+        it->second->AddSymbolUse(use.short_symbol_name());
+      }
+    }
+  }
+
+  // Mark forward-decl uses. We need to do this in a separate pass because
+  // we need to be sure include_map is fully populated -- we don't want
   // to bother with a "(ptr only)" use if there's already a full use.
-  for (Each<OneUse> use(&uses); !use.AtEnd(); ++use) {
-    if (!use->ignore_use() && !use->is_full_use() && use->has_suggested_header()
-        && ContainsKey(include_map, use->suggested_header())) {
-      const string symbol_name = use->short_symbol_name();
-      const int index = include_map[use->suggested_header()];
-      if (!(*lines)[index].HasSymbolUse(symbol_name))
-        (*lines)[index].AddSymbolUse(symbol_name + " (ptr only)");
+  for (const OneUse& use : uses) {
+    if (use.ignore_use() || use.is_full_use())
+      continue;
+
+    if (!use.has_suggested_header()) {
+      // A forward-declare for a use where there is no suggested header to
+      // provide the symbol is very much desired.
+      auto range = fwd_decl_map.equal_range(use.decl());
+      for (auto it = range.first; it != range.second; ++it) {
+        it->second->set_desired();
+      }
+    } else if (ContainsKey(include_map, use.suggested_header())) {
+      // If we satisfy a forward-declare use from a file, let the file
+      // know (this is just for logging).
+      const string symbol_name = use.short_symbol_name();
+
+      auto range = include_map.equal_range(use.suggested_header());
+      for (auto it = range.first; it != range.second; ++it) {
+        if (!it->second->HasSymbolUse(symbol_name))
+          it->second->AddSymbolUse(symbol_name + " (ptr only)");
+      }
     }
   }
 
@@ -1465,13 +1516,16 @@ void CalculateDesiredIncludesAndForwardDeclares(
   // -- that will cause us to add it when it's unnecessary.  We could
   // choose to actually *remove* the .h here if it's present, to keep
   // #includes to a minimum, but for now we just decline to add it.
-  for (vector<OneIncludeOrForwardDeclareLine>::iterator
-           it = lines->begin(); it != lines->end(); ++it) {
-    if (it->is_desired() && !it->is_present() && it->IsIncludeLine() &&
-        ContainsKey(associated_desired_includes, it->quoted_include())) {
-      it->clear_desired();
+  for (OneIncludeOrForwardDeclareLine& line : *lines) {
+    if (line.is_desired() && !line.is_present() && line.IsIncludeLine() &&
+        ContainsKey(associated_desired_includes, line.quoted_include())) {
+      line.clear_desired();
     }
   }
+
+  // Clear desired for all duplicates.
+  ClearDesiredForSurplusIncludesOrForwardDeclares(include_map);
+  ClearDesiredForSurplusIncludesOrForwardDeclares(fwd_decl_map);
 }
 
 bool IsRemovablePrefixHeader(const FileEntry* file_entry,

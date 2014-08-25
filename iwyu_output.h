@@ -140,6 +140,14 @@ class OneIncludeOrForwardDeclareLine {
     return fwd_decl_;
   }
 
+  bool matches(const string& quoted_include) const {
+    return IsIncludeLine() && (quoted_include_ == quoted_include);
+  }
+
+  bool matches(const clang::NamedDecl* decl) const {
+    return !IsIncludeLine() && (fwd_decl_ == decl);
+  }
+
   void set_present() { is_present_ = true; }
   void set_desired() { is_desired_ = true; }
   void clear_desired() { is_desired_ = false; }
