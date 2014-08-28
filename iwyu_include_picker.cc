@@ -1294,7 +1294,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
   VERRS(5) << "Adding mappings from file '" << absolute_path << "'.\n";
 
   SourceMgr source_manager;
-  Stream json_stream(std::move(bufferOrError.get()), source_manager);
+  Stream json_stream(bufferOrError.get()->getMemBufferRef(), source_manager);
 
   document_iterator stream_begin = json_stream.begin();
   if (stream_begin == json_stream.end())
