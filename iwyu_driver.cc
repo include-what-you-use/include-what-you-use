@@ -189,7 +189,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   // We expect to get back exactly one command job, if we didn't something
   // failed. Extract that job from the compilation.
   const JobList& jobs = compilation->getJobs();
-  if (jobs.size() != 1 || !isa<Command>(*jobs.begin())) {
+  if (jobs.size() != 1 || !isa<Command>(**jobs.begin())) {
     SmallString<256> msg;
     raw_svector_ostream out(msg);
     jobs.Print(out, "; ", true);
@@ -197,14 +197,14 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
     return NULL;
   }
 
-  const Command *command = cast<Command>(*jobs.begin());
-  if (StringRef(command->getCreator().getName()) != "clang") {
+  const Command& command = cast<Command>(**jobs.begin());
+  if (StringRef(command.getCreator().getName()) != "clang") {
     diagnostics.Report(clang::diag::err_fe_expected_clang_command);
     return NULL;
   }
 
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
-  const ArgStringList &cc_arguments = command->getArguments();
+  const ArgStringList &cc_arguments = command.getArguments();
   const char** args_start = const_cast<const char**>(cc_arguments.data());
   const char** args_end = args_start + cc_arguments.size();
   unique_ptr<CompilerInvocation> invocation(new CompilerInvocation);
