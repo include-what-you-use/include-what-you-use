@@ -92,9 +92,7 @@ using std::vector;
 class IwyuPreprocessorInfo : public clang::PPCallbacks,
                              public clang::CommentHandler {
  public:
-  IwyuPreprocessorInfo() : main_file_(NULL),
-                           empty_file_info_(NULL, this, ""),
-                           num_include_directives_(0) {}
+  IwyuPreprocessorInfo() : main_file_(NULL), empty_file_info_(NULL, this, "") {}
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
   void HandlePreprocessingDone();
@@ -360,9 +358,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // other places because it is unclear which inclusion directive filename
   // location corresponds to.
   clang::SourceLocation include_filename_loc_;
-
-  // Count of inclusion directives seen in this translation unit.
-  size_t num_include_directives_;
 };
 
 }  // namespace include_what_you_use
