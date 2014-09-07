@@ -50,6 +50,10 @@
 #include <utility>                      // for pair
 #include <vector>                       // for vector
 
+namespace clang {
+class FileEntry;
+}  // namespace clang
+
 namespace include_what_you_use {
 
 using std::map;
@@ -136,6 +140,8 @@ class IncludePicker {
   // map_to_filepath should be full file-paths.
   bool HasMapping(const string& map_from_filepath,
                   const string& map_to_filepath) const;
+
+  bool IsPublic(const clang::FileEntry* file) const;
 
   // Parses a YAML/JSON file containing mapping directives of various types.
   void AddMappingsFromFile(const string& filename);

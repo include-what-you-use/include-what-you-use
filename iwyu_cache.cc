@@ -66,7 +66,7 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
                                          kFullUseTypes + fulluse_size);
 
   const NamedDecl* tpl_decl = TypeToDeclAsWritten(tpl_type);
-  if (!ContainsKey(fulluse_types, tpl_decl->getQualifiedNameAsString()))
+  if (!ContainsKey(fulluse_types, GetWrittenQualifiedNameAsString(tpl_decl)))
     return map<const Type*, const Type*>();
 
   // The code below doesn't handle template-template args/etc.  None
