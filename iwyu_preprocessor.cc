@@ -507,9 +507,12 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   // foo.cc.  Make sure we ignore self-includes, though!
   // iwyu_output.cc gets upset if a file is its own associated header.
   if (includer == main_file_ && includee != includer &&
-      BelongsToMainCompilationUnit(includer, includee))
-    GetFromFileInfoMap(includer)->AddAssociatedHeader(
-        GetFromFileInfoMap(includee));
+      BelongsToMainCompilationUnit(includer, includee)) {
+    GetFromFileInfoMap(includer)
+        ->AddAssociatedHeader(GetFromFileInfoMap(includee));
+    VERRS(4) << "Marked " << GetFilePath(includee)
+             << " as associated header of " << GetFilePath(includer) << ".\n";
+  }
 
   // Also keep track of what FileEntry we ended up using for this name.
   // Because we use #include-next, the same include-name can map to
@@ -955,18 +958,23 @@ void IwyuPreprocessorInfo::HandlePreprocessingDone() {
 
 bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(
     const FileEntry* includer, const FileEntry* includee) const {
+  // TODO: Should probably have a CHECK_(main_file_), but this method is
+  // currently sometimes called with a NULL main_file_.
   if (!includee)
     return false;
   if (GetCanonicalName(GetFilePath(includee)) ==
       GetCanonicalName(GetFilePath(main_file_)))
     return true;
   // Heuristic: if the main compilation unit's *first* include is
-  // a file with the same basename, assume that it's the 'related'
+  // a file with the same basename, assume that it's the 'associated'
   // .h file, even if the canonical names differ.  This catches
   // cases like 'foo/x.cc' #includes 'foo/public/x.h', or
   // 'foo/mailserver/x.cc' #includes 'foo/public/x.h'.
+  // In the case of pch-in-code make this the *second* include,
+  // as the PCH must always be first.
+  int first_include_index = GlobalFlags().pch_in_code ? 2 : 1;
   if (includer == main_file_ &&
-      ContainsKeyValue(num_includes_seen_, includer, 1)) {
+      ContainsKeyValue(num_includes_seen_, includer, first_include_index)) {
     if (GetCanonicalName(Basename(GetFilePath(includee))) ==
         GetCanonicalName(Basename(GetFilePath(main_file_))))
       return true;
