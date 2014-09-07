@@ -22,6 +22,7 @@
 #include <utility>                      // for pair, make_pair
 #include <vector>                       // for vector, vector<>::iterator
 
+#include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/Basic/FileManager.h"
 
 using std::find;
 using std::make_pair;
@@ -1264,6 +1266,12 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
     }
   }
   return quoted_to == quoted_from;   // indentity mapping, why not?
+}
+
+bool IncludePicker::IsPublic(const clang::FileEntry* file) const {
+  CHECK_(file && "Need existing FileEntry");
+  const string quoted_file = ConvertToQuotedInclude(GetFilePath(file));
+  return (GetVisibility(quoted_file) == kPublic);
 }
 
 // Parses a YAML/JSON file containing mapping directives of various types.

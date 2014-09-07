@@ -857,18 +857,21 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   // Basically, a public header is really an equivalence class of
   // itself and all its direct includes.
   // TODO(csilvers): use AddAssociatedHeaders() to get includes here.
+  const IncludePicker& picker = GlobalIncludePicker();
   for (Each<const FileEntry*, IwyuFileInfo> it(&iwyu_file_info_map_);
        !it.AtEnd(); ++it) {
     const FileEntry* file = it->first;
+    if (file == nullptr)
+      continue;
     intends_to_provide_map_[file].insert(file);  // Everyone provides itself!
-    if (ContainsKey(private_headers_behind, file)) {  // We're a public header.
+    if (picker.IsPublic(file)) {
       AddAllIncludesAsFileEntries(file, &intends_to_provide_map_[file]);
     } else {
       const set<const FileEntry*>& direct_includes
           = it->second.direct_includes_as_fileentries();
       for (Each<const FileEntry*> inc(&direct_includes); !inc.AtEnd(); ++inc) {
         intends_to_provide_map_[file].insert(*inc);
-        if (ContainsKey(private_headers_behind, *inc))
+        if (picker.IsPublic(*inc))
           AddAllIncludesAsFileEntries(*inc, &intends_to_provide_map_[file]);
       }
     }
