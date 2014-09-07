@@ -209,6 +209,7 @@ using clang::TemplateSpecializationKind;
 using clang::TemplateSpecializationType;
 using clang::TemplateTemplateParmDecl;
 using clang::Token;
+using clang::TranslationUnitDecl;
 using clang::Type;
 using clang::TypeLoc;
 using clang::TypedefDecl;
@@ -238,6 +239,21 @@ string IntToString(int i) {
   char buf[64];   // big enough for any number
   snprintf(buf, sizeof(buf), "%d", i);
   return buf;
+}
+
+bool CanIgnoreLocation(SourceLocation loc) {
+  // If we're in a macro expansion, we always want to treat this as
+  // being in the expansion location, never the as-written location,
+  // since that's what the compiler does.  CanIgnoreCurrentASTNode()
+  // is an optimization, so we want to be conservative about what we
+  // ignore.
+  const FileEntry* file_entry = GetFileEntry(loc);
+  const FileEntry* file_entry_after_macro_expansion =
+      GetFileEntry(GetInstantiationLoc(loc));
+
+  // ignore symbols used outside foo.{h,cc} + check_also
+  return (!ShouldReportIWYUViolationsFor(file_entry) &&
+          !ShouldReportIWYUViolationsFor(file_entry_after_macro_expansion));
 }
 
 }  // namespace
@@ -3304,16 +3320,10 @@ class IwyuAstConsumer
   // for whatever reason.  For instance, we can ignore nodes that are
   // neither in the file we're compiling nor in its associated .h file.
   virtual bool CanIgnoreCurrentASTNode() const {
-    // If we're in a macro expansion, we always want to treat this as
-    // being in the expansion location, never the as-written location,
-    // since that's what the compiler does.  CanIgnoreCurrentASTNode()
-    // is an optimization, so we want to be conservative about what we
-    // ignore.
-    const FileEntry* file_entry_after_macro_expansion
-        = GetFileEntry(GetInstantiationLoc(current_ast_node()->GetLocation()));
-    if (!ShouldReportIWYUViolationsFor(CurrentFileEntry()) &&
-        !ShouldReportIWYUViolationsFor(file_entry_after_macro_expansion))
-      return true;               // ignore symbols used outside foo.{h,cc}
+    // If we're outside of foo.{h,cc} and the set of check_also files,
+    // just ignore.
+    if (CanIgnoreLocation(current_ast_node()->GetLocation()))
+      return true;
 
     // If we're a field of a typedef type, ignore us: our rule is that
     // the author of the typedef is responsible for everything
@@ -3360,6 +3370,10 @@ class IwyuAstConsumer
     const_cast<IwyuPreprocessorInfo*>(&preprocessor_info())->
         HandlePreprocessingDone();
 
+    // We run a separate pass to force parsing of late-parsed function
+    // templates.
+    ParseFunctionTemplates(context.getTranslationUnitDecl());
+
     TraverseDecl(context.getTranslationUnitDecl());
 
     // We have to calculate the .h files before the .cc file, since
@@ -3381,6 +3395,31 @@ class IwyuAstConsumer
         ->CalculateAndReportIwyuViolations();
 
     exit(1);  // we need to force the compile to fail so we can re-run.
+  }
+
+  void ParseFunctionTemplates(TranslationUnitDecl* decl) {
+    set<FunctionDecl*> late_parsed_decls = GetLateParsedFunctionDecls(decl);
+    clang::Sema& sema = compiler()->getSema();
+
+    // If we have any late-parsed functions, make sure the
+    // -fdelayed-template-parsing flag is on. Otherwise we don't know where
+    // they came from.
+    CHECK_((compiler()->getLangOpts().DelayedTemplateParsing ||
+            late_parsed_decls.empty()) &&
+           "Should not have late-parsed decls without "
+           "-fdelayed-template-parsing.");
+
+    for (const FunctionDecl* fd : late_parsed_decls) {
+      CHECK_(fd->isLateTemplateParsed());
+
+      if (CanIgnoreLocation(GetLocation(fd)))
+        continue;
+
+      // Force parsing and AST building of the yet-uninstantiated function
+      // template body.
+      clang::LateParsedTemplate* lpt = sema.LateParsedTemplateMap[fd];
+      sema.LateTemplateParser(sema.OpaqueParser, *lpt);
+    }
   }
 
   //------------------------------------------------------------

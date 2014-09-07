@@ -82,6 +82,7 @@ class OneIwyuTest(unittest.TestCase):
       'alias_template.cc': ['-std=c++11'],
       'auto_type_within_template.cc': ['-std=c++11'],
       'conversion_ctor.cc': ['-std=c++11'],
+      'lateparsed_template.cc': ['-fdelayed-template-parsing'],
       'ms_inline_asm.cc': ['-fms-extensions'],
       'prefix_header_attribution.cc': [
           self.Include('prefix_header_attribution-d1.h')],

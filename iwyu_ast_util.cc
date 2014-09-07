@@ -110,6 +110,7 @@ using clang::TemplateDecl;
 using clang::TemplateName;
 using clang::TemplateParameterList;
 using clang::TemplateSpecializationType;
+using clang::TranslationUnitDecl;
 using clang::Type;
 using clang::TypeDecl;
 using clang::TypeLoc;
@@ -640,6 +641,26 @@ SourceRange GetSourceRangeOfClassDecl(const Decl* decl) {
   if (const TemplateDecl* tpl_decl = DynCastFrom(decl))
     return tpl_decl->getSourceRange();
   CHECK_UNREACHABLE_("Cannot get source range for this decl type");
+}
+
+// Use a local RAV implementation to simply collect all FunctionDecls marked for
+// late template parsing. This happens with the flag -fdelayed-template-parsing,
+// which is on by default in MSVC-compatible mode.
+set<FunctionDecl*> GetLateParsedFunctionDecls(TranslationUnitDecl* decl) {
+  struct Visitor : public RecursiveASTVisitor<Visitor> {
+    bool VisitFunctionDecl(FunctionDecl* function_decl) {
+      if (function_decl->isLateTemplateParsed())
+        late_parsed_decls.insert(function_decl);
+      return true;
+    }
+
+    set<FunctionDecl*> late_parsed_decls;
+  };
+
+  Visitor v;
+  v.TraverseDecl(decl);
+
+  return v.late_parsed_decls;
 }
 
 // Helper for the Get*ResugarMap*() functions.  Given a map from
