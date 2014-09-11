@@ -3770,9 +3770,10 @@ class IwyuAction : public ASTFrontendAction {
     InitGlobals(&compiler.getSourceManager(),
                 &compiler.getPreprocessor().getHeaderSearchInfo());
 
-    IwyuPreprocessorInfo* const preprocessor_consumer
-        = new IwyuPreprocessorInfo();
-    compiler.getPreprocessor().addPPCallbacks(preprocessor_consumer);
+    IwyuPreprocessorInfo* const preprocessor_consumer =
+        new IwyuPreprocessorInfo();
+    compiler.getPreprocessor().addPPCallbacks(
+        std::unique_ptr<PPCallbacks>(preprocessor_consumer));
     compiler.getPreprocessor().addCommentHandler(preprocessor_consumer);
 
     VisitorState* const visitor_state
