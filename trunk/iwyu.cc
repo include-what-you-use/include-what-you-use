@@ -3669,7 +3669,7 @@ class IwyuAstConsumer
         //    void init(struct mystruct* s);
         //      warning: declaration of 'struct mystruct' will not be visible
         //      outside of this function [-Wvisibility]
-        if (current_ast_node()->template HasAncestorOfType<ParmVarDecl>())
+        if (current_ast_node()->HasAncestorOfType<ParmVarDecl>())
           ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
       }
       return Base::VisitTagType(type);
