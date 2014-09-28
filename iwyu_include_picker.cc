@@ -429,6 +429,9 @@ const IncludeMapEntry libc_include_map[] = {
   { "<linux/limits.h>", kPrivate, "<limits.h>", kPublic },   // PATH_MAX
   { "<linux/prctl.h>", kPrivate, "<sys/prctl.h>", kPublic },
   { "<sys/ucontext.h>", kPrivate, "<ucontext.h>", kPublic },
+};
+
+const IncludeMapEntry stdlib_c_include_map[] = {
   // Allow the C++ wrappers around C files.  Without these mappings,
   // if you #include <cstdio>, iwyu will tell you to replace it with
   // <stdio.h>, which is where the symbols are actually defined.  We
@@ -439,6 +442,10 @@ const IncludeMapEntry libc_include_map[] = {
   // assert.h with cassert, you'd change it to a public->private
   // mapping.)  Here is how I identified the files to map:
   // $ for i in /usr/include/c++/4.4/c* ; do ls /usr/include/`basename $i | cut -b2-`.h /usr/lib/gcc/*/4.4/include/`basename $i | cut -b2-`.h 2>/dev/null ; done
+  //
+  // These headers are defined in C++14 [headers]p3.  You can get them with
+  // $ sed -n '/begin{floattable}.*{tab:cpp.c.headers}/,/end{floattable}/p' lib-intro.tex | grep tcode | perl -nle 'm/tcode{<c(.*)>}/ && print qq@  { "<$1.h>", kPublic, "<c$1>", kPublic },@' | sort
+  // on https://github.com/cplusplus/draft/blob/master/source/lib-intro.tex
   { "<assert.h>", kPublic, "<cassert>", kPublic },
   { "<complex.h>", kPublic, "<ccomplex>", kPublic },
   { "<ctype.h>", kPublic, "<cctype>", kPublic },
@@ -465,6 +472,65 @@ const IncludeMapEntry libc_include_map[] = {
   { "<uchar.h>", kPublic, "<cuchar>", kPublic },
   { "<wchar.h>", kPublic, "<cwchar>", kPublic },
   { "<wctype.h>", kPublic, "<cwctype>", kPublic },
+};
+
+const char* stdlib_cpp_public_headers[] = {
+  // These headers are defined in C++14 [headers]p2.  You can get them with
+  // $ sed -n '/begin{floattable}.*{tab:cpp.library.headers}/,/end{floattable}/p' lib-intro.tex | grep tcode | perl -nle 'm/tcode{(.*)}/ && print qq@  "$1",@' | sort
+  // on https://github.com/cplusplus/draft/blob/master/source/lib-intro.tex
+  "<algorithm>",
+  "<array>",
+  "<atomic>",
+  "<bitset>",
+  "<chrono>",
+  "<codecvt>",
+  "<complex>",
+  "<condition_variable>",
+  "<deque>",
+  "<exception>",
+  "<forward_list>",
+  "<fstream>",
+  "<functional>",
+  "<future>",
+  "<initializer_list>",
+  "<iomanip>",
+  "<ios>",
+  "<iosfwd>",
+  "<iostream>",
+  "<istream>",
+  "<iterator>",
+  "<limits>",
+  "<list>",
+  "<locale>",
+  "<map>",
+  "<memory>",
+  "<mutex>",
+  "<new>",
+  "<numeric>",
+  "<ostream>",
+  "<queue>",
+  "<random>",
+  "<ratio>",
+  "<regex>",
+  "<scoped_allocator>",
+  "<set>",
+  "<sstream>",
+  "<stack>",
+  "<stdexcept>",
+  "<streambuf>",
+  "<string>",
+  "<strstream>",
+  "<system_error>",
+  "<thread>",
+  "<tuple>",
+  "<type_traits>",
+  "<typeindex>",
+  "<typeinfo>",
+  "<unordered_map>",
+  "<unordered_set>",
+  "<utility>",
+  "<valarray>",
+  "<vector>",
 };
 
 // Private -> public include mappings for GNU libstdc++
@@ -890,8 +956,13 @@ void IncludePicker::AddDefaultMappings() {
 
   AddIncludeMappings(libc_include_map,
       IWYU_ARRAYSIZE(libc_include_map));
+  AddIncludeMappings(stdlib_c_include_map,
+      IWYU_ARRAYSIZE(stdlib_c_include_map));
   AddIncludeMappings(libstdcpp_include_map,
       IWYU_ARRAYSIZE(libstdcpp_include_map));
+
+  AddPublicIncludes(stdlib_cpp_public_headers,
+      IWYU_ARRAYSIZE(stdlib_cpp_public_headers));
 }
 
 void IncludePicker::MarkVisibility(
@@ -1002,6 +1073,13 @@ void IncludePicker::AddSymbolMappings(const IncludeMapEntry* entries,
   for (size_t i = 0; i < count; ++i) {
     const IncludeMapEntry& e = entries[i];
     AddSymbolMapping(e.map_from, e.map_to, e.to_visibility);
+  }
+}
+
+void IncludePicker::AddPublicIncludes(const char** includes, size_t count) {
+  for (size_t i = 0; i < count; ++i) {
+    const char* include = includes[i];
+    MarkVisibility(include, kPublic);
   }
 }
 

@@ -173,6 +173,8 @@ class IncludePicker {
   void AddIncludeMappings(const IncludeMapEntry* entries, size_t count);
   void AddSymbolMappings(const IncludeMapEntry* entries, size_t count);
 
+  void AddPublicIncludes(const char** includes, size_t count);
+
   // Expands the regex keys in filepath_include_map_ and
   // friend_to_headers_map_ by matching them against all source files
   // seen by iwyu.
