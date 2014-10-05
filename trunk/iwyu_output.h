@@ -247,6 +247,10 @@ class IwyuFileInfo {
   void ReportIncludeFileUse(const clang::FileEntry* included_file,
                             const string& quoted_include);
 
+  // This is used when we see an "IWYU pragma: keep" comment
+  // on an include line.
+  void ReportPragmaKeep(const clang::FileEntry* included_file);
+
   // This is used only in iwyu_preprocessor.cc.  TODO(csilvers): revamp?
   const set<const clang::FileEntry*>& direct_includes_as_fileentries() const {
     return direct_includes_as_fileentries_;
@@ -325,6 +329,9 @@ class IwyuFileInfo {
   set<string> direct_includes_;      // key is the quoted include, eg '<set>'
   set<const clang::FileEntry*> direct_includes_as_fileentries_;
   set<const clang::NamedDecl*> direct_forward_declares_;
+
+  // Holds any files included with the "IWYU pragma: keep" comment.
+  set<const clang::FileEntry*> kept_includes_;
 
   // What we will recommend the #includes to be.
   set<string> desired_includes_;

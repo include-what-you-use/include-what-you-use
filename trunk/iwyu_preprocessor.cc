@@ -394,6 +394,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep") ||
       IncludeLineHasText(includer_loc, "/* IWYU pragma: keep")) {
     protect_reason = "pragma_keep";
+    FileInfoFor(includer)->ReportPragmaKeep(includee);
 
   } else if (IncludeLineHasText(includer_loc, "// IWYU pragma: export") ||
              IncludeLineHasText(includer_loc, "/* IWYU pragma: export") ||
