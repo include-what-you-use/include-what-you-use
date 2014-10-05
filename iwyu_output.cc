@@ -532,6 +532,9 @@ void IwyuFileInfo::ReportIncludeFileUse(const clang::FileEntry* included_file,
   LogSymbolUse("Marked use of include-file", symbol_uses_.back());
 }
 
+void IwyuFileInfo::ReportPragmaKeep(const clang::FileEntry* included_file) {
+  kept_includes_.insert(included_file);
+}
 
 void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
                                            const NamedDecl* decl,
@@ -1424,6 +1427,7 @@ void ClearDesiredForSurplusIncludesOrForwardDeclares(ContainerType& container) {
 void CalculateDesiredIncludesAndForwardDeclares(
     const vector<OneUse>& uses,
     const set<string>& associated_desired_includes,
+    const set<const FileEntry*>& kept_includes,
     vector<OneIncludeOrForwardDeclareLine>* lines) {
   // First make sure all uses' includes and fwd decls are reflected in lines.
   for (const OneUse& use : uses) {
@@ -1526,6 +1530,14 @@ void CalculateDesiredIncludesAndForwardDeclares(
   // Clear desired for all duplicates.
   ClearDesiredForSurplusIncludesOrForwardDeclares(include_map);
   ClearDesiredForSurplusIncludesOrForwardDeclares(fwd_decl_map);
+
+  // Now reset all files included with "IWYU pragma: keep" as desired.
+  for (OneIncludeOrForwardDeclareLine& line : *lines) {
+    if (!line.is_desired() && line.IsIncludeLine() &&
+        ContainsKey(kept_includes, line.included_file())) {
+      line.set_desired();
+    }
+  }
 }
 
 bool IsRemovablePrefixHeader(const FileEntry* file_entry,
@@ -1769,7 +1781,7 @@ int IwyuFileInfo::CalculateAndReportIwyuViolations() {
   CalculateIwyuViolations(&symbol_uses_);
   const int retval = EmitWarningMessages(symbol_uses_);
   internal::CalculateDesiredIncludesAndForwardDeclares(
-      symbol_uses_, associated_desired_includes, &lines_);
+      symbol_uses_, associated_desired_includes, kept_includes_,  &lines_);
 
   // Remove desired inclusions that have been inhibited by pragma
   // "no_include".

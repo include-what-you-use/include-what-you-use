@@ -99,6 +99,14 @@
 // IWYU pragma: no_forward_declare ::CommentPragmasD20c
 // IWYU pragma: no_forward_declare CommentPragmasTest21a
 
+// Keep all includes of any header name marked with pragma keep.
+#include "tests/cxx/comment_pragmas-d21.h"
+#include "tests/cxx/comment_pragmas-d21.h" // IWYU pragma: keep
+
+#include "tests/cxx/comment_pragmas-d22.h" // IWYU pragma: keep
+#include "tests/cxx/comment_pragmas-d22.h"
+
+
 class CommentPragmasD19;  // Needed, but removed due to no_forward_declare.
 class CommentPragmasTest21a;  // Needed but removed due to no_forward_declare.
 
@@ -223,6 +231,10 @@ The full include-list for tests/cxx/comment_pragmas.cc:
 #include "tests/cxx/comment_pragmas-d18.h"  // for CommentPragmasD18
 #include "tests/cxx/comment_pragmas-d19.h"  // for CommentPragmasD19
 #include "tests/cxx/comment_pragmas-d20.h"  // for CommentPragmasD20a, CommentPragmasD20b, CommentPragmasD20c
+#include "tests/cxx/comment_pragmas-d21.h"
+#include "tests/cxx/comment_pragmas-d21.h"
+#include "tests/cxx/comment_pragmas-d22.h"
+#include "tests/cxx/comment_pragmas-d22.h"
 #include "tests/cxx/comment_pragmas-d5.h"
 #include "tests/cxx/comment_pragmas-d6.h"
 #include "tests/cxx/comment_pragmas-i1.h"  // for CommentPragmasI2, CommentPragmasI3, CommentPragmasI4
