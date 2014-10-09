@@ -1,0 +1,25 @@
+# It's very common for third-party libraries to just expose one
+# header file.  So this map takes advantage of regex functionality.
+#
+# Please keep this in sync with _deprecated_headers in cpplint.py.
+[
+  { include: ["@\"third_party/dynamic_annotations/.*\"", private, "\"base/dynamic_annotations.h\"", public] },
+  { include: ["@\"third_party/gmock/include/gmock/.*\"", private, "\"testing/base/public/gmock.h\"", public] },
+  # Old location for Python. TODO(csilvers): remove when
+  # third_party/python2_4_3 is gone.
+  { include: ["@\"third_party/python2_4_3/.*\"", private, "<Python.h>", public] },
+  # New location for Python.
+  { include: ["@\"third_party/python_runtime/.*\"", private, "<Python.h>", public] },
+  { include: ["\"third_party/icu/include/unicode/umachine.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/uversion.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/uconfig.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/udraft.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/udeprctd.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/uobslete.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/uintrnal.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/usystem.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/urename.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/platform.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/ptypes.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+  { include: ["\"third_party/icu/include/unicode/uvernum.h\"", private, "\"third_party/icu/include/unicode/utypes.h\"", public] },
+]
