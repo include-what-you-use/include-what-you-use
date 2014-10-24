@@ -641,7 +641,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       if (isa<FunctionTemplateDecl>(*it))
         continue;
       CXXConstructorDecl* ctor = cast<CXXConstructorDecl>(*it);
-      if (!ctor->hasBody() && ctor->isImplicit()) {
+      if (!ctor->hasBody() && !ctor->isDeleted() && ctor->isImplicit()) {
         if (sema.getSpecialMember(ctor) == clang::Sema::CXXDefaultConstructor) {
           sema.DefineImplicitDefaultConstructor(CurrentLoc(), ctor);
         } else {
@@ -653,10 +653,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     }
 
     if (CXXDestructorDecl* dtor = sema.LookupDestructor(decl)) {
-      if (!dtor->hasBody() && dtor->isImplicit())
-        sema.DefineImplicitDestructor(CurrentLoc(), dtor);
-      if (!dtor->isDefined() && dtor->getTemplateInstantiationPattern())
-        sema.PendingInstantiations.push_back(make_pair(dtor, CurrentLoc()));
+      if (!dtor->isDeleted()) {
+        if (!dtor->hasBody() && dtor->isImplicit())
+          sema.DefineImplicitDestructor(CurrentLoc(), dtor);
+        if (!dtor->isDefined() && dtor->getTemplateInstantiationPattern())
+          sema.PendingInstantiations.push_back(make_pair(dtor, CurrentLoc()));
+      }
     }
 
     // TODO(nlewycky): copy assignment operator
@@ -702,7 +704,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     for (CXXRecordDecl::ctor_iterator it = decl->ctor_begin();
          it != decl->ctor_end(); ++it) {
       CXXConstructorDecl* ctor = *it;
-      if (ctor->isImplicit()) {
+      if (ctor->isImplicit() && !ctor->isDeleted()) {
         if (!TraverseImplicitDeclHelper(ctor))
           return false;
       }
