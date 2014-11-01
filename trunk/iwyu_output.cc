@@ -572,8 +572,17 @@ static void LogIncludeMapping(const string& reason, const OneUse& use) {
 namespace internal {
 
 bool DeclCanBeForwardDeclared(const Decl* decl) {
-  // Only uses of classes or template classes can be forward-declared.
-  return isa<RecordDecl>(decl) || isa<ClassTemplateDecl>(decl);
+  // Class templates can always be forward-declared.
+  if (isa<ClassTemplateDecl>(decl))
+    return true;
+
+  // Other record decls can be forward-declared unless they denote a lambda
+  // expression; these have no type name to forward-declare.
+  if (const RecordDecl* record = DynCastFrom(decl)) {
+    return !record->isLambda();
+  }
+
+  return false;
 }
 
 // Helper to tell whether a forward-declare use is 'preceded' by a

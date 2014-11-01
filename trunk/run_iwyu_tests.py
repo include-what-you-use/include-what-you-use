@@ -83,6 +83,7 @@ class OneIwyuTest(unittest.TestCase):
       'auto_type_within_template.cc': ['-std=c++11'],
       'conversion_ctor.cc': ['-std=c++11'],
       'deleted_implicit.cc' : ['-std=c++11'],
+      'lambda_fwd_decl.cc': ['-std=c++11'],
       'lateparsed_template.cc': ['-fdelayed-template-parsing'],
       'ms_inline_asm.cc': ['-fms-extensions'],
       'prefix_header_attribution.cc': [
