@@ -3382,6 +3382,7 @@ class IwyuAstConsumer
     // We have to calculate the .h files before the .cc file, since
     // the .cc file inherits #includes from the .h files, and we
     // need to figure out what those #includes are going to be.
+    size_t num_edits = 0;
     const FileEntry* const main_file = preprocessor_info().main_file();
     const set<const FileEntry*>* const files_to_report_iwyu_violations_for
         = preprocessor_info().files_to_report_iwyu_violations_for();
@@ -3390,14 +3391,15 @@ class IwyuAstConsumer
       if (*file == main_file)
         continue;
       CHECK_(preprocessor_info().FileInfoFor(*file));
-      preprocessor_info().FileInfoFor(*file)
+      num_edits += preprocessor_info().FileInfoFor(*file)
           ->CalculateAndReportIwyuViolations();
     }
     CHECK_(preprocessor_info().FileInfoFor(main_file));
-    preprocessor_info().FileInfoFor(main_file)
+    num_edits += preprocessor_info().FileInfoFor(main_file)
         ->CalculateAndReportIwyuViolations();
 
-    exit(1);  // we need to force the compile to fail so we can re-run.
+    // We need to force the compile to fail so we can re-run.
+    exit(EXIT_SUCCESS_OFFSET + num_edits);
   }
 
   void ParseFunctionTemplates(TranslationUnitDecl* decl) {

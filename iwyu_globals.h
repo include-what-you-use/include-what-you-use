@@ -24,6 +24,15 @@ struct PrintingPolicy;
 
 namespace include_what_you_use {
 
+// Exit codes.
+// If invalid args are specified in any form, we return 1,
+// otherwise we return 2 + the number of edits suggested.
+// Of course, this means that IWYU always fails (i.e. never returns 0.)
+// This is intentional, so it can be used with make -k without ever being
+// considered up-to-date.
+static const int EXIT_INVALIDARGS = 1;
+static const int EXIT_SUCCESS_OFFSET = 2;
+
 using std::set;
 using std::string;
 
