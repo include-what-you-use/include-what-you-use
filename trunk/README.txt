@@ -3,7 +3,7 @@
 --------------------------------------------------------------------------------
 
 This README was generated from the Wiki contents at
-http://code.google.com/p/include-what-you-use/w/ on 2014-01-22 20:43:44 UTC.
+http://code.google.com/p/include-what-you-use/w/ on 2014-11-30 10:05:01 UTC.
 
 
 = Instructions for Users  =
@@ -112,6 +112,24 @@ CMake workflows as described in the Clang Getting Started guide
 
 This configuration is more useful if you're actively developing IWYU against
 Clang trunk.
+
+
+== How to Install ==
+
+If you're building IWYU out-of-tree or installing pre-built binaries, you need
+to make sure it can find Clang built-in headers (stdarg.h and friends.)
+
+Clang's default policy is to look in path/to/clang-
+executable/../lib/clang/<clang ver>/include. So if Clang 3.5.0 is installed in
+/usr/bin, it will search for built-ins in /usr/lib/clang/3.5.0/include.
+
+Clang tools have the same policy by default, so in order for IWYU to analyze any
+non-trivial code, it needs to find Clang's built-ins in
+path/to/iwyu/../lib/clang/3.5.0/include where 3.5.0 is a stand-in for the
+version of Clang your IWYU was built against.
+
+This weirdness is tracked in issue 100, hopefully we can eliminate the manual
+patching.
 
 
 == How to Run ==
