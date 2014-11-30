@@ -1697,10 +1697,14 @@ LineSortKey GetSortKey(const OneIncludeOrForwardDeclareLine& line,
 
 // filename is "this" filename: the file being emitted.
 // associated_filepaths are the quoted-include form of associated_headers_.
-string PrintableDiffs(const string& filename,
+size_t PrintableDiffs(const string& filename,
                       const IwyuPreprocessorInfo* preprocessor_info,
                       const set<string>& associated_quoted_includes,
-                      const vector<OneIncludeOrForwardDeclareLine>& lines) {
+                      const vector<OneIncludeOrForwardDeclareLine>& lines,
+                      string* diff_output) {
+  CHECK_(diff_output && "Must provide diff_output");
+
+  string& output = *diff_output;
   const set<string>& aqi = associated_quoted_includes;  // short alias
 
   // Sort all the output-lines: system headers before user headers
@@ -1728,10 +1732,12 @@ string PrintableDiffs(const string& filename,
     }
   }
   if (no_adds_or_deletes) {
-    return "\n(" + filename + " has correct #includes/fwd-decls)\n";
+    output = "\n(" + filename + " has correct #includes/fwd-decls)\n";
+    return 0;
   }
 
-  string output;
+  size_t num_edits = 0;
+
   // First, new desired includes and forward-declares.
   if (ShouldPrint(1)) {
     output += "\n" + filename + " should add these lines:\n";
@@ -1739,6 +1745,7 @@ string PrintableDiffs(const string& filename,
              it(&sorted_lines); !it.AtEnd(); ++it) {
       if (it->second->is_desired() && !it->second->is_present()) {
         output += PrintableIncludeOrForwardDeclareLine(*it->second, aqi);
+        ++num_edits;
       }
     }
   }
@@ -1750,6 +1757,7 @@ string PrintableDiffs(const string& filename,
              it(&sorted_lines); !it.AtEnd(); ++it) {
       if (it->second->is_present() && !it->second->is_desired()) {
         output += "- " + PrintableIncludeOrForwardDeclareLine(*it->second, aqi);
+        ++num_edits;
       }
     }
   }
@@ -1768,18 +1776,12 @@ string PrintableDiffs(const string& filename,
   // Let's print a helpful separator as well.
   output += "---\n";
 
-  return output;
+  return num_edits;
 }
 
 }  // namespace internal
 
-void IwyuFileInfo::EmitDiffs(
-    const vector<OneIncludeOrForwardDeclareLine>& lines) {
-  errs() << internal::PrintableDiffs(GetFilePath(file_), preprocessor_info_,
-                                     AssociatedQuotedIncludes(), lines);
-}
-
-int IwyuFileInfo::CalculateAndReportIwyuViolations() {
+size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // This is used to calculate our own desired includes.  That depends
   // on what our associated files' desired includes are: if we use
   // bar.h and foo.h is adding it, we don't need to add it ourself.
@@ -1788,7 +1790,7 @@ int IwyuFileInfo::CalculateAndReportIwyuViolations() {
   set<string> associated_desired_includes = AssociatedDesiredIncludes();
 
   CalculateIwyuViolations(&symbol_uses_);
-  const int retval = EmitWarningMessages(symbol_uses_);
+  EmitWarningMessages(symbol_uses_);
   internal::CalculateDesiredIncludesAndForwardDeclares(
       symbol_uses_, associated_desired_includes, kept_includes_,  &lines_);
 
@@ -1804,8 +1806,13 @@ int IwyuFileInfo::CalculateAndReportIwyuViolations() {
 
   internal::CleanupPrefixHeaderIncludes(preprocessor_info_, &lines_);
 
-  EmitDiffs(lines_);
-  return retval;
+  string diff_output;
+  size_t num_edits = internal::PrintableDiffs(
+      GetFilePath(file_), preprocessor_info_, AssociatedQuotedIncludes(),
+      lines_, &diff_output);
+  errs() << diff_output;
+
+  return num_edits;
 }
 
 }  // namespace include_what_you_use

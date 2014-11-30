@@ -190,12 +190,15 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
           prefix_header_include_policy = CommandlineFlags::kRemove;
         } else {
           PrintHelp("FATAL ERROR: unknown --prefix_header_includes value.");
-          exit(1);
+          exit(EXIT_INVALIDARGS);
         }
         break;
       case 'h': pch_in_code = true; break;
       case -1: return optind;   // means 'no more input'
-      default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
+      default:
+        PrintHelp("FATAL ERROR: unknown flag.");
+        exit(EXIT_INVALIDARGS);
+        break;
     }
   }
   return optind;  // unreachable
@@ -215,10 +218,13 @@ static int ParseInterceptedCommandlineFlags(int argc, char** argv) {
   static const char shortopts[] = "";
   while (true) {
     switch (getopt_long(argc, argv, shortopts, longopts, NULL)) {
-      case 'h': PrintHelp(""); exit(0); break;
-      case 'v': PrintVersion(); exit(0); break;
+      case 'h': PrintHelp(""); exit(EXIT_SUCCESS); break;
+      case 'v': PrintVersion(); exit(EXIT_SUCCESS); break;
       case -1: return optind;   // means 'no more input'
-      default: PrintHelp("FATAL ERROR: unknown flag."); exit(1); break;
+      default:
+        PrintHelp("FATAL ERROR: unknown flag.");
+        exit(EXIT_INVALIDARGS);
+        break;
     }
   }
   return optind;  // unreachable
@@ -239,11 +245,11 @@ static int ParseIwyuCommandlineFlags(int argc, char** argv) {
 
   if (!commandline_flags->cwd.empty()) {
     printf("-p/--cwd not yet implemented\n");
-    exit(1);
+    exit(EXIT_INVALIDARGS);
   }
   if (commandline_flags->howtodebug != CommandlineFlags::kUnspecified) {
     printf("-d/--howtodebug not yet implemented\n");
-    exit(1);
+    exit(EXIT_INVALIDARGS);
   }
 
   VERRS(4) << "Setting verbose-level to " << commandline_flags->verbose << "\n";

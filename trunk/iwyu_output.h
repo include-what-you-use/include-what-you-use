@@ -259,7 +259,7 @@ class IwyuFileInfo {
   // The meat of iwyu: compare the actual includes and forward-declares
   // against the symbol uses, and report which uses are iwyu violations.
   // Reports violations on errs(), and returns the number of violations.
-  int CalculateAndReportIwyuViolations();
+  size_t CalculateAndReportIwyuViolations();
 
  private:
   const set<string>& direct_includes() const { return direct_includes_; }
@@ -294,9 +294,6 @@ class IwyuFileInfo {
   // Uses uses to emit warning messages (at high enough verbosity).
   // Returns the number of warning messages found.
   int EmitWarningMessages(const vector<OneUse>& uses);
-  // Uses uses and lines to emit the 'desired' set of #includes, and
-  // diffs from the current.
-  void EmitDiffs(const vector<OneIncludeOrForwardDeclareLine>& lines);
 
   // The constructor arguments.  file_ is 'this file'.
   const clang::FileEntry* file_;
