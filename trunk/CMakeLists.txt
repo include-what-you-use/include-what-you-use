@@ -106,11 +106,14 @@ target_link_libraries(include-what-you-use
 
 # LLVM dependencies.
 target_link_libraries(include-what-you-use
-  LLVMX86AsmParser # MC, MCParser, Support, X86Desc, X86Info
-  LLVMX86Desc # MC, Support, X86AsmPrinter, X86Info
+  LLVMX86AsmParser # MC, MCParser, Support, X86CodeGen, X86Desc, X86Info
+  LLVMX86CodeGen # Analysis, AsmPrinter, CodeGen, Core, MC, Support, Target, 
+                 # X86AsmPrinter, X86Desc, X86Info, X86Utils
+  LLVMX86Desc # MC, MCDisassembler, Object, Support, X86AsmPrinter, X86Info
   LLVMX86AsmPrinter # MC, Support, X86Utils
-  LLVMX86Info # MC, Support, Target
+  LLVMX86Info # Support
   LLVMX86Utils # Core, Support
+  LLVMCodeGen # Analysis, Core, MC, Scalar, Support, Target, TransformUtils
   LLVMipo
   LLVMScalarOpts
   LLVMInstCombine
@@ -119,6 +122,7 @@ target_link_libraries(include-what-you-use
   LLVMAnalysis
   LLVMTarget
   LLVMOption # Support
+  LLVMMCDisassembler # MC, Support
   LLVMMCParser # MC, Support
   LLVMMC # Object, Support
   LLVMObject # BitReader, Core, Support
