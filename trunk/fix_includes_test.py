@@ -2068,6 +2068,179 @@ The full include-list for simple.h:
     self.RegisterFileContents({'simple.h': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testAddIncludeAfterSoloPragmaOnce(self):
+    """Test that we are willing to insert .h's after #pragma once."""
+    infile = """\
+// Copyright 2010
+
+#pragma once
+
+#include <notused.h>  ///-
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+"""
+    iwyu_output = """\
+pragma_once.h should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+pragma_once.h should remove these lines:
+- #include <notused.h>  // lines 5-5
+
+The full include-list for pragma_once.h:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    self.RegisterFileContents({'pragma_once.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddIncludeAfterPragmaOnceWithHeaderGuard(self):
+    """Test that we are willing to insert .h's after #pragma once and header
+    guard."""
+    infile = """\
+// Copyright 2010
+
+#pragma once
+#ifndef PRAGMA_ONCE_H_
+#define PRAGMA_ONCE_H_
+
+#include <notused.h>  ///-
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+#endif
+"""
+    iwyu_output = """\
+pragma_once_with_guard.h should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+pragma_once_with_guard.h should remove these lines:
+- #include <notused.h>  // lines 7-7
+
+The full include-list for pragma_once_with_guard.h:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    self.RegisterFileContents({'pragma_once_with_guard.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddIncludeAfterEarlyPragmaOnce(self):
+    """Test that we are willing to insert .h's after early #pragma once."""
+    infile = """\
+#pragma once
+// Copyright 2010
+
+#include <notused.h>  ///-
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+"""
+    iwyu_output = """\
+early_pragma_once.h should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+early_pragma_once.h should remove these lines:
+- #include <notused.h>  // lines 4-4
+
+The full include-list for early_pragma_once.h:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    self.RegisterFileContents({'early_pragma_once.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddIncludeAfterEarlyPragmaOnceWithHeaderGuard(self):
+    """Test that we are willing to insert .h's after early #pragma once and
+    header guard."""
+    infile = """\
+#pragma once
+// Copyright 2010
+
+#ifndef PRAGMA_ONCE_H_
+#define PRAGMA_ONCE_H_
+
+#include <notused.h>  ///-
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+#endif
+"""
+    iwyu_output = """\
+early_pragma_once_with_guard.h should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+early_pragma_once_with_guard.h should remove these lines:
+- #include <notused.h>  // lines 7-7
+
+The full include-list for early_pragma_once_with_guard.h:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    self.RegisterFileContents({'early_pragma_once_with_guard.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddIncludeAfterWeirdPragmaOnce(self):
+    """Test that we are willing to insert .h's after creatively formatted
+    #pragma once."""
+    infile = """\
+  # pragma    once
+
+#include <notused.h>  ///-
+///+#include <stdio.h>
+"""
+    iwyu_output = """\
+weird_pragma_once.h should add these lines:
+#include <stdio.h>
+
+weird_pragma_once.h should remove these lines:
+- #include <notused.h>  // lines 3-3
+
+The full include-list for weird_pragma_once.h:
+#include <stdio.h>
+---
+"""
+    self.RegisterFileContents({'weird_pragma_once.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddIncludeBeforePragmaMessage(self):
+    """Test that non-once #pragmas are pushed after the #includes."""
+    infile = """\
+///+#include <stdio.h>
+///+
+#pragma message "Hello world!"
+
+#include <notused.h>  ///-
+"""
+    iwyu_output = """\
+weird_pragma_once.h should add these lines:
+#include <stdio.h>
+
+weird_pragma_once.h should remove these lines:
+- #include <notused.h>  // lines 3-3
+
+The full include-list for weird_pragma_once.h:
+#include <stdio.h>
+---
+"""
+    self.RegisterFileContents({'weird_pragma_once.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testAddIncludeAfterWeirdHeaderGuard(self):
     """Test that we are willing to insert .h's inside a non-standard h-guard."""
     infile = """\
