@@ -100,6 +100,7 @@ _COMMENT_RE = re.compile(r'\s*//.*')
 _C_COMMENT_START_RE = re.compile(r'\s*/\*')
 _C_COMMENT_END_RE = re.compile(r'.*\*/\s*(.*)$')
 _COMMENT_LINE_RE = re.compile(r'\s*//')
+_PRAGMA_ONCE_LINE_RE = re.compile(r'\s*#\s*pragma\s+once')
 _BLANK_LINE_RE = re.compile(r'\s*$')
 _IF_RE = re.compile(r'\s*#\s*if')               # compiles #if/ifdef/ifndef
 _ELSE_RE = re.compile(r'\s*#\s*(else|elif)\b')  # compiles #else/elif
@@ -134,6 +135,7 @@ _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
                _IF_RE, _ELSE_RE, _ENDIF_RE,
                _INCLUDE_RE, _FORWARD_DECLARE_RE,
                _HEADER_GUARD_RE, _HEADER_GUARD_DEFINE_RE,
+               _PRAGMA_ONCE_LINE_RE,
               ]
 
 # A regexp matching #include lines that should be a barrier for
@@ -596,11 +598,12 @@ def _MarkHeaderGuardIfPresent(file_lines):
   Arguments:
     file_lines: an array of LineInfo objects with .type filled in.
   """
-  # Pass over blank lines or comments at the top of the file.
+  # Pass over blank lines, pragmas and comments at the top of the file.
   i = 0
   for i in xrange(len(file_lines)):
     if (not file_lines[i].deleted and
-        file_lines[i].type not in [_COMMENT_LINE_RE, _BLANK_LINE_RE]):
+        file_lines[i].type not in [_COMMENT_LINE_RE, _BLANK_LINE_RE,
+                                   _PRAGMA_ONCE_LINE_RE]):
       break
   else:     # for/else: got to EOF without finding any non-blank/comment lines
     return
@@ -1305,7 +1308,8 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
     # header guard, which is (by definition) the only kind of #ifdef
     # that we can be inside and still considered at the "top level".
     if line_info.type in (_COMMENT_LINE_RE, _BLANK_LINE_RE, _INCLUDE_RE,
-                          _HEADER_GUARD_RE, _HEADER_GUARD_DEFINE_RE):
+                          _HEADER_GUARD_RE, _HEADER_GUARD_DEFINE_RE,
+                          _PRAGMA_ONCE_LINE_RE):
       continue
 
     # If we're a 'contentful' line such as a (non-header-guard) #ifdef, bail.
@@ -1587,6 +1591,9 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
       seen_header_guard = True
       line_number += 2    # skip over the header guard
     elif file_lines[line_number].type == _BLANK_LINE_RE:
+      line_number += 1
+    elif file_lines[line_number].type == _PRAGMA_ONCE_LINE_RE:
+      seen_header_guard = True
       line_number += 1
     elif (file_lines[line_number].type == _COMMENT_LINE_RE
           and not seen_header_guard):
