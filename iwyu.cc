@@ -1894,6 +1894,22 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   //------------------------------------------------------------
   // Visitors of types derived from clang::Stmt.
 
+  // Catch statements always require the full type to be visible,
+  // no matter if we're catching by value, reference or pointer.
+  bool VisitCXXCatchStmt(clang::CXXCatchStmt* stmt) {
+    if (CanIgnoreCurrentASTNode()) return true;
+
+    if (const Type* caught_type = stmt->getCaughtType().getTypePtrOrNull()) {
+      // Strip off pointers/references to get to the 'base' type.
+      caught_type = RemovePointersAndReferencesAsWritten(caught_type);
+      ReportTypeUse(CurrentLoc(), caught_type);
+    } else {
+      // catch(...): no type to act on here.
+    }
+
+    return Base::VisitCXXCatchStmt(stmt);
+  }
+
   // When casting non-pointers, iwyu will do the right thing
   // automatically, but sometimes when casting from one pointer to
   // another, you still need the full type information of both types:
