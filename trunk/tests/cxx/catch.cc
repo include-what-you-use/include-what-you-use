@@ -10,6 +10,7 @@
 #include "tests/cxx/catch-byvalue.h"  // for CatchByValue
 #include "tests/cxx/catch-byref.h"    // for CatchByRef
 #include "tests/cxx/catch-byptr.h"    // for CatchByPtr
+#include "tests/cxx/catch-elab.h"     // for CatchElab
 
 int main() {
   try {
@@ -22,6 +23,11 @@ int main() {
 
   try {
   } catch (const CatchByPtr*) {
+  }
+
+  // Make sure we see through elaborated types
+  try {
+  } catch (const Namespace::CatchElab&) {
   }
 
   // Make sure we don't crash when there's no type.
