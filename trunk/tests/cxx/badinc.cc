@@ -1938,36 +1938,6 @@ int main() {
       // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
       = &I1_TemplateMethodOnlyClass<I1_Struct>::c<I2_Struct>;
 
-  // Test try and catch
-  try {
-    try {
-      // IWYU: I11 is...*badinc-i1.h
-      // IWYU: I1_Enum is...*badinc-i1.h
-      H_TemplateFunction(I11);
-      throw;
-      // IWYU: I1_Struct is...*badinc-i1.h
-    } catch (I1_Struct iwyu_type_with_var) {
-      // IWYU: I12 is...*badinc-i1.h
-      D1Function(I12);
-      throw &i1_struct;
-      // IWYU: I1_Struct needs a declaration
-    } catch (I1_Struct* iwyu_ptr_with_var) {
-      // IWYU: I1_PtrDereferenceStatic is...*badinc-i1.h
-      (void)(I1_PtrDereferenceStatic::a);
-    }
-    // IWYU: I1_Struct needs a declaration
-  } catch (I1_Struct& iwyu_ref_with_var) {
-    // IWYU: MACRO_CALLING_I6_FUNCTION is...*badinc-i1.h
-    MACRO_CALLING_I6_FUNCTION;
-    // IWYU: I1_Class is...*badinc-i1.h
-  } catch (I1_Class) {
-    // IWYU: kI1ConstInt is...*badinc-i1.h
-    (void)(kI1ConstInt);
-  } catch (...) {
-    // IWYU: kI1ConstInt is...*badinc-i1.h
-    (void)(kI1ConstInt);
-  };
-
   // Check use of a macro inside an #ifdef.
   // IWYU: I2_MACRO is...*badinc-i2.h
 #ifdef I2_MACRO
