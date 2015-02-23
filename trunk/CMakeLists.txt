@@ -5,12 +5,27 @@ project(include-what-you-use)
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   message(STATUS "IWYU out-of-tree configuration")
 
-  if( NOT DEFINED LLVM_PATH )
-    message(FATAL_ERROR "LLVM_PATH must be provided using -DLLVM_PATH=<path to llvm package root>")
+  if( DEFINED LLVM_PATH )
+    set(IWYU_LLVM_ROOT_PATH ${LLVM_PATH})
+    message(WARNING "LLVM_PATH is deprecated, use IWYU_LLVM_ROOT_PATH instead.")
   endif()
 
-  link_directories(${LLVM_PATH}/lib)
-  include_directories(${LLVM_PATH}/include)
+  if( DEFINED IWYU_LLVM_INCLUDE_PATH AND DEFINED IWYU_LLVM_LIB_PATH )
+    # User provided include/lib paths, fall through
+  elseif ( DEFINED IWYU_LLVM_ROOT_PATH )
+    # Synthesize include/lib relative to a root.
+    set(IWYU_LLVM_INCLUDE_PATH ${IWYU_LLVM_ROOT_PATH}/include)
+    set(IWYU_LLVM_LIB_PATH ${IWYU_LLVM_ROOT_PATH}/lib)
+  else()
+    # If none provided, fail.
+    message(FATAL_ERROR
+      "Don't know how to find LLVM headers/libraries. "
+      "Use -DIWYU_LLVM_ROOT_PATH=/xyz or both "
+      "-DIWYU_LLVM_INCLUDE_PATH=/xyz/include and -DIWYU_LLVM_LIB_PATH=/xyz/lib")
+  endif()
+
+  include_directories(${IWYU_LLVM_INCLUDE_PATH})
+  link_directories(${IWYU_LLVM_LIB_PATH})
 
   add_definitions(
     -D__STDC_LIMIT_MACROS
