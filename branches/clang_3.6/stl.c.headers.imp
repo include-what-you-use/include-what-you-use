@@ -1,0 +1,42 @@
+[
+  # Allow the C++ wrappers around C files.  Without these mappings,
+  # if you #include <cstdio>, iwyu will tell you to replace it with
+  # <stdio.h>, which is where the symbols are actually defined.  We
+  # inhibit that behavior to keep the <cstdio> alone.  Note this is a
+  # public-to-public mapping: we don't want to *replace* <assert.h>
+  # with <cassert>, we just want to avoid suggesting changing
+  # <cassert> back to <assert.h>.  (If you *did* want to replace
+  # assert.h with cassert, you'd change it to a public->private
+  # mapping.)  Here is how I identified the files to map:
+  # $ for i in /usr/include/c++/4.4/c* ; do ls /usr/include/`basename $i | cut -b2-`.h /usr/lib/gcc/*/4.4/include/`basename $i | cut -b2-`.h 2>/dev/null ; done
+  #
+  # These headers are defined in C++14 [headers]p3.  You can get them with
+  # $ sed -n '/begin{floattable}.*{tab:cpp.c.headers}/,/end{floattable}/p' lib-intro.tex | grep tcode | perl -nle 'm/tcode{<c(.*)>}/ && print qq@  { include: [ "<$1.h>", public, "<c$1>", public ] },@' | sort
+  # on https://github.com/cplusplus/draft/blob/master/source/lib-intro.tex
+  { include: [ "<assert.h>", public, "<cassert>", public ] },
+  { include: [ "<complex.h>", public, "<ccomplex>", public ] },
+  { include: [ "<ctype.h>", public, "<cctype>", public ] },
+  { include: [ "<errno.h>", public, "<cerrno>", public ] },
+  { include: [ "<fenv.h>", public, "<cfenv>", public ] },
+  { include: [ "<float.h>", public, "<cfloat>", public ] },
+  { include: [ "<inttypes.h>", public, "<cinttypes>", public ] },
+  { include: [ "<iso646.h>", public, "<ciso646>", public ] },
+  { include: [ "<limits.h>", public, "<climits>", public ] },
+  { include: [ "<locale.h>", public, "<clocale>", public ] },
+  { include: [ "<math.h>", public, "<cmath>", public ] },
+  { include: [ "<setjmp.h>", public, "<csetjmp>", public ] },
+  { include: [ "<signal.h>", public, "<csignal>", public ] },
+  { include: [ "<stdalign.h>", public, "<cstdalign>", public ] },
+  { include: [ "<stdarg.h>", public, "<cstdarg>", public ] },
+  { include: [ "<stdbool.h>", public, "<cstdbool>", public ] },
+  { include: [ "<stddef.h>", public, "<cstddef>", public ] },
+  { include: [ "<stdint.h>", public, "<cstdint>", public ] },
+  { include: [ "<stdio.h>", public, "<cstdio>", public ] },
+  { include: [ "<stdlib.h>", public, "<cstdlib>", public ] },
+  { include: [ "<string.h>", public, "<cstring>", public ] },
+  { include: [ "<tgmath.h>", public, "<ctgmath>", public ] },
+  { include: [ "<time.h>", public, "<ctime>", public ] },
+  { include: [ "<uchar.h>", public, "<cuchar>", public ] },
+  { include: [ "<wchar.h>", public, "<cwchar>", public ] },
+  { include: [ "<wctype.h>", public, "<cwctype>", public ] },
+]
