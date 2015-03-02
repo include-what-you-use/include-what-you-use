@@ -80,7 +80,8 @@ void InitGlobalsAndFlagsForTesting();
 //   5: like 4, and add tons of debug info.
 //   6: like 5, and print every symbol that's needed by main-cu files.
 //   7: like 6, and print pointers of AST nodes (and uninstantiated templates)
-//  10: like 7, and add tons more debug info (for all non-system header files).
+//   8: like 7, and print all mappings, built-in and dynamic.
+//  10: like 8, and add tons more debug info (for all non-system header files).
 //  11: like 10, and add tons *more* debug info (for all header files).
 struct CommandlineFlags {
   enum PrefixHeaderIncludePolicy { kAdd, kKeep, kRemove };
