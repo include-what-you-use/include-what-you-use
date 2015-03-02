@@ -1031,7 +1031,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
 }
 
 void IncludePicker::AddMapping(const string& map_from, const string& map_to) {
-  VERRS(4) << "Adding mapping from " << map_from << " to " << map_to << "\n";
+  VERRS(8) << "Adding mapping from " << map_from << " to " << map_to << "\n";
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
   CHECK_(IsQuotedFilepathPattern(map_from)
          && "All map keys must be quoted filepaths or @ followed by regex");
