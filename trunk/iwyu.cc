@@ -172,7 +172,6 @@ using clang::Expr;
 using clang::FileEntry;
 using clang::FriendDecl;
 using clang::FriendTemplateDecl;
-using clang::FullSourceLoc;
 using clang::FunctionDecl;
 using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
@@ -438,7 +437,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // If the token is formed via macro concatenation, the spelling
     // location will be in <scratch space>.  Use the instantiation
     // location instead.
-    const FullSourceLoc spelling_loc = GetSpellingLoc(loc);
+    const SourceLocation spelling_loc = GetSpellingLoc(loc);
     if (IsInMacro(loc) && StartsWith(PrintableLoc(spelling_loc), "<scratch "))
       return GetInstantiationLoc(loc);
     else

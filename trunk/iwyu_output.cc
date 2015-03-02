@@ -44,7 +44,6 @@ using clang::CXXRecordDecl;
 using clang::Decl;
 using clang::DeclContext;
 using clang::FileEntry;
-using clang::FullSourceLoc;
 using clang::FunctionDecl;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
@@ -1371,8 +1370,8 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
 }
 
 static string GetWarningMsg(const OneUse& use) {
-  const FullSourceLoc spelling_loc = GetSpellingLoc(use.use_loc());
-  const FullSourceLoc instantiation_loc = GetInstantiationLoc(use.use_loc());
+  const SourceLocation spelling_loc = GetSpellingLoc(use.use_loc());
+  const SourceLocation instantiation_loc = GetInstantiationLoc(use.use_loc());
   string warning = PrintableLoc(spelling_loc) + ": warning: ";
   if (use.is_full_use()) {
     warning += (use.symbol_name() + " is defined in " + use.suggested_header()
