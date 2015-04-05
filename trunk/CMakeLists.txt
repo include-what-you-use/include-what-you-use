@@ -134,8 +134,8 @@ target_link_libraries(include-what-you-use
   LLVMInstCombine
   LLVMTransformUtils
   LLVMipa
-  LLVMAnalysis
-  LLVMTarget
+  LLVMTarget # Analysis, MC, Core, Support
+  LLVMAnalysis # Core, Support
   LLVMOption # Support
   LLVMMCDisassembler # MC, Support
   LLVMMCParser # MC, Support
