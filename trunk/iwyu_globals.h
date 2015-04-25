@@ -96,6 +96,8 @@ struct CommandlineFlags {
   int verbose;             // -v: how much information to emit as we parse
   vector<string> mapping_files; // -m: mapping files
   bool no_default_mappings;     // -n: no default mappings
+  // Truncate output lines to this length. No short option.
+  int max_line_length;
   // Policy regarding files included via -include option.  No short option.
   PrefixHeaderIncludePolicy prefix_header_include_policy;
   bool pch_in_code;  // Treat the first seen include as a PCH. No short option.
