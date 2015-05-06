@@ -168,7 +168,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
  protected:
   // Preprocessor event handlers called by Clang.
   virtual void MacroExpands(const clang::Token& id,
-                            const clang::MacroDirective* directive,
+                            const clang::MacroDefinition& definition,
                             clang::SourceRange range,
                             const clang::MacroArgs* args) IWYU_OVERRIDE;
   virtual void MacroDefined(
@@ -186,10 +186,10 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                     clang::SourceLocation if_loc) IWYU_OVERRIDE;
   virtual void Ifdef(clang::SourceLocation loc,
                      const clang::Token& id,
-                     const clang::MacroDirective* directive) IWYU_OVERRIDE;
+                     const clang::MacroDefinition& definition) IWYU_OVERRIDE;
   virtual void Ifndef(clang::SourceLocation loc,
                       const clang::Token& id,
-                      const clang::MacroDirective* directive) IWYU_OVERRIDE;
+                      const clang::MacroDefinition& definition) IWYU_OVERRIDE;
   // Not needed for iwyu:
   // virtual void Else();
   // virtual void Endif();

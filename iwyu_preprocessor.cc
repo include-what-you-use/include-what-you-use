@@ -34,6 +34,7 @@
 
 using clang::FileEntry;
 using clang::FileID;
+using clang::MacroDefinition;
 using clang::MacroDirective;
 using clang::MacroInfo;
 using clang::Preprocessor;
@@ -544,11 +545,11 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 // FOO, and 'directive' containing more information about FOO's
 // definition.
 void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
-                                        const MacroDirective* directive,
+                                        const MacroDefinition& definition,
                                         SourceRange range,
                                         const clang::MacroArgs* /*args*/) {
   const FileEntry* macro_file = GetFileEntry(macro_use_token);
-  const MacroInfo* macro_def = directive->getMacroInfo();
+  const MacroInfo* macro_def = definition.getMacroInfo();
   if (ShouldPrintSymbolFromFile(macro_file)) {
     errs() << "[ Use macro   ] "
            << PrintableLoc(macro_use_token.getLocation())
@@ -610,7 +611,7 @@ void IwyuPreprocessorInfo::Elif(SourceLocation loc,
 
 void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
                                  const Token& id,
-                                 const MacroDirective* /*directive*/) {
+                                 const MacroDefinition& /*definition*/) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifdef      ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
@@ -619,7 +620,7 @@ void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
 
 void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
                                   const Token& id,
-                                  const MacroDirective* /*directive*/) {
+                                  const MacroDefinition& /*definition*/) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifndef     ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
