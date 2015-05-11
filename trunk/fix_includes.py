@@ -155,6 +155,10 @@ _BARRIER_INCLUDES = re.compile(r'^\s*#\s*include\s+(<linux/)')
 _SOURCE_EXTENSIONS = [".c", ".C", ".cc", ".CC", ".cxx", ".CXX",
                       ".cpp", ".CPP", ".c++", ".C++", ".cp"]
 
+# Adapt Python 2 iterators to Python 3 syntax
+if sys.version_info[0] < 3:
+  def next(i):
+    return i.next()
 
 def _MayBeHeaderFile(filename):
   """Tries to figure out if filename is a C++ header file.  Defaults to yes."""
@@ -573,8 +577,8 @@ def PrintFileDiff(old_file_contents, new_file_contents):
   diff = difflib.unified_diff(old_file_contents, new_file_contents)
   # skip the '--- <filename>/+++ <filename>' lines at the start
   try:
-    diff.next()
-    diff.next()
+    next(diff)
+    next(diff)
     print('\n'.join(diff))
   except StopIteration:
     pass
