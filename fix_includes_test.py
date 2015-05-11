@@ -18,7 +18,11 @@ Test test test!
 
 __author__ = 'csilvers@google.com (Craig Silverstein)'
 
-import cStringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 import re
 import sys
 # I use unittest instead of googletest to ease opensourcing.  Luckily,
@@ -210,7 +214,7 @@ class FixIncludesBase(unittest.TestCase):
       if filename not in unedited_files:
         expected_after.extend(self.expected_after_map[filename])
 
-    iwyu_output_as_file = cStringIO.StringIO(iwyu_output)
+    iwyu_output_as_file = StringIO(iwyu_output)
     num_modified_files = fix_includes.ProcessIWYUOutput(iwyu_output_as_file,
                                                         cmdline_files,
                                                         self.flags)
@@ -282,7 +286,7 @@ int main() { return 0; }
     self.RegisterFileContents({'nodiffs.h': infile})
     # fix_includes gives special output when there are no changes, so
     # we can't use the normal ProcessAndTest.
-    iwyu_output_as_file = cStringIO.StringIO(iwyu_output)
+    iwyu_output_as_file = StringIO(iwyu_output)
     num_modified_files = fix_includes.ProcessIWYUOutput(iwyu_output_as_file,
                                                         None, self.flags)
     self.assertListEqual([], self.actual_after_contents)  # 'no diffs'
@@ -306,7 +310,7 @@ int main() { return 0; }
     self.RegisterFileContents({'nodiffs_nosorting.h': infile})
     # fix_includes gives special output when there are no changes, so
     # we can't use the normal ProcessAndTest.
-    iwyu_output_as_file = cStringIO.StringIO(iwyu_output)
+    iwyu_output_as_file = StringIO(iwyu_output)
     num_modified_files = fix_includes.ProcessIWYUOutput(iwyu_output_as_file,
                                                         None, self.flags)
     self.assertListEqual([], self.actual_after_contents)  # 'no diffs'
@@ -3309,7 +3313,7 @@ The full include-list for dry_run:
 """
     self.RegisterFileContents({'dry_run': infile})
     num_modified_files = fix_includes.ProcessIWYUOutput(
-        cStringIO.StringIO(iwyu_output), ['dry_run'], self.flags)
+        StringIO(iwyu_output), ['dry_run'], self.flags)
     self.assertListEqual([], self.actual_after_contents)
     self.assertEqual(0, num_modified_files)
 
@@ -3459,7 +3463,7 @@ namespace ns { namespace ns4 { class Baz; } }
     # Give an empty stdin so we don't actually try to parse anything.
     old_stdin = sys.stdin
     try:
-      sys.stdin = cStringIO.StringIO()
+      sys.stdin = StringIO()
       fix_includes.main(['fix_includes.py'])    # argv[0] doesn't really matter
     finally:
       sys.stdin = old_stdin
