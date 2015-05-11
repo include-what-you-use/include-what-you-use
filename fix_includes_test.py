@@ -9,6 +9,8 @@
 #
 ##===----------------------------------------------------------------------===##
 
+from __future__ import print_function
+
 """Test for fix_includes.py
 
 Test test test!
@@ -56,7 +58,7 @@ class FakeGetCommandOutputWithInput(object):
     self.stdin = None
 
   def GetCommandOutputWithInput(self, command, stdin):
-    print 'GetCommandOutputWithInput(%s, ...)' % command
+    print('GetCommandOutputWithInput(%s, ...)' % command)
     self.command = command
     self.stdin = stdin
     return self.stdout
@@ -69,7 +71,7 @@ class FakeGetCommandOutputLines(object):
     self.args = None
 
   def GetCommandOutputLines(self, command, args):
-    print 'GetCommandOutputLines(%s, %s)' % (command, args)
+    print('GetCommandOutputLines(%s, %s)' % (command, args))
     self.command = command
     self.args = args
     return self.stdout_lines_map[command]
@@ -214,13 +216,13 @@ class FixIncludesBase(unittest.TestCase):
                                                         self.flags)
 
     if expected_after != self.actual_after_contents:
-      print "=== Expected:"
+      print("=== Expected:")
       for line in expected_after:
-        print line
-      print "=== Got:"
+        print(line)
+      print("=== Got:")
       for line in self.actual_after_contents:
-        print line
-      print "==="
+        print(line)
+      print("===")
     self.assertListEqual(expected_after, self.actual_after_contents)
     if expected_num_modified_files is not None:
       self.assertEqual(expected_num_modified_files, num_modified_files)
