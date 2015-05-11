@@ -71,6 +71,7 @@ import pipes  # For (undocumented) pipes.quote
 import re
 import sys
 import subprocess
+from collections import OrderedDict
 
 _USAGE = """\
 %prog [options] [filename] ... < <output from include-what-you-use script>
@@ -2183,7 +2184,9 @@ def ProcessIWYUOutput(f, files_to_process, flags):
     files that would have been modified.
   """
   # First collect all the iwyu data from stdin.
-  iwyu_output_records = {}    # key is filename, value is an IWYUOutputRecord
+
+  # Maintain sort order by using OrderedDict instead of dict
+  iwyu_output_records = OrderedDict()  # IWYUOutputRecords keyed by filename
   while True:
     iwyu_output_parser = IWYUOutputParser()
     try:
