@@ -175,7 +175,7 @@ class FixIncludesBase(unittest.TestCase):
          is a string, having the format mentioned above.
     """
     remove_re = re.compile('\s*///-$')
-    for (filename, contents) in file_contents_map.iteritems():
+    for (filename, contents) in file_contents_map.items():
       before_contents = []
       expected_after_contents = []
       for line in contents.splitlines():

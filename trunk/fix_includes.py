@@ -303,7 +303,7 @@ class IWYUOutputParser(object):
     if not line:             # just ignore blank lines
       return True
 
-    for (section_re, section_name) in self._RE_TO_NAME.iteritems():
+    for (section_re, section_name) in self._RE_TO_NAME.items():
       m = section_re.search(line)
       if m:
         # Check or set the filename (if the re has a group, it's for filename).
