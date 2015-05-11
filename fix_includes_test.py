@@ -25,8 +25,7 @@ except ImportError:
 
 import re
 import sys
-# I use unittest instead of googletest to ease opensourcing.  Luckily,
-# the only googletest function I have to re-implement is assertListEqual.
+# I use unittest instead of googletest to ease opensourcing.
 import unittest
 import fix_includes
 
@@ -147,10 +146,6 @@ class FixIncludesBase(unittest.TestCase):
   def SetFindClientsOfFilesOutput(self, output_lines):
     self.fake_get_command_output_lines.SetCommandOutputLines(
         self.find_clients_of_files_command, output_lines)
-
-  def assertListEqual(self, a, b):
-    """If the two lists aren't equal, raise an error and print the diffs."""
-    self.assert_(a == b, (a, b))
 
   def RegisterFileContents(self, file_contents_map):
     """Parses and stores the given map from filename to file-contents.
@@ -2732,29 +2727,29 @@ The full include-list for keep_nolint:
     self.assertEqual(None, parser.current_section)
     self.assertEqual('<unknown file>', parser.filename)
 
-    self.assert_(parser._ProcessOneLine(''))
+    self.assertTrue(parser._ProcessOneLine(''))
     self.assertEqual(None, parser.current_section)
     self.assertEqual('<unknown file>', parser.filename)
 
-    self.assert_(parser._ProcessOneLine(
+    self.assertTrue(parser._ProcessOneLine(
         'myfile.cc should add these lines:'))
     self.assertEqual(parser._ADD_SECTION_RE, parser.current_section)
     self.assertEqual('add', parser._RE_TO_NAME[parser.current_section])
     self.assertEqual('myfile.cc', parser.filename)
 
-    self.assert_(parser._ProcessOneLine(
+    self.assertTrue(parser._ProcessOneLine(
         'myfile.cc should remove these lines:'))
     self.assertEqual(parser._REMOVE_SECTION_RE, parser.current_section)
     self.assertEqual('remove', parser._RE_TO_NAME[parser.current_section])
     self.assertEqual('myfile.cc', parser.filename)
 
-    self.assert_(parser._ProcessOneLine(
+    self.assertTrue(parser._ProcessOneLine(
         'The full include-list for myfile.cc:'))
     self.assertEqual(parser._TOTAL_SECTION_RE, parser.current_section)
     self.assertEqual('total', parser._RE_TO_NAME[parser.current_section])
     self.assertEqual('myfile.cc', parser.filename)
 
-    self.assert_(not parser._ProcessOneLine('---'))
+    self.assertTrue(not parser._ProcessOneLine('---'))
     self.assertEqual(parser._SECTION_END_RE, parser.current_section)
     self.assertEqual('end', parser._RE_TO_NAME[parser.current_section])
     self.assertEqual('myfile.cc', parser.filename)
@@ -2762,7 +2757,7 @@ The full include-list for keep_nolint:
   def testIWYUOutputParserProcessOneLineProcessNoEditsHeader(self):
     parser = fix_includes.IWYUOutputParser()
     line = '(myfile.cc has correct #includes/fwd-decls)'
-    self.assert_(not parser._ProcessOneLine(line))
+    self.assertTrue(not parser._ProcessOneLine(line))
     self.assertEqual(parser._NO_EDITS_RE, parser.current_section)
     self.assertEqual('no_edits', parser._RE_TO_NAME[parser.current_section])
     self.assertEqual('myfile.cc', parser.filename)
@@ -2775,7 +2770,7 @@ The full include-list for keep_nolint:
 
   def testIWYUOutputParserProcessOneLineOutOfOrder(self):
     parser = fix_includes.IWYUOutputParser()
-    self.assert_(parser._ProcessOneLine(
+    self.assertTrue(parser._ProcessOneLine(
         'myfile.cc should add these lines:'))
     self.assertRaises(fix_includes.FixIncludesError,
                       parser._ProcessOneLine,
@@ -2783,7 +2778,7 @@ The full include-list for keep_nolint:
 
   def testIWYUOutputParserProcessOneLineIncorrectFilename(self):
     parser = fix_includes.IWYUOutputParser()
-    self.assert_(parser._ProcessOneLine(
+    self.assertTrue(parser._ProcessOneLine(
         'myfile.cc should add these lines:'))
     self.assertRaises(fix_includes.FixIncludesError,
                       parser._ProcessOneLine,
@@ -2792,7 +2787,7 @@ The full include-list for keep_nolint:
   def testIWYUOutputParserProcessOneLineNoMatcher(self):
     parser = fix_includes.IWYUOutputParser()
     # We successfully process this not-in-any-section line, but update no data.
-    self.assert_(parser._ProcessOneLine('#include <foo>'))
+    self.assertTrue(parser._ProcessOneLine('#include <foo>'))
     self.assertEqual(None, parser.current_section)
     self.assertEqual('<unknown file>', parser.filename)
 
@@ -2818,11 +2813,11 @@ namespace ns {class ForwardDeclared;}
     record = parser.ParseOneRecord(iwyu_output.splitlines(), self.flags)
 
     self.assertEqual('simple', record.filename)
-    self.assertEqual(set([3]), record.lines_to_delete)
-    self.assertEqual(set(('#include <stdio.h>',
-                          '#include "used2.h"',
-                          'namespace ns {class ForwardDeclared;}')),
-                     record.includes_and_forward_declares_to_add)
+    self.assertSetEqual(set([3]), record.lines_to_delete)
+    self.assertSetEqual(set(('#include <stdio.h>',
+                             '#include "used2.h"',
+                             'namespace ns {class ForwardDeclared;}')),
+                        record.includes_and_forward_declares_to_add)
 
   def testIWYUOutputParserRemoveLineNoComment(self):
     iwyu_output = """\
