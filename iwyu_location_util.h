@@ -126,25 +126,16 @@ inline int GetLineNumber(clang::SourceLocation loc) {
 // FileEntry* corresponding to a source location: the file that the
 // location is in.  This is a surprising amount of work.
 
-namespace internal {
-// clang uses the name FileID to mean 'a filename that was reached via
-// a particular series of #includes.'  (What one might think a FileID
-// might be -- a unique reference to a filesystem object -- is
-// actually a FileEntry*.)  We use a less-confusing pseudonym.
-typedef clang::FileID IncludeID;
-
 // Tells which #include loc comes from.
-inline IncludeID GetIncludeID(clang::SourceLocation loc) {
-  return GlobalSourceManager()->getFileID(loc);
-}
-
-inline const clang::FileEntry* GetFileEntryFromIncludeID(IncludeID include_id) {
-  return GlobalSourceManager()->getFileEntryForID(include_id);
-}
-}  // namespace internal
-
-inline const clang::FileEntry* GetFileEntry(clang::FullSourceLoc full_loc) {
-  return internal::GetFileEntryFromIncludeID(internal::GetIncludeID(full_loc));
+// This is the most basic FileEntry getter, it only does a simple lookup in
+// SourceManager to determine which file the location is associated with.
+inline const clang::FileEntry* GetLocFileEntry(clang::SourceLocation loc) {
+  // clang uses the name FileID to mean 'a filename that was reached via
+  // a particular series of #includes.'  (What one might think a FileID
+  // might be -- a unique reference to a filesystem object -- is
+  // actually a FileEntry*.)
+  const clang::SourceManager& source_manager = *GlobalSourceManager();
+  return source_manager.getFileEntryForID(source_manager.getFileID(loc));
 }
 
 inline const clang::FileEntry* GetFileEntry(clang::SourceLocation loc) {
@@ -159,7 +150,7 @@ inline const clang::FileEntry* GetFileEntry(clang::SourceLocation loc) {
   //
   // FOO(z) will expand to 'z + y', where symbol z's location is
   // foo.h, line 5, and its spelling location is bar.cc, line 10.
-  const clang::FileEntry* retval = GetFileEntry(GetSpellingLoc(loc));
+  const clang::FileEntry* retval = GetLocFileEntry(GetSpellingLoc(loc));
 
   // Sometimes the spelling location is NULL, because the symbol is
   // 'spelled' via macro concatenation.  For instance, all the
@@ -167,7 +158,7 @@ inline const clang::FileEntry* GetFileEntry(clang::SourceLocation loc) {
   // /usr/include/c++/4.2/x86_64-linux-gnu/bits/gthr-default.h.
   // In that case, fall back on the instantiation location.
   if (!retval) {
-    retval = GetFileEntry(GetInstantiationLoc(loc));
+    retval = GetLocFileEntry(GetInstantiationLoc(loc));
   }
   return retval;
 }
