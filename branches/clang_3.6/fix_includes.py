@@ -156,10 +156,43 @@ _BARRIER_INCLUDES = re.compile(r'^\s*#\s*include\s+(<linux/)')
 _SOURCE_EXTENSIONS = [".c", ".C", ".cc", ".CC", ".cxx", ".CXX",
                       ".cpp", ".CPP", ".c++", ".C++", ".cp"]
 
+
 # Adapt Python 2 iterators to Python 3 syntax
 if sys.version_info[0] < 3:
   def next(i):
     return i.next()
+
+
+class OrderedSet(object):
+  """ Sometimes sets affect order of outputs, which hinders testing. This
+  (naive) set implementation preserves order to avoid that problem. """
+  def __init__(self, iterable=None):
+    iterable = iterable or []
+    self.storage = OrderedDict((a, None) for a in iterable)
+
+  def add(self, value):
+    self.storage[value] = None
+
+  def intersection_update(self, other):
+    self.storage = OrderedDict(
+        (k, None) for k in self.storage if k in other.storage)
+
+  def update(self, other):
+    self.storage.update(other.storage)
+
+  def difference(self, other):
+    diff_values = (v for v in self if v not in other)
+    return OrderedSet(diff_values)
+
+  def __iter__(self):
+    return self.storage.keys().__iter__()
+
+  def __contains__(self, value):
+    return value in self.storage
+
+  def __len__(self):
+    return len(self.storage)
+
 
 def _MayBeHeaderFile(filename):
   """Tries to figure out if filename is a C++ header file.  Defaults to yes."""
@@ -199,14 +232,14 @@ class IWYUOutputRecord(object):
     self.seen_forward_declare_lines = set()
 
     # A set of each line in the iwyu 'add' section.
-    self.includes_and_forward_declares_to_add = set()
+    self.includes_and_forward_declares_to_add = OrderedSet()
 
     # A map from the include filename (including ""s or <>s) to the
     # full line as given by iwyu, which includes comments that iwyu
     # has put next to the #include.  This holds both 'to-add' and
     # 'to-keep' #includes.  If flags.comments is False, the comments
     # are removed before adding to this list.
-    self.full_include_lines = {}
+    self.full_include_lines = OrderedDict()
 
   def Merge(self, other):
     """Merges other with this one.  They must share a filename.
@@ -2028,7 +2061,7 @@ def GetFixedFile(iwyu_record, flags):
   fixed_lines = FixFileLines(iwyu_record, file_lines, flags)
   fixed_lines = [line for line in fixed_lines if line is not None]
   if old_lines == fixed_lines:
-    print("No changes in file", iwyu_record.filename)
+    print("No changes in file ", iwyu_record.filename)
     return None
 
   if flags.dry_run:
