@@ -66,6 +66,61 @@ namespace internal {
 
 namespace {
 
+class OutputLine {
+ public:
+  OutputLine() {}
+  explicit OutputLine(const string& line)
+      : line_(line) {}
+  OutputLine(const string& line, const vector<string>& symbols)
+      : line_(line), symbols_(symbols) {}
+
+  size_t line_length() const { return line_.size(); }
+  bool needs_alignment() const { return !symbols_.empty(); }
+  void add_prefix(const string& prefix) { line_ = prefix + line_; }
+  string printable_line(size_t desired_length, size_t max_length) const;
+
+ private:
+  string line_;                     // '#include XXX' or 'class YYY;'
+  vector<string> symbols_;          // symbols used from included header
+};
+
+string OutputLine::printable_line(size_t desired_length, size_t max_length)
+    const {
+  // Reduce max_length to make room for the ", etc" suffix.
+  max_length -= strlen(", etc");
+
+  desired_length = std::min(desired_length, max_length);
+
+  string retval = line_;
+
+  string prefix;   // what we print before each symbol in the 'why' comments
+  // We try to get the columns to line up nicely.
+  if (retval.length() < desired_length)
+    prefix += string(desired_length - retval.length(), ' ');
+  prefix += "  // for ";    // before 1st symbol, print ' // for '
+  int symbols_printed = 0;
+
+  for (Each<string> it(&symbols_); !it.AtEnd(); ++it) {
+    if (it->empty())       // ignore the empty ("") symbol
+      continue;
+    // At verbose levels of 0, 1, or 2, cut off output at max_length columns.
+    // Actually, at 74, to leave 5 chars for ', etc' and 1 for newline.
+    if (ShouldPrint(3) ||
+        retval.length() + prefix.length() + it->length() <= max_length) {
+      retval += prefix + *it;
+      ++symbols_printed;
+      prefix = ", ";       // before 2nd and subsequent symbols, print ', '
+    } else {
+      // Truncate at max_length cols.
+      if (symbols_printed > 0)
+        retval += ", etc";
+      break;
+    }
+  }
+  retval += "\n";
+  return retval;
+}
+
 // A map that effectively allows us to dynamic cast from a NamedDecl
 // to a FakeNamedDecl. When a FakeNamedDecl is created, it will be
 // inserted into the map with itself as the key (implicitly casted to
@@ -1621,53 +1676,29 @@ vector<string> GetSymbolsSortedByFrequency(const map<string, int>& m) {
   return retval;
 }
 
-// A helper function that returns one line of the desired-includes blobs.
-string PrintableIncludeOrForwardDeclareLine(
+OutputLine PrintableIncludeOrForwardDeclareLine(
     const OneIncludeOrForwardDeclareLine& line,
     const set<string>& associated_quoted_includes) {
   // Print the line number where we saw this forward-declare or
   // #include, as a comment, if we don't have anything better to show.
   // (For instance, when we want to delete this line.)
   if (line.symbol_counts().empty() && !line.is_present()) {
-    return line.line() + "\n";   // if not present, doesn't have a line #
+    return OutputLine(line.line());   // if not present, doesn't have a line #
   }
   if (line.symbol_counts().empty() || !line.is_desired()) {
     CHECK_(!StartsWith(line.LineNumberString(), "-"));
-    return line.line() + "  // lines " + line.LineNumberString() + "\n";
+    return OutputLine(line.line() + "  // lines " + line.LineNumberString());
   }
   // We don't need to explain why foo.cc #includes foo.h
   if (line.IsIncludeLine() &&
       ContainsKey(associated_quoted_includes, line.quoted_include())) {
-    return line.line() + "\n";
+    return OutputLine(line.line());
   }
-  string retval = line.line();
-  string prefix;   // what we print before each symbol in the 'why' comments
-  // We try to get the columns to line up nicely.  The 38 is arbitrary.
-  if (retval.length() < 38)
-    prefix += string(38 - retval.length(), ' ');
-  prefix += "  // for ";    // before 1st symbol, print ' // for '
-  int symbols_printed = 0;
-  vector<string> symbols(GetSymbolsSortedByFrequency(line.symbol_counts()));
-  for (Each<string> it(&symbols); !it.AtEnd(); ++it) {
-    if (it->empty())       // ignore the empty ("") symbol
-      continue;
-    // At verbose levels of 0, 1, or 2, cut off output at 80 columns.
-    // Actually, at 74, to leave 5 chars for ', etc' and 1 for newline.
-    if (ShouldPrint(3) ||
-        retval.length() + prefix.length() + it->length() <= 74) {
-      retval += prefix + *it;
-      ++symbols_printed;
-      prefix = ", ";       // before 2nd and subsequent symbols, print ', '
-    } else {
-      // Truncate at 80 cols.
-      if (symbols_printed > 0)
-        retval += ", etc";
-      break;
-    }
-  }
-  retval += "\n";
-  return retval;
+
+  return OutputLine(line.line(),
+    GetSymbolsSortedByFrequency(line.symbol_counts()));
 }
+
 
 typedef pair<int, string> LineSortKey;
 
@@ -1704,6 +1735,8 @@ size_t PrintableDiffs(const string& filename,
   CHECK_(diff_output && "Must provide diff_output");
 
   string& output = *diff_output;
+  vector<OutputLine> output_lines;
+
   const set<string>& aqi = associated_quoted_includes;  // short alias
 
   // Sort all the output-lines: system headers before user headers
@@ -1739,11 +1772,13 @@ size_t PrintableDiffs(const string& filename,
 
   // First, new desired includes and forward-declares.
   if (ShouldPrint(1)) {
-    output += "\n" + filename + " should add these lines:\n";
+    output_lines.push_back(
+      OutputLine("\n" + filename + " should add these lines:"));
     for (Each<LineSortKey, const OneIncludeOrForwardDeclareLine*>
              it(&sorted_lines); !it.AtEnd(); ++it) {
       if (it->second->is_desired() && !it->second->is_present()) {
-        output += PrintableIncludeOrForwardDeclareLine(*it->second, aqi);
+        output_lines.push_back(
+          PrintableIncludeOrForwardDeclareLine(*it->second, aqi));
         ++num_edits;
       }
     }
@@ -1751,11 +1786,15 @@ size_t PrintableDiffs(const string& filename,
 
   // Second, includes and forward-declares that should be removed.
   if (ShouldPrint(1)) {
-    output += "\n" + filename + " should remove these lines:\n";
+    output_lines.push_back(
+      OutputLine("\n" + filename + " should remove these lines:"));
     for (Each<LineSortKey, const OneIncludeOrForwardDeclareLine*>
              it(&sorted_lines); !it.AtEnd(); ++it) {
       if (it->second->is_present() && !it->second->is_desired()) {
-        output += "- " + PrintableIncludeOrForwardDeclareLine(*it->second, aqi);
+        output_lines.push_back(
+          PrintableIncludeOrForwardDeclareLine(*it->second, aqi));
+        output_lines.back().add_prefix("- ");
+
         ++num_edits;
       }
     }
@@ -1763,13 +1802,30 @@ size_t PrintableDiffs(const string& filename,
 
   // Finally, print the final, complete include-and-forward-declare list.
   if (ShouldPrint(0)) {
-    output += "\nThe full include-list for " + filename + ":\n";
+    output_lines.push_back(
+      OutputLine("\nThe full include-list for " + filename + ":"));
     for (Each<LineSortKey, const OneIncludeOrForwardDeclareLine*>
              it(&sorted_lines); !it.AtEnd(); ++it) {
       if (it->second->is_desired()) {
-        output += PrintableIncludeOrForwardDeclareLine(*it->second, aqi);
+        output_lines.push_back(
+          PrintableIncludeOrForwardDeclareLine(*it->second, aqi));
       }
     }
+  }
+
+  // Compute max width of lines with comments so we can align them nicely.
+  size_t line_length     = 0;
+  size_t max_line_length = GlobalFlags().max_line_length;
+
+  for (Each<OutputLine> it(&output_lines); !it.AtEnd(); ++it) {
+    // Only consider lines that need alignment.
+    if (it->needs_alignment())
+      line_length = std::max(it->line_length(), line_length);
+  }
+
+  // Align lines and produce final output.
+  for (Each<OutputLine> it(&output_lines); !it.AtEnd(); ++it) {
+    output += it->printable_line(line_length, max_line_length);
   }
 
   // Let's print a helpful separator as well.
