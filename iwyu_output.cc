@@ -1814,7 +1814,7 @@ size_t PrintableDiffs(const string& filename,
   }
 
   // Compute max width of lines with comments so we can align them nicely.
-  size_t line_length     = 0;
+  size_t line_length = 0;
   size_t max_line_length = GlobalFlags().max_line_length;
 
   for (Each<OutputLine> it(&output_lines); !it.AtEnd(); ++it) {
