@@ -828,7 +828,7 @@ def _CalculateMoveSpans(file_lines, forward_declare_spans):
 
 def _ContainsBarrierInclude(file_lines, line_range):
   """Returns true iff some line in [line_range[0], line_range[1]) is BARRIER."""
-  for line_number in apply(range, line_range):
+  for line_number in range(*line_range):
     if (not file_lines[line_number].deleted and
         _BARRIER_INCLUDES.search(file_lines[line_number].line)):
       return True
@@ -1072,7 +1072,7 @@ def _DeleteDuplicateLines(file_lines, line_ranges):
   """
   seen_lines = set()
   for line_range in line_ranges:
-    for line_number in apply(range, line_range):
+    for line_number in range(*line_range):
       if file_lines[line_number].type in (_BLANK_LINE_RE, _COMMENT_LINE_RE):
         continue
       uncommented_line = _COMMENT_RE.sub('', file_lines[line_number].line)
@@ -1117,7 +1117,7 @@ def _DeleteExtraneousBlankLines(file_lines, line_range):
        to a reorder-span.
   """
   # First make sure the entire span is deleted.
-  for line_number in apply(range, line_range):
+  for line_number in range(*line_range):
     if not file_lines[line_number].deleted:
       return
 
@@ -1258,7 +1258,7 @@ def _GetToplevelReorderSpans(file_lines):
   for reorder_span in reorder_spans:
     if reorder_span is None:
       continue
-    for line_number in apply(range, reorder_span):
+    for line_number in range(*reorder_span):
       if in_ifdef[line_number] or in_namespace[line_number]:
         break
     else:   # for/else
@@ -1553,7 +1553,7 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
   first_reorder_spans = {}
   last_reorder_spans = {}
   for reorder_span in good_reorder_spans:
-    for line_number in apply(range, reorder_span):
+    for line_number in range(*reorder_span):
       line_kind = _GetLineKind(file_lines[line_number], filename,
                                flags.separate_project_includes)
       # Ignore forward-declares that come after 'contentful' code; we
@@ -1839,7 +1839,7 @@ def _DeleteLinesAccordingToIwyu(iwyu_record, file_lines):
   """Deletes all lines that iwyu_record tells us to, and cleans up after."""
   for line_number in iwyu_record.lines_to_delete:
     # Delete the entire move-span (us and our preceding comments).
-    for i in apply(range, file_lines[line_number].move_span):
+    for i in range(*file_lines[line_number].move_span):
       file_lines[i].deleted = True
 
   while True:
