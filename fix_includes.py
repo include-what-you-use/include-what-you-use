@@ -1253,11 +1253,10 @@ def _GetToplevelReorderSpans(file_lines):
           in_namespace[i] = True
         break
 
-  reorder_spans = sorted(set([fl.reorder_span for fl in file_lines]))
+  reorder_spans = [fl.reorder_span for fl in file_lines if fl.reorder_span]
+  reorder_spans = sorted(set(reorder_spans))
   good_reorder_spans = []
   for reorder_span in reorder_spans:
-    if reorder_span is None:
-      continue
     for line_number in range(*reorder_span):
       if in_ifdef[line_number] or in_namespace[line_number]:
         break
