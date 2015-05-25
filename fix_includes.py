@@ -375,7 +375,7 @@ class IWYUOutputParser(object):
         raise FixIncludesError('line "%s" (for %s) has no line number'
                                % (line, self.filename))
       # The RE is of the form [start_line, end_line], inclusive.
-      for line_number in xrange(int(m.group(1)), int(m.group(2)) + 1):
+      for line_number in range(int(m.group(1)), int(m.group(2)) + 1):
         retval.lines_to_delete.add(line_number)
 
     # IWYUOutputRecord.some_include_lines
@@ -386,7 +386,7 @@ class IWYUOutputParser(object):
       m = self._LINE_NUMBERS_COMMENT_RE.search(line)
       if not m:
         continue   # not all #include lines have line numbers, but some do
-      for line_number in xrange(int(m.group(1)), int(m.group(2)) + 1):
+      for line_number in range(int(m.group(1)), int(m.group(2)) + 1):
         retval.some_include_lines.add(line_number)
 
     # IWYUOutputRecord.seen_forward_declare_lines
@@ -602,7 +602,7 @@ def _MarkHeaderGuardIfPresent(file_lines):
   """
   # Pass over blank lines, pragmas and comments at the top of the file.
   i = 0
-  for i in xrange(len(file_lines)):
+  for i in range(len(file_lines)):
     if (not file_lines[i].deleted and
         file_lines[i].type not in [_COMMENT_LINE_RE, _BLANK_LINE_RE,
                                    _PRAGMA_ONCE_LINE_RE]):
@@ -618,7 +618,7 @@ def _MarkHeaderGuardIfPresent(file_lines):
 
   # Find the end of this ifdef, to see if it's really a header guard..
   ifdef_depth = 0
-  for ifdef_end in xrange(ifdef_start, len(file_lines)):
+  for ifdef_end in range(ifdef_start, len(file_lines)):
     if file_lines[ifdef_end].deleted:
       continue
     if file_lines[ifdef_end].type == _IF_RE:
@@ -631,7 +631,7 @@ def _MarkHeaderGuardIfPresent(file_lines):
     return False             # Weird: never found a close to this #ifdef
 
   # Finally, all the lines after the end of the ifdef must be blank or comments.
-  for i in xrange(ifdef_end + 1, len(file_lines)):
+  for i in range(ifdef_end + 1, len(file_lines)):
     if (not file_lines[i].deleted and
         file_lines[i].type not in [_COMMENT_LINE_RE, _BLANK_LINE_RE]):
       return
@@ -720,7 +720,7 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
 
   # We depend entirely on the iwyu_record for the forward-declare lines.
   for (start_line, end_line) in iwyu_record.seen_forward_declare_lines:
-    for line_number in xrange(start_line, end_line):
+    for line_number in range(start_line, end_line):
       if line_number >= len(file_lines):
         raise FixIncludesError('iwyu line number %s:%d is past file-end'
                                % (iwyu_record.filename, line_number))
@@ -750,7 +750,7 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
 
 def _PreviousNondeletedLine(file_lines, line_number):
   """Returns the line number of the previous not-deleted line, or None."""
-  for line_number in xrange(line_number - 1, -1, -1):
+  for line_number in range(line_number - 1, -1, -1):
     if not file_lines[line_number].deleted:
       return line_number
   return None
@@ -758,7 +758,7 @@ def _PreviousNondeletedLine(file_lines, line_number):
 
 def _NextNondeletedLine(file_lines, line_number):
   """Returns the line number of the next not-deleted line, or None."""
-  for line_number in xrange(line_number + 1, len(file_lines)):
+  for line_number in range(line_number + 1, len(file_lines)):
     if not file_lines[line_number].deleted:
       return line_number
   return None
@@ -813,22 +813,22 @@ def _CalculateMoveSpans(file_lines, forward_declare_spans):
        In practice this comes from iwyu_record.seen_forward_declare_lines.
   """
   # First let's do #includes.
-  for line_number in xrange(len(file_lines)):
+  for line_number in range(len(file_lines)):
     if file_lines[line_number].type == _INCLUDE_RE:
       span_begin = _LineNumberStartingPrecedingComments(file_lines, line_number)
-      for i in xrange(span_begin, line_number + 1):
+      for i in range(span_begin, line_number + 1):
         file_lines[i].move_span = (span_begin, line_number + 1)
 
   # Now forward-declares.  These spans come as input to this function.
   for (span_begin, span_end) in forward_declare_spans:
     span_begin = _LineNumberStartingPrecedingComments(file_lines, span_begin)
-    for i in xrange(span_begin, span_end):
+    for i in range(span_begin, span_end):
       file_lines[i].move_span = (span_begin, span_end)
 
 
 def _ContainsBarrierInclude(file_lines, line_range):
   """Returns true iff some line in [line_range[0], line_range[1]) is BARRIER."""
-  for line_number in apply(xrange, line_range):
+  for line_number in apply(range, line_range):
     if (not file_lines[line_number].deleted and
         _BARRIER_INCLUDES.search(file_lines[line_number].line)):
       return True
@@ -837,7 +837,7 @@ def _ContainsBarrierInclude(file_lines, line_range):
 
 def _LinesAreAllBlank(file_lines, start_line, end_line):
   """Returns true iff all lines in [start_line, end_line) are blank/deleted."""
-  for line_number in xrange(start_line, end_line):
+  for line_number in range(start_line, end_line):
     if (not file_lines[line_number].deleted and
         file_lines[line_number].type != _BLANK_LINE_RE):
       return False
@@ -897,7 +897,7 @@ def _CalculateReorderSpans(file_lines):
           break
     reorder_span_end = sorted_move_spans[i][1]
     # We'll map every line in the span to the span-extent.
-    for line_number in xrange(reorder_span_start, reorder_span_end):
+    for line_number in range(reorder_span_start, reorder_span_end):
       file_lines[line_number].reorder_span = (reorder_span_start,
                                               reorder_span_end)
     i += 1
@@ -982,7 +982,7 @@ def _DeleteEmptyNamespaces(file_lines):
           while (start_line > 0 and
                  file_lines[start_line-1].type == _BLANK_LINE_RE):
             start_line -= 1
-          for line_number in xrange(start_line, end_line):
+          for line_number in range(start_line, end_line):
             file_lines[line_number].deleted = True
           num_namespaces_deleted += 1
           break
@@ -1038,7 +1038,7 @@ def _DeleteEmptyIfdefs(file_lines):
         while (start_line > 0 and
                file_lines[start_line-1].type == _BLANK_LINE_RE):
           start_line -= 1
-        for line_number in xrange(start_line, end_line):
+        for line_number in range(start_line, end_line):
           file_lines[line_number].deleted = True
         num_ifdefs_deleted += 1
         break
@@ -1072,7 +1072,7 @@ def _DeleteDuplicateLines(file_lines, line_ranges):
   """
   seen_lines = set()
   for line_range in line_ranges:
-    for line_number in apply(xrange, line_range):
+    for line_number in apply(range, line_range):
       if file_lines[line_number].type in (_BLANK_LINE_RE, _COMMENT_LINE_RE):
         continue
       uncommented_line = _COMMENT_RE.sub('', file_lines[line_number].line)
@@ -1117,7 +1117,7 @@ def _DeleteExtraneousBlankLines(file_lines, line_range):
        to a reorder-span.
   """
   # First make sure the entire span is deleted.
-  for line_number in apply(xrange, line_range):
+  for line_number in apply(range, line_range):
     if not file_lines[line_number].deleted:
       return
 
@@ -1220,7 +1220,7 @@ def _GetToplevelReorderSpans(file_lines):
   """
   in_ifdef = [False] * len(file_lines)   # lines inside an #if
   ifdef_depth = 0
-  for line_number in xrange(len(file_lines)):
+  for line_number in range(len(file_lines)):
     line_info = file_lines[line_number]
     if line_info.deleted:
       continue
@@ -1237,7 +1237,7 @@ def _GetToplevelReorderSpans(file_lines):
   # the namespace.
   in_namespace = [False] * len(file_lines)
   namespace_depth = 0
-  for line_number in xrange(len(file_lines)):
+  for line_number in range(len(file_lines)):
     line_info = file_lines[line_number]
     if line_info.deleted:
       continue
@@ -1249,7 +1249,7 @@ def _GetToplevelReorderSpans(file_lines):
     if namespace_depth > 0:
       in_namespace[line_number] = True
       if line_info.type is None:
-        for i in xrange(line_number, len(file_lines)):  # rest of file
+        for i in range(line_number, len(file_lines)):  # rest of file
           in_namespace[i] = True
         break
 
@@ -1258,7 +1258,7 @@ def _GetToplevelReorderSpans(file_lines):
   for reorder_span in reorder_spans:
     if reorder_span is None:
       continue
-    for line_number in apply(xrange, reorder_span):
+    for line_number in apply(range, reorder_span):
       if in_ifdef[line_number] or in_namespace[line_number]:
         break
     else:   # for/else
@@ -1299,7 +1299,7 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
   simple_namespace_re = re.compile(r'^\s*namespace\s+([^{\s]+)\s*\{\s*(//.*)?$')
   namespace_prefix = ''
 
-  for line_number in xrange(len(file_lines)):
+  for line_number in range(len(file_lines)):
     line_info = file_lines[line_number]
 
     if line_info.deleted:
@@ -1539,7 +1539,7 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
   # Figure out where the first 'contentful' line is (after the first
   # 'good' span, so we skip past header guards and the like).  Basically,
   # the first contentful line is a line not in any reorder span.
-  for i in xrange(len(good_reorder_spans) - 1):
+  for i in range(len(good_reorder_spans) - 1):
     if good_reorder_spans[i][1] != good_reorder_spans[i+1][0]:
       first_contentful_line = good_reorder_spans[i][1]
       break
@@ -1553,7 +1553,7 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
   first_reorder_spans = {}
   last_reorder_spans = {}
   for reorder_span in good_reorder_spans:
-    for line_number in apply(xrange, reorder_span):
+    for line_number in apply(range, reorder_span):
       line_kind = _GetLineKind(file_lines[line_number], filename,
                                flags.separate_project_includes)
       # Ignore forward-declares that come after 'contentful' code; we
@@ -1570,13 +1570,13 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
     return first_reorder_spans[kind]
 
   # Second choice: last span of the kinds above us:
-  for backup_kind in xrange(kind - 1, _MAIN_CU_INCLUDE_KIND - 1, -1):
+  for backup_kind in range(kind - 1, _MAIN_CU_INCLUDE_KIND - 1, -1):
     if backup_kind in last_reorder_spans:
       return last_reorder_spans[backup_kind]
 
   # Third choice: first span of the kinds below us, but not counting
   # _FORWARD_DECLARE_KIND.
-  for backup_kind in xrange(kind + 1, _FORWARD_DECLARE_KIND):
+  for backup_kind in range(kind + 1, _FORWARD_DECLARE_KIND):
     if backup_kind in first_reorder_spans:
       return first_reorder_spans[backup_kind]
 
@@ -1701,7 +1701,7 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines, flags):
       reason lacks an #include or forward-declare line.
   """
   # Get to the first contentful line.
-  for i in xrange(len(move_span_lines)):
+  for i in range(len(move_span_lines)):
     if (not move_span_lines[i].deleted and
         move_span_lines[i].type in (_INCLUDE_RE, _FORWARD_DECLARE_RE)):
       first_contentful_line = i
@@ -1770,7 +1770,7 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines, flags):
 def _CommonPrefixLength(a, b):
   """Given two lists, returns the index of 1st element not common to both."""
   end = min(len(a), len(b))
-  for i in xrange(end):
+  for i in range(end):
     if a[i] != b[i]:
       return i
   return end
@@ -1839,7 +1839,7 @@ def _DeleteLinesAccordingToIwyu(iwyu_record, file_lines):
   """Deletes all lines that iwyu_record tells us to, and cleans up after."""
   for line_number in iwyu_record.lines_to_delete:
     # Delete the entire move-span (us and our preceding comments).
-    for i in apply(xrange, file_lines[line_number].move_span):
+    for i in apply(range, file_lines[line_number].move_span):
       file_lines[i].deleted = True
 
   while True:
