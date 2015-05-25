@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 ##===--- fix_includes_test.py - test for fix_includes.py ------------------===##
 #
