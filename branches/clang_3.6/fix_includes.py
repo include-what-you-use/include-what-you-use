@@ -9,6 +9,8 @@
 #
 ##===----------------------------------------------------------------------===##
 
+from __future__ import print_function
+
 """Update files with the 'correct' #include and forward-declare lines.
 
 Given the output of include_what_you_use on stdin -- when run at the
@@ -475,7 +477,7 @@ def _ReadFile(filename):
   try:
     return open(filename).read().splitlines()
   except (IOError, OSError), why:
-    print "Skipping '%s': %s" % (filename, why)
+    print("Skipping '%s': %s" % (filename, why))
   return None
 
 
@@ -533,13 +535,13 @@ def _WriteFileContents(filename, file_lines):
     finally:
       f.close()
   except (IOError, OSError), why:
-    print "Error writing '%s': %s" % (filename, why)
+    print("Error writing '%s': %s" % (filename, why))
 
 
 def _CreateCommandLine(command, args):
   """Join the command with the args in a shell-quoted way."""
   ret = '%s %s' % (command, ' '.join(map(pipes.quote, args)))
-  print 'Running:', ret
+  print('Running: ' + ret)
   return ret
 
 
@@ -553,12 +555,12 @@ def _GetCommandOutputLines(command, args):
 def _RunCommand(command, args):
   """Run the given shell command."""
   for line in _GetCommandOutputLines(command, args):
-    print line,
+    print(line, end=None)
 
 
 def _GetCommandOutputWithInput(command, stdin_text):
   """Return the output of the given command fed the stdin_text."""
-  print command
+  print(command)
   proc = subprocess.Popen(command,
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
@@ -573,7 +575,7 @@ def PrintFileDiff(old_file_contents, new_file_contents):
   try:
     diff.next()
     diff.next()
-    print '\n'.join(diff)
+    print('\n'.join(diff))
   except StopIteration:
     pass
 
@@ -2013,16 +2015,16 @@ def GetFixedFile(iwyu_record, flags):
   file_contents = _ReadWriteableFile(iwyu_record.filename,
                                      flags.dry_run or flags.checkout_command)
   if not file_contents:
-    print '(skipping %s: not a writable file)' % iwyu_record.filename
+    print('(skipping %s: not a writable file)' % iwyu_record.filename)
     return None
-  print ">>> Fixing #includes in '%s'" % iwyu_record.filename
+  print(">>> Fixing #includes in '%s'" % iwyu_record.filename)
   file_lines = ParseOneFile(file_contents, iwyu_record)
   old_lines = [fl.line for fl in file_lines
                if fl is not None and fl.line is not None]
   fixed_lines = FixFileLines(iwyu_record, file_lines, flags)
   fixed_lines = [line for line in fixed_lines if line is not None]
   if old_lines == fixed_lines:
-    print "No changes in file", iwyu_record.filename
+    print("No changes in file", iwyu_record.filename)
     return None
 
   if flags.dry_run:
@@ -2077,10 +2079,10 @@ def CreateCLForCheckoutCommand(checkout_command, invoking_command):
       input_lines.append(line)
 
   if not description_added:
-    print ('ERROR: Didn\'t find "\t<enter description here>" in'
-           ' "%s change -o" output' % what4)
+    print('ERROR: Didn\'t find "\t<enter description here>" in'
+          ' "%s change -o" output' % what4)
     for line in output_lines:
-      print line,
+      print(line, end=None)
     return None
 
   input_text = ''.join(input_lines)
@@ -2089,7 +2091,7 @@ def CreateCLForCheckoutCommand(checkout_command, invoking_command):
   # Parse output for "Changelist XXX created."
   m = re.match(r'Change (\d+) created.', output)
   if not m:
-    print 'ERROR: Unexpected change creation output "%s"' % output
+    print('ERROR: Unexpected change creation output "%s"' % output)
     return None
   return m.group(1)
 
@@ -2124,7 +2126,7 @@ def FixManyFiles(iwyu_records, flags):
             not os.access(iwyu_record.filename, os.W_OK)):
           files_to_checkout.append(iwyu_record.filename)
     except FixIncludesError, why:
-      print 'ERROR: %s - skipping file %s' % (why, iwyu_record.filename)
+      print('ERROR: %s - skipping file %s' % (why, iwyu_record.filename))
 
   # It's much faster to check out all the files at once.
   if flags.checkout_command and files_to_checkout:
@@ -2153,8 +2155,7 @@ def FixManyFiles(iwyu_records, flags):
 
   files_fixed = [filename for filename, _ in file_and_fix_pairs]
 
-  print 'IWYU edited %d files on your behalf.\n' % len(files_fixed)
-
+  print('IWYU edited %d files on your behalf.\n' % len(files_fixed))
 
   return len(files_fixed)
 
@@ -2187,15 +2188,15 @@ def ProcessIWYUOutput(f, files_to_process, flags):
       if not iwyu_record:
         break
     except FixIncludesError, why:
-      print 'ERROR: %s' % why
+      print('ERROR: %s' % why)
       continue
     filename = iwyu_record.filename
     if files_to_process is not None and filename not in files_to_process:
-      print '(skipping %s: not listed on commandline)' % filename
+      print('(skipping %s: not listed on commandline)' % filename)
       continue
     if flags.ignore_re and re.search(flags.ignore_re, filename):
-      print '(skipping %s: it matches --ignore_re, which is %s)' % (
-          filename, flags.ignore_re)
+      print('(skipping %s: it matches --ignore_re, which is %s)' % (
+          filename, flags.ignore_re))
       continue
 
     if filename in iwyu_output_records:
@@ -2209,7 +2210,7 @@ def ProcessIWYUOutput(f, files_to_process, flags):
   # file, but not another, and we need to have merged them above.)
   for filename in iwyu_output_records:
     if not iwyu_output_records[filename].HasContentfulChanges():
-      print '(skipping %s: iwyu reports no contentful changes)' % filename
+      print('(skipping %s: iwyu reports no contentful changes)' % filename)
       # Mark that we're skipping this file by setting the record to None
       iwyu_output_records[filename] = None
 
