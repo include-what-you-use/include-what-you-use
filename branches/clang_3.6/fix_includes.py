@@ -476,7 +476,7 @@ def _ReadFile(filename):
   """Read from filename and return a list of file lines."""
   try:
     return open(filename).read().splitlines()
-  except (IOError, OSError), why:
+  except (IOError, OSError) as why:
     print("Skipping '%s': %s" % (filename, why))
   return None
 
@@ -534,7 +534,7 @@ def _WriteFileContents(filename, file_lines):
       _WriteFileContentsToFileObject(f, file_lines, line_ending)
     finally:
       f.close()
-  except (IOError, OSError), why:
+  except (IOError, OSError) as why:
     print("Error writing '%s': %s" % (filename, why))
 
 
@@ -2125,7 +2125,7 @@ def FixManyFiles(iwyu_records, flags):
         if (flags.checkout_command and
             not os.access(iwyu_record.filename, os.W_OK)):
           files_to_checkout.append(iwyu_record.filename)
-    except FixIncludesError, why:
+    except FixIncludesError as why:
       print('ERROR: %s - skipping file %s' % (why, iwyu_record.filename))
 
   # It's much faster to check out all the files at once.
@@ -2187,7 +2187,7 @@ def ProcessIWYUOutput(f, files_to_process, flags):
       iwyu_record = iwyu_output_parser.ParseOneRecord(f, flags)
       if not iwyu_record:
         break
-    except FixIncludesError, why:
+    except FixIncludesError as why:
       print('ERROR: %s' % why)
       continue
     filename = iwyu_record.filename
