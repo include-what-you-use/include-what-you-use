@@ -87,6 +87,10 @@ static void PrintHelp(const char* extra_msg) {
          "   --transitive_includes_only: do not suggest that a file add\n"
          "        foo.h unless foo.h is already visible in the file's\n"
          "        transitive includes.\n"
+         "   --max_line_length: maximum line length for includes.\n"
+         "        Note that this only affects comments and alignment thereof,\n"
+         "        the maximum line length can still be exceeded with long\n"
+         "        file names (default: 80)."
          "   --verbose=<level>: the higher the level, the more output.\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
@@ -154,6 +158,7 @@ CommandlineFlags::CommandlineFlags()
       transitive_includes_only(false),
       verbose(getenv("IWYU_VERBOSE") ? atoi(getenv("IWYU_VERBOSE")) : 1),
       no_default_mappings(false),
+      max_line_length(80),
       prefix_header_include_policy(CommandlineFlags::kAdd),
       pch_in_code(false) {
 }
@@ -169,6 +174,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"no_default_mappings", no_argument, NULL, 'n'},
     {"prefix_header_includes", required_argument, NULL, 'x'},
     {"pch_in_code", no_argument, NULL, 'h'},
+    {"max_line_length", optional_argument, NULL, 'l'},
     {0, 0, 0, 0}
   };
   static const char shortopts[] = "d::p:v:c:m:n";
@@ -194,6 +200,10 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         }
         break;
       case 'h': pch_in_code = true; break;
+      case 'l':
+        max_line_length = atoi(optarg);
+        CHECK_((max_line_length >= 0) && "Max line length must be positive");
+        break;
       case -1: return optind;   // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");
