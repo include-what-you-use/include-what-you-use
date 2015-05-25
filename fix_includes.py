@@ -1611,7 +1611,7 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
       # reorder span, just return that span, rather than creating a new
       # span inside the existing one.
       if first_reorder_spans:
-        assert first_reorder_spans.keys() == [_FORWARD_DECLARE_KIND], \
+        assert list(first_reorder_spans.keys()) == [_FORWARD_DECLARE_KIND], \
             first_reorder_spans
         if line_number >= first_reorder_spans[_FORWARD_DECLARE_KIND][0]:
           return first_reorder_spans[_FORWARD_DECLARE_KIND]
