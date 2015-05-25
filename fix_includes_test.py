@@ -209,8 +209,9 @@ class FixIncludesBase(unittest.TestCase):
     if not filenames:    # This is the other possible starting-line
       filenames = re.findall('^\((\S+) has correct #includes/fwd-decls\)',
                              iwyu_output, re.M)
+
     expected_after = []
-    for filename in set(filenames):   # uniquify
+    for filename in fix_includes.OrderedSet(filenames):  # uniquify
       if filename not in unedited_files:
         expected_after.extend(self.expected_after_map[filename])
 
