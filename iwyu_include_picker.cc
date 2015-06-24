@@ -171,7 +171,14 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "useconds_t", kPrivate, "<sys/types.h>", kPublic },
   { "useconds_t", kPrivate, "<unistd.h>", kPublic },
   // glob.h seems to define size_t if necessary, but it should come from stddef.
-  { "size_t", kPrivate, "<stddef.h>", kPublic },
+  // It is unspecified if the cname headers provide ::size_t.
+  // <locale.h> is the one header which defines NULL but not size_t.
+  { "size_t", kPrivate, "<stddef.h>", kPublic },  // 'canonical' location for size_t
+  { "size_t", kPrivate, "<stdio.h>", kPublic },
+  { "size_t", kPrivate, "<stdlib.h>", kPublic },
+  { "size_t", kPrivate, "<string.h>", kPublic },
+  { "size_t", kPrivate, "<time.h>", kPublic },
+  { "size_t", kPrivate, "<wchar.h>", kPublic },
   // Macros that can be defined in more than one file, don't have the
   // same __foo_defined guard that other types do, so the grep above
   // doesn't discover them.  Until I figure out a better way, I just

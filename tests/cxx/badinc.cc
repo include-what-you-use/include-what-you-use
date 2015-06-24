@@ -68,7 +68,8 @@
 #include UNUSED_INC
 // The following ilne is not needed, but use a 'keep' pragma anyway.
 #include <setjmp.h>   // IWYU pragma: keep
-#include <cwchar>     // for NULL (though we get NULL via badinc.h's stdio.h).
+#include <clocale>    // for NULL (though we get NULL via badinc.h's stdio.h).
+                      // clocale is chosen as it provides NULL but not size_t.
 #include <algorithm>  // try #including the same file twice
 #include <algorithm>  // ...and then 3 times
 
@@ -1067,7 +1068,7 @@ class CC_TemplateClass {
   typedef I1_TemplateClass<A> i1_typedef;
 
   // Let's throw in per-class operator new/delete.
-  // IWYU: size_t is...*<stddef.h>
+  // IWYU: size_t is...*((<stddef.h>)|(stdio.h)|(stdlib.h)|(string.h)|(time.h)|(wchar.h))
   void* operator new(size_t size) {
     B b;
     (void)b;
@@ -1980,7 +1981,7 @@ tests/cxx/badinc.cc should remove these lines:
 - #include <math.h>  // lines XX-XX
 - #include <algorithm>  // lines XX-XX
 - #include <algorithm>  // lines XX-XX
-- #include <cwchar>  // lines XX-XX
+- #include <clocale>  // lines XX-XX
 - #include <locale>  // lines XX-XX
 - #include "tests/cxx/badinc-d2.h"  // lines XX-XX
 - class Cc_ForwardDeclare_Function::I2_Class;  // lines XX-XX
@@ -1993,7 +1994,7 @@ The full include-list for tests/cxx/badinc.cc:
 #include <ctype.h>  // for isascii
 #include <setjmp.h>
 #include <stdarg.h>  // for va_list
-#include <stddef.h>  // for offsetof, size_t
+#include <stddef.h>  // for offsetof
 #include <stdlib.h>  // for rand
 #include <algorithm>  // for find
 #include <fstream>  // for fstream
