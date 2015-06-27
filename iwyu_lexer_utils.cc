@@ -34,6 +34,19 @@ using std::vector;
 
 namespace include_what_you_use {
 
+namespace {
+// Return a copy of the source text in the range (begin, end].
+string GetRangeText(const CharacterDataGetterInterface& data_getter,
+                    SourceLocation begin, SourceLocation end) {
+  // We generally shouldn't copy, but the raw lexer needs a nul-terminated
+  // string, so this is useful when we need to lex things manually.
+  const char* text = data_getter.GetCharacterData(begin);
+  const char* text_end = data_getter.GetCharacterData(end);
+  CHECK_(text_end >= text);
+  return string(text, text_end);
+}
+}
+
 // SourceManagerCharacterDataGetter method implementations.
 SourceManagerCharacterDataGetter::SourceManagerCharacterDataGetter(
     const SourceManager& source_manager)
@@ -94,23 +107,41 @@ string GetTokenText(const Token& token,
   return string(text, token.getLength());
 }
 
+// In the expression at loc, find the next following identifier token.
+// We use this to determine if a use-expression contains a macro argument,
+// e.g. sizeof(*x), where x is a macro-arg.
+// Return empty string if none is found.
+string FindNextIdentifier(SourceLocation loc, SourceLocation endLoc,
+                          const CharacterDataGetterInterface& data_getter) {
+  const string range_str = GetRangeText(data_getter, loc, endLoc);
+  const char* range_cstr = range_str.c_str();
+
+  VERRS(7) << "Lexing looking for identifier: " << range_str << "\n";
+  Lexer lexer(loc, LangOptions(), range_cstr, range_cstr,
+              range_cstr + range_str.length());
+
+  Token token;
+  while (!lexer.LexFromRawLexer(token)) {
+    if (token.is(clang::tok::raw_identifier))
+      return token.getRawIdentifier();
+  }
+
+  return string();  // No identifier found.
+}
+
 // Given the range of an #if or #elif statement, determine the
 // symbols which are arguments to "defined". This allows iwyu to
 // treat these symbols as if #ifdef was used instead.
 vector<Token> FindArgumentsToDefined(
     SourceRange range,
     const CharacterDataGetterInterface& data_getter) {
-  const char* text = data_getter.GetCharacterData(range.getBegin());
-  const char* text_end = data_getter.GetCharacterData(range.getEnd());
-
-  // Ugh. The lexer wants the text to be nul-terminated. Make a copy.
-  const unsigned range_length = text_end - text;
-  const string range_str(text, range_length);
+  const string range_str =
+      GetRangeText(data_getter, range.getBegin(), range.getEnd());
   const char* range_cstr = range_str.c_str();
 
   VERRS(7) << "Lexing: " << range_str << "\n";
   Lexer lexer(range.getBegin(), LangOptions(), range_cstr, range_cstr,
-              range_cstr + range_length);
+              range_cstr + range_str.length());
 
   vector<Token> ret;
   Token token;
