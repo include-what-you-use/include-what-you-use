@@ -105,6 +105,7 @@
 #include "iwyu_cache.h"
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
+#include "iwyu_lexer_utils.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
 // This is needed for
@@ -129,6 +130,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
@@ -137,7 +139,6 @@
 namespace clang {
 class FileEntry;
 class PPCallbacks;
-class SourceManager;
 class Token;
 }  // namespace clang
 
@@ -176,6 +177,7 @@ using clang::FunctionDecl;
 using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
 using clang::FunctionType;
+using clang::IdentifierInfo;
 using clang::ImplicitCastExpr;
 using clang::LValueReferenceType;
 using clang::LinkageSpecDecl;
@@ -188,6 +190,7 @@ using clang::OverloadExpr;
 using clang::ParmVarDecl;
 using clang::PPCallbacks;
 using clang::PointerType;
+using clang::Preprocessor;
 using clang::QualType;
 using clang::QualifiedTypeLoc;
 using clang::RecordDecl;
@@ -431,17 +434,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 
   SourceLocation CurrentLoc() const {
     CHECK_(current_ast_node_ && "Call CurrentLoc within Visit* or Traverse*");
-    const SourceLocation loc = current_ast_node_->GetLocation();
-    if (!loc.isValid())
-      return loc;
-    // If the token is formed via macro concatenation, the spelling
-    // location will be in <scratch space>.  Use the instantiation
-    // location instead.
-    const SourceLocation spelling_loc = GetSpellingLoc(loc);
-    if (IsInMacro(loc) && StartsWith(PrintableLoc(spelling_loc), "<scratch "))
-      return GetInstantiationLoc(loc);
-    else
-      return spelling_loc;
+    return current_ast_node_->GetLocation();
   }
 
   string CurrentFilePath() const {
@@ -1380,31 +1373,96 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return type;
   }
 
-  // Re-assign uses from macro authors to macro callers when possible.
-  // With macros, it can be very difficult to tell what types are the
-  // responsibility of the macro-caller, and which the macro-author.  e.g.
-  //    #define SIZE_IN_FOOS(ptr)  ( sizeof(*ptr) / sizeof(Foo) )
-  // Here the type of *ptr is the responsibility of the caller, while the
-  // type of Foo is the responsibility of the author, even though the
-  // Exprs for *ptr and Foo are both located inside the macro (the Expr
-  // for ptr is located at the macro-calling site, but not for *ptr).
-  // To help us guess the owner, we use this rule: if the macro-file
-  // intends-to-provide the type, then we keep ownership of the type
-  // at the macro.  Otherwise, we assume it's with the caller.  This
-  // works well as long as the file defining the macro is well-behaved.
-  //   This function should be called with a use-loc that is within
-  // an expanded macro (so the use-loc will point to either inside a
-  // macro definition, or to an argument to a macro call).  If it
-  // points within a macro definition, and that macro-definition file
-  // does not mean to re-export the symbol being used, then we reassign
-  // use of the decl to the macro-caller.
-  SourceLocation GetUseLocationForMacroExpansion(SourceLocation use_loc,
-                                                 const Decl* used_decl) {
+  // Return true if decl is forward-declared earlier in the same file as loc.
+  bool IsForwardDeclaredInSameFile(const Decl* decl, SourceLocation loc) {
+    set<const NamedDecl*> redecls = GetClassRedecls(DynCastFrom(decl));
+    for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
+      if (IsBeforeInSameFile(*it, loc)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Assuming use_loc is part of a macro expansion, decide whether the file
+  // expanding the macro or the file defining the macro should be held
+  // responsible for the used_decl.
+  // The rules are:
+  // 1) If the macro definition file forward-declares the used decl, that's a
+  //    hint that it wants callers to take responsibility.
+  // 2) If the symbol being used is passed as an argument to the macro, we want
+  //    callers to take responsibility (that thing they passed in is something
+  //    they know about, and the macro doesn't)
+  // 3) If the use_loc is in <scratch space>, we assume it's formed by macro
+  //    argument concatenation, and attribute responsibility to callers.
+  // Otherwise, the macro file is responsible for including the symbol.
+  //
+  // Returns a pair of the responsible location and a Boolean indicating whether
+  // the macro file forward-declared used_decl (if the use inside the macro is a
+  // fwd-decl use, and the macro file has already forward-declared the symbol,
+  // we don't want to force callers to re-forward-declare it.)
+  std::pair<SourceLocation, bool> GetUseLocationForMacroExpansion(
+      SourceLocation use_loc, const Decl* used_decl) {
     CHECK_(IsInMacro(use_loc) && "Unexpected non-macro-expansion call");
-    if (!preprocessor_info().PublicHeaderIntendsToProvide(
-            GetFileEntry(use_loc), GetFileEntry(used_decl)))
-      return GetInstantiationLoc(use_loc);
-    return use_loc;
+
+    SourceLocation caller_loc = GetInstantiationLoc(use_loc);
+
+    bool isForwardDeclaredInMacroFile = false;
+    if (StartsWith(PrintableLoc(GetSpellingLoc(use_loc)), "<scratch ")) {
+      VERRS(5) << "Decl was used in <scratch space>, probably as a result of "
+                  "macro arg concatenation, attributing to caller.\n";
+      use_loc = caller_loc;
+    } else {
+      isForwardDeclaredInMacroFile =
+          IsForwardDeclaredInSameFile(used_decl, use_loc);
+      if (isForwardDeclaredInMacroFile) {
+        VERRS(5) << "Decl was forward-declared in macro file, attributing to "
+                    "caller.\n";
+        use_loc = caller_loc;
+      } else {
+        // use_loc might be pointing directly to a macro argument, ask the
+        // source manager if that's the case.
+        SourceManager& SM = *GlobalSourceManager();
+        if (SM.isMacroArgExpansion(use_loc)) {
+           VERRS(5) << "Use location is a macro arg expansion."
+                       "Attributing to caller.\n";
+           use_loc = caller_loc;
+        } else {
+          // use_loc might be pointing to an expression, e.g. sizeof(*x) --
+          // use the lexer to dig out 'x'
+          llvm::StringRef macro_name =
+              compiler()->getPreprocessor().getImmediateMacroName(use_loc);
+          const IdentifierInfo* ii =
+              compiler()->getPreprocessor().getIdentifierInfo(macro_name);
+          const MacroInfo* mi = compiler()->getPreprocessor().getMacroInfo(ii);
+
+          SourceLocation eom = mi->getDefinitionEndLoc();
+          string identifier = FindNextIdentifier(GetSpellingLoc(use_loc), eom,
+                                                 DefaultDataGetter());
+
+          for (MacroInfo::arg_iterator i = mi->arg_begin(); i != mi->arg_end();
+               ++i) {
+            if ((*i)->getName() == identifier) {
+              VERRS(5)
+                  << "Offset use location (identifier: '" << identifier
+                  << "') is a macro arg expansion. Attributing to caller.\n";
+              use_loc = caller_loc;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // If none of the above kicked in, log that we're attributing this use
+    // to the macro.
+    if (use_loc != caller_loc) {
+      VERRS(5) << "Use location is not a macro arg expansion. "
+               << "Attributing to macro.\n";
+    }
+
+    return std::make_pair(use_loc, isForwardDeclaredInMacroFile);
   }
 
   // There are a few situations where iwyu is more restrictive than
@@ -1585,8 +1643,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return;
 
     // Figure out the best location to attribute uses inside macros.
-    if (IsInMacro(used_loc))
-      used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
+    if (used_loc.isMacroID()) {
+      bool forwardDeclaredInMacro = false; // unused
+      std::tie(used_loc, forwardDeclaredInMacro) =
+          GetUseLocationForMacroExpansion(used_loc, decl);
+    }
     const FileEntry* used_in = GetFileEntry(used_loc);
 
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
@@ -1650,13 +1711,21 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return;
 
     // Figure out the best location to attribute uses inside macros.
-    if (IsInMacro(used_loc))
-      used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
+    bool isForwardDeclaredInMacroFile = false;
+    bool definedAndUsedInSameFile = false;
+    if (used_loc.isMacroID()) {
+      definedAndUsedInSameFile = (GetFileEntry(used_loc) ==
+                                  GetFileEntry(GetInstantiationLoc(used_loc)));
+      std::tie(used_loc, isForwardDeclaredInMacroFile) =
+          GetUseLocationForMacroExpansion(used_loc, decl);
+    }
     const FileEntry* used_in = GetFileEntry(used_loc);
 
-    preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()),
-        comment);
+    if (definedAndUsedInSameFile || !isForwardDeclaredInMacroFile) {
+      preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
+          used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+          comment);
+    }
 
     // If we're a use that depends on a using declaration, make sure
     // we #include the file with the using declaration.

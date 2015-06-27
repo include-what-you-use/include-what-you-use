@@ -71,6 +71,12 @@ string GetIncludeNameAsTyped(
     clang::SourceLocation include_loc,
     const CharacterDataGetterInterface& character_data_getter);
 
+// Returns the first identifier after loc, if any.
+// If no identifier is found, return empty string.
+string FindNextIdentifier(
+    clang::SourceLocation loc, clang::SourceLocation endLoc,
+    const CharacterDataGetterInterface& data_getter);
+
 // Given the range of an #if or #elif statement, determine the
 // symbols which are arguments to "defined". This allows iwyu to
 // treat these symbols as if #ifdef was used instead.
