@@ -15,20 +15,6 @@
 #include <iostream>
 #include "llvm/Support/Compiler.h"
 
-// Portable stub for Clang's __has_feature.
-#ifndef __has_feature
-# define __has_feature(x) 0
-#endif
-
-// Portable override keyword.
-// Use to mark virtual methods as overriding a base class method,
-// compiler will complain if method does not exist in base class.
-#if (defined(_MSC_VER) || __has_feature(cxx_override_control))
-#define IWYU_OVERRIDE override
-#else
-#define IWYU_OVERRIDE
-#endif
-
 // Count of statically allocated array.
 #define IWYU_ARRAYSIZE(arr) sizeof(arr) / sizeof(*arr)
 
