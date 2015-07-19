@@ -81,6 +81,7 @@ class OneIwyuTest(unittest.TestCase):
     clang_flags_map = {
       'alias_template.cc': ['-std=c++11'],
       'auto_type_within_template.cc': ['-std=c++11'],
+      'catch.cc': ['-Xclang', '-fcxx-exceptions', '-Xclang', '-fexceptions'],
       'clmode.cc': ['--driver-mode=cl', '/C', '/Os', '/W2'],
       'conversion_ctor.cc': ['-std=c++11'],
       'deleted_implicit.cc' : ['-std=c++11'],
