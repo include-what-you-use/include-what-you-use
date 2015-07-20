@@ -72,53 +72,53 @@ class OutputLine {
   explicit OutputLine(const string& line)
       : line_(line) {}
   OutputLine(const string& line, const vector<string>& symbols)
-      : line_(line), symbols_(symbols) {}
+      : line_(line),
+        symbols_(symbols) {
+    symbols_.erase(std::remove_if(symbols_.begin(), symbols_.end(),
+                                  [](const string& v) { return v.empty(); }),
+                   symbols_.end());
+  }
 
   size_t line_length() const { return line_.size(); }
   bool needs_alignment() const { return !symbols_.empty(); }
   void add_prefix(const string& prefix) { line_ = prefix + line_; }
-  string printable_line(size_t desired_length, size_t max_length) const;
+  string printable_line(size_t min_length, size_t max_length) const;
 
  private:
   string line_;                     // '#include XXX' or 'class YYY;'
   vector<string> symbols_;          // symbols used from included header
 };
 
-string OutputLine::printable_line(size_t desired_length, size_t max_length)
-    const {
-  // Reduce max_length to make room for the ", etc" suffix.
-  max_length -= strlen(", etc");
+// Append a helpful 'why' comment to the include line, containing the symbols
+// used from the header. Align nicely at lower verbosity levels.
+string OutputLine::printable_line(size_t min_length, size_t max_length) const {
+  // If there are no symbols to mention, return the line as-is.
+  if (symbols_.empty())
+    return line_;
 
-  desired_length = std::min(desired_length, max_length);
+  string symbol_prefix = "  // for ";  // before 1st symbol, print '  // for '
 
-  string retval = line_;
+  // Pad the symbol prefix so 'why' comments are nicely aligned.
+  if (line_.length() < min_length)
+    symbol_prefix.insert(0, min_length - line_.length(), ' ');
 
-  string prefix;   // what we print before each symbol in the 'why' comments
-  // We try to get the columns to line up nicely.
-  if (retval.length() < desired_length)
-    prefix += string(desired_length - retval.length(), ' ');
-  prefix += "  // for ";    // before 1st symbol, print ' // for '
-  int symbols_printed = 0;
+  string result = line_;
+  for (const string& symbol : symbols_) {
+    string hunk = symbol_prefix + symbol;
+    if (!ShouldPrint(3)) {
+      // At verbose levels 0-2, truncate output to max_length columns.
+      hunk = Truncate(hunk, max_length - result.length());
 
-  for (Each<string> it(&symbols_); !it.AtEnd(); ++it) {
-    if (it->empty())       // ignore the empty ("") symbol
-      continue;
-    // At verbose levels of 0, 1, or 2, cut off output at max_length columns.
-    // Actually, at 74, to leave 5 chars for ', etc' and 1 for newline.
-    if (ShouldPrint(3) ||
-        retval.length() + prefix.length() + it->length() <= max_length) {
-      retval += prefix + *it;
-      ++symbols_printed;
-      prefix = ", ";       // before 2nd and subsequent symbols, print ', '
-    } else {
-      // Truncate at max_length cols.
-      if (symbols_printed > 0)
-        retval += ", etc";
-      break;
+      // If we can't fit any fragment of the symbol hunk, just give up.
+      if (hunk.empty())
+        break;
     }
+
+    result += hunk;
+    symbol_prefix = ", ";
   }
-  retval += "\n";
-  return retval;
+
+  return result;
 }
 
 // A map that effectively allows us to dynamic cast from a NamedDecl
@@ -1826,6 +1826,7 @@ size_t PrintableDiffs(const string& filename,
   // Align lines and produce final output.
   for (Each<OutputLine> it(&output_lines); !it.AtEnd(); ++it) {
     output += it->printable_line(line_length, max_line_length);
+    output += "\n";
   }
 
   // Let's print a helpful separator as well.
