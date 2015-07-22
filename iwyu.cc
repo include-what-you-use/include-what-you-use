@@ -1601,13 +1601,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // the namespace of the decl.  If we have 'using std::vector;' +
     // 'std::vector<int> foo;' we don't actually care about the
     // using-decl.
-    // TODO(csilvers): maybe just insert our own using declaration
-    // instead?  We can call it "Use what you use". :-)
     // TODO(csilvers): check for using statements and namespace aliases too.
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
-      preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-          used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+      preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
+          used_loc, using_decl, decl, 
+          IsNodeInsideCXXMethodBody(current_ast_node()),
           "(for using decl)");
     }
 
@@ -1662,8 +1661,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // we #include the file with the using declaration.
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
-      preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-          used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+      preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
+          used_loc, using_decl, decl, 
+          IsNodeInsideCXXMethodBody(current_ast_node()),
           "(for using decl)");
     }
   }
@@ -2572,19 +2572,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                                         using_decl));
   }
 
- private:
-  template <typename T> friend class IwyuBaseAstVisitor;
-
-  bool IsProcessedOverloadLoc(SourceLocation loc) const {
-    return ContainsKey(visitor_state_->processed_overload_locs, loc);
-  }
-
-  void AddProcessedOverloadLoc(SourceLocation loc) {
-    visitor_state_->processed_overload_locs.insert(loc);
-  }
-
   const UsingDecl* GetUsingDeclarationOf(const NamedDecl* decl,
-                                         const DeclContext* using_context) {
+                                         const DeclContext* use_context) {
     // We look through all the using-decls of the given decl.  We
     // limit them to ones that are visible from the decl-context we're
     // currently in (that is, what namespaces we're in).  Of those, we
@@ -2594,14 +2583,34 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     vector<const UsingDecl*> using_decls
         = FindInMultiMap(visitor_state_->using_declarations, decl);
     for (Each<const UsingDecl*> it(&using_decls); !it.AtEnd(); ++it) {
-      if (!(*it)->getDeclContext()->Encloses(using_context))
-        continue;
+      const DeclContext* using_decl_context = (*it)->getDeclContext();
+      if (!using_decl_context->Encloses(use_context)) {
+        // DeclContext::Encloses fails if the decl context is a function. In
+        // practice this doesnt matter because we only care about Encloses
+        // when we're exporting symbols from a namespace, class, etc which can
+        // not happen if the using decl is in a function.
+        if(using_decl_context->getDeclKind() != clang::Decl::Function) {
+          continue;
+        }
+      }
+
       if (GetFileEntry(decl) == GetFileEntry(*it) ||    // in same file, prefer
           retval == NULL) {        // not in same file, but better than nothing
         retval = *it;
       }
     }
     return retval;
+  }
+
+ private:
+  template <typename T> friend class IwyuBaseAstVisitor;
+
+  bool IsProcessedOverloadLoc(SourceLocation loc) const {
+    return ContainsKey(visitor_state_->processed_overload_locs, loc);
+  }
+
+  void AddProcessedOverloadLoc(SourceLocation loc) {
+    visitor_state_->processed_overload_locs.insert(loc);
   }
 
   // Do not any variables here!  If you do, they will not be shared
@@ -3483,17 +3492,17 @@ class IwyuAstConsumer
       AddUsingDeclaration((*it)->getTargetDecl(), decl);
     }
 
-    if (CanIgnoreCurrentASTNode())  return true;
 
     // The shadow decls hold the declarations for the var/fn/etc we're
     // using.  (There may be more than one if, say, we're using an
-    // overloaded function.)  We check to make sure nothing we're
-    // using is an iwyu violation.
-    for (UsingDecl::shadow_iterator it = decl->shadow_begin();
-         it != decl->shadow_end(); ++it) {
-      ReportDeclForwardDeclareUse(CurrentLoc(), (*it)->getTargetDecl());
-    }
-
+    // overloaded function.)  We don't want too add all of them at once
+    // though because that will drag in every overload even if we're
+    // only using one.  Instead, we keep track of the using decl and
+    // mark it as touched when something actually uses it.
+    preprocessor_info().FileInfoFor(CurrentFileEntry())->AddUsingDecl(decl);
+    
+    if (CanIgnoreCurrentASTNode())  return true;
+    
     return Base::VisitUsingDecl(decl);
   }
 
@@ -3623,7 +3632,11 @@ class IwyuAstConsumer
   // Called whenever a variable, function, enum, etc is used.
   bool VisitDeclRefExpr(clang::DeclRefExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
-    ReportDeclUse(CurrentLoc(), expr->getDecl());
+    if(const UsingShadowDecl* found_decl = DynCastFrom(expr->getFoundDecl())) {
+      ReportDeclUse(CurrentLoc(), found_decl->getTargetDecl());
+    } else {
+      ReportDeclUse(CurrentLoc(), expr->getDecl());
+    }
     return Base::VisitDeclRefExpr(expr);
   }
 
