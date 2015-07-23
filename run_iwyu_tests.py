@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 ##===--- run_iwyu_tests.py - include-what-you-use test framework driver ---===##
 #
