@@ -69,7 +69,8 @@ def _Which(program, paths):
 
 def _GetIwyuPath(iwyu_paths):
   """Returns the path to IWYU or raises IOError if it cannot be found."""
-  iwyu_path = _Which('include-what-you-use', iwyu_paths)
+  #iwyu_path = _Which('include-what-you-use', iwyu_paths)
+  iwyu_path = "/home/chris/src/build/llvm/_target/gcc/bin/include-what-you-use"
   if iwyu_path:
       return iwyu_path
 

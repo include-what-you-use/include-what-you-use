@@ -28,6 +28,7 @@
 
 namespace clang {
 class FileEntry;
+class UsingDecl;
 }
 
 namespace include_what_you_use {
@@ -175,6 +176,23 @@ class OneIncludeOrForwardDeclareLine {
   const clang::NamedDecl* fwd_decl_;
 };
 
+class OneUsingDeclLine {
+ public: 
+  explicit OneUsingDeclLine(const clang::UsingDecl* using_decl);
+  string LineNumberString() const;      // <startline>-<endline>
+  bool is_referenced() const { return is_referenced_; }
+  const clang::UsingDecl* using_decl() const { return using_decl_; }
+  bool matches(const clang::UsingDecl* decl) const {
+    return (using_decl_ == decl);
+  }
+  void set_referenced() { is_referenced_ = true; }
+ private:
+  int start_linenum_;
+  int end_linenum_;
+  bool is_referenced_;             
+  const clang::UsingDecl* using_decl_;
+};
+
 
 // This class holds IWYU information about a single file (FileEntry)
 // -- referred to, in the comments below, as "this file."  The keys to
@@ -214,6 +232,9 @@ class IwyuFileInfo {
   // the fwd-decl be removed, even if we don't see any uses of it.
   void AddForwardDeclare(const clang::NamedDecl* forward_declare_decl,
                          bool definitely_keep_fwd_decl);
+    // definitely_keep_fwd_decl tells us that we should never suggest
+  // the fwd-decl be removed, even if we don't see any uses of it.
+  void AddUsingDecl(const clang::UsingDecl* using_decl_decl);
 
   // Use these to register an iwyu 'use'.  It's preferable to indicate
   // an explicit type or decl being used, but if that's not available,
@@ -240,6 +261,11 @@ class IwyuFileInfo {
   void ReportForwardDeclareUse(clang::SourceLocation use_loc,
                                const clang::NamedDecl* decl,
                                bool in_cxx_method_body, const char* comment);
+
+  void ReportUsingDeclUse(clang::SourceLocation use_loc,
+                          const clang::UsingDecl* using_decl,
+                          const clang::NamedDecl* target_decl,
+                          bool in_cxx_method_body, const char* comment);
 
   // This is used when we see a // NOLINT comment, for instance.  It says
   // '#include this header file as-is, without any public-header mapping.'
@@ -320,6 +346,9 @@ class IwyuFileInfo {
 
   // Holds all the lines (#include and fwd-declare) that are reported.
   vector<OneIncludeOrForwardDeclareLine> lines_;
+
+  // Holds all of the using delcs that ar reported.
+  vector<OneUsingDeclLine> using_decl_lines_;
 
   // We also hold the line information in a few other data structures,
   // for ease of references.
