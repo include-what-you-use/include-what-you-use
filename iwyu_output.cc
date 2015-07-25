@@ -48,9 +48,10 @@ using clang::FunctionDecl;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
 using clang::RecordDecl;
+using clang::SourceLocation;
 using clang::SourceRange;
 using clang::TemplateDecl;
-using clang::SourceLocation;
+using clang::UsingDecl;
 using llvm::cast;
 using llvm::errs;
 using llvm::isa;
@@ -467,6 +468,26 @@ string OneIncludeOrForwardDeclareLine::LineNumberString() const {
   return buf;
 }
 
+OneUsingDeclLine::OneUsingDeclLine(
+    const UsingDecl* using_decl)
+    : start_linenum_(-1), 
+      end_linenum_(-1),     // set 'for real' below
+      is_referenced_(false),
+      using_decl_(using_decl) {
+
+  const SourceRange decl_lines = using_decl->getSourceRange();
+  // We always want to use the instantiation line numbers: for code like
+  //     FORWARD_DECLARE_CLASS(MyClass);
+  // we care about where this macro is called, not where it's defined.
+  start_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
+  end_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
+}
+
+string OneUsingDeclLine::LineNumberString() const {
+  char buf[64];   // big enough for any two numbers
+  snprintf(buf, sizeof(buf), "%d-%d", start_linenum_, end_linenum_);
+  return buf;
+}
 
 IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
                            const IwyuPreprocessorInfo* preprocessor_info,
@@ -537,6 +558,16 @@ void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
            << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
 }
 
+void IwyuFileInfo::AddUsingDecl(const clang::UsingDecl* using_decl_decl) {
+  CHECK_(using_decl_decl && "using_decl_decl unexpectedly NULL");
+  using_decl_lines_.push_back(OneUsingDeclLine(using_decl_decl));
+  OneUsingDeclLine& using_decl_line = using_decl_lines_.back();
+  VERRS(6) << "Found using-decl: "
+           << GetFilePath(file_) << ":" << using_decl_line.LineNumberString()
+           << ": " << internal::PrintablePtr(using_decl_decl)
+           << internal::GetQualifiedNameAsString(using_decl_decl) << "\n";
+}
+
 static void LogSymbolUse(const string& prefix, const OneUse& use) {
   string decl_loc;
   string printable_ptr;
@@ -603,6 +634,28 @@ void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
   symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse,
                                 in_cxx_method_body, comment));
   LogSymbolUse("Marked fwd-decl use of decl", symbol_uses_.back());
+}
+
+void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
+                                      const UsingDecl* using_decl,
+                                      const NamedDecl* target_decl,
+                                      bool in_cxx_method_body,
+                                      const char* comment) {  
+  for(auto&& saved_decl : using_decl_lines_) {
+    if(saved_decl.matches(using_decl)) {
+      saved_decl.set_referenced();
+      break;
+    }
+  }
+
+  ReportFullSymbolUse(use_loc, using_decl, in_cxx_method_body, comment);
+  ReportForwardDeclareUse(using_decl->getSourceRange().getBegin(), 
+                          target_decl, in_cxx_method_body, comment);
+
+  // Fake OneUse for logging.
+  OneUse fake_use(using_decl, use_loc, OneUse::kForwardDeclareUse,
+                  in_cxx_method_body, comment);
+  LogSymbolUse("Marked using-decl use of decl", fake_use);
 }
 
 // Given a collection of symbol-uses for symbols defined in various
@@ -1843,6 +1896,27 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // On the other hand, if foo.h used to have it but is removing it,
   // we *do* need to add it.
   set<string> associated_desired_includes = AssociatedDesiredIncludes();
+
+  // Resolve using declarations before continuing.  This handles the case
+  // where there's a using dclaration in the file but no code is actually
+  // using it. If that happens, we might try to remove all of the headers with
+  // the decls that the using decl is referencing, which would result in a
+  // compilation error at best. A possible solution is to remove the using
+  // decl if it's not used, but that doesn't work for header files because a
+  // using decl in a header is an exported symbol, so we don't want to do that
+  // either. As a compromise, we arbitrarily add the first shadow decl to make
+  // sure everything still compiles instead of removing the using decel. A
+  // more thorough approach would be to scan the current list of includes that
+  // alredy name this decl (like in the overloaded function case) and include
+  // one of those so we don't include a file we dont actually need.
+  for(auto&& using_line : using_decl_lines_) {
+    if(!using_line.is_referenced()) {
+      const UsingDecl* using_decl = using_line.using_decl();
+      ReportForwardDeclareUse(using_decl->getUsingLoc(),
+                              using_decl->shadow_begin()->getTargetDecl(), 
+                              false, nullptr);
+    }
+  }
 
   CalculateIwyuViolations(&symbol_uses_);
   EmitWarningMessages(symbol_uses_);
