@@ -99,36 +99,27 @@ This weirdness is tracked in issue 100, hopefully we can eliminate the manual pa
 ### How to Run ###
 
 The easiest way to run IWYU over your codebase is to run
-
+```
   make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use
-
+```
 or
-
+```
   make -k CXX=/path/to/llvm/Release/bin/include-what-you-use
+```
+(include-what-you-use always exits with an error code, so the build system knows it didn't build a .o file.  Hence the need for -k.)
 
-(include-what-you-use always exits with an error code, so the build system knows
-it didn't build a .o file.  Hence the need for -k.)
-
-We also include, in this directory, a tool that automatically fixes up your
-source files based on the iwyu recommendations.  This is also alpha-quality
-software!  Here's how to use it (requires python):
-
+We also include, in this directory, a tool that automatically fixes up your source files based on the iwyu recommendations.  This is also alpha-quality software!  Here's how to use it (requires python):
+```
   make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use >
 /tmp/iwyu.out
   python fix_includes.py < /tmp/iwyu.out
-
-If you don't like the way fix_includes.py munges your #include lines, you can
-control its behavior via flags. fix_includes.py --help will give a full list,
-but these are some common ones:
+```
+If you don't like the way fix_includes.py munges your #include lines, you can control its behavior via flags. fix_includes.py --help will give a full list, but these are some common ones:
 
   * -b: Put blank lines between system and Google #includes
   * --nocomments: Don't add the 'why' comments next to #includes
 
-WARNING: include-what-you-use only analyzes .cc (or .cpp) files built by make,
-along with their corresponding .h files.  If your project has a .h file with no
-corresponding .cc file, iwyu will ignore it. include-what-you-use supports the
-AddGlobToReportIWYUViolationsFor() function which can be used to indicate other
-files to analyze, but it's not currently exposed to the user in any way.
+WARNING: include-what-you-use only analyzes .cc (or .cpp) files built by make, along with their corresponding .h files.  If your project has a .h file with no corresponding .cc file, iwyu will ignore it. include-what-you-use supports the AddGlobToReportIWYUViolationsFor() function which can be used to indicate other files to analyze, but it's not currently exposed to the user in any way.
 
 
 ### How to Correct IWYU Mistakes ###
