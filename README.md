@@ -72,23 +72,14 @@ without building Clang and LLVM from scratch.
 You will need the Clang and LLVM trees on your system, such as by checking out
 their SVN trees (but don't configure or build before you've done the following.)
 
-  * Put include-what-you-use in the source tree. Either download the include-
-what-you-use tarball and unpack it your /path/to/llvm/tools/clang/tools
-directory, or get the project directly from svn:
+  * Put include-what-you-use in the source tree. Either download the include-what-you-use tarball and unpack it your /path/to/llvm/tools/clang/tools directory, or get the project directly from svn:
 
-    # Unpack tarball
-    llvm/tools/clang/tools$ tar xfz include-what-you-use-<version>.tar.gz
+    * Unpack tarball: ```llvm/tools/clang/tools$ tar xfz include-what-you-use-<version>.tar.gz```
+    * or checkout from SVN: ```llvm/tools/clang/tools$ svn co http://include-what-you-use.googlecode.com/svn/trunk/ include-what-you-use```
 
-    # or checkout from SVN
-    llvm/tools/clang/tools$ svn co http://include-what-you-
-use.googlecode.com/svn/trunk/ include-what-you-use
-
-  * Edit tools/clang/tools/Makefile and add include-what-you-use to the DIRS
-variable
-  * Edit tools/clang/tools/CMakeLists.txt and add_subdirectory(include-what-you-
-use)
-  * Once this is done, IWYU is recognized and picked up by both autoconf and
-CMake workflows as described in the Clang Getting Started guide
+  * Edit tools/clang/tools/Makefile and add include-what-you-use to the DIRS variable
+  * Edit tools/clang/tools/CMakeLists.txt and add_subdirectory(include-what-you-use)
+  * Once this is done, IWYU is recognized and picked up by both autoconf and CMake workflows as described in the Clang Getting Started guide
 
 This configuration is more useful if you're actively developing IWYU against
 Clang trunk.
