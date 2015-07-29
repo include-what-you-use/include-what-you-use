@@ -54,32 +54,14 @@ dev package. Out-of-tree builds are only supported with CMake (patches very
 welcome for the Make system).
 
   * Create a directory for IWYU development, e.g. iwyu-trunk
-  * Get the IWYU source code, either from a published tarball or directly from
-svn
+  * Get the IWYU source code, either from a published tarball or directly from svn
 
-    # Unpack tarball
-    iwyu-trunk$ tar xfz include-what-you-use-<version>.tar.gz
+    * Unpack tarball: ```iwyu-trunk$ tar xfz include-what-you-use-<version>.tar.gz```
+    * or checkout from SVN: ```iwyu-trunk$ svn co http://include-what-you-use.googlecode.com/svn/trunk/include-what-you-use```
 
-    # or checkout from SVN
-    iwyu-trunk$ svn co http://include-what-you-use.googlecode.com/svn/trunk/
-include-what-you-use
-
-  * Create a build root
-
-    iwyu-trunk$ mkdir build && cd build
-
-  * Run CMake and specify the location of LLVM/Clang prebuilts
-
-    # This example uses the Makefile generator,
-    # but anything should work.
-    iwyu-trunk/build$ cmake -G "Unix Makefiles" -DLLVM_PATH=/usr/lib/llvm-3.4
-../include-what-you-use
-
-  * Once CMake has generated a build system, you can invoke it directly from
-build, e.g.
-
-    iwyu-trunk/build$ make
-
+  * Create a build root: ```iwyu-trunk$ mkdir build && cd build```
+  * Run CMake and specify the location of LLVM/Clang prebuilts: ```iwyu-trunk/build$ cmake -G "Unix Makefiles" -DLLVM_PATH=/usr/lib/llvm-3.4 ../include-what-you-use```
+  * Once CMake has generated a build system, you can invoke it directly from build, e.g. ```iwyu-trunk/build$ make```
 
 This configuration is more useful if you want to get IWYU up and running quickly
 without building Clang and LLVM from scratch.
