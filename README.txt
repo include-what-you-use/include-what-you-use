@@ -1,12 +1,10 @@
---------------------------------------------------------------------------------
- Include What You Use
---------------------------------------------------------------------------------
+# Include What You Use #
 
 This README was generated from the Wiki contents at
 http://code.google.com/p/include-what-you-use/w/ on 2014-11-30 10:05:01 UTC.
 
 
-= Instructions for Users  =
+## Instructions for Users  ##
 
 "Include what you use" means this: for every symbol (type, function, variable,
 or macro) that you use in foo.cc (or foo.cpp), either foo.cc or foo.h should
@@ -21,7 +19,7 @@ accidentally breaking the upwards dependencies of that file.  It also becomes
 easy to automatically track and update dependencies in the source code.
 
 
-== CAVEAT ==
+### CAVEAT ###
 
 This is alpha quality software -- at best (as of February 2011).  It was written
 to work specifically in the Google source tree, and may make assumptions, or
@@ -35,7 +33,7 @@ chance of getting a problem fixed is to submit a patch that fixes it (along with
 a unittest case that verifies the fix)!
 
 
-== How to Build ==
+### How to Build ###
 
 Include-what-you-use makes heavy use of Clang internals, and will occasionally
 break when Clang is updated. See the include-what-you-use Makefile for
@@ -48,7 +46,7 @@ IWYU is available on the mailing list.
 We support two build configurations: out-of-tree and in-tree.
 
 
-=== Building out-of-tree ===
+#### Building out-of-tree ####
 
 In an out-of-tree configuration, we assume you already have compiled LLVM and
 Clang headers and libs somewhere on your filesystem, such as via the libclang-
@@ -87,7 +85,7 @@ This configuration is more useful if you want to get IWYU up and running quickly
 without building Clang and LLVM from scratch.
 
 
-=== Building in-tree ===
+#### Building in-tree ####
 
 You will need the Clang and LLVM trees on your system, such as by checking out
 their SVN trees (but don't configure or build before you've done the following.)
@@ -114,7 +112,7 @@ This configuration is more useful if you're actively developing IWYU against
 Clang trunk.
 
 
-== How to Install ==
+### How to Install ###
 
 If you're building IWYU out-of-tree or installing pre-built binaries, you need
 to make sure it can find Clang built-in headers (stdarg.h and friends.)
@@ -132,7 +130,7 @@ This weirdness is tracked in issue 100, hopefully we can eliminate the manual
 patching.
 
 
-== How to Run ==
+### How to Run ###
 
 The easiest way to run IWYU over your codebase is to run
 
@@ -167,7 +165,7 @@ AddGlobToReportIWYUViolationsFor() function which can be used to indicate other
 files to analyze, but it's not currently exposed to the user in any way.
 
 
-== How to Correct IWYU Mistakes ==
+### How to Correct IWYU Mistakes ###
 
   * If fix_includes.py has removed an #include you actually need, add it back in
 with the comment '// IWYU pragma: keep' at the end of the #include line.  Note
@@ -185,16 +183,16 @@ file (assuming you can write to it): '// IWYU pragma: private, include
 All current IWYU pragmas (as of July 2012) are described in [IWYUPragmas].
 
 
-= Instructions for Developers =
+## Instructions for Developers ##
 
-== Submitting Patches ==
+### Submitting Patches ###
 
 We're still working this part out.  For now, you can create patches against svn-
 head and submit them as new issues.  Probably, we'll move to a scheme where
 people can submit patches directly to the SVN repository.
 
 
-== Running the Tests ==
+### Running the Tests ###
 
 If fixing a bug in clang, please add a test to the test suite!  You
 can create a file called whatever.cc (_not_ .cpp), and, if necessary,
@@ -217,7 +215,7 @@ When fixing fix_includes.py, add a test case to fix_includes_test.py and run
   python fix_includes_test.py
 
 
-== Debugging ==
+### Debugging ###
 
 It's possible to run include-what-you-use in gdb, to debug that way.
 Another useful tool -- especially in combination with gdb -- is to get
@@ -230,7 +228,7 @@ iwyu decisions made as it goes -- but very useful for that:
 you-use 2>&1 > /tmp/iwyu.verbose
 
 
-== A Quick Tour of the Codebase ==
+### A Quick Tour of the Codebase ###
 
 The codebase is strewn with TODOs of known problems, and also language
 constructs that aren't adequately tested yet.  So there's plenty to do!  Here's
@@ -270,13 +268,13 @@ implementation for Windows.
 recommendations.
 
 
-= Why Include What You Use? =
+## Why Include What You Use? ##
 
 Are there any concrete benefits to a strict include-what-you-use policy? We like
 to think so.
 
 
-== Faster Compiles ==
+### Faster Compiles ###
 
 Every .h file you bring in when compiling a source file lengthens the time to
 compile, as the bytes have to be read, preprocessed, and parsed.  If you're not
@@ -289,7 +287,7 @@ Here, the main benefit of include-what-you-use comes from the flip side: "don't
 include what you don't use."
 
 
-== Fewer Recompiles ==
+### Fewer Recompiles ###
 
 Many build tools, such as make, provide a mechanism for automatically figuring
 out what .h files a .cc file depends on.  These mechanisms typically look at
@@ -299,7 +297,7 @@ likely to recompile in cases where it's not necessary.
 Again, the main advantage here is from "don't include what you don't use."
 
 
-== Allow Refactoring ==
+### Allow Refactoring ###
 
 Suppose you refactor foo.h so it no longer uses vectors.  You'd like to remove
 #include <vector> from foo.h, to reduce compile time -- template class files
@@ -320,7 +318,7 @@ everyone who uses vector is #including <vector> themselves, then you can remove
 <vector> without fear of breaking anything.
 
 
-== Self-documentation ==
+### Self-documentation ###
 
 When you can trust the #include lines to accurately reflect what is used in the
 file, you can use them to help you understand the code.  Looking at them, in
@@ -339,7 +337,7 @@ changes, so unless you run iwyu often, you still have to take the comments with
 a grain of salt.  Nothing is free. :-) )
 
 
-== Dependency Cutting ==
+### Dependency Cutting ###
 
 Again, this makes the most sense for large code-bases.  Suppose your binaries
 are larger than you would expect, and upon closer examination use symbols that
@@ -354,7 +352,7 @@ parts, and fixing up all callers.  Again it's iwyu to the rescue: with include-
 what-you-use, figuring out the callers that need fixing is easy.
 
 
-== Why Forward-Declare? ==
+### Why Forward-Declare? ###
 
 Include-what-you-use tries very hard to figure out when a forward-declare can be
 used instead of an #include (iwyu would be about 90% less code if it didn't
@@ -379,7 +377,7 @@ forward-declared class is.  Include-what-you-use does not currently support
 forwarding headers, but may in the future.
 
 
-= IWYU Mappings =
+## IWYU Mappings ##
 
 One of the difficult problems for IWYU is distinguishing between which header
 contains a symbol definition and which header is the actual documented header to
@@ -408,14 +406,14 @@ Any mappings outside of the default set can therefore be specified as external
 _mapping files_.
 
 
-== Default Mappings ==
+### Default Mappings ###
 
 IWYU's default mappings are hard-coded in iwyu_include_picker.cc, and are very
 GCC-centric. There are both symbol- and include mappings for GNU libstdc++ and
 libc.
 
 
-== Mapping Files ==
+### Mapping Files ###
 
 The mapping files conventionally use the .imp file extension, for "Iwyu
 !MaPping" (terrible, I know). They use a JSON meta-format with the following
@@ -446,7 +444,7 @@ non-standard behavior, so apart from comment style, try to keep mapping files in
 line with the JSON spec.
 
 
-=== Include Mappings ===
+#### Include Mappings ####
 
 The include directive specifies a mapping between two include names (relative
 path, including quotes or angle brackets.)
@@ -478,7 +476,7 @@ The @ prefix is a signal that the remaining content is a regex, and can be used
 to re-map a whole subdirectory of private headers to a public facade header.
 
 
-=== Symbol Mappings ===
+#### Symbol Mappings ####
 
 The symbol directive maps from a qualified symbol name to its authoritative
 header.
@@ -501,7 +499,7 @@ Like include, symbol directives support the @-prefixed regex syntax in the first
 entry.
 
 
-=== Mapping Refs ===
+#### Mapping Refs ####
 
 The last kind of directive, ref, is used to pull in another mapping file, much
 like the C preprocessor's #include directive. Data for this directive is a
@@ -520,7 +518,7 @@ specific project uses, you could easily create an aggregate mapping file with
 refs to the relevant mappings.
 
 
-=== Specifying Mapping Files ===
+#### Specifying Mapping Files ####
 
 Mapping files are specified on the command-line using the --mapping_file switch:
 
@@ -535,7 +533,7 @@ ref directives are first looked up relative to the current directory and if not
 found, relative to the referring mapping file.
 
 
-= IWYU pragmas =
+## IWYU pragmas ##
 
 IWYU pragmas are used to give IWYU information that isn't obvious from the
 source code, such as how different files relate to each other and which
@@ -545,7 +543,7 @@ All pragmas start with "// IWYU pragma: " or "/* IWYU pragma: ". They are case-
 sensitive and spaces are significant.
 
 
-== IWYU pragma: keep ==
+### IWYU pragma: keep ###
 
 This pragma applies to a single #include statement. It forces IWYU to keep an
 inclusion even if it is deemed unnecessary.
@@ -557,7 +555,7 @@ In this case, std::vector isn't used, so <vector> would normally be discarded,
 but the pragma instructs IWYU to leave it.
 
 
-== IWYU pragma: export ==
+### IWYU pragma: export ###
 
 This pragma applies to a single #include statement. It says that the current
 file is to be considered the provider of any symbol from the included file.
@@ -581,7 +579,7 @@ In contrast, since <vector> has not been exported from facade.h, it will be
 suggested as an additional include.
 
 
-== IWYU pragma: begin_exports/end_exports ==
+### IWYU pragma: begin_exports/end_exports ###
 
 This pragma applies to a set of #include statements. It declares that the
 including file is to be considered the provider of any symbol from these
@@ -597,7 +595,7 @@ facade.h:
   #include <vector> // don't export stuff from <vector>
 
 
-== IWYU pragma: private ==
+### IWYU pragma: private ###
 
 This pragma applies to the current header file. It says that any symbol from
 this file will be provided by another, optionally named, file.
@@ -629,7 +627,7 @@ private2.h, but will also result in a warning that there's no public header for
 private2.h.
 
 
-== IWYU pragma: no_include ==
+### IWYU pragma: no_include ###
 
 This pragma applies to the current source file. It declares that the named file
 should not be suggested for inclusion by IWYU.
@@ -658,7 +656,7 @@ The no_include pragma is somewhat similar to private, but is employed at point
 of use rather than at point of declaration.
 
 
-== IWYU pragma: no_forward_declare ==
+### IWYU pragma: no_forward_declare ###
 
 This pragma applies to the current source file. It says that the named symbol
 should not be suggested for forward-declaration by IWYU.
@@ -686,7 +684,7 @@ dependency, or when IWYU does not correctly understand that the definition is
 necessary.
 
 
-== IWYU pragma: friend ==
+### IWYU pragma: friend ###
 
 This pragma applies to the current header file. It says that any file matching
 the given regular expression will be considered a friend, and is allowed to
@@ -712,7 +710,7 @@ main.cc:
   AlsoPrivate p;
 
 
-== Which pragma should I use? ==
+### Which pragma should I use? ###
 
 Ideally, IWYU should be smart enough to understand your intentions (and
 intentions of the authors of libraries you use), so the first answer should
@@ -758,7 +756,7 @@ Some files are both included and include others, so it can make sense to mix and
 match.
 
 
-= What Is a Use? =
+## What Is a Use? ##
 
 (*Disclaimer:* the information here is accurate as of 12 May 2011, when it was
 written.  Specifics of IWYU's policy, and even philosophy, may have changed
@@ -803,7 +801,7 @@ But IWYU doesn't (at least, modulo bugs).  This is because of its attempt to
 analyze "author intent".
 
 
-== Author Intent ==
+### Author Intent ###
 
 If code has typedef Foo MyTypedef, and you write MyTypedef var;, you are using
 MyTypedef, but are you also using Foo?  The answer depends on the _intent_ of
@@ -848,7 +846,7 @@ author intent.  Sometimes the author is willing to provide the definition of the
 return type, sometimes it is not.
 
 
-=== Re-Exporting ===
+#### Re-Exporting ####
 
 When the author of a file is providing a definition of a symbol from somewhere
 else, we say that the file is "re-exporting" that symbol.  In the first
@@ -868,7 +866,7 @@ must either #include the definition of the symbol, or #include a file that re-
 exports the symbol."
 
 
-== Manual re-export identifiers ==
+### Manual re-export identifiers ###
 
 You can mark that one file is re-exporting symbols from another via an IWYU
 pragma in your source code:
@@ -881,7 +879,7 @@ can #include you to get them, if they want.
 The full list of IWYU pragmas is defined at the top of iwyu_preprocessor.h.
 
 
-== Automatic re-export ==
+### Automatic re-export ###
 
 In certain situations, IWYU will decide that one file is exporting a symbol from
 another even without the use of a pragma.  These are places where the author
@@ -890,7 +888,7 @@ of these cases, a simple technique can be used to override IWYU's decision to
 re-export.
 
 
-=== Automatic re-export: typedefs ===
+#### Automatic re-export: typedefs ####
 
 If you write
 
@@ -927,7 +925,7 @@ IWYU supports this in its analysis.  If you are using Typedef1 in your code and
 the definition of Foo via the typedef.
 
 
-=== Automatic re-export: Function return values ===
+#### Automatic re-export: Function return values ####
 
 The same rule applies with the return value in a function declaration:
 
@@ -972,7 +970,7 @@ In this case, IWYU will say that baz.cc does not need to #include "foo.h", since
 bar.h re-exports it.
 
 
-=== Automatic re-export: Conversion constructors ===
+#### Automatic re-export: Conversion constructors ####
 
 Consider the following code:
 
@@ -1016,7 +1014,7 @@ converted):
 
 
 
-= Why Include What You Use Is Difficult =
+## Why Include What You Use Is Difficult ##
 
 This section is informational, for folks who are wondering why include-what-you-
 use requires so much code and yet still has so many
@@ -1027,7 +1025,7 @@ code doesn't use either, iwyu will probably do great. And, you're probably not
 actually programming in C++...
 
 
-== Use Versus Forward Declare ==
+### Use Versus Forward Declare ###
 
 Include-what-you-use has to be able to tell when a symbol is being used in a way
 that you can forward-declare it. Otherwise, if you wrote
@@ -1066,7 +1064,7 @@ for MyClass. The end result is that the caller can forward-declare MyClass, but
 the file defining MyFunc has to #include "myclass.h".
 
 
-== Handling Template Arguments ==
+### Handling Template Arguments ###
 
 Even figuring out what types are 'used' with a template can be difficult.
 Consider the following two declarations:
@@ -1100,7 +1098,7 @@ and you call MyFunc(FunctionReturningAFunctionPointer()). What types are being
 used where, in this case?
 
 
-== Who is Responsible for Dependent Template Types? ==
+### Who is Responsible for Dependent Template Types? ###
 
 If you say vector<MyClass> v;, it's clear that you, and not vector.h are
 responsible for the use of MyClass, even though all the functions that use
@@ -1150,7 +1148,7 @@ get it exactly right would require re-implementing C++'s (byzantine) lookup
 rules, which we have not yet tackled.
 
 
-== Template Template Types ==
+### Template Template Types ###
 
 Let's say you have a function
 
@@ -1164,7 +1162,7 @@ the  caller never uses the string type in its file at all. This is rather
 counter-intuitive. Luckily, it's also rather rare.
 
 
-== Typedefs ==
+### Typedefs ###
 
 Suppose you #include a file "foo.h" that has typedef hash_map<Foo, Bar> MyMap;.
 And you have this code:
@@ -1198,7 +1196,7 @@ worthless here. We have to jump through lots of hoops so this code doesn't
 require you to #include not only <hash_map>, but <alloc> and <utility> as well.
 
 
-== Macros ==
+### Macros ###
 
 It's no surprise macros cause a huge problem for include-what-you-use.
 Basically, all the problems of templates also apply to macros, but worse: with
@@ -1209,7 +1207,7 @@ of a macro is responsible for a symbol used in a macro, and when the caller of
 the macro is responsible.
 
 
-== Includes with Side Effects ==
+### Includes with Side Effects ###
 
 While not a major problem, this indicates the myriad "gotchas" that exist around
 include-what-you-use: removing an #include and replacing it with a forward-
@@ -1241,7 +1239,7 @@ dependency at all, it won't even notice it.  IWYU needs to keep track of
 dependencies between files it's not even trying to analyze!
 
 
-== Private Includes ==
+### Private Includes ###
 
 Suppose you write vector<int> v;. You are using vector, and thus have to
 #include <vector>. Even this seemingly easy case is difficult, because vector
@@ -1261,7 +1259,7 @@ file should iwyu suggest? We have rules to try to minimize the number of
 #includes you have to add; it can get rather involved.
 
 
-== Unparsed Code ==
+### Unparsed Code ###
 
 Conditional #includes are a problem for iwyu when the condition is false:
 
@@ -1273,7 +1271,7 @@ If we're not running under windows (and iwyu does not currently run under
 windows), we have no way of telling if foo is a necessary #include or not.
 
 
-== Placing New Includes and Forward-Declares ==
+### Placing New Includes and Forward-Declares ###
 
 Figuring out where to insert new #includes and forward-declares is a complex
 problem of its own (one that is the responsibility of fix_includes.py). In
