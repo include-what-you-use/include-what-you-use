@@ -124,18 +124,10 @@ WARNING: include-what-you-use only analyzes .cc (or .cpp) files built by make, a
 
 ### How to Correct IWYU Mistakes ###
 
-  * If fix_includes.py has removed an #include you actually need, add it back in
-with the comment '// IWYU pragma: keep' at the end of the #include line.  Note
-that the comment is case-sensitive.
-  * If fix_includes has added an #include you don't need, just take it out.  We
-hope to come up with a more permanent way of fixing later.
-  * If fix_includes has wrongly added or removed a forward-declare, just fix it
-up manually.
-  * If fix_includes has suggested a private header file (such as
-<bits/stl_vector.h>) instead of the proper public header file (<vector>), you
-can fix this by inserting a specially crafted comment near top of the private
-file (assuming you can write to it): '// IWYU pragma: private, include
-"the/public/file.h"'.
+  * If fix_includes.py has removed an #include you actually need, add it back in with the comment '// IWYU pragma: keep' at the end of the #include line. Note that the comment is case-sensitive.
+  * If fix_includes has added an #include you don't need, just take it out. We hope to come up with a more permanent way of fixing later.
+  * If fix_includes has wrongly added or removed a forward-declare, just fix it up manually.
+  * If fix_includes has suggested a private header file (such as <bits/stl_vector.h>) instead of the proper public header file (<vector>), you can fix this by inserting a specially crafted comment near top of the private file (assuming you can write to it): '// IWYU pragma: private, include "the/public/file.h"'.
 
 All current IWYU pragmas (as of July 2012) are described in [IWYUPragmas].
 
@@ -144,32 +136,25 @@ All current IWYU pragmas (as of July 2012) are described in [IWYUPragmas].
 
 ### Submitting Patches ###
 
-We're still working this part out.  For now, you can create patches against svn-
-head and submit them as new issues.  Probably, we'll move to a scheme where
-people can submit patches directly to the SVN repository.
+We're still working this part out. For now, you can create patches against svn-head and submit them as new issues. Probably, we'll move to a scheme where people can submit patches directly to the SVN repository.
 
 
 ### Running the Tests ###
 
-If fixing a bug in clang, please add a test to the test suite!  You
-can create a file called whatever.cc (_not_ .cpp), and, if necessary,
-whatever.h, and whatever-<extension>.h.  You may be able to get away without
-adding any .h files, and just #including direct.h -- see, for instance,
-tests/remove_fwd_decl_when_including.cc.
+If fixing a bug in clang, please add a test to the test suite! You can create a file called whatever.cc (_not_ .cpp), and, if necessary,
+whatever.h, and whatever-<extension>.h. You may be able to get away without adding any .h files, and just #including direct.h -- see, for instance, tests/remove_fwd_decl_when_including.cc.
 
 To run the iwyu tests, run
-
+```
   python run_iwyu_tests.py
-
-It runs one test for each .cc file in the tests/ directory.  (We have additional
-tests in more_tests/, but have not yet gotten the testing framework set up for
-those tests.)  The output can be a bit hard to read, but if a test fails, the
-reason why will be listed after the
-ERROR:root:Test failed for xxx line.
+```
+It runs one test for each .cc file in the tests/ directory.  (We have additional tests in more_tests/, but have not yet gotten the testing framework set up for those tests.)  The output can be a bit hard to read, but if a test fails, the
+reason why will be listed after the ERROR:root:Test failed for xxx line.
 
 When fixing fix_includes.py, add a test case to fix_includes_test.py and run
-
+```
   python fix_includes_test.py
+```
 
 
 ### Debugging ###
