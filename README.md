@@ -394,8 +394,7 @@ main.cc:
 ```
   #include "facade.h"
 
-  // Assuming Thing comes from detail/types.h and MAX_THINGS from
-detail/constants.h
+  // Assuming Thing comes from detail/types.h and MAX_THINGS from detail/constants.h
   std::vector<Thing> things(MAX_THINGS);
 ```
 
