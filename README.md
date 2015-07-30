@@ -141,7 +141,7 @@ We're still working this part out. For now, you can create patches against svn-h
 ### Running the Tests ###
 
 If fixing a bug in clang, please add a test to the test suite! You can create a file called whatever.cc (_not_ .cpp), and, if necessary,
-whatever.h, and whatever-<extension>.h. You may be able to get away without adding any .h files, and just #including direct.h -- see, for instance, tests/remove_fwd_decl_when_including.cc.
+whatever.h, and `whatever-<extension>.h`. You may be able to get away without adding any .h files, and just #including direct.h -- see, for instance, tests/remove_fwd_decl_when_including.cc.
 
 To run the iwyu tests, run
 ```
@@ -203,11 +203,11 @@ Again, the main advantage here is from "don't include what you don't use."
 
 ### Allow Refactoring ###
 
-Suppose you refactor foo.h so it no longer uses vectors.  You'd like to remove #include <vector> from foo.h, to reduce compile time -- template class files such as vector can include a lot of code.  But can you?  In theory yes, but in practice maybe not: some other file may be #including you and using vectors, and depending (probably unknowingly) on your #include <vector> to compile.  Your refactor could break code far away from you.
+Suppose you refactor foo.h so it no longer uses vectors.  You'd like to remove `#include <vector>` from foo.h, to reduce compile time -- template class files such as vector can include a lot of code.  But can you?  In theory yes, but in practice maybe not: some other file may be #including you and using vectors, and depending (probably unknowingly) on your `#include <vector>` to compile.  Your refactor could break code far away from you.
 
-This is most compelling for a very large codebase (such as Google's).  In a small codebase, it's practical to just compile everything after a refactor like this, and clean up any errors you see.  When your codebase contains hundreds of thousands of source files, identifying and cleaning up the errors can be a project in itself.  In practice, people are likely to just leave the #include <vector> line in there, even though it's unnecessary.
+This is most compelling for a very large codebase (such as Google's).  In a small codebase, it's practical to just compile everything after a refactor like this, and clean up any errors you see.  When your codebase contains hundreds of thousands of source files, identifying and cleaning up the errors can be a project in itself.  In practice, people are likely to just leave the `#include <vector>` line in there, even though it's unnecessary.
 
-Here, it's the actual 'include what you use' policy that saves the day.  If everyone who uses vector is #including <vector> themselves, then you can remove <vector> without fear of breaking anything.
+Here, it's the actual 'include what you use' policy that saves the day.  If everyone who uses vector is `#including <vector>` themselves, then you can remove `<vector>` without fear of breaking anything.
 
 
 ### Self-documentation ###
@@ -241,9 +241,9 @@ One compromise approach is to use 'forwarding headers', such as <iosfwd>.  These
 
 One of the difficult problems for IWYU is distinguishing between which header contains a symbol definition and which header is the actual documented header to include for that symbol.
 
-For example, in GCC's libstdc++, std::unique_ptr<T> is defined in <bits/unique_ptr.h>, but the documented way to get it is to #include <memory>.
+For example, in GCC's libstdc++, `std::unique_ptr<T>` is defined in `<bits/unique_ptr.h>`, but the documented way to get it is to `#include <memory>`.
 
-Another example is NULL. Its authoritative header is <cstddef>, but for practical purposes NULL is more of a keyword, and according to the standard it's acceptable to assume it comes with <cstring>, <clocale>, <cwchar>, <ctime>, <cstdio> or <cstdlib>. In fact, almost every standard library header pulls in NULL one way or another, and we probably shouldn't force people to #include <cstddef>.
+Another example is NULL. Its authoritative header is `<cstddef>`, but for practical purposes NULL is more of a keyword, and according to the standard it's acceptable to assume it comes with `<cstring>`, `<clocale>`, `<cwchar>`, `<ctime>`, `<cstdio>` or `<cstdlib>`. In fact, almost every standard library header pulls in NULL one way or another, and we probably shouldn't force people to `#include <cstddef>`.
 
 To simplify IWYU deployment and command-line interface, many of these mappings are compiled into the executable. These constitute the _default mappings_.
 
@@ -400,7 +400,7 @@ main.cc:
 
 Here, since detail/constants.h and detail/types.h have both been exported, IWYU is happy with the facade.h include for Thing and MAX_THINGS.
 
-In contrast, since <vector> has not been exported from facade.h, it will be suggested as an additional include.
+In contrast, since `<vector>` has not been exported from facade.h, it will be suggested as an additional include.
 
 
 ### IWYU pragma: begin_exports/end_exports ###
@@ -589,22 +589,22 @@ bar.cc:
   oe << 5;
 ```
 
-Does bar.cc "use" ostream, such that it should #include <ostream>?  You'd hope the answer would be no: the whole point of the OutputEmitter typedef, presumably, is to hide the fact the type is an ostream.  Having to have clients #include <ostream> rather defeats that purpose.  But iwyu sees that you're calling operator<<(ostream, int), which is defined in <ostream>, so naively, it should say that you need that header.
+Does bar.cc "use" ostream, such that it should `#include <ostream>`?  You'd hope the answer would be no: the whole point of the OutputEmitter typedef, presumably, is to hide the fact the type is an ostream.  Having to have clients `#include <ostream>` rather defeats that purpose.  But iwyu sees that you're calling `operator<<(ostream, int)`, which is defined in `<ostream>`, so naively, it should say that you need that header.
 
 But IWYU doesn't (at least, modulo bugs).  This is because of its attempt to analyze "author intent".
 
 
 ### Author Intent ###
 
-If code has typedef Foo MyTypedef, and you write MyTypedef var;, you are using MyTypedef, but are you also using Foo?  The answer depends on the _intent_ of the person who wrote the typedef.
+If code has `typedef Foo MyTypedef`, and you write `MyTypedef var;`, you are using `MyTypedef`, but are you also using `Foo`?  The answer depends on the _intent_ of the person who wrote the typedef.
 
-In the OutputEmitter example above, while we don't know for sure, we can guess that the intent of the author was that clients should not be considered to use the underlying type -- and thus they shouldn't have to #include <ostream> themselves.  In that case, the typedef author takes responsibility for the underlying type, promising to provide all the definitions needed to make code compile.  The philosophy here is: "As long as you #include foo.h, you can use OutputEmitter however you want, without worry of compilation errors."
+In the OutputEmitter example above, while we don't know for sure, we can guess that the intent of the author was that clients should not be considered to use the underlying type -- and thus they shouldn't have to `#include <ostream>` themselves.  In that case, the typedef author takes responsibility for the underlying type, promising to provide all the definitions needed to make code compile.  The philosophy here is: "As long as you #include foo.h, you can use OutputEmitter however you want, without worry of compilation errors."
 
-Some typedef authors have a different intent.  <iosfwd> has the line
+Some typedef authors have a different intent.  `<iosfwd>` has the line
 ```
   typedef basic_ostream<char> ostream;
 ```
-but it does *not* promise "as long as you #include <iosfwd>, you can use ostream however you want, without worry of compilation errors."  For most uses of ostream, you'll get a compiler error unles you #include <ostream> as well.
+but it does *not* promise "as long as you `#include <iosfwd>`, you can use ostream however you want, without worry of compilation errors."  For most uses of ostream, you'll get a compiler error unles you `#include <ostream>` as well.
 
 So take a slightly modified version of the above foo.h:
 ```
@@ -617,12 +617,12 @@ Another case where author intent turns up is in function return types.  Consider
 ```
   Foo* GetSingletonObject();   // Foo is defined in foo.h
 ```
-If you write GetSingletonObject()->methodOnFoo(), are you "using" Foo::methodOnFoo, such that you should #include foo.h?  Or are you supposed to be able to operate on the results of GetSingletonObject without needing to #include the definition of the returned type?  The answer is: it depends on the author intent.  Sometimes the author is willing to provide the definition of the return type, sometimes it is not.
+If you write `GetSingletonObject()->methodOnFoo()`, are you "using" `Foo::methodOnFoo`, such that you should #include foo.h?  Or are you supposed to be able to operate on the results of GetSingletonObject without needing to #include the definition of the returned type?  The answer is: it depends on the author intent.  Sometimes the author is willing to provide the definition of the return type, sometimes it is not.
 
 
 #### Re-Exporting ####
 
-When the author of a file is providing a definition of a symbol from somewhere else, we say that the file is "re-exporting" that symbol.  In the first OutputEmitter example, we say that foo.h is re-exporting ostream.  As a result, people who #include foo.h get a definition of ostream along for free, even if they don't directly #include <ostream> themselves.  Another way of thinking about it is: if file A re-exports symbol B, we can pretend that A defines B, even if it doesn't.
+When the author of a file is providing a definition of a symbol from somewhere else, we say that the file is "re-exporting" that symbol.  In the first OutputEmitter example, we say that foo.h is re-exporting ostream.  As a result, people who #include foo.h get a definition of ostream along for free, even if they don't directly `#include <ostream>` themselves.  Another way of thinking about it is: if file A re-exports symbol B, we can pretend that A defines B, even if it doesn't.
 
 (In an ideal world, we'd have a very fine-grained concept: "File A re-exports symbol S when it's used in the context of typedef T function F, or ...," but in reality, we have the much looser concept "file A re-exports all symbols from file B.")
 
@@ -745,7 +745,7 @@ baz.cc:
   MyFunc(11);
 ```
 
-The above code does not compile, because the code to convert 11 to a Foo is not visible to baz.cc.  Either baz.cc or bar.h needs to #include "foo.h" to make the conversion constructor visible where MyFunc is being called.
+The above code does not compile, because the code to convert 11 to a `Foo` is not visible to baz.cc.  Either baz.cc or bar.h needs to #include "foo.h" to make the conversion constructor visible where MyFunc is being called.
 
 The same rule applies as before:
 ```
@@ -792,7 +792,7 @@ In the above case, it's pretty easy for iwyu to tell that we can safely forward-
 To distinguish these, clang has to instantiate the vector and scoped_ptr template classes, including analyzing all member variables
 and the bodies of the constructor and destructor (and recursively for superclasses).
 
-But that's not enough: when instantiating the templates, we need to keep track of which symbols come from template arguments and which don't. For instance, suppose you call MyFunc<MyClass>(), where MyFunc looks like this:
+But that's not enough: when instantiating the templates, we need to keep track of which symbols come from template arguments and which don't. For instance, suppose you call `MyFunc<MyClass>()`, where MyFunc looks like this:
 ```
   template<typename T> void MyFunc() {
     T* t;
@@ -819,23 +819,23 @@ These both have default template arguments, so are parsed like
   hash_set<MyClass, hash<MyClass>, equal_to<MyClass>, alloc<MyClass> > h;
 ```
 
-What symbols should we say are used? If we say alloc<MyClass> is used when you declare a vector, then every file that #includes <vector> will also need to #include <memory>.
+What symbols should we say are used? If we say `alloc<MyClass>` is used when you declare a vector, then every file that `#includes <vector>` will also need to `#include <memory>`.
 
-So it's tempting to just ignore default template arguments. But that's not right either. What if hash<MyClass> is defined in some local myhash.h file (as hash<string> often is)? Then we want to make sure iwyu says to #include "myhash.h" when you create the hash_set (otherwise the code won't compile). That requires paying attention to the default template argument. Figuring out how to handle default template arguments can get very complex.
+So it's tempting to just ignore default template arguments. But that's not right either. What if `hash<MyClass>` is defined in some local myhash.h file (as `hash<string>` often is)? Then we want to make sure iwyu says to #include "myhash.h" when you create the hash_set (otherwise the code won't compile). That requires paying attention to the default template argument. Figuring out how to handle default template arguments can get very complex.
 
 Even normal template arguments can be confusing. Consider this templated function:
 ```
   template<typename A, typename B, typename C> void MyFunc(A (*fn)(B,C))
   { ... }
 ```
-and you call MyFunc(FunctionReturningAFunctionPointer()). What types are being used where, in this case?
+and you call `MyFunc(FunctionReturningAFunctionPointer())`. What types are being used where, in this case?
 
 
 ### Who is Responsible for Dependent Template Types? ###
 
-If you say vector<MyClass> v;, it's clear that you, and not vector.h are responsible for the use of MyClass, even though all the functions that use MyClass are defined in vector.h. (OK, technically, these functions are not "defined" in a particular location, they're instantiated from template methods written in vector.h, but for us it works out the same.)
+If you say `vector<MyClass> v;`, it's clear that you, and not vector.h are responsible for the use of MyClass, even though all the functions that use MyClass are defined in vector.h. (OK, technically, these functions are not "defined" in a particular location, they're instantiated from template methods written in vector.h, but for us it works out the same.)
 
-When you say hash_map<MyClass, int> h;, you are likewise responsible for MyClass (and int), but are you responsible for pair<MyClass, int>? That is the type that hash_map uses to store your entries internally, and it depends on one of your template arguments, but even so  it shouldn't be your responsibility -- it's an implementation detail of hash_map. Of course, if you say hash_map<pair<int,int>, int>, then you are responsible for the use of pair. Distinguishing these two cases from each other, and from the vector case, can be difficult.
+When you say `hash_map<MyClass, int> h;`, you are likewise responsible for MyClass (and int), but are you responsible for `pair<MyClass, int>`? That is the type that hash_map uses to store your entries internally, and it depends on one of your template arguments, but even so  it shouldn't be your responsibility -- it's an implementation detail of hash_map. Of course, if you say `hash_map<pair<int,int>, int>`, then you are responsible for the use of pair. Distinguishing these two cases from each other, and from the vector case, can be difficult.
 
 Now suppose there's a template function like this:
 ```
@@ -853,9 +853,9 @@ strcat, strchr, operator<<(ostream&, T)?
 
 strcat is a normal function, and the author of MyFunc is responsible for its use. This is an easy case.
 
-In C++, strchr is a templatized function (different impls for char* and const char*). Which version is called depends on the template argument. So, naively, we'd conclude that the caller is responsible for the use of strchr. However, that's ridiculous; we don't want caller of MyFunc to have to #include <string.h> just to call MyFunc. We have special code that (usually) handles this kind of case.
+In C++, strchr is a templatized function (different impls for char* and const char*). Which version is called depends on the template argument. So, naively, we'd conclude that the caller is responsible for the use of strchr. However, that's ridiculous; we don't want caller of MyFunc to have to `#include <string.h>` just to call MyFunc. We have special code that (usually) handles this kind of case.
 
-operator<< is also a templated function, but it's one that may be defined in lots of different files. It would be ridiculous in its own way if MyFunc was responsible for #including every file that defines operator<<(ostream&, T) for all T. So, unlike the two cases above, the caller is the one responsible for the use of  operator<<, and will have to #include the file that defines it. It's counter-intuitive, perhaps, but the alternatives are all worse.
+`operator<<` is also a templated function, but it's one that may be defined in lots of different files. It would be ridiculous in its own way if MyFunc was responsible for #including every file that defines `operator<<(ostream&, T)` for all T. So, unlike the two cases above, the caller is the one responsible for the use of  `operator<<`, and will have to #include the file that defines it. It's counter-intuitive, perhaps, but the alternatives are all worse.
 
 As you can imagine, distinguishing all these cases is extremely difficult. To get it exactly right would require re-implementing C++'s (byzantine) lookup rules, which we have not yet tackled.
 
@@ -868,16 +868,16 @@ Let's say you have a function
     T<string> t;
   }
 ```
-And you call MyFunc<hash_set>. Who is responsible for the 'use' of hash<string>, and thus needs to #include "myhash.h"? I think it has to be the caller, even if the  caller never uses the string type in its file at all. This is rather counter-intuitive. Luckily, it's also rather rare.
+And you call `MyFunc<hash_set>`. Who is responsible for the 'use' of `hash<string>`, and thus needs to `#include "myhash.h"`? I think it has to be the caller, even if the  caller never uses the string type in its file at all. This is rather counter-intuitive. Luckily, it's also rather rare.
 
 
 ### Typedefs ###
 
-Suppose you #include a file "foo.h" that has typedef hash_map<Foo, Bar> MyMap;. And you have this code:
+Suppose you #include a file "foo.h" that has typedef `hash_map<Foo, Bar> MyMap;`. And you have this code:
 ```
   for (MyMap::iterator it = ...)
 ```
-Who, if anyone, is using the symbol hash_map<Foo, Bar>::iterator? If we say you, as the author of the for-loop, are the user, then you must #include <hash_map>, which undoubtedly goes against the goal of the typedef (you shouldn't even have to know you're using a hash_map). So we want to say the author of the typedef is responsible for the use. But how could the author of the typedef know that you were going to use MyMap::iterator? It can't predict that. That means it has to be responsible for every possible use of the typedef type. This can be complicated to figure out. It requires instantiating all methods of the underlying type, some of which might not even be legal C++ (if, say, the class uses SFINAE).
+Who, if anyone, is using the symbol hash_map<Foo, Bar>::iterator? If we say you, as the author of the for-loop, are the user, then you must `#include <hash_map>`, which undoubtedly goes against the goal of the typedef (you shouldn't even have to know you're using a hash_map). So we want to say the author of the typedef is responsible for the use. But how could the author of the typedef know that you were going to use MyMap::iterator? It can't predict that. That means it has to be responsible for every possible use of the typedef type. This can be complicated to figure out. It requires instantiating all methods of the underlying type, some of which might not even be legal C++ (if, say, the class uses SFINAE).
 
 Worse, when the language auto-derives template types, it loses typedef information. Suppose you wrote this:
 ```
@@ -885,9 +885,9 @@ Worse, when the language auto-derives template types, it loses typedef informati
   find(m.begin(), m.end(), some_foo);
 ```
 
-The compiler sees this as syntactic sugar for find<hash_map<Foo, Bar, hash<Foo>, equal_to<Foo>, alloc<Foo> >(m.begin(), m.end(), some_foo);
+The compiler sees this as syntactic sugar for `find<hash_map<Foo, Bar, hash<Foo>, equal_to<Foo>, alloc<Foo> >(m.begin(), m.end(), some_foo);`
 
-Not only is the template argument hash_map instead of MyMap, it includes all the default template arguments, with no indication they're default arguments. All the tricks we used above to intelligently ignore default template arguments are worthless here. We have to jump through lots of hoops so this code doesn't require you to #include not only <hash_map>, but <alloc> and <utility> as well.
+Not only is the template argument hash_map instead of MyMap, it includes all the default template arguments, with no indication they're default arguments. All the tricks we used above to intelligently ignore default template arguments are worthless here. We have to jump through lots of hoops so this code doesn't require you to #include not only `<hash_map>`, but `<alloc>` and `<utility>` as well.
 
 
 ### Macros ###
@@ -912,7 +912,7 @@ foo.cc:
   Foo* foo;
 ```
 
-If iwyu just blindly replaces the #include with a forward declare such as namespace ns { class Foo; }, the code will break because of the lost using declaration. Include-what-you-use has to watch out for this case.
+If iwyu just blindly replaces the #include with a forward declare such as `namespace ns { class Foo; }`, the code will break because of the lost using declaration. Include-what-you-use has to watch out for this case.
 
 Another case is a header file like this:
 
@@ -927,7 +927,7 @@ We might think we can remove an #include of foo.h and replace it by #include mod
 
 ### Private Includes ###
 
-Suppose you write vector<int> v;. You are using vector, and thus have to #include <vector>. Even this seemingly easy case is difficult, because vector isn't actually defined in <vector>; it's defined in <bits/stl_vector.h>. The C++ standard library has hundreds of private files that users are not supposed to #include directly. Third party libraries have hundreds more.  There's no general way to distinguish private from public headers; we have to manually construct the proper mapping.
+Suppose you write `vector<int> v;`. You are using vector, and thus have to `#include <vector>`. Even this seemingly easy case is difficult, because vector isn't actually defined in `<vector>`; it's defined in `<bits/stl_vector.h>`. The C++ standard library has hundreds of private files that users are not supposed to #include directly. Third party libraries have hundreds more.  There's no general way to distinguish private from public headers; we have to manually construct the proper mapping.
 
 In the future, we hope to provide a way for users to annotate if a file is public or private, either a comment or a #pragma. For now, we hard-code it in the iwyu tool.
 
@@ -947,6 +947,6 @@ If we're not running under windows (and iwyu does not currently run under window
 
 ### Placing New Includes and Forward-Declares ###
 
-Figuring out where to insert new #includes and forward-declares is a complex problem of its own (one that is the responsibility of fix_includes.py). In general, we want to put new #includes with existing #includes. But the existing #includes may be broken up into sections, either because of conditional #includes (with #ifdefs), or macros (such as #define __GNU_SOURCE), or for other reasons. Some forward-declares may need to come early in the file, and some may prefer to come later (after we're in an appropriate namespace, for instance).
+Figuring out where to insert new #includes and forward-declares is a complex problem of its own (one that is the responsibility of fix_includes.py). In general, we want to put new #includes with existing #includes. But the existing #includes may be broken up into sections, either because of conditional #includes (with #ifdefs), or macros (such as `#define __GNU_SOURCE`), or for other reasons. Some forward-declares may need to come early in the file, and some may prefer to come later (after we're in an appropriate namespace, for instance).
 
 fix_includes.py tries its best to give pleasant-looking output, while being conservative about putting code in a place where it might not compile. It uses heuristics to do this, which are not yet perfect.
