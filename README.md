@@ -116,8 +116,8 @@ We also include, in this directory, a tool that automatically fixes up your sour
 ```
 If you don't like the way fix_includes.py munges your #include lines, you can control its behavior via flags. fix_includes.py --help will give a full list, but these are some common ones:
 
-  * -b: Put blank lines between system and Google #includes
-  * --nocomments: Don't add the 'why' comments next to #includes
+  * `-b`: Put blank lines between system and Google #includes
+  * `--nocomments`: Don't add the 'why' comments next to #includes
 
 WARNING: include-what-you-use only analyzes .cc (or .cpp) files built by make, along with their corresponding .h files.  If your project has a .h file with no corresponding .cc file, iwyu will ignore it. include-what-you-use supports the AddGlobToReportIWYUViolationsFor() function which can be used to indicate other files to analyze, but it's not currently exposed to the user in any way.
 
