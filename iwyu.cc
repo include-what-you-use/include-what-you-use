@@ -2586,10 +2586,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const DeclContext* using_decl_context = (*it)->getDeclContext();
       if (!using_decl_context->Encloses(use_context)) {
         // DeclContext::Encloses fails if the decl context is a function. In
-        // practice this doesnt matter because we only care about Encloses
+        // practice this doesn't matter because we only care about Encloses
         // when we're exporting symbols from a namespace, class, etc which can
         // not happen if the using decl is in a function.
-        if(using_decl_context->getDeclKind() != clang::Decl::Function) {
+        if (using_decl_context->getDeclKind() != clang::Decl::Function) {
           continue;
         }
       }
@@ -3495,8 +3495,8 @@ class IwyuAstConsumer
 
     // The shadow decls hold the declarations for the var/fn/etc we're
     // using.  (There may be more than one if, say, we're using an
-    // overloaded function.)  We don't want too add all of them at once
-    // though because that will drag in every overload even if we're
+    // overloaded function.)  We don't want to add all of them at once
+    // though, because that will drag in every overload even if we're
     // only using one.  Instead, we keep track of the using decl and
     // mark it as touched when something actually uses it.
     preprocessor_info().FileInfoFor(CurrentFileEntry())->AddUsingDecl(decl);
@@ -3632,7 +3632,7 @@ class IwyuAstConsumer
   // Called whenever a variable, function, enum, etc is used.
   bool VisitDeclRefExpr(clang::DeclRefExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
-    if(const UsingShadowDecl* found_decl = DynCastFrom(expr->getFoundDecl())) {
+    if (const UsingShadowDecl* found_decl = DynCastFrom(expr->getFoundDecl())) {
       ReportDeclUse(CurrentLoc(), found_decl->getTargetDecl());
     } else {
       ReportDeclUse(CurrentLoc(), expr->getDecl());

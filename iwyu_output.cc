@@ -468,8 +468,7 @@ string OneIncludeOrForwardDeclareLine::LineNumberString() const {
   return buf;
 }
 
-OneUsingDeclLine::OneUsingDeclLine(
-    const UsingDecl* using_decl)
+OneUsingDeclLine::OneUsingDeclLine(const UsingDecl* using_decl)
     : start_linenum_(-1), 
       end_linenum_(-1),     // set 'for real' below
       is_referenced_(false),
@@ -641,8 +640,8 @@ void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
                                       const NamedDecl* target_decl,
                                       bool in_cxx_method_body,
                                       const char* comment) {  
-  for(auto&& saved_decl : using_decl_lines_) {
-    if(saved_decl.matches(using_decl)) {
+  for (OneUsingDeclLine& saved_decl : using_decl_lines_) {
+    if (saved_decl.matches(using_decl)) {
       saved_decl.set_referenced();
       break;
     }
@@ -1908,13 +1907,14 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // sure everything still compiles instead of removing the using decel. A
   // more thorough approach would be to scan the current list of includes that
   // alredy name this decl (like in the overloaded function case) and include
-  // one of those so we don't include a file we dont actually need.
-  for(auto&& using_line : using_decl_lines_) {
-    if(!using_line.is_referenced()) {
+  // one of those so we don't include a file we don't actually need.
+  for (OneUsingDeclLine& using_line : using_decl_lines_) {
+    if (!using_line.is_referenced()) {
       const UsingDecl* using_decl = using_line.using_decl();
       ReportForwardDeclareUse(using_decl->getUsingLoc(),
                               using_decl->shadow_begin()->getTargetDecl(), 
-                              false, nullptr);
+                              /* in_cxx_method_body */ false,
+                              /* comment */ nullptr);
     }
   }
 

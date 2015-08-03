@@ -223,8 +223,8 @@ class IwyuFileInfo {
   // headers.
   void AddAssociatedHeader(const IwyuFileInfo* other);
 
-  // Use these to register an iwyu declaration: either an #include or
-  // a forward-declaration.
+  // Use these to register an iwyu declaration: either an #include,
+  // a forward-declaration or a using-declaration.
 
   void AddInclude(const clang::FileEntry* includee,
                   const string& quoted_includee, int linenumber);
@@ -232,8 +232,7 @@ class IwyuFileInfo {
   // the fwd-decl be removed, even if we don't see any uses of it.
   void AddForwardDeclare(const clang::NamedDecl* forward_declare_decl,
                          bool definitely_keep_fwd_decl);
-    // definitely_keep_fwd_decl tells us that we should never suggest
-  // the fwd-decl be removed, even if we don't see any uses of it.
+
   void AddUsingDecl(const clang::UsingDecl* using_decl_decl);
 
   // Use these to register an iwyu 'use'.  It's preferable to indicate
@@ -262,6 +261,8 @@ class IwyuFileInfo {
                                const clang::NamedDecl* decl,
                                bool in_cxx_method_body, const char* comment);
 
+  // Called whenever a NamedDecl is accesed through a UsingDecl.
+  // ie: using std::swap; swap(a, b); 
   void ReportUsingDeclUse(clang::SourceLocation use_loc,
                           const clang::UsingDecl* using_decl,
                           const clang::NamedDecl* target_decl,
@@ -347,7 +348,7 @@ class IwyuFileInfo {
   // Holds all the lines (#include and fwd-declare) that are reported.
   vector<OneIncludeOrForwardDeclareLine> lines_;
 
-  // Holds all of the using delcs that ar reported.
+  // Holds all the using-decls that are reported.
   vector<OneUsingDeclLine> using_decl_lines_;
 
   // We also hold the line information in a few other data structures,
