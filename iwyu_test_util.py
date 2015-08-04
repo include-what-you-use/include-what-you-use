@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 ##===--- iwyu_test_util.py - include-what-you-use test framework -----------===##
 #
