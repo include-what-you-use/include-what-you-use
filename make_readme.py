@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 ##===--------- make_readme.py - generate README from Wiki sources ---------===##
 #
