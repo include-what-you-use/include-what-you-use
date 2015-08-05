@@ -96,25 +96,32 @@ string OutputLine::printable_line(size_t min_length, size_t max_length) const {
   if (symbols_.empty())
     return line_;
 
-  string symbol_prefix = "  // for ";  // before 1st symbol, print '  // for '
+  --max_length;  // Spare a char for newline character.
 
-  // Pad the symbol prefix so 'why' comments are nicely aligned.
-  if (line_.length() < min_length)
+  // Before first symbol, print '  // for ' and pad it so 'why' comments are
+  // nicely aligned.
+  string symbol_prefix = "  // for ";
+  if (min_length > line_.length())
     symbol_prefix.insert(0, min_length - line_.length(), ' ');
 
   string result = line_;
-  for (const string& symbol : symbols_) {
-    string hunk = symbol_prefix + symbol;
+  for (string symbol : symbols_) {
+    // At verbose levels 0-2, truncate output to max_length columns.
     if (!ShouldPrint(3)) {
-      // At verbose levels 0-2, truncate output to max_length columns.
-      hunk = Truncate(hunk, max_length - result.length());
+      // Calculate number of chars remaining.
+      size_t remaining = 0;
+      size_t result_length = result.length() + symbol_prefix.length();
+      if (max_length > result_length)
+        remaining = max_length - result_length;
 
-      // If we can't fit any fragment of the symbol hunk, just give up.
-      if (hunk.empty())
+      // Ellipsize, and if we can't fit any fragment of the symbol, give up.
+      symbol = Ellipsize(symbol, remaining);
+      if (symbol.empty())
         break;
     }
 
-    result += hunk;
+    result += symbol_prefix;
+    result += symbol;
     symbol_prefix = ", ";
   }
 
