@@ -176,9 +176,9 @@ class OneIncludeOrForwardDeclareLine {
   const clang::NamedDecl* fwd_decl_;
 };
 
-class OneUsingDeclLine {
+class UsingDeclStatus {
  public: 
-  explicit OneUsingDeclLine(const clang::UsingDecl* using_decl);
+  explicit UsingDeclStatus(const clang::UsingDecl* using_decl);
   string LineNumberString() const;      // <startline>-<endline>
   bool is_referenced() const { return is_referenced_; }
   const clang::UsingDecl* using_decl() const { return using_decl_; }
@@ -349,7 +349,7 @@ class IwyuFileInfo {
   vector<OneIncludeOrForwardDeclareLine> lines_;
 
   // Holds all the using-decls that are reported.
-  vector<OneUsingDeclLine> using_decl_lines_;
+  vector<UsingDeclStatus> using_decl_status_;
 
   // We also hold the line information in a few other data structures,
   // for ease of references.
