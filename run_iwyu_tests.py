@@ -83,7 +83,7 @@ class OneIwyuTest(unittest.TestCase):
       'auto_type_within_template.cc': ['-std=c++11'],
       # MSVC targets need to explicitly enable exceptions, so we do it for all.
       'catch.cc': ['-fcxx-exceptions', '-fexceptions'],
-      'clmode.cc': ['--driver-mode=cl', '/C', '/Os', '/W2'],
+      'clmode.cc': ['--driver-mode=cl', '/GF', '/Os', '/W2'],
       'conversion_ctor.cc': ['-std=c++11'],
       'deleted_implicit.cc' : ['-std=c++11'],
       'lambda_fwd_decl.cc': ['-std=c++11'],
