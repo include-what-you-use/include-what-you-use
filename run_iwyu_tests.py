@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 ##===--- run_iwyu_tests.py - include-what-you-use test framework driver ---===##
 #
@@ -81,6 +81,8 @@ class OneIwyuTest(unittest.TestCase):
     clang_flags_map = {
       'alias_template.cc': ['-std=c++11'],
       'auto_type_within_template.cc': ['-std=c++11'],
+      # MSVC targets need to explicitly enable exceptions, so we do it for all.
+      'catch.cc': ['-fcxx-exceptions', '-fexceptions'],
       'clmode.cc': ['--driver-mode=cl', '/GF', '/Os', '/W2'],
       'conversion_ctor.cc': ['-std=c++11'],
       'deleted_implicit.cc' : ['-std=c++11'],

@@ -10,7 +10,7 @@
 #ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_INL_H_
 #define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_INL_H_
 
-#include <time.h>   // one way to get NULL
+#include <locale.h>   // the way to get NULL without size_t
 #include "tests/cxx/badinc-private.h"
 #include "tests/cxx/badinc-private2.h"
 

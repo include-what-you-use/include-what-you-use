@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 ##===--- iwyu_test_util.py - include-what-you-use test framework -----------===##
 #
@@ -102,7 +102,8 @@ def _GetCommandOutput(command):
                        shell=True,
                        stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT)
-  lines = [line.decode("utf-8") for line in p.stdout.readlines()]
+  stdout, _ = p.communicate()
+  lines = stdout.decode("utf-8").splitlines(True)
   lines = [line.replace(os.linesep, '\n') for line in lines]
   return lines
 
