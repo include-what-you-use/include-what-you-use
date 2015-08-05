@@ -468,7 +468,7 @@ string OneIncludeOrForwardDeclareLine::LineNumberString() const {
   return buf;
 }
 
-OneUsingDeclLine::OneUsingDeclLine(const UsingDecl* using_decl)
+UsingDeclStatus::UsingDeclStatus(const UsingDecl* using_decl)
     : start_linenum_(-1), 
       end_linenum_(-1),     // set 'for real' below
       is_referenced_(false),
@@ -482,7 +482,7 @@ OneUsingDeclLine::OneUsingDeclLine(const UsingDecl* using_decl)
   end_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
 }
 
-string OneUsingDeclLine::LineNumberString() const {
+string UsingDeclStatus::LineNumberString() const {
   char buf[64];   // big enough for any two numbers
   snprintf(buf, sizeof(buf), "%d-%d", start_linenum_, end_linenum_);
   return buf;
@@ -559,8 +559,8 @@ void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
 
 void IwyuFileInfo::AddUsingDecl(const clang::UsingDecl* using_decl_decl) {
   CHECK_(using_decl_decl && "using_decl_decl unexpectedly NULL");
-  using_decl_lines_.push_back(OneUsingDeclLine(using_decl_decl));
-  OneUsingDeclLine& using_decl_line = using_decl_lines_.back();
+  using_decl_status_.push_back(UsingDeclStatus(using_decl_decl));
+  UsingDeclStatus& using_decl_line = using_decl_status_.back();
   VERRS(6) << "Found using-decl: "
            << GetFilePath(file_) << ":" << using_decl_line.LineNumberString()
            << ": " << internal::PrintablePtr(using_decl_decl)
@@ -640,7 +640,7 @@ void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
                                       const NamedDecl* target_decl,
                                       bool in_cxx_method_body,
                                       const char* comment) {  
-  for (OneUsingDeclLine& saved_decl : using_decl_lines_) {
+  for (UsingDeclStatus& saved_decl : using_decl_status_) {
     if (saved_decl.matches(using_decl)) {
       saved_decl.set_referenced();
       break;
@@ -648,13 +648,6 @@ void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
   }
 
   ReportFullSymbolUse(use_loc, using_decl, in_cxx_method_body, comment);
-  ReportForwardDeclareUse(using_decl->getSourceRange().getBegin(), 
-                          target_decl, in_cxx_method_body, comment);
-
-  // Fake OneUse for logging.
-  OneUse fake_use(using_decl, use_loc, OneUse::kForwardDeclareUse,
-                  in_cxx_method_body, comment);
-  LogSymbolUse("Marked using-decl use of decl", fake_use);
 }
 
 // Given a collection of symbol-uses for symbols defined in various
@@ -1904,13 +1897,13 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // decl if it's not used, but that doesn't work for header files because a
   // using decl in a header is an exported symbol, so we don't want to do that
   // either. As a compromise, we arbitrarily add the first shadow decl to make
-  // sure everything still compiles instead of removing the using decel. A
+  // sure everything still compiles instead of removing the using decl. A
   // more thorough approach would be to scan the current list of includes that
   // alredy name this decl (like in the overloaded function case) and include
   // one of those so we don't include a file we don't actually need.
-  for (OneUsingDeclLine& using_line : using_decl_lines_) {
-    if (!using_line.is_referenced()) {
-      const UsingDecl* using_decl = using_line.using_decl();
+  for (UsingDeclStatus& using_decl_state : using_decl_status_) {
+    if (!using_decl_state.is_referenced()) {
+      const UsingDecl* using_decl = using_decl_state.using_decl();
       ReportForwardDeclareUse(using_decl->getUsingLoc(),
                               using_decl->shadow_begin()->getTargetDecl(), 
                               /* in_cxx_method_body */ false,
