@@ -1890,7 +1890,7 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   set<string> associated_desired_includes = AssociatedDesiredIncludes();
 
   // Resolve using declarations before continuing.  This handles the case
-  // where there's a using dclaration in the file but no code is actually
+  // where there's a using declaration in the file but no code is actually
   // using it. If that happens, we might try to remove all of the headers with
   // the decls that the using decl is referencing, which would result in a
   // compilation error at best. A possible solution is to remove the using
