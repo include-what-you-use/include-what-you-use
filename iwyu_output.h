@@ -233,7 +233,7 @@ class IwyuFileInfo {
   void AddForwardDeclare(const clang::NamedDecl* forward_declare_decl,
                          bool definitely_keep_fwd_decl);
 
-  void AddUsingDecl(const clang::UsingDecl* using_decl_decl);
+  void AddUsingDecl(const clang::UsingDecl* using_decl);
 
   // Use these to register an iwyu 'use'.  It's preferable to indicate
   // an explicit type or decl being used, but if that's not available,

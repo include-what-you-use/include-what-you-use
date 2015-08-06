@@ -557,14 +557,14 @@ void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
            << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
 }
 
-void IwyuFileInfo::AddUsingDecl(const clang::UsingDecl* using_decl_decl) {
-  CHECK_(using_decl_decl && "using_decl_decl unexpectedly NULL");
-  using_decl_status_.push_back(UsingDeclStatus(using_decl_decl));
+void IwyuFileInfo::AddUsingDecl(const clang::UsingDecl* using_decl) {
+  CHECK_(using_decl && "using_decl unexpectedly NULL");
+  using_decl_status_.push_back(UsingDeclStatus(using_decl));
   UsingDeclStatus& using_decl_line = using_decl_status_.back();
   VERRS(6) << "Found using-decl: "
            << GetFilePath(file_) << ":" << using_decl_line.LineNumberString()
-           << ": " << internal::PrintablePtr(using_decl_decl)
-           << internal::GetQualifiedNameAsString(using_decl_decl) << "\n";
+           << ": " << internal::PrintablePtr(using_decl)
+           << internal::GetQualifiedNameAsString(using_decl) << "\n";
 }
 
 static void LogSymbolUse(const string& prefix, const OneUse& use) {
