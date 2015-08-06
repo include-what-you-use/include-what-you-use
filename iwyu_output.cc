@@ -96,12 +96,13 @@ string OutputLine::printable_line(size_t min_length, size_t max_length) const {
   if (symbols_.empty())
     return line_;
 
+  CHECK_(max_length > 0);
   --max_length;  // Spare a char for newline character.
 
   // Before first symbol, print '  // for ' and pad it so 'why' comments are
   // nicely aligned.
   string symbol_prefix = "  // for ";
-  if (min_length > line_.length())
+  if (line_.length() < min_length)
     symbol_prefix.insert(0, min_length - line_.length(), ' ');
 
   string result = line_;
@@ -111,7 +112,7 @@ string OutputLine::printable_line(size_t min_length, size_t max_length) const {
       // Calculate number of chars remaining.
       size_t remaining = 0;
       size_t result_length = result.length() + symbol_prefix.length();
-      if (max_length > result_length)
+      if (result_length < max_length)
         remaining = max_length - result_length;
 
       // Ellipsize, and if we can't fit any fragment of the symbol, give up.
