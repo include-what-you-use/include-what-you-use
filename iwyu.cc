@@ -1605,7 +1605,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
-          used_loc, using_decl, decl, 
+          used_loc, using_decl, 
           IsNodeInsideCXXMethodBody(current_ast_node()),
           "(for using decl)");
     }
@@ -1662,7 +1662,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
-          used_loc, using_decl, decl, 
+          used_loc, using_decl, 
           IsNodeInsideCXXMethodBody(current_ast_node()),
           "(for using decl)");
     }

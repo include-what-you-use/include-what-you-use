@@ -261,11 +261,10 @@ class IwyuFileInfo {
                                const clang::NamedDecl* decl,
                                bool in_cxx_method_body, const char* comment);
 
-  // Called whenever a NamedDecl is accesed through a UsingDecl.
+  // Called whenever a NamedDecl is accessed through a UsingDecl.
   // ie: using std::swap; swap(a, b); 
   void ReportUsingDeclUse(clang::SourceLocation use_loc,
                           const clang::UsingDecl* using_decl,
-                          const clang::NamedDecl* target_decl,
                           bool in_cxx_method_body, const char* comment);
 
   // This is used when we see a // NOLINT comment, for instance.  It says

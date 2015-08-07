@@ -637,17 +637,19 @@ void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
 
 void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
                                       const UsingDecl* using_decl,
-                                      const NamedDecl* target_decl,
                                       bool in_cxx_method_body,
                                       const char* comment) {  
   for (UsingDeclStatus& saved_decl : using_decl_status_) {
     if (saved_decl.matches(using_decl)) {
       saved_decl.set_referenced();
-      break;
+      // When a symbol is accessed through a using decl, we must report
+      // that as a full use of the using decl because whatever file that
+      // using decl is in is now required.
+      ReportFullSymbolUse(use_loc, using_decl, in_cxx_method_body, comment);
+      return;
     }
   }
-
-  ReportFullSymbolUse(use_loc, using_decl, in_cxx_method_body, comment);
+  CHECK_UNREACHABLE_("Unexpected use of an unknown UsingDecl");
 }
 
 // Given a collection of symbol-uses for symbols defined in various
