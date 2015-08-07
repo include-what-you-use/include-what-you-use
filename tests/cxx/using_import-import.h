@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/cxx/declare_symbol.h"
+#include "tests/cxx/using_import-declare.h"
 
 using ns::symbol;
 

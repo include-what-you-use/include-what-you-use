@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "import_symbol.h"
+#include "using_import-import.h"
 
 void use_symbol() {  
   symbol();
@@ -15,13 +15,14 @@ void use_symbol() {
 
 /**** IWYU_SUMMARY
 
+
 tests/cxx/using_import.cc should add these lines:
-#include "declare_symbol.h" // lines XX-XX
+#include "tests/cxx/using_import-declare.h"
 
 tests/cxx/using_import.cc should remove these lines:
 
 The full include-list for tests/cxx/using_import.cc:
-#include "import_symbol.h"  // for symbol
-#include "tests/cxx/declare_symbol.h"  // for symbol
+#include "tests/cxx/using_import-declare.h"  // for symbol
+#include "using_import-import.h"  // for symbol
 
 ***** IWYU_SUMMARY */
