@@ -1604,8 +1604,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // TODO(csilvers): check for using statements and namespace aliases too.
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
-	  const FileEntry* declared_in = GetFileEntry(using_decl->getSourceRange().getBegin());
-      preprocessor_info().FileInfoFor(declared_in)->ReportUsingDeclUse(
+      preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, 
           IsNodeInsideCXXMethodBody(current_ast_node()),
           "(for using decl)");
@@ -1662,8 +1661,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // we #include the file with the using declaration.
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
-	  const FileEntry* declared_in = GetFileEntry(using_decl->getSourceRange().getBegin());
-      preprocessor_info().FileInfoFor(declared_in)->ReportUsingDeclUse(
+      preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, 
           IsNodeInsideCXXMethodBody(current_ast_node()),
           "(for using decl)");
