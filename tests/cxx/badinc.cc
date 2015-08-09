@@ -680,7 +680,7 @@ I1_Enum i1_enum;
 I1_Typedef i1_typedef;
 // IWYU: I1_Struct is...*badinc-i1.h
 I1_Struct i1_struct;
-// IWYU: I1_NamespaceStruct ...*
+// IWYU: I1_NamespaceStruct ...*badinc-i1.h
 I1_NamespaceStruct i1_namespace_struct;
 // IWYU: I1_Union is...*badinc-i1.h
 I1_Union i1_union;
