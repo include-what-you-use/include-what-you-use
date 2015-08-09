@@ -41,7 +41,6 @@ void TestDeclFromD4() {
   var_in_d4 = 0;
 }
 
-// IWYU: i1::UsingInCc needs a declaration
 using i1::UsingInCc;
 
 void TestUsingInCc() {

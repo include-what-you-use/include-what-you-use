@@ -18,7 +18,7 @@ void use_symbol() {
 tests/cxx/using_import_unused.cc should add these lines:
 
 tests/cxx/using_import_unused.cc should remove these lines:
-#include "using_import-import.h" // lines XX-XX
+- #include "using_import-import.h"  // lines XX-XX
 
 The full include-list for tests/cxx/using_import_unused.cc:
 

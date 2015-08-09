@@ -10,6 +10,7 @@
 #include "using_import-import.h"
 
 void use_symbol() {  
+  // IWYU: ns::symbol is defined in ...*using_import-declare.h", which isn't directly #included.
   symbol();
 }
 
