@@ -330,7 +330,7 @@ class IwyuFileInfo {
   vector<OneIncludeOrForwardDeclareLine> lines_;
 
   // Maps all the using-decls that are reported to a bool indicating whether
-  // or not a the using decl has been referenced in this file or not.
+  // or not a the using decl has been referenced in this file.
   map<const clang::UsingDecl*, bool> using_decl_referenced_;
 
   // We also hold the line information in a few other data structures,
