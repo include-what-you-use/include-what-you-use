@@ -1900,7 +1900,7 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
       ReportForwardDeclareUse(using_decl->getUsingLoc(),
                               using_decl->shadow_begin()->getTargetDecl(), 
                               /* in_cxx_method_body */ false,
-		                          "(for un-referenced using)");
+                              "(for un-referenced using)");
     }
   }
 
