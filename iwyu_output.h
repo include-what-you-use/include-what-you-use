@@ -176,24 +176,6 @@ class OneIncludeOrForwardDeclareLine {
   const clang::NamedDecl* fwd_decl_;
 };
 
-class UsingDeclStatus {
- public: 
-  explicit UsingDeclStatus(const clang::UsingDecl* using_decl);
-  string LineNumberString() const;      // <startline>-<endline>
-  bool is_referenced() const { return is_referenced_; }
-  const clang::UsingDecl* using_decl() const { return using_decl_; }
-  bool matches(const clang::UsingDecl* decl) const {
-    return (using_decl_ == decl);
-  }
-  void set_referenced() { is_referenced_ = true; }
- private:
-  int start_linenum_;
-  int end_linenum_;
-  bool is_referenced_;             
-  const clang::UsingDecl* using_decl_;
-};
-
-
 // This class holds IWYU information about a single file (FileEntry)
 // -- referred to, in the comments below, as "this file."  The keys to
 // most of these methods are all quoted header paths, which are the
@@ -347,8 +329,9 @@ class IwyuFileInfo {
   // Holds all the lines (#include and fwd-declare) that are reported.
   vector<OneIncludeOrForwardDeclareLine> lines_;
 
-  // Holds all the using-decls that are reported.
-  vector<UsingDeclStatus> using_decl_status_;
+  // Maps all the using-decls that are reported to a bool indicating whether
+  // or not a the using decl has been referenced in this file or not.
+  map<const clang::UsingDecl*, bool> using_decl_referenced_;
 
   // We also hold the line information in a few other data structures,
   // for ease of references.

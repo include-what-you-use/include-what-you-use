@@ -61,6 +61,7 @@ using std::map;
 using std::multimap;
 using std::pair;
 using std::sort;
+using std::to_string;
 using std::vector;
 
 namespace internal {
@@ -468,26 +469,6 @@ string OneIncludeOrForwardDeclareLine::LineNumberString() const {
   return buf;
 }
 
-UsingDeclStatus::UsingDeclStatus(const UsingDecl* using_decl)
-    : start_linenum_(-1), 
-      end_linenum_(-1),     // set 'for real' below
-      is_referenced_(false),
-      using_decl_(using_decl) {
-
-  const SourceRange decl_lines = using_decl->getSourceRange();
-  // We always want to use the instantiation line numbers: for code like
-  //     FORWARD_DECLARE_CLASS(MyClass);
-  // we care about where this macro is called, not where it's defined.
-  start_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
-  end_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
-}
-
-string UsingDeclStatus::LineNumberString() const {
-  char buf[64];   // big enough for any two numbers
-  snprintf(buf, sizeof(buf), "%d-%d", start_linenum_, end_linenum_);
-  return buf;
-}
-
 IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
                            const IwyuPreprocessorInfo* preprocessor_info,
                            const string& quoted_include_name)
@@ -559,11 +540,14 @@ void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
 
 void IwyuFileInfo::AddUsingDecl(const clang::UsingDecl* using_decl) {
   CHECK_(using_decl && "using_decl unexpectedly NULL");
-  using_decl_status_.push_back(UsingDeclStatus(using_decl));
-  UsingDeclStatus& using_decl_line = using_decl_status_.back();
+  using_decl_referenced_.insert(std::make_pair(using_decl, false));
+  const SourceRange decl_lines = using_decl->getSourceRange();
+  int start_linenum = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
+  int end_linenum = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
   VERRS(6) << "Found using-decl: "
-           << GetFilePath(file_) << ":" << using_decl_line.LineNumberString()
-           << ": " << internal::PrintablePtr(using_decl)
+           << GetFilePath(file_) << ":" 
+           << to_string(start_linenum) << "-" << to_string(end_linenum) << ": " 
+           << internal::PrintablePtr(using_decl)
            << internal::GetQualifiedNameAsString(using_decl) << "\n";
 }
 
@@ -645,11 +629,11 @@ void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
   // traversing the AST, we check to see if a using decl is unreferenced and a
   // full use of one of its shadow decls so that the source file continues to
   // compile.
-  for (UsingDeclStatus& saved_decl : using_decl_status_) {
-    if (saved_decl.matches(using_decl)) {
-      saved_decl.set_referenced();
-      break;
-    }
+  typename map<const UsingDecl*, bool>::iterator using_decl_status = 
+    using_decl_referenced_.find(using_decl);
+
+  if(using_decl_status != using_decl_referenced_.end()) {
+    using_decl_status->second = true;
   }
 
   // When a symbol is accessed through a using decl, we must report
@@ -1909,13 +1893,14 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // more thorough approach would be to scan the current list of includes that
   // alredy name this decl (like in the overloaded function case) and include
   // one of those so we don't include a file we don't actually need.
-  for (UsingDeclStatus& using_decl_state : using_decl_status_) {
-    if (!using_decl_state.is_referenced()) {
-      const UsingDecl* using_decl = using_decl_state.using_decl();
+  for (typename map<const UsingDecl*, bool>::value_type using_decl_status
+       : using_decl_referenced_) {
+    if (!using_decl_status.second) {
+      const UsingDecl* using_decl = using_decl_status.first;
       ReportForwardDeclareUse(using_decl->getUsingLoc(),
                               using_decl->shadow_begin()->getTargetDecl(), 
                               /* in_cxx_method_body */ false,
-							 "(for un-referenced using)");
+		                          "(for un-referenced using)");
     }
   }
 
