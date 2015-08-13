@@ -2,7 +2,7 @@
 
 This section is informational, for folks who are wondering why include-what-you-use requires so much code and yet still has so many errors.
 
-Include-what-you-use has the most problems with templates and macros. If your code doesn't use either, iwyu will probably do great. And, you're probably not actually programming in C++...
+Include-what-you-use has the most problems with templates and macros. If your code doesn't use either, IWYU will probably do great. And, you're probably not actually programming in C++...
 
 
 ### Use Versus Forward Declare ###
@@ -11,9 +11,9 @@ Include-what-you-use has to be able to tell when a symbol is being used in a way
 
     vector<MyClass*> foo;
 
-iwyu would tell you to `#include "myclass.h"`, when perhaps the whole reason you're using a pointer here is to avoid the need for that `#include`.
+IWYU would tell you to `#include "myclass.h"`, when perhaps the whole reason you're using a pointer here is to avoid the need for that `#include`.
 
-In the above case, it's pretty easy for iwyu to tell that we can safely forward-declare `MyClass`. But now consider
+In the above case, it's pretty easy for IWYU to tell that we can safely forward-declare `MyClass`. But now consider
 
     vector<MyClass> foo;        // requires full definition of MyClass
     scoped_ptr<MyClass> foo;    // forward-declaring MyClass is often ok
@@ -48,7 +48,7 @@ These both have default template arguments, so are parsed like
 
 What symbols should we say are used? If we say `alloc<MyClass>` is used when you declare a vector, then every file that `#includes` `<vector>` will also need to `#include <memory>`.
 
-So it's tempting to just ignore default template arguments. But that's not right either. What if `hash<MyClass>` is defined in some local `myhash.h` file (as `hash<string>` often is)? Then we want to make sure iwyu says to `#include "myhash.h"` when you create the hash_set (otherwise the code won't compile). That requires paying attention to the default template argument. Figuring out how to handle default template arguments can get very complex.
+So it's tempting to just ignore default template arguments. But that's not right either. What if `hash<MyClass>` is defined in some local `myhash.h` file (as `hash<string>` often is)? Then we want to make sure IWYU says to `#include "myhash.h"` when you create the hash_set (otherwise the code won't compile). That requires paying attention to the default template argument. Figuring out how to handle default template arguments can get very complex.
 
 Even normal template arguments can be confusing. Consider this templated function:
 
@@ -129,7 +129,7 @@ While not a major problem, this indicates the myriad "gotchas" that exist around
       #include "foo.h"
       Foo* foo;`
 
-If iwyu just blindly replaces the `#include` with a forward declare such as `namespace ns { class Foo; }`, the code will break because of the lost using declaration. Include-what-you-use has to watch out for this case.
+If IWYU just blindly replaces the `#include` with a forward declare such as `namespace ns { class Foo; }`, the code will break because of the lost using declaration. Include-what-you-use has to watch out for this case.
 
 Another case is a header file like this:
 
@@ -144,20 +144,20 @@ We might think we can remove an `#include` of `foo.h` and replace it by `#includ
 
 Suppose you write `vector<int> v;`. You are using vector, and thus have to `#include <vector>`. Even this seemingly easy case is difficult, because vector isn't actually defined in `<vector>`; it's defined in `<bits/stl_vector.h>`. The C++ standard library has hundreds of private files that users are not supposed to `#include` directly. Third party libraries have hundreds more.  There's no general way to distinguish private from public headers; we have to manually construct the proper mapping.
 
-In the future, we hope to provide a way for users to annotate if a file is public or private, either a comment or a `#pragma`. For now, we hard-code it in the iwyu tool.
+In the future, we hope to provide a way for users to annotate if a file is public or private, either a comment or a `#pragma`. For now, we hard-code it in the IWYU tool.
 
-The mappings themselves can be ambiguous. For instance, `NULL` is provided by many files, including `stddef.h`, `stdlib.h`, and more. If you use `NULL`, what header file should iwyu suggest? We have rules to try to minimize the number of `#includes` you have to add; it can get rather involved.
+The mappings themselves can be ambiguous. For instance, `NULL` is provided by many files, including `stddef.h`, `stdlib.h`, and more. If you use `NULL`, what header file should IWYU suggest? We have rules to try to minimize the number of `#includes` you have to add; it can get rather involved.
 
 
 ### Unparsed Code ###
 
-Conditional `#includes` are a problem for iwyu when the condition is false:
+Conditional `#includes` are a problem for IWYU when the condition is false:
 
     #if _MSC_VER
     #include <foo>
     #endif
 
-If we're not running under windows (and iwyu does not currently run under windows), we have no way of telling if foo is a necessary `#include` or not.
+If we're not running under windows (and IWYU does not currently run under windows), we have no way of telling if foo is a necessary `#include` or not.
 
 
 ### Placing New Includes and Forward-Declares ###
