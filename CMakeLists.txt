@@ -133,7 +133,6 @@ target_link_libraries(include-what-you-use
   LLVMScalarOpts
   LLVMInstCombine
   LLVMTransformUtils
-  LLVMipa
   LLVMTarget # Analysis, MC, Core, Support
   LLVMAnalysis # Core, Support
   LLVMOption # Support
