@@ -2,7 +2,7 @@
 
 IWYU pragmas are used to give IWYU information that isn't obvious from the source code, such as how different files relate to each other and which includes to never remove or include.
 
-All pragmas start with `"// IWYU pragma: "` or `"/* IWYU pragma: "`. They are case-sensitive and spaces are significant.
+All pragmas start with `// IWYU pragma: ` or `/* IWYU pragma: `. They are case-sensitive and spaces are significant.
 
 
 ### IWYU pragma: keep ###

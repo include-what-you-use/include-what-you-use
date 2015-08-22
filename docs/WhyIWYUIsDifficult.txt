@@ -88,7 +88,7 @@ Let's say you have a function
       T<string> t;
     }
 
-And you call `MyFunc<hash_set>`. Who is responsible for the 'use' of `hash<string>`, and thus needs to `#include "myhash.h"`? I think it has to be the caller, even if the  caller never uses the string type in its file at all. This is rather counter-intuitive. Luckily, it's also rather rare.
+And you call `MyFunc<hash_set>`. Who is responsible for the 'use' of `hash<string>`, and thus needs to `#include "myhash.h"`? I think it has to be the caller, even if the  caller never uses the `string` type in its file at all. This is rather counter-intuitive. Luckily, it's also rather rare.
 
 
 ### Typedefs ###
