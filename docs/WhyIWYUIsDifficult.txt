@@ -18,11 +18,9 @@ In the above case, it's pretty easy for IWYU to tell that we can safely forward-
     vector<MyClass> foo;        // requires full definition of MyClass
     scoped_ptr<MyClass> foo;    // forward-declaring MyClass is often ok
 
-To distinguish these, clang has to instantiate the vector and scoped_ptr template classes, including analyzing all member variables
-and the bodies of the constructor and destructor (and recursively for superclasses).
+To distinguish these, clang has to instantiate the vector and scoped_ptr template classes, including analyzing all member variables and the bodies of the constructor and destructor (and recursively for superclasses).
 
-But that's not enough: when instantiating the templates, we need to keep track of which symbols come from template arguments and which
-don't. For instance, suppose you call `MyFunc<MyClass>()`, where `MyFunc` looks like this:
+But that's not enough: when instantiating the templates, we need to keep track of which symbols come from template arguments and which don't. For instance, suppose you call `MyFunc<MyClass>()`, where `MyFunc` looks like this:
 
     template<typename T> void MyFunc() {
       T* t;
@@ -30,8 +28,7 @@ don't. For instance, suppose you call `MyFunc<MyClass>()`, where `MyFunc` looks 
       ...
     }
 
-In this case, the caller of `MyFunc` is not using the full type of `MyClass`, because the template parameter is only used as a pointer. On
-the other hand, the file that defines `MyFunc` is using the full type information for `MyClass`. The end result is that the caller can forward-declare `MyClass`, but the file defining `MyFunc` has to `#include "myclass.h"`.
+In this case, the caller of `MyFunc` is not using the full type of `MyClass`, because the template parameter is only used as a pointer. On the other hand, the file that defines `MyFunc` is using the full type information for `MyClass`. The end result is that the caller can forward-declare `MyClass`, but the file defining `MyFunc` has to `#include "myclass.h"`.
 
 
 ### Handling Template Arguments ###
