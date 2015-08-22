@@ -1,23 +1,23 @@
 ## What Is a Use? ##
 
-(*Disclaimer:* the information here is accurate as of 12 May 2011, when it was written.  Specifics of IWYU's policy, and even philosophy, may have changed since then.  We'll try to remember to update this wiki page as that happens, but may occasionally forget.  The further we are from May 2011, the more you should take the below with a grain of salt.)
+(*Disclaimer:* the information here is accurate as of 12 May 2011, when it was written.  Specifics of IWYU's policy, and even philosophy, may have changed since then.  We'll try to remember to update this file as that happens, but may occasionally forget.  The further we are from May 2011, the more you should take the below with a grain of salt.)
 
 IWYU has the policy that you should `#include` a declaration for every symbol you "use" in a file, or forward-declare it if possible.  But what does it mean to "use" a symbol?
 
-For the most part, IWYU considers a "use" the same as the compiler does: if you get a compiler error saying "Unknown symbol 'foo'", then you are using foo.  Whether the use is a 'full' use, that needs the definition of the symbol, or a 'forward-declare' use, that can get by with just a declaration of the symbol, likewise matches what the compiler allows.
+For the most part, IWYU considers a "use" the same as the compiler does: if you get a compiler error saying "Unknown symbol 'foo'", then you are using `foo`.  Whether the use is a 'full' use, that needs the definition of the symbol, or a 'forward-declare' use, that can get by with just a declaration of the symbol, likewise matches what the compiler allows.
 
 This makes it sound like IWYU does the moral equivalent of taking a source file, removing `#include` lines from it, seeing what the compiler complains about, and marking uses as appropriate.  This is not what IWYU does.  Instead, IWYU does a thought experiment: if the definition (or declaration) of a given type were not available, would the code compile?  Here is an example illustrating the difference:
 
     foo.h:
       #include <ostream>
-      typedef ostream OutputEmitter;
+      typedef std::ostream OutputEmitter;
 
     bar.cc:
       #include "foo.h"
       OutputEmitter oe;
       oe << 5;
 
-Does `bar.cc` "use" `ostream`, such that it should `#include <ostream>`?  You'd hope the answer would be no: the whole point of the `OutputEmitter` typedef, presumably, is to hide the fact the type is an `ostream`.  Having to have clients `#include <ostream>` rather defeats that purpose.  But IWYU sees that you're calling `operator<<(ostream&, int)`, which is defined in `<ostream>`, so naively, it should say that you need that header.
+Does `bar.cc` "use" `std::ostream`, such that it should `#include <ostream>`?  You'd hope the answer would be no: the whole point of the `OutputEmitter` typedef, presumably, is to hide the fact the type is an `std::ostream`.  Having to have clients `#include <ostream>` rather defeats that purpose.  But IWYU sees that you're calling `operator<<(std::ostream&, int)`, which is defined in `<ostream>`, so naively, it should say that you need that header.
 
 But IWYU doesn't (at least, modulo bugs).  This is because of its attempt to analyze "author intent".
 
@@ -32,12 +32,12 @@ Some typedef authors have a different intent.  `<iosfwd>` has the line
 
     typedef basic_ostream<char> ostream;
 
-but it does *not* promise "as long as you `#include <iosfwd>`, you can use `ostream` however you want, without worry of compilation errors."  For most uses of `ostream`, you'll get a compiler error unless you `#include <ostream>` as well.
+but it does *not* promise "as long as you `#include <iosfwd>`, you can use `std::ostream` however you want, without worry of compilation errors."  For most uses of `std::ostream`, you'll get a compiler error unless you `#include <ostream>` as well.
 
 So take a slightly modified version of the above `foo.h`:
 
     #include <iosfwd>
-    typedef ostream OutputEmitter;
+    typedef std::ostream OutputEmitter;
 
 This is a self-contained .h file: it's perfectly legal to typedef an incomplete type (that's what `iosfwd` itself does).  But now IWYU had better tell `bar.cc` to `#include <ostream>`, or it will break the build.  The difference is in the author intent with the typedef.
 
@@ -65,7 +65,7 @@ You can mark that one file is re-exporting symbols from another via an IWYU prag
 
 This tells IWYU that if some other file uses symbols defined in `private.h`, they can `#include` you to get them, if they want.
 
-The full list of IWYU pragmas is defined at the top of [http://code.google.com/p/include-what-you-use/source/browse/trunk/iwyu_preprocessor.h iwyu_preprocessor.h].
+The full list of IWYU pragmas is defined in [IWYUPragmas.txt](IWYUPragmas.txt).
 
 
 ### Automatic re-export ###
