@@ -1,18 +1,18 @@
-# Instructions for Users #
+## Instructions for Users ##
 
 "Include what you use" means this: for every symbol (type, function, variable, or macro) that you use in `foo.cc` (or `foo.cpp`), either `foo.cc` or `foo.h` should include a .h file that exports the declaration of that symbol. (Similarly, for `foo_test.cc`, either `foo_test.cc` or `foo.h` should do the including.)  Obviously symbols defined in `foo.cc` itself are excluded from this requirement.
 
 This puts us in a state where every file includes the headers it needs to declare the symbols that it uses.  When every file includes what it uses, then it is possible to edit any file and remove unused headers, without fear of accidentally breaking the upwards dependencies of that file.  It also becomes easy to automatically track and update dependencies in the source code.
 
 
-## CAVEAT ##
+### CAVEAT ###
 
 This is alpha quality software -- at best (as of February 2011).  It was written to work specifically in the Google source tree, and may make assumptions, or have gaps, that are immediately and embarrassingly evident in other types of code.  For instance, we only run this on C++ code, not C or Objective C.  Even for Google code, the tool still makes a lot of mistakes.
 
 While we work to get IWYU quality up, we will be stinting new features, and will prioritize reported bugs along with the many existing, known bugs.  The best chance of getting a problem fixed is to submit a patch that fixes it (along with a unittest case that verifies the fix)!
 
 
-## How to Build ##
+### How to Build ###
 
 Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. See the include-what-you-use Makefile for instructions on how to keep them in sync.
 
@@ -21,7 +21,7 @@ IWYU, like Clang, does not yet handle some of the non-standard constructs in Mic
 We support two build configurations: out-of-tree and in-tree.
  
 
-### Building out-of-tree ###
+#### Building out-of-tree ####
 
 In an out-of-tree configuration, we assume you already have compiled LLVM and Clang headers and libs somewhere on your filesystem, such as via the `libclang-dev` package. Out-of-tree builds are only supported with CMake (patches very welcome for the Make system).
 
@@ -53,7 +53,7 @@ In an out-of-tree configuration, we assume you already have compiled LLVM and Cl
 This configuration is more useful if you want to get IWYU up and running quickly without building Clang and LLVM from scratch.
 
 
-### Building in-tree ###
+#### Building in-tree ####
 
 You will need the Clang and LLVM trees on your system, such as by [checking out](http://clang.llvm.org/get_started.html) their SVN trees (but don't configure or build before you've done the following.)
 
@@ -72,7 +72,7 @@ You will need the Clang and LLVM trees on your system, such as by [checking out]
 This configuration is more useful if you're actively developing IWYU against Clang trunk.
 
 
-## How to Install ##
+### How to Install ###
 
 If you're building IWYU out-of-tree or installing pre-built binaries, you need to make sure it can find Clang built-in headers (`stdarg.h` and friends.)
 
@@ -83,7 +83,7 @@ Clang tools have the same policy by default, so in order for IWYU to analyze any
 This weirdness is tracked in [issue 100](https://code.google.com/p/include-what-you-use/issues/detail?id=100), hopefully we can eliminate the manual patching.
 
 
-## How to Run ##
+### How to Run ###
 
 The easiest way to run IWYU over your codebase is to run
 
@@ -108,7 +108,7 @@ If you don't like the way `fix_includes.py` munges your `#include` lines, you ca
 **WARNING:** include-what-you-use only analyzes .cc (or .cpp) files built by `make`, along with their corresponding .h files.  If your project has a .h file with no corresponding .cc file, IWYU will ignore it. include-what-you-use supports the `AddGlobToReportIWYUViolationsFor()` function which can be used to indicate other files to analyze, but it's not currently exposed to the user in any way.
 
 
-## How to Correct IWYU Mistakes ##
+### How to Correct IWYU Mistakes ###
 
   * If `fix_includes.py` has removed an `#include` you actually need, add it back in with the comment '`// IWYU pragma: keep`' at the end of the `#include` line.  Note that the comment is case-sensitive.
   * If `fix_includes.py` has added an `#include` you don't need, just take it out.  We hope to come up with a more permanent way of fixing later.
