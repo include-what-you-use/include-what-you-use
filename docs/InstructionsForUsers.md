@@ -109,4 +109,4 @@ If you don't like the way `fix_includes.py` munges your `#include` lines, you ca
   * If `fix_includes.py` has wrongly added or removed a forward-declare, just fix it up manually.
   * If `fix_includes.py` has suggested a private header file (such as `<bits/stl_vector.h>`) instead of the proper public header file (`<vector>`), you can fix this by inserting a specially crafted comment near top of the private file (assuming you can write to it): '`// IWYU pragma: private, include "the/public/file.h"`'.  
 
-Current IWYU pragmas are described in [IWYUPragmas](IWYUPragmas.txt).
+Current IWYU pragmas are described in [IWYUPragmas](IWYUPragmas.md).

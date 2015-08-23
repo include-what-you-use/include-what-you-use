@@ -65,7 +65,7 @@ You can mark that one file is re-exporting symbols from another via an IWYU prag
 
 This tells IWYU that if some other file uses symbols defined in `private.h`, they can `#include` you to get them, if they want.
 
-The full list of IWYU pragmas is defined in [IWYUPragmas.txt](IWYUPragmas.txt).
+The full list of IWYU pragmas is defined in [IWYUPragmas.md](IWYUPragmas.md).
 
 
 ### Automatic re-export ###
