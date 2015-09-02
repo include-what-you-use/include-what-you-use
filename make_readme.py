@@ -10,6 +10,7 @@
 ##===----------------------------------------------------------------------===##
 
 from __future__ import print_function
+import re
 import sys
 from datetime import datetime
 
@@ -42,6 +43,15 @@ def Heading():
   return '\n'.join(buf)
 
 
+def RewriteRelativeLinks(content):
+  def Replace(m):
+    if not m.group(2).startswith('http'):
+        return '[' + m.group(1) + '](docs/' + m.group(2) + ')'
+    return m.group(0)
+
+  return re.sub(r'\[(.*?)\]\((.*?)\)', Replace, content)
+
+
 def main(argv):
   if len(argv) != 1:
     print(_USAGE, file=sys.stderr)
@@ -50,7 +60,7 @@ def main(argv):
   print(Heading())
 
   with open('docs/InstructionsForUsers.md', 'r') as stream:
-      print(stream.read())
+      print(RewriteRelativeLinks(stream.read()))
 
   return 0
 
