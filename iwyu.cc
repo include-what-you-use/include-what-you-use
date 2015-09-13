@@ -1428,29 +1428,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
            VERRS(5) << "Use location is a macro arg expansion."
                        "Attributing to caller.\n";
            use_loc = caller_loc;
-        } else {
-          // use_loc might be pointing to an expression, e.g. sizeof(*x) --
-          // use the lexer to dig out 'x'
-          llvm::StringRef macro_name =
-              compiler()->getPreprocessor().getImmediateMacroName(use_loc);
-          const IdentifierInfo* ii =
-              compiler()->getPreprocessor().getIdentifierInfo(macro_name);
-          const MacroInfo* mi = compiler()->getPreprocessor().getMacroInfo(ii);
-
-          SourceLocation eom = mi->getDefinitionEndLoc();
-          string identifier = FindNextIdentifier(GetSpellingLoc(use_loc), eom,
-                                                 DefaultDataGetter());
-
-          for (MacroInfo::arg_iterator i = mi->arg_begin(); i != mi->arg_end();
-               ++i) {
-            if ((*i)->getName() == identifier) {
-              VERRS(5)
-                  << "Offset use location (identifier: '" << identifier
-                  << "') is a macro arg expansion. Attributing to caller.\n";
-              use_loc = caller_loc;
-              break;
-            }
-          }
         }
       }
     }
@@ -2213,7 +2190,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (!CanIgnoreType(dereftype))
         // This reports even if the expr ends up not being a reference, but
         // that's ok (if potentially redundant).
-        ReportTypeUse(GetLocation(arg_expr), dereftype);
+        ReportTypeUse(GetLocation(arg_expr->IgnoreParenImpCasts()), dereftype);
     }
     return true;
   }
