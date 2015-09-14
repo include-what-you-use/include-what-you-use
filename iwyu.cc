@@ -2194,7 +2194,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (!CanIgnoreType(dereftype))
         // This reports even if the expr ends up not being a reference, but
         // that's ok (if potentially redundant).
-        ReportTypeUse(GetLocation(arg_expr), dereftype);
+        ReportTypeUse(GetLocation(arg_expr->IgnoreParenImpCasts()), dereftype);
     }
     return true;
   }
