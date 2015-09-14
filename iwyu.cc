@@ -1398,48 +1398,31 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   //    argument concatenation, and attribute responsibility to callers.
   // Otherwise, the macro file is responsible for including the symbol.
   //
-  // Returns a pair of the responsible location and a Boolean indicating whether
-  // the macro file forward-declared used_decl (if the use inside the macro is a
-  // fwd-decl use, and the macro file has already forward-declared the symbol,
-  // we don't want to force callers to re-forward-declare it.)
-  std::pair<SourceLocation, bool> GetUseLocationForMacroExpansion(
-      SourceLocation use_loc, const Decl* used_decl) {
+  // Returns the responsible location.
+  SourceLocation GetUseLocationForMacroExpansion(SourceLocation use_loc,
+                                                 const Decl* used_decl) {
     CHECK_(IsInMacro(use_loc) && "Unexpected non-macro-expansion call");
 
     SourceLocation caller_loc = GetInstantiationLoc(use_loc);
+    const char* responsible = "caller";
 
-    bool isForwardDeclaredInMacroFile = false;
-    if (StartsWith(PrintableLoc(GetSpellingLoc(use_loc)), "<scratch ")) {
-      VERRS(5) << "Decl was used in <scratch space>, probably as a result of "
-                  "macro arg concatenation, attributing to caller.\n";
+    if (IsInScratchSpace(use_loc)) {
+      VERRS(5) << "Decl was used in <scratch space>, presumably as a result of "
+                  "macro arg concatenation.\n";
+      use_loc = caller_loc;
+    } else if (IsForwardDeclaredInSameFile(used_decl, use_loc)) {
+      VERRS(5) << "Decl was forward-declared in macro file.\n";
+      use_loc = caller_loc;
+    } else if (GlobalSourceManager()->isMacroArgExpansion(use_loc)) {
+      VERRS(5) << "Use location is a macro arg expansion.\n";
       use_loc = caller_loc;
     } else {
-      isForwardDeclaredInMacroFile =
-          IsForwardDeclaredInSameFile(used_decl, use_loc);
-      if (isForwardDeclaredInMacroFile) {
-        VERRS(5) << "Decl was forward-declared in macro file, attributing to "
-                    "caller.\n";
-        use_loc = caller_loc;
-      } else {
-        // use_loc might be pointing directly to a macro argument, ask the
-        // source manager if that's the case.
-        SourceManager& SM = *GlobalSourceManager();
-        if (SM.isMacroArgExpansion(use_loc)) {
-           VERRS(5) << "Use location is a macro arg expansion."
-                       "Attributing to caller.\n";
-           use_loc = caller_loc;
-        }
-      }
+      responsible = "macro";
     }
 
-    // If none of the above kicked in, log that we're attributing this use
-    // to the macro.
-    if (use_loc != caller_loc) {
-      VERRS(5) << "Use location is not a macro arg expansion. "
-               << "Attributing to macro.\n";
-    }
+    VERRS(5) << "Attributing use to " << responsible << ".\n";
 
-    return std::make_pair(use_loc, isForwardDeclaredInMacroFile);
+    return use_loc;
   }
 
   // There are a few situations where iwyu is more restrictive than
@@ -1621,9 +1604,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // Figure out the best location to attribute uses inside macros.
     if (used_loc.isMacroID()) {
-      bool forwardDeclaredInMacro = false; // unused
-      std::tie(used_loc, forwardDeclaredInMacro) =
-          GetUseLocationForMacroExpansion(used_loc, decl);
+      used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
     }
     const FileEntry* used_in = GetFileEntry(used_loc);
 
@@ -1693,8 +1674,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (used_loc.isMacroID()) {
       definedAndUsedInSameFile = (GetFileEntry(used_loc) ==
                                   GetFileEntry(GetInstantiationLoc(used_loc)));
-      std::tie(used_loc, isForwardDeclaredInMacroFile) =
-          GetUseLocationForMacroExpansion(used_loc, decl);
+      isForwardDeclaredInMacroFile =
+          IsForwardDeclaredInSameFile(decl, used_loc);
+      used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
     }
     const FileEntry* used_in = GetFileEntry(used_loc);
 
