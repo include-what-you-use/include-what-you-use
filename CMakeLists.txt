@@ -167,5 +167,5 @@ else()
   endif()
 endif()
 
-install(TARGETS include-what-you-use
-  RUNTIME DESTINATION bin)
+install(TARGETS include-what-you-use RUNTIME DESTINATION bin)
+install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
