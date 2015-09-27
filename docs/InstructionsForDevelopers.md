@@ -18,7 +18,19 @@ To run the IWYU tests, run
 
     python run_iwyu_tests.py
 
-It runs one test for each `.cc` file in the `tests/` directory.  (We have additional tests in `more_tests/`, but have not yet gotten the testing framework set up for those tests.)  The output can be a bit hard to read, but if a test fails, the reason why will be listed after the `ERROR:root:Test failed for xxx` line.
+It runs one test for each `.cc` file in the `tests/` directory.  (We have additional tests in `more_tests/`, but have not yet gotten the testing framework set up for those tests.) The test runner searches for IWYU in the system `PATH` by default.
+
+The output can be a bit hard to read, but if a test fails, the reason why will be listed after the `ERROR:root:Test failed for xxx` line.
+
+You can select individual tests by listing their filename without extension as arguments
+
+    python run_iwyu_tests.py array macro_location
+
+If you don't want to modify your `PATH` you can specify which IWYU executable to use for testing
+
+    python run_iwyu_tests.py -- ./include-what-you-use
+
+(put any test names before '--' and the IWYU path after.)
 
 When fixing `fix_includes.py`, add a test case to `fix_includes_test.py` and run
 
