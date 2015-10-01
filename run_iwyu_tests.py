@@ -30,6 +30,15 @@ def PosixPath(path):
     return path.replace('\\', '/')
 
 
+def Partition(l, delimiter):
+  try:
+    delim_index = l.index(delimiter)
+  except ValueError:
+    return l, []
+
+  return l[:delim_index], l[delim_index+1:]
+
+
 class OneIwyuTest(unittest.TestCase):
   """Superclass for tests.  A subclass per test-file is created at runtime."""
 
@@ -167,6 +176,10 @@ def RegisterFilesForTesting(rootdir, pattern):
 
 
 if __name__ == '__main__':
+  unittest_args, additional_args = Partition(sys.argv, '--')
+  if additional_args:
+    iwyu_test_util.SetIwyuPath(additional_args[0])
+
   RegisterFilesForTesting('tests/cxx', '*.cc')
   RegisterFilesForTesting('tests/c', '*.c')
-  unittest.main()
+  unittest.main(argv=unittest_args)
