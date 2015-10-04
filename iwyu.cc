@@ -1580,24 +1580,24 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                         const NamedDecl* used_decl,
                                         const char* comment) {
 
-    const NamedDecl* corrected_decl = used_decl;
+    const NamedDecl* target_decl = used_decl;
 
-    // Sometimes a shadow decl comes between us an the 'real' decl.
+    // Sometimes a shadow decl comes between us and the 'real' decl.
     if (const UsingShadowDecl* shadow_decl = DynCastFrom(used_decl))
-      corrected_decl = shadow_decl->getTargetDecl();
+      target_decl = shadow_decl->getTargetDecl();
     
     // Map private decls like __normal_iterator to their public counterpart.
-    corrected_decl = MapPrivateDeclToPublicDecl(corrected_decl);
-    if (CanIgnoreDecl(corrected_decl))
+    target_decl = MapPrivateDeclToPublicDecl(target_decl);
+    if (CanIgnoreDecl(target_decl))
       return;
 
     // Figure out the best location to attribute uses inside macros.
     if (IsInMacro(used_loc))
-      used_loc = GetUseLocationForMacroExpansion(used_loc, corrected_decl);
+      used_loc = GetUseLocationForMacroExpansion(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
 
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, corrected_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+        used_loc, target_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
         comment);
 
     // Sometimes using a decl drags in a few other uses as well:
@@ -1626,7 +1626,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // anywhere.  ('autocast' is similar, but is handled in
     // VisitCastExpr; 'fn-return-type' is also similar and is
     // handled in HandleFunctionCall.)
-    if (const TypedefDecl* typedef_decl = DynCastFrom(corrected_decl)) {
+    if (const TypedefDecl* typedef_decl = DynCastFrom(target_decl)) {
       // One exception: if this TypedefType is being used in another
       // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
       // user -- the other typedef -- is never responsible for the
@@ -1654,23 +1654,23 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   virtual void ReportDeclForwardDeclareUseWithComment(SourceLocation used_loc,
                                                       const NamedDecl* used_decl,
                                                       const char* comment) {
-    const NamedDecl* corrected_decl = used_decl;
+    const NamedDecl* target_decl = used_decl;
 
-    // Sometimes a shadow decl comes between us an the 'real' decl.
+    // Sometimes a shadow decl comes between us and the 'real' decl.
     if (const UsingShadowDecl* shadow_decl = DynCastFrom(used_decl))
-      corrected_decl = shadow_decl->getTargetDecl();
+      target_decl = shadow_decl->getTargetDecl();
 
-    corrected_decl = MapPrivateDeclToPublicDecl(corrected_decl);
-    if (CanIgnoreDecl(corrected_decl))
+    target_decl = MapPrivateDeclToPublicDecl(target_decl);
+    if (CanIgnoreDecl(target_decl))
       return;
 
     // Figure out the best location to attribute uses inside macros.
     if (IsInMacro(used_loc))
-      used_loc = GetUseLocationForMacroExpansion(used_loc, corrected_decl);
+      used_loc = GetUseLocationForMacroExpansion(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
 
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, corrected_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+        used_loc, target_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
         comment);
 
     // If we're a use that depends on a using declaration, make sure
