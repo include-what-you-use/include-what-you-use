@@ -1615,7 +1615,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(used_decl, 
               GetDeclContext(current_ast_node()))) {
-      preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
+      preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
           "(for using decl)");
     }
@@ -1678,7 +1678,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(used_decl, 
               GetDeclContext(current_ast_node()))) {
-      preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
+      preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
           "(for using decl)");
     }
@@ -2582,10 +2582,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return visitor_state_->preprocessor_info;
   }
 
-  void AddUsingDeclaration(const NamedDecl* target_decl,  // what's being used
-                           const UsingDecl* using_decl) {
-    visitor_state_->using_declarations.insert(make_pair(target_decl,
-                                                        using_decl));
+  void AddShadowDeclarations(const UsingDecl* using_decl) {
+    for (UsingDecl::shadow_iterator it = using_decl->shadow_begin();
+         it != using_decl->shadow_end(); ++it) {
+      visitor_state_->using_declarations.insert(make_pair(it->getTargetDecl(),
+          it->getUsingDecl()));
+    }
   }
 
  private:
@@ -3417,14 +3419,25 @@ class IwyuAstConsumer
     ParseFunctionTemplates(context.getTranslationUnitDecl());
 
     TraverseDecl(context.getTranslationUnitDecl());
+   
+    const set<const FileEntry*>* const files_to_report_iwyu_violations_for
+          = preprocessor_info().files_to_report_iwyu_violations_for();
+
+    // Some analysis, such as UsingDecl resolution, is deferred until the
+    // entire AST is visited because it's only at that point that we know if
+    // the symbol was actually used or not.
+    // We perform that analysis here before CalculateAndReportIwyuViolations.
+    for (Each<const FileEntry*> file(files_to_report_iwyu_violations_for);
+         !file.AtEnd(); ++file) {
+      CHECK_(preprocessor_info().FileInfoFor(*file));
+      preprocessor_info().FileInfoFor(*file)->ResolvePendingAnalysis();
+    }
 
     // We have to calculate the .h files before the .cc file, since
     // the .cc file inherits #includes from the .h files, and we
     // need to figure out what those #includes are going to be.
     size_t num_edits = 0;
     const FileEntry* const main_file = preprocessor_info().main_file();
-    const set<const FileEntry*>* const files_to_report_iwyu_violations_for
-        = preprocessor_info().files_to_report_iwyu_violations_for();
     for (Each<const FileEntry*> file(files_to_report_iwyu_violations_for);
          !file.AtEnd(); ++file) {
       if (*file == main_file)
@@ -3495,22 +3508,26 @@ class IwyuAstConsumer
     return Base::VisitNamespaceAliasDecl(decl);
   }
 
-  bool VisitUsingDecl(clang::UsingDecl* using_decl) {
+  bool VisitUsingDecl(clang::UsingDecl* decl) {
     // If somebody in a different file tries to use one of these decls
     // with the shortened name, then they had better #include us in
     // order to get our using declaration.  We store the necessary
     // information here.  Note: we have to store this even if this is
     // an ast node we would otherwise ignore, since other AST nodes
     // (which we might not ignore) can depend on it.
-    for (UsingDecl::shadow_iterator it = using_decl->shadow_begin();
-         it != using_decl->shadow_end(); ++it) {
-      const NamedDecl* named_decl = (*it)->getTargetDecl();
-        AddUsingDeclaration(named_decl, using_decl);
-    }
+    AddShadowDeclarations(decl);
+
+    // The shadow decls hold the declarations for the var/fn/etc we're
+    // using.  (There may be more than one if, say, we're using an
+    // overloaded function.)  We don't want to add all of them at once
+    // though, because that will drag in every overload even if we're
+    // only using one.  Instead, we keep track of the using decl and
+    // mark it as touched when something actually uses it.
+    preprocessor_info().FileInfoFor(CurrentFileEntry())->AddUsingDecl(decl);
 
     if (CanIgnoreCurrentASTNode())  return true;
 
-    return Base::VisitUsingDecl(using_decl);
+    return Base::VisitUsingDecl(decl);
   }
 
   bool VisitTagDecl(clang::TagDecl* decl) {
