@@ -28,6 +28,7 @@
 
 namespace clang {
 class FileEntry;
+class UsingDecl;
 }
 
 namespace include_what_you_use {
@@ -205,8 +206,8 @@ class IwyuFileInfo {
   // headers.
   void AddAssociatedHeader(const IwyuFileInfo* other);
 
-  // Use these to register an iwyu declaration: either an #include or
-  // a forward-declaration.
+  // Use these to register an iwyu declaration: either an #include,
+  // a forward-declaration or a using-declaration.
 
   void AddInclude(const clang::FileEntry* includee,
                   const string& quoted_includee, int linenumber);
@@ -214,6 +215,8 @@ class IwyuFileInfo {
   // the fwd-decl be removed, even if we don't see any uses of it.
   void AddForwardDeclare(const clang::NamedDecl* forward_declare_decl,
                          bool definitely_keep_fwd_decl);
+
+  void AddUsingDecl(const clang::UsingDecl* using_decl);
 
   // Use these to register an iwyu 'use'.  It's preferable to indicate
   // an explicit type or decl being used, but if that's not available,
@@ -241,6 +244,12 @@ class IwyuFileInfo {
                                const clang::NamedDecl* decl,
                                bool in_cxx_method_body, const char* comment);
 
+  // Called whenever a NamedDecl is accessed through a UsingDecl.
+  // ie: using std::swap; swap(a, b); 
+  void ReportUsingDeclUse(clang::SourceLocation use_loc,
+                          const clang::UsingDecl* using_decl,
+                          bool in_cxx_method_body, const char* comment);
+
   // This is used when we see a // NOLINT comment, for instance.  It says
   // '#include this header file as-is, without any public-header mapping.'
   // Input is the include-line as desired: '<string.h>' or '"ads/foo.h"'.
@@ -255,6 +264,10 @@ class IwyuFileInfo {
   const set<const clang::FileEntry*>& direct_includes_as_fileentries() const {
     return direct_includes_as_fileentries_;
   }
+
+  // Resolve and pending analysis that needs to occur between AST traversal
+  // and CalculateAndReportIwyuViolations.
+  void ResolvePendingAnalysis();
 
   // The meat of iwyu: compare the actual includes and forward-declares
   // against the symbol uses, and report which uses are iwyu violations.
@@ -320,6 +333,10 @@ class IwyuFileInfo {
 
   // Holds all the lines (#include and fwd-declare) that are reported.
   vector<OneIncludeOrForwardDeclareLine> lines_;
+
+  // Maps all the using-decls that are reported to a bool indicating whether
+  // or not a the using decl has been referenced in this file.
+  map<const clang::UsingDecl*, bool> using_decl_referenced_;
 
   // We also hold the line information in a few other data structures,
   // for ease of references.

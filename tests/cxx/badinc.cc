@@ -139,11 +139,9 @@ int i1_macro_symbol_with_value_and_value2_var2;
 // uses of this namespace are in badinc-i1.h; we'll get the iwyu
 // violation later when we try to use symbols from i1_ns2.
 using namespace i1_ns2;
-// IWYU: i1_ns3::i1_int_global3 is...*badinc-i1.h
 using i1_ns3::i1_int_global3;
 // IWYU: i1_ns4 is...*badinc-i1.h
 namespace cc_ns_alias = i1_ns4;
-// IWYU: i1_ns::I1_NamespaceStruct needs a declaration
 using i1_ns::I1_NamespaceStruct;
 // IWYU: i1_ns::I1_NamespaceTemplateFn is...*badinc-i1.h
 using i1_ns::I1_NamespaceTemplateFn;
