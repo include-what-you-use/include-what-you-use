@@ -1608,26 +1608,34 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // The comment, if not NULL, is extra text that is included along
   // with the warning message that iwyu emits.
   virtual void ReportDeclUseWithComment(SourceLocation used_loc,
-                                        const NamedDecl* decl,
+                                        const NamedDecl* used_decl,
                                         const char* comment) {
+
+    const NamedDecl* target_decl = used_decl;
+
+    // Sometimes a shadow decl comes between us and the 'real' decl.
+    if (const UsingShadowDecl* shadow_decl = DynCastFrom(used_decl))
+      target_decl = shadow_decl->getTargetDecl();
+    
     // Map private decls like __normal_iterator to their public counterpart.
-    decl = MapPrivateDeclToPublicDecl(decl);
-    if (CanIgnoreDecl(decl))
+    target_decl = MapPrivateDeclToPublicDecl(target_decl);
+    if (CanIgnoreDecl(target_decl))
       return;
 
     // Figure out the best location to attribute uses inside macros.
     if (IsInMacro(used_loc))
-      used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
+      used_loc = GetUseLocationForMacroExpansion(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
 
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+        used_loc, target_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
         comment);
 
     // Sometimes using a decl drags in a few other uses as well:
 
     // If we're a use that depends on a using declaration, make sure
-    // we #include the file with the using declaration.
+    // we #include the file with the using declaration. Need to check
+    // the original reported decl so we don't lose the shadow information.
     // TODO(csilvers): check that our getQualifier() does not match
     // the namespace of the decl.  If we have 'using std::vector;' +
     // 'std::vector<int> foo;' we don't actually care about the
@@ -1636,8 +1644,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // instead?  We can call it "Use what you use". :-)
     // TODO(csilvers): check for using statements and namespace aliases too.
     if (const UsingDecl* using_decl
-        = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
-      preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
+        = GetUsingDeclarationOf(used_decl, 
+              GetDeclContext(current_ast_node()))) {
+      preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
           "(for using decl)");
     }
@@ -1648,7 +1657,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // anywhere.  ('autocast' is similar, but is handled in
     // VisitCastExpr; 'fn-return-type' is also similar and is
     // handled in HandleFunctionCall.)
-    if (const TypedefDecl* typedef_decl = DynCastFrom(decl)) {
+    if (const TypedefDecl* typedef_decl = DynCastFrom(target_decl)) {
       // One exception: if this TypedefType is being used in another
       // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
       // user -- the other typedef -- is never responsible for the
@@ -1674,26 +1683,33 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // The comment, if not NULL, is extra text that is included along
   // with the warning message that iwyu emits.
   virtual void ReportDeclForwardDeclareUseWithComment(SourceLocation used_loc,
-                                                      const NamedDecl* decl,
+                                                      const NamedDecl* used_decl,
                                                       const char* comment) {
-    decl = MapPrivateDeclToPublicDecl(decl);
-    if (CanIgnoreDecl(decl))
+    const NamedDecl* target_decl = used_decl;
+
+    // Sometimes a shadow decl comes between us and the 'real' decl.
+    if (const UsingShadowDecl* shadow_decl = DynCastFrom(used_decl))
+      target_decl = shadow_decl->getTargetDecl();
+
+    target_decl = MapPrivateDeclToPublicDecl(target_decl);
+    if (CanIgnoreDecl(target_decl))
       return;
 
     // Figure out the best location to attribute uses inside macros.
     if (IsInMacro(used_loc))
-      used_loc = GetUseLocationForMacroExpansion(used_loc, decl);
+      used_loc = GetUseLocationForMacroExpansion(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
 
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+        used_loc, target_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
         comment);
 
     // If we're a use that depends on a using declaration, make sure
     // we #include the file with the using declaration.
     if (const UsingDecl* using_decl
-        = GetUsingDeclarationOf(decl, GetDeclContext(current_ast_node()))) {
-      preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
+        = GetUsingDeclarationOf(used_decl, 
+              GetDeclContext(current_ast_node()))) {
+      preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
           "(for using decl)");
     }
@@ -2600,30 +2616,27 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return visitor_state_->preprocessor_info;
   }
 
-  void AddUsingDeclaration(const NamedDecl* target_decl,  // what's being used
-                           const UsingDecl* using_decl) {
-    visitor_state_->using_declarations.insert(make_pair(target_decl,
-                                                        using_decl));
-  }
-
- private:
-  template <typename T> friend class IwyuBaseAstVisitor;
-
-  bool IsProcessedOverloadLoc(SourceLocation loc) const {
-    return ContainsKey(visitor_state_->processed_overload_locs, loc);
-  }
-
-  void AddProcessedOverloadLoc(SourceLocation loc) {
-    visitor_state_->processed_overload_locs.insert(loc);
+  void AddShadowDeclarations(const UsingDecl* using_decl) {
+    for (UsingDecl::shadow_iterator it = using_decl->shadow_begin();
+         it != using_decl->shadow_end(); ++it) {
+      visitor_state_->using_declarations.insert(make_pair(it->getTargetDecl(),
+          it->getUsingDecl()));
+    }
   }
 
   const UsingDecl* GetUsingDeclarationOf(const NamedDecl* decl,
                                          const DeclContext* using_context) {
-    // We look through all the using-decls of the given decl.  We
-    // limit them to ones that are visible from the decl-context we're
-    // currently in (that is, what namespaces we're in).  Of those, we
-    // pick the one that's in the same file as decl, if possible,
-    // otherwise we pick one arbitrarily.
+    // First, if we have a UsingShadowDecl, then we don't need to do anything
+    // because we can just directly return the using decl from that.
+    if (const UsingShadowDecl* shadow = DynCastFrom(decl))
+      return shadow->getUsingDecl();
+
+    // But, if we don't have a UsingShadowDecl, then we need to look through
+    // all the using-decls of the given decl.  We limit them to ones that are
+    // visible from the decl-context we're currently in (that is, what
+    // namespaces we're in), via the check through 'Encloses'. Of those, we
+    // pick the one that's in the same file as decl, if possible, otherwise we
+    // pick one arbitrarily.
     const UsingDecl* retval = NULL;
     vector<const UsingDecl*> using_decls
         = FindInMultiMap(visitor_state_->using_declarations, decl);
@@ -2636,6 +2649,17 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
     }
     return retval;
+  }
+
+ private:
+  template <typename T> friend class IwyuBaseAstVisitor;
+
+  bool IsProcessedOverloadLoc(SourceLocation loc) const {
+    return ContainsKey(visitor_state_->processed_overload_locs, loc);
+  }
+
+  void AddProcessedOverloadLoc(SourceLocation loc) {
+    visitor_state_->processed_overload_locs.insert(loc);
   }
 
   // Do not any variables here!  If you do, they will not be shared
@@ -3427,14 +3451,25 @@ class IwyuAstConsumer
     ParseFunctionTemplates(context.getTranslationUnitDecl());
 
     TraverseDecl(context.getTranslationUnitDecl());
+   
+    const set<const FileEntry*>* const files_to_report_iwyu_violations_for
+          = preprocessor_info().files_to_report_iwyu_violations_for();
+
+    // Some analysis, such as UsingDecl resolution, is deferred until the
+    // entire AST is visited because it's only at that point that we know if
+    // the symbol was actually used or not.
+    // We perform that analysis here before CalculateAndReportIwyuViolations.
+    for (Each<const FileEntry*> file(files_to_report_iwyu_violations_for);
+         !file.AtEnd(); ++file) {
+      CHECK_(preprocessor_info().FileInfoFor(*file));
+      preprocessor_info().FileInfoFor(*file)->ResolvePendingAnalysis();
+    }
 
     // We have to calculate the .h files before the .cc file, since
     // the .cc file inherits #includes from the .h files, and we
     // need to figure out what those #includes are going to be.
     size_t num_edits = 0;
     const FileEntry* const main_file = preprocessor_info().main_file();
-    const set<const FileEntry*>* const files_to_report_iwyu_violations_for
-        = preprocessor_info().files_to_report_iwyu_violations_for();
     for (Each<const FileEntry*> file(files_to_report_iwyu_violations_for);
          !file.AtEnd(); ++file) {
       if (*file == main_file)
@@ -3512,22 +3547,18 @@ class IwyuAstConsumer
     // information here.  Note: we have to store this even if this is
     // an ast node we would otherwise ignore, since other AST nodes
     // (which we might not ignore) can depend on it.
-    for (UsingDecl::shadow_iterator it = decl->shadow_begin();
-         it != decl->shadow_end(); ++it) {
-      AddUsingDeclaration((*it)->getTargetDecl(), decl);
-    }
-
-    if (CanIgnoreCurrentASTNode())  return true;
+    AddShadowDeclarations(decl);
 
     // The shadow decls hold the declarations for the var/fn/etc we're
     // using.  (There may be more than one if, say, we're using an
-    // overloaded function.)  We check to make sure nothing we're
-    // using is an iwyu violation.
-    for (UsingDecl::shadow_iterator it = decl->shadow_begin();
-         it != decl->shadow_end(); ++it) {
-      ReportDeclForwardDeclareUse(CurrentLoc(), (*it)->getTargetDecl());
-    }
+    // overloaded function.)  We don't want to add all of them at once
+    // though, because that will drag in every overload even if we're
+    // only using one.  Instead, we keep track of the using decl and
+    // mark it as touched when something actually uses it.
+    preprocessor_info().FileInfoFor(CurrentFileEntry())->AddUsingDecl(decl);
 
+    if (CanIgnoreCurrentASTNode())  return true;
+    
     return Base::VisitUsingDecl(decl);
   }
 
@@ -3657,7 +3688,7 @@ class IwyuAstConsumer
   // Called whenever a variable, function, enum, etc is used.
   bool VisitDeclRefExpr(clang::DeclRefExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
-    ReportDeclUse(CurrentLoc(), expr->getDecl());
+    ReportDeclUse(CurrentLoc(), expr->getFoundDecl());
     return Base::VisitDeclRefExpr(expr);
   }
 
