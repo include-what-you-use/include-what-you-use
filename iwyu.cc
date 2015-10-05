@@ -1640,6 +1640,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // the namespace of the decl.  If we have 'using std::vector;' +
     // 'std::vector<int> foo;' we don't actually care about the
     // using-decl.
+    // TODO(csilvers): maybe just insert our own using declaration
+    // instead?  We can call it "Use what you use". :-)
     // TODO(csilvers): check for using statements and namespace aliases too.
     if (const UsingDecl* using_decl
         = GetUsingDeclarationOf(used_decl, 
@@ -2623,7 +2625,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   const UsingDecl* GetUsingDeclarationOf(const NamedDecl* decl,
-                                         const DeclContext* use_context) {
+                                         const DeclContext* using_context) {
     // First, if we have a UsingShadowDecl, then we don't need to do anything
     // because we can just directly return the using decl from that.
     if (const UsingShadowDecl* shadow = DynCastFrom(decl))
@@ -2639,17 +2641,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     vector<const UsingDecl*> using_decls
         = FindInMultiMap(visitor_state_->using_declarations, decl);
     for (Each<const UsingDecl*> it(&using_decls); !it.AtEnd(); ++it) {
-      const DeclContext* using_decl_context = (*it)->getDeclContext();
-      if (!using_decl_context->Encloses(use_context)) {
-        // DeclContext::Encloses fails if the decl context is a function. In
-        // practice this doesn't matter because we only care about Encloses
-        // when we're exporting symbols from a namespace, class, etc which can
-        // not happen if the using decl is in a function.
-        if (using_decl_context->getDeclKind() != clang::Decl::Function) {
-          continue;
-        }
-      }
-
+      if (!(*it)->getDeclContext()->Encloses(using_context))
+        continue;
       if (GetFileEntry(decl) == GetFileEntry(*it) ||    // in same file, prefer
           retval == NULL) {        // not in same file, but better than nothing
         retval = *it;

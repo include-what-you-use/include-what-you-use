@@ -1882,14 +1882,6 @@ size_t PrintableDiffs(const string& filename,
 }  // namespace internal
 
 void IwyuFileInfo::ResolvePendingAnalysis() {
-size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
-  // This is used to calculate our own desired includes.  That depends
-  // on what our associated files' desired includes are: if we use
-  // bar.h and foo.h is adding it, we don't need to add it ourself.
-  // On the other hand, if foo.h used to have it but is removing it,
-  // we *do* need to add it.
-  set<string> associated_desired_includes = AssociatedDesiredIncludes();
-
   // Resolve using declarations before continuing.  This handles the case
   // where there's a using declaration in the file but no code is actually
   // using it. If that happens, we might try to remove all of the headers with
@@ -1901,7 +1893,6 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // sure everything still compiles instead of removing the using decl. A
   // more thorough approach would be to scan the current list of includes that
   // already name this decl (like in the overloaded function case) and include
-  // alredy name this decl (like in the overloaded function case) and include
   // one of those so we don't include a file we don't actually need.
   for (map<const UsingDecl*, bool>::value_type using_decl_status
     : using_decl_referenced_) {
@@ -1913,6 +1904,15 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
         "(for un-referenced using)");
     }
   }
+}
+
+size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
+  // This is used to calculate our own desired includes.  That depends
+  // on what our associated files' desired includes are: if we use
+  // bar.h and foo.h is adding it, we don't need to add it ourself.
+  // On the other hand, if foo.h used to have it but is removing it,
+  // we *do* need to add it.
+  set<string> associated_desired_includes = AssociatedDesiredIncludes();
 
   CalculateIwyuViolations(&symbol_uses_);
   EmitWarningMessages(symbol_uses_);
