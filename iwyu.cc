@@ -1475,6 +1475,37 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  // Returns the first type that is not a typedef in a template.  For example,
+  // for template
+  //
+  //   template<typename T> class Foo {
+  //     typedef T value_type;
+  //     typedef value_type& reference;
+  //   };
+  //
+  // for type 'reference' it will return type T with which Foo was instantiated.
+  const Type* DesugarDependentTypedef(const TypedefType* typedef_type) {
+    const DeclContext* parent
+        = typedef_type->getDecl()->getLexicalDeclContext();
+    if (const ClassTemplateSpecializationDecl* template_parent
+        = DynCastFrom(parent)) {
+      return DesugarDependentTypedef(typedef_type, template_parent);
+    }
+    return typedef_type;
+  }
+
+  const Type* DesugarDependentTypedef(
+      const TypedefType* typedef_type, const RecordDecl* parent) {
+    const Type* underlying_type
+        = typedef_type->getDecl()->getUnderlyingType().getTypePtr();
+    if (const TypedefType* underlying_typedef = DynCastFrom(underlying_type)) {
+      if (underlying_typedef->getDecl()->getLexicalDeclContext() == parent) {
+        return DesugarDependentTypedef(underlying_typedef, parent);
+      }
+    }
+    return underlying_type;
+  }
+
   set<const Type*> GetCallerResponsibleTypesForTypedef(
       const TypedefDecl* decl) {
     set<const Type*> retval;
@@ -2084,6 +2115,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         = expr->isArrow() ? RemovePointerFromType(base_type) : base_type;
     if (CanIgnoreType(base_type) && CanIgnoreType(deref_base_type))
       return true;
+    if (const TypedefType* typedef_type = DynCastFrom(deref_base_type)) {
+      deref_base_type = DesugarDependentTypedef(typedef_type);
+    }
     // Technically, we should say the type is being used at the
     // location of base_expr.  That may be a different file than us in
     // cases like MACRO.b().  However, while one can imagine

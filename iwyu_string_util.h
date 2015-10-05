@@ -59,6 +59,23 @@ inline bool StripRight(string* str, const string& suffix) {
   return false;
 }
 
+// Truncate str to width with ellipses to indicate truncation.
+// Return str unchanged if it fits within width.
+// Return empty string if width is too short to fit anything meaningful.
+// Otherwise return str truncated to width chars.
+inline string Ellipsize(const string& str, size_t width) {
+  if (str.length() <= width)
+    return str;
+
+  // If we truncate strings too short, we'll end up with nonsense abbreviations
+  // like '...', 'T...' or 'Ty...' so make sure we have at least three chars
+  // from str and three chars for ellipsis.
+  if (width < 6)
+    return string();
+
+  return str.substr(0, width - 3) + "...";
+}
+
 // Finds the first occurrence of substr in *str and removes from *str
 // everything before the occurrence and the occurrence itself.  For
 // example, string s = "What a hat!"; StripPast(&s, "hat"); will make s

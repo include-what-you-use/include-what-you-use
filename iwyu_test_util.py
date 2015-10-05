@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 ##===--- iwyu_test_util.py - include-what-you-use test framework -----------===##
 #
@@ -67,15 +67,7 @@ def _Which(program, paths):
     return None
 
 
-def _GetIwyuPath(iwyu_paths):
-  """Returns the path to IWYU or raises IOError if it cannot be found."""
-  iwyu_path = _Which('include-what-you-use', iwyu_paths)
-  if iwyu_path:
-      return iwyu_path
-
-  raise IOError('Failed to locate IWYU.\nSearched\n %s' % '\n '.join(iwyu_paths))
-
-
+_IWYU_PATH = None
 _SYSTEM_PATHS = [p.strip('"') for p in os.environ["PATH"].split(os.pathsep)]
 _IWYU_PATHS = [
     '../../../../Debug+Asserts/bin',
@@ -94,7 +86,27 @@ _IWYU_PATHS = [
     '../../../../../build/bin/MinSizeRel',
     '../../../../../build/bin/RelWithDebInfo',
     ]
-_IWYU_PATH = _GetIwyuPath(_IWYU_PATHS + _SYSTEM_PATHS)
+
+
+def SetIwyuPath(iwyu_path):
+  """Set the path to the IWYU executable under test.
+  """
+  global _IWYU_PATH
+  _IWYU_PATH = iwyu_path
+
+
+def _GetIwyuPath():
+  """Returns the path to IWYU or raises IOError if it cannot be found."""
+  global _IWYU_PATH
+
+  if not _IWYU_PATH:
+    iwyu_paths = _IWYU_PATHS + _SYSTEM_PATHS
+    _IWYU_PATH = _Which('include-what-you-use', iwyu_paths)
+    if not _IWYU_PATH:
+      raise IOError('Failed to locate IWYU.\nSearched\n %s' %
+                    '\n '.join(iwyu_paths))
+
+  return _IWYU_PATH
 
 
 def _GetCommandOutput(command):
@@ -102,7 +114,8 @@ def _GetCommandOutput(command):
                        shell=True,
                        stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT)
-  lines = [line.decode("utf-8") for line in p.stdout.readlines()]
+  stdout, _ = p.communicate()
+  lines = stdout.decode("utf-8").splitlines(True)
   lines = [line.replace(os.linesep, '\n') for line in lines]
   return lines
 
@@ -403,7 +416,7 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
 
   # TODO(csilvers): verify that has exit-status 0.
   cmd = '%s %s %s %s' % (
-      _IWYU_PATH, ' '.join(iwyu_flags), ' '.join(clang_flags), cc_file)
+      _GetIwyuPath(), ' '.join(iwyu_flags), ' '.join(clang_flags), cc_file)
   if verbose:
     print('>>> Running %s' % cmd)
   output = _GetCommandOutput(cmd)

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 ##===--- run_iwyu_tests.py - include-what-you-use test framework driver ---===##
 #
@@ -28,6 +28,15 @@ import iwyu_test_util
 def PosixPath(path):
     """Normalize Windows path separators to POSIX path separators."""
     return path.replace('\\', '/')
+
+
+def Partition(l, delimiter):
+  try:
+    delim_index = l.index(delimiter)
+  except ValueError:
+    return l, []
+
+  return l[:delim_index], l[delim_index+1:]
 
 
 class OneIwyuTest(unittest.TestCase):
@@ -81,7 +90,9 @@ class OneIwyuTest(unittest.TestCase):
     clang_flags_map = {
       'alias_template.cc': ['-std=c++11'],
       'auto_type_within_template.cc': ['-std=c++11'],
-      'clmode.cc': ['--driver-mode=cl', '/C', '/Os', '/W2'],
+      # MSVC targets need to explicitly enable exceptions, so we do it for all.
+      'catch.cc': ['-fcxx-exceptions', '-fexceptions'],
+      'clmode.cc': ['--driver-mode=cl', '/GF', '/Os', '/W2'],
       'conversion_ctor.cc': ['-std=c++11'],
       'deleted_implicit.cc' : ['-std=c++11'],
       'lambda_fwd_decl.cc': ['-std=c++11'],
@@ -165,6 +176,10 @@ def RegisterFilesForTesting(rootdir, pattern):
 
 
 if __name__ == '__main__':
+  unittest_args, additional_args = Partition(sys.argv, '--')
+  if additional_args:
+    iwyu_test_util.SetIwyuPath(additional_args[0])
+
   RegisterFilesForTesting('tests/cxx', '*.cc')
   RegisterFilesForTesting('tests/c', '*.c')
-  unittest.main()
+  unittest.main(argv=unittest_args)
