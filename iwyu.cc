@@ -2603,24 +2603,22 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   const UsingDecl* GetUsingDeclarationOf(const NamedDecl* decl,
                                          const DeclContext* using_context) {
-    // We look through all the using-decls of the given decl.  We limit them to
-    // ones that are visible from the decl-context we're currently in (that is,
-    // what namespaces we're in), via the check through 'Encloses'. If we have a
-    // shadow decl then we know we're being accessed through a using decl, so we
-    // don't need to check Encloses; we only need to check that the using decls
-    // match. Of those, we pick the one that's in the same file as decl, if
-    // possible, otherwise we pick one arbitrarily.
-    const UsingShadowDecl* shadow = DynCastFrom(decl);
-    if (shadow)
-      decl = shadow->getTargetDecl();
+    // First, if we have a UsingShadowDecl, then we don't need to do anything
+    // because we can just directly return the using decl from that.
+    if (const UsingShadowDecl* shadow = DynCastFrom(decl))
+      return shadow->getUsingDecl();
 
+    // But, if we don't have a UsingShadowDecl, then we need to look through
+    // all the using-decls of the given decl.  We limit them to ones that are
+    // visible from the decl-context we're currently in (that is, what
+    // namespaces we're in), via the check through 'Encloses'. Of those, we
+    // pick the one that's in the same file as decl, if possible, otherwise we
+    // pick one arbitrarily.
     const UsingDecl* retval = NULL;
     vector<const UsingDecl*> using_decls
         = FindInMultiMap(visitor_state_->using_declarations, decl);
     for (Each<const UsingDecl*> it(&using_decls); !it.AtEnd(); ++it) {
-      if (!shadow && !(*it)->getDeclContext()->Encloses(using_context))
-        continue;
-      if (shadow && shadow->getUsingDecl() != *it)
+      if (!(*it)->getDeclContext()->Encloses(using_context))
         continue;
       if (GetFileEntry(decl) == GetFileEntry(*it) ||    // in same file, prefer
           retval == NULL) {        // not in same file, but better than nothing
