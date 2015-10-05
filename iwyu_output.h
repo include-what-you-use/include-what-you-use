@@ -264,6 +264,10 @@ class IwyuFileInfo {
     return direct_includes_as_fileentries_;
   }
 
+  // Resolve and pending analysis that needs to occur between AST traversal
+  // and CalculateAndReportIwyuViolations.
+  void ResolvePendingAnalysis();
+
   // The meat of iwyu: compare the actual includes and forward-declares
   // against the symbol uses, and report which uses are iwyu violations.
   // Reports violations on errs(), and returns the number of violations.

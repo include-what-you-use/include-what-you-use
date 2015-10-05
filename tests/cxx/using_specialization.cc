@@ -7,6 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Tests that when we use an object through a using decl, that we are only
+// required to include the files that represent the specializations we've
+// actually used and not the entire overload set the the using decl
+// represents.
+
 namespace ns {
   #include "template_specialization-i1.h"
   #include "template_specialization-i2.h"

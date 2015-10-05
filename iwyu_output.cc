@@ -546,7 +546,7 @@ void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
            << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
 }
 
-void IwyuFileInfo::AddUsingDecl(const clang::UsingDecl* using_decl) {
+void IwyuFileInfo::AddUsingDecl(const UsingDecl* using_decl) {
   CHECK_(using_decl && "using_decl unexpectedly NULL");
   using_decl_referenced_.insert(std::make_pair(using_decl, false));
   const SourceRange decl_lines = using_decl->getSourceRange();
@@ -631,16 +631,15 @@ void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
                                       const UsingDecl* using_decl,
                                       bool in_cxx_method_body,
                                       const char* comment) {  
-
   // If accessing a symbol through a using decl in the same file that contains
   // the using decl, we must mark the using decl as referenced. At the end of
-  // traversing the AST, we check to see if a using decl is unreferenced and a
-  // full use of one of its shadow decls so that the source file continues to
-  // compile.
-  typename map<const UsingDecl*, bool>::iterator using_decl_status = 
+  // traversing the AST, we check to see if a using decl is unreferenced and
+  // add a full use of one of its shadow decls so that the source file
+  // continues to compile.
+  map<const UsingDecl*, bool>::iterator using_decl_status = 
     using_decl_referenced_.find(using_decl);
 
-  if(using_decl_status != using_decl_referenced_.end()) {
+  if (using_decl_status != using_decl_referenced_.end()) {
     using_decl_status->second = true;
   }
 
@@ -1882,6 +1881,7 @@ size_t PrintableDiffs(const string& filename,
 
 }  // namespace internal
 
+void IwyuFileInfo::ResolvePendingAnalysis() {
 size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // This is used to calculate our own desired includes.  That depends
   // on what our associated files' desired includes are: if we use
@@ -1900,16 +1900,17 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // either. As a compromise, we arbitrarily add the first shadow decl to make
   // sure everything still compiles instead of removing the using decl. A
   // more thorough approach would be to scan the current list of includes that
+  // already name this decl (like in the overloaded function case) and include
   // alredy name this decl (like in the overloaded function case) and include
   // one of those so we don't include a file we don't actually need.
-  for (typename map<const UsingDecl*, bool>::value_type using_decl_status
-       : using_decl_referenced_) {
+  for (map<const UsingDecl*, bool>::value_type using_decl_status
+    : using_decl_referenced_) {
     if (!using_decl_status.second) {
       const UsingDecl* using_decl = using_decl_status.first;
       ReportForwardDeclareUse(using_decl->getUsingLoc(),
-                              using_decl->shadow_begin()->getTargetDecl(), 
-                              /* in_cxx_method_body */ false,
-                              "(for un-referenced using)");
+        using_decl->shadow_begin()->getTargetDecl(),
+        /* in_cxx_method_body */ false,
+        "(for un-referenced using)");
     }
   }
 
