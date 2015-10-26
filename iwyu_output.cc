@@ -48,9 +48,10 @@ using clang::FunctionDecl;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
 using clang::RecordDecl;
+using clang::SourceLocation;
 using clang::SourceRange;
 using clang::TemplateDecl;
-using clang::SourceLocation;
+using clang::UsingDecl;
 using llvm::cast;
 using llvm::errs;
 using llvm::isa;
@@ -60,6 +61,7 @@ using std::map;
 using std::multimap;
 using std::pair;
 using std::sort;
+using std::to_string;
 using std::vector;
 
 namespace internal {
@@ -545,6 +547,19 @@ void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
            << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
 }
 
+void IwyuFileInfo::AddUsingDecl(const UsingDecl* using_decl) {
+  CHECK_(using_decl && "using_decl unexpectedly NULL");
+  using_decl_referenced_.insert(std::make_pair(using_decl, false));
+  const SourceRange decl_lines = using_decl->getSourceRange();
+  int start_linenum = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
+  int end_linenum = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
+  VERRS(6) << "Found using-decl: "
+           << GetFilePath(file_) << ":" 
+           << to_string(start_linenum) << "-" << to_string(end_linenum) << ": " 
+           << internal::PrintablePtr(using_decl)
+           << internal::GetQualifiedNameAsString(using_decl) << "\n";
+}
+
 static void LogSymbolUse(const string& prefix, const OneUse& use) {
   string decl_loc;
   string printable_ptr;
@@ -611,6 +626,28 @@ void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
   symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse,
                                 in_cxx_method_body, comment));
   LogSymbolUse("Marked fwd-decl use of decl", symbol_uses_.back());
+}
+
+void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
+                                      const UsingDecl* using_decl,
+                                      bool in_cxx_method_body,
+                                      const char* comment) {  
+  // If accessing a symbol through a using decl in the same file that contains
+  // the using decl, we must mark the using decl as referenced. At the end of
+  // traversing the AST, we check to see if a using decl is unreferenced and
+  // add a full use of one of its shadow decls so that the source file
+  // continues to compile.
+  map<const UsingDecl*, bool>::iterator using_decl_status = 
+    using_decl_referenced_.find(using_decl);
+
+  if (using_decl_status != using_decl_referenced_.end()) {
+    using_decl_status->second = true;
+  }
+
+  // When a symbol is accessed through a using decl, we must report
+  // that as a full use of the using decl because whatever file that
+  // using decl is in is now required.
+  ReportFullSymbolUse(use_loc, using_decl, in_cxx_method_body, comment);
 }
 
 // Given a collection of symbol-uses for symbols defined in various
@@ -1844,6 +1881,35 @@ size_t PrintableDiffs(const string& filename,
 }
 
 }  // namespace internal
+
+void IwyuFileInfo::ResolvePendingAnalysis() {
+  // Resolve using declarations:  This handles the case where there's a using
+  // declaration in the file but no code is actually using it. If that
+  // happens, we might try to remove all of the headers with the decls that
+  // the using decl is referencing, which would result in a compilation error
+  // at best. A possible solution is to remove the using decl if it's not
+  // used, but that doesn't work for header files because a using decl in a
+  // header is an exported symbol, so we don't want to do that either. As a
+  // compromise, we arbitrarily add the first shadow decl to make sure
+  // everything still compiles instead of removing the using decl. A more
+  // thorough approach would be to scan the current list of includes that
+  // already name this decl (like in the overloaded function case) and include
+  // one of those so we don't include a file we don't actually need.
+  for (map<const UsingDecl*, bool>::value_type using_decl_status
+      : using_decl_referenced_) {
+    if (!using_decl_status.second) {
+      const UsingDecl* using_decl = using_decl_status.first;
+      // It should not be possible to get here with a using decl without any
+      // shadow decls because doing so would imply that the input code we're
+      // analyzing code doesn't compile.
+      CHECK_(using_decl->shadow_size() > 0);
+      ReportForwardDeclareUse(using_decl->getUsingLoc(),
+        using_decl->shadow_begin()->getTargetDecl(),
+        /* in_cxx_method_body */ false,
+        "(for un-referenced using)");
+    }
+  }
+}
 
 size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // This is used to calculate our own desired includes.  That depends
