@@ -35,11 +35,11 @@ ifneq (,$(filter $(HOST_OS), Cygwin MingW))
   LIBS += -lshlwapi
 endif
 
-# Provide SVN revision for version string like in clang/lib/Basic/Makefile.
-IWYU_SVN_REVISION := $(strip \
+# Provide Git revision for version string like in clang/lib/Basic/Makefile.
+IWYU_GIT_REV := $(strip \
         $(shell $(LLVM_SRC_ROOT)/utils/GetSourceVersion $(PROJ_SRC_DIR)))
 
-CPP.Defines += -DIWYU_SVN_REVISION='"$(IWYU_SVN_REVISION)"'
+CPP.Defines += -DIWYU_GIT_REV='"$(IWYU_GIT_REV)"'
 
 check-iwyu:: all
 	./run_iwyu_tests.py
