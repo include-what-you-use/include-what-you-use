@@ -415,7 +415,7 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
   iwyu_flags = ['-Xiwyu ' + flag for flag in iwyu_flags]
 
   # TODO(csilvers): verify that has exit-status 0.
-  cmd = '%s %s %s %s' % (
+  cmd = '"%s" %s %s %s' % (
       _GetIwyuPath(), ' '.join(iwyu_flags), ' '.join(clang_flags), cc_file)
   if verbose:
     print('>>> Running %s' % cmd)
