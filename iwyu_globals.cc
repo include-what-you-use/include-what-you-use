@@ -103,10 +103,10 @@ static void PrintHelp(const char* extra_msg) {
 
 static void PrintVersion() {
   llvm::outs() << "include-what-you-use " << IWYU_VERSION_STRING;
-  // IWYU_SVN_REVISION should be provided by build system.
-  string iwyu_svn_revision = IWYU_SVN_REVISION;
-  if (!iwyu_svn_revision.empty()) {
-    llvm::outs() << " (" << iwyu_svn_revision << ")";
+  // IWYU_GIT_REV should be provided by build system.
+  string iwyu_rev = IWYU_GIT_REV;
+  if (!iwyu_rev.empty()) {
+    llvm::outs() << " (git:" << iwyu_rev << ")";
   }
   llvm::outs() << " based on " << clang::getClangFullVersion()
                << "\n";

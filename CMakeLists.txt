@@ -63,15 +63,15 @@ else()
   message(STATUS "IWYU in-tree configuration")
 endif()
 
-# Pick up SVN revision so we can report it
-# in version information.
-include(FindSubversion)
-if( Subversion_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.svn" )
-  Subversion_WC_INFO(${CMAKE_CURRENT_SOURCE_DIR} IWYU)
+# Pick up Git revision so we can report it in version information.
+include(FindGit)
+if( GIT_FOUND )
+  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE IWYU_GIT_REV
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()
-add_definitions(
-  -DIWYU_SVN_REVISION="${IWYU_WC_REVISION}"
-)
+add_definitions(-DIWYU_GIT_REV="${IWYU_GIT_REV}")
 
 add_executable(include-what-you-use
   iwyu.cc
