@@ -96,6 +96,17 @@ string CanonicalizeFilePath(const string& path) {
   return result;
 }
 
+string CanonicalizeHeaderSearchPath(const string& path) {
+  string result = CanonicalizeFilePath(path);
+
+  // We want a trailing slash on all header search paths, because it makes it
+  // much easier to find the longest common path prefix.
+  if (!EndsWith(result, "/"))
+    result += "/";
+
+  return result;
+}
+
 string GetCanonicalName(string file_path) {
   // Get rid of any <> and "" in case file_path is really an #include line.
   StripLeft(&file_path, "\"") || StripLeft(&file_path, "<");
@@ -177,8 +188,9 @@ string ConvertToQuotedInclude(const string& filepath) {
   // loop will prefer the longest prefix: /usr/include/c++/4.4/foo
   // will be mapped to <foo>, not <c++/4.4/foo>.
   for (Each<HeaderSearchPath> it(&search_paths); !it.AtEnd(); ++it) {
+    // All header search paths have a trailing "/", so we'll get a perfect
+    // quoted include by just stripping the prefix.
     if (StripLeft(&path, it->path)) {
-      StripLeft(&path, "/");
       if (it->path_type == HeaderSearchPath::kSystemPath)
         return "<" + path + ">";
       else
