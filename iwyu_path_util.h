@@ -46,6 +46,9 @@ string Basename(const string& path);
 // On Microsoft platforms, convert \ to /.
 string CanonicalizeFilePath(const string& path);
 
+// Canonicalize slashes and ensure trailing slash.
+string CanonicalizeHeaderSearchPath(const string& path);
+
 // Removes enclosing <> or "", then strips uninteresting suffixes from
 // the file name. Replaces "/internal/" with "/public/" and
 // "/include/" with "/src".  "Canonicalize" the path on Microsoft

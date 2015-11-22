@@ -297,7 +297,7 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
            it = header_search->system_dir_begin();
        it != header_search->system_dir_end(); ++it) {
     if (const DirectoryEntry* entry = it->getDir()) {
-      const string path = CanonicalizeFilePath(entry->getName());
+      const string path = CanonicalizeHeaderSearchPath(entry->getName());
       search_path_map[path] = HeaderSearchPath::kSystemPath;
     }
   }
@@ -308,7 +308,7 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
       // search_dir_begin()/end() includes both system and user paths.
       // If it's a system path, it's already in the map, so everything
       // new is a user path.  The insert only 'takes' for new entries.
-      const string path = CanonicalizeFilePath(entry->getName());
+      const string path = CanonicalizeHeaderSearchPath(entry->getName());
       search_path_map.insert(make_pair(path, HeaderSearchPath::kUserPath));
     }
   }
@@ -406,11 +406,12 @@ void InitGlobalsAndFlagsForTesting() {
 
   // Use a reasonable default for the -I flags.
   map<string, HeaderSearchPath::Type> search_path_map;
-  search_path_map["/usr/include"] = HeaderSearchPath::kSystemPath;
-  search_path_map["/usr/include/c++/4.3"] = HeaderSearchPath::kSystemPath;
-  search_path_map["/usr/include/c++/4.2"] = HeaderSearchPath::kSystemPath;
-  search_path_map["."] = HeaderSearchPath::kUserPath;
-  search_path_map["/usr/src/linux-headers-2.6.24-gg23/include"] = HeaderSearchPath::kSystemPath;
+  search_path_map["/usr/include/"] = HeaderSearchPath::kSystemPath;
+  search_path_map["/usr/include/c++/4.3/"] = HeaderSearchPath::kSystemPath;
+  search_path_map["/usr/include/c++/4.2/"] = HeaderSearchPath::kSystemPath;
+  search_path_map["./"] = HeaderSearchPath::kUserPath;
+  search_path_map["/usr/src/linux-headers-2.6.24-gg23/include/"] =
+      HeaderSearchPath::kSystemPath;
 
   SetHeaderSearchPaths(NormalizeHeaderSearchPaths(search_path_map));
 }
