@@ -14,8 +14,11 @@
 
 #include <string>
 
+#include "gtest/gtest.h"
 
 // TODO(dsturtevant): using string for MOE.
+using std::string;
+using std::vector;
 
 namespace iwyu = include_what_you_use;
 using iwyu::SplitOnWhiteSpace;
@@ -114,9 +117,4 @@ TEST(IwyuStringUtilTest, SplitOnWhiteSpacePreservingQuotes) {
   EXPECT_EQ(string("this"), out[0]);
   EXPECT_EQ(string("is"), out[1]);
   EXPECT_EQ(string("\"a test\""), out[2]);
-}
-
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
 }

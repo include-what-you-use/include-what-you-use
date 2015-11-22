@@ -18,14 +18,16 @@
 #include <string>
 #include <vector>
 
-#include "base/logging.h"
 #include "iwyu_globals.h"
-#include "testing/base/public/gunit.h"
+#include "port.h"
+#include "gtest/gtest.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
 
+using std::string;
+using std::vector;
 using clang::LangOptions;
 using clang::Lexer;
 using clang::SourceLocation;
@@ -54,7 +56,7 @@ class StringCharacterDataGetter : public CharacterDataGetterInterface {
 
   virtual const char* GetCharacterData(SourceLocation loc) const {
     unsigned offset = loc.getRawEncoding();
-    CHECK_LE(offset, str_.size());
+    CHECK_(offset <= str_.size());
     return str_.c_str() + offset;
   }
 
@@ -94,7 +96,7 @@ void TestFindArgumentsToDefinedWithText(const string& text,
   vector<Token> defined_tokens = FindArgumentsToDefined(
       SourceRange(begin_loc, end_loc), data_getter);
   EXPECT_EQ(symbols.size(), defined_tokens.size());
-  for (int i = 0; i < symbols.size(); ++i) {
+  for (size_t i = 0; i < symbols.size(); ++i) {
     const string& symbol = symbols[i];
     const Token& token = defined_tokens[i];
     EXPECT_EQ(clang::tok::raw_identifier, token.getKind());
@@ -268,10 +270,3 @@ TEST(GetIncludeNameAsTyped, WithComments) {
 }
 
 }  // namespace
-
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  include_what_you_use::InitGlobalsAndFlagsForTesting();
-  return RUN_ALL_TESTS();
-}

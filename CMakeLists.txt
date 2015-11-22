@@ -73,40 +73,10 @@ if( GIT_FOUND )
 endif()
 add_definitions(-DIWYU_GIT_REV="${IWYU_GIT_REV}")
 
-add_executable(include-what-you-use
-  iwyu.cc
-  iwyu_ast_util.cc
-  iwyu_cache.cc
-  iwyu_driver.cc
-  iwyu_getopt.cc
-  iwyu_globals.cc
-  iwyu_include_picker.cc
-  iwyu_lexer_utils.cc
-  iwyu_location_util.cc
-  iwyu_output.cc
-  iwyu_path_util.cc
-  iwyu_preprocessor.cc
-  iwyu_verrs.cc
-)
+include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)
 
-if( MSVC )
-  # Disable warnings for IWYU, and disable exceptions in MSVC's STL.
-  add_definitions(
-    -wd4722 # Suppress ''destructor'' : destructor never returns, potential memory leak
-    -D_HAS_EXCEPTIONS=0
-  )
-
-  # Put project in solution folder
-  set_target_properties(include-what-you-use
-    PROPERTIES FOLDER "Clang executables"
-  )
-else()
-  # Disable RTTI, use C++11 to be compatible with LLVM/Clang libraries.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -std=c++11")
-endif()
-
-# Clang dependencies.
-target_link_libraries(include-what-you-use
+list(APPEND IWYU_LINK_LIBS
+  # Clang dependencies
   clangFrontend
   clangSerialization
   clangDriver
@@ -117,10 +87,7 @@ target_link_libraries(include-what-you-use
   clangBasic
   clangEdit
   clangLex
-)
-
-# LLVM dependencies.
-target_link_libraries(include-what-you-use
+  # LLVM dependencies
   LLVMX86AsmParser # MC, MCParser, Support, X86CodeGen, X86Desc, X86Info
   LLVMX86CodeGen # Analysis, AsmPrinter, CodeGen, Core, MC, Support, Target, 
                  # X86AsmPrinter, X86Desc, X86Info, X86Utils
@@ -143,17 +110,17 @@ target_link_libraries(include-what-you-use
   LLVMBitReader # Core, Support
   LLVMCore # Support
   LLVMSupport
-)
+  )
 
 # Platform dependencies.
 if( CMAKE_SYSTEM_NAME MATCHES "Windows" )
-  target_link_libraries(include-what-you-use
+  list(APPEND IWYU_LINK_LIBS
     shlwapi
   )
 else()
   # POSIX
   include(FindCurses)
-  target_link_libraries(include-what-you-use
+  list(APPEND IWYU_LINK_LIBS
     pthread
     z
     ${CURSES_LIBRARIES}
@@ -161,11 +128,66 @@ else()
 
   # Only Linux targets need dl for dynamic linking.
   if( CMAKE_SYSTEM_NAME MATCHES "Linux" )
-    target_link_libraries(include-what-you-use
+    list(APPEND IWYU_LINK_LIBS
       dl
     )
   endif()
 endif()
+
+add_library(IWYU_OBJECTS OBJECT
+  iwyu_ast_util.cc
+  iwyu_cache.cc
+  iwyu_driver.cc
+  iwyu_getopt.cc
+  iwyu_globals.cc
+  iwyu_include_picker.cc
+  iwyu_lexer_utils.cc
+  iwyu_location_util.cc
+  iwyu_output.cc
+  iwyu_path_util.cc
+  iwyu_preprocessor.cc
+  iwyu_verrs.cc
+)
+
+add_executable(include-what-you-use
+ iwyu.cc
+ $<TARGET_OBJECTS:IWYU_OBJECTS>
+)
+
+add_executable(include-what-you-use-tests
+  $<TARGET_OBJECTS:IWYU_OBJECTS>
+  more_tests/iwyu_include_picker_test.cc
+  more_tests/iwyu_lexer_utils_test.cc
+  more_tests/iwyu_output_test.cc
+  more_tests/iwyu_string_util_test.cc
+  more_tests/test_main.cc
+  )
+
+if( MSVC )
+  # Disable warnings for IWYU, and disable exceptions in MSVC's STL.
+  add_definitions(
+    -wd4722 # Suppress ''destructor'' : destructor never returns, potential memory leak
+    -D_HAS_EXCEPTIONS=0
+  )
+
+  # Put project in solution folder
+  set_target_properties(include-what-you-use
+    PROPERTIES FOLDER "Clang executables"
+  )
+else()
+  # Disable RTTI, use C++11 to be compatible with LLVM/Clang libraries.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -std=c++11")
+endif()
+
+target_link_libraries(include-what-you-use
+  ${IWYU_LINK_LIBS}
+)
+
+target_link_libraries(include-what-you-use-tests
+  gtest
+#  gtest_main
+  ${IWYU_LINK_LIBS}
+)
 
 install(TARGETS include-what-you-use RUNTIME DESTINATION bin)
 install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
