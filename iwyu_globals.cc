@@ -283,7 +283,6 @@ static vector<HeaderSearchPath> NormalizeHeaderSearchPaths(
     include_dirs.push_back(HeaderSearchPath(it->first, it->second));
   }
 
-
   sort(include_dirs.begin(), include_dirs.end(), &SortByDescendingLength);
   return include_dirs;
 }
