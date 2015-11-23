@@ -84,7 +84,7 @@ string CanonicalizeFilePath(const string& path) {
   string result = path;
 
 #ifdef _WIN32
-  // canonicalise directory separators (forward slashes considered canonical)
+  // Canonicalise directory separators (forward slashes considered canonical.)
   for (size_t i = 0; i < result.size(); ++i) {
     if (result[i] == '\\')
       result[i] = '/';
@@ -197,7 +197,6 @@ string ConvertToQuotedInclude(const string& filepath) {
         return "\"" + path + "\"";
     }
   }
-
 
   // Case 2: Uses the implicit "-I." entry on the search path.  Always local.
   return "\"" + path + "\"";
