@@ -17,7 +17,7 @@
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
 #include "iwyu_verrs.h"
-#include "testing/base/public/gunit.h"
+#include "gtest/gtest.h"
 
 #undef ATTRIBUTE_UNUSED
 #include "clang/Basic/SourceLocation.h"
@@ -37,11 +37,14 @@ set<string> CalculateMinimalIncludes(
     const set<string>& associated_direct_includes,
     vector<OneUse>* uses);
 
-void ProcessForwardDeclare(OneUse* use);
+void ProcessForwardDeclare(OneUse* use,
+                           const IwyuPreprocessorInfo* preprocessor_info);
 
-void ProcessFullUse(OneUse* use);
+void ProcessFullUse(OneUse* use,
+                    const IwyuPreprocessorInfo* preprocessor_info);
 
-void ProcessSymbolUse(OneUse* use);
+void ProcessSymbolUse(OneUse* use,
+                      const IwyuPreprocessorInfo* preprocessor_info);
 
 void CalculateIwyuForForwardDeclareUse(OneUse* use,
                                        const set<string>& actual_includes,
@@ -56,13 +59,15 @@ void CalculateDesiredIncludesAndForwardDeclares(
     const set<string> associated_desired_includes,
     vector<OneIncludeOrForwardDeclareLine>* lines);
 
-string PrintableIncludeOrForwardDeclareLine(
-    const OneIncludeOrForwardDeclareLine& line,
-    const set<string>& associated_quoted_includes);
+// string PrintableIncludeOrForwardDeclareLine(
+//     const OneIncludeOrForwardDeclareLine& line,
+//     const set<string>& associated_quoted_includes);
 
-string PrintableDiffs(const string& filename,
+size_t PrintableDiffs(const string& filename,
+                      const IwyuPreprocessorInfo* preprocessor_info,
                       const set<string>& associated_quoted_includes,
-                      const vector<OneIncludeOrForwardDeclareLine>& lines);
+                      const vector<OneIncludeOrForwardDeclareLine>& lines,
+                      string* diff_output);
 
 struct FakeSourceLocation : public SourceLocation {
   FakeSourceLocation(const string& fp, int ln)
@@ -107,7 +112,7 @@ namespace {
 template <int N>
 OneIncludeOrForwardDeclareLine MakeDesiredIncludeLine(
     const string& quoted_includee, const char* (&used_symbols)[N]) {
-  OneIncludeOrForwardDeclareLine retval(quoted_includee, 1);
+  OneIncludeOrForwardDeclareLine retval(NULL, quoted_includee, 1);
   retval.set_desired();
   for (int i = 0; i < N; i++)
     retval.AddSymbolUse(used_symbols[i]);
@@ -153,8 +158,8 @@ TEST(ProcessFullUseTest, B1) {
                       OneUse::kFullUse, false, NULL);
   OneUse difffile_use(&decl, FakeSourceLocation("src/myclass.cc", 10),
                       OneUse::kFullUse, false, NULL);
-  internal::ProcessFullUse(&samefile_use);
-  internal::ProcessFullUse(&difffile_use);
+  internal::ProcessFullUse(&samefile_use, /*todo_pp=*/NULL);
+  internal::ProcessFullUse(&difffile_use, /*todo_pp=*/NULL);
   EXPECT_TRUE(samefile_use.ignore_use());
   EXPECT_FALSE(difffile_use.ignore_use());
 }
@@ -171,8 +176,8 @@ TEST(ProcessFullUseTest, B3) {
                OneUse::kFullUse, false, NULL);
   OneUse cc_use(&cc_decl, FakeSourceLocation("src/main.cc", 10),
                 OneUse::kFullUse, false, NULL);
-  internal::ProcessFullUse(&h_use);
-  internal::ProcessFullUse(&cc_use);
+  internal::ProcessFullUse(&h_use, /*todo_pp=*/NULL);
+  internal::ProcessFullUse(&cc_use, /*todo_pp=*/NULL);
   EXPECT_TRUE(h_use.ignore_use());
   EXPECT_FALSE(cc_use.ignore_use());
 }
@@ -184,12 +189,12 @@ TEST(ProcessFullUseTest, B4) {
 TEST(ProcessSymbolUseTest, B5) {
   return;  // TODO(csilvers): re-enable when we can fake the SourceLoc and decl
   // Test the use being *before* the definition in the file (shouldn't matter)
-  OneUse samefile_use("mysym", "src/includes/myclass.h",
+  OneUse samefile_use("mysym", NULL, "src/includes/myclass.h",
                       FakeSourceLocation("src/includes/myclass.h", 5));
-  OneUse difffile_use("sym2", "src/includes/myclass.h",
+  OneUse difffile_use("sym2", NULL, "src/includes/myclass.h",
                       FakeSourceLocation("src/myclass.cc", 5));
-  internal::ProcessSymbolUse(&samefile_use);
-  internal::ProcessSymbolUse(&difffile_use);
+  internal::ProcessSymbolUse(&samefile_use, /*todo_pp=*/NULL);
+  internal::ProcessSymbolUse(&difffile_use, /*todo_pp=*/NULL);
   EXPECT_TRUE(samefile_use.ignore_use());
   EXPECT_FALSE(difffile_use.ignore_use());
 }
@@ -203,9 +208,9 @@ TEST(CalculateIwyuForForwardDeclareUseTest, D2) {
 }
 
 TEST(CalculateIwyuForFullUse, E1) {
-  OneUse iwyu_violation("mysym", "src/includes/myclass.h",
+  OneUse iwyu_violation("mysym", NULL, "src/includes/myclass.h",
                         FakeSourceLocation("src/myclass.cc", 5));
-  OneUse iwyu_ok("mysym", "src/includes/myclass.h",
+  OneUse iwyu_ok("mysym", NULL, "src/includes/myclass.h",
                  FakeSourceLocation("src/myclass.cc", 5));
   iwyu_violation.set_suggested_header("<myclass.h>");
   iwyu_ok.set_suggested_header("\"includes/myclass.h\"");
@@ -249,67 +254,69 @@ class VerboseTest : public ::testing::Test {
 
 class PrintableIncludeOrForwardDeclareLineTest : public VerboseTest { };
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest, CutsOffAt80Columns) {
-  const set<string> empty;
-  OneIncludeOrForwardDeclareLine foo_line("<foo.h>", 1);
-  foo_line.AddSymbolUse("FOO");
-  foo_line.AddSymbolUse("FooClass");
-  foo_line.AddSymbolUse("FooClass::a");
-  foo_line.AddSymbolUse("FooClass::~FooClass");
-  foo_line.AddSymbolUse("FunctionOnFoo");
-  foo_line.AddSymbolUse("Foo_Enum");
-  foo_line.AddSymbolUse("Foo_Typedef");
-  foo_line.set_desired();
-  EXPECT_EQ("#include <foo.h>"
-            "                        // for FOO, FooClass, FooClass::a, etc\n",
-            internal::PrintableIncludeOrForwardDeclareLine(foo_line, empty));
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest, CutsOffAt80Columns) {
+//   const set<string> empty;
+//   OneIncludeOrForwardDeclareLine foo_line(NULL, "<foo.h>", 1);
+//   foo_line.AddSymbolUse("FOO");
+//   foo_line.AddSymbolUse("FooClass");
+//   foo_line.AddSymbolUse("FooClass::a");
+//   foo_line.AddSymbolUse("FooClass::~FooClass");
+//   foo_line.AddSymbolUse("FunctionOnFoo");
+//   foo_line.AddSymbolUse("Foo_Enum");
+//   foo_line.AddSymbolUse("Foo_Typedef");
+//   foo_line.set_desired();
+//   EXPECT_EQ("#include <foo.h>"
+//             "                        // for FOO, FooClass, FooClass::a, etc\n",
+//             internal::PrintableIncludeOrForwardDeclareLine(foo_line, empty));
 
-  OneIncludeOrForwardDeclareLine bar_line("<bar.h>", 2);
-  bar_line.AddSymbolUse("this_symbol_is_so_big_there_is_no_room_for_it_at_all");
-  bar_line.set_desired();
-  EXPECT_EQ("#include <bar.h>\n",
-            internal::PrintableIncludeOrForwardDeclareLine(bar_line, empty));
+//   OneIncludeOrForwardDeclareLine bar_line(NULL, "<bar.h>", 2);
+//   bar_line.AddSymbolUse("this_symbol_is_so_big_there_is_no_room_for_it_at_all");
+//   bar_line.set_desired();
+//   EXPECT_EQ("#include <bar.h>\n",
+//             internal::PrintableIncludeOrForwardDeclareLine(bar_line, empty));
 
-  OneIncludeOrForwardDeclareLine long_line(
-      "\"deep/enough/to/go/past/the/indent.h\"", 3);
-  long_line.AddSymbolUse("DeepFn");
-  long_line.AddSymbolUse("Deep_Typedef");
-  long_line.AddSymbolUse("DEEP");
-  long_line.AddSymbolUse("TheInkyDeeps");
-  long_line.set_desired();
+//   OneIncludeOrForwardDeclareLine long_line(NULL,
+//       "\"deep/enough/to/go/past/the/indent.h\"", 3);
+//   long_line.AddSymbolUse("DeepFn");
+//   long_line.AddSymbolUse("Deep_Typedef");
+//   long_line.AddSymbolUse("DEEP");
+//   long_line.AddSymbolUse("TheInkyDeeps");
+//   long_line.set_desired();
 
-  EXPECT_EQ("#include \"deep/enough/to/go/past/the/indent.h\""
-            "  // for DEEP, DeepFn, etc\n",
-            internal::PrintableIncludeOrForwardDeclareLine(long_line, empty));
-}
+//   EXPECT_EQ("#include \"deep/enough/to/go/past/the/indent.h\""
+//             "  // for DEEP, DeepFn, etc\n",
+//             internal::PrintableIncludeOrForwardDeclareLine(long_line, empty));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest, SortsSymbolsByFreqThenAlpha) {
-  SetVerboseLevel(3);   // so we see a printout of *all* the symbols
-  const set<string> empty;
-  OneIncludeOrForwardDeclareLine line("<foo.h>", 2);
-  line.AddSymbolUse("FOO");
-  line.AddSymbolUse("FooClass");
-  line.AddSymbolUse("FooClass::a");
-  line.AddSymbolUse("Foo_Enum");
-  line.AddSymbolUse("FooClass::~FooClass");
-  line.AddSymbolUse("FunctionOnFoo");
-  line.AddSymbolUse("FooClass");
-  line.AddSymbolUse("Foo_Typedef");
-  line.AddSymbolUse("FooClass");
-  line.AddSymbolUse("Foo_Typedef");
-  line.AddSymbolUse("FunctionOnFoo");
-  line.set_desired();
-  EXPECT_EQ("#include <foo.h>"
-            "                        // for FooClass, Foo_Typedef,"
-            " FunctionOnFoo, FOO, FooClass::a, FooClass::~FooClass, Foo_Enum\n",
-            internal::PrintableIncludeOrForwardDeclareLine(line, empty));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest, SortsSymbolsByFreqThenAlpha) {
+//   SetVerboseLevel(3);   // so we see a printout of *all* the symbols
+//   const set<string> empty;
+//   OneIncludeOrForwardDeclareLine line(NULL, "<foo.h>", 2);
+//   line.AddSymbolUse("FOO");
+//   line.AddSymbolUse("FooClass");
+//   line.AddSymbolUse("FooClass::a");
+//   line.AddSymbolUse("Foo_Enum");
+//   line.AddSymbolUse("FooClass::~FooClass");
+//   line.AddSymbolUse("FunctionOnFoo");
+//   line.AddSymbolUse("FooClass");
+//   line.AddSymbolUse("Foo_Typedef");
+//   line.AddSymbolUse("FooClass");
+//   line.AddSymbolUse("Foo_Typedef");
+//   line.AddSymbolUse("FunctionOnFoo");
+//   line.set_desired();
+//   EXPECT_EQ("#include <foo.h>"
+//             "                        // for FooClass, Foo_Typedef,"
+//             " FunctionOnFoo, FOO, FooClass::a, FooClass::~FooClass, Foo_Enum\n",
+//             internal::PrintableIncludeOrForwardDeclareLine(line, empty));
+// }
 
 TEST(PrintableDiffsTest, PrintsEmptyIncludes) {
   vector<OneIncludeOrForwardDeclareLine> no_lines;
+  string result;
+  internal::PrintableDiffs("baz.cc", NULL, set<string>(), no_lines, &result);
   EXPECT_EQ("\n"
             "(baz.cc has correct #includes/fwd-decls)\n",
-            internal::PrintableDiffs("baz.cc", set<string>(), no_lines));
+            result);
 }
 
 TEST(PrintableDiffsTest, ProperlyOrdersIncludeLines) {
@@ -327,6 +334,8 @@ TEST(PrintableDiffsTest, ProperlyOrdersIncludeLines) {
   lines.push_back(MakeDesiredIncludeLine("<string>", "string::iterator"));
   lines.push_back(MakeDesiredIncludeLine("<sstring>", "sstring"));
   lines.push_back(MakeDesiredIncludeLine("<ctype.h>", "isascii"));
+  string result;
+  internal::PrintableDiffs("baz.cc", NULL, associated_includes, lines, &result);
   EXPECT_EQ("\n"
             "baz.cc should add these lines:\n"
             "#include \"baz.h\"\n"
@@ -354,16 +363,18 @@ TEST(PrintableDiffsTest, ProperlyOrdersIncludeLines) {
             "#include \"foo-inl.h\"                    // for FooFn\n"
             "#include \"foo.h\"                        // for FOO\n"
             "---\n",
-            internal::PrintableDiffs("baz.cc", associated_includes, lines));
+            result);
 }
 
 TEST(PrintableDiffsTest, ShowLineNumbersForDeletedIncludesEvenWithUses) {
   const set<string> empty;
   vector<OneIncludeOrForwardDeclareLine> lines;
-  OneIncludeOrForwardDeclareLine line("\"foo.h\"", 1);
+  OneIncludeOrForwardDeclareLine line(NULL, "\"foo.h\"", 1);
   line.set_present();   // *not* desired
   line.AddSymbolUse("Foo (ptr only)");
   lines.push_back(line);
+  string result;
+  internal::PrintableDiffs("baz.cc", NULL, empty, lines, &result);
   EXPECT_EQ("\n"
             "baz.cc should add these lines:\n"
             "\n"
@@ -372,213 +383,206 @@ TEST(PrintableDiffsTest, ShowLineNumbersForDeletedIncludesEvenWithUses) {
             "\n"
             "The full include-list for baz.cc:\n"
             "---\n",
-            internal::PrintableDiffs("baz.cc", empty, lines));
+            result);
 }
 
-#if 0
+// #if 0
 
-TEST_F(IwyuFileInfo_PrintableIncludeInformation, PrintsForwardDeclares) {
-  IwyuFileInfo f("baz.cc");
-  f.AddDesiredIncludeNeededBySymbol("\"foo.h\"", "FOO");
-  f.AddDesiredIncludeNeededBySymbol("\"bar.h\"", "BAR");
-  f.AddDesiredIncludeNeededBySymbol("\"baz.h\"", "BAZ");
-  f.AddDesiredIncludeNeededBySymbol("<string>", "string::iterator");
-  f.AddDesiredIncludeNeededBySymbol("<stdio.h>", "printf");
-  FakeNamedDecl record1("struct", "Foo");
-  f.AddDesiredForwardDeclare("\"record1.h\"", &record1);
-  f.NormalizeDesiredSetsForCc(set<string>());
-  EXPECT_EQ("\n"
-            "baz.cc should add these lines:\n"
-            "#include \"baz.h\"\n"
-            "#include <stdio.h>                      // for printf\n"
-            "#include <string>                       // for string::iterator\n"
-            "#include \"bar.h\"                        // for BAR\n"
-            "#include \"foo.h\"                        // for FOO\n"
-            "struct Foo;\n"
-            "\n"
-            "baz.cc should remove these lines:\n"
-            "\n"
-            "The full include-list for baz.cc:\n"
-            "#include \"baz.h\"\n"
-            "#include <stdio.h>                      // for printf\n"
-            "#include <string>                       // for string::iterator\n"
-            "#include \"bar.h\"                        // for BAR\n"
-            "#include \"foo.h\"                        // for FOO\n"
-            "struct Foo;\n"
-            "---\n",
-            f.PrintableIncludeInformation());
-}
+// TEST_F(IwyuFileInfo_PrintableIncludeInformation, PrintsForwardDeclares) {
+//   IwyuFileInfo f("baz.cc");
+//   f.AddDesiredIncludeNeededBySymbol("\"foo.h\"", "FOO");
+//   f.AddDesiredIncludeNeededBySymbol("\"bar.h\"", "BAR");
+//   f.AddDesiredIncludeNeededBySymbol("\"baz.h\"", "BAZ");
+//   f.AddDesiredIncludeNeededBySymbol("<string>", "string::iterator");
+//   f.AddDesiredIncludeNeededBySymbol("<stdio.h>", "printf");
+//   FakeNamedDecl record1("struct", "Foo");
+//   f.AddDesiredForwardDeclare("\"record1.h\"", &record1);
+//   f.NormalizeDesiredSetsForCc(set<string>());
+//   EXPECT_EQ("\n"
+//             "baz.cc should add these lines:\n"
+//             "#include \"baz.h\"\n"
+//             "#include <stdio.h>                      // for printf\n"
+//             "#include <string>                       // for string::iterator\n"
+//             "#include \"bar.h\"                        // for BAR\n"
+//             "#include \"foo.h\"                        // for FOO\n"
+//             "struct Foo;\n"
+//             "\n"
+//             "baz.cc should remove these lines:\n"
+//             "\n"
+//             "The full include-list for baz.cc:\n"
+//             "#include \"baz.h\"\n"
+//             "#include <stdio.h>                      // for printf\n"
+//             "#include <string>                       // for string::iterator\n"
+//             "#include \"bar.h\"                        // for BAR\n"
+//             "#include \"foo.h\"                        // for FOO\n"
+//             "struct Foo;\n"
+//             "---\n",
+//             f.PrintableIncludeInformation());
+// }
 
-using internal::PrintableIncludeOrForwardDeclareLine;
+// using internal::PrintableIncludeOrForwardDeclareLine;
 
-// This test fixture automatically saves/restores the verbose level
-// between tests to prevent leaking side effects.
-class PrintableIncludeOrForwardDeclareLineTest : public VerboseTest { };
+// // This test fixture automatically saves/restores the verbose level
+// // between tests to prevent leaking side effects.
+// class PrintableIncludeOrForwardDeclareLineTest : public VerboseTest { };
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest,
-       ShowsReasonForNonMainCUHeaders) {
-  // The reason should be printed even at a low verbose level.
-  SetVerboseLevel(1);
-  const char* symbols[] = { "Foo" };
-  EXPECT_EQ("#include \"foo.h\"                        "
-            "// for Foo\n",  // single symbol
-            PrintableIncludeOrForwardDeclareLine(
-                "bar.cc", MakeIncludeLine("\"foo.h\"", symbols)));
-  const char* symbols2[] = { "Foo", "Bar" };
-  EXPECT_EQ("#include \"foo.h\"                        "
-            "// for Foo, Bar\n",  // multiple symbols
-            PrintableIncludeOrForwardDeclareLine(
-                "x.h", MakeIncludeLine("\"foo.h\"", symbols2)));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest,
+//        ShowsReasonForNonMainCUHeaders) {
+//   // The reason should be printed even at a low verbose level.
+//   SetVerboseLevel(1);
+//   const char* symbols[] = { "Foo" };
+//   EXPECT_EQ("#include \"foo.h\"                        "
+//             "// for Foo\n",  // single symbol
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "bar.cc", MakeIncludeLine("\"foo.h\"", symbols)));
+//   const char* symbols2[] = { "Foo", "Bar" };
+//   EXPECT_EQ("#include \"foo.h\"                        "
+//             "// for Foo, Bar\n",  // multiple symbols
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "x.h", MakeIncludeLine("\"foo.h\"", symbols2)));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest, HidesReasonForMainCUHeaders) {
-  // The reason should be hidden even at a high verbose level.
-  SetVerboseLevel(5);
-  const char* symbols[] = { "Foo" };
-  EXPECT_EQ("#include \"foo.h\"\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "foo.cc", MakeIncludeLine("\"foo.h\"", symbols)));
-  EXPECT_EQ("#include \"foo.h\"\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "foo_test.cc", MakeIncludeLine("\"foo.h\"", symbols)));
-  EXPECT_EQ("#include \"foo-inl.h\"\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "foo.cc", MakeIncludeLine("\"foo-inl.h\"", symbols)));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest, HidesReasonForMainCUHeaders) {
+//   // The reason should be hidden even at a high verbose level.
+//   SetVerboseLevel(5);
+//   const char* symbols[] = { "Foo" };
+//   EXPECT_EQ("#include \"foo.h\"\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "foo.cc", MakeIncludeLine("\"foo.h\"", symbols)));
+//   EXPECT_EQ("#include \"foo.h\"\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "foo_test.cc", MakeIncludeLine("\"foo.h\"", symbols)));
+//   EXPECT_EQ("#include \"foo-inl.h\"\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "foo.cc", MakeIncludeLine("\"foo-inl.h\"", symbols)));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest,
-       TruncatesLongSymbolListAtLowVerbosityLevels) {
-  SetVerboseLevel(2);
-  const char* symbols[] = { "Foo", "Bar", "SomeA", "SomeB", "SomeC", "BigX",
-                            "BigY", "BigZ", "What", "Which", "Where" };
-  EXPECT_EQ("#include <foo.h>         "
-            "               // for Foo, Bar, SomeA, SomeB, etc\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "bar.cc", MakeIncludeLine("<foo.h>", symbols)));
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest,
+//        TruncatesLongSymbolListAtLowVerbosityLevels) {
+//   SetVerboseLevel(2);
+//   const char* symbols[] = { "Foo", "Bar", "SomeA", "SomeB", "SomeC", "BigX",
+//                             "BigY", "BigZ", "What", "Which", "Where" };
+//   EXPECT_EQ("#include <foo.h>         "
+//             "               // for Foo, Bar, SomeA, SomeB, etc\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "bar.cc", MakeIncludeLine("<foo.h>", symbols)));
 
-  EXPECT_EQ(
-     "#include <some/really/really/really/really/long/path/abc.h>  "
-     "// for Foo, etc\n",
-     PrintableIncludeOrForwardDeclareLine(
-         "a.cc",
-         MakeIncludeLine("<some/really/really/really/really/long/path/abc.h>",
-                         symbols)));
+//   EXPECT_EQ(
+//      "#include <some/really/really/really/really/long/path/abc.h>  "
+//      "// for Foo, etc\n",
+//      PrintableIncludeOrForwardDeclareLine(
+//          "a.cc",
+//          MakeIncludeLine("<some/really/really/really/really/long/path/abc.h>",
+//                          symbols)));
 
- EXPECT_EQ(
-     // This line is exactly 80-character long, including the \n.
-     "#include <some/really/really/really/really/long/path/abcdef.h>  "
-     "// for Foo, etc\n",
-     PrintableIncludeOrForwardDeclareLine(
-         "foo.cc",
-         MakeIncludeLine(
-             "<some/really/really/really/really/long/path/abcdef.h>",
-             symbols)));
+//  EXPECT_EQ(
+//      // This line is exactly 80-character long, including the \n.
+//      "#include <some/really/really/really/really/long/path/abcdef.h>  "
+//      "// for Foo, etc\n",
+//      PrintableIncludeOrForwardDeclareLine(
+//          "foo.cc",
+//          MakeIncludeLine(
+//              "<some/really/really/really/really/long/path/abcdef.h>",
+//              symbols)));
 
- EXPECT_EQ(
-     // There's no space on this line for " // for Foo, etc".  We
-     // should cut off the comment entirely instead of printing
-     // "  // for etc" or "  // for ".
-     "#include <some/really/really/really/really/long/path/abcdefg.h>\n",
-     PrintableIncludeOrForwardDeclareLine(
-         "foo.cc",
-         MakeIncludeLine(
-             "<some/really/really/really/really/long/path/abcdefg.h>",
-             symbols)));
-}
+//  EXPECT_EQ(
+//      // There's no space on this line for " // for Foo, etc".  We
+//      // should cut off the comment entirely instead of printing
+//      // "  // for etc" or "  // for ".
+//      "#include <some/really/really/really/really/long/path/abcdefg.h>\n",
+//      PrintableIncludeOrForwardDeclareLine(
+//          "foo.cc",
+//          MakeIncludeLine(
+//              "<some/really/really/really/really/long/path/abcdefg.h>",
+//              symbols)));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest,
-       PreservesLongSymbolListAtHighVerbosityLevels) {
-  SetVerboseLevel(3);
-  const char* symbols[] = { "Foo", "Bar", "SomeA", "SomeB", "SomeC", "BigX",
-                            "BigY", "BigZ", "What", "Which", "Where" };
-  EXPECT_EQ("#include <foo.h>                        "
-            "// for Foo, Bar, SomeA, SomeB, SomeC, BigX, BigY, BigZ, What, "
-            "Which, Where\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "bar.cc", MakeIncludeLine("<foo.h>", symbols)));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest,
+//        PreservesLongSymbolListAtHighVerbosityLevels) {
+//   SetVerboseLevel(3);
+//   const char* symbols[] = { "Foo", "Bar", "SomeA", "SomeB", "SomeC", "BigX",
+//                             "BigY", "BigZ", "What", "Which", "Where" };
+//   EXPECT_EQ("#include <foo.h>                        "
+//             "// for Foo, Bar, SomeA, SomeB, SomeC, BigX, BigY, BigZ, What, "
+//             "Which, Where\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "bar.cc", MakeIncludeLine("<foo.h>", symbols)));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest,
-       OmitsReasonForSuperLongPathsAtLowVerbosityLevels) {
-  SetVerboseLevel(2);
-  const char* symbols[] = { "Foo" };
-  EXPECT_EQ("#include \"some/really/really/really/really/really/deeply/buried/"
-            "package/foo.h\"\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "bar.cc",
-                MakeIncludeLine("\"some/really/really/really/really/really/"
-                                "deeply/buried/package/foo.h\"", symbols)));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest,
+//        OmitsReasonForSuperLongPathsAtLowVerbosityLevels) {
+//   SetVerboseLevel(2);
+//   const char* symbols[] = { "Foo" };
+//   EXPECT_EQ("#include \"some/really/really/really/really/really/deeply/buried/"
+//             "package/foo.h\"\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "bar.cc",
+//                 MakeIncludeLine("\"some/really/really/really/really/really/"
+//                                 "deeply/buried/package/foo.h\"", symbols)));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest,
-       PreservesReasonForSuperLongPathsAtHighVerbosityLevels) {
-  SetVerboseLevel(3);
-  const char* symbols[] = { "Foo" };
-  EXPECT_EQ("#include \"some/really/really/really/really/really/deeply/buried/"
-            "package/foo.h\"  // for Foo\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "bar.cc",
-                MakeIncludeLine("\"some/really/really/really/really/really/"
-                                "deeply/buried/package/foo.h\"", symbols)));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest,
+//        PreservesReasonForSuperLongPathsAtHighVerbosityLevels) {
+//   SetVerboseLevel(3);
+//   const char* symbols[] = { "Foo" };
+//   EXPECT_EQ("#include \"some/really/really/really/really/really/deeply/buried/"
+//             "package/foo.h\"  // for Foo\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "bar.cc",
+//                 MakeIncludeLine("\"some/really/really/really/really/really/"
+//                                 "deeply/buried/package/foo.h\"", symbols)));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest, PadsSpacesForShortPaths) {
-  const char* symbols[] = { "Foo" };
-  EXPECT_EQ("#include \"foo.h\"                        // for Foo\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "bar.cc", MakeIncludeLine("\"foo.h\"", symbols)));
-  EXPECT_EQ("#include \"foo/bar/b.h\"                  // for Foo\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "bar.cc", MakeIncludeLine("\"foo/bar/b.h\"", symbols)));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest, PadsSpacesForShortPaths) {
+//   const char* symbols[] = { "Foo" };
+//   EXPECT_EQ("#include \"foo.h\"                        // for Foo\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "bar.cc", MakeIncludeLine("\"foo.h\"", symbols)));
+//   EXPECT_EQ("#include \"foo/bar/b.h\"                  // for Foo\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "bar.cc", MakeIncludeLine("\"foo/bar/b.h\"", symbols)));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest, DoesNotPadSpacesForLongPaths) {
-  const char* symbols[] = { "Foo" };
-  EXPECT_EQ("#include \"foo/bar/bluh.h\"               // for Foo\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "bar.cc", MakeIncludeLine("\"foo/bar/bluh.h\"", symbols)));
-  EXPECT_EQ("#include \"foo/bar/bluh-bluh.h\"          // for Foo\n",
-            PrintableIncludeOrForwardDeclareLine(
-                "bar.cc", MakeIncludeLine("\"foo/bar/bluh-bluh.h\"", symbols)));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest, DoesNotPadSpacesForLongPaths) {
+//   const char* symbols[] = { "Foo" };
+//   EXPECT_EQ("#include \"foo/bar/bluh.h\"               // for Foo\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "bar.cc", MakeIncludeLine("\"foo/bar/bluh.h\"", symbols)));
+//   EXPECT_EQ("#include \"foo/bar/bluh-bluh.h\"          // for Foo\n",
+//             PrintableIncludeOrForwardDeclareLine(
+//                 "bar.cc", MakeIncludeLine("\"foo/bar/bluh-bluh.h\"", symbols)));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest,
-       PrintsLineNumbersWhenThereIsNoUsedSymbol) {
-  IncludeOrForwardDeclareLineData data;
-  data.line = "#include <foo.h>";
-  data.line_num_range = make_pair(12, 12);
-  // data.used_symbols is intentionally left empty.
-  // We don't really care about .is_present and .is_desired.
-  EXPECT_EQ("#include <foo.h>  // lines 12-12\n",
-            PrintableIncludeOrForwardDeclareLine("bar.cc", data));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest,
+//        PrintsLineNumbersWhenThereIsNoUsedSymbol) {
+//   IncludeOrForwardDeclareLineData data;
+//   data.line = "#include <foo.h>";
+//   data.line_num_range = make_pair(12, 12);
+//   // data.used_symbols is intentionally left empty.
+//   // We don't really care about .is_present and .is_desired.
+//   EXPECT_EQ("#include <foo.h>  // lines 12-12\n",
+//             PrintableIncludeOrForwardDeclareLine("bar.cc", data));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest,
-       PrintsForwardDeclaresProperlyWithLineNumbers) {
-  IncludeOrForwardDeclareLineData data;
-  data.line = "class Foo;";
-  data.line_num_range = make_pair(7, 8);
-  EXPECT_EQ("class Foo;  // lines 7-8\n",
-            PrintableIncludeOrForwardDeclareLine("bar.cc", data));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest,
+//        PrintsForwardDeclaresProperlyWithLineNumbers) {
+//   IncludeOrForwardDeclareLineData data;
+//   data.line = "class Foo;";
+//   data.line_num_range = make_pair(7, 8);
+//   EXPECT_EQ("class Foo;  // lines 7-8\n",
+//             PrintableIncludeOrForwardDeclareLine("bar.cc", data));
+// }
 
-TEST_F(PrintableIncludeOrForwardDeclareLineTest,
-       PrintsForwardDeclaresProperlyWithNoLineNumbers) {
-  IncludeOrForwardDeclareLineData data;
-  data.line = "class Foo;";
-  data.line_num_range = make_pair(-1, -1);
-  EXPECT_EQ("class Foo;\n",
-            PrintableIncludeOrForwardDeclareLine("bar.cc", data));
-}
+// TEST_F(PrintableIncludeOrForwardDeclareLineTest,
+//        PrintsForwardDeclaresProperlyWithNoLineNumbers) {
+//   IncludeOrForwardDeclareLineData data;
+//   data.line = "class Foo;";
+//   data.line_num_range = make_pair(-1, -1);
+//   EXPECT_EQ("class Foo;\n",
+//             PrintableIncludeOrForwardDeclareLine("bar.cc", data));
+// }
 
-#endif
+// #endif
 
 }  // unnamed namespace
 }  // namespace include_what_you_use
-
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  include_what_you_use::InitGlobalsAndFlagsForTesting();
-  return RUN_ALL_TESTS();
-}
