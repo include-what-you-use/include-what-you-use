@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(include-what-you-use)
 
-if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
+set(IWYU_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+if( CMAKE_SOURCE_DIR STREQUAL IWYU_SOURCE_DIR )
   message(STATUS "IWYU out-of-tree configuration")
 
   if( DEFINED LLVM_PATH )
