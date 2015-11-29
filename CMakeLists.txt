@@ -73,8 +73,7 @@ if( GIT_FOUND )
 endif()
 add_definitions(-DIWYU_GIT_REV="${IWYU_GIT_REV}")
 
-add_executable(include-what-you-use
-  iwyu.cc
+add_library(IWYU_OBJECTS OBJECT
   iwyu_ast_util.cc
   iwyu_cache.cc
   iwyu_driver.cc
@@ -87,6 +86,11 @@ add_executable(include-what-you-use
   iwyu_path_util.cc
   iwyu_preprocessor.cc
   iwyu_verrs.cc
+)
+
+add_executable(include-what-you-use
+  iwyu.cc
+  $<TARGET_OBJECTS:IWYU_OBJECTS>
 )
 
 if( MSVC )
