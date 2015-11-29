@@ -110,7 +110,7 @@ else()
 endif()
 
 # Clang dependencies.
-target_link_libraries(include-what-you-use
+list(APPEND IWYU_LINK_LIBS
   clangFrontend
   clangSerialization
   clangDriver
@@ -124,7 +124,7 @@ target_link_libraries(include-what-you-use
 )
 
 # LLVM dependencies.
-target_link_libraries(include-what-you-use
+list(APPEND IWYU_LINK_LIBS
   LLVMX86AsmParser # MC, MCParser, Support, X86CodeGen, X86Desc, X86Info
   LLVMX86CodeGen # Analysis, AsmPrinter, CodeGen, Core, MC, Support, Target, 
                  # X86AsmPrinter, X86Desc, X86Info, X86Utils
@@ -151,12 +151,12 @@ target_link_libraries(include-what-you-use
 
 # Platform dependencies.
 if( WIN32 )
-  target_link_libraries(include-what-you-use
+  list(APPEND IWYU_LINK_LIBS
     shlwapi
   )
 elseif( UNIX )
   include(FindCurses)
-  target_link_libraries(include-what-you-use
+  list(APPEND IWYU_LINK_LIBS
     pthread
     z
     ${CURSES_LIBRARIES}
@@ -167,6 +167,8 @@ else()
     "Unknown system: ${CMAKE_SYSTEM_NAME}. "
     "No platform link-dependencies added.")
 endif()
+
+target_link_libraries(include-what-you-use ${IWYU_LINK_LIBS})
 
 install(TARGETS include-what-you-use RUNTIME DESTINATION bin)
 install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
