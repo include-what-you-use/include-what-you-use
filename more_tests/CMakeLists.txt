@@ -43,7 +43,7 @@ add_executable(include-what-you-use-tests
   # iwyu_include_picker_test.cc
   # iwyu_lexer_utils_test.cc
   # iwyu_output_test.cc
-  # iwyu_string_util_test.cc
+  iwyu_string_util_test.cc
   test_main.cc
 )
 
