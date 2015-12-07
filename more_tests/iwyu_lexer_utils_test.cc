@@ -17,14 +17,15 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include "gtest/gtest.h"
 
-#include "base/logging.h"
-#include "iwyu_globals.h"
-#include "testing/base/public/gunit.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
+
+#include "iwyu_globals.h"
+#include "port.h"
 
 using clang::LangOptions;
 using clang::Lexer;
@@ -48,13 +49,13 @@ SourceLocation CreateSourceLocationFromOffset(SourceLocation begin_loc,
 
 class StringCharacterDataGetter : public CharacterDataGetterInterface {
  public:
-  StringCharacterDataGetter(const string& str)
+  StringCharacterDataGetter(const std::string& str)
       : str_("unused" + str) {
   }
 
   virtual const char* GetCharacterData(SourceLocation loc) const {
-    unsigned offset = loc.getRawEncoding();
-    CHECK_LE(offset, str_.size());
+    size_t offset = loc.getRawEncoding();
+    CHECK_(offset <= str_.size());
     return str_.c_str() + offset;
   }
 
@@ -64,7 +65,7 @@ class StringCharacterDataGetter : public CharacterDataGetterInterface {
   }
 
  private:
-  string str_;
+  std::string str_;
 };
 
 TEST(LexerTest, ClangLexer) {
@@ -77,25 +78,25 @@ TEST(LexerTest, ClangLexer) {
     printf("Token: %s at %u length %u: \"%s\"\n",
            token.getName(), token.getLocation().getRawEncoding(),
            token.getLength(),
-           string(text + token.getLocation().getRawEncoding(),
-                  token.getLength()).c_str());
+           std::string(text + token.getLocation().getRawEncoding(),
+                       token.getLength()).c_str());
   }
 }
 
 // Common test code for testing FindArgumentsToDefined. The symbols
 // should be the arguments to defined() in order.
-void TestFindArgumentsToDefinedWithText(const string& text,
-                                        const vector<string>& symbols) {
+void TestFindArgumentsToDefinedWithText(
+    const std::string& text, const std::vector<std::string>& symbols) {
   StringCharacterDataGetter data_getter(text);
   SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation end_loc =
       CreateSourceLocationFromOffset(begin_loc, text.size());
 
-  vector<Token> defined_tokens = FindArgumentsToDefined(
+  std::vector<Token> defined_tokens = FindArgumentsToDefined(
       SourceRange(begin_loc, end_loc), data_getter);
   EXPECT_EQ(symbols.size(), defined_tokens.size());
-  for (int i = 0; i < symbols.size(); ++i) {
-    const string& symbol = symbols[i];
+  for (size_t i = 0; i < symbols.size(); ++i) {
+    const std::string& symbol = symbols[i];
     const Token& token = defined_tokens[i];
     EXPECT_EQ(clang::tok::raw_identifier, token.getKind());
     SourceLocation expected_loc =
@@ -107,19 +108,19 @@ void TestFindArgumentsToDefinedWithText(const string& text,
 }
 
 TEST(FindArgumentsToDefined, InParentheses) {
-  vector<string> symbols;
+  std::vector<std::string> symbols;
   symbols.push_back("FOO");
   TestFindArgumentsToDefinedWithText("#if defined(FOO)\n", symbols);
 }
 
 TEST(FindArgumentsToDefined, NoParentheses) {
-  vector<string> symbols;
+  std::vector<std::string> symbols;
   symbols.push_back("FOO");
   TestFindArgumentsToDefinedWithText("#if defined FOO\n", symbols);
 }
 
 TEST(FindArgumentsToDefined, MultipleArgs) {
-  vector<string> symbols;
+  std::vector<std::string> symbols;
   symbols.push_back("FOO");
   symbols.push_back("BAR");
   symbols.push_back("BAZ");
@@ -268,10 +269,3 @@ TEST(GetIncludeNameAsTyped, WithComments) {
 }
 
 }  // namespace
-
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  include_what_you_use::InitGlobalsAndFlagsForTesting();
-  return RUN_ALL_TESTS();
-}
