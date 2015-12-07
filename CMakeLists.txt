@@ -14,7 +14,7 @@ if( CMAKE_SOURCE_DIR STREQUAL IWYU_SOURCE_DIR )
 
   if( DEFINED IWYU_LLVM_INCLUDE_PATH AND DEFINED IWYU_LLVM_LIB_PATH )
     # User provided include/lib paths, fall through
-  elseif ( DEFINED IWYU_LLVM_ROOT_PATH )
+  elseif( DEFINED IWYU_LLVM_ROOT_PATH )
     # Synthesize include/lib relative to a root.
     set(IWYU_LLVM_INCLUDE_PATH ${IWYU_LLVM_ROOT_PATH}/include)
     set(IWYU_LLVM_LIB_PATH ${IWYU_LLVM_ROOT_PATH}/lib)
@@ -174,3 +174,5 @@ target_link_libraries(include-what-you-use ${IWYU_LINK_LIBS})
 
 install(TARGETS include-what-you-use RUNTIME DESTINATION bin)
 install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
+
+add_subdirectory(more_tests)
