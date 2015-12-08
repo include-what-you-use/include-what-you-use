@@ -40,7 +40,7 @@ include_directories(${IWYU_SOURCE_DIR})
 
 add_executable(include-what-you-use-tests
   $<TARGET_OBJECTS:IWYU_OBJECTS>
-  # iwyu_include_picker_test.cc
+  iwyu_include_picker_test.cc
   iwyu_lexer_utils_test.cc
   # iwyu_output_test.cc
   iwyu_string_util_test.cc

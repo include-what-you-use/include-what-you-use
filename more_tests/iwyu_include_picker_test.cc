@@ -17,10 +17,10 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include "gtest/gtest.h"
 
 #include "iwyu_globals.h"
 #include "iwyu_path_util.h"
-#include "testing/base/public/gunit.h"
 
 namespace clang {
 class ASTConsumer;
@@ -46,7 +46,7 @@ string IntToString(int i) {
 // and expected (an array) differ, or "" if they're identical.
 template <size_t kCount> string VectorDiff(const string (&expected)[kCount],
                                            const vector<string>& actual) {
-  for (int i = 0; i < std::min(kCount, actual.size()); ++i) {
+  for (size_t i = 0; i < std::min(kCount, actual.size()); ++i) {
     if (expected[i] != actual[i]) {
       return ("Differ at #" + IntToString(i) + ": expected=" + expected[i] +
               ", actual=" + actual[i]);
@@ -118,7 +118,7 @@ TEST(ConvertToQuotedInclude, Basic) {
 
 
 TEST(DynamicMapping, DoesMapping) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("project/public/foo.h", "project/internal/private.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
@@ -127,7 +127,7 @@ TEST(DynamicMapping, DoesMapping) {
 }
 
 TEST(DynamicMapping, MultiplePublicFiles) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("project/public/foo.h", "project/internal/private.h", "");
   p.AddDirectInclude("project/public/bar.h", "project/internal/private.h", "");
   p.AddDirectInclude("project/public/bar.h", "project/internal/other.h", "");
@@ -138,7 +138,7 @@ TEST(DynamicMapping, MultiplePublicFiles) {
 }
 
 TEST(DynamicMapping, TransitiveMapping) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("project/public/foo.h", "project/internal/private.h", "");
   p.AddDirectInclude("project/internal/private.h", "project/internal/other.h",
                      "");
@@ -149,7 +149,7 @@ TEST(DynamicMapping, TransitiveMapping) {
 }
 
 TEST(DynamicMapping, MultipleTransitiveMapping) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("project/public/foo.h", "project/internal/private.h", "");
   p.AddDirectInclude("project/public/bar.h", "project/internal/private.h", "");
   p.AddDirectInclude("project/public/baz.h", "project/internal/private2.h", "");
@@ -165,7 +165,7 @@ TEST(DynamicMapping, MultipleTransitiveMapping) {
 }
 
 TEST(DynamicMapping, NormalizesAsm) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("/usr/include/types.h",
                      "/usr/include/asm-cris/posix_types.h", "");
   p.FinalizeAddedIncludes();
@@ -176,7 +176,7 @@ TEST(DynamicMapping, NormalizesAsm) {
 }
 
 TEST(DynamicMapping, PrivateToPublicMapping) {
-  IncludePicker p;
+  IncludePicker p(false);
   // These names are not the public/internal names that AddInclude looks at.
   p.AddMapping("\"project/private/foo.h\"", "\"project/not_private/bar.h\"");
   p.MarkIncludeAsPrivate("\"project/private/foo.h\"");
@@ -187,7 +187,7 @@ TEST(DynamicMapping, PrivateToPublicMapping) {
 }
 
 TEST(GetCandidateHeadersForSymbol, Basic) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(p.GetCandidateHeadersForSymbol("dev_t"),
                       "<sys/types.h>", "<sys/stat.h>");
@@ -203,7 +203,7 @@ TEST(GetCandidateHeadersForSymbol, Basic) {
 }
 
 TEST(GetCandidateHeadersForFilepath, C) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("/usr/include/bits/dlfcn.h"),
@@ -221,7 +221,7 @@ TEST(GetCandidateHeadersForFilepath, C) {
 }
 
 TEST(GetCandidateHeadersForFilepath, CXX) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("/usr/include/c++/4.2/bits/allocator.h"),
@@ -250,7 +250,7 @@ TEST(IsThirdPartyFile, ReturnsTrueForNonGoogleFileInThirdParty) {
 }
 
 TEST(GetCandidateHeadersForFilepath, ThirdParty) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h", "");
   p.AddDirectInclude("b.h", "third_party/dynamic_annotations/a/b/c.h", "");
   p.AddDirectInclude("c.h", "third_party/python_runtime/includes/py.h", "");
@@ -279,7 +279,7 @@ TEST(GetCandidateHeadersForFilepath, ThirdParty) {
 }
 
 TEST(GetCandidateHeadersForFilepath, ThirdPartyCycle) {
-  IncludePicker p;
+  IncludePicker p(false);
   // We should ignore the cycle here.
   p.AddDirectInclude("myapp.h", "third_party/a.h", "");
   p.AddDirectInclude("third_party/a.h", "third_party/b.h", "");
@@ -303,7 +303,7 @@ TEST(GetCandidateHeadersForFilepath, ThirdPartyCycle) {
 }
 
 TEST(GetCandidateHeadersForFilepath, RegexOverlap) {
-  IncludePicker p;
+  IncludePicker p(false);
   // It's ok if a header is specified in both a regex and non-regex rule.
   // For regexes to work, we need to have actually seen the includes.
   p.AddDirectInclude("a.h", "third_party/dynamic_annotations/d.h", "");
@@ -318,7 +318,7 @@ TEST(GetCandidateHeadersForFilepath, RegexOverlap) {
 }
 
 TEST(GetCandidateHeadersForFilepath, NoIdentityRegex) {
-  IncludePicker p;
+  IncludePicker p(false);
   // Make sure we don't complain when the key of a mapping is a regex
   // that includes the value (which would, naively, lead to an identity
   // mapping).
@@ -337,7 +337,7 @@ TEST(GetCandidateHeadersForFilepath, NoIdentityRegex) {
 }
 
 TEST(GetCandidateHeadersForFilepath, ImplicitThirdPartyMapping) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("third_party/public.h", "third_party/private1.h", "");
   p.AddDirectInclude("third_party/public.h", "third_party/private2.h", "");
   p.AddDirectInclude("third_party/private1.h", "third_party/private11.h", "");
@@ -371,7 +371,7 @@ TEST(GetCandidateHeadersForFilepath, ImplicitThirdPartyMapping) {
 }
 
 TEST(GetCandidateHeadersForFilepath, TreatsGTestAsNonThirdParty) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("foo/foo.cc", "testing/base/public/gunit.h", "");
   p.AddDirectInclude("testing/base/public/gunit.h",
                      "third_party/gtest/include/gtest/gtest.h", "");
@@ -385,7 +385,7 @@ TEST(GetCandidateHeadersForFilepath, TreatsGTestAsNonThirdParty) {
 }
 
 TEST(GetCandidateHeadersForFilepath, ExplicitThirdPartyMapping) {
-  IncludePicker p;
+  IncludePicker p(false);
   // These are controlled by third_party_include_map, not by
   // AddImplicitThirdPartyMappings().
   p.AddDirectInclude("my_app.h", "third_party/dynamic_annotations/public.h",
@@ -406,7 +406,7 @@ TEST(GetCandidateHeadersForFilepath, ExplicitThirdPartyMapping) {
 }
 
 TEST(GetCandidateHeadersForFilepath, ExplicitVsImplicitThirdPartyMapping) {
-  IncludePicker p;
+  IncludePicker p(false);
   // Here, the includees are all explicitly marked as public.
   p.AddDirectInclude("my_app.h", "third_party/icu/include/unicode/foo.h", "");
   p.AddDirectInclude("third_party/icu/include/unicode/foo.h",
@@ -425,7 +425,7 @@ TEST(GetCandidateHeadersForFilepath, ExplicitVsImplicitThirdPartyMapping) {
 }
 
 TEST(GetCandidateHeadersForFilepath, NotInAnyMap) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("/usr/grte/v1/include/poll.h"),
@@ -441,7 +441,7 @@ TEST(GetCandidateHeadersForFilepath, NotInAnyMap) {
 }
 
 TEST(GetCandidateHeadersForFilepath, IncludeRecursion) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("/usr/include/c++/4.2/bits/istream.tcc"),
@@ -449,7 +449,7 @@ TEST(GetCandidateHeadersForFilepath, IncludeRecursion) {
 }
 
 TEST(GetCandidateHeadersForFilepath, PrivateValueInRecursion) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepath("/usr/include/linux/errno.h"),
@@ -458,7 +458,7 @@ TEST(GetCandidateHeadersForFilepath, PrivateValueInRecursion) {
 
 TEST(GetCandidateHeadersForFilepath, NoBuiltin) {
   // Make sure we never specify "<built-in>" as an #include mapping.
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("<built-in>", "foo/bar/internal/code.cc", "");
   p.AddDirectInclude("foo/bar/internal/code.cc", "foo/qux/internal/lib.h", "");
 
@@ -469,7 +469,7 @@ TEST(GetCandidateHeadersForFilepath, NoBuiltin) {
 }
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, NoInternal) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
       p.GetCandidateHeadersForFilepathIncludedFrom("/usr/include/bits/dlfcn.h",
@@ -478,7 +478,7 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, NoInternal) {
 }
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, Internal) {
-  IncludePicker p;
+  IncludePicker p(false);
   // clang always has <built-in> #including the file specified on the cmdline.
   p.AddDirectInclude("<built-in>", "foo/bar/internal/code.cc", "");
   p.AddDirectInclude("foo/bar/internal/code.cc", "foo/bar/public/code.h", "");
@@ -491,7 +491,7 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, Internal) {
 }
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, OtherInternal) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("foo/bar/public/code.h", "foo/bar/internal/hdr.h", "");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
@@ -501,7 +501,7 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, OtherInternal) {
 }
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, PublicToInternal) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("foo/bar/public/code.cc", "foo/bar/public/code.h", "");
   p.AddDirectInclude("foo/bar/public/code.cc", "foo/bar/public/code2.h", "");
   p.AddDirectInclude("foo/bar/public/code.h", "foo/bar/internal/hdr.h", "");
@@ -517,7 +517,7 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, PublicToInternal) {
 }
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, FriendRegex) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("baz.cc", "baz.h", "");
   p.AddDirectInclude("baz.cc", "abcde.h", "");
   p.AddDirectInclude("baz.cc", "random.h", "");
@@ -544,7 +544,7 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, FriendRegex) {
 }
 
 TEST(GetCandidateHeadersForFilepathIncludedFrom, PreservesWrittenForm) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.AddDirectInclude("baz.cc", "baz.h", "\"./././baz.h\"");
   p.FinalizeAddedIncludes();
   EXPECT_VECTOR_STREQ(
@@ -553,7 +553,7 @@ TEST(GetCandidateHeadersForFilepathIncludedFrom, PreservesWrittenForm) {
 }
 
 TEST(HasMapping, IncludeMatch) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.FinalizeAddedIncludes();
   EXPECT_TRUE(p.HasMapping("/usr/include/stdio.h",
                            "/usr/include/c++/4.2/cstdio"));
@@ -566,7 +566,7 @@ TEST(HasMapping, IncludeMatch) {
 }
 
 TEST(HasMapping, IncludeMatchIndirectly) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.FinalizeAddedIncludes();
   EXPECT_TRUE(p.HasMapping("/usr/include/c++/4.2/ios",
                            "/usr/include/c++/4.2/iostream"));
@@ -575,7 +575,7 @@ TEST(HasMapping, IncludeMatchIndirectly) {
 }
 
 TEST(HasMapping, IncludeMatchDifferentMaps) {
-  IncludePicker p;
+  IncludePicker p(false);
   p.FinalizeAddedIncludes();
   // Testing when a google path re-exports a c++ system #include.
   EXPECT_TRUE(p.HasMapping("/usr/include/c++/4.2/ostream", "base/logging.h"));
@@ -584,7 +584,7 @@ TEST(HasMapping, IncludeMatchDifferentMaps) {
 }
 
 TEST(HasMapping, IncludeForThirdParty) {
-  IncludePicker p;
+  IncludePicker p(false);
   // For regexes to work, we need to have actually seen the includes.
   p.AddDirectInclude("base/dynamic_annotations.h",
                      "third_party/dynamic_annotations/foo/bar.h", "");
@@ -595,10 +595,3 @@ TEST(HasMapping, IncludeForThirdParty) {
 
 }  // namespace
 }  // namespace include_what_you_use
-
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  include_what_you_use::InitGlobalsAndFlagsForTesting();
-  return RUN_ALL_TESTS();
-}
