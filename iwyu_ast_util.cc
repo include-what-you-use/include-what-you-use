@@ -45,7 +45,6 @@ namespace clang {
 class FileEntry;
 }  // namespace clang
 
-using clang::ASTTemplateArgumentListInfo;
 using clang::BlockPointerType;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
@@ -105,6 +104,7 @@ using clang::TagDecl;
 using clang::TagType;
 using clang::TemplateArgument;
 using clang::TemplateArgumentList;
+using clang::TemplateArgumentListInfo;
 using clang::TemplateArgumentLoc;
 using clang::TemplateDecl;
 using clang::TemplateName;
@@ -711,17 +711,14 @@ static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
 static map<const Type*, const Type*>
 GetTplTypeResugarMapForFunctionExplicitTplArgs(
     const FunctionDecl* decl,
-    const ASTTemplateArgumentListInfo* explicit_tpl_list) {
+    const TemplateArgumentListInfo& explicit_tpl_list) {
   map<const Type*, const Type*> retval;
-  if (explicit_tpl_list) {
-    for (unsigned i = 0; i < explicit_tpl_list->NumTemplateArgs; ++i) {
-      const TemplateArgument& arg
-          = explicit_tpl_list->getTemplateArgs()[i].getArgument();
-      if (const Type* arg_type = GetTemplateArgAsType(arg)) {
-        retval[GetCanonicalType(arg_type)] = arg_type;
-        VERRS(6) << "Adding an explicit template-function type of interest: "
-                 << PrintableType(arg_type) << "\n";
-      }
+  for (unsigned i = 0; i < explicit_tpl_list.size(); ++i) {
+    const TemplateArgument& arg = explicit_tpl_list[i].getArgument();
+    if (const Type* arg_type = GetTemplateArgAsType(arg)) {
+      retval[GetCanonicalType(arg_type)] = arg_type;
+      VERRS(6) << "Adding an explicit template-function type of interest: "
+               << PrintableType(arg_type) << "\n";
     }
   }
   return retval;
@@ -758,16 +755,18 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     fn_args = call_expr->getArgs();
     num_args = call_expr->getNumArgs();
     const Expr* callee_expr = call_expr->getCallee()->IgnoreParenCasts();
-    if (const ASTTemplateArgumentListInfo* explicit_tpl_args
-        = GetExplicitTplArgs(callee_expr)) {
+    const TemplateArgumentListInfo& explicit_tpl_args
+        = GetExplicitTplArgs(callee_expr);
+    if (explicit_tpl_args.size() > 0) {
       retval = GetTplTypeResugarMapForFunctionExplicitTplArgs(
           decl, explicit_tpl_args);
-      start_of_implicit_args = explicit_tpl_args->NumTemplateArgs;
+      start_of_implicit_args = explicit_tpl_args.size();
     }
   } else {
     // If calling_expr has explicit template args, then consider them.
-    if (const ASTTemplateArgumentListInfo* explicit_tpl_args
-        = GetExplicitTplArgs(calling_expr)) {
+    const TemplateArgumentListInfo& explicit_tpl_args
+        = GetExplicitTplArgs(calling_expr);
+    if (explicit_tpl_args.size() > 0) {
       retval = GetTplTypeResugarMapForFunctionExplicitTplArgs(
           decl, explicit_tpl_args);
       retval = ResugarTypeComponents(retval);
@@ -1319,19 +1318,17 @@ bool IsCastToReferenceType(const CastExpr* expr) {
   CHECK_UNREACHABLE_("Unexpected type of cast expression");
 }
 
-const ASTTemplateArgumentListInfo* GetExplicitTplArgs(const Expr* expr) {
+TemplateArgumentListInfo GetExplicitTplArgs(const Expr* expr) {
+  TemplateArgumentListInfo explicit_tpl_args;
   if (const DeclRefExpr* decl_ref = DynCastFrom(expr))
-    return decl_ref->getOptionalExplicitTemplateArgs();
-  if (const MemberExpr* member_expr = DynCastFrom(expr))
-    return member_expr->getOptionalExplicitTemplateArgs();
-  // Ugh, annoying casts needed because no const methods exist.
-  if (const OverloadExpr* overload_expr = DynCastFrom(expr))
-    return const_cast<OverloadExpr*>(overload_expr)
-        ->getOptionalExplicitTemplateArgs();
-  if (const DependentScopeDeclRefExpr* dependent_decl_ref = DynCastFrom(expr))
-    return const_cast<DependentScopeDeclRefExpr*>(dependent_decl_ref)
-        ->getOptionalExplicitTemplateArgs();
-  return NULL;
+    decl_ref->copyTemplateArgumentsInto(explicit_tpl_args);
+  else if (const MemberExpr* member_expr = DynCastFrom(expr))
+    member_expr->copyTemplateArgumentsInto(explicit_tpl_args);
+  else if (const OverloadExpr* overload_expr = DynCastFrom(expr))
+    overload_expr->copyTemplateArgumentsInto(explicit_tpl_args);
+  else if (const DependentScopeDeclRefExpr* dependent_decl_ref = DynCastFrom(expr))
+    dependent_decl_ref->copyTemplateArgumentsInto(explicit_tpl_args);
+  return explicit_tpl_args;
 }
 
 }  // namespace include_what_you_use

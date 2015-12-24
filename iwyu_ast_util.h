@@ -798,9 +798,8 @@ const clang::FunctionType* GetCalleeFunctionType(clang::CallExpr* expr);
 bool IsCastToReferenceType(const clang::CastExpr* expr);
 
 // Returns the list of explicit template args for all exprs that support
-// such a concept (declrefexpr, memberexpr), and NULL if none is present.
-const clang::ASTTemplateArgumentListInfo* GetExplicitTplArgs(
-    const clang::Expr* expr);
+// such a concept (declrefexpr, memberexpr), and empty list if none is present.
+clang::TemplateArgumentListInfo GetExplicitTplArgs(const clang::Expr* expr);
 
 }  // namespace include_what_you_use
 
