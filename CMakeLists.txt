@@ -157,14 +157,8 @@ else()
     pthread
     z
     ${CURSES_LIBRARIES}
+    ${CMAKE_DL_LIBS}
   )
-
-  # Only Linux targets need dl for dynamic linking.
-  if( CMAKE_SYSTEM_NAME MATCHES "Linux" )
-    target_link_libraries(include-what-you-use
-      dl
-    )
-  endif()
 endif()
 
 install(TARGETS include-what-you-use RUNTIME DESTINATION bin)
