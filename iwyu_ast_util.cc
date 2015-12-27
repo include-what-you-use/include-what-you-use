@@ -713,9 +713,8 @@ GetTplTypeResugarMapForFunctionExplicitTplArgs(
     const FunctionDecl* decl,
     const TemplateArgumentListInfo& explicit_tpl_list) {
   map<const Type*, const Type*> retval;
-  for (unsigned i = 0; i < explicit_tpl_list.size(); ++i) {
-    const TemplateArgument& arg = explicit_tpl_list[i].getArgument();
-    if (const Type* arg_type = GetTemplateArgAsType(arg)) {
+  for (const TemplateArgumentLoc& loc : explicit_tpl_list.arguments()) {
+    if (const Type* arg_type = GetTemplateArgAsType(loc.getArgument())) {
       retval[GetCanonicalType(arg_type)] = arg_type;
       VERRS(6) << "Adding an explicit template-function type of interest: "
                << PrintableType(arg_type) << "\n";
