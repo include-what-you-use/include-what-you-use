@@ -1588,11 +1588,6 @@
     { symbol: [ "QtXmlPatternsVersion", "private", "<QtXmlPatternsVersion>", "public" ] },
     { symbol: [ "QtXmlVersion", "private", "<QtXmlVersion>", "public" ] },
 
-## other things not picked up by the above
-    #{ symbol: [ "qobject_cast", "private", "<QObject>", "public" ] },
-    #{ symbol: [ "qApp", "private", "<QApplication>", "public" ] },
-    #{ symbol: [ "qHash", "private", "<QHash>", "public" ] },
-
 # This is necessary because QList::toSet ends up in QSet which is wrong. See note
 # at top as to why this shouldn't be necessary
 
