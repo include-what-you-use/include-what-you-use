@@ -56,7 +56,7 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
     )
   endif()
 
-  if( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
+  if( APPLE )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden")
   endif()
 else()
@@ -146,12 +146,11 @@ target_link_libraries(include-what-you-use
 )
 
 # Platform dependencies.
-if( CMAKE_SYSTEM_NAME MATCHES "Windows" )
+if( WIN32 )
   target_link_libraries(include-what-you-use
     shlwapi
   )
-else()
-  # POSIX
+elseif( UNIX )
   include(FindCurses)
   target_link_libraries(include-what-you-use
     pthread
@@ -159,6 +158,10 @@ else()
     ${CURSES_LIBRARIES}
     ${CMAKE_DL_LIBS}
   )
+else()
+  message(WARNING
+    "Unknown system: ${CMAKE_SYSTEM_NAME}. "
+    "No platform link-dependencies added.")
 endif()
 
 install(TARGETS include-what-you-use RUNTIME DESTINATION bin)
