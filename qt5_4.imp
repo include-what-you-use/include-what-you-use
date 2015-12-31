@@ -2458,7 +2458,7 @@
     { include: [ "@\"(QtCore/)?qglobal\\.h\"", "private", "<QtGlobal>", "public" ] },
     { include: [ "@\"(QtCore/)?qnamespace\\.h\"", "private", "<Qt>", "public" ] },
     { include: [ "@\"(QtCore/)?qlogging\\.h\"", "private", "<QtDebug>", "public" ] }, #qDebug, qWarning, etc
-    { include: [ "@\"(QtCore/)?qalgorithms\\.h\"", "private", "<QAlgorithms>", "public" ] }, #qSort, etc
+    { include: [ "@\"(QtCore/)?qalgorithms\\.h\"", "private", "<QtAlgorithms>", "public" ] }, #qSort, etc
     { include: [ "@\"(QtWinExtras/)?qwinfunctions\\.h\"", "private", "<QtWin>", "public" ] },  # for fromHICON
 
 # These ones are just madness. For instance, why with the above do we get
