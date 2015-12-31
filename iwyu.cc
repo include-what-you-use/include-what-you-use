@@ -2660,7 +2660,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return retval;
   }
 
-  // Do not any variables here!  If you do, they will not be shared
+  // Do not add any variables here!  If you do, they will not be shared
   // between the normal iwyu ast visitor and the
   // template-instantiation visitor, which is almost always a mistake.
   // Instead, add them to the VisitorState struct, above.
