@@ -146,4 +146,47 @@ vector<Token> FindArgumentsToDefined(
   return ret;
 }
 
+// Lex the file beginning at file_begin, looking for #error directives.
+// Return a vector of #error messages.
+std::vector<std::string> FindErrorDirectives(
+    SourceLocation file_begin,
+    const CharacterDataGetterInterface& data_getter) {
+  std::vector<std::string> error_directives;
+
+  llvm::StringRef source_text(data_getter.GetCharacterData(file_begin));
+  Lexer lexer(file_begin, LangOptions(), source_text.begin(),
+              source_text.begin(), source_text.end());
+
+  // The state indicates what we're looking for/expecting.
+  enum { kHash, kError, kMessage } state = kHash;
+
+  Token token;
+  while (!lexer.LexFromRawLexer(token)) {
+    switch (state) {
+      case kHash:
+        if (token.isAtStartOfLine() && token.is(clang::tok::hash))
+          state = kError;
+        break;
+
+      case kError:
+        if (token.is(clang::tok::raw_identifier) &&
+            token.getRawIdentifier() == "error")
+          state = kMessage;
+        else
+          state = kHash;
+        break;
+
+      case kMessage:
+        // A message can be a string literal or just any sequence of tokens.
+        // Assume that it runs until the end of the line.
+        error_directives.push_back(
+            GetSourceTextUntilEndOfLine(token.getLocation(), data_getter));
+        state = kHash;
+        break;
+    }
+  }
+
+  return error_directives;
+}
+
 }  // namespace include_what_you_use

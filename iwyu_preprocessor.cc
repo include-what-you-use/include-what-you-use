@@ -28,12 +28,23 @@
 #include "port.h"  // for CHECK_
 // TODO(wan): remove this once the IWYU bug is fixed.
 // IWYU pragma: no_include "foo/bar/baz.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/Token.h"
+
 
 using clang::FileEntry;
 using clang::FileID;
+using clang::LangOptions;
+using clang::Lexer;
 using clang::MacroDefinition;
 using clang::MacroDirective;
 using clang::MacroInfo;
@@ -348,6 +359,54 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
                                         << quoted_header_name << "\n";
     }
     break;  // No more than one @headername directive allowed.
+  }
+}
+
+void IwyuPreprocessorInfo::ProcessErrorDirectivesInFile(
+    SourceLocation file_beginning) {
+  // Collect all #error directives in the file.
+  std::vector<std::string> error_directives =
+      FindErrorDirectives(file_beginning, DefaultDataGetter());
+
+#define QUOTED_INCLUDE "([<\"][-_/a-z0-9.]+[>\"])"
+
+  // GNU libc has two similar #error messages for mapping
+  llvm::Regex glibc_re1("Never use " QUOTED_INCLUDE
+                        " directly; include " QUOTED_INCLUDE " instead\\.");
+  llvm::Regex glibc_re2("Never include " QUOTED_INCLUDE
+                        " directly; use " QUOTED_INCLUDE " instead\\.");
+
+  // glib
+  llvm::Regex glib_re("Only " QUOTED_INCLUDE " can be included directly\\.");
+
+#undef QUOTED_INCLUDE
+
+  for (StringRef error : error_directives) {
+    std::string quoted_private_include;
+    std::string quoted_public_include;
+
+    llvm::SmallVector<llvm::StringRef, 3> matches;
+    if (glib_re.match(error, &matches)) {
+      quoted_private_include =
+          ConvertToQuotedInclude(GetFilePath(file_beginning));
+      quoted_public_include = matches[1];
+    } else if (glibc_re1.match(error, &matches) ||
+               glibc_re2.match(error, &matches)) {
+      quoted_private_include = matches[1];
+      quoted_public_include = matches[2];
+    }
+
+    if (!quoted_private_include.empty() && !quoted_public_include.empty()) {
+      MutableGlobalIncludePicker()->AddMapping(quoted_private_include,
+                                               quoted_public_include);
+      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(
+          quoted_private_include);
+      VERRS(5) << "Adding #error mapping: " << quoted_private_include
+               << " -> " << quoted_public_include << "\n";
+    } else {
+      VERRS(6) << "Found #error line without recognized include hint: '"
+               << error << "'\n";
+    }
   }
 }
 
@@ -706,6 +765,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
     return;
 
   ProcessHeadernameDirectivesInFile(file_beginning);
+  ProcessErrorDirectivesInFile(file_beginning);
 
   // The first non-special file entered is the main file.
   if (main_file_ == NULL)
