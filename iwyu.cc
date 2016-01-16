@@ -2012,6 +2012,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
       // We shouldn't be seeing any of these kinds.
       case clang::CK_ArrayToPointerDecay:
+      case clang::CK_BooleanToSignedIntegral:
       case clang::CK_FloatingCast:
       case clang::CK_FloatingComplexCast:
       case clang::CK_FloatingComplexToBoolean:
