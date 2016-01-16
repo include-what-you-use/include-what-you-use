@@ -89,6 +89,11 @@ add_executable(include-what-you-use
   iwyu_verrs.cc
 )
 
+if( MINGW )
+  # Work around 'too many sections' error with MINGW/GCC
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
+endif()
+
 if( MSVC )
   # Disable warnings for IWYU, and disable exceptions in MSVC's STL.
   add_definitions(
