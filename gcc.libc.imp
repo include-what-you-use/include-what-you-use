@@ -117,7 +117,9 @@
   { include: [ "<bits/xtitypes.h>", private, "<stropts.h>", public ] },
   # Sometimes libc tells you what mapping to do via an '#error':
   # # error "Never use <bits/dlfcn.h> directly; include <dlfcn.h> instead."
-  # ( cd /usr/include && grep -R '^ *# *error "Never use' * | perl -nle 'm/<([^>]+).*<([^>]+)/ && print qq@    { include: [ "<$1>", private, "<$2>", public ] },@' | sort )
+  # or
+  # # error "Never include <bits/socket_type.h> directly; use <sys/socket.h> instead."
+  # ( cd /usr/include && grep -R '^ *# *error "Never use\|include' * | perl -nle 'm/<([^>]+).*directly.*<([^>]+)/ && print qq@    { include: [ "<$1>", private, "<$2>", public ] },@' | sort )
   { include: [ "<bits/a.out.h>", private, "<a.out.h>", public ] },
   { include: [ "<bits/byteswap-16.h>", private, "<byteswap.h>", public ] },
   { include: [ "<bits/byteswap.h>", private, "<byteswap.h>", public ] },
@@ -165,6 +167,7 @@
   { include: [ "<bits/string3.h>", private, "<string.h>", public ] },
   { include: [ "<bits/syscall.h>", private, "<sys/syscall.h>", private ] },
   { include: [ "<bits/timerfd.h>", private, "<sys/timerfd.h>", public ] },
+  { include: [ "<bits/typesizes.h>", private, "<sys/types.h>", public ] },
   # Top-level #includes that just forward to another file:
   # $ for i in /usr/include/*; do [ -f $i ] } && [ `wc -l < $i` = 1 ] } && echo $i; done
   # (poll.h, syscall.h, syslog.h, ustat.h, wait.h).
