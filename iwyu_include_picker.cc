@@ -355,7 +355,9 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/xtitypes.h>", kPrivate, "<stropts.h>", kPublic },
   // Sometimes libc tells you what mapping to do via an '#error':
   // # error "Never use <bits/dlfcn.h> directly; include <dlfcn.h> instead."
-  // ( cd /usr/include && grep -R '^ *# *error "Never use' * | perl -nle 'm/<([^>]+).*<([^>]+)/ && print qq@    { "<$1>", kPrivate, "<$2>", kPublic },@' | sort )
+  // or
+  // # error "Never include <bits/socket_type.h> directly; use <sys/socket.h> instead."
+  // ( cd /usr/include && grep -R '^ *# *error "Never use\|include' * | perl -nle 'm/<([^>]+).*directly.*<([^>]+)/ && print qq@    { "<$1>", kPrivate, "<$2>", kPublic },@' | sort )
   { "<bits/a.out.h>", kPrivate, "<a.out.h>", kPublic },
   { "<bits/byteswap-16.h>", kPrivate, "<byteswap.h>", kPublic },
   { "<bits/byteswap.h>", kPrivate, "<byteswap.h>", kPublic },
@@ -403,6 +405,7 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/string3.h>", kPrivate, "<string.h>", kPublic },
   { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPrivate },
   { "<bits/timerfd.h>", kPrivate, "<sys/timerfd.h>", kPublic },
+  { "<bits/typesizes.h>", kPrivate, "<sys/types.h>", kPublic },
   // Top-level #includes that just forward to another file:
   // $ for i in /usr/include/*; do [ -f $i ] && [ `wc -l < $i` = 1 ] && echo $i; done
   // (poll.h, syscall.h, syslog.h, ustat.h, wait.h).
