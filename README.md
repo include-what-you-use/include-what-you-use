@@ -1,6 +1,6 @@
 # Include What You Use #
 
-This README was generated on 2015-09-02 20:35:20 UTC.
+This README was generated on 2016-02-01 00:55:37 UTC.
 
 For more in-depth documentation, see http://github.com/include-what-you-use/include-what-you-use/tree/master/docs.
 
@@ -21,14 +21,14 @@ While we work to get IWYU quality up, we will be stinting new features, and will
 
 ### How to Build ###
 
-Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. See the include-what-you-use `Makefile` for instructions on how to keep them in sync.
+Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. Usually such discrepancies are detected by build bot and fixed promptly.
 
 We support two build configurations: out-of-tree and in-tree.
  
 
 #### Building out-of-tree ####
 
-In an out-of-tree configuration, we assume you already have compiled LLVM and Clang headers and libs somewhere on your filesystem, such as via the `libclang-dev` package. Out-of-tree builds are only supported with CMake (patches very welcome for the Make system).
+In an out-of-tree configuration, we assume you already have compiled LLVM and Clang headers and libs somewhere on your filesystem, such as via the `libclang-dev` package.
 
   * Create a directory for IWYU development, e.g. `iwyu-trunk`
 
@@ -63,9 +63,8 @@ You will need the Clang and LLVM trees on your system, such as by [checking out]
 
         llvm/tools/clang/tools$ git clone https://github.com/include-what-you-use/include-what-you-use.git
 
-  * Edit `tools/clang/tools/Makefile` and add `include-what-you-use` to the `DIRS` variable
   * Edit `tools/clang/tools/CMakeLists.txt` and put in `add_subdirectory(include-what-you-use)`
-  * Once this is done, IWYU is recognized and picked up by both autoconf and CMake workflows as described in the Clang Getting Started guide
+  * Once this is done, IWYU is recognized and picked up by CMake workflow as described in the Clang Getting Started guide
 
 This configuration is more useful if you're actively developing IWYU against Clang trunk. It's easier to set up correctly, but it requires that you build all of LLVM and Clang.
 
