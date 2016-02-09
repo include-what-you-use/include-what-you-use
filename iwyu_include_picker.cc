@@ -1441,6 +1441,14 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
           return;
         }
 
+        if (!IsQuotedInclude(mapping[2])) {
+          json_stream.printError(
+              current_node,
+              "Expected to-entry to be quoted include, but was '" + mapping[2] +
+                  "'");
+          return;
+        }
+
         AddSymbolMapping(mapping[0], mapping[2], to_visibility);
       } else if (directive == "include") {
         // Include mapping.
@@ -1463,6 +1471,22 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
         if (to_visibility == kUnusedVisibility) {
           json_stream.printError(current_node,
               "Unknown visibility '" + mapping[3] + "'.");
+          return;
+        }
+
+        if (!IsQuotedFilepathPattern(mapping[0])) {
+          json_stream.printError(
+              current_node,
+              "Expected from-entry to be quoted filepath or @regex, but was '" +
+                  mapping[0] + "'");
+          return;
+        }
+
+        if (!IsQuotedInclude(mapping[2])) {
+          json_stream.printError(
+              current_node,
+              "Expected to-entry to be quoted include, but was '" + mapping[2] +
+                  "'");
           return;
         }
 
