@@ -7,7 +7,7 @@ All pragmas start with `// IWYU pragma: ` or `/* IWYU pragma: `. They are case-s
 
 ### IWYU pragma: keep ###
 
-This pragma applies to a single `#include` statement. It forces IWYU to keep an inclusion even if it is deemed unnecessary.
+This pragma applies to a single `#include` directive. It forces IWYU to keep an inclusion even if it is deemed unnecessary.
 
     main.cc:
       #include <vector> // IWYU pragma: keep
@@ -17,7 +17,7 @@ In this case, `std::vector` isn't used, so `<vector>` would normally be discarde
 
 ### IWYU pragma: export ###
 
-This pragma applies to a single `#include` statement. It says that the current file is to be considered the provider of any symbol from the included file.
+This pragma applies to a single `#include` directive. It says that the current file is to be considered the provider of any symbol from the included file.
 
     facade.h:
       #include "detail/constants.h" // IWYU pragma: export
@@ -37,7 +37,7 @@ In contrast, since `<vector>` has not been exported from `facade.h`, it will be 
 
 ### IWYU pragma: begin_exports/end_exports ###
 
-This pragma applies to a set of `#include` statements. It declares that the including file is to be considered the provider of any symbol from these included files. This is the same as decorating every `#include` statement with `IWYU pragma: export`.
+This pragma applies to a set of `#include` directives. It declares that the including file is to be considered the provider of any symbol from these included files. This is the same as decorating every `#include` directive with `IWYU pragma: export`.
 
     facade.h:
       // IWYU pragma: begin_exports
@@ -154,7 +154,7 @@ In practice, intentions are not so clear -- it might be ambiguous whether an `#i
 
 IWYU pragmas have some overlap, so it can sometimes be hard to choose one over the other. Here's a guide based on how I understand them at the moment:
 
-  * Use `IWYU pragma: keep` to force IWYU to keep any `#include` statement that would be discarded under its normal policies.
+  * Use `IWYU pragma: keep` to force IWYU to keep any `#include` directive that would be discarded under its normal policies.
   * Use `IWYU pragma: export` to tell IWYU that one header serves as the provider for all symbols in another, included header (e.g. facade headers). Use `IWYU pragma: begin_exports/end_exports` for a whole group of included headers.
   * Use `IWYU pragma: no_include` to tell IWYU that the file in which the pragma is defined should never `#include` a specific header (the header may already be included via some other `#include`.)
   * Use `IWYU pragma: no_forward_declare` to tell IWYU that the file in which the pragma is defined should never forward-declare a specific symbol (a forward declaration may already be available via some other `#include`.)
@@ -164,7 +164,7 @@ IWYU pragmas have some overlap, so it can sometimes be hard to choose one over t
 
 The pragmas come in three different classes;
 
-  1. Ones that apply to a single `#include` statement (`keep`, `export`)
+  1. Ones that apply to a single `#include` directive (`keep`, `export`)
   2. Ones that apply to a file being included (`private`, `friend`)
   3. Ones that apply to a file including other headers (`no_include`, `no_forward_declare`)
 
