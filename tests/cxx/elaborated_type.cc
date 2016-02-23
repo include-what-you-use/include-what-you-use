@@ -19,6 +19,8 @@
 #include "tests/cxx/elaborated_type_enum1.h"  // for ElaborationEnum1
 #include "tests/cxx/elaborated_type_enum2.h"  // for ElaborationEnum2
 
+class GlobalClass;
+
 // Make sure both elaborated and bare enums require the full type.
 void bare_enum(ElaborationEnum1 e);
 void elaborated_enum(enum ElaborationEnum2 e);
@@ -43,10 +45,14 @@ void bare_union(ElaborationUnion* u);
 void elaborated_union(union UnknownElaborationUnion* u);
 
 // Namespace-qualified types must be forward-declared even
-// if they are represented as elaborated types in Clang's AST. 
+// if they are represented as elaborated types in Clang's AST,
+// and the same goes for ::global-qualified types.
 #include "tests/cxx/elaborated_type_namespace.h"
 
 void namespace_qualified(Elaboration::Class* c);
+void global_qualified(::GlobalClass* c);
+void namespace_qualified_elab(class Elaboration::Class* c);
+void global_qualified_elab(class ::GlobalClass* c);
 
 // We can use elaborated types for templates, too, but
 // they must also be forward-declared.
@@ -71,6 +77,7 @@ The full include-list for tests/cxx/elaborated_type.cc:
 #include "tests/cxx/elaborated_type_enum1.h"  // for ElaborationEnum1
 #include "tests/cxx/elaborated_type_enum2.h"  // for ElaborationEnum2
 class ElaborationClass;
+class GlobalClass;  // lines XX-XX
 namespace Elaboration { class Class; }
 namespace Elaboration { template <typename T, typename U> struct Template; }
 struct ElaborationStruct;

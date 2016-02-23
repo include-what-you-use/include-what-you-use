@@ -231,9 +231,13 @@ bool IsNamespaceQualifiedNode(const ASTNode* ast_node) {
   if (ast_node == NULL)
     return false;
   const ElaboratedType* elaborated_type = ast_node->GetAs<ElaboratedType>();
-  return (elaborated_type && elaborated_type->getQualifier()
-          && elaborated_type->getQualifier()->getKind() ==
-          NestedNameSpecifier::Namespace);
+  if (elaborated_type == NULL)
+    return false;
+  const NestedNameSpecifier* qualifier = elaborated_type->getQualifier();
+  if (qualifier == NULL)
+    return false;
+  return (qualifier->getKind() == NestedNameSpecifier::Global ||
+          qualifier->getKind() == NestedNameSpecifier::Namespace);
 }
 
 bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
