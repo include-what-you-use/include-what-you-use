@@ -1066,7 +1066,7 @@ class CC_TemplateClass {
   typedef I1_TemplateClass<A> i1_typedef;
 
   // Let's throw in per-class operator new/delete.
-  // IWYU: size_t is...*((<stddef.h>)|(stdio.h)|(stdlib.h)|(string.h)|(time.h)|(wchar.h))
+  // IWYU: size_t is...*((<stddef.h>)|(stdio.h)|(string.h)|(time.h)|(wchar.h))
   void* operator new(size_t size) {
     B b;
     (void)b;
@@ -1944,8 +1944,7 @@ int main() {
   int i2_macro_var = kI1ConstInt;
 #endif
 
-  // IWYU: rand is...*<stdlib.h>
-  return rand();           // use a function from stdlib.h
+  return 0;
 }
 
 // TODO(csilvers): the delete of <locale> should be line 56, not 35
@@ -1961,7 +1960,6 @@ tests/cxx/badinc.cc should add these lines:
 #include <ctype.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <list>
 #include <new>
 #include "tests/cxx/badinc-i1.h"
@@ -1993,7 +1991,6 @@ The full include-list for tests/cxx/badinc.cc:
 #include <setjmp.h>
 #include <stdarg.h>  // for va_list
 #include <stddef.h>  // for offsetof
-#include <stdlib.h>  // for rand
 #include <algorithm>  // for find
 #include <fstream>  // for fstream
 #include <list>  // for list
