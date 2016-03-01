@@ -1724,6 +1724,11 @@ vector<string> GetSymbolsSortedByFrequency(const map<string, int>& m) {
 OutputLine PrintableIncludeOrForwardDeclareLine(
     const OneIncludeOrForwardDeclareLine& line,
     const set<string>& associated_quoted_includes) {
+  // If we don't want any comments, always use the line as-is.
+  if (GlobalFlags().no_comments) {
+    return OutputLine(line.line());
+  }
+
   // Print the line number where we saw this forward-declare or
   // #include, as a comment, if we don't have anything better to show.
   // (For instance, when we want to delete this line.)
@@ -1859,6 +1864,8 @@ size_t PrintableDiffs(const string& filename,
   }
 
   // Compute max width of lines with comments so we can align them nicely.
+  // This is not strictly necessary if comments have been disabled,
+  // but it won't have any effect in that case anyway.
   size_t line_length = 0;
   size_t max_line_length = GlobalFlags().max_line_length;
 

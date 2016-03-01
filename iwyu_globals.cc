@@ -90,7 +90,8 @@ static void PrintHelp(const char* extra_msg) {
          "   --max_line_length: maximum line length for includes.\n"
          "        Note that this only affects comments and alignment thereof,\n"
          "        the maximum line length can still be exceeded with long\n"
-         "        file names (default: 80)."
+         "        file names (default: 80).\n"
+         "   --no_comments: do not add 'why' comments.\n"
          "   --verbose=<level>: the higher the level, the more output.\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
@@ -160,7 +161,8 @@ CommandlineFlags::CommandlineFlags()
       no_default_mappings(false),
       max_line_length(80),
       prefix_header_include_policy(CommandlineFlags::kAdd),
-      pch_in_code(false) {
+      pch_in_code(false),
+      no_comments(false) {
 }
 
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
@@ -175,6 +177,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"prefix_header_includes", required_argument, NULL, 'x'},
     {"pch_in_code", no_argument, NULL, 'h'},
     {"max_line_length", optional_argument, NULL, 'l'},
+    {"no_comments", optional_argument, NULL, 'o'},
     {0, 0, 0, 0}
   };
   static const char shortopts[] = "d::p:v:c:m:n";
@@ -187,6 +190,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case 'v': verbose = atoi(optarg); break;
       case 'm': mapping_files.push_back(optarg); break;
       case 'n': no_default_mappings = true; break;
+      case 'o': no_comments = true; break;
       case 'x':
         if (strcmp(optarg, "add") == 0) {
           prefix_header_include_policy = CommandlineFlags::kAdd;

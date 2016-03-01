@@ -75,6 +75,7 @@ class OneIwyuTest(unittest.TestCase):
       'non_transitive_include.cc': [self.CheckAlsoExtension('-d*.h'),
                                     '--transitive_includes_only'],
       'no_h_includes_cc.cc': [self.CheckAlsoExtension('.c')],
+      'no_comments.cc': ['--no_comments'],
       'overloaded_class.cc': [self.CheckAlsoExtension('-i1.h')],
       'pch_in_code.cc': ['--pch_in_code', '--prefix_header_includes=remove'],
       'prefix_header_attribution.cc': ['--prefix_header_includes=remove'],
