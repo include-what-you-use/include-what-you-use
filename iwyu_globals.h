@@ -101,6 +101,7 @@ struct CommandlineFlags {
   // Policy regarding files included via -include option.  No short option.
   PrefixHeaderIncludePolicy prefix_header_include_policy;
   bool pch_in_code;  // Treat the first seen include as a PCH. No short option.
+  bool no_comments;  // Disable 'why' comments. No short option.
 };
 
 const CommandlineFlags& GlobalFlags();
