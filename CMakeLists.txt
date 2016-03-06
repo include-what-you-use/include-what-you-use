@@ -152,6 +152,7 @@ target_link_libraries(include-what-you-use
   LLVMMCDisassembler # MC, Support
   LLVMMCParser # MC, Support
   LLVMMC # Object, Support
+  LLVMProfileData # Core, Support, Object
   LLVMObject # BitReader, Core, Support
   LLVMBitReader # Core, Support
   LLVMCore # Support
