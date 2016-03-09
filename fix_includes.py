@@ -613,7 +613,7 @@ def PrintFileDiff(old_file_contents, new_file_contents):
   try:
     next(diff)
     next(diff)
-    print('\n'.join(diff))
+    print('\n'.join(l.rstrip() for l in diff))
   except StopIteration:
     pass
 
