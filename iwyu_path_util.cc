@@ -12,6 +12,8 @@
 #include <stddef.h>
 #include <string.h>                     // for strlen
 #include <system_error>
+#include <limits.h>
+#include <cstdlib>
 
 #include "iwyu_stl_util.h"
 
@@ -89,9 +91,13 @@ string CanonicalizeFilePath(const string& path) {
     if (result[i] == '\\')
       result[i] = '/';
   }
-#endif
-
   // We may also want to collapse ../ here.
+#else
+  char realpath_result[PATH_MAX + 1];
+  if (NULL != realpath(path.c_str(), realpath_result)) {
+      result = string(realpath_result);
+  }
+#endif
 
   return result;
 }
