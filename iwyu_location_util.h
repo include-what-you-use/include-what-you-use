@@ -82,6 +82,12 @@ inline bool IsBuiltinOrCommandLineFile(const clang::FileEntry* file) {
   return IsBuiltinFile(file) || (!strcmp(file->getName(), "<command line>"));
 }
 
+// When macro args are concatenated e.g. '#define CAT(A, B) A##B', their
+// location ends up outside the source text, in what the compiler calls
+// "<scratch space>".
+// This function returns true if the provided loc is in scratch space.
+bool IsInScratchSpace(clang::SourceLocation loc);
+
 inline string GetFilePath(const clang::FileEntry* file) {
   return (IsBuiltinFile(file) ? "<built-in>" :
           NormalizeFilePath(file->getName()));

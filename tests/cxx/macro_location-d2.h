@@ -9,6 +9,12 @@
 
 #include "tests/cxx/macro_location-d1.h"
 
+// The forward-declare is a hint that the use should be attributed
+// to users of the DECLARE_INDIRECT macro, not this file.
+class IndirectClass;
+
+#define DECLARE_INDIRECT(name) IndirectClass name;
+
 #define ARRAYSIZE(x)  ( sizeof(x) / sizeof(*(x)) )
 
 #define NEW_CLASS(name)                         \
