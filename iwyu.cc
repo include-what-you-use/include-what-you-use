@@ -431,17 +431,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 
   SourceLocation CurrentLoc() const {
     CHECK_(current_ast_node_ && "Call CurrentLoc within Visit* or Traverse*");
-    const SourceLocation loc = current_ast_node_->GetLocation();
-    if (!loc.isValid())
-      return loc;
-    // If the token is formed via macro concatenation, the spelling
-    // location will be in <scratch space>.  Use the instantiation
-    // location instead.
-    const SourceLocation spelling_loc = GetSpellingLoc(loc);
-    if (IsInMacro(loc) && StartsWith(PrintableLoc(spelling_loc), "<scratch "))
-      return GetInstantiationLoc(loc);
-    else
-      return spelling_loc;
+    return current_ast_node_->GetLocation();
   }
 
   string CurrentFilePath() const {
@@ -1380,30 +1370,72 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return type;
   }
 
-  // Re-assign uses from macro authors to macro callers when possible.
-  // With macros, it can be very difficult to tell what types are the
-  // responsibility of the macro-caller, and which the macro-author.  e.g.
-  //    #define SIZE_IN_FOOS(ptr)  ( sizeof(*ptr) / sizeof(Foo) )
-  // Here the type of *ptr is the responsibility of the caller, while the
-  // type of Foo is the responsibility of the author, even though the
-  // Exprs for *ptr and Foo are both located inside the macro (the Expr
-  // for ptr is located at the macro-calling site, but not for *ptr).
-  // To help us guess the owner, we use this rule: if the macro-file
-  // intends-to-provide the type, then we keep ownership of the type
-  // at the macro.  Otherwise, we assume it's with the caller.  This
-  // works well as long as the file defining the macro is well-behaved.
-  //   This function should be called with a use-loc that is within
-  // an expanded macro (so the use-loc will point to either inside a
-  // macro definition, or to an argument to a macro call).  If it
-  // points within a macro definition, and that macro-definition file
-  // does not mean to re-export the symbol being used, then we reassign
-  // use of the decl to the macro-caller.
-  SourceLocation GetUseLocationForMacroExpansion(SourceLocation use_loc,
-                                                 const Decl* used_decl) {
-    CHECK_(IsInMacro(use_loc) && "Unexpected non-macro-expansion call");
-    if (!preprocessor_info().PublicHeaderIntendsToProvide(
-            GetFileEntry(use_loc), GetFileEntry(used_decl)))
-      return GetInstantiationLoc(use_loc);
+  // Return any forward-declare of decl earlier in the same file as loc.
+  const NamedDecl* GetForwardDeclareInSameFile(const Decl* decl,
+                                               SourceLocation loc) {
+    set<const NamedDecl*> redecls = GetClassRedecls(DynCastFrom(decl));
+    for (const NamedDecl* redecl : redecls) {
+      if (IsBeforeInSameFile(redecl, loc)) {
+        return redecl;
+      }
+    }
+
+    return nullptr;
+  }
+
+  // Get the canonical use location for a (location, decl) pair.
+  // Decide whether the file expanding the macro or the file defining the macro
+  // should be held responsible for a use.
+  SourceLocation GetCanonicalUseLocation(SourceLocation use_loc,
+                                         const NamedDecl* decl) {
+    // If we're not in a macro, just echo the use location.
+    if (!IsInMacro(use_loc))
+      return use_loc;
+
+    // If we're in a macro, and the macro file forward-declares decl, make sure
+    // we keep that forward-declaration.
+    const NamedDecl* fwd_decl = GetForwardDeclareInSameFile(decl, use_loc);
+    if (fwd_decl) {
+      const FileEntry* used_in = GetFileEntry(use_loc);
+      preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
+          use_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+          nullptr);
+    }
+
+    // Resolve the best use location based on our current knowledge.
+    //
+    // 1) If the macro definition file forward-declares the used decl, that's a
+    //    hint that it wants the expansion location to take responsibility.
+    // 2) If the symbol being used is passed as an argument to the macro, we
+    //    want the expansion location to take responsibility (that thing they
+    //    passed in is something they know about, and the macro doesn't.)
+    // 3) If the use_loc is in <scratch space>, we assume it's formed by macro
+    //    argument concatenation, and attribute responsibility to the expansion
+    //    location.
+    //
+    // Otherwise, the macro file is responsible for including the symbol.
+    SourceLocation expansion_loc = GetInstantiationLoc(use_loc);
+    const char* responsible = "expansion";
+
+    if (fwd_decl != nullptr) {
+      VERRS(5) << "Macro file has a forward-decl attribution hint.\n";
+      use_loc = expansion_loc;
+    } else if (IsInScratchSpace(use_loc)) {
+      VERRS(5) << "Decl was used in <scratch space>, presumably as a result of "
+                  "macro arg concatenation.\n";
+      use_loc = expansion_loc;
+    } else if (GlobalSourceManager()->isMacroArgExpansion(use_loc)) {
+      VERRS(5) << "Use location is a macro arg expansion.\n";
+      use_loc = expansion_loc;
+    } else {
+      use_loc = GetSpellingLoc(use_loc);
+      responsible = "definition";
+    }
+
+    VERRS(5) << "Attributing " << decl->getNameAsString() << " use to macro "
+             << responsible << " location at " << PrintableLoc(use_loc)
+             << ".\n";
+
     return use_loc;
   }
 
@@ -1621,11 +1653,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreDecl(target_decl))
       return;
 
-    // Figure out the best location to attribute uses inside macros.
-    if (IsInMacro(used_loc))
-      used_loc = GetUseLocationForMacroExpansion(used_loc, target_decl);
+    // Canonicalize the use location and report the use.
+    used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
-
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
         used_loc, target_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
         comment);
@@ -1694,11 +1724,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreDecl(target_decl))
       return;
 
-    // Figure out the best location to attribute uses inside macros.
-    if (IsInMacro(used_loc))
-      used_loc = GetUseLocationForMacroExpansion(used_loc, target_decl);
+    // Canonicalize the use location and report the use.
+    used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
-
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
         used_loc, target_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
         comment);
