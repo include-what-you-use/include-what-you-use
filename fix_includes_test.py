@@ -143,6 +143,10 @@ class FixIncludesBase(unittest.TestCase):
          '==== targets',
          '//foo/bar:a'])
 
+    # Stub out stdout
+    self.stdout_stub = StringIO()
+    fix_includes.sys.stdout = self.stdout_stub
+
   def SetFindClientsOfFilesOutput(self, output_lines):
     self.fake_get_command_output_lines.SetCommandOutputLines(
         self.find_clients_of_files_command, output_lines)
@@ -272,16 +276,16 @@ The full include-list for simple:
 int main() { return 0; }
 """
     iwyu_output = """\
-unified_diff should add these lines:
+unified_diff.cc should add these lines:
 
-unified_diff should remove these lines:
+unified_diff.cc should remove these lines:
 - #include <notused.h>  // lines 2-2
 
-The full include-list for unified_diff:
+The full include-list for unified_diff.cc:
 ---
 """
     diff_expect = """\
->>> Fixing #includes in 'unified_diff'
+>>> Fixing #includes in 'unified_diff.cc'
 @@ -1,4 +1,2 @@
 -
 -#include <notused.h>
@@ -291,21 +295,11 @@ IWYU edited 0 files on your behalf.
 
 """
 
-    # the diff is printed to stdout, so intercept that
-    cout = StringIO()
-    dry_run = True
+    self.flags.dry_run = True
+    self.RegisterFileContents({'unified_diff.cc': infile})
+    self.ProcessAndTest(iwyu_output, unedited_files=['unified_diff.cc'])
 
-    sys.stdout, cout = cout, sys.stdout
-    self.flags.dry_run, dry_run = dry_run, self.flags.dry_run
-    self.RegisterFileContents({'unified_diff': infile})
-    self.ProcessAndTest(iwyu_output, unedited_files=['unified_diff'])
-    sys.stdout, cout = cout, sys.stdout
-    self.flags.dry_run, dry_run = dry_run, self.flags.dry_run
-
-    got = cout.getvalue()
-    if got != diff_expect:
-      print("=== Expected:\n%s\n=== Got:\n%s" %(diff_expect, got))
-    self.assertEqual(got, diff_expect)
+    self.assertEqual(self.stdout_stub.getvalue(), diff_expect)
 
   def testNodiffOutput(self):
     """Tests handling of the '(<file> has correct #includes)' iwyu output."""
