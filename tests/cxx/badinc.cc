@@ -73,8 +73,6 @@
 #include <algorithm>  // try #including the same file twice
 #include <algorithm>  // ...and then 3 times
 
-#define CONCAT(a, b)  a##b
-
 // This should given an IWYU error even though MACRO_CALLING_I1_MACRO
 // is never actually called.
 // IWYU: MACRO_CALLING_I6_FUNCTION is...*badinc-i1.h
@@ -1448,11 +1446,6 @@ int main() {
   MACRO_CALLING_I6_FUNCTION;
   // IWYU: kI1ConstInt is...*badinc-i1.h
   (void)(kI1ConstInt);
-  // IWYU: kI1ConstInt is...*badinc-i1.h
-  (void)(CONCAT(kI1C, onstInt));
-  // IWYU: I1_Class needs a declaration
-  CONCAT(I1_, Class) *i1_concat_class_ptr;   // also test something fwd-decl
-  (void)(i1_concat_class_ptr);
 
   Cc_string().length();
 

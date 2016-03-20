@@ -168,7 +168,7 @@ SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc) {
 }
 
 bool IsInScratchSpace(SourceLocation loc) {
-  return PrintableLoc(GetSpellingLoc(loc)) == "<scratch space>";
+  return StartsWith(PrintableLoc(GetSpellingLoc(loc)), "<scratch space>");
 }
 
 }  // namespace include_what_you_use

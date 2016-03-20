@@ -1,4 +1,4 @@
-//===--- macro_location-d3.h - test input file for iwyu -------------------===//
+//===--- macro_location-i4.h - test input file for iwyu -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,5 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/cxx/macro_location-i3.h"
-#include "tests/cxx/macro_location-i4.h"
+class ConcatClass {};
+
+class ConcatFwdDeclClass {};
