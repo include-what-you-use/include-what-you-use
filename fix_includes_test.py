@@ -23,6 +23,7 @@ try:
 except ImportError:
     from io import StringIO
 
+import os
 import re
 import sys
 # I use unittest instead of googletest to ease opensourcing.
@@ -41,6 +42,7 @@ class FakeFlags(object):
     self.separate_project_includes = None
     self.keep_iwyu_namespace_format = False
     self.reorder = True
+    self.basedir = None
 
 
 class FixIncludesBase(unittest.TestCase):
@@ -140,6 +142,7 @@ class FixIncludesBase(unittest.TestCase):
 
     expected_after = []
     for filename in fix_includes.OrderedSet(filenames):  # uniquify
+      filename = fix_includes.NormalizeFilePath(self.flags.basedir, filename)
       if filename not in unedited_files:
         expected_after.extend(self.expected_after_map[filename])
 
@@ -3974,6 +3977,27 @@ namespace ns { namespace ns4 { class Baz; } }
 ---
 """
     self.RegisterFileContents({'add_fwd_declare_keep_iwyu_namespace': infile})
+    self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
+
+  def testbasedir(self):
+    self.flags.basedir = "/project/build/"
+    iwyu_output = """\
+../src/source.cc should add these lines:
+
+../src/source.cc should remove these lines:
+- #include <unused.h> // lines 1-1
+
+The full include-list for ../src/source.cc:
+#include <used.h>
+---
+"""
+    infile = """\
+#include <unused.h> ///-
+#include <used.h>
+
+int main() { return 0; }
+"""
+    self.RegisterFileContents({'/project/src/source.cc': infile})
     self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
 
   def testMain(self):
