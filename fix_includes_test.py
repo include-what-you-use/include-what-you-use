@@ -41,6 +41,7 @@ class FakeFlags(object):
     self.separate_project_includes = None
     self.keep_iwyu_namespace_format = False
     self.reorder = True
+    self.basedir = None
 
 
 class FixIncludesBase(unittest.TestCase):
@@ -119,7 +120,7 @@ class FixIncludesBase(unittest.TestCase):
       self.expected_after_map[filename] = expected_after_contents
 
   def ProcessAndTest(self, iwyu_output, cmdline_files=None, unedited_files=[],
-                     expected_num_modified_files=None):
+                     expected_num_modified_files=None, cwd=None):
     """For all files mentioned in iwyu_output, compare expected and actual.
 
     Arguments:
@@ -132,6 +133,8 @@ class FixIncludesBase(unittest.TestCase):
           but fix_files has chosen not to edit for some reason.
        expected_num_modified_files: what we expect ProcessIWYUOutput to
           return.  If None, suppress this check.
+       cwd: working directory passed to ProcessIWYUOutput, used to normalize
+          paths in cmdline_files. If None, no normalization occurs.
     """
     filenames = re.findall('^(\S+) should add these lines:', iwyu_output, re.M)
     if not filenames:    # This is the other possible starting-line
@@ -140,13 +143,15 @@ class FixIncludesBase(unittest.TestCase):
 
     expected_after = []
     for filename in fix_includes.OrderedSet(filenames):  # uniquify
+      filename = fix_includes.NormalizeFilePath(self.flags.basedir, filename)
       if filename not in unedited_files:
         expected_after.extend(self.expected_after_map[filename])
 
     iwyu_output_as_file = StringIO(iwyu_output)
     num_modified_files = fix_includes.ProcessIWYUOutput(iwyu_output_as_file,
                                                         cmdline_files,
-                                                        self.flags)
+                                                        self.flags,
+                                                        cwd=cwd)
 
     if expected_after != self.actual_after_contents:
       print("=== Expected:")
@@ -245,7 +250,7 @@ int main() { return 0; }
     # we can't use the normal ProcessAndTest.
     iwyu_output_as_file = StringIO(iwyu_output)
     num_modified_files = fix_includes.ProcessIWYUOutput(iwyu_output_as_file,
-                                                        None, self.flags)
+                                                        None, self.flags, None)
     self.assertListEqual([], self.actual_after_contents)  # 'no diffs'
     self.assertEqual(0, num_modified_files)
 
@@ -269,7 +274,7 @@ int main() { return 0; }
     # we can't use the normal ProcessAndTest.
     iwyu_output_as_file = StringIO(iwyu_output)
     num_modified_files = fix_includes.ProcessIWYUOutput(iwyu_output_as_file,
-                                                        None, self.flags)
+                                                        None, self.flags, None)
     self.assertListEqual([], self.actual_after_contents)  # 'no diffs'
     self.assertEqual(0, num_modified_files)
 
@@ -3831,7 +3836,7 @@ The full include-list for dry_run:
 """
     self.RegisterFileContents({'dry_run': infile})
     num_modified_files = fix_includes.ProcessIWYUOutput(
-        StringIO(iwyu_output), ['dry_run'], self.flags)
+        StringIO(iwyu_output), ['dry_run'], self.flags, None)
     self.assertListEqual([], self.actual_after_contents)
     self.assertEqual(1, num_modified_files)
 
@@ -3975,6 +3980,87 @@ namespace ns { namespace ns4 { class Baz; } }
 """
     self.RegisterFileContents({'add_fwd_declare_keep_iwyu_namespace': infile})
     self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
+
+  def testBasedir(self):
+    self.flags.basedir = "/project/build/"
+    iwyu_output = """\
+../src/source.cc should add these lines:
+
+../src/source.cc should remove these lines:
+- #include <unused.h> // lines 1-1
+
+The full include-list for ../src/source.cc:
+#include <used.h>
+---
+"""
+    infile = """\
+#include <unused.h> ///-
+#include <used.h>
+
+int main() { return 0; }
+"""
+    self.RegisterFileContents({'/project/src/source.cc': infile})
+    self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
+
+  def testBasedirWithFilesToProcess(self):
+    self.flags.basedir = "/project/build/"
+    iwyu_output = """\
+../src/changed.cc should add these lines:
+
+../src/changed.cc should remove these lines:
+- #include <unused.h> // lines 1-1
+
+The full include-list for ../src/changed.cc:
+#include <used.h>
+---
+"""
+    changed_file = """\
+#include <unused.h> ///-
+#include <used.h>
+
+int main() { return 0; }
+"""
+    unchanged_file = """\
+#include <unused.h>
+#include <used.h>
+
+int main() { return 0; }
+"""
+
+    iwyu_output += iwyu_output.replace('changed.cc', 'unchanged.cc')
+
+    self.RegisterFileContents({
+        '/project/src/changed.cc': changed_file,
+        '/project/src/unchanged.cc': unchanged_file
+        })
+    self.ProcessAndTest(iwyu_output, cmdline_files=['/project/src/changed.cc'],
+                        unedited_files=['/project/src/unchanged.cc'])
+
+  def testBasedirWithRelativeCmdlineFiles(self):
+    self.flags.basedir = "/project/build/"
+    iwyu_output = """\
+../src/changed.cc should add these lines:
+
+../src/changed.cc should remove these lines:
+- #include <unused.h> // lines 1-1
+
+The full include-list for ../src/changed.cc:
+#include <used.h>
+---
+"""
+    changed_file = """\
+#include <unused.h> ///-
+#include <used.h>
+
+int main() { return 0; }
+"""
+
+    self.RegisterFileContents({
+        # File path is normalized to absolute by ProcessIWYUOutput.
+        '/project/src/changed.cc': changed_file,
+        })
+    self.ProcessAndTest(iwyu_output, cmdline_files=['changed.cc'],
+                        cwd='/project/src')
 
   def testMain(self):
     """Make sure calling main doesn't crash.  Inspired by a syntax-error bug."""

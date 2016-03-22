@@ -320,7 +320,7 @@ class IWYUOutputParser(object):
     self.filename = '<unknown file>'
     self.lines_by_section = {}     # key is an RE, value is a list of lines
 
-  def _ProcessOneLine(self, line):
+  def _ProcessOneLine(self, line, basedir=None):
     """Reads one line of input, updates self, and returns False at EORecord.
 
     If the line matches one of the hard-coded section names, updates
@@ -347,7 +347,8 @@ class IWYUOutputParser(object):
       if m:
         # Check or set the filename (if the re has a group, it's for filename).
         if section_re.groups >= 1:
-          this_filename = m.group(1)
+          this_filename = NormalizeFilePath(basedir, m.group(1))
+
           if (self.current_section is not None and
               this_filename != self.filename):
             raise FixIncludesError('"%s" section for %s comes after "%s" for %s'
@@ -398,7 +399,8 @@ class IWYUOutputParser(object):
        FixIncludesError: for malformed-looking lines in the iwyu output.
     """
     for line in iwyu_output:
-      if not self._ProcessOneLine(line):   # returns False at end-of-record
+      if not self._ProcessOneLine(line, flags.basedir):
+        # returns False at end-of-record
         break
     else:                                  # for/else
       return None                          # at EOF
@@ -2202,7 +2204,7 @@ def FixManyFiles(iwyu_records, flags):
   return files_fixed
 
 
-def ProcessIWYUOutput(f, files_to_process, flags):
+def ProcessIWYUOutput(f, files_to_process, flags, cwd):
   """Fix the #include and forward-declare lines as directed by f.
 
   Given a file object that has the output of the include_what_you_use
@@ -2215,12 +2217,17 @@ def ProcessIWYUOutput(f, files_to_process, flags):
     flags: commandline flags, as parsed by optparse.  The only flag
        we use directly is flags.ignore_re, to indicate files not to
        process; we also pass the flags to other routines.
+    cwd: the current working directory, externalized for testing.
 
   Returns:
     The number of files that had to be modified (because they weren't
     already all correct).  In dry_run mode, returns the number of
     files that would have been modified.
   """
+  if files_to_process is not None:
+    files_to_process = [NormalizeFilePath(cwd, fname)
+                        for fname in files_to_process]
+
   # First collect all the iwyu data from stdin.
 
   # Maintain sort order by using OrderedDict instead of dict
@@ -2234,7 +2241,7 @@ def ProcessIWYUOutput(f, files_to_process, flags):
     except FixIncludesError as why:
       print('ERROR: %s' % why)
       continue
-    filename = iwyu_record.filename
+    filename = NormalizeFilePath(flags.basedir, iwyu_record.filename)
     if files_to_process is not None and filename not in files_to_process:
       print('(skipping %s: not listed on commandline)' % filename)
       continue
@@ -2267,6 +2274,11 @@ def ProcessIWYUOutput(f, files_to_process, flags):
   return FixManyFiles(contentful_records, flags)
 
 
+def NormalizeFilePath(basedir, filename):
+    if basedir and not os.path.isabs(filename):
+        return os.path.normpath(os.path.join(basedir, filename))
+    return filename
+
 def SortIncludesInFiles(files_to_process, flags):
   """For each file in files_to_process, sort its #includes.
 
@@ -2285,6 +2297,7 @@ def SortIncludesInFiles(files_to_process, flags):
   """
   sort_only_iwyu_records = []
   for filename in files_to_process:
+    filename = NormalizeFilePath(flags.basedir, filename)
     # An empty iwyu record has no adds or deletes, so its only effect
     # is to cause us to sort the #include lines.  (Since fix_includes
     # gets all its knowledge of where forward-declare lines are from
@@ -2358,6 +2371,11 @@ def main(argv):
   parser.add_option('--nokeep_iwyu_namespace_format', action='store_false',
                     dest='keep_iwyu_namespace_format')
 
+  parser.add_option('--basedir', '-p', default=None,
+                    help=('Specify the base directory. fix_includes will '
+                          'interpret non-absolute filenames relative to this '
+                          'path.'))
+
   (flags, files_to_modify) = parser.parse_args(argv[1:])
   if files_to_modify:
     files_to_modify = set(files_to_modify)
@@ -2375,7 +2393,7 @@ def main(argv):
       sys.exit('FATAL ERROR: -s flag requires a list of filenames')
     return SortIncludesInFiles(files_to_modify, flags)
   else:
-    return ProcessIWYUOutput(sys.stdin, files_to_modify, flags)
+    return ProcessIWYUOutput(sys.stdin, files_to_modify, flags, cwd=os.getcwd())
 
 
 if __name__ == '__main__':
