@@ -839,10 +839,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // implicitly when the variable goes out of scope).  Only when initializing
     // a field of a class does the constructor not have to worry
     // about destruction.  It turns out it's easier to check for that.
-    bool willCallImplicitDestructorOnLeavingScope =
+    bool will_call_implicit_destructor_on_leaving_scope =
         !IsCXXConstructExprInInitializer(current_ast_node()) &&
         !IsCXXConstructExprInNewExpr(current_ast_node());
-    if (willCallImplicitDestructorOnLeavingScope) {
+    if (will_call_implicit_destructor_on_leaving_scope) {
       // Create the destructor if it hasn't been lazily created yet.
       InstantiateImplicitMethods(expr->getConstructor()->getParent());
       if (const CXXDestructorDecl* dtor_decl = GetSiblingDestructorFor(expr)) {
