@@ -700,9 +700,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     }
 
     // Check the (single) destructor.
-    bool hasImplicitDeclaredDestructor = (!decl->needsImplicitDestructor() &&
-                                          !decl->hasUserDeclaredDestructor());
-    if (hasImplicitDeclaredDestructor) {
+    bool has_implicit_declared_destructor =
+        (!decl->needsImplicitDestructor() &&
+         !decl->hasUserDeclaredDestructor());
+    if (has_implicit_declared_destructor) {
       if (!TraverseImplicitDeclHelper(decl->getDestructor()))
         return false;
     }
@@ -710,9 +711,9 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // Check copy and move assignment operators.
     for (CXXRecordDecl::method_iterator it = decl->method_begin();
          it != decl->method_end(); ++it) {
-      bool isAssignmentOperator = it->isCopyAssignmentOperator() ||
-                                  it->isMoveAssignmentOperator();
-      if (isAssignmentOperator && it->isImplicit()) {
+      bool is_assignment_operator =
+          it->isCopyAssignmentOperator() || it->isMoveAssignmentOperator();
+      if (is_assignment_operator && it->isImplicit()) {
         if (!TraverseImplicitDeclHelper(*it))
           return false;
       }
