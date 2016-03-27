@@ -2440,12 +2440,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // We also need to do a varargs check, like for other function calls.
     if (CanIgnoreCurrentASTNode())  return true;
     // ... only if this NewExpr involves a constructor call.
-    const Expr* Init = expr->getInitializer();
-    if (const CXXConstructExpr* CCE =
-        dyn_cast_or_null<CXXConstructExpr>(Init)){
-      ReportIfReferenceVararg(CCE->getArgs(),
-                              CCE->getNumArgs(),
-                              CCE->getConstructor());
+    const Expr* initializer = expr->getInitializer();
+    if (const CXXConstructExpr* cce =
+            dyn_cast_or_null<CXXConstructExpr>(initializer)) {
+      ReportIfReferenceVararg(cce->getArgs(),
+                              cce->getNumArgs(),
+                              cce->getConstructor());
     }
     return true;
   }
