@@ -609,6 +609,10 @@ void IwyuFileInfo::ReportIncludeFileUse(const clang::FileEntry* included_file,
   LogSymbolUse("Marked use of include-file", symbol_uses_.back());
 }
 
+void IwyuFileInfo::ReportIncludedFileMacroUse(const FileEntry* included_file) {
+  kept_includes_.insert(included_file);
+}
+
 void IwyuFileInfo::ReportPragmaKeep(const clang::FileEntry* included_file) {
   kept_includes_.insert(included_file);
 }

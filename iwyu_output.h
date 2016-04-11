@@ -256,6 +256,8 @@ class IwyuFileInfo {
   void ReportIncludeFileUse(const clang::FileEntry* included_file,
                             const string& quoted_include);
 
+  void ReportIncludedFileMacroUse(const clang::FileEntry* included_file);
+
   // This is used when we see an "IWYU pragma: keep" comment
   // on an include line.
   void ReportPragmaKeep(const clang::FileEntry* included_file);
@@ -344,7 +346,8 @@ class IwyuFileInfo {
   set<const clang::FileEntry*> direct_includes_as_fileentries_;
   set<const clang::NamedDecl*> direct_forward_declares_;
 
-  // Holds any files included with the "IWYU pragma: keep" comment.
+  // Holds files forced to be kept.  For example, files included with the
+  // "IWYU pragma: keep" comment and x-macros.
   set<const clang::FileEntry*> kept_includes_;
 
   // What we will recommend the #includes to be.

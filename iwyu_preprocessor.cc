@@ -772,25 +772,50 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
                                           SourceLocation dfn_location) {
   const FileEntry* used_in = GetFileEntry(usage_location);
 
-  if (!ShouldReportIWYUViolationsFor(used_in))
-    return;             // ignore symbols used outside foo.{h,cc}
   // Don't report macro uses that aren't actually in a file somewhere.
   if (!dfn_location.isValid() || GetFilePath(dfn_location) == "<built-in>")
     return;
+  if (ShouldReportIWYUViolationsFor(used_in)) {
+    // ignore symbols used outside foo.{h,cc}
 
-  // TODO(csilvers): this isn't really a symbol use -- it may be ok
-  // that the symbol isn't defined.  For instance:
-  //    foo.h: #define FOO
-  //    bar.h: #ifdef FOO ... #else ... #endif
-  //    baz.cc: #include "foo.h"
-  //            #include "bar.h"
-  //    bang.cc: #include "bar.h"
-  // We don't want to say that bar.h 'uses' FOO, and thus needs to
-  // #include foo.h -- adding that #include could break bang.cc.
-  // I think the solution is to have a 'soft' use -- don't remove it
-  // if it's there, but don't add it if it's not.  Or something.
-  GetFromFileInfoMap(used_in)->ReportMacroUse(usage_location, dfn_location,
-                                              name);
+    // TODO(csilvers): this isn't really a symbol use -- it may be ok
+    // that the symbol isn't defined.  For instance:
+    //    foo.h: #define FOO
+    //    bar.h: #ifdef FOO ... #else ... #endif
+    //    baz.cc: #include "foo.h"
+    //            #include "bar.h"
+    //    bang.cc: #include "bar.h"
+    // We don't want to say that bar.h 'uses' FOO, and thus needs to
+    // #include foo.h -- adding that #include could break bang.cc.
+    // I think the solution is to have a 'soft' use -- don't remove it
+    // if it's there, but don't add it if it's not.  Or something.
+    GetFromFileInfoMap(used_in)->ReportMacroUse(usage_location, dfn_location,
+                                                name);
+  }
+  const FileEntry* defined_in = GetFileEntry(dfn_location);
+  const SourceLocation include_loc = GlobalSourceManager()->getIncludeLoc(
+      GlobalSourceManager()->getFileID(usage_location));
+  const FileEntry* use_includer = GetFileEntry(include_loc);
+  bool is_macro_defined_by_includer = (defined_in == use_includer);
+  if (is_macro_defined_by_includer) {
+    if (ShouldReportIWYUViolationsFor(defined_in)) {
+      GetFromFileInfoMap(use_includer)->ReportIncludedFileMacroUse(used_in);
+      ERRSYM(defined_in) << "Keep #include " << used_in->getName()
+                         << " in " << defined_in->getName()
+                         << " because macro " << name
+                         << " is defined by includer.\n";
+    } else {
+      string private_include = ConvertToQuotedInclude(
+          GetFilePath(usage_location));
+      string public_include = ConvertToQuotedInclude(GetFilePath(dfn_location));
+      MutableGlobalIncludePicker()->AddMapping(private_include, public_include);
+      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
+      ERRSYM(defined_in) << "Mark " << public_include
+                         << " as public header for " << private_include
+                         << " because macro " << name
+                         << " is defined by includer.\n";
+    }
+  }
 }
 
 // As above, but get the definition location from macros_definition_loc_.

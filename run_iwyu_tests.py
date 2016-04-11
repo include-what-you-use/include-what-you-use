@@ -98,6 +98,7 @@ class OneIwyuTest(unittest.TestCase):
       'deleted_implicit.cc' : ['-std=c++11'],
       'lambda_fwd_decl.cc': ['-std=c++11'],
       'lateparsed_template.cc': ['-fdelayed-template-parsing'],
+      'macro_defined_by_includer.cc': ['-DCOMMAND_LINE_TYPE=double'],
       'ms_inline_asm.cc': ['-fms-extensions'],
       'prefix_header_attribution.cc': [
           self.Include('prefix_header_attribution-d1.h')],
