@@ -256,11 +256,10 @@ class IwyuFileInfo {
   void ReportIncludeFileUse(const clang::FileEntry* included_file,
                             const string& quoted_include);
 
-  void ReportIncludedFileMacroUse(const clang::FileEntry* included_file);
-
-  // This is used when we see an "IWYU pragma: keep" comment
-  // on an include line.
-  void ReportPragmaKeep(const clang::FileEntry* included_file);
+  // This is used when we see a file we want to keep not due to symbol-use
+  // reasons.  For example, it can be #included with an "IWYU pragma: keep"
+  // comment or it can be a x-macro.
+  void ReportKnownDesiredFile(const clang::FileEntry* included_file);
 
   // This is used only in iwyu_preprocessor.cc.  TODO(csilvers): revamp?
   const set<const clang::FileEntry*>& direct_includes_as_fileentries() const {

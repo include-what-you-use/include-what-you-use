@@ -395,7 +395,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep") ||
       IncludeLineHasText(includer_loc, "/* IWYU pragma: keep")) {
     protect_reason = "pragma_keep";
-    FileInfoFor(includer)->ReportPragmaKeep(includee);
+    FileInfoFor(includer)->ReportKnownDesiredFile(includee);
 
   } else if (IncludeLineHasText(includer_loc, "// IWYU pragma: export") ||
              IncludeLineHasText(includer_loc, "/* IWYU pragma: export") ||
@@ -770,11 +770,10 @@ void IwyuPreprocessorInfo::FileChanged_SystemHeaderPragma(SourceLocation loc) {
 void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
                                           SourceLocation usage_location,
                                           SourceLocation dfn_location) {
-  const FileEntry* used_in = GetFileEntry(usage_location);
-
   // Don't report macro uses that aren't actually in a file somewhere.
   if (!dfn_location.isValid() || GetFilePath(dfn_location) == "<built-in>")
     return;
+  const FileEntry* used_in = GetFileEntry(usage_location);
   if (ShouldReportIWYUViolationsFor(used_in)) {
     // ignore symbols used outside foo.{h,cc}
 
@@ -796,18 +795,16 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
   const SourceLocation include_loc = GlobalSourceManager()->getIncludeLoc(
       GlobalSourceManager()->getFileID(usage_location));
   const FileEntry* use_includer = GetFileEntry(include_loc);
-  bool is_macro_defined_by_includer = (defined_in == use_includer);
-  if (is_macro_defined_by_includer) {
+  if (defined_in == use_includer) {
     if (ShouldReportIWYUViolationsFor(defined_in)) {
-      GetFromFileInfoMap(use_includer)->ReportIncludedFileMacroUse(used_in);
+      GetFromFileInfoMap(use_includer)->ReportKnownDesiredFile(used_in);
       ERRSYM(defined_in) << "Keep #include " << used_in->getName()
                          << " in " << defined_in->getName()
                          << " because macro " << name
                          << " is defined by includer.\n";
     } else {
-      string private_include = ConvertToQuotedInclude(
-          GetFilePath(usage_location));
-      string public_include = ConvertToQuotedInclude(GetFilePath(dfn_location));
+      string private_include = ConvertToQuotedInclude(GetFilePath(used_in));
+      string public_include = ConvertToQuotedInclude(GetFilePath(defined_in));
       MutableGlobalIncludePicker()->AddMapping(private_include, public_include);
       MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
       ERRSYM(defined_in) << "Mark " << public_include
