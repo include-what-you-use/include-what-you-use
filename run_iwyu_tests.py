@@ -99,17 +99,77 @@ class OneIwyuTest(unittest.TestCase):
       'lambda_fwd_decl.cc': ['-std=c++11'],
       'lateparsed_template.cc': ['-fdelayed-template-parsing'],
       'ms_inline_asm.cc': ['-fms-extensions'],
-      'prefix_header_attribution.cc': [
-          self.Include('prefix_header_attribution-d1.h')],
+      'prefix_header_attribution.cc': [self.Include('prefix_header_attribution-d1.h')],
       'prefix_header_includes_add.cc': prefix_headers,
       'prefix_header_includes_keep.cc': prefix_headers,
       'prefix_header_includes_remove.cc': prefix_headers,
+    }
+    include_map = {
+      'alias_template.cc': ['.'],
+      'array.cc': ['.'],
+      'associated_h_file_heuristic.cc': ['.'],
+      'associated_include.cc': ['.'],
+      'backwards_includes.cc': ['.'],
+      'badinc.cc': ['.'],
+      'casts.cc': ['.'],
+      'catch.cc': ['.'],
+      'clmode.cc': ['.'],
+      'comment_pragmas.cc': ['.'],
+      'computed_include.cc': ['.'],
+      'conversion_ctor.cc': ['.'],
+      'default_template_arg_other_file.cc': ['.'],
+      'depopulated_h_file.cc': ['.'],
+      'derived_function_tpl_args.cc': ['.'],
+      'double_include.cc': ['.'],
+      'elaborated_struct.c': ['.'],
+      'elaborated_type.cc': ['.'],
+      'forward_declare_in_macro.cc': ['.'],
+      'fullinfo_for_templates.cc': ['.'],
+      'fwd_decl_class_template.cc': ['.'],
+      'fwd_decl_static_member.cc': ['.'],
+      'fwd_decl_with_instantiation.cc': ['.'],
+      'implicit_ctor.cc': ['.'],
+      'include_with_using.cc': ['.'],
+      'iwyu_stricter_than_cpp.cc': ['.'],
+      'keep_mapping.cc': ['.'],
+      'lateparsed_template.cc': ['.'],
+      'macro_location.cc': ['.'],
+      'member_expr.cc': ['.'],
+      'multiple_include_paths.cc': ['.'],
+      'no_comments.cc': ['.'],
+      'no_h_includes_cc.cc': ['.'],
+      'non_transitive_include.cc': ['.'],
+      'overloaded_class.cc': ['.'],
+      'pch_in_code.cc': ['.'],
+      'precomputed_tpl_args.cc': ['.'],
+      'prefix_header_attribution.cc': ['.'],
+      'prefix_header_includes_add.cc': ['.'],
+      'prefix_header_includes_keep.cc': ['.'],
+      'prefix_header_includes_remove.cc': ['.'],
+      're_fwd_decl.cc': ['.'],
+      'redecls.cc': ['.'],
+      'remove_fwd_decl_when_including.cc': ['.'],
+      'sizeof_reference.cc': ['.'],
+      'specialization_needs_decl.cc': ['.'],
+      'system_namespaces.cc': ['.'],
+      'template_args.cc': ['.'],
+      'templated_constructor.cc': ['.'],
+      'template_specialization.cc': ['.'],
+      'typedef_chain_in_template.cc': ['.'],
+      'typedef_chain_no_follow.cc': ['.'],
+      'typedefs_and_resugaring.cc': ['.'],
+      'uses_printf.cc': ['.'],
+      'using_aliased_symbol.cc': ['.'],
+      'varargs_and_references.cc': ['.'],
+      'virtual_tpl_method.cc': ['.'],
     }
     # Internally, we like it when the paths start with rootdir.
     self._iwyu_flags_map = dict((posixpath.join(self.rootdir, k), v)
                                 for (k,v) in flags_map.items())
     self._clang_flags_map = dict((posixpath.join(self.rootdir, k), v)
                                  for (k,v) in clang_flags_map.items())
+    self._include_map = dict((posixpath.join(self.rootdir, k), ['-I ' + include for include in v])
+                                 for (k,v) in include_map.items())
 
   def RunOneTest(self, filename):
     logging.info('Testing iwyu on %s', filename)
@@ -136,7 +196,8 @@ class OneIwyuTest(unittest.TestCase):
     if iwyu_flags:
       logging.info('%s: Using iwyu flags %s', filename, str(iwyu_flags))
 
-    clang_flags = self._clang_flags_map.get(filename, None)
+    clang_flags = self._clang_flags_map.get(filename, [])
+    clang_flags.extend(self._include_map.get(filename, []))
     if clang_flags:
       logging.info('%s: Using clang flags %s', filename, str(clang_flags))
 

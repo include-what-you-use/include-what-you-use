@@ -402,8 +402,7 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
     verbose: Whether to display verbose output.
   """
   iwyu_flags = iwyu_flags or []  # Make sure iwyu_flags is a list.
-  clang_flags = clang_flags or []  # Make sure clang_flags is a list.
-  clang_flags = ['-I .'] + clang_flags  # Default header search path for tests.
+  clang_flags = clang_flags or [] # Make sure this is a list
 
   # Require verbose level 3 so that we can verify the individual diagnostics.
   # We allow the level to be overriden by the IWYU_VERBOSE environment
