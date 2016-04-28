@@ -21,13 +21,20 @@
 // IWYU: GuardedInclude1 is...*macro_defined_by_includer-i1.h
 GuardedInclude1 g1;
 
-#define DIRECT_INCLUDE_GUARD_2
-#include "tests/cxx/macro_defined_by_includer-g2.h"
+#include "tests/cxx/macro_defined_by_includer-d2.h"
 GuardedInclude2 g2;
+
+#include "tests/cxx/macro_defined_by_includer-d3.h"
+GuardedInclude3 g3;
+GuardedInclude4 g4;
+
+#define DIRECT_INCLUDE_GUARD_5
+#include "tests/cxx/macro_defined_by_includer-g5.h"
+GuardedInclude5 g5;
 
 
 // Test x-macros.
-#include "tests/cxx/macro_defined_by_includer-d2.h"
+#include "tests/cxx/macro_defined_by_includer-d4.h"
 
 #define TYPE int
 #include "tests/cxx/macro_defined_by_includer-xmacro.h"
@@ -39,9 +46,9 @@ GuardedInclude2 g2;
 #undef TYPE
 
 int main() {
-  // IWYU: f is...*macro_defined_by_includer-i2.h
+  // IWYU: f is...*macro_defined_by_includer-i3.h
   f(3);
-  // IWYU: f is...*macro_defined_by_includer-i2.h
+  // IWYU: f is...*macro_defined_by_includer-i3.h
   f('a');
 }
 
@@ -55,16 +62,18 @@ COMMAND_LINE_TYPE x;
 
 tests/cxx/macro_defined_by_includer.cc should add these lines:
 #include "tests/cxx/macro_defined_by_includer-i1.h"
-#include "tests/cxx/macro_defined_by_includer-i2.h"
+#include "tests/cxx/macro_defined_by_includer-i3.h"
 
 tests/cxx/macro_defined_by_includer.cc should remove these lines:
 - #include "tests/cxx/macro_defined_by_includer-d1.h"  // lines XX-XX
-- #include "tests/cxx/macro_defined_by_includer-d2.h"  // lines XX-XX
+- #include "tests/cxx/macro_defined_by_includer-d4.h"  // lines XX-XX
 
 The full include-list for tests/cxx/macro_defined_by_includer.cc:
-#include "tests/cxx/macro_defined_by_includer-g2.h"  // for GuardedInclude2
+#include "tests/cxx/macro_defined_by_includer-d2.h"  // for GuardedInclude2
+#include "tests/cxx/macro_defined_by_includer-d3.h"  // for GuardedInclude3, GuardedInclude4
+#include "tests/cxx/macro_defined_by_includer-g5.h"  // for GuardedInclude5
 #include "tests/cxx/macro_defined_by_includer-i1.h"  // for GuardedInclude1
-#include "tests/cxx/macro_defined_by_includer-i2.h"  // for f
+#include "tests/cxx/macro_defined_by_includer-i3.h"  // for f
 #include "tests/cxx/macro_defined_by_includer-xmacro.h"  // lines XX-XX
 #include "tests/cxx/macro_defined_by_includer-xmacro.h"  // lines XX-XX
 

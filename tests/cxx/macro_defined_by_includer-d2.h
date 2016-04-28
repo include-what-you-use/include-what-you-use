@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Header file to provide extra level of inclusion indirection.
+// Tests case when file using macro is included from file defining macro but
+// the macro user is first encountered as include in another file.
 
+#define DIRECT_INCLUDE_GUARD_2
 #include "tests/cxx/macro_defined_by_includer-i2.h"
+#include "tests/cxx/macro_defined_by_includer-g2.h"

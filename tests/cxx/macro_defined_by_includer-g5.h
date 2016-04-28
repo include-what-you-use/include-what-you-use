@@ -1,4 +1,4 @@
-//===--- macro_defined_by_includer-i2.h - test input file for iwyu --------===//
+//===--- macro_defined_by_includer-g5.h - test input file for iwyu --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,4 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/cxx/macro_defined_by_includer-g2.h"
+#ifndef DIRECT_INCLUDE_GUARD_5
+  #error Do not include directly
+#else
+  class GuardedInclude5 {};
+#endif

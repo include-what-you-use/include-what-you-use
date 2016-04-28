@@ -1,4 +1,4 @@
-//===--- macro_defined_by_includer-i2.h - test input file for iwyu --------===//
+//===--- macro_defined_by_includer-d4.h - test input file for iwyu --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,4 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/cxx/macro_defined_by_includer-g2.h"
+// Header file to provide extra level of inclusion indirection.
+
+#include "tests/cxx/macro_defined_by_includer-i3.h"
