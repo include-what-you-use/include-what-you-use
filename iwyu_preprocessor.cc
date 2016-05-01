@@ -754,7 +754,8 @@ void IwyuPreprocessorInfo::FileChanged_ExitToFile(
   }
 
   // Check macros defined by includer.  Requires file preprocessing to be
-  // finished to know all direct includes.
+  // finished to know all direct includes.  Note that direct includes don't
+  // contain #include_next and it is desirable in this case.
   bool should_report_violations = ShouldReportIWYUViolationsFor(exiting_from);
   IwyuFileInfo *file_info = GetFromFileInfoMap(exiting_from);
   std::list<const FileEntry*> direct_macro_use_includees;
@@ -766,19 +767,19 @@ void IwyuPreprocessorInfo::FileChanged_ExitToFile(
                                       direct_macro_use_includees.end()));
   for (const FileEntry* macro_use_includee : direct_macro_use_includees) {
     if (should_report_violations) {
-      file_info->ReportKnownDesiredFile(macro_use_includee);
       ERRSYM(exiting_from) << "Keep #include " << macro_use_includee->getName()
                            << " in " << exiting_from->getName()
                            << " because used macro is defined by includer.\n";
+      file_info->ReportKnownDesiredFile(macro_use_includee);
     } else {
       string private_include =
           ConvertToQuotedInclude(GetFilePath(macro_use_includee));
       string public_include = ConvertToQuotedInclude(GetFilePath(exiting_from));
-      MutableGlobalIncludePicker()->AddMapping(private_include, public_include);
-      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
       ERRSYM(exiting_from) << "Mark " << public_include
                            << " as public header for " << private_include
                            << " because used macro is defined by includer.\n";
+      MutableGlobalIncludePicker()->AddMapping(private_include, public_include);
+      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
     }
   }
 }

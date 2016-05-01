@@ -58,6 +58,14 @@ int main() {
 COMMAND_LINE_TYPE x;
 
 
+// Clang internal <limits.h> defines LLONG_MIN and #include_next system
+// <limits.h> which on Mac OS X uses LLONG_MIN.
+//
+// Test that we don't create a mapping between those 2 <limits.h> and don't try
+// to mark system <limits.h> as private.
+#include <limits.h>
+
+
 /**** IWYU_SUMMARY
 
 tests/cxx/macro_defined_by_includer.cc should add these lines:
@@ -65,6 +73,7 @@ tests/cxx/macro_defined_by_includer.cc should add these lines:
 #include "tests/cxx/macro_defined_by_includer-i3.h"
 
 tests/cxx/macro_defined_by_includer.cc should remove these lines:
+- #include <limits.h>  // lines XX-XX
 - #include "tests/cxx/macro_defined_by_includer-d1.h"  // lines XX-XX
 - #include "tests/cxx/macro_defined_by_includer-d4.h"  // lines XX-XX
 
