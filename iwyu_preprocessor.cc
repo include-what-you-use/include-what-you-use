@@ -12,6 +12,8 @@
 
 #include <stddef.h>                     // for size_t
 #include <string.h>
+#include <algorithm>
+#include <iterator>
 #include <string>                       // for string, basic_string, etc
 #include <utility>                      // for pair, make_pair
 
@@ -643,13 +645,14 @@ void IwyuPreprocessorInfo::InclusionDirective(
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
                                        FileChangeReason reason,
                                        SrcMgr::CharacteristicKind file_type,
-                                       FileID exiting_from) {
+                                       FileID exiting_from_id) {
   switch (reason) {
     case EnterFile:
       FileChanged_EnterFile(loc);
       return;
     case ExitFile:
-      FileChanged_ExitToFile(loc, exiting_from);
+      FileChanged_ExitToFile(
+          loc, GlobalSourceManager()->getFileEntryForID(exiting_from_id));
       return;
     case RenameFile:
       FileChanged_RenameFile(loc);
@@ -740,16 +743,43 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
 }
 
 // Called when done with an #included file and returning to the parent file.
-void IwyuPreprocessorInfo::FileChanged_ExitToFile(SourceLocation include_loc,
-                                                  FileID exiting_from_id) {
+void IwyuPreprocessorInfo::FileChanged_ExitToFile(
+      SourceLocation include_loc, const FileEntry* exiting_from) {
   ERRSYM(GetFileEntry(include_loc)) << "[ Exiting to  ] "
                                     << PrintableLoc(include_loc) << "\n";
-  const FileEntry* exiting_from = GlobalSourceManager()->getFileEntryForID(
-      exiting_from_id);
   if (HasOpenBeginExports(exiting_from)) {
     Warn(begin_exports_location_stack_.top(),
          "begin_exports without an end_exports");
     begin_exports_location_stack_.pop();
+  }
+
+  // Check macros defined by includer.  Requires file preprocessing to be
+  // finished to know all direct includes.
+  bool should_report_violations = ShouldReportIWYUViolationsFor(exiting_from);
+  IwyuFileInfo *file_info = GetFromFileInfoMap(exiting_from);
+  std::list<const FileEntry*> direct_macro_use_includees;
+  std::set_intersection(file_info->macro_users().begin(),
+                        file_info->macro_users().end(),
+                        file_info->direct_includes_as_fileentries().begin(),
+                        file_info->direct_includes_as_fileentries().end(),
+                        std::inserter(direct_macro_use_includees,
+                                      direct_macro_use_includees.end()));
+  for (const FileEntry* macro_use_includee : direct_macro_use_includees) {
+    if (should_report_violations) {
+      file_info->ReportKnownDesiredFile(macro_use_includee);
+      ERRSYM(exiting_from) << "Keep #include " << macro_use_includee->getName()
+                           << " in " << exiting_from->getName()
+                           << " because used macro is defined by includer.\n";
+    } else {
+      string private_include =
+          ConvertToQuotedInclude(GetFilePath(macro_use_includee));
+      string public_include = ConvertToQuotedInclude(GetFilePath(exiting_from));
+      MutableGlobalIncludePicker()->AddMapping(private_include, public_include);
+      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
+      ERRSYM(exiting_from) << "Mark " << public_include
+                           << " as public header for " << private_include
+                           << " because used macro is defined by includer.\n";
+    }
   }
 }
 
@@ -792,27 +822,7 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
                                                 name);
   }
   const FileEntry* defined_in = GetFileEntry(dfn_location);
-  const SourceLocation include_loc = GlobalSourceManager()->getIncludeLoc(
-      GlobalSourceManager()->getFileID(usage_location));
-  const FileEntry* use_includer = GetFileEntry(include_loc);
-  if (defined_in == use_includer) {
-    if (ShouldReportIWYUViolationsFor(defined_in)) {
-      GetFromFileInfoMap(use_includer)->ReportKnownDesiredFile(used_in);
-      ERRSYM(defined_in) << "Keep #include " << used_in->getName()
-                         << " in " << defined_in->getName()
-                         << " because macro " << name
-                         << " is defined by includer.\n";
-    } else {
-      string private_include = ConvertToQuotedInclude(GetFilePath(used_in));
-      string public_include = ConvertToQuotedInclude(GetFilePath(defined_in));
-      MutableGlobalIncludePicker()->AddMapping(private_include, public_include);
-      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
-      ERRSYM(defined_in) << "Mark " << public_include
-                         << " as public header for " << private_include
-                         << " because macro " << name
-                         << " is defined by includer.\n";
-    }
-  }
+  GetFromFileInfoMap(defined_in)->ReportDefinedMacroUse(used_in);
 }
 
 // As above, but get the definition location from macros_definition_loc_.
@@ -966,6 +976,9 @@ void IwyuPreprocessorInfo::PopulateTransitiveIncludeMap() {
 // The public API.
 
 void IwyuPreprocessorInfo::HandlePreprocessingDone() {
+  CHECK_(main_file_ && "Main file should be present");
+  FileChanged_ExitToFile(SourceLocation(), main_file_);
+
   // In some cases, macros can refer to macros in files that are
   // defined later in other files.  In those cases, we can't
   // do an iwyu check until all header files have been read.

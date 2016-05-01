@@ -602,6 +602,10 @@ void IwyuFileInfo::ReportMacroUse(clang::SourceLocation use_loc,
   LogSymbolUse("Marked full-info use of macro", symbol_uses_.back());
 }
 
+void IwyuFileInfo::ReportDefinedMacroUse(const clang::FileEntry* used_in) {
+  macro_users_.insert(used_in);
+}
+
 void IwyuFileInfo::ReportIncludeFileUse(const clang::FileEntry* included_file,
                                         const string& quoted_include) {
   symbol_uses_.push_back(OneUse("", included_file, quoted_include,
