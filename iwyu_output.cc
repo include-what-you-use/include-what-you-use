@@ -602,6 +602,10 @@ void IwyuFileInfo::ReportMacroUse(clang::SourceLocation use_loc,
   LogSymbolUse("Marked full-info use of macro", symbol_uses_.back());
 }
 
+void IwyuFileInfo::ReportDefinedMacroUse(const clang::FileEntry* used_in) {
+  macro_users_.insert(used_in);
+}
+
 void IwyuFileInfo::ReportIncludeFileUse(const clang::FileEntry* included_file,
                                         const string& quoted_include) {
   symbol_uses_.push_back(OneUse("", included_file, quoted_include,
@@ -609,7 +613,7 @@ void IwyuFileInfo::ReportIncludeFileUse(const clang::FileEntry* included_file,
   LogSymbolUse("Marked use of include-file", symbol_uses_.back());
 }
 
-void IwyuFileInfo::ReportPragmaKeep(const clang::FileEntry* included_file) {
+void IwyuFileInfo::ReportKnownDesiredFile(const FileEntry* included_file) {
   kept_includes_.insert(included_file);
 }
 
@@ -1888,6 +1892,41 @@ size_t PrintableDiffs(const string& filename,
 }
 
 }  // namespace internal
+
+void IwyuFileInfo::HandlePreprocessingDone() {
+  // Check macros defined by includer.  Requires file preprocessing to be
+  // finished to know all direct includes and all macro usages.
+  bool should_report_violations = ShouldReportIWYUViolationsFor(file_);
+  std::list<const FileEntry*> direct_macro_use_includees;
+  std::set_intersection(macro_users_.begin(), macro_users_.end(),
+                        direct_includes_as_fileentries_.begin(),
+                        direct_includes_as_fileentries_.end(),
+                        std::inserter(direct_macro_use_includees,
+                                      direct_macro_use_includees.end()));
+  for (const FileEntry* macro_use_includee : direct_macro_use_includees) {
+    if (should_report_violations) {
+      ERRSYM(file_) << "Keep #include " << macro_use_includee->getName()
+                    << " in " << file_->getName()
+                    << " because used macro is defined by includer.\n";
+      ReportKnownDesiredFile(macro_use_includee);
+    } else {
+      string private_include =
+          ConvertToQuotedInclude(GetFilePath(macro_use_includee));
+      if (GlobalIncludePicker().IsPublic(macro_use_includee)) {
+        ERRSYM(file_) << "Skip marking " << quoted_file_
+                      << " as public header for " << private_include
+                      << " because latter is already marked as public,"
+                      << " though uses macro defined by includer.\n";
+      } else {
+        ERRSYM(file_) << "Mark " << quoted_file_
+                      << " as public header for " << private_include
+                      << " because used macro is defined by includer.\n";
+        MutableGlobalIncludePicker()->AddMapping(private_include, quoted_file_);
+        MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
+      }
+    }
+  }
+}
 
 void IwyuFileInfo::ResolvePendingAnalysis() {
   // Resolve using declarations:  This handles the case where there's a using

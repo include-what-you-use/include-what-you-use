@@ -213,7 +213,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // FileChanged is actually a multi-plexer for 4 different callbacks.
   void FileChanged_EnterFile(clang::SourceLocation file_beginning);
   void FileChanged_ExitToFile(clang::SourceLocation include_loc,
-                              clang::FileID exiting_from);
+                              const clang::FileEntry* exiting_from);
   void FileChanged_RenameFile(clang::SourceLocation new_file);
   void FileChanged_SystemHeaderPragma(clang::SourceLocation loc);
 
