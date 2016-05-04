@@ -12,6 +12,8 @@
 
 #include <stddef.h>                     // for size_t
 #include <string.h>
+#include <algorithm>
+#include <iterator>
 #include <string>                       // for string, basic_string, etc
 #include <utility>                      // for pair, make_pair
 
@@ -395,7 +397,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep") ||
       IncludeLineHasText(includer_loc, "/* IWYU pragma: keep")) {
     protect_reason = "pragma_keep";
-    FileInfoFor(includer)->ReportPragmaKeep(includee);
+    FileInfoFor(includer)->ReportKnownDesiredFile(includee);
 
   } else if (IncludeLineHasText(includer_loc, "// IWYU pragma: export") ||
              IncludeLineHasText(includer_loc, "/* IWYU pragma: export") ||
@@ -643,13 +645,14 @@ void IwyuPreprocessorInfo::InclusionDirective(
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
                                        FileChangeReason reason,
                                        SrcMgr::CharacteristicKind file_type,
-                                       FileID exiting_from) {
+                                       FileID exiting_from_id) {
   switch (reason) {
     case EnterFile:
       FileChanged_EnterFile(loc);
       return;
     case ExitFile:
-      FileChanged_ExitToFile(loc, exiting_from);
+      FileChanged_ExitToFile(
+          loc, GlobalSourceManager()->getFileEntryForID(exiting_from_id));
       return;
     case RenameFile:
       FileChanged_RenameFile(loc);
@@ -740,16 +743,44 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
 }
 
 // Called when done with an #included file and returning to the parent file.
-void IwyuPreprocessorInfo::FileChanged_ExitToFile(SourceLocation include_loc,
-                                                  FileID exiting_from_id) {
+void IwyuPreprocessorInfo::FileChanged_ExitToFile(
+      SourceLocation include_loc, const FileEntry* exiting_from) {
   ERRSYM(GetFileEntry(include_loc)) << "[ Exiting to  ] "
                                     << PrintableLoc(include_loc) << "\n";
-  const FileEntry* exiting_from = GlobalSourceManager()->getFileEntryForID(
-      exiting_from_id);
   if (HasOpenBeginExports(exiting_from)) {
     Warn(begin_exports_location_stack_.top(),
          "begin_exports without an end_exports");
     begin_exports_location_stack_.pop();
+  }
+
+  // Check macros defined by includer.  Requires file preprocessing to be
+  // finished to know all direct includes.  Note that direct includes don't
+  // contain #include_next and it is desirable in this case.
+  bool should_report_violations = ShouldReportIWYUViolationsFor(exiting_from);
+  IwyuFileInfo *file_info = GetFromFileInfoMap(exiting_from);
+  std::list<const FileEntry*> direct_macro_use_includees;
+  std::set_intersection(file_info->macro_users().begin(),
+                        file_info->macro_users().end(),
+                        file_info->direct_includes_as_fileentries().begin(),
+                        file_info->direct_includes_as_fileentries().end(),
+                        std::inserter(direct_macro_use_includees,
+                                      direct_macro_use_includees.end()));
+  for (const FileEntry* macro_use_includee : direct_macro_use_includees) {
+    if (should_report_violations) {
+      ERRSYM(exiting_from) << "Keep #include " << macro_use_includee->getName()
+                           << " in " << exiting_from->getName()
+                           << " because used macro is defined by includer.\n";
+      file_info->ReportKnownDesiredFile(macro_use_includee);
+    } else {
+      string private_include =
+          ConvertToQuotedInclude(GetFilePath(macro_use_includee));
+      string public_include = ConvertToQuotedInclude(GetFilePath(exiting_from));
+      ERRSYM(exiting_from) << "Mark " << public_include
+                           << " as public header for " << private_include
+                           << " because used macro is defined by includer.\n";
+      MutableGlobalIncludePicker()->AddMapping(private_include, public_include);
+      MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
+    }
   }
 }
 
@@ -770,27 +801,29 @@ void IwyuPreprocessorInfo::FileChanged_SystemHeaderPragma(SourceLocation loc) {
 void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
                                           SourceLocation usage_location,
                                           SourceLocation dfn_location) {
-  const FileEntry* used_in = GetFileEntry(usage_location);
-
-  if (!ShouldReportIWYUViolationsFor(used_in))
-    return;             // ignore symbols used outside foo.{h,cc}
   // Don't report macro uses that aren't actually in a file somewhere.
   if (!dfn_location.isValid() || GetFilePath(dfn_location) == "<built-in>")
     return;
+  const FileEntry* used_in = GetFileEntry(usage_location);
+  if (ShouldReportIWYUViolationsFor(used_in)) {
+    // ignore symbols used outside foo.{h,cc}
 
-  // TODO(csilvers): this isn't really a symbol use -- it may be ok
-  // that the symbol isn't defined.  For instance:
-  //    foo.h: #define FOO
-  //    bar.h: #ifdef FOO ... #else ... #endif
-  //    baz.cc: #include "foo.h"
-  //            #include "bar.h"
-  //    bang.cc: #include "bar.h"
-  // We don't want to say that bar.h 'uses' FOO, and thus needs to
-  // #include foo.h -- adding that #include could break bang.cc.
-  // I think the solution is to have a 'soft' use -- don't remove it
-  // if it's there, but don't add it if it's not.  Or something.
-  GetFromFileInfoMap(used_in)->ReportMacroUse(usage_location, dfn_location,
-                                              name);
+    // TODO(csilvers): this isn't really a symbol use -- it may be ok
+    // that the symbol isn't defined.  For instance:
+    //    foo.h: #define FOO
+    //    bar.h: #ifdef FOO ... #else ... #endif
+    //    baz.cc: #include "foo.h"
+    //            #include "bar.h"
+    //    bang.cc: #include "bar.h"
+    // We don't want to say that bar.h 'uses' FOO, and thus needs to
+    // #include foo.h -- adding that #include could break bang.cc.
+    // I think the solution is to have a 'soft' use -- don't remove it
+    // if it's there, but don't add it if it's not.  Or something.
+    GetFromFileInfoMap(used_in)->ReportMacroUse(usage_location, dfn_location,
+                                                name);
+  }
+  const FileEntry* defined_in = GetFileEntry(dfn_location);
+  GetFromFileInfoMap(defined_in)->ReportDefinedMacroUse(used_in);
 }
 
 // As above, but get the definition location from macros_definition_loc_.
@@ -944,6 +977,9 @@ void IwyuPreprocessorInfo::PopulateTransitiveIncludeMap() {
 // The public API.
 
 void IwyuPreprocessorInfo::HandlePreprocessingDone() {
+  CHECK_(main_file_ && "Main file should be present");
+  FileChanged_ExitToFile(SourceLocation(), main_file_);
+
   // In some cases, macros can refer to macros in files that are
   // defined later in other files.  In those cases, we can't
   // do an iwyu check until all header files have been read.
