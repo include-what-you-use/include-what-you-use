@@ -235,13 +235,9 @@ class IwyuFileInfo {
                            const string& symbol);
   // TODO(dsturtevant): Can we determine in_cxx_method_body? Do we care?
 
-  // Called when using a macro in this file.
   void ReportMacroUse(clang::SourceLocation use_loc,
                       clang::SourceLocation dfn_loc,
                       const string& symbol);
-
-  // Called when somebody uses a macro defined in this file.
-  void ReportDefinedMacroUse(const clang::FileEntry* used_in);
 
   // We only allow forward-declaring of decls, not arbitrary symbols.
   void ReportForwardDeclareUse(clang::SourceLocation use_loc,
@@ -260,19 +256,13 @@ class IwyuFileInfo {
   void ReportIncludeFileUse(const clang::FileEntry* included_file,
                             const string& quoted_include);
 
-  // This is used when we see a file we want to keep not due to symbol-use
-  // reasons.  For example, it can be #included with an "IWYU pragma: keep"
-  // comment or it can be a x-macro.
-  void ReportKnownDesiredFile(const clang::FileEntry* included_file);
+  // This is used when we see an "IWYU pragma: keep" comment
+  // on an include line.
+  void ReportPragmaKeep(const clang::FileEntry* included_file);
 
   // This is used only in iwyu_preprocessor.cc.  TODO(csilvers): revamp?
   const set<const clang::FileEntry*>& direct_includes_as_fileentries() const {
     return direct_includes_as_fileentries_;
-  }
-
-  // This is used only in iwyu_preprocessor.cc.
-  const set<const clang::FileEntry*>& macro_users() const {
-    return macro_users_;
   }
 
   // Resolve and pending analysis that needs to occur between AST traversal
@@ -354,12 +344,8 @@ class IwyuFileInfo {
   set<const clang::FileEntry*> direct_includes_as_fileentries_;
   set<const clang::NamedDecl*> direct_forward_declares_;
 
-  // Holds files forced to be kept.  For example, files included with the
-  // "IWYU pragma: keep" comment and x-macros.
+  // Holds any files included with the "IWYU pragma: keep" comment.
   set<const clang::FileEntry*> kept_includes_;
-
-  // Holds files using macros defined in this file.
-  set<const clang::FileEntry*> macro_users_;
 
   // What we will recommend the #includes to be.
   set<string> desired_includes_;
