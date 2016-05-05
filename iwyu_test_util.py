@@ -403,7 +403,7 @@ def _CompareExpectedAndActualSummaries(expected_summaries, actual_summaries):
   return failures
 
 
-def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
+def TestIwyuOnFile(test_case, cc_file, cpp_files_to_check,
                            iwyu_flags=None, clang_flags=None, verbose=False):
   """Checks running IWYU on the given .cc file.
 
@@ -441,6 +441,12 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
   print(''.join(output))
   sys.stdout.flush()      # don't commingle this output with the failure output
 
+  if os.path.isabs(cc_file):
+    # Output is relative to test scripts directory
+    # So for absolute cc file paths we need to remove this path from the output
+    scriptPath = os.path.dirname(os.path.realpath(__file__))
+    output = [line.replace(os.path.abspath(scriptPath) + '/', '') for line in output]
+    
   expected_diagnostics = _GetMatchingLines(
       _EXPECTED_DIAGNOSTICS_RE, cpp_files_to_check)
   failures = _CompareExpectedAndActualDiagnostics(
@@ -453,3 +459,4 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
       _GetActualSummaries(output))
 
   test_case.assertTrue(not failures, ''.join(failures))
+
