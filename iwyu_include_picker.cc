@@ -1286,9 +1286,10 @@ vector<string> IncludePicker::GetCandidateHeadersForSymbol(
 }
 
 vector<string> IncludePicker::GetCandidateHeadersForFilepath(
-    const string& filepath) const {
+    const string& filepath, const string& including_filepath) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
-  const string quoted_header = ConvertToQuotedInclude(filepath);
+  const string quoted_header = ConvertToQuotedInclude(
+      filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
   vector<string> retval = GetPublicValues(filepath_include_map_, quoted_header);
   if (retval.empty()) {
     // the filepath isn't in include_map, so just quote and return it.
@@ -1303,15 +1304,21 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepath(
 vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     const string& included_filepath, const string& including_filepath) const {
   vector<string> retval;
-  const string quoted_includer = ConvertToQuotedInclude(including_filepath);
-  const string quoted_includee = ConvertToQuotedInclude(included_filepath);
+  // We pass the own files path to ConvertToQuotedInclude so the quoted include
+  // for the case that there is no matching `-I` option is just the filename
+  // (e.g. "foo.cpp") instead of the absolute file path.
+  const string quoted_includer = ConvertToQuotedInclude(
+      including_filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
+  const string quoted_includee = ConvertToQuotedInclude(
+      included_filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
   const set<string>* headers_with_includer_as_friend =
       FindInMap(&friend_to_headers_map_, quoted_includer);
   if (headers_with_includer_as_friend != nullptr &&
       ContainsKey(*headers_with_includer_as_friend, included_filepath)) {
     retval.push_back(quoted_includee);
   } else {
-    retval = GetCandidateHeadersForFilepath(included_filepath);
+    retval =
+        GetCandidateHeadersForFilepath(included_filepath, including_filepath);
     if (retval.size() == 1) {
       const string& quoted_header = retval[0];
       if (GetVisibility(quoted_header) == kPrivate) {

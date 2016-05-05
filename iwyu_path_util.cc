@@ -82,9 +82,12 @@ string Basename(const string& path) {
 }
 
 string GetCanonicalName(string file_path) {
-  // Get rid of any <> and "" in case file_path is really an #include line.
-  StripLeft(&file_path, "\"") || StripLeft(&file_path, "<");
-  StripRight(&file_path, "\"") || StripRight(&file_path, ">");
+  // For this special 'path' we just return it.
+  // Note that we leave the 'quotes' to make it different from regular paths.
+  if (file_path == "<built-in>")
+    return file_path;
+
+  CHECK_(!IsQuotedInclude(file_path));
 
   file_path = NormalizeFilePath(file_path);
 
@@ -163,11 +166,24 @@ string GetParentPath(const string& path) {
   return parent.str();
 }
 
+bool StripPathPrefix(string* path, const string& prefix_path) {
+  // Only makes sense if both are absolute or both are relative (to same dir).
+  CHECK_(IsAbsolutePath(*path) == IsAbsolutePath(prefix_path));
+  return StripLeft(path, prefix_path);
+}
+
 // Converts a file-path, such as /usr/include/stdio.h, to a
 // quoted include, such as <stdio.h>.
-string ConvertToQuotedInclude(const string& filepath) {
-  // First, get rid of leading ./'s and the like.
-  string path = NormalizeFilePath(filepath);
+string ConvertToQuotedInclude(const string& filepath,
+                              const string& includer_path) {
+  // includer_path must be given as an absolute path.
+  CHECK_(includer_path.empty() || IsAbsolutePath(includer_path));
+
+  if (filepath == "<built-in>")
+    return filepath;
+
+  // Get path into same format as header search paths: Absolute and normalized.
+  string path = NormalizeFilePath(MakeAbsolutePath(filepath));
 
   // Case 1: Uses an explicit entry on the search path (-I) list.
   const vector<HeaderSearchPath>& search_paths = HeaderSearchPaths();
@@ -177,7 +193,8 @@ string ConvertToQuotedInclude(const string& filepath) {
   for (Each<HeaderSearchPath> it(&search_paths); !it.AtEnd(); ++it) {
     // All header search paths have a trailing "/", so we'll get a perfect
     // quoted include by just stripping the prefix.
-    if (StripLeft(&path, it->path)) {
+
+    if (StripPathPrefix(&path, it->path)) {
       if (it->path_type == HeaderSearchPath::kSystemPath)
         return "<" + path + ">";
       else
@@ -185,7 +202,10 @@ string ConvertToQuotedInclude(const string& filepath) {
     }
   }
 
-  // Case 2: Uses the implicit "-I." entry on the search path.  Always local.
+  // Case 2:
+  // Uses the implicit "-I <basename current file>" entry on the search path.
+  if (!includer_path.empty())
+    StripPathPrefix(&path, NormalizeDirPath(includer_path));
   return "\"" + path + "\"";
 }
 

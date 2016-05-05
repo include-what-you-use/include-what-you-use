@@ -43,9 +43,9 @@ bool IsHeaderFile(string path);
 // else return the input path.
 string Basename(const string& path);
 
-// Removes enclosing <> or "", then strips uninteresting suffixes from
+// Normalizes the file path, then strips uninteresting suffixes from
 // the file name. Replaces "/internal/" with "/public/" and
-// "/include/" with "/src".  Normalize the file path.
+// "/include/" with "/src".
 string GetCanonicalName(string file_path);
 
 // Replaces "\" by "/" (Microsoft platform paths) and collapses all dot
@@ -66,6 +66,11 @@ string MakeAbsolutePath(const string& base_path, const string& relative_path);
 // Get the parent of path.
 string GetParentPath(const string& path);
 
+// Try to strip the prefix_path from the front of path.
+// The path assumed to be normalized but either absolute or relative.
+// Return true if path was stripped.
+bool StripPathPrefix(string* path, const string& prefix_path);
+
 // Below, we talk 'quoted' includes.  A quoted include is something
 // that would be written on an #include line, complete with the <> or
 // "".  In the line '#include <time.h>', "<time.h>" is the quoted
@@ -73,7 +78,8 @@ string GetParentPath(const string& path);
 
 // Converts a file-path, such as /usr/include/stdio.h, to a
 // quoted include, such as <stdio.h>.
-string ConvertToQuotedInclude(const string& filepath);
+string ConvertToQuotedInclude(const string& filepath,
+                              const string& includer_path = "");
 
 // Returns true if the string is a quoted include.
 bool IsQuotedInclude(const string& s);
