@@ -113,6 +113,7 @@ class OneIwyuTest(unittest.TestCase):
       'badinc.cc': ['.'],
       'casts.cc': ['.'],
       'catch.cc': ['.'],
+      'check_also.cc': ['.'],
       'clmode.cc': ['.'],
       'comment_pragmas.cc': ['.'],
       'computed_include.cc': ['.'],
