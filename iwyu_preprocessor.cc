@@ -285,6 +285,13 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
     return;
   }
 
+  if (MatchOneToken(tokens, "associated", 1, begin_loc)) {
+	  if (associated_pragma_location_.isInvalid()) {
+		  associated_pragma_location_ = begin_loc;
+	  }
+	  return;
+  }
+
   // "keep" and "export" are handled in MaybeProtectInclude.
   if (!MatchOneToken(tokens, "keep", 1, begin_loc)
       && !MatchOneToken(tokens, "export", 1, begin_loc)) {
@@ -751,6 +758,23 @@ void IwyuPreprocessorInfo::FileChanged_ExitToFile(SourceLocation include_loc,
          "begin_exports without an end_exports");
     begin_exports_location_stack_.pop();
   }
+
+  const FileEntry* includer = GetFileEntry(associated_pragma_location_);
+  if (associated_pragma_location_.isValid() &&
+	  includer == GetFileEntry(include_loc)) {
+	  GetFromFileInfoMap(includer)
+		  ->AddAssociatedHeader(GetFromFileInfoMap(exiting_from));
+	  VERRS(4) << "Marked " << GetFilePath(exiting_from)
+		  << " as associated header of " << GetFilePath(includer) << ".\n";
+
+	  AddGlobToReportIWYUViolationsFor(GetFilePath(exiting_from));
+	  if (ShouldReportIWYUViolationsFor(exiting_from)) {
+		  files_to_report_iwyu_violations_for_.insert(exiting_from);
+	  }
+
+	  associated_pragma_location_ = SourceLocation();
+  }
+
 }
 
 void IwyuPreprocessorInfo::FileChanged_RenameFile(SourceLocation new_file) {
