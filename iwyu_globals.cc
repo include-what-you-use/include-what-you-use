@@ -300,7 +300,7 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
            it = header_search->system_dir_begin();
        it != header_search->system_dir_end(); ++it) {
     if (const DirectoryEntry* entry = it->getDir()) {
-      const string path = CanonicalizeHeaderSearchPath(entry->getName());
+      const string path = NormalizeFolderPath(entry->getName());
       search_path_map[path] = HeaderSearchPath::kSystemPath;
     }
   }
@@ -311,7 +311,7 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
       // search_dir_begin()/end() includes both system and user paths.
       // If it's a system path, it's already in the map, so everything
       // new is a user path.  The insert only 'takes' for new entries.
-      const string path = CanonicalizeHeaderSearchPath(entry->getName());
+      const string path = NormalizeFolderPath(entry->getName());
       search_path_map.insert(make_pair(path, HeaderSearchPath::kUserPath));
     }
   }
@@ -386,7 +386,7 @@ FullUseCache* ClassMembersFullUseCache() {
 
 void AddGlobToReportIWYUViolationsFor(const string& glob) {
   CHECK_(commandline_flags && "Call ParseIwyuCommandlineFlags() before this");
-  commandline_flags->check_also.insert(CanonicalizeFilePath(glob));
+  commandline_flags->check_also.insert(NormalizeFilePath(glob));
 }
 
 bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file) {
