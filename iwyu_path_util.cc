@@ -9,6 +9,7 @@
 
 #include "iwyu_path_util.h"
 
+#include <algorithm>                    // for std::replace
 #include <stddef.h>
 #include <string.h>                     // for strlen
 #include <system_error>
@@ -80,39 +81,12 @@ string Basename(const string& path) {
   return path;
 }
 
-string CanonicalizeFilePath(const string& path) {
-  string result = path;
-
-#ifdef _WIN32
-  // Canonicalise directory separators (forward slashes considered canonical.)
-  for (size_t i = 0; i < result.size(); ++i) {
-    if (result[i] == '\\')
-      result[i] = '/';
-  }
-#endif
-
-  // We may also want to collapse ../ here.
-
-  return result;
-}
-
-string CanonicalizeHeaderSearchPath(const string& path) {
-  string result = CanonicalizeFilePath(path);
-
-  // We want a trailing slash on all header search paths, because it makes it
-  // much easier to find the longest common path prefix.
-  if (!EndsWith(result, "/"))
-    result += "/";
-
-  return result;
-}
-
 string GetCanonicalName(string file_path) {
   // Get rid of any <> and "" in case file_path is really an #include line.
   StripLeft(&file_path, "\"") || StripLeft(&file_path, "<");
   StripRight(&file_path, "\"") || StripRight(&file_path, ">");
 
-  file_path = CanonicalizeFilePath(file_path);
+  file_path = NormalizeFilePath(file_path);
 
   bool stripped_ext = StripRight(&file_path, ".h")
       || StripRight(&file_path, ".hpp")
@@ -146,9 +120,22 @@ string GetCanonicalName(string file_path) {
 }
 
 string NormalizeFilePath(const string& path) {
-  string result = CanonicalizeFilePath(path);
-  while (StripLeft(&result, "./")) {
-  }
+  llvm::SmallString<128> normalized(path.c_str());
+  llvm::sys::path::remove_dots(normalized);
+
+#ifdef _WIN32
+  // Canonicalize directory separators (forward slashes considered canonical.)
+  std::replace(normalized.begin(), normalized.end(), '\\', '/');
+#endif
+
+  return normalized.str();
+}
+
+string NormalizeDirPath(const string& path) {
+  string result = NormalizeFilePath(path);
+  // Ensure trailing slash.
+  if (!result.empty() && result.back() != '/')
+      result += '/';
   return result;
 }
 
