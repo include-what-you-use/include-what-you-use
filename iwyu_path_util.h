@@ -43,21 +43,18 @@ bool IsHeaderFile(string path);
 // else return the input path.
 string Basename(const string& path);
 
-// On Microsoft platforms, convert \ to /.
-string CanonicalizeFilePath(const string& path);
-
-// Canonicalize slashes and ensure trailing slash.
-string CanonicalizeHeaderSearchPath(const string& path);
-
 // Removes enclosing <> or "", then strips uninteresting suffixes from
 // the file name. Replaces "/internal/" with "/public/" and
-// "/include/" with "/src".  "Canonicalize" the path on Microsoft
-// platforms.
+// "/include/" with "/src".  Normalize the file path.
 string GetCanonicalName(string file_path);
 
-// "Canonicals" the name on Microsoft platforms, then recursively
+// Replaces "\" by "/" (Microsoft platform paths), then recursively
 // removes all "./" prefixes.
 string NormalizeFilePath(const string& path);
+
+// Normalizes like NormalizeFilePath and ensures trailing slash.
+// Hence use only for folders!
+string NormalizeFolderPath(const string& path);
 
 // Is path absolute?
 bool IsAbsolutePath(const string& path);
