@@ -180,3 +180,7 @@ endif()
 
 install(TARGETS include-what-you-use RUNTIME DESTINATION bin)
 install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
+
+# Install mapping files
+file(GLOB MAPPING_FILES *.imp)
+install(FILES ${MAPPING_FILES} DESTINATION share/include-what-you-use)
