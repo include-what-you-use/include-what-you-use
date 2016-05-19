@@ -177,8 +177,8 @@ string ConvertToQuotedInclude(const string& filepath, const string& includer_pat
   if (filepath == "<built-in>")
     return filepath;
 
-  // First, get rid of leading ./'s and the like.
-  string path = NormalizeFilePath(filepath);
+  // Get path into same format as header search paths: Absolute and normalized.
+  string path = NormalizeFilePath(MakeAbsolutePath(filepath));
 
   // Case 1: Uses an explicit entry on the search path (-I) list.
   const vector<HeaderSearchPath>& search_paths = HeaderSearchPaths();
