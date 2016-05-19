@@ -170,7 +170,8 @@ bool StripPathPrefix(string* path, const string& prefix_path) {
 
 // Converts a file-path, such as /usr/include/stdio.h, to a
 // quoted include, such as <stdio.h>.
-string ConvertToQuotedInclude(const string& filepath, const string& includer_path) {
+string ConvertToQuotedInclude(const string& filepath,
+                              const string& includer_path) {
   // includer_path must be given as an absolute path.
   CHECK_(includer_path.empty() || IsAbsolutePath(includer_path));
 
@@ -197,7 +198,8 @@ string ConvertToQuotedInclude(const string& filepath, const string& includer_pat
       return "\"" + path + "\"";
   }
 
-  // Case 2: Uses the implicit "-I <basename current file>" entry on the search path.
+  // Case 2:
+  // Uses the implicit "-I <basename current file>" entry on the search path.
   if (!includer_path.empty())
       StripPathPrefix(&path, NormalizeDirPath(includer_path));
   return "\"" + path + "\"";
