@@ -7,11 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "iwyu_preprocessor.h"
 
-#include <stddef.h>                     // for size_t
-#include <string.h>
+#include <cstddef>                      // for size_t
+#include <cstring>
 #include <string>                       // for string, basic_string, etc
 #include <utility>                      // for pair, make_pair
 
@@ -336,9 +335,9 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     after_text = after_text.substr(0, close_brace_pos);
     vector<string> public_includes = Split(after_text, ",", 0);
 
-    for (string::size_type i = 0; i < public_includes.size(); ++i) {
-      StripWhiteSpace(&public_includes[i]);
-      const string quoted_header_name = "<" + public_includes[i] + ">";
+    for (string& public_include : public_includes) {
+      StripWhiteSpace(&public_include);
+      const string quoted_header_name = "<" + public_include + ">";
       MutableGlobalIncludePicker()->AddMapping(quoted_private_include,
                                                quoted_header_name);
       MutableGlobalIncludePicker()->MarkIncludeAsPrivate(
@@ -353,7 +352,6 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
 
 //------------------------------------------------------------
 // Utilities for adding #includes.
-
 
 // Helper function that returns iwyu_file_info_map_[file_entry] if
 // it already exists, or creates a new one and returns it otherwise.
@@ -455,7 +453,6 @@ static void ProtectReexportIncludes(
   }
 }
 
-
 // Called when a #include is encountered.  i_n_a_t includes <> or "".
 // We keep track of this information in two places:
 // 1) iwyu_file_info_map_ maps the includer as a FileEntry* to the
@@ -477,7 +474,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   // don't care as much.
   const FileEntry* includer = GetFileEntry(includer_loc);
   if (ShouldReportIWYUViolationsFor(includer)) {
-    CHECK_(includee != NULL);
+    CHECK_(includee != nullptr);
     CHECK_(!include_name_as_typed.empty());
   }
   ++num_includes_seen_[includer];
@@ -688,7 +685,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   // include of the file that file_beginning is in.
   const SourceLocation include_loc = GlobalSourceManager()->getIncludeLoc(
       GlobalSourceManager()->getFileID(file_beginning));
-  string include_name_as_typed = "";
+  string include_name_as_typed;
   if (!IsBuiltinOrCommandLineFile(GetFileEntry(include_loc))) {
     CHECK_(include_filename_loc_.isValid() &&
            "Include from not built-in file must have inclusion directive");
@@ -708,10 +705,10 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   ProcessHeadernameDirectivesInFile(file_beginning);
 
   // The first non-special file entered is the main file.
-  if (main_file_ == NULL)
+  if (main_file_ == nullptr)
     main_file_ = new_file;
 
-  if (main_file_ != NULL &&
+  if (main_file_ != nullptr &&
       BelongsToMainCompilationUnit(GetFileEntry(include_loc), new_file)) {
     VERRS(5) << "Added to main compilation unit: "
              << GetFilePath(new_file) << "\n";
@@ -845,7 +842,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
             GetFilePath(header));
     for (Each<string> pub(&public_headers_for_header); !pub.AtEnd(); ++pub) {
       if (const FileEntry* public_file
-          = GetOrDefault(include_to_fileentry_map_, *pub, NULL)) {
+          = GetOrDefault(include_to_fileentry_map_, *pub, nullptr)) {
         CHECK_(ContainsKey(iwyu_file_info_map_, public_file));
         if (public_file != header)  // no credit for mapping to yourself :-)
           private_headers_behind[public_file].insert(header);
@@ -964,7 +961,7 @@ void IwyuPreprocessorInfo::HandlePreprocessingDone() {
 bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(
     const FileEntry* includer, const FileEntry* includee) const {
   // TODO: Should probably have a CHECK_(main_file_), but this method is
-  // currently sometimes called with a NULL main_file_.
+  // currently sometimes called with a nullptr main_file_.
   if (!includee)
     return false;
   if (GetCanonicalName(GetFilePath(includee)) ==
@@ -989,7 +986,7 @@ bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(
 
 const FileEntry* IwyuPreprocessorInfo::IncludeToFileEntry(
     const string quoted_include) const {
-  return GetOrDefault(include_to_fileentry_map_, quoted_include, NULL);
+  return GetOrDefault(include_to_fileentry_map_, quoted_include, nullptr);
 }
 
 IwyuFileInfo* IwyuPreprocessorInfo::FileInfoFor(const FileEntry* file) const {
@@ -1048,7 +1045,7 @@ bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
 bool IwyuPreprocessorInfo::IncludeIsInhibited(
     const clang::FileEntry* file, const string& other_filename) const {
   const set<string>* inhibited_includes = FindInMap(&no_include_map_, file);
-  return (inhibited_includes != NULL) &&
+  return (inhibited_includes != nullptr) &&
       ContainsKey(*inhibited_includes, other_filename);
 }
 
@@ -1058,7 +1055,7 @@ bool IwyuPreprocessorInfo::ForwardDeclareIsInhibited(
       NormalizeNamespaces(qualified_symbol_name);
   const set<string>* inhibited_forward_declares =
       FindInMap(&no_forward_declare_map_, file);
-  return (inhibited_forward_declares != NULL) &&
+  return (inhibited_forward_declares != nullptr) &&
       ContainsKey(*inhibited_forward_declares, normalized_symbol_name);
 }
 
