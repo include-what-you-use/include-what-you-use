@@ -1,0 +1,7 @@
+# libc++ headers
+[
+  { include: ["<__functional_base>", private, "<functional>", public ] },
+  { include: ["<__mutex_base>", private, "<mutex>", public ] },
+  { symbol: [ "std::move", private, "<algorithm>", public ] },
+  { symbol: [ "std::string", private, "<string>", public ] },
+]
