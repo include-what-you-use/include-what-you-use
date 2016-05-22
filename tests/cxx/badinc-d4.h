@@ -11,8 +11,8 @@
 // badinc.cc only uses D4_ClassForOperator as a reference,
 // we still need to #include this file to get operator<<.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D4_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D4_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D4_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D4_H_
 
 class D4_ClassForOperator {
  public:
@@ -23,4 +23,4 @@ int operator<<(int i, const D4_ClassForOperator& d4) {
   return i;
 }
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D4_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D4_H_

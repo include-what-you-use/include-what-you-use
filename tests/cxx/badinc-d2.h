@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D2_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D2_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D2_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D2_H_
 
 // Forward-declare classes from badinc-i1.h before #including them.
 // This tests that we find the real class definition, not the
@@ -56,4 +56,4 @@ I2_Enum D2_Function(D2_Class* c) {
 
 class D2_ForwardDeclareClass;
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D2_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D2_H_

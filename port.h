@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 // Source file for architecture-specific logic.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
+#ifndef INCLUDE_WHAT_YOU_USE_PORT_H_
+#define INCLUDE_WHAT_YOU_USE_PORT_H_
 
 #include <stdlib.h>  // for abort
 #include <iostream>
@@ -87,4 +87,4 @@ inline bool GlobMatchesPath(const char *glob, const char *path) {
 
 #endif  // #if defined(_WIN32)
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
+#endif  // INCLUDE_WHAT_YOU_USE_PORT_H_

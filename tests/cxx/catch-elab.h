@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_CATCH_ELAB_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_CATCH_ELAB_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_CATCH_ELAB_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_CATCH_ELAB_H_
 
 namespace Namespace {
 class CatchElab {};
 }
 
-#endif // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_CATCH_ELAB_H_
+#endif // INCLUDE_WHAT_YOU_USE_TESTS_CXX_CATCH_ELAB_H_

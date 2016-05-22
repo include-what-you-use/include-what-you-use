@@ -12,8 +12,8 @@
 // sure that badinc.cc realizes it needs these definitios, and not
 // just the declarations in badinc-i2.h.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I2_INL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I2_INL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I2_INL_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I2_INL_H_
 
 #include "tests/cxx/badinc-i2.h"
 
@@ -71,4 +71,4 @@ template<> int InlFileFreeTemplateFn<int>() {
 
 int inlfile_var;
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I2_INL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I2_INL_H_

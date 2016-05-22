@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 // The source manager is used in just too many places.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
 
 #include <set>                          // for set
 #include <string>                       // for string
@@ -133,4 +133,4 @@ bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file);
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_

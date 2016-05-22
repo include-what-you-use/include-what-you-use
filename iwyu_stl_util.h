@@ -9,8 +9,8 @@
 
 // Utilities that make it easier to work with STL.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 
 #include <stddef.h>                     // for NULL
 #include <algorithm>                    // for find
@@ -237,4 +237,4 @@ class Each : public Each<pair<const Key, Value> > {
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_

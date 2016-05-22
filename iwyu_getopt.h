@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_GETOPT_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_GETOPT_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_GETOPT_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_GETOPT_H_
 
 #if defined(_MSC_VER)
 
@@ -38,4 +38,4 @@ int getopt_long(int argc, char* const argv[],
 
 #endif  // #if defined(_MSC_VER)
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_GETOPT_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_GETOPT_H_

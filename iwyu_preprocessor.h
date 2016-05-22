@@ -55,8 +55,8 @@
 //      of the information about public vs private headers.
 //    * Testing and reporting membership in the main compilation unit.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
 
 #include <map>                          // for map
 #include <set>                          // for set
@@ -361,4 +361,4 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_

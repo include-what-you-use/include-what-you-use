@@ -9,12 +9,12 @@
 
 // This is a private file included directly by comment_pragmas.cc.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D2_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D2_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_COMMENT_PRAGMAS_D2_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_COMMENT_PRAGMAS_D2_H_
 
 // Note: there is no file no_such_file.h. It isn't needed for this test.
 // IWYU pragma: private, include "tests/cxx/no_such_file.h"
 
 class CommentPragmasD2 {};
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D2_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_COMMENT_PRAGMAS_D2_H_

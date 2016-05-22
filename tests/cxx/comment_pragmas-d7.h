@@ -15,8 +15,8 @@
 /*  @headername{missing_close_brace
 */
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D7_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D7_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_COMMENT_PRAGMAS_D7_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_COMMENT_PRAGMAS_D7_H_
 
 // IWYU: end_exports without a begin_exports
 // IWYU pragma: end_exports
@@ -32,4 +32,4 @@
 // IWYU: begin_exports without an end_exports
 // IWYU pragma: begin_exports
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D7_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_COMMENT_PRAGMAS_D7_H_

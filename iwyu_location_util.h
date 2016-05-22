@@ -37,8 +37,8 @@
 // file path, line number, column number, and which file (if any)
 // #includes the file.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_FILE_UTIL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_FILE_UTIL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_LOCATION_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_LOCATION_UTIL_H_
 
 #include <string>                       // for string
 
@@ -231,4 +231,4 @@ inline bool IsBeforeInSameFile(const T& a, const U& b) {
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_FILE_UTIL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_LOCATION_UTIL_H_

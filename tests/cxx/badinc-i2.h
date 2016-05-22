@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I2_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I2_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I2_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I2_H_
 
 #include <vector>
 #include <list>    // I only ever use a pointer to stuff in this file
@@ -143,4 +143,4 @@ extern int inlfile_var;   // defined in badinc-d1-inl.h
   # define MACRO_CALLING_I2_FUNCTION  I2_Function(NULL)
 #endif
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I2_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I2_H_

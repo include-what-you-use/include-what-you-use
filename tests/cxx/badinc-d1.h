@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D1_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D1_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D1_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D1_H_
 
 #include <stdlib.h>
 #include <errno.h>    // not used, but iwyu shouldn't warn about that
@@ -105,4 +105,4 @@ D1_CopyClass D1CopyClassFn(I1_Enum i) {
 D1_Enum d1_d1_enum;
 I1_Class d1_i1_class;
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D1_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D1_H_

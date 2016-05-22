@@ -13,8 +13,8 @@
 // to sanitize symbol names, to emit desired include-lines properly,
 // etc.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 
 #include <map>                          // for map
 #include <set>                          // for set
@@ -378,4 +378,4 @@ class FakeNamedDecl : public clang::NamedDecl {
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_

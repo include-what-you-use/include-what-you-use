@@ -9,8 +9,8 @@
 
 // This module controls logging and verbosity levels for include-what-you-use.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -42,4 +42,4 @@ bool ShouldPrintSymbolFromFile(const clang::FileEntry* file);
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_

@@ -10,8 +10,8 @@
 // String utilities for the IWYU checker.
 //
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
 
 #include <ctype.h>
 #include <stddef.h>
@@ -203,4 +203,4 @@ inline vector<string> SplitOnWhiteSpacePreservingQuotes(
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_

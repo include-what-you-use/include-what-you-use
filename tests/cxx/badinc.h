@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_H_
 
 #include <ctype.h>  // used only in badinc.cc
 #include <errno.h>  // used both here and in badinc.cc
@@ -374,7 +374,7 @@ H_TemplateClass<I2_Enum> h_i2_template_class(I22);
 H_TemplateTemplateClass<> h_templatetemlpate_class;
 H_TemplateTemplateClass<H_TemplateClass> h_i2_templatetemlpate_class;
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_H_
 
 
 /**** IWYU_SUMMARY

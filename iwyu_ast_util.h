@@ -9,8 +9,8 @@
 
 // Utilities that make it easier to work with Clang's AST.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
 
 #include <map>                          // for map
 #include <set>                          // for set
@@ -803,4 +803,4 @@ clang::TemplateArgumentListInfo GetExplicitTplArgs(const clang::Expr* expr);
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_

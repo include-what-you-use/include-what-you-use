@@ -9,8 +9,8 @@
 
 // File-path utilities for the IWYU checker.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
 
 #include <string>                       // for string, allocator, etc
 #include <vector>
@@ -88,4 +88,4 @@ bool IsThirdPartyFile(string quoted_path);
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_

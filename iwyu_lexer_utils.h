@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
 
 #include <string>                       // for string
 #include <vector>                       // for vector
@@ -84,4 +84,4 @@ string GetTokenText(const clang::Token& token,
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
