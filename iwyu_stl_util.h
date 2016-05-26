@@ -12,7 +12,6 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 
-#include <stddef.h>                     // for NULL
 #include <algorithm>                    // for find
 #include <map>                          // for map, multimap
 #include <set>                          // for set
@@ -26,7 +25,6 @@ using std::multimap;
 using std::pair;
 using std::set;
 using std::vector;
-
 
 // Returns true if the associative container (e.g. set or map)
 // contains the given key.
@@ -62,9 +60,8 @@ template <class AssociativeContainer>
 bool ContainsAnyKey(
     const AssociativeContainer& container,
     const set<typename AssociativeContainer::key_type>& keys) {
-  for (typename set<typename AssociativeContainer::key_type>::const_iterator
-           it = keys.begin(); it != keys.end(); ++it) {
-    if (ContainsKey(container, *it))
+  for (const auto &i : keys) {
+    if (ContainsKey(container, i))
       return true;
   }
   return false;
@@ -81,16 +78,16 @@ const typename Map::mapped_type& GetOrDefault(
 }
 
 // Returns a pointer to (*a_map)[key] if key is in *a_map; otherwise
-// returns NULL.
+// returns nullptr.
 template <typename K, typename V>
 const V* FindInMap(const map<K, V>* a_map, const K& key) {
   const typename map<K, V>::const_iterator it = a_map->find(key);
-  return it == a_map->end() ? NULL : &it->second;
+  return it == a_map->end() ? nullptr : &it->second;
 }
 template <typename K, typename V>
 V* FindInMap(map<K, V>* a_map, const K& key) {
   const typename map<K, V>::iterator it = a_map->find(key);
-  return it == a_map->end() ? NULL : &it->second;
+  return it == a_map->end() ? nullptr : &it->second;
 }
 
 // Returns all values associated with the given key in the multimap.
@@ -149,7 +146,6 @@ vector<T> GetUniqueEntries(const vector<T>& v) {
   }
   return retval;
 }
-
 
 // Utilities for writing concise loops over STL containers.
 //
@@ -211,9 +207,9 @@ class Each<Element, void> {  // implements Each<Element>
         : current_(begin),
           end_(end) {}
 
-    virtual bool AtEnd() const { return current_ == end_; }
-    virtual void Advance() { ++current_; }
-    virtual const Element* Get() const { return &(*current_); }
+    bool AtEnd() const override { return current_ == end_; }
+    void Advance() override { ++current_; }
+    const Element* Get() const override { return &(*current_); }
 
    private:
     Iter current_;
