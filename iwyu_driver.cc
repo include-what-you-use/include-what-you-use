@@ -12,8 +12,8 @@
 
 // Everything below is adapted from clang/examples/clang-interpreter/main.cpp.
 
-#include <ctype.h>
-#include <stdint.h>
+#include <cctype>
+#include <cstdint>
 #include <memory>
 #include <set>
 #include <string>
@@ -39,7 +39,6 @@ namespace llvm {
 class LLVMContext;
 }  // namespace llvm
 
-using clang::ASTFrontendAction;
 using clang::CompilerInstance;
 using clang::CompilerInvocation;
 using clang::DiagnosticIDs;
@@ -53,7 +52,6 @@ using clang::driver::Driver;
 using clang::driver::JobList;
 using llvm::ErrorOr;
 using llvm::IntrusiveRefCntPtr;
-using llvm::LLVMContext;
 using llvm::SmallString;
 using llvm::SmallVector;
 using llvm::SmallVectorImpl;
@@ -154,14 +152,14 @@ void ExpandArgv(int argc, const char **argv,
   }
 }
 
-}  // unnamed namespace
+}  // anonymous namespace
 
 CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   void* main_addr = (void*) (intptr_t) GetExecutablePath;
   std::string path = GetExecutablePath(argv[0]);
   IntrusiveRefCntPtr<DiagnosticOptions> diagnostic_options =
     new DiagnosticOptions;
-  TextDiagnosticPrinter* diagnostic_client =
+  auto* diagnostic_client =
     new TextDiagnosticPrinter(errs(), &*diagnostic_options);
 
   IntrusiveRefCntPtr<DiagnosticIDs> diagnostic_id(new DiagnosticIDs());
@@ -183,7 +181,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
 
   unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
   if (!compilation)
-    return NULL;
+    return nullptr;
 
   // FIXME: This is copied from ASTUnit.cpp; simplify and eliminate.
 
@@ -195,13 +193,13 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
     raw_svector_ostream out(msg);
     jobs.Print(out, "; ", true);
     diagnostics.Report(clang::diag::err_fe_expected_compiler_job) << out.str();
-    return NULL;
+    return nullptr;
   }
 
   const Command& command = cast<Command>(*jobs.begin());
   if (StringRef(command.getCreator().getName()) != "clang") {
     diagnostics.Report(clang::diag::err_fe_expected_clang_command);
-    return NULL;
+    return nullptr;
   }
 
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
@@ -230,7 +228,7 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   // Create the compilers actual diagnostics engine.
   compiler->createDiagnostics();
   if (!compiler->hasDiagnostics())
-    return NULL;
+    return nullptr;
 
   // Infer the builtin include path if unspecified.
   if (compiler->getHeaderSearchOpts().UseBuiltinIncludes &&
