@@ -34,7 +34,7 @@ import sys
 # These are the warning/error lines that iwyu.cc produces when --verbose >= 3
 _EXPECTED_DIAGNOSTICS_RE = re.compile(r'^(.*?):(\d+):.*//\s*IWYU:\s*(.*)$')
 _ACTUAL_DIAGNOSTICS_RE = re.compile(r'^(.*?):(\d+):\d+:\s*'
-                                    r'(?:warning|error):\s*(.*)$')
+                                    r'(?:warning|error|fatal error):\s*(.*)$')
 
 # This is the final summary output that iwyu.cc produces when --verbose >= 1
 # The summary for a given source file should appear in that source file,
