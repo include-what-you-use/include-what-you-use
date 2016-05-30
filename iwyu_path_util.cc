@@ -82,8 +82,7 @@ string Basename(const string& path) {
 }
 
 string GetCanonicalName(string file_path) {
-  // Get rid of any <> and "" in case file_path is really an #include line.
-  StripQuotes(&file_path);
+  CHECK_(!IsQuotedInclude(file_path));
 
   file_path = NormalizeFilePath(file_path);
 
@@ -190,24 +189,19 @@ string ConvertToQuotedInclude(const string& filepath,
     // All header search paths have a trailing "/", so we'll get a perfect
     // quoted include by just stripping the prefix.
 
-    if (!StripPathPrefix(&path, it->path))
-      continue;
-    else if (it->path_type == HeaderSearchPath::kSystemPath)
-      return "<" + path + ">";
-    else
-      return "\"" + path + "\"";
+    if (StripPathPrefix(&path, it->path)) {
+      if (it->path_type == HeaderSearchPath::kSystemPath)
+        return "<" + path + ">";
+      else
+        return "\"" + path + "\"";
+    }
   }
 
   // Case 2:
   // Uses the implicit "-I <basename current file>" entry on the search path.
   if (!includer_path.empty())
-      StripPathPrefix(&path, NormalizeDirPath(includer_path));
+    StripPathPrefix(&path, NormalizeDirPath(includer_path));
   return "\"" + path + "\"";
-}
-
-bool StripQuotes(string* s) {
-  return (StripLeft(s, "\"") && StripRight(s, "\"")) ||
-         (StripLeft(s, "<") && StripRight(s, ">"));
 }
 
 bool IsQuotedInclude(const string& s) {

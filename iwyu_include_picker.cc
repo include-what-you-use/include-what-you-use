@@ -1304,7 +1304,11 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepath(
 vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     const string& included_filepath, const string& including_filepath) const {
   vector<string> retval;
-  const string quoted_includer = ConvertToQuotedInclude(including_filepath);
+  // We pass the own files path to ConvertToQuotedInclude so the quoted include
+  // for the case that there is no matching `-I` option is just the filename
+  // (e.g. "foo.cpp") instead of the absolute file path.
+  const string quoted_includer = ConvertToQuotedInclude(
+      including_filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
   const string quoted_includee = ConvertToQuotedInclude(
       included_filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
   const set<string>* headers_with_includer_as_friend =

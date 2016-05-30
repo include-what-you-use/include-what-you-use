@@ -121,7 +121,8 @@ class IncludePicker {
   // (which is why we return a vector, not a set): all else being
   // equal, the first element of the vector is the "best" (or most
   // standard) header for the input header.
-  vector<string> GetCandidateHeadersForFilepath(const string& filepath, const string& including_filepath = "") const;
+  vector<string> GetCandidateHeadersForFilepath(
+      const string& filepath, const string& including_filepath = "") const;
 
   // This allows for special-casing of GetCandidateHeadersForFilepath
   // -- it's the same, but you give it the filepath that's doing the
