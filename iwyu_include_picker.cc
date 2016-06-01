@@ -9,8 +9,8 @@
 
 #include "iwyu_include_picker.h"
 
-#include <stddef.h>                     // for size_t
 #include <algorithm>                    // for find
+#include <cstddef>                      // for size_t
 // TODO(wan): make sure IWYU doesn't suggest <iterator>.
 #include <iterator>                     // for find
 // not hash_map: it's not as portable and needs hash<string>.
@@ -881,7 +881,7 @@ void MakeMapTransitive(IncludePicker::IncludeMap* filename_map) {
 // Returns empty string if it's not of type ScalarNode.
 string GetScalarValue(Node* node) {
   ScalarNode* scalar = llvm::dyn_cast<ScalarNode>(node);
-  if (scalar == NULL)
+  if (scalar == nullptr)
     return string();
 
   llvm::SmallString<8> storage;
@@ -894,7 +894,7 @@ vector<string> GetSequenceValue(Node* node) {
   vector<string> result;
 
   SequenceNode* sequence = llvm::dyn_cast<SequenceNode>(node);
-  if (sequence != NULL) {
+  if (sequence != nullptr) {
     for (SequenceNode::iterator it = sequence->begin();
          it != sequence->end(); ++it) {
       result.push_back(GetScalarValue(&*it));
@@ -948,7 +948,7 @@ string FindFileInSearchPath(const vector<string>& search_path,
   return filename;
 }
 
-}  // namespace
+}  // anonymous namespace
 
 IncludePicker::IncludePicker(bool no_default_mappings)
     : symbol_include_map_(),
@@ -1119,7 +1119,7 @@ vector<string> ExtractKeysMarkedAsRegexes(const MapType& m) {
   }
   return regex_keys;
 }
-}  // namespace
+}  // anonymous namespace
 
 // Expands the regex keys in filepath_include_map_ and
 // friend_to_headers_map_ by matching them against all source files
@@ -1145,7 +1145,7 @@ void IncludePicker::ExpandRegexes() {
       const vector<string>& map_to = filepath_include_map_[regex_key];
       // Enclose the regex in ^(...)$ for full match.
       llvm::Regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
-      if (regex.match(hdr.c_str(), NULL) && !ContainsValue(map_to, hdr)) {
+      if (regex.match(hdr, nullptr) && !ContainsValue(map_to, hdr)) {
         Extend(&filepath_include_map_[hdr], filepath_include_map_[regex_key]);
         MarkVisibility(hdr, filepath_visibility_map_[regex_key]);
       }
@@ -1154,7 +1154,7 @@ void IncludePicker::ExpandRegexes() {
          !it.AtEnd(); ++it) {
       const string& regex_key = *it;
       llvm::Regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
-      if (regex.match(hdr.c_str(), NULL)) {
+      if (regex.match(hdr, nullptr)) {
         InsertAllInto(friend_to_headers_map_[regex_key],
                       &friend_to_headers_map_[hdr]);
       }
@@ -1307,7 +1307,7 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
   const string quoted_includee = ConvertToQuotedInclude(included_filepath);
   const set<string>* headers_with_includer_as_friend =
       FindInMap(&friend_to_headers_map_, quoted_includer);
-  if (headers_with_includer_as_friend != NULL &&
+  if (headers_with_includer_as_friend != nullptr &&
       ContainsKey(*headers_with_includer_as_friend, included_filepath)) {
     retval.push_back(quoted_includee);
   } else {
@@ -1400,7 +1400,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
   // Get root sequence.
   Node* root = stream_begin->getRoot();
   SequenceNode *array = llvm::dyn_cast<SequenceNode>(root);
-  if (array == NULL) {
+  if (array == nullptr) {
     json_stream.printError(root, "Root element must be an array.");
     return;
   }
@@ -1410,7 +1410,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
 
     // Every item must be a JSON object ("mapping" in YAML terms.)
     MappingNode* mapping = llvm::dyn_cast<MappingNode>(current_node);
-    if (mapping == NULL) {
+    if (mapping == nullptr) {
       json_stream.printError(current_node,
           "Mapping directives must be objects.");
       return;
