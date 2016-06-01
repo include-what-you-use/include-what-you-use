@@ -86,7 +86,6 @@ using clang::MemberExpr;
 using clang::MemberPointerType;
 using clang::NamedDecl;
 using clang::NestedNameSpecifier;
-using clang::NestedNameSpecifierLoc;
 using clang::ObjCObjectType;
 using clang::OverloadExpr;
 using clang::PointerType;
@@ -96,7 +95,6 @@ using clang::RecordDecl;
 using clang::RecordType;
 using clang::RecursiveASTVisitor;
 using clang::SourceLocation;
-using clang::SourceManager;
 using clang::SourceRange;
 using clang::Stmt;
 using clang::SubstTemplateTypeParmType;
@@ -158,7 +156,7 @@ void DumpASTNode(llvm::raw_ostream& ostream, const ASTNode* node) {
   }
 }
 
-}
+}  // anonymous namespace
 
 //------------------------------------------------------------
 // ASTNode and associated utilities.
@@ -169,7 +167,7 @@ SourceLocation ASTNode::GetLocation() const {
     return retval;
 
   // OK, let's ask a parent node.
-  for (const ASTNode* node = parent_; node != NULL; node = node->parent_) {
+  for (const ASTNode* node = parent_; node != nullptr; node = node->parent_) {
     if (node->FillLocationIfKnown(&retval))
       break;
   }
@@ -221,20 +219,20 @@ bool ASTNode::FillLocationIfKnown(SourceLocation* loc) const {
 // --- Utilities for ASTNode.
 
 bool IsElaborationNode(const ASTNode* ast_node) {
-  if (ast_node == NULL)
+  if (ast_node == nullptr)
     return false;
   const ElaboratedType* elaborated_type = ast_node->GetAs<ElaboratedType>();
   return elaborated_type && elaborated_type->getKeyword() != clang::ETK_None;
 }
 
 bool IsNamespaceQualifiedNode(const ASTNode* ast_node) {
-  if (ast_node == NULL)
+  if (ast_node == nullptr)
     return false;
   const ElaboratedType* elaborated_type = ast_node->GetAs<ElaboratedType>();
-  if (elaborated_type == NULL)
+  if (elaborated_type == nullptr)
     return false;
   const NestedNameSpecifier* qualifier = elaborated_type->getQualifier();
-  if (qualifier == NULL)
+  if (qualifier == nullptr)
     return false;
   return (qualifier->getKind() == NestedNameSpecifier::Global ||
           qualifier->getKind() == NestedNameSpecifier::Namespace);
@@ -246,7 +244,7 @@ bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
   // triggered when we see implicit destruction of member vars.
   if (ast_node && ast_node->IsA<CXXDestructorDecl>())
     return true;
-  for (; ast_node != NULL; ast_node = ast_node->parent()) {
+  for (; ast_node != nullptr; ast_node = ast_node->parent()) {
     // If we're a constructor, check if we're part of the
     // initializers, which also count as 'the body' of the method.
     if (const CXXConstructorDecl* ctor =
@@ -314,11 +312,11 @@ template<typename T>
 NestedNameSpecifier* TryGetQualifier(const ASTNode* ast_node) {
   if (ast_node->IsA<T>())
     return ast_node->GetAs<T>()->getQualifier();
-  return NULL;
+  return nullptr;
 }
 
 const NestedNameSpecifier* GetQualifier(const ASTNode* ast_node) {
-  const NestedNameSpecifier* nns = NULL;
+  const NestedNameSpecifier* nns = nullptr;
   if (ast_node->IsA<TemplateName>()) {
     const TemplateName* tn = ast_node->GetAs<TemplateName>();
     if (const DependentTemplateName* dtn
@@ -364,7 +362,7 @@ bool IsMemberOfATypedef(const ASTNode* ast_node) {
     if (nns && ast_node->IsA<TypedefType>()) {
       nns = nns->getPrefix();
     } else if (!nns) {
-      // nns will be non-NULL when processing 'a' in MyTypedef::a::b
+      // nns will be non-nullptr when processing 'a' in MyTypedef::a::b
       // But typically, such as processing 'a' in MyTypedef::a or 'b' in
       // MyTypedef::a::b, the parent will be an ElaboratedType.
       if (const ElaboratedType* elab_type =
@@ -381,13 +379,12 @@ bool IsMemberOfATypedef(const ASTNode* ast_node) {
 }
 
 const DeclContext* GetDeclContext(const ASTNode* ast_node) {
-  for (; ast_node != NULL; ast_node = ast_node->parent()) {
+  for (; ast_node != nullptr; ast_node = ast_node->parent()) {
     if (ast_node->IsA<Decl>())
       return ast_node->GetAs<Decl>()->getDeclContext();
   }
-  return NULL;
+  return nullptr;
 }
-
 
 //------------------------------------------------------------
 // Helper functions for working with raw Clang AST nodes.
@@ -493,11 +490,11 @@ string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl) {
 
 // If the TemplateArgument is a type (and not an expression such as
 // 'true', or a template such as 'vector', etc), return it.  Otherwise
-// return NULL.
+// return nullptr.
 static const Type* GetTemplateArgAsType(const TemplateArgument& tpl_arg) {
   if (tpl_arg.getKind() == TemplateArgument::Type)
     return tpl_arg.getAsType().getTypePtr();
-  return NULL;
+  return nullptr;
 }
 
 // These utilities figure out the template arguments that are
@@ -559,7 +556,7 @@ set<const Type*> GetComponentsOfType(const Type* type) {
 // --- Utilities for Decl.
 
 bool IsTemplatizedFunctionDecl(const FunctionDecl* decl) {
-  return decl && decl->getTemplateSpecializationArgs() != NULL;
+  return decl && decl->getTemplateSpecializationArgs() != nullptr;
 }
 
 bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
@@ -607,7 +604,7 @@ const RecordDecl* GetDefinitionForClass(const Decl* decl) {
       return record_dfn;
     }
     // If we're a templated class that was never instantiated (because
-    // we were never "used"), then getDefinition() will return NULL.
+    // we were never "used"), then getDefinition() will return nullptr.
     if (const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(decl)) {
       PointerUnion<ClassTemplateDecl*,
           ClassTemplatePartialSpecializationDecl*>
@@ -629,7 +626,7 @@ const RecordDecl* GetDefinitionForClass(const Decl* decl) {
       }
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 SourceRange GetSourceRangeOfClassDecl(const Decl* decl) {
@@ -697,7 +694,7 @@ static map<const Type*, const Type*> ResugarTypeComponents(
 static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
     const FunctionDecl* decl, unsigned start_arg) {
   map<const Type*, const Type*> retval;
-  if (!decl)   // can be NULL if the function call is via a function pointer
+  if (!decl)   // can be nullptr if the function call is via a function pointer
     return retval;
   if (const TemplateArgumentList* tpl_list
       = decl->getTemplateSpecializationArgs()) {
@@ -731,12 +728,12 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     const FunctionDecl* decl, const Expr* calling_expr) {
   map<const Type*, const Type*> retval;
 
-  // If calling_expr is NULL, then we can't find any explicit template
+  // If calling_expr is nullptr, then we can't find any explicit template
   // arguments, if they were specified (e.g. 'Fn<int>()'), and we
   // won't be able to get the function arguments as written.  So we
   // can't resugar at all.  We just have to hope that the types happen
   // to be already sugared, because the actual-type is already canonical.
-  if (calling_expr == NULL) {
+  if (calling_expr == nullptr) {
     retval = GetTplTypeResugarMapForFunctionNoCallExpr(decl, 0);
     retval = ResugarTypeComponents(retval);  // add in retval's decomposition
     return retval;
@@ -748,7 +745,7 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   // arguments might be explicit, and others implicit.  Otherwise,
   // it's a type that doesn't take function template args at all (like
   // CXXDeleteExpr) or only takes explicit args (like DeclRefExpr).
-  const Expr* const* fn_args = NULL;
+  const Expr* const* fn_args = nullptr;
   unsigned num_args = 0;
   unsigned start_of_implicit_args = 0;
   if (const CXXConstructExpr* ctor_expr = DynCastFrom(calling_expr)) {
@@ -990,7 +987,7 @@ const NamedDecl* GetFirstRedecl(const NamedDecl* decl) {
   FullSourceLoc first_decl_loc(GetLocation(first_decl), *GlobalSourceManager());
   set<const NamedDecl*> all_redecls = GetClassRedecls(decl);
   if (all_redecls.empty())  // input is not a class or class template
-    return NULL;
+    return nullptr;
 
   for (Each<const NamedDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
     const FullSourceLoc redecl_loc(GetLocation(*it), *GlobalSourceManager());
@@ -1023,7 +1020,6 @@ bool DeclsAreInSameClass(const Decl* decl1, const Decl* decl2) {
     return false;
   return decl1->getDeclContext()->isRecord();
 }
-
 
 // --- Utilities for Type.
 
@@ -1086,7 +1082,7 @@ const Type* RemovePointerFromType(const Type* type) {
     type = type->getUnqualifiedDesugaredType();
   }
   if (!IsPointerOrReferenceAsWritten(type)) {
-    return NULL;
+    return nullptr;
   }
   type = RemoveElaboration(type);
   type = type->getPointeeType().getTypePtr();
@@ -1095,10 +1091,10 @@ const Type* RemovePointerFromType(const Type* type) {
 
 // This follows typedefs/etc to remove pointers, if necessary.
 const Type* RemovePointersAndReferences(const Type* type) {
-  while (1) {
+  while (true) {
     const Type* deref_type = RemovePointerFromType(type);
-    if (deref_type == NULL)   // type wasn't a pointer (or reference) type
-      break;                  // removed all pointers
+    if (deref_type == nullptr) // type wasn't a pointer (or reference) type
+      break;                   // removed all pointers
     type = deref_type;
   }
   return type;
@@ -1136,9 +1132,9 @@ const NamedDecl* TypeToDeclAsWritten(const Type* type) {
   } else if (const FunctionType* function_type = DynCastFrom(type)) {
     // TODO(csilvers): is it possible to map from fn type to fn decl?
     (void)function_type;
-    return NULL;
+    return nullptr;
   }  else {
-    return NULL;
+    return nullptr;
   }
 }
 
@@ -1217,7 +1213,7 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
     if (ContainsKey(explicit_args, i))
       continue;
     if (const Type* arg_type = GetTemplateArgAsType(tpl_args[i])) {
-      retval[arg_type] = NULL;
+      retval[arg_type] = nullptr;
       VERRS(6) << "Adding a template-class default type of interest: "
                << PrintableType(arg_type) << "\n";
     }
@@ -1253,7 +1249,7 @@ const Type* TypeOfParentIfMethod(const CallExpr* expr) {
       return ref_expr->getQualifier()->getAsType();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 const Expr* GetFirstClassArgument(CallExpr* expr) {
@@ -1273,23 +1269,23 @@ const Expr* GetFirstClassArgument(CallExpr* expr) {
       return *it;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 const CXXDestructorDecl* GetDestructorForDeleteExpr(const CXXDeleteExpr* expr) {
   const Type* type = expr->getDestroyedType().getTypePtrOrNull();
-  // type is NULL when deleting a dependent type: 'T foo; delete foo'
-  if (type == NULL)
-    return NULL;
+  // type is nullptr when deleting a dependent type: 'T foo; delete foo'
+  if (type == nullptr)
+    return nullptr;
   const NamedDecl* decl = TypeToDeclAsWritten(type);
   if (const CXXRecordDecl* cxx_record = DynCastFrom(decl))
     return cxx_record->getDestructor();
-  return NULL;
+  return nullptr;
 }
 
 const CXXDestructorDecl* GetSiblingDestructorFor(
     const CXXConstructorDecl* ctor) {
-  return ctor ? ctor->getParent()->getDestructor() : NULL;
+  return ctor ? ctor->getParent()->getDestructor() : nullptr;
 }
 
 const CXXDestructorDecl* GetSiblingDestructorFor(
