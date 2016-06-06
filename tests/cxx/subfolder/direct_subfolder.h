@@ -7,13 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This file includes and uses only another file in the subfolder
+// This file includes only another file in the subfolder
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_DIRECT_SUBFOLDER_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_DIRECT_SUBFOLDER_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_DIRECT_SUBFOLDER_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_DIRECT_SUBFOLDER_H_
 
 #include "indirect_subfolder.h"
 
-namespace { IndirectSubfolderClass foo; }
-
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_DIRECT_SUBFOLDER_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_DIRECT_SUBFOLDER_H_
