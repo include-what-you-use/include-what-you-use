@@ -82,6 +82,11 @@ string Basename(const string& path) {
 }
 
 string GetCanonicalName(string file_path) {
+  // For this special 'path' we just return it.
+  // Note that we leave the 'quotes' to make it different from regular paths.
+  if (file_path == "<built-in>")
+    return file_path;
+
   CHECK_(!IsQuotedInclude(file_path));
 
   file_path = NormalizeFilePath(file_path);
