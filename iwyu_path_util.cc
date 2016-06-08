@@ -10,8 +10,8 @@
 #include "iwyu_path_util.h"
 
 #include <algorithm>                    // for std::replace
-#include <stddef.h>
-#include <string.h>                     // for strlen
+#include <cstddef>
+#include <cstring>                      // for strlen
 #include <system_error>
 
 #include "iwyu_stl_util.h"
@@ -42,17 +42,17 @@ const char* source_extensions[] = {
   ".cp"
 };
 
-}  // namespace
+}  // anonymous namespace
 
 void SetHeaderSearchPaths(const vector<HeaderSearchPath>& search_paths) {
-  if (header_search_paths != NULL) {
+  if (header_search_paths != nullptr) {
     delete header_search_paths;
   }
   header_search_paths = new vector<HeaderSearchPath>(search_paths);
 }
 
 const vector<HeaderSearchPath>& HeaderSearchPaths() {
-  if (header_search_paths == NULL) {
+  if (header_search_paths == nullptr) {
     header_search_paths = new vector<HeaderSearchPath>();
   }
   return *header_search_paths;
@@ -65,8 +65,9 @@ bool IsHeaderFile(string path) {
   // Some headers don't have an extension (e.g. <string>), or have an
   // unusual one (the compiler doesn't care), so it's safer to
   // enumerate non-header extensions instead.
-  for (size_t i = 0; i < llvm::array_lengthof(source_extensions); ++i) {
-    if (EndsWith(path, source_extensions[i]))
+  //  for (size_t i = 0; i < llvm::array_lengthof(source_extensions); ++i) {
+  for (const auto* source_extension : source_extensions) {
+    if (EndsWith(path, source_extension))
       return false;
   }
 
@@ -94,8 +95,8 @@ string GetCanonicalName(string file_path) {
       || StripRight(&file_path, ".hh")
       || StripRight(&file_path, ".inl");
   if (!stripped_ext) {
-    for (size_t i = 0; i < llvm::array_lengthof(source_extensions); ++i) {
-      if (StripRight(&file_path, source_extensions[i]))
+    for (const auto* source_extension : source_extensions) {
+      if (StripRight(&file_path, source_extension))
         break;
     }
   }
@@ -120,7 +121,7 @@ string GetCanonicalName(string file_path) {
 }
 
 string NormalizeFilePath(const string& path) {
-  llvm::SmallString<128> normalized(path.c_str());
+  llvm::SmallString<128> normalized(path);
   llvm::sys::path::remove_dots(normalized);
 
 #ifdef _WIN32
@@ -144,7 +145,7 @@ bool IsAbsolutePath(const string& path) {
 }
 
 string MakeAbsolutePath(const string& path) {
-  llvm::SmallString<128> absolute_path(path.c_str());
+  llvm::SmallString<128> absolute_path(path);
   std::error_code error = llvm::sys::fs::make_absolute(absolute_path);
   CHECK_(!error);
 
@@ -152,7 +153,7 @@ string MakeAbsolutePath(const string& path) {
 }
 
 string MakeAbsolutePath(const string& base_path, const string& relative_path) {
-  llvm::SmallString<128> absolute_path(base_path.c_str());
+  llvm::SmallString<128> absolute_path(base_path);
   llvm::sys::path::append(absolute_path, relative_path);
 
   return absolute_path.str();

@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
 
@@ -29,7 +28,6 @@ namespace include_what_you_use {
 using std::string;
 using std::vector;
 
-
 // Interface to get character data from a SourceLocation. This allows
 // tests to avoid constructing a SourceManager yet still allow iwyu to
 // get the character data from SourceLocations.
@@ -44,7 +42,7 @@ class SourceManagerCharacterDataGetter : public CharacterDataGetterInterface {
  public:
   explicit SourceManagerCharacterDataGetter(
       const clang::SourceManager& source_manager);
-  virtual const char* GetCharacterData(clang::SourceLocation loc) const;
+  const char* GetCharacterData(clang::SourceLocation loc) const override;
 
  private:
   const clang::SourceManager& source_manager_;
