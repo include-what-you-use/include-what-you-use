@@ -240,14 +240,29 @@ class OneIwyuTest(unittest.TestCase):
     iwyu_flags = self._iwyu_flags_map.get(filename, None)
     clang_flags = self._clang_flags_map.get(filename, [])
     clang_flags.extend(self._include_map.get(filename, []))
+    if self.testAbsPath:
+      filename = os.path.abspath(filename)
     iwyu_test_util.TestIwyuOnFile(self, filename, files_to_check,
                                   iwyu_flags, clang_flags, verbose=True)
-    iwyu_test_util.TestIwyuOnFile(self, os.path.abspath(filename), files_to_check,
-                                  iwyu_flags, clang_flags, verbose=True)
 
 
-def RegisterFilesForTesting(rootdir, pattern):
+def RegisterFilesForTesting(rootdir, pattern,
+                            DefaultTestSuite,
+                            AbsolutePathsTestSuite,
+                            RelativePathsTestSuite):
   """Create a test-class for every file in rootdir matching pattern."""
+  
+  # Test filenames that should also be tested for absolute paths in the default suite
+  # instead of the AbsPathSuite.
+  default_abs_path_list = [
+    'check_also.cc',
+    'no_h_includes_cc.cc',
+    'badinc.cc',
+    'redecls.cc'
+  ]
+  _default_abs_path_list = [posixpath.join(rootdir, filename)
+                              for filename in default_abs_path_list]
+  
   filenames = []
   for (dirpath, dirs, files) in os.walk(rootdir):
     dirpath = PosixPath(dirpath)  # Normalize path separators.
@@ -265,17 +280,30 @@ def RegisterFilesForTesting(rootdir, pattern):
     class_name = re.sub('[^0-9a-zA-Z_]', '_', basename)  # python-clean
     if class_name[0].isdigit():            # classes can't start with a number
       class_name = '_' + class_name
-    while class_name in module.__dict__:   # already have a class with that name
-      class_name += '2'                    # just append a suffix :-)
+    for testAbsPath in (False, True):
+      if testAbsPath:
+        cur_class_name = class_name + '_absolute'
+      else:
+        cur_class_name = class_name
+      while cur_class_name in module.__dict__:   # already have a class with that name
+        cur_class_name += '2'                    # just append a suffix :-)
 
-    logging.info('Registering %s to test %s', class_name, filename)
-    test_class = type(class_name,          # class name
-                      (OneIwyuTest,),      # superclass
-                      # and attrs. f=filename is required for proper scoping
-                      {'runTest': lambda self, f=filename: self.RunOneTest(f),
-                       'rootdir': rootdir,
-                       'pattern': pattern})
-    setattr(module, test_class.__name__, test_class)
+      logging.info('Registering %s to test %s', cur_class_name, filename)
+      test_class = type(cur_class_name,      # class name
+                        (OneIwyuTest,),      # superclass
+                        # and attrs. f=filename is required for proper scoping
+                        {'runTest': lambda self, f=filename: self.RunOneTest(f),
+                         'rootdir': rootdir,
+                         'pattern': pattern,
+                         'testAbsPath': testAbsPath})
+      setattr(module, test_class.__name__, test_class)
+      if testAbsPath:
+        AbsolutePathsTestSuite.addTest(test_class())
+      else:
+        RelativePathsTestSuite.addTest(test_class())
+      
+      if not testAbsPath or filename in _default_abs_path_list:
+        DefaultTestSuite.addTest(test_class())    
 
 
 if __name__ == '__main__':
@@ -283,6 +311,10 @@ if __name__ == '__main__':
   if additional_args:
     iwyu_test_util.SetIwyuPath(additional_args[0])
 
-  RegisterFilesForTesting('tests/cxx', '*.cc')
-  RegisterFilesForTesting('tests/c', '*.c')
-  unittest.main(argv=unittest_args)
+  DefaultTests = unittest.TestSuite()
+  AbsolutePaths = unittest.TestSuite()
+  RelativePaths = unittest.TestSuite()
+
+  RegisterFilesForTesting('tests/cxx', '*.cc', DefaultTests, AbsolutePaths, RelativePaths)
+  RegisterFilesForTesting('tests/c', '*.c', DefaultTests, AbsolutePaths, RelativePaths)
+  unittest.main(argv=unittest_args, defaultTest = 'DefaultTests')
