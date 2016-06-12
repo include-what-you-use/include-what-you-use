@@ -677,15 +677,14 @@ set<FunctionDecl*> GetLateParsedFunctionDecls(TranslationUnitDecl* decl) {
 static map<const Type*, const Type*> ResugarTypeComponents(
     const map<const Type*, const Type*>& resugar_map) {
   map<const Type*, const Type*> retval = resugar_map;
-  for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
-    const set<const Type*>& components = GetComponentsOfType(it->second);
-    for (Each<const Type*> component_type(&components);
-         !component_type.AtEnd(); ++component_type) {
-      const Type* desugared_type = GetCanonicalType(*component_type);
+  for (const auto& types : resugar_map) {
+    const set<const Type*>& components = GetComponentsOfType(types.second);
+    for (const Type* component_type : components) {
+      const Type* desugared_type = GetCanonicalType(component_type);
       if (!ContainsKey(retval, desugared_type)) {
-        retval[desugared_type] = *component_type;
+        retval[desugared_type] = component_type;
         VERRS(6) << "Adding a type-components of interest: "
-                 << PrintableType(*component_type) << "\n";
+                 << PrintableType(component_type) << "\n";
       }
     }
   }
@@ -800,24 +799,24 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     InsertAllInto(GetComponentsOfType(argtype), &fn_arg_types);
   }
 
-  for (Each<const Type*> it(&fn_arg_types); !it.AtEnd(); ++it) {
+  for (const Type* type : fn_arg_types) {
     // See if any of the template args in retval are the desugared form of us.
-    const Type* desugared_type = GetCanonicalType(*it);
+    const Type* desugared_type = GetCanonicalType(type);
     if (ContainsKey(desugared_types, desugared_type)) {
-      retval[desugared_type] = *it;
-      if (desugared_type != *it) {
+      retval[desugared_type] = type;
+      if (desugared_type != type) {
         VERRS(6) << "Remapping template arg of interest: "
                  << PrintableType(desugared_type) << " -> "
-                 << PrintableType(*it) << "\n";
+                 << PrintableType(type) << "\n";
       }
     }
   }
 
   // Log the types we never mapped.
-  for (Each<const Type*, const Type*> it(&desugared_types); !it.AtEnd(); ++it) {
-    if (!ContainsKey(retval, it->first)) {
+  for (const auto& types : desugared_types) {
+    if (!ContainsKey(retval, types.first)) {
       VERRS(6) << "Ignoring unseen-in-fn-args template arg of interest: "
-               << PrintableType(it->first) << "\n";
+               << PrintableType(types.first) << "\n";
     }
   }
 
@@ -991,10 +990,10 @@ const NamedDecl* GetFirstRedecl(const NamedDecl* decl) {
   if (all_redecls.empty())  // input is not a class or class template
     return nullptr;
 
-  for (Each<const NamedDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
-    const FullSourceLoc redecl_loc(GetLocation(*it), *GlobalSourceManager());
+  for (const NamedDecl* redecl : all_redecls) {
+    const FullSourceLoc redecl_loc(GetLocation(redecl), *GlobalSourceManager());
     if (redecl_loc.isBeforeInTranslationUnitThan(first_decl_loc)) {
-      first_decl = *it;
+      first_decl = redecl;
       first_decl_loc = redecl_loc;
     }
   }
@@ -1196,13 +1195,13 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
     // and compare it against each of the types in the template decl
     // (the latter are all desugared).  If there's a match, update
     // the mapping.
-    for (Each<const Type*> it(&arg_components); !it.AtEnd(); ++it) {
+    for (const Type* type : arg_components) {
       for (unsigned i = 0; i < tpl_args.size(); ++i) {
         if (const Type* arg_type = GetTemplateArgAsType(tpl_args[i])) {
-          if (GetCanonicalType(*it) == arg_type) {
-            retval[arg_type] = *it;
+          if (GetCanonicalType(type) == arg_type) {
+            retval[arg_type] = type;
             VERRS(6) << "Adding a template-class type of interest: "
-                     << PrintableType(*it) << "\n";
+                     << PrintableType(type) << "\n";
             explicit_args.insert(i);
           }
         }

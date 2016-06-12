@@ -283,22 +283,23 @@ class IwyuFileInfo {
   }
   set<string> AssociatedQuotedIncludes() const {
     set<string> associated_quoted_includes;
-    for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it)
-      associated_quoted_includes.insert((*it)->quoted_file_);
+    for (const IwyuFileInfo* associated : associated_headers_)
+      associated_quoted_includes.insert(associated->quoted_file_);
     return associated_quoted_includes;
   }
 
   set<const clang::FileEntry*> AssociatedFileEntries() const {
     set<const clang::FileEntry*> associated_file_entries;
-    for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it)
-      associated_file_entries.insert((*it)->file_);
+    for (const IwyuFileInfo* associated : associated_headers_)
+      associated_file_entries.insert(associated->file_);
     return associated_file_entries;
   }
 
   set<string> AssociatedDesiredIncludes() const {
     set<string> associated_desired_includes;
-    for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it)
-      InsertAllInto((*it)->desired_includes(), &associated_desired_includes);
+    for (const IwyuFileInfo* associated : associated_headers_)
+      InsertAllInto(associated->desired_includes(),
+                    &associated_desired_includes);
     return associated_desired_includes;
   }
 

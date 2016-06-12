@@ -585,14 +585,14 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
              it = record->bases_begin(); it != record->bases_end(); ++it) {
       member_types.insert(it->getType().getTypePtr());
     }
-    for (Each<const Type*> it(&member_types); !it.AtEnd(); ++it) {
-      const NamedDecl* member_decl = TypeToDeclAsWritten(*it);
+    for (const Type* type : member_types) {
+      const NamedDecl* member_decl = TypeToDeclAsWritten(type);
       // We only want those fields that are c++ classes.
       if (const CXXRecordDecl* cxx_field_decl = DynCastFrom(member_decl)) {
         if (const CXXDestructorDecl* field_dtor
             = cxx_field_decl->getDestructor()) {
           if (!this->getDerived().TraverseImplicitDestructorCall(
-                  const_cast<CXXDestructorDecl*>(field_dtor), *it))
+                  const_cast<CXXDestructorDecl*>(field_dtor), type))
             return false;
         }
       }
@@ -615,11 +615,11 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 
     clang::Sema& sema = compiler_->getSema();
     DeclContext::lookup_result ctors = sema.LookupConstructors(decl);
-    for (Each<NamedDecl*> it(&ctors); !it.AtEnd(); ++it) {
+    for (NamedDecl* ctor_lookup : ctors) {
       // Ignore templated constructors.
-      if (isa<FunctionTemplateDecl>(*it))
+      if (isa<FunctionTemplateDecl>(ctor_lookup))
         continue;
-      CXXConstructorDecl* ctor = cast<CXXConstructorDecl>(*it);
+      CXXConstructorDecl* ctor = cast<CXXConstructorDecl>(ctor_lookup);
       if (!ctor->hasBody() && !ctor->isDeleted() && ctor->isImplicit()) {
         if (sema.getSpecialMember(ctor) == clang::Sema::CXXDefaultConstructor) {
           sema.DefineImplicitDefaultConstructor(CurrentLoc(), ctor);
@@ -976,8 +976,8 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
         // The best we can do is to compare the associated decl
         if (tn->getAsTemplateDecl() == nullptr)
           return false;    // be conservative if we can't compare decls
-        for (Each<TemplateName> it(&tpl_names); it.AtEnd(); ++it) {
-          if (it->getAsTemplateDecl() == tn->getAsTemplateDecl())
+        for (const TemplateName& tpl_name : tpl_names) {
+          if (tpl_name.getAsTemplateDecl() == tn->getAsTemplateDecl())
             return true;
         }
         return false;
@@ -1479,8 +1479,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // Check if the author forward-declared the class in the same file.
     bool found_earlier_forward_declare_in_same_file = false;
-    for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
-      if (IsBeforeInSameFile(*it, use_loc)) {
+    for (const NamedDecl* redecl : redecls) {
+      if (IsBeforeInSameFile(redecl, use_loc)) {
         found_earlier_forward_declare_in_same_file = true;
         break;
       }
@@ -1700,9 +1700,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           // If any of the used types are themselves typedefs, this will
           // result in a recursive expansion.  Note we are careful to
           // recurse inside this class, and not go back to subclasses.
-          for (Each<const Type*> it(&underlying_types); !it.AtEnd(); ++it)
-            IwyuBaseAstVisitor<Derived>::ReportTypeUseWithComment(used_loc, *it,
-                                                                  nullptr);
+          for (const Type* type : underlying_types)
+            IwyuBaseAstVisitor<Derived>::ReportTypeUseWithComment(
+                used_loc, type, nullptr);
         }
       }
     }
@@ -1753,8 +1753,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   void ReportDeclsUse(SourceLocation used_loc,
                       const set<const NamedDecl*>& decls) {
-    for (Each<const NamedDecl*> it(&decls); !it.AtEnd(); ++it)
-      ReportDeclUse(used_loc, *it);
+    for (const NamedDecl* decl : decls)
+      ReportDeclUse(used_loc, decl);
   }
 
   // Called when the given type is fully used at used_loc, regardless
@@ -1795,8 +1795,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   void ReportTypesUse(SourceLocation used_loc, const set<const Type*>& types) {
-    for (Each<const Type*> it(&types); !it.AtEnd(); ++it)
-      ReportTypeUse(used_loc, *it);
+    for (const Type* type : types)
+      ReportTypeUse(used_loc, type);
   }
 
   //------------------------------------------------------------
@@ -2678,12 +2678,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const UsingDecl* retval = nullptr;
     vector<const UsingDecl*> using_decls
         = FindInMultiMap(visitor_state_->using_declarations, decl);
-    for (Each<const UsingDecl*> it(&using_decls); !it.AtEnd(); ++it) {
-      if (!(*it)->getDeclContext()->Encloses(use_context))
+    for (const UsingDecl* using_decl : using_decls) {
+      if (!using_decl->getDeclContext()->Encloses(use_context))
         continue;
-      if (GetFileEntry(decl) == GetFileEntry(*it) ||    // in same file, prefer
-          retval == nullptr) {      // not in same file, but better than nothing
-        retval = *it;
+      if (GetFileEntry(decl) == GetFileEntry(using_decl) || // prefer same file
+          retval == nullptr) {  // not in same file, but better than nothing
+        retval = using_decl;
       }
     }
     return retval;
@@ -2881,8 +2881,8 @@ class InstantiatedTemplateVisitor
     } else {
       // Let all the currently active types and decls know about this
       // report, so they can update their cache entries.
-      for (Each<CacheStoringScope*> it(&cache_storers_); !it.AtEnd(); ++it)
-        (*it)->NoteReportedDecl(decl);
+      for (CacheStoringScope* storer : cache_storers_)
+        storer->NoteReportedDecl(decl);
       Base::ReportDeclUseWithComment(caller_loc(), decl, comment);
     }
   }
@@ -2892,8 +2892,8 @@ class InstantiatedTemplateVisitor
     // clang desugars template types, so Foo<MyTypedef>() gets turned
     // into Foo<UnderlyingType>().  Try to convert back.
     type = ResugarType(type);
-    for (Each<CacheStoringScope*> it(&cache_storers_); !it.AtEnd(); ++it)
-      (*it)->NoteReportedType(type);
+    for (CacheStoringScope* storer : cache_storers_)
+      storer->NoteReportedType(type);
     Base::ReportTypeUseWithComment(caller_loc(), type, comment);
   }
 
@@ -3326,14 +3326,13 @@ class InstantiatedTemplateVisitor
     // resugar_map_for_precomputed_type has less_than<Foo> or hash<Foo>,
     // we'll add those in even if resugar_map_ only includes 'Foo'.
     map<const Type*, const Type*> resugar_map;
-    for (Each<const Type*, const Type*> it(&resugar_map_for_precomputed_type);
-         !it.AtEnd(); ++it) {
-      // TODO(csilvers): for default template args, it->first is sometimes
+    for (const auto& item : resugar_map_for_precomputed_type) {
+      // TODO(csilvers): for default template args, item.first is sometimes
       // a RecordType even when it's a template specialization.  Figure out
       // how to get the proper type components in that situation.
-      const set<const Type*> type_components = GetComponentsOfType(it->first);
+      const set<const Type*> type_components = GetComponentsOfType(item.first);
       if (ContainsAnyKey(resugar_map_, type_components)) {
-        resugar_map.insert(*it);
+        resugar_map.insert(item);
       }
     }
     if (resugar_map.empty())
@@ -3345,15 +3344,15 @@ class InstantiatedTemplateVisitor
     // is the unsugared type, as being fully used.  Entries with a
     // nullptr value are default template args, and we only report them
     // if the template class doesn't intend-to-provide them.
-    for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
+    for (const auto& item : resugar_map) {
       const Type* resugared_type = nullptr;
-      if (it->second) {
-        resugared_type = it->second;
+      if (item.second) {
+        resugared_type = item.second;
       } else {
-        const NamedDecl* resugared_decl = TypeToDeclAsWritten(it->first);
+        const NamedDecl* resugared_decl = TypeToDeclAsWritten(item.first);
         if (!preprocessor_info().PublicHeaderIntendsToProvide(
                 GetFileEntry(tpl_decl), GetFileEntry(resugared_decl)))
-          resugared_type = it->first;
+          resugared_type = item.first;
       }
       if (resugared_type && !resugared_type->isPointerType()) {
         ReportTypeUse(caller_loc(), resugared_type);
@@ -3496,12 +3495,11 @@ class IwyuAstConsumer
     // need to figure out what those #includes are going to be.
     size_t num_edits = 0;
     const FileEntry* const main_file = preprocessor_info().main_file();
-    for (Each<const FileEntry*> file(files_to_report_iwyu_violations_for);
-         !file.AtEnd(); ++file) {
-      if (*file == main_file)
+    for (const FileEntry* file : *files_to_report_iwyu_violations_for) {
+      if (file == main_file)
         continue;
-      CHECK_(preprocessor_info().FileInfoFor(*file));
-      num_edits += preprocessor_info().FileInfoFor(*file)
+      CHECK_(preprocessor_info().FileInfoFor(file));
+      num_edits += preprocessor_info().FileInfoFor(file)
           ->CalculateAndReportIwyuViolations();
     }
     CHECK_(preprocessor_info().FileInfoFor(main_file));
@@ -3619,8 +3617,8 @@ class IwyuAstConsumer
       // remove a decl with attributes unless they're inherited, i.e. propagated
       // from another redeclaration as opposed to explicitly written.
       } else if (decl->hasAttrs()) {
-        for (Each<const Attr*> it(&decl->getAttrs()); !it.AtEnd(); ++it) {
-          if (!(*it)->isInherited()) {
+        for (const Attr* attr : decl->getAttrs()) {
+          if (!attr->isInherited()) {
             definitely_keep_fwd_decl = true;
             break;
           }

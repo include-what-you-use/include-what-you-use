@@ -509,9 +509,8 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
   // (for instance, if we include a .h file twice, and that .h file
   // does not have a header guard).  Ignore all but the first.
   // TODO(csilvers): could rewrite this so it's constant-time.
-  for (Each<OneIncludeOrForwardDeclareLine> line(&lines_); !line.AtEnd();
-       ++line) {
-    if (line->LineNumbersMatch(new_include)) {
+  for (const OneIncludeOrForwardDeclareLine& line : lines_) {
+    if (line.LineNumbersMatch(new_include)) {
       VERRS(6) << "Ignoring repeated include: "
                << GetFilePath(file_) << ":" << linenumber
                << " -> " << GetFilePath(includee) << "\n";
@@ -723,7 +722,6 @@ set<string> CalculateMinimalIncludes(
   // captures both decls that aren't in private header files, and
   // those in private header files that only map to one public file.
   // For every other decl, we store the (decl, public-headers) pair.
-  // Note we can't use Each<> because it only gives const iterators.
   for (OneUse& use : *uses) {
     // We don't need to add any #includes for non-full-use.
     if (use.ignore_use() || !use.is_full_use())
@@ -762,35 +760,39 @@ set<string> CalculateMinimalIncludes(
       continue;
     const vector<string>& public_headers = use.public_headers();
     // TODO(csilvers): write ElementInBoth() in iwyu_stl_util.h
-    for (Each<string> choice(&public_headers);
-         !use.has_suggested_header() && !choice.AtEnd(); ++choice) {
-      if (ContainsKey(associated_direct_includes, *choice)) {
-        use.set_suggested_header(*choice);
+    for (const string& choice : public_headers) {
+      if (use.has_suggested_header())
+        break;
+      if (ContainsKey(associated_direct_includes, choice)) {
+        use.set_suggested_header(choice);
         desired_headers.insert(use.suggested_header());
         LogIncludeMapping("in associated header", use);
       }
     }
-    for (Each<string> choice(&public_headers);
-         !use.has_suggested_header() && !choice.AtEnd(); ++choice) {
-      if (ContainsKey(direct_includes, *choice) &&
-          ContainsKey(desired_headers, *choice)) {
-        use.set_suggested_header(*choice);
+    for (const string& choice : public_headers) {
+      if (use.has_suggested_header())
+        break;
+      if (ContainsKey(direct_includes, choice) &&
+          ContainsKey(desired_headers, choice)) {
+        use.set_suggested_header(choice);
         desired_headers.insert(use.suggested_header());
         LogIncludeMapping("#include already present and needed", use);
       }
     }
-    for (Each<string> choice(&public_headers);
-         !use.has_suggested_header() && !choice.AtEnd(); ++choice) {
-      if (ContainsKey(desired_headers, *choice)) {
-        use.set_suggested_header(*choice);
+    for (const string& choice : public_headers) {
+      if (use.has_suggested_header())
+        break;
+      if (ContainsKey(desired_headers, choice)) {
+        use.set_suggested_header(choice);
         desired_headers.insert(use.suggested_header());
         LogIncludeMapping("#include already needed", use);
       }
     }
-    for (Each<string> choice(&public_headers);
-         !use.has_suggested_header() && !choice.AtEnd(); ++choice) {
-      if (ContainsKey(direct_includes, *choice)) {
-        use.set_suggested_header(*choice);
+    for (const string& choice : public_headers) {
+      if (use.has_suggested_header())
+        break;
+      if (ContainsKey(direct_includes, choice)) {
+        use.set_suggested_header(choice);
         desired_headers.insert(use.suggested_header());
         LogIncludeMapping("#include already present", use);
       }
@@ -812,20 +814,22 @@ set<string> CalculateMinimalIncludes(
   }
   while (!unmapped_uses.empty()) {
     map<string, pair<int,int> > header_counts;   // total appearances, 1st's
-    for (Each<OneUse*> use(&unmapped_uses); !use.AtEnd(); ++use) {
-      CHECK_(!(*use)->has_suggested_header());
-      const vector<string>& public_headers = (*use)->public_headers();
-      for (Each<string> choice(&public_headers);
-           !(*use)->has_suggested_header() && !choice.AtEnd(); ++choice) {
-        ++header_counts[*choice].first;     // increment total count
-        if (*choice == (*use)->public_headers()[0])
-          ++header_counts[*choice].second;  // increment first-in-list count
+    for (OneUse* use : unmapped_uses) {
+      CHECK_(!use->has_suggested_header());
+      const vector<string>& public_headers = use->public_headers();
+      for (const string& choice : public_headers) {
+        if (use->has_suggested_header())
+          break;
+        ++header_counts[choice].first;  // increment total count
+        if (choice == use->public_headers()[0])
+          ++header_counts[choice].second;  // increment first-in-list count
       }
     }
     pair<string, pair<int, int> > best = *header_counts.begin();
-    for (Each<string, pair<int, int> > it(&header_counts); !it.AtEnd(); ++it) {
-      if (it->second > best.second)  // uses pair<>'s operator> to order for us
-        best = *it;
+    for (const auto& header_count : header_counts) {
+      // Use pair<>'s operator> to order for us.
+      if (header_count.second > best.second)
+        best = header_count;
     }
     const string hdr = best.first;
     desired_headers.insert(hdr);
@@ -1016,14 +1020,15 @@ void ProcessForwardDeclare(OneUse* use,
   // Note: for the 'earlier' checks, what matters is the *instantiation*
   // location.
   const set<const NamedDecl*> redecls = GetClassRedecls(record_decl);
-  for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
-    CHECK_(isa<RecordDecl>(*it) && "GetClassRedecls has redecls of wrong type");
-    const SourceLocation defined_loc = GetLocation(*it);
-    if (cast<RecordDecl>(*it)->isCompleteDefinition() &&
-        DeclIsVisibleToUseInSameFile(*it, *use)) {
-      VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name()
-               << " (" << use->PrintableUseLoc() << "): dfn is present: "
-               << PrintableLoc(defined_loc) << "\n";
+  for (const NamedDecl* redecl : redecls) {
+    CHECK_(isa<RecordDecl>(redecl) &&
+           "GetClassRedecls has redecls of wrong type");
+    const SourceLocation defined_loc = GetLocation(redecl);
+    if (cast<RecordDecl>(redecl)->isCompleteDefinition() &&
+        DeclIsVisibleToUseInSameFile(redecl, *use)) {
+      VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name() << " ("
+               << use->PrintableUseLoc()
+               << "): dfn is present: " << PrintableLoc(defined_loc) << "\n";
       use->set_ignore_use();
       return;
     }
@@ -1083,8 +1088,8 @@ void ProcessFullUse(OneUse* use,
     all_redecls.insert(use->decl());    // for classes, just consider the dfn
   else
     all_redecls = GetNonclassRedecls(use->decl());
-  for (Each<const NamedDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
-    if (DeclIsVisibleToUseInSameFile(*it, *use)) {
+  for (const NamedDecl* redecl : all_redecls) {
+    if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
       VERRS(6) << "Ignoring use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "): definition is present: "
                << PrintableLoc(GetLocation(use->decl())) << "\n";
@@ -1253,10 +1258,10 @@ void CalculateIwyuForForwardDeclareUse(
     vector<string> headers
       = GlobalIncludePicker().GetCandidateHeadersForFilepathIncludedFrom(
           GetFilePath(dfn), GetFilePath(use->use_loc()));
-    for (Each<string> header(&headers); !header.AtEnd(); ++header) {
-      if (ContainsKey(desired_includes, *header))
+    for (const string& header : headers) {
+      if (ContainsKey(desired_includes, header))
         dfn_is_in_desired_includes = true;
-      if (ContainsKey(actual_includes, *header))
+      if (ContainsKey(actual_includes, header))
         dfn_is_in_actual_includes = true;
     }
     // We ourself are always a 'desired' and 'actual' include (though
@@ -1270,9 +1275,9 @@ void CalculateIwyuForForwardDeclareUse(
   // We also want to know if *any* redecl of this record is defined
   // in the same file as the use (and before it).
   const set<const NamedDecl*>& redecls = GetClassRedecls(record_decl);
-  for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
-    if (DeclIsVisibleToUseInSameFile(*it, *use)) {
-      same_file_decl = *it;
+  for (const NamedDecl* redecl : redecls) {
+    if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
+      same_file_decl = redecl;
       break;
     }
   }
@@ -1280,9 +1285,9 @@ void CalculateIwyuForForwardDeclareUse(
   // an associated .h file.  Since associated .h files are always
   // desired includes, we don't need to check for that.
   if (!same_file_decl) {
-    for (Each<const NamedDecl*> it(&redecls); !it.AtEnd(); ++it) {
-      if (ContainsKey(associated_includes, GetFileEntry(*it))) {
-        same_file_decl = *it;
+    for (const NamedDecl* redecl : redecls) {
+      if (ContainsKey(associated_includes, GetFileEntry(redecl))) {
+        same_file_decl = redecl;
         break;
       }
     }
@@ -1403,7 +1408,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
 
   // We have to do the steps in order, because a forward-declare use may
   // turn into a full use, and need to be processed in the full-use step
-  // too.  Note we can't use Each<> because it returns a const-iterator.
+  // too.
   for (OneUse& use : *uses) {
     if (!use.is_full_use() && use.decl())
       internal::ProcessForwardDeclare(&use, preprocessor_info_);
@@ -1419,9 +1424,9 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
 
   // (C1) Compute the direct includes of 'associated' files.
   set<string> associated_direct_includes;
-  for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it) {
-    ReportIncludeFileUse((*it)->file_, (*it)->quoted_file_);
-    InsertAllInto((*it)->direct_includes(), &associated_direct_includes);
+  for (const IwyuFileInfo* associated : associated_headers_) {
+    ReportIncludeFileUse(associated->file_, associated->quoted_file_);
+    InsertAllInto(associated->direct_includes(), &associated_direct_includes);
   }
   // The 'effective' direct includes are defined to be the current
   // includes of associated, plus us.  This is only used to decide
@@ -1434,12 +1439,12 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
       direct_includes(), associated_direct_includes, uses);
 
   // (C4) Remove .cc files from desired-includes unless they're in actual-inc.
-  for (Each<string> it(&desired_set_cover); !it.AtEnd(); ++it) {
-    if (IsHeaderFile(*it) || ContainsKey(direct_includes(), *it))
-      desired_includes_.insert(*it);
+  for (const string& header_name : desired_set_cover) {
+    if (IsHeaderFile(header_name) ||
+        ContainsKey(direct_includes(), header_name))
+      desired_includes_.insert(header_name);
   }
   desired_includes_have_been_calculated_ = true;
-
 
   // The 'effective' desired includes are defined to be the desired
   // includes of associated, plus us.  These are used to decide if a
@@ -1488,14 +1493,14 @@ static string GetWarningMsg(const OneUse& use) {
 
 int IwyuFileInfo::EmitWarningMessages(const vector<OneUse>& uses) {
   set<pair<int, string> > iwyu_warnings;   // line-number, warning-msg.
-  for (Each<OneUse> it(&uses); !it.AtEnd(); ++it) {
-    if (it->is_iwyu_violation())
-      iwyu_warnings.insert(make_pair(it->UseLinenum(), GetWarningMsg(*it)));
+  for (const OneUse& use : uses) {
+    if (use.is_iwyu_violation())
+      iwyu_warnings.insert(make_pair(use.UseLinenum(), GetWarningMsg(use)));
   }
   // Nice that set<> automatically sorts things for us!
-  for (Each<pair<int, string> > it(&iwyu_warnings); !it.AtEnd(); ++it) {
+  for (const pair<int, string>& warning : iwyu_warnings) {
     if (ShouldPrint(3)) {
-      errs() << it->second;
+      errs() << warning.second;
     } else if (ShouldPrint(2)) {
       // TODO(csilvers): print one warning per sym per file.
     }
@@ -1710,8 +1715,8 @@ vector<string> GetSymbolsSortedByFrequency(const map<string, int>& m) {
   sort(count_vector.begin(), count_vector.end(), CountGt());
 
   vector<string> retval;
-  for (Each<pair<string, int> > i(&count_vector); !i.AtEnd(); ++i)
-    retval.push_back(i->first);
+  for (const pair<string, int>& count : count_vector)
+    retval.push_back(count.first);
   return retval;
 }
 
@@ -1787,21 +1792,21 @@ size_t PrintableDiffs(const string& filename,
   // just put them all in multimap whose key is a sort-order (multimap
   // because some headers might be listed twice in the source file.)
   multimap<LineSortKey, const OneIncludeOrForwardDeclareLine*> sorted_lines;
-  for (Each<OneIncludeOrForwardDeclareLine> it(&lines); !it.AtEnd(); ++it) {
+  for (const OneIncludeOrForwardDeclareLine& line : lines) {
     const IwyuFileInfo* file_info = nullptr;
-    if (it->IsIncludeLine())
-      file_info = preprocessor_info->FileInfoFor(it->included_file());
+    if (line.IsIncludeLine())
+      file_info = preprocessor_info->FileInfoFor(line.included_file());
 
-    sorted_lines.insert(make_pair(GetSortKey(*it, aqi, file_info), &*it));
+    sorted_lines.insert(make_pair(GetSortKey(line, aqi, file_info), &line));
   }
 
   // First, check if there are no adds or deletes.  If so, we print a
   // shorter summary line.
   bool no_adds_or_deletes = true;
-  for (Each<LineSortKey, const OneIncludeOrForwardDeclareLine*>
-           it(&sorted_lines); !it.AtEnd(); ++it) {
-    if ((it->second->is_desired() && !it->second->is_present()) ||  // add
-        (it->second->is_present() && !it->second->is_desired())) {  // delete
+  for (const auto& key_line : sorted_lines) {
+    const OneIncludeOrForwardDeclareLine* line = key_line.second;
+    if ((line->is_desired() && !line->is_present()) || // add
+        (line->is_present() && !line->is_desired())) { // delete
       no_adds_or_deletes = false;
       break;
     }
@@ -1817,11 +1822,11 @@ size_t PrintableDiffs(const string& filename,
   if (ShouldPrint(1)) {
     output_lines.push_back(
       OutputLine("\n" + filename + " should add these lines:"));
-    for (Each<LineSortKey, const OneIncludeOrForwardDeclareLine*>
-             it(&sorted_lines); !it.AtEnd(); ++it) {
-      if (it->second->is_desired() && !it->second->is_present()) {
+    for (const auto& key_line : sorted_lines) {
+      const OneIncludeOrForwardDeclareLine* line = key_line.second;
+      if (line->is_desired() && !line->is_present()) {
         output_lines.push_back(
-          PrintableIncludeOrForwardDeclareLine(*it->second, aqi));
+          PrintableIncludeOrForwardDeclareLine(*line, aqi));
         ++num_edits;
       }
     }
@@ -1830,12 +1835,12 @@ size_t PrintableDiffs(const string& filename,
   // Second, includes and forward-declares that should be removed.
   if (ShouldPrint(1)) {
     output_lines.push_back(
-      OutputLine("\n" + filename + " should remove these lines:"));
-    for (Each<LineSortKey, const OneIncludeOrForwardDeclareLine*>
-             it(&sorted_lines); !it.AtEnd(); ++it) {
-      if (it->second->is_present() && !it->second->is_desired()) {
+        OutputLine("\n" + filename + " should remove these lines:"));
+    for (const auto& key_line : sorted_lines) {
+      const OneIncludeOrForwardDeclareLine* line = key_line.second;
+      if (line->is_present() && !line->is_desired()) {
         output_lines.push_back(
-          PrintableIncludeOrForwardDeclareLine(*it->second, aqi));
+            PrintableIncludeOrForwardDeclareLine(*line, aqi));
         output_lines.back().add_prefix("- ");
 
         ++num_edits;
@@ -1847,11 +1852,11 @@ size_t PrintableDiffs(const string& filename,
   if (ShouldPrint(0)) {
     output_lines.push_back(
       OutputLine("\nThe full include-list for " + filename + ":"));
-    for (Each<LineSortKey, const OneIncludeOrForwardDeclareLine*>
-             it(&sorted_lines); !it.AtEnd(); ++it) {
-      if (it->second->is_desired()) {
+    for (const auto& key_line : sorted_lines) {
+      const OneIncludeOrForwardDeclareLine* line = key_line.second;
+      if (line->is_desired()) {
         output_lines.push_back(
-          PrintableIncludeOrForwardDeclareLine(*it->second, aqi));
+          PrintableIncludeOrForwardDeclareLine(*line, aqi));
       }
     }
   }
@@ -1862,15 +1867,15 @@ size_t PrintableDiffs(const string& filename,
   size_t line_length = 0;
   size_t max_line_length = GlobalFlags().max_line_length;
 
-  for (Each<OutputLine> it(&output_lines); !it.AtEnd(); ++it) {
+  for (const OutputLine& line : output_lines) {
     // Only consider lines that need alignment.
-    if (it->needs_alignment())
-      line_length = std::max(it->line_length(), line_length);
+    if (line.needs_alignment())
+      line_length = std::max(line.line_length(), line_length);
   }
 
   // Align lines and produce final output.
-  for (Each<OutputLine> it(&output_lines); !it.AtEnd(); ++it) {
-    output += it->printable_line(line_length, max_line_length);
+  for (const OutputLine& line : output_lines) {
+    output += line.printable_line(line_length, max_line_length);
     output += "\n";
   }
 

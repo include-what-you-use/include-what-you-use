@@ -191,12 +191,12 @@ string ConvertToQuotedInclude(const string& filepath,
   // HeaderSearchPaths is sorted to be longest-first, so this
   // loop will prefer the longest prefix: /usr/include/c++/4.4/foo
   // will be mapped to <foo>, not <c++/4.4/foo>.
-  for (Each<HeaderSearchPath> it(&search_paths); !it.AtEnd(); ++it) {
+  for (const HeaderSearchPath& entry : search_paths) {
     // All header search paths have a trailing "/", so we'll get a perfect
     // quoted include by just stripping the prefix.
 
-    if (StripPathPrefix(&path, it->path)) {
-      if (it->path_type == HeaderSearchPath::kSystemPath)
+    if (StripPathPrefix(&path, entry.path)) {
+      if (entry.path_type == HeaderSearchPath::kSystemPath)
         return "<" + path + ">";
       else
         return "\"" + path + "\"";

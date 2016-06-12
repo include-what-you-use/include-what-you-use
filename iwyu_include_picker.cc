@@ -788,17 +788,17 @@ bool IsQuotedFilepathPattern(const string& str) {
 void ExpandOnce(const IncludePicker::IncludeMap& m, vector<string>* nodes) {
   vector<string> nodes_and_children;
   set<string> seen_nodes_and_children;
-  for (Each<string> node(nodes); !node.AtEnd(); ++node) {
+  for (const string& node : *nodes) {
     // First insert the node itself, then all its kids.
-    if (!ContainsKey(seen_nodes_and_children, *node)) {
-      nodes_and_children.push_back(*node);
-      seen_nodes_and_children.insert(*node);
+    if (!ContainsKey(seen_nodes_and_children, node)) {
+      nodes_and_children.push_back(node);
+      seen_nodes_and_children.insert(node);
     }
-    if (const vector<string>* children = FindInMap(&m, *node)) {
-      for (Each<string> child(children); !child.AtEnd(); ++child) {
-        if (!ContainsKey(seen_nodes_and_children, *child)) {
-          nodes_and_children.push_back(*child);
-          seen_nodes_and_children.insert(*child);
+    if (const vector<string>* children = FindInMap(&m, node)) {
+      for (const string& child : *children) {
+        if (!ContainsKey(seen_nodes_and_children, child)) {
+          nodes_and_children.push_back(child);
+          seen_nodes_and_children.insert(child);
         }
       }
     }
@@ -853,9 +853,9 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
 
   // Keep track of node->second as we update it, to avoid duplicates.
   (*seen_nodes)[key] = kCalculating;
-  for (Each<string> child(&node->second); !child.AtEnd(); ++child) {
-    node_stack->push_back(*child);
-    MakeNodeTransitive(filename_map, seen_nodes, node_stack, *child);
+  for (const string& child : node->second) {
+    node_stack->push_back(child);
+    MakeNodeTransitive(filename_map, seen_nodes, node_stack, child);
     node_stack->pop_back();
   }
   (*seen_nodes)[key] = kDone;
@@ -873,8 +873,8 @@ void MakeMapTransitive(IncludePicker::IncludeMap* filename_map) {
   // the complete transitive closure.
   map<string, TransitiveStatus> seen_nodes;
   vector<string> node_stack;
-  for (Each<string, vector<string> > it(filename_map); !it.AtEnd(); ++it)
-    MakeNodeTransitive(filename_map, &seen_nodes, &node_stack, it->first);
+  for (const IncludePicker::IncludeMap::value_type& includes : *filename_map)
+    MakeNodeTransitive(filename_map, &seen_nodes, &node_stack, includes.first);
 }
 
 // Get a scalar value from a YAML node.
@@ -935,8 +935,8 @@ string FindFileInSearchPath(const vector<string>& search_path,
     return MakeAbsolutePath(filename);
   } else if (!IsAbsolutePath(filename)) {
     // If it's relative, scan search path.
-    for (Each<string> it(&search_path); !it.AtEnd(); ++it) {
-      string candidate = MakeAbsolutePath(*it, filename);
+    for (const string& base_path : search_path) {
+      string candidate = MakeAbsolutePath(base_path, filename);
       if (llvm::sys::fs::exists(candidate)) {
         return candidate;
       }
@@ -1113,9 +1113,9 @@ namespace {
 template <typename MapType>
 vector<string> ExtractKeysMarkedAsRegexes(const MapType& m) {
   vector<string> regex_keys;
-  for (Each<typename MapType::value_type> it(&m); !it.AtEnd(); ++it) {
-    if (StartsWith(it->first, "@"))
-      regex_keys.push_back(it->first);
+  for (const typename MapType::value_type& item : m) {
+    if (StartsWith(item.first, "@"))
+      regex_keys.push_back(item.first);
   }
   return regex_keys;
 }
@@ -1137,11 +1137,9 @@ void IncludePicker::ExpandRegexes() {
   // discarding the identity mappings.  TODO(wan): to improve
   // performance, don't construct more than one Regex object for each
   // element in the above vectors.
-  for (Each<string, set<string> > incmap(&quoted_includes_to_quoted_includers_);
-       !incmap.AtEnd(); ++incmap) {
-    const string& hdr = incmap->first;
-    for (Each<string> it(&filepath_include_map_regex_keys); !it.AtEnd(); ++it) {
-      const string& regex_key = *it;
+  for (const auto& incmap : quoted_includes_to_quoted_includers_) {
+    const string& hdr = incmap.first;
+    for (const string& regex_key : filepath_include_map_regex_keys) {
       const vector<string>& map_to = filepath_include_map_[regex_key];
       // Enclose the regex in ^(...)$ for full match.
       llvm::Regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
@@ -1150,9 +1148,7 @@ void IncludePicker::ExpandRegexes() {
         MarkVisibility(hdr, filepath_visibility_map_[regex_key]);
       }
     }
-    for (Each<string> it(&friend_to_headers_map_regex_keys);
-         !it.AtEnd(); ++it) {
-      const string& regex_key = *it;
+    for (const string& regex_key : friend_to_headers_map_regex_keys) {
       llvm::Regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
       if (regex.match(hdr, nullptr)) {
         InsertAllInto(friend_to_headers_map_[regex_key],
@@ -1179,37 +1175,34 @@ void IncludePicker::ExpandRegexes() {
 //    means iwyu will never suggest adding y.h.
 void IncludePicker::AddImplicitThirdPartyMappings() {
   set<string> third_party_headers_with_explicit_mappings;
-  for (Each<IncludeMap::value_type>
-           it(&filepath_include_map_); !it.AtEnd(); ++it) {
-    if (IsThirdPartyFile(it->first))
-      third_party_headers_with_explicit_mappings.insert(it->first);
+  for (const IncludeMap::value_type& item : filepath_include_map_) {
+    if (IsThirdPartyFile(item.first))
+      third_party_headers_with_explicit_mappings.insert(item.first);
   }
 
   set<string> headers_included_from_non_third_party;
-  for (Each<string, set<string> >
-           it(&quoted_includes_to_quoted_includers_); !it.AtEnd(); ++it) {
-    for (Each<string> includer(&it->second); !includer.AtEnd(); ++includer) {
-      if (!IsThirdPartyFile(*includer)) {
-        headers_included_from_non_third_party.insert(it->first);
+  for (const auto& incmap : quoted_includes_to_quoted_includers_) {
+    for (const string& includer : incmap.second) {
+      if (!IsThirdPartyFile(includer)) {
+        headers_included_from_non_third_party.insert(incmap.first);
         break;
       }
     }
   }
 
-  for (Each<string, set<string> >
-           it(&quoted_includes_to_quoted_includers_); !it.AtEnd(); ++it) {
-    const string& includee = it->first;
+  for (const auto& incmap : quoted_includes_to_quoted_includers_) {
+    const string& includee = incmap.first;
     if (!IsThirdPartyFile(includee) ||
         ContainsKey(third_party_headers_with_explicit_mappings, includee) ||
         ContainsKey(headers_included_from_non_third_party, includee)) {
       continue;
     }
-    for (Each<string> includer(&it->second); !includer.AtEnd(); ++includer) {
+    for (const string& includer : incmap.second) {
       // From the 'if' statement above, we already know that includee
       // is not included from non-third-party code.
-      CHECK_(IsThirdPartyFile(*includer) && "Why not nixed!");
+      CHECK_(IsThirdPartyFile(includer) && "Why not nixed!");
       CHECK_(IsThirdPartyFile(includee) && "Why not nixed!");
-      AddMapping(includee, *includer);
+      AddMapping(includee, includer);
       if (GetVisibility(includee) == kUnusedVisibility) {
         MarkIncludeAsPrivate(includee);
       }
@@ -1237,10 +1230,8 @@ void IncludePicker::FinalizeAddedIncludes() {
   MakeMapTransitive(&filepath_include_map_);
   // Now that filepath_include_map_ is transitively closed, it's an
   // easy task to get the values of symbol_include_map_ closed too.
-  // We can't use Each<>() because we need a non-const iterator.
-  for (IncludePicker::IncludeMap::iterator it = symbol_include_map_.begin();
-       it != symbol_include_map_.end(); ++it) {
-    ExpandOnce(filepath_include_map_, &it->second);
+  for (IncludeMap::value_type& symbol_include : symbol_include_map_) {
+    ExpandOnce(filepath_include_map_, &symbol_include.second);
   }
 
   has_called_finalize_added_include_lines_ = true;
@@ -1262,10 +1253,10 @@ vector<string> IncludePicker::GetPublicValues(
 
   if (GetOrDefault(filepath_visibility_map_, key, kPublic) == kPublic)
     retval.push_back(key);                // we can map to ourself!
-  for (Each<string> it(values); !it.AtEnd(); ++it) {
-    CHECK_(!StartsWith(*it, "@"));
-    if (GetOrDefault(filepath_visibility_map_, *it, kPublic) == kPublic)
-      retval.push_back(*it);
+  for (const string& value : *values) {
+    CHECK_(!StartsWith(value, "@"));
+    if (GetOrDefault(filepath_visibility_map_, value, kPublic) == kPublic)
+      retval.push_back(value);
   }
   return retval;
 }
@@ -1356,8 +1347,8 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
   const vector<string>* all_mappers = FindInMap(&filepath_include_map_,
                                                 quoted_from);
   if (all_mappers) {
-    for (Each<string> it(all_mappers); !it.AtEnd(); ++it) {
-      if (*it == quoted_to)
+    for (const string& mapper : *all_mappers) {
+      if (mapper == quoted_to)
         return true;
     }
   }
