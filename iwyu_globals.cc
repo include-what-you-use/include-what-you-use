@@ -282,9 +282,8 @@ static bool SortByDescendingLength(const HeaderSearchPath& left,
 static vector<HeaderSearchPath> NormalizeHeaderSearchPaths(
     const map<string, HeaderSearchPath::Type>& include_dirs_map) {
   vector<HeaderSearchPath> include_dirs;
-  for (Each<string, HeaderSearchPath::Type>
-           it(&include_dirs_map); !it.AtEnd(); ++it) {
-    include_dirs.push_back(HeaderSearchPath(it->first, it->second));
+  for (const pair<string, HeaderSearchPath::Type>& entry : include_dirs_map) {
+    include_dirs.push_back(HeaderSearchPath(entry.first, entry.second));
   }
 
   sort(include_dirs.begin(), include_dirs.end(), &SortByDescendingLength);
@@ -328,15 +327,16 @@ void InitGlobals(clang::SourceManager* sm,
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 
-  for (Each<HeaderSearchPath> it(&search_paths); !it.AtEnd(); ++it) {
-    const char* path_type_name
-        = (it->path_type == HeaderSearchPath::kSystemPath ? "system" : "user");
-    VERRS(6) << "Search path: " << it->path << " (" << path_type_name << ")\n";
+  for (const HeaderSearchPath& entry : search_paths) {
+    const char* path_type_name =
+        (entry.path_type == HeaderSearchPath::kSystemPath ? "system" : "user");
+    VERRS(6) << "Search path: " << entry.path << " (" << path_type_name
+             << ")\n";
   }
 
   // Add mappings.
-  for (Each<string> it(&GlobalFlags().mapping_files); !it.AtEnd(); ++it) {
-    include_picker->AddMappingsFromFile(*it);
+  for (const string& mapping_file : GlobalFlags().mapping_files) {
+    include_picker->AddMappingsFromFile(mapping_file);
   }
 }
 
@@ -389,8 +389,8 @@ void AddGlobToReportIWYUViolationsFor(const string& glob) {
 
 bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file) {
   const string filepath = GetFilePath(file);
-  for (Each<string> it(&GlobalFlags().check_also); !it.AtEnd(); ++it)
-    if (GlobMatchesPath(it->c_str(), filepath.c_str()))
+  for (const string& glob : GlobalFlags().check_also)
+    if (GlobMatchesPath(glob.c_str(), filepath.c_str()))
       return true;
   return false;
 }
