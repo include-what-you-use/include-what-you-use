@@ -9,8 +9,8 @@
 
 #include "iwyu_output.h"
 
-#include <stdio.h>                      // for snprintf
 #include <algorithm>                    // for sort, find
+#include <cstdio>                       // for snprintf
 // TODO(wan): make sure IWYU doesn't suggest <iterator>.
 #include <iterator>                     // for find
 #include <map>                          // for _Rb_tree_const_iterator, etc
@@ -56,7 +56,6 @@ using llvm::cast;
 using llvm::errs;
 using llvm::isa;
 using llvm::raw_string_ostream;
-using std::find;
 using std::map;
 using std::multimap;
 using std::pair;
@@ -141,14 +140,14 @@ g_fake_named_decl_map;
 // Since dynamic casting is not an option, this method is provided to
 // determine if a decl is actually a FakeNamedDecl.
 const FakeNamedDecl* FakeNamedDeclIfItIsOne(const clang::NamedDecl* decl) {
-  return GetOrDefault(g_fake_named_decl_map, decl, NULL);
+  return GetOrDefault(g_fake_named_decl_map, decl, nullptr);
 }
 
-}  // namespace
+}  // anonymous namespace
 
 FakeNamedDecl::FakeNamedDecl(const string& kind_name, const string& qual_name,
                              const string& decl_filepath, int decl_linenum)
-    : clang::NamedDecl(clang::Decl::Record, NULL, clang::SourceLocation(),
+    : clang::NamedDecl(clang::Decl::Record, nullptr, clang::SourceLocation(),
                        clang::DeclarationName()),
       kind_name_(kind_name),
       qual_name_(qual_name),
@@ -253,7 +252,7 @@ OneUse::OneUse(const string& symbol_name, const FileEntry* dfn_file,
                const string& dfn_filepath, SourceLocation use_loc)
     : symbol_name_(symbol_name),
       short_symbol_name_(symbol_name),
-      decl_(NULL),
+      decl_(nullptr),
       decl_file_(dfn_file),
       decl_filepath_(dfn_filepath),
       use_loc_(use_loc),
@@ -318,7 +317,6 @@ bool OneUse::PublicHeadersContain(const string& elt) {
 bool OneUse::NeedsSuggestedHeader() const {
   return (!ignore_use() && is_full_use() && suggested_header_.empty());;
 }
-
 
 namespace internal {
 
@@ -438,7 +436,7 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
     : line_(internal::MungedForwardDeclareLine(fwd_decl)),
       start_linenum_(-1), end_linenum_(-1),     // set 'for real' below
       is_desired_(false), is_present_(false), symbol_counts_(),
-      quoted_include_(), included_file_(NULL), fwd_decl_(fwd_decl) {
+      quoted_include_(), included_file_(nullptr), fwd_decl_(fwd_decl) {
   const SourceRange decl_lines = GetSourceRangeOfClassDecl(fwd_decl);
   // We always want to use the instantiation line numbers: for code like
   //     FORWARD_DECLARE_CLASS(MyClass);
@@ -453,7 +451,7 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
       start_linenum_(linenum), end_linenum_(linenum),
       is_desired_(false), is_present_(false), symbol_counts_(),
       quoted_include_(quoted_include), included_file_(included_file),
-      fwd_decl_(NULL) {
+      fwd_decl_(nullptr) {
 }
 
 bool OneIncludeOrForwardDeclareLine::HasSymbolUse(const string& symbol_name)
@@ -476,7 +474,6 @@ string OneIncludeOrForwardDeclareLine::LineNumberString() const {
   snprintf(buf, sizeof(buf), "%d-%d", start_linenum_, end_linenum_);
   return buf;
 }
-
 
 IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
                            const IwyuPreprocessorInfo* preprocessor_info,
@@ -533,7 +530,7 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
 
 void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
                                      bool definitely_keep_fwd_decl) {
-  CHECK_(fwd_decl && "forward_declare_decl unexpectedly NULL");
+  CHECK_(fwd_decl && "forward_declare_decl unexpectedly nullptr");
   CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<RecordDecl>(fwd_decl))
          && "Can only forward declare classes and class templates");
   lines_.push_back(OneIncludeOrForwardDeclareLine(fwd_decl));
@@ -548,7 +545,7 @@ void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
 }
 
 void IwyuFileInfo::AddUsingDecl(const UsingDecl* using_decl) {
-  CHECK_(using_decl && "using_decl unexpectedly NULL");
+  CHECK_(using_decl && "using_decl unexpectedly nullptr");
   using_decl_referenced_.insert(std::make_pair(using_decl, false));
   const SourceRange decl_lines = using_decl->getSourceRange();
   int start_linenum = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
@@ -590,7 +587,7 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
                                        const string& dfn_filepath,
                                        const string& symbol) {
-  symbol_uses_.push_back(OneUse(symbol, NULL, dfn_filepath, use_loc));
+  symbol_uses_.push_back(OneUse(symbol, nullptr, dfn_filepath, use_loc));
   LogSymbolUse("Marked full-info use of symbol", symbol_uses_.back());
 }
 
@@ -637,8 +634,7 @@ void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
   // traversing the AST, we check to see if a using decl is unreferenced and
   // add a full use of one of its shadow decls so that the source file
   // continues to compile.
-  map<const UsingDecl*, bool>::iterator using_decl_status = 
-    using_decl_referenced_.find(using_decl);
+  auto using_decl_status = using_decl_referenced_.find(using_decl);
 
   if (using_decl_status != using_decl_referenced_.end()) {
     using_decl_status->second = true;
@@ -728,27 +724,27 @@ set<string> CalculateMinimalIncludes(
   // those in private header files that only map to one public file.
   // For every other decl, we store the (decl, public-headers) pair.
   // Note we can't use Each<> because it only gives const iterators.
-  for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
+  for (OneUse& use : *uses) {
     // We don't need to add any #includes for non-full-use.
-    if (it->ignore_use() || !it->is_full_use())
+    if (use.ignore_use() || !use.is_full_use())
       continue;
     // Special case #1: Some uses come with a suggested header already picked.
-    if (it->has_suggested_header()) {
-      desired_headers.insert(it->suggested_header());
+    if (use.has_suggested_header()) {
+      desired_headers.insert(use.suggested_header());
       continue;
     }
     // Special case #2: if the dfn-file maps to the use-file, then
     // this is a file that the use-file is re-exporting symbols for,
     // and we should keep the #include as-is.
-    const string use_file = ConvertToQuotedInclude(GetFilePath(it->use_loc()));
-    if (it->PublicHeadersContain(use_file)) {
-      it->set_suggested_header(ConvertToQuotedInclude(it->decl_filepath()));
-      desired_headers.insert(it->suggested_header());
-      LogIncludeMapping("private header", *it);
-    } else if (it->public_headers().size() == 1) {
-      it->set_suggested_header(it->public_headers()[0]);
-      desired_headers.insert(it->suggested_header());
-      LogIncludeMapping("only candidate", *it);
+    const string use_file = ConvertToQuotedInclude(GetFilePath(use.use_loc()));
+    if (use.PublicHeadersContain(use_file)) {
+      use.set_suggested_header(ConvertToQuotedInclude(use.decl_filepath()));
+      desired_headers.insert(use.suggested_header());
+      LogIncludeMapping("private header", use);
+    } else if (use.public_headers().size() == 1) {
+      use.set_suggested_header(use.public_headers()[0]);
+      desired_headers.insert(use.suggested_header());
+      LogIncludeMapping("only candidate", use);
     }
   }
 
@@ -761,43 +757,42 @@ set<string> CalculateMinimalIncludes(
   // Fourth choice, includes in direct_includes.  Picking in
   // this order minimizes the number of #includes we add, while
   // allowing us to remove #includes if need be.
-  for (vector<OneUse>::iterator use = uses->begin();
-       use != uses->end(); ++use) {
-    if (!use->NeedsSuggestedHeader())
+  for (OneUse& use : *uses) {
+    if (!use.NeedsSuggestedHeader())
       continue;
-    const vector<string>& public_headers = use->public_headers();
+    const vector<string>& public_headers = use.public_headers();
     // TODO(csilvers): write ElementInBoth() in iwyu_stl_util.h
     for (Each<string> choice(&public_headers);
-         !use->has_suggested_header() && !choice.AtEnd(); ++choice) {
+         !use.has_suggested_header() && !choice.AtEnd(); ++choice) {
       if (ContainsKey(associated_direct_includes, *choice)) {
-        use->set_suggested_header(*choice);
-        desired_headers.insert(use->suggested_header());
-        LogIncludeMapping("in associated header", *use);
+        use.set_suggested_header(*choice);
+        desired_headers.insert(use.suggested_header());
+        LogIncludeMapping("in associated header", use);
       }
     }
     for (Each<string> choice(&public_headers);
-         !use->has_suggested_header() && !choice.AtEnd(); ++choice) {
+         !use.has_suggested_header() && !choice.AtEnd(); ++choice) {
       if (ContainsKey(direct_includes, *choice) &&
           ContainsKey(desired_headers, *choice)) {
-        use->set_suggested_header(*choice);
-        desired_headers.insert(use->suggested_header());
-        LogIncludeMapping("#include already present and needed", *use);
+        use.set_suggested_header(*choice);
+        desired_headers.insert(use.suggested_header());
+        LogIncludeMapping("#include already present and needed", use);
       }
     }
     for (Each<string> choice(&public_headers);
-         !use->has_suggested_header() && !choice.AtEnd(); ++choice) {
+         !use.has_suggested_header() && !choice.AtEnd(); ++choice) {
       if (ContainsKey(desired_headers, *choice)) {
-        use->set_suggested_header(*choice);
-        desired_headers.insert(use->suggested_header());
-        LogIncludeMapping("#include already needed", *use);
+        use.set_suggested_header(*choice);
+        desired_headers.insert(use.suggested_header());
+        LogIncludeMapping("#include already needed", use);
       }
     }
     for (Each<string> choice(&public_headers);
-         !use->has_suggested_header() && !choice.AtEnd(); ++choice) {
+         !use.has_suggested_header() && !choice.AtEnd(); ++choice) {
       if (ContainsKey(direct_includes, *choice)) {
-        use->set_suggested_header(*choice);
-        desired_headers.insert(use->suggested_header());
-        LogIncludeMapping("#include already present", *use);
+        use.set_suggested_header(*choice);
+        desired_headers.insert(use.suggested_header());
+        LogIncludeMapping("#include already present", use);
       }
     }
   }
@@ -811,9 +806,9 @@ set<string> CalculateMinimalIncludes(
   // best-fit order).  Among those, we choose arbitrarily.  We repeat
   // until we cover all sets.
   set<OneUse*> unmapped_uses;
-  for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
-    if (it->NeedsSuggestedHeader())
-      unmapped_uses.insert(&*it);
+  for (OneUse& use : *uses) {
+    if (use.NeedsSuggestedHeader())
+      unmapped_uses.insert(&use);
   }
   while (!unmapped_uses.empty()) {
     map<string, pair<int,int> > header_counts;   // total appearances, 1st's
@@ -961,7 +956,7 @@ void ProcessForwardDeclare(OneUse* use,
   // (A2) If it has default template parameters, recategorize as a full use.
   // Suppress this if there's no definition for this class (so can't full-use).
   if (tpl_decl && HasDefaultTemplateParameters(tpl_decl) &&
-      GetDefinitionForClass(tpl_decl) != NULL) {
+      GetDefinitionForClass(tpl_decl) != nullptr) {
     VERRS(6) << "Moving " << use->symbol_name()
              << " from fwd-decl use to full use: has default template param"
              << " (" << use->PrintableUseLoc() << ")\n";
@@ -1234,7 +1229,7 @@ void CalculateIwyuForForwardDeclareUse(
   CHECK_(use->decl() && "CalculateIwyuForForwardDeclareUse takes a fwd-decl");
   CHECK_(!use->is_full_use() && "ForwardDeclareUse are not full uses");
 
-  const NamedDecl* same_file_decl = NULL;
+  const NamedDecl* same_file_decl = nullptr;
   const RecordDecl* record_decl = DynCastFrom(use->decl());
   const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
   const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(use->decl());
@@ -1294,7 +1289,7 @@ void CalculateIwyuForForwardDeclareUse(
   }
 
   // (D1) Mark that the fwd-declare is satisfied by dfn in desired include.
-  const NamedDecl* providing_decl = NULL;
+  const NamedDecl* providing_decl = nullptr;
   if (dfn_is_in_desired_includes) {
     providing_decl = dfn;
     VERRS(6) << "Noting fwd-decl use of " << use->symbol_name()
@@ -1409,17 +1404,17 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // We have to do the steps in order, because a forward-declare use may
   // turn into a full use, and need to be processed in the full-use step
   // too.  Note we can't use Each<> because it returns a const-iterator.
-  for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
-    if (!it->is_full_use() && it->decl())
-      internal::ProcessForwardDeclare(&*it, preprocessor_info_);
+  for (OneUse& use : *uses) {
+    if (!use.is_full_use() && use.decl())
+      internal::ProcessForwardDeclare(&use, preprocessor_info_);
   }
-  for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
-    if (it->is_full_use() && it->decl())
-      internal::ProcessFullUse(&*it, preprocessor_info_);
+  for (OneUse& use : *uses) {
+    if (use.is_full_use() && use.decl())
+      internal::ProcessFullUse(&use, preprocessor_info_);
   }
-  for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
-    if (it->is_full_use() && !it->decl())
-      internal::ProcessSymbolUse(&*it, preprocessor_info_);
+  for (OneUse& use : *uses) {
+    if (use.is_full_use() && !use.decl())
+      internal::ProcessSymbolUse(&use, preprocessor_info_);
   }
 
   // (C1) Compute the direct includes of 'associated' files.
@@ -1455,16 +1450,16 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   InsertAllInto(AssociatedDesiredIncludes(), &effective_desired_includes);
 
   // Now that we've figured out desired_includes, figure out iwyu violations.
-  for (vector<OneUse>::iterator it = uses->begin(); it != uses->end(); ++it) {
-    if (it->ignore_use()) {
+  for (OneUse& use : *uses) {
+    if (use.ignore_use()) {
       // Do nothing, we're ignoring the use
-    } else if (!it->is_full_use()) {
+    } else if (!use.is_full_use()) {
       internal::CalculateIwyuForForwardDeclareUse(
-          &*it, effective_direct_includes, effective_desired_includes,
+          &use, effective_direct_includes, effective_desired_includes,
           AssociatedFileEntries());
     } else {
       internal::CalculateIwyuForFullUse(
-          &*it, effective_direct_includes, effective_desired_includes);
+          &use, effective_direct_includes, effective_desired_includes);
     }
   }
 }
@@ -1666,29 +1661,28 @@ void CleanupPrefixHeaderIncludes(
   if (policy == CommandlineFlags::kAdd)
     return;
 
-  for (vector<OneIncludeOrForwardDeclareLine>::iterator it = lines->begin();
-       it != lines->end(); ++it) {
-    if (!it->is_desired())
+  for (OneIncludeOrForwardDeclareLine& line : *lines) {
+    if (!line.is_desired())
       continue;
-    if (it->is_present() && (policy == CommandlineFlags::kKeep))
+    if (line.is_present() && (policy == CommandlineFlags::kKeep))
       continue;  // Keep present line according to policy.
 
-    const FileEntry* file_entry = NULL;
-    if (it->IsIncludeLine()) {
-      file_entry = it->included_file();
+    const FileEntry* file_entry = nullptr;
+    if (line.IsIncludeLine()) {
+      file_entry = line.included_file();
       if (!file_entry)
         file_entry = preprocessor_info->IncludeToFileEntry(
-            it->quoted_include());
-      // At this point it's OK if file_entry is NULL.  It means we've never
+            line.quoted_include());
+      // At this point it's OK if file_entry is nullptr.  It means we've never
       // seen quoted_include.  And that's why it cannot be prefix header.
     } else {
-      const RecordDecl* dfn = GetDefinitionForClass(it->fwd_decl());
+      const RecordDecl* dfn = GetDefinitionForClass(line.fwd_decl());
       file_entry = GetFileEntry(dfn);
     }
     if (IsRemovablePrefixHeader(file_entry, preprocessor_info)) {
       CHECK_(file_entry && "FileEntry should exist to be prefix header");
-      it->clear_desired();
-      VERRS(6) << "Ignoring '" << it->line()
+      line.clear_desired();
+      VERRS(6) << "Ignoring '" << line.line()
                << "': is superseded by command line include "
                << file_entry->getName() << "\n";
     }
@@ -1749,7 +1743,6 @@ OutputLine PrintableIncludeOrForwardDeclareLine(
     GetSymbolsSortedByFrequency(line.symbol_counts()));
 }
 
-
 typedef pair<int, string> LineSortKey;
 
 // The sort key of an include/forward-declare line is an (int, string)
@@ -1795,7 +1788,7 @@ size_t PrintableDiffs(const string& filename,
   // because some headers might be listed twice in the source file.)
   multimap<LineSortKey, const OneIncludeOrForwardDeclareLine*> sorted_lines;
   for (Each<OneIncludeOrForwardDeclareLine> it(&lines); !it.AtEnd(); ++it) {
-    const IwyuFileInfo* file_info = NULL;
+    const IwyuFileInfo* file_info = nullptr;
     if (it->IsIncludeLine())
       file_info = preprocessor_info->FileInfoFor(it->included_file());
 
@@ -1933,11 +1926,10 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
 
   // Remove desired inclusions that have been inhibited by pragma
   // "no_include".
-  for (vector<OneIncludeOrForwardDeclareLine>::iterator
-           it = lines_.begin(); it != lines_.end(); ++it) {
-    if (it->IsIncludeLine() &&
-        preprocessor_info_->IncludeIsInhibited(file_, it->quoted_include())) {
-      it->clear_desired();
+  for (OneIncludeOrForwardDeclareLine& line : lines_) {
+    if (line.IsIncludeLine() &&
+        preprocessor_info_->IncludeIsInhibited(file_, line.quoted_include())) {
+      line.clear_desired();
     }
   }
 

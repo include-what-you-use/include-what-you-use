@@ -86,11 +86,12 @@
 //     case it is.  For example, if foo.cc desires bar.h, but can
 //     already get it via foo.h, IWYU won't recommend foo.cc to
 //     #include bar.h, unless it already does so.
-#include <stddef.h>                     // for size_t
-#include <stdio.h>                      // for snprintf
-#include <stdlib.h>                     // for atoi, exit
-#include <string.h>
+
 #include <algorithm>                    // for swap, find, make_pair
+#include <cstddef>                      // for size_t
+#include <cstdio>                       // for snprintf
+#include <cstdlib>                      // for atoi, exit
+#include <cstring>
 #include <deque>                        // for swap
 #include <iterator>                     // for find
 #include <list>                         // for swap
@@ -137,8 +138,6 @@
 namespace clang {
 class FileEntry;
 class PPCallbacks;
-class SourceManager;
-class Token;
 }  // namespace clang
 
 namespace include_what_you_use {
@@ -148,7 +147,6 @@ namespace include_what_you_use {
 using clang::ASTConsumer;
 using clang::ASTContext;
 using clang::ASTFrontendAction;
-using clang::ArrayType;
 using clang::Attr;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
@@ -179,7 +177,6 @@ using clang::FunctionType;
 using clang::ImplicitCastExpr;
 using clang::LValueReferenceType;
 using clang::LinkageSpecDecl;
-using clang::MacroInfo;
 using clang::MemberExpr;
 using clang::NamedDecl;
 using clang::NestedNameSpecifier;
@@ -191,11 +188,9 @@ using clang::PointerType;
 using clang::QualType;
 using clang::QualifiedTypeLoc;
 using clang::RecordDecl;
-using clang::RecordType;
 using clang::RecursiveASTVisitor;
 using clang::ReferenceType;
 using clang::SourceLocation;
-using clang::SourceManager;
 using clang::Stmt;
 using clang::SubstTemplateTypeParmType;
 using clang::TagDecl;
@@ -203,12 +198,9 @@ using clang::TagType;
 using clang::TemplateArgument;
 using clang::TemplateArgumentList;
 using clang::TemplateArgumentLoc;
-using clang::TemplateDecl;
 using clang::TemplateName;
 using clang::TemplateSpecializationKind;
 using clang::TemplateSpecializationType;
-using clang::TemplateTemplateParmDecl;
-using clang::Token;
 using clang::TranslationUnitDecl;
 using clang::Type;
 using clang::TypeLoc;
@@ -224,8 +216,6 @@ using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
-using llvm::raw_string_ostream;
-using std::find;
 using std::make_pair;
 using std::map;
 using std::set;
@@ -256,7 +246,7 @@ bool CanIgnoreLocation(SourceLocation loc) {
           !ShouldReportIWYUViolationsFor(file_entry_after_macro_expansion));
 }
 
-}  // namespace
+}  // anonymous namespace
 
 // ----------------------------------------------------------------------
 // --- BaseAstVisitor
@@ -298,7 +288,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // non-const methods on CompilerInstance, so the var can't be const.
   explicit BaseAstVisitor(CompilerInstance* compiler)
       : compiler_(compiler),
-        current_ast_node_(NULL) {}
+        current_ast_node_(nullptr) {}
 
   virtual ~BaseAstVisitor() {}
 
@@ -381,7 +371,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseNestedNameSpecifier(NestedNameSpecifier* nns) {
-    if (nns == NULL)
+    if (nns == nullptr)
       return true;
     ASTNode node(nns, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
@@ -662,7 +652,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // we're not implicit, we have to lie and give a location as well.
   // (We give the null location.)  This is a small memory leak.
   void SetTypeSourceInfoForImplicitMethodIfNeeded(FunctionDecl* decl) {
-    if (decl->getTypeSourceInfo() == NULL) {
+    if (decl->getTypeSourceInfo() == nullptr) {
       ASTContext& ctx = compiler_->getASTContext();
       decl->setTypeSourceInfo(ctx.getTrivialTypeSourceInfo(decl->getType()));
     }
@@ -758,7 +748,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // it does.  A subclass interested only in function calls, and
   // not exactly what expression caused them, can override
   // HandleFunctionCall.  Note: subclasses should expect that
-  // the first argument to HandleFunctionCall may be NULL (e.g. when
+  // the first argument to HandleFunctionCall may be nullptr (e.g. when
   // constructing a built-in type), in which case the handler should
   // immediately return.
 
@@ -767,7 +757,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // the source.  (We need the type-as-written so we can distinguish
   // explicitly-written template args from default template args.)  We
   // also pass in the CallExpr (or CXXConstructExpr, etc).  This may
-  // be NULL if the function call is implicit.
+  // be nullptr if the function call is implicit.
   bool HandleFunctionCall(clang::FunctionDecl* callee,
                           const clang::Type* parent_type,
                           const clang::Expr* calling_expr) {
@@ -788,7 +778,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
              << PrintableType(type_being_destroyed) << "\n";
     }
     return this->getDerived().HandleFunctionCall(decl, type_being_destroyed,
-                                                 static_cast<Expr*>(NULL));
+                                                 static_cast<Expr*>(nullptr));
   }
 
 
@@ -877,7 +867,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (FunctionDecl* operator_new = expr->getOperatorNew()) {
       // If operator new is a method, it must (by the semantics of
       // per-class operator new) be a method on the class we're newing.
-      const Type* op_parent = NULL;
+      const Type* op_parent = nullptr;
       if (isa<CXXMethodDecl>(operator_new))
         op_parent = parent_type;
       if (!this->getDerived().HandleFunctionCall(operator_new, op_parent, expr))
@@ -896,7 +886,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (FunctionDecl* operator_delete = expr->getOperatorDelete()) {
       // If operator delete is a method, it must (by the semantics of per-
       // class operator delete) be a method on the class we're deleting.
-      const Type* op_parent = NULL;
+      const Type* op_parent = nullptr;
       if (isa<CXXMethodDecl>(operator_delete))
         op_parent = parent_type;
       if (!this->getDerived().HandleFunctionCall(operator_delete, op_parent,
@@ -926,7 +916,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (FunctionDecl* fn_decl = DynCastFrom(expr->getDecl())) {
       // If fn_decl has a class-name before it -- 'MyClass::method' --
       // it's a method pointer.
-      const Type* parent_type = NULL;
+      const Type* parent_type = nullptr;
       if (expr->getQualifier() && expr->getQualifier()->getAsType())
         parent_type = expr->getQualifier()->getAsType();
       if (!this->getDerived().HandleFunctionCall(fn_decl, parent_type, expr))
@@ -948,7 +938,6 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // Traverse*() is ASTNode knows its parent.
   ASTNode* current_ast_node_;
 };
-
 
 // ----------------------------------------------------------------------
 // --- AstTreeFlattenerVisitor
@@ -985,7 +974,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
         return ContainsValue(nnslocs, *nl);
       } else if (const TemplateName* tn = node.GetAs<TemplateName>()) {
         // The best we can do is to compare the associated decl
-        if (tn->getAsTemplateDecl() == NULL)
+        if (tn->getAsTemplateDecl() == nullptr)
           return false;    // be conservative if we can't compare decls
         for (Each<TemplateName> it(&tpl_names); it.AtEnd(); ++it) {
           if (it->getAsTemplateDecl() == tn->getAsTemplateDecl())
@@ -1071,13 +1060,15 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   //------------------------------------------------------------
   // Pure virtual methods that the base class requires.
 
-  virtual bool CanIgnoreCurrentASTNode() const {
+  bool CanIgnoreCurrentASTNode() const override {
     return false;
   }
-  virtual bool ShouldPrintSymbolFromCurrentFile() const {
+
+  bool ShouldPrintSymbolFromCurrentFile() const override {
     return false;
   }
-  virtual string GetSymbolAnnotation() const {
+
+  string GetSymbolAnnotation() const override {
     return "[Uninstantiated template AST-node] ";
   }
 
@@ -1085,49 +1076,58 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   // Top-level handlers that construct the tree.
 
   bool VisitDecl(Decl*) { AddCurrentAstNodeAsPointer(); return true; }
+
   bool VisitStmt(Stmt*) { AddCurrentAstNodeAsPointer(); return true; }
+
   bool VisitType(Type*) { AddCurrentAstNodeAsPointer(); return true; }
+
   bool VisitTypeLoc(TypeLoc typeloc) {
     VERRS(7) << GetSymbolAnnotation() << PrintableTypeLoc(typeloc) << "\n";
     seen_nodes_.Add(typeloc);
     return true;
   }
+
   bool VisitNestedNameSpecifier(NestedNameSpecifier*) {
     AddCurrentAstNodeAsPointer();
     return true;
   }
+
   bool VisitTemplateName(TemplateName tpl_name) {
     VERRS(7) << GetSymbolAnnotation()
              << PrintableTemplateName(tpl_name) << "\n";
     seen_nodes_.Add(tpl_name);
     return true;
   }
+
   bool VisitTemplateArgument(const TemplateArgument& tpl_arg) {
     VERRS(7) << GetSymbolAnnotation()
              << PrintableTemplateArgument(tpl_arg) << "\n";
     seen_nodes_.Add(tpl_arg);
     return true;
   }
+
   bool VisitTemplateArgumentLoc(const TemplateArgumentLoc& tpl_argloc) {
     VERRS(7) << GetSymbolAnnotation()
              << PrintableTemplateArgumentLoc(tpl_argloc) << "\n";
     seen_nodes_.Add(tpl_argloc);
     return true;
   }
+
   bool TraverseImplicitDestructorCall(clang::CXXDestructorDecl* decl,
                                       const Type* type) {
     VERRS(7) << GetSymbolAnnotation() << "[implicit dtor] "
              << static_cast<void*>(decl)
-             << (decl ? PrintableDecl(decl) : "NULL") << "\n";
+             << (decl ? PrintableDecl(decl) : "nullptr") << "\n";
     AddAstNodeAsPointer(decl);
     return Base::TraverseImplicitDestructorCall(decl, type);
   }
+
   bool HandleFunctionCall(clang::FunctionDecl* callee,
                           const clang::Type* parent_type,
                           const clang::Expr* calling_expr) {
     VERRS(7) << GetSymbolAnnotation() << "[function call] "
              << static_cast<void*>(callee)
-             << (callee ? PrintableDecl(callee) : "NULL") << "\n";
+             << (callee ? PrintableDecl(callee) : "nullptr") << "\n";
     AddAstNodeAsPointer(callee);
     return Base::HandleFunctionCall(callee, parent_type, calling_expr);
   }
@@ -1160,7 +1160,6 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
 
 map<const Decl*, AstFlattenerVisitor::NodeSet>
 AstFlattenerVisitor::nodeset_decl_cache_;
-
 
 // ----------------------------------------------------------------------
 // --- VisitorState
@@ -1207,7 +1206,6 @@ struct VisitorState {
   multimap<const NamedDecl*, const UsingDecl*> using_declarations;
 };
 
-
 // ----------------------------------------------------------------------
 // --- IwyuBaseAstVisitor
 // ----------------------------------------------------------------------
@@ -1228,7 +1226,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       : Base(visitor_state->compiler),
         visitor_state_(visitor_state) {}
 
-  virtual ~IwyuBaseAstVisitor() {}
+  ~IwyuBaseAstVisitor() override {}
 
   // To avoid having this-> pointers everywhere, we re-export Base's
   // functions that we use in this class.  This is a language nit(?)
@@ -1302,7 +1300,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // respectively, so we don't need to re-map them, but we do want to re-map
   // reverse_iterator<_List_iterator> to something in list header.
   //    If the input decl does not correspond to one of these private
-  // decls, we return NULL.  This method is actually a helper for
+  // decls, we return nullptr.  This method is actually a helper for
   // MapPrivateDeclToPublicDecl() and MapPrivateTypeToPublicType().
   const Type* MapPrivateDeclToPublicType(const NamedDecl* decl) const {
     const NamedDecl* class_decl = decl;
@@ -1353,7 +1351,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return GetTplTypeArg(class_decl, 0);
     }
 
-    return NULL;
+    return nullptr;
   }
 
   const NamedDecl* MapPrivateDeclToPublicDecl(const NamedDecl* decl) const {
@@ -1467,7 +1465,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   bool CodeAuthorWantsJustAForwardDeclare(const Type* type,
                                           SourceLocation use_loc) {
     const NamedDecl* decl = TypeToDeclAsWritten(type);
-    if (decl == NULL)    // only class-types are candidates for returning true
+    if (decl == nullptr)   // only class-types are candidates for returning true
       return false;
 
     // If we're a template specialization, we also accept
@@ -1638,7 +1636,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Checkers, that tell iwyu_output about uses of symbols.
   // We let, but don't require, subclasses to override these.
 
-  // The comment, if not NULL, is extra text that is included along
+  // The comment, if not nullptr, is extra text that is included along
   // with the warning message that iwyu emits.
   virtual void ReportDeclUseWithComment(SourceLocation used_loc,
                                         const NamedDecl* used_decl,
@@ -1704,13 +1702,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           // recurse inside this class, and not go back to subclasses.
           for (Each<const Type*> it(&underlying_types); !it.AtEnd(); ++it)
             IwyuBaseAstVisitor<Derived>::ReportTypeUseWithComment(used_loc, *it,
-                                                                  NULL);
+                                                                  nullptr);
         }
       }
     }
   }
 
-  // The comment, if not NULL, is extra text that is included along
+  // The comment, if not nullptr, is extra text that is included along
   // with the warning message that iwyu emits.
   virtual void ReportDeclForwardDeclareUseWithComment(SourceLocation used_loc,
                                                       const NamedDecl* used_decl,
@@ -1745,12 +1743,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   // Like ReportDeclUse, but for the common case of no comment.
   void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl) {
-    return ReportDeclUseWithComment(used_loc, decl, NULL);
+    return ReportDeclUseWithComment(used_loc, decl, nullptr);
   }
 
   void ReportDeclForwardDeclareUse(SourceLocation used_loc,
                                    const NamedDecl* decl) {
-    return ReportDeclForwardDeclareUseWithComment(used_loc, decl, NULL);
+    return ReportDeclForwardDeclareUseWithComment(used_loc, decl, nullptr);
   }
 
   void ReportDeclsUse(SourceLocation used_loc,
@@ -1761,7 +1759,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   // Called when the given type is fully used at used_loc, regardless
   // of the type being explicitly written in the source code or not.
-  // The comment, if not NULL, is extra text that is included along
+  // The comment, if not nullptr, is extra text that is included along
   // with the warning message that iwyu emits.
   virtual void ReportTypeUseWithComment(SourceLocation used_loc,
                                         const Type* type,
@@ -1793,7 +1791,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   // Like ReportTypeUse, but for the common case of no comment.
   void ReportTypeUse(SourceLocation used_loc, const Type* type) {
-    return ReportTypeUseWithComment(used_loc, type, NULL);
+    return ReportTypeUseWithComment(used_loc, type, nullptr);
   }
 
   void ReportTypesUse(SourceLocation used_loc, const set<const Type*>& types) {
@@ -1917,7 +1915,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         continue;
 
       // TODO(csilvers): remove this 'if' check when we've resolved the
-      // clang bug where getTypeSourceInfo() can return NULL.
+      // clang bug where getTypeSourceInfo() can return nullptr.
       if ((*param)->getTypeSourceInfo()) {
         const TypeLoc param_tl = (*param)->getTypeSourceInfo()->getTypeLoc();
         // While iwyu requires the full type of autocast parameters,
@@ -1936,7 +1934,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                    "(for autocast)");
         }
       } else {
-        VERRS(6) << "WARNING: NULL TypeSourceInfo for " << PrintableDecl(*param)
+        VERRS(6) << "WARNING: nullptr TypeSourceInfo for "
+                 << PrintableDecl(*param)
                  << " (type " << PrintableType(param_type) << ")\n";
       }
     }
@@ -2358,7 +2357,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // For now, we're only worried about function calls.
     // TODO(csilvers): are there other kinds of overloads we need to check?
-    const FunctionDecl* arbitrary_fn_decl = NULL;
+    const FunctionDecl* arbitrary_fn_decl = nullptr;
     for (OverloadExpr::decls_iterator it = expr->decls_begin();
          it != expr->decls_end(); ++it) {
       const NamedDecl* decl = *it;
@@ -2403,7 +2402,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // trouble with methods defined in a different file than they're
   // declared.
 
-  // If getOperatorNew() returns NULL, it means the operator-new is
+  // If getOperatorNew() returns nullptr, it means the operator-new is
   // overloaded, and technically we can't know which operator-new is
   // being called until the template is instantiated.  But if it looks
   // like a placement-new, we handle it at template-writing time
@@ -2488,7 +2487,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // declarations are forward-declarable.  This is true, *except*
     // for the exception (throw) types.  We clean that up here.
     // TODO(csilvers): figure out how to do these two steps in one place.
-    const FunctionProtoType* fn_type = NULL;
+    const FunctionProtoType* fn_type = nullptr;
     if (!fn_type) {
       fn_type = current_ast_node()->template GetParentAs<FunctionProtoType>();
     }
@@ -2619,7 +2618,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Now there are two options: either we have a type or we have a declaration
     // involving a type.
     const Type* parent_type = ast_node->GetParentAs<Type>();
-    if (parent_type == NULL) {
+    if (parent_type == nullptr) {
       // Since it's not a type, it must be a decl.
       // Our target here is record members, all of which derive from ValueDecl.
       if (const ValueDecl *decl = ast_node->GetParentAs<ValueDecl>()) {
@@ -2676,14 +2675,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // namespaces we're in), via the check through 'Encloses'. Of those, we
     // pick the one that's in the same file as decl, if possible, otherwise we
     // pick one arbitrarily.
-    const UsingDecl* retval = NULL;
+    const UsingDecl* retval = nullptr;
     vector<const UsingDecl*> using_decls
         = FindInMultiMap(visitor_state_->using_declarations, decl);
     for (Each<const UsingDecl*> it(&using_decls); !it.AtEnd(); ++it) {
       if (!(*it)->getDeclContext()->Encloses(use_context))
         continue;
       if (GetFileEntry(decl) == GetFileEntry(*it) ||    // in same file, prefer
-          retval == NULL) {        // not in same file, but better than nothing
+          retval == nullptr) {      // not in same file, but better than nothing
         retval = *it;
       }
     }
@@ -2696,7 +2695,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Instead, add them to the VisitorState struct, above.
   VisitorState* const visitor_state_;
 };
-
 
 // ----------------------------------------------------------------------
 // --- InstantiatedTemplateVisitor
@@ -2758,7 +2756,7 @@ class InstantiatedTemplateVisitor
   // type to the template type as written (or as close as we can find
   // to it).  If a type is not in resugar-map, it might be due to a
   // recursive template call and encode a template type we don't care
-  // about ourselves.  If it's in the resugar_map but with a NULL
+  // about ourselves.  If it's in the resugar_map but with a nullptr
   // value, it's a default template parameter, that the
   // template-caller may or may not be responsible for.
   void ScanInstantiatedFunction(
@@ -2813,25 +2811,25 @@ class InstantiatedTemplateVisitor
   // When checking a template instantiation, we don't care where the
   // template definition is, so we never have any reason to ignore a
   // node.
-  virtual bool CanIgnoreCurrentASTNode() const {
+  bool CanIgnoreCurrentASTNode() const override {
     // TODO(csilvers): call CanIgnoreType() if we're a type.
     return nodes_to_ignore_.Contains(*current_ast_node());
   }
 
   // For template instantiations, we want to print the symbol even if
   // it's not from the main compilation unit.
-  virtual bool ShouldPrintSymbolFromCurrentFile() const {
+  bool ShouldPrintSymbolFromCurrentFile() const override {
     return GlobalFlags().verbose >= 5;
   }
 
-  virtual string GetSymbolAnnotation() const { return " in tpl"; }
+  string GetSymbolAnnotation() const override { return " in tpl"; }
 
   // We only care about types that would have been dependent in the
   // uninstantiated template: that is, SubstTemplateTypeParmType types
   // or types derived from them.  We use nodes_to_ignore_ to select
   // down to those.  Even amongst subst-type, we only want ones in the
   // resugar-map: the rest we have chosen to ignore for some reason.
-  virtual bool CanIgnoreType(const Type* type) const {
+  bool CanIgnoreType(const Type* type) const override {
     if (nodes_to_ignore_.Contains(type))
       return true;
 
@@ -2863,7 +2861,7 @@ class InstantiatedTemplateVisitor
   // are not responsible for because the template code is (for
   // instance, we're not responsible for a vector's call to
   // allocator::allocator(), because <vector> provides it for us).
-  virtual bool CanIgnoreDecl(const Decl* decl) const {
+  bool CanIgnoreDecl(const Decl* decl) const override {
     return nodes_to_ignore_.Contains(decl);
   }
 
@@ -2872,9 +2870,8 @@ class InstantiatedTemplateVisitor
   // provide" the decl, by #including the file that defines the decl
   // (if templates call other templates, we have to find the right
   // template).
-  virtual void ReportDeclUseWithComment(SourceLocation used_loc,
-                                        const NamedDecl* decl,
-                                        const char* comment) {
+  void ReportDeclUseWithComment(SourceLocation used_loc, const NamedDecl* decl,
+                                const char* comment) override {
     const SourceLocation actual_used_loc = GetLocOfTemplateThatProvides(decl);
     if (actual_used_loc.isValid()) {
       // If a template is responsible for this decl, then we don't add
@@ -2890,9 +2887,8 @@ class InstantiatedTemplateVisitor
     }
   }
 
-  virtual void ReportTypeUseWithComment(SourceLocation used_loc,
-                                        const Type* type,
-                                        const char* comment) {
+  void ReportTypeUseWithComment(SourceLocation used_loc, const Type* type,
+                                const char* comment) override {
     // clang desugars template types, so Foo<MyTypedef>() gets turned
     // into Foo<UnderlyingType>().  Try to convert back.
     type = ResugarType(type);
@@ -2942,11 +2938,13 @@ class InstantiatedTemplateVisitor
       current_ast_node()->set_in_forward_declare_context(true);
     return TraverseDataAndTypeMembersOfClassHelper(type);
   }
+
   bool TraverseTemplateSpecializationType(
       clang::TemplateSpecializationType* type) {
     if (!Base::TraverseTemplateSpecializationType(type))  return false;
     return TraverseTemplateSpecializationTypeHelper(type);
   }
+
   bool TraverseTemplateSpecializationTypeLoc(
       clang::TemplateSpecializationTypeLoc typeloc) {
     if (!Base::TraverseTemplateSpecializationTypeLoc(typeloc))  return false;
@@ -2961,6 +2959,7 @@ class InstantiatedTemplateVisitor
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
     return TraverseType(QualType(actual_type, 0));
   }
+
   // When we see a template argument used inside an instantiated
   // template, we want to explore the type recursively.  For instance
   // if we see Inner<Outer<Foo> >(), we want to recurse onto Foo.
@@ -2970,6 +2969,7 @@ class InstantiatedTemplateVisitor
       return false;
     return TraverseSubstTemplateTypeParmTypeHelper(type);
   }
+
   bool TraverseSubstTemplateTypeParmTypeLoc(
       clang::SubstTemplateTypeParmTypeLoc typeloc) {
     if (!Base::TraverseSubstTemplateTypeParmTypeLoc(typeloc))
@@ -3072,7 +3072,7 @@ class InstantiatedTemplateVisitor
  private:
   // Clears the state of the visitor.
   void Clear() {
-    caller_ast_node_ = NULL;
+    caller_ast_node_ = nullptr;
     resugar_map_.clear();
     traversed_decls_.clear();
     nodes_to_ignore_.clear();
@@ -3120,10 +3120,10 @@ class InstantiatedTemplateVisitor
   // For a SubstTemplateTypeParmType, says whether it corresponds to a
   // default template parameter (one not explicitly specified when the
   // class was instantiated) or not.  We store this in resugar_map by
-  // having the value be NULL.
+  // having the value be nullptr.
   bool IsDefaultTemplateParameter(const Type* type) const {
     type = RemoveSubstTemplateTypeParm(type);
-    return ContainsKeyValue(resugar_map_, type, static_cast<Type*>(NULL));
+    return ContainsKeyValue(resugar_map_, type, static_cast<Type*>(nullptr));
   }
 
   // clang desugars template types, so Foo<MyTypedef>() gets turned
@@ -3132,10 +3132,10 @@ class InstantiatedTemplateVisitor
   // so we can just use the input type unchanged.
   const Type* ResugarType(const Type* type) const {
     type = RemoveSubstTemplateTypeParm(type);
-    // If we're the resugar-map but with a value of NULL, it means
+    // If we're the resugar-map but with a value of nullptr, it means
     // we're a default template arg, which means we don't have anything
     // to resugar to.  So just return the input type.
-    if (ContainsKeyValue(resugar_map_, type, static_cast<const Type*>(NULL)))
+    if (ContainsKeyValue(resugar_map_, type, static_cast<const Type*>(nullptr)))
       return type;
     return GetOrDefault(resugar_map_, type, type);
   }
@@ -3341,12 +3341,12 @@ class InstantiatedTemplateVisitor
 
     VERRS(6) << "(Using pre-computed list of full-use information for "
              << tpl_decl->getQualifiedNameAsString() << ")\n";
-    // For entries with a non-NULL value, we report the value, which
+    // For entries with a non-nullptr value, we report the value, which
     // is the unsugared type, as being fully used.  Entries with a
-    // NULL value are default template args, and we only report them
+    // nullptr value are default template args, and we only report them
     // if the template class doesn't intend-to-provide them.
     for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
-      const Type* resugared_type = NULL;
+      const Type* resugared_type = nullptr;
       if (it->second) {
         resugared_type = it->second;
       } else {
@@ -3384,7 +3384,7 @@ class InstantiatedTemplateVisitor
   // type to the template type as written (or as close as we can find
   // to it).  If a type is not in resugar-map, it might be due to a
   // recursive template call and encode a template type we don't care
-  // about ourselves.  If it's in the resugar_map but with a NULL
+  // about ourselves.  If it's in the resugar_map but with a nullptr
   // value, it's a default template parameter, that the
   // template-caller may or may not be responsible for.
   map<const Type*, const Type*> resugar_map_;
@@ -3397,7 +3397,6 @@ class InstantiatedTemplateVisitor
   // The current set of nodes we're updating cache entries for.
   set<CacheStoringScope*> cache_storers_;
 };  // class InstantiatedTemplateVisitor
-
 
 // ----------------------------------------------------------------------
 // --- IwyuAstConsumer
@@ -3423,7 +3422,7 @@ class IwyuAstConsumer
   // Returns true if we are not interested in symbols used in used_in
   // for whatever reason.  For instance, we can ignore nodes that are
   // neither in the file we're compiling nor in its associated .h file.
-  virtual bool CanIgnoreCurrentASTNode() const {
+  bool CanIgnoreCurrentASTNode() const override {
     // If we're outside of foo.{h,cc} and the set of check_also files,
     // just ignore.
     if (CanIgnoreLocation(current_ast_node()->GetLocation()))
@@ -3444,19 +3443,19 @@ class IwyuAstConsumer
   // foo.h, foo-inl.h) if the debug level is 5 or 6, for non-system
   // files if the debug level is 7, and all files if the debug level
   // is 8 or more.
-  virtual bool ShouldPrintSymbolFromCurrentFile() const {
+  bool ShouldPrintSymbolFromCurrentFile() const override {
     return ShouldPrintSymbolFromFile(CurrentFileEntry());
   }
 
-  virtual string GetSymbolAnnotation() const { return ""; }
+  string GetSymbolAnnotation() const override { return ""; }
 
   // We are interested in all types for iwyu checking.
-  virtual bool CanIgnoreType(const Type* type) const {
-    return type == NULL;
+  bool CanIgnoreType(const Type* type) const override {
+    return type == nullptr;
   }
 
-  virtual bool CanIgnoreDecl(const Decl* decl) const {
-    return decl == NULL;
+  bool CanIgnoreDecl(const Decl* decl) const override {
+    return decl == nullptr;
   }
 
   //------------------------------------------------------------
@@ -3466,10 +3465,10 @@ class IwyuAstConsumer
   // for all the handlers we can override.
 
   // Called once at the beginning of the compilation.
-  virtual void Initialize(ASTContext& context) {}  // NOLINT
+  void Initialize(ASTContext& context) override {}  // NOLINT
 
   // Called once at the end of the compilation.
-  virtual void HandleTranslationUnit(ASTContext& context) {  // NOLINT
+  void HandleTranslationUnit(ASTContext& context) override {  // NOLINT
     // TODO(csilvers): automatically detect preprocessing is done, somehow.
     const_cast<IwyuPreprocessorInfo*>(&preprocessor_info())->
         HandlePreprocessingDone();
@@ -3692,7 +3691,7 @@ class IwyuAstConsumer
     if (const CXXRecordDecl* record_decl = DynCastFrom(underlying_decl)) {
       for (DeclContext::decl_iterator it = record_decl->decls_begin();
            it != record_decl->decls_end(); ++it) {
-        FunctionDecl* fn_decl = NULL;
+        FunctionDecl* fn_decl = nullptr;
         if (CXXMethodDecl* method_decl = DynCastFrom(*it)) {
           fn_decl = method_decl;
         } else if (FunctionTemplateDecl* tpl_decl = DynCastFrom(*it)) {
@@ -3701,7 +3700,7 @@ class IwyuAstConsumer
           continue;    // not a method or static method
         }
         if (!this->getDerived().HandleFunctionCall(
-                fn_decl, underlying_type, static_cast<Expr*>(NULL)))
+                fn_decl, underlying_type, static_cast<Expr*>(nullptr)))
           return false;
       }
     }
@@ -3881,25 +3880,23 @@ class IwyuAstConsumer
 // We use an ASTFrontendAction to hook up IWYU with Clang.
 class IwyuAction : public ASTFrontendAction {
  protected:
-  virtual std::unique_ptr<ASTConsumer> CreateASTConsumer(
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(
       CompilerInstance& compiler,  // NOLINT
-      llvm::StringRef /* dummy */) {
+      llvm::StringRef /* dummy */) override {
     // Do this first thing after getting our hands on a CompilerInstance.
     InitGlobals(&compiler.getSourceManager(),
                 &compiler.getPreprocessor().getHeaderSearchInfo());
 
-    IwyuPreprocessorInfo* const preprocessor_consumer =
-        new IwyuPreprocessorInfo();
+    auto* const preprocessor_consumer = new IwyuPreprocessorInfo();
     compiler.getPreprocessor().addPPCallbacks(
         std::unique_ptr<PPCallbacks>(preprocessor_consumer));
     compiler.getPreprocessor().addCommentHandler(preprocessor_consumer);
 
-    VisitorState* const visitor_state
+    auto* const visitor_state
         = new VisitorState(&compiler, *preprocessor_consumer);
     return std::unique_ptr<IwyuAstConsumer>(new IwyuAstConsumer(visitor_state));
   }
 };
-
 
 } // namespace include_what_you_use
 
