@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/ArrayRef.h"  // IWYU pragma: keep
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/FileSystem.h"
@@ -210,6 +211,16 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   CompilerInvocation::CreateFromArgs(*invocation,
                                      args_start, args_end, diagnostics);
   invocation->getFrontendOpts().DisableFree = false;
+
+  // Use libc++ headers bundled with Xcode.app on Darwin OSes.
+  llvm::Triple triple(invocation->getTargetOpts().Triple);
+  if (triple.isOSDarwin() && invocation->getHeaderSearchOpts().UseLibcxx) {
+    invocation->getHeaderSearchOpts().AddPath(
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/"
+        "XcodeDefault.xctoolchain/usr/include/c++/v1",
+        clang::frontend::CXXSystem,
+        /*IsFramework=*/false, /*IgnoreSysRoot=*/true);
+  }
 
   // Show the invocation, with -v.
   if (invocation->getHeaderSearchOpts().Verbose) {
