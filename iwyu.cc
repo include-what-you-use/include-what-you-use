@@ -1935,8 +1935,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
       } else {
         VERRS(6) << "WARNING: nullptr TypeSourceInfo for "
-                 << PrintableDecl(*param) << " (type "
-                 << PrintableType(param_type) << ")\n";
+                 << PrintableDecl(*param)
+                 << " (type " << PrintableType(param_type) << ")\n";
       }
     }
     return true;

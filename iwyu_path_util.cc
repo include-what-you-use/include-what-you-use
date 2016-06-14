@@ -66,7 +66,7 @@ bool IsHeaderFile(string path) {
   // unusual one (the compiler doesn't care), so it's safer to
   // enumerate non-header extensions instead.
   //  for (size_t i = 0; i < llvm::array_lengthof(source_extensions); ++i) {
-  for (const auto* source_extension : source_extensions) {
+  for (const char* source_extension : source_extensions) {
     if (EndsWith(path, source_extension))
       return false;
   }
@@ -95,7 +95,7 @@ string GetCanonicalName(string file_path) {
       || StripRight(&file_path, ".hh")
       || StripRight(&file_path, ".inl");
   if (!stripped_ext) {
-    for (const auto* source_extension : source_extensions) {
+    for (const char* source_extension : source_extensions) {
       if (StripRight(&file_path, source_extension))
         break;
     }

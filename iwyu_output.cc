@@ -724,7 +724,7 @@ set<string> CalculateMinimalIncludes(
   // those in private header files that only map to one public file.
   // For every other decl, we store the (decl, public-headers) pair.
   // Note we can't use Each<> because it only gives const iterators.
-  for (auto& use : *uses) {
+  for (OneUse& use : *uses) {
     // We don't need to add any #includes for non-full-use.
     if (use.ignore_use() || !use.is_full_use())
       continue;
@@ -757,7 +757,7 @@ set<string> CalculateMinimalIncludes(
   // Fourth choice, includes in direct_includes.  Picking in
   // this order minimizes the number of #includes we add, while
   // allowing us to remove #includes if need be.
-  for (auto& use : *uses) {
+  for (OneUse& use : *uses) {
     if (!use.NeedsSuggestedHeader())
       continue;
     const vector<string>& public_headers = use.public_headers();
@@ -806,7 +806,7 @@ set<string> CalculateMinimalIncludes(
   // best-fit order).  Among those, we choose arbitrarily.  We repeat
   // until we cover all sets.
   set<OneUse*> unmapped_uses;
-  for (auto& use : *uses) {
+  for (OneUse& use : *uses) {
     if (use.NeedsSuggestedHeader())
       unmapped_uses.insert(&use);
   }
@@ -1404,15 +1404,15 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // We have to do the steps in order, because a forward-declare use may
   // turn into a full use, and need to be processed in the full-use step
   // too.  Note we can't use Each<> because it returns a const-iterator.
-  for (auto& use : *uses) {
+  for (OneUse& use : *uses) {
     if (!use.is_full_use() && use.decl())
       internal::ProcessForwardDeclare(&use, preprocessor_info_);
   }
-  for (auto& use : *uses) {
+  for (OneUse& use : *uses) {
     if (use.is_full_use() && use.decl())
       internal::ProcessFullUse(&use, preprocessor_info_);
   }
-  for (auto& use : *uses) {
+  for (OneUse& use : *uses) {
     if (use.is_full_use() && !use.decl())
       internal::ProcessSymbolUse(&use, preprocessor_info_);
   }
@@ -1450,7 +1450,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   InsertAllInto(AssociatedDesiredIncludes(), &effective_desired_includes);
 
   // Now that we've figured out desired_includes, figure out iwyu violations.
-  for (auto& use : *uses) {
+  for (OneUse& use : *uses) {
     if (use.ignore_use()) {
       // Do nothing, we're ignoring the use
     } else if (!use.is_full_use()) {
@@ -1661,7 +1661,7 @@ void CleanupPrefixHeaderIncludes(
   if (policy == CommandlineFlags::kAdd)
     return;
 
-  for (auto& line : *lines) {
+  for (OneIncludeOrForwardDeclareLine& line : *lines) {
     if (!line.is_desired())
       continue;
     if (line.is_present() && (policy == CommandlineFlags::kKeep))
@@ -1926,7 +1926,7 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
 
   // Remove desired inclusions that have been inhibited by pragma
   // "no_include".
-  for (auto& line : lines_) {
+  for (OneIncludeOrForwardDeclareLine& line : lines_) {
     if (line.IsIncludeLine() &&
         preprocessor_info_->IncludeIsInhibited(file_, line.quoted_include())) {
       line.clear_desired();
