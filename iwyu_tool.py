@@ -63,7 +63,7 @@ def main(compilation_db_path, source_files, verbose, iwyu_args):
         compilation_db = json.load(fileobj)
 
     # Cross-reference source files with compilation database
-    source_files = [os.path.abspath(s) for s in source_files]
+    source_files = [os.path.realpath(os.path.abspath(s)) for s in source_files]
     if not source_files:
         # No source files specified, analyze entire compilation database
         entries = compilation_db
