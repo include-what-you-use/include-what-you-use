@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.4.3)
 
 if( POLICY CMP0048 )
   # Silence CMP0048 warning about missing project VERSION.
