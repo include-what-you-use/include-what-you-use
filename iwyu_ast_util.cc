@@ -22,6 +22,7 @@
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/ASTContext.h"
@@ -118,6 +119,7 @@ using clang::UnaryOperator;
 using clang::UsingDirectiveDecl;
 using clang::ValueDecl;
 using clang::VarDecl;
+using llvm::ArrayRef;
 using llvm::PointerUnion;
 using llvm::cast;
 using llvm::dyn_cast_or_null;
@@ -451,7 +453,7 @@ string PrintableTemplateArgument(const TemplateArgument& arg) {
   std::string buffer;
   raw_string_ostream ostream(buffer);
   TemplateSpecializationType::PrintTemplateArgumentList(
-      ostream, &arg, 1, DefaultPrintPolicy());
+      ostream, ArrayRef<TemplateArgument>(arg), DefaultPrintPolicy());
   return ostream.str();
 }
 
@@ -459,7 +461,7 @@ string PrintableTemplateArgumentLoc(const TemplateArgumentLoc& arg) {
   std::string buffer;
   raw_string_ostream ostream(buffer);
   TemplateSpecializationType::PrintTemplateArgumentList(
-      ostream, &arg, 1, DefaultPrintPolicy());
+      ostream, ArrayRef<TemplateArgumentLoc>(arg), DefaultPrintPolicy());
   return ostream.str();
 }
 
