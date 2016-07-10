@@ -66,7 +66,7 @@ class OstreamVoidifier {
 #define snprintf _snprintf
 
 #define NOMINMAX  // Prevent Windows headers from redefining min/max.
-#include "Shlwapi.h"  // for PathMatchSpec
+#include "Shlwapi.h"  // for PathMatchSpecA
 
 // This undef is necessary to prevent conflicts between llvm
 // and Windows headers.
@@ -74,7 +74,7 @@ class OstreamVoidifier {
 #undef interface
 
 inline bool GlobMatchesPath(const char *glob, const char *path) {
-  return PathMatchSpec(path, glob);
+  return PathMatchSpecA(path, glob);
 }
 
 #else  // #if defined(_WIN32)
