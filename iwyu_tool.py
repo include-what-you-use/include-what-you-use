@@ -53,7 +53,7 @@ def main(compilation_db_path, source_files, verbose, iwyu_args):
         compilation_db_path = os.path.join(compilation_db_path,
                                            'compile_commands.json')
 
-    compilation_db_path = os.path.abspath(compilation_db_path)
+    compilation_db_path = os.path.realpath(compilation_db_path)
     if not os.path.isfile(compilation_db_path):
         print('ERROR: No such file or directory: \'%s\'' % compilation_db_path)
         return 1
@@ -63,7 +63,7 @@ def main(compilation_db_path, source_files, verbose, iwyu_args):
         compilation_db = json.load(fileobj)
 
     # Cross-reference source files with compilation database
-    source_files = [os.path.abspath(s) for s in source_files]
+    source_files = [os.path.realpath(s) for s in source_files]
     if not source_files:
         # No source files specified, analyze entire compilation database
         entries = compilation_db
