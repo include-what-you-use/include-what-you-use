@@ -124,6 +124,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
@@ -2189,6 +2190,31 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreType(element_type))
       return true;
     ReportTypeUse(CurrentLoc(), element_type);
+    return true;
+  }
+
+  // If a binary operator expression results in pointer arithmetic, we need the
+  // full types of all pointers involved.
+  bool VisitBinaryOperator(clang::BinaryOperator* expr) {
+    if (CanIgnoreCurrentASTNode())  return true;
+
+    // If it's not +, +=, - or -=, this can't be pointer arithmetic
+    clang::BinaryOperator::Opcode op = expr->getOpcode();
+    if (op != clang::BO_Add && op != clang::BO_Sub &&
+        op != clang::BO_AddAssign && op != clang::BO_SubAssign)
+      return true;
+
+    for (const Stmt* child : expr->children()) {
+      if (const PointerType* pointer_type =
+              dyn_cast<PointerType>(GetTypeOf(cast<Expr>(child)))) {
+        // It's a pointer-typed expression. Get the pointed-to type (which may
+        // itself be a pointer) and report it.
+        const Type* deref_type = pointer_type->getPointeeType().getTypePtr();
+        if (!CanIgnoreType(deref_type))
+          ReportTypeUse(CurrentLoc(), deref_type);
+      }
+    }
+
     return true;
   }
 

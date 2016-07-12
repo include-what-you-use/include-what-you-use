@@ -150,6 +150,7 @@ class OneIwyuTest(unittest.TestCase):
       'non_transitive_include.cc': ['.'],
       'overloaded_class.cc': ['.'],
       'pch_in_code.cc': ['.'],
+      'pointer_arith.cc': ['.'],
       'precomputed_tpl_args.cc': ['.'],
       'prefix_header_attribution.cc': ['.'],
       'prefix_header_includes_add.cc': ['.'],
