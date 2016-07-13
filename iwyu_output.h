@@ -29,7 +29,7 @@
 namespace clang {
 class FileEntry;
 class UsingDecl;
-}
+}  // namespace clang
 
 namespace include_what_you_use {
 
@@ -38,7 +38,6 @@ using std::pair;
 using std::set;
 using std::string;
 using std::vector;
-
 
 class IwyuPreprocessorInfo;
 
@@ -75,6 +74,7 @@ class OneUse {
   bool ignore_use() const { return ignore_use_; }
   bool is_iwyu_violation() const { return is_iwyu_violation_; }
   bool has_suggested_header() const { return !suggested_header_.empty(); }
+
   const string& suggested_header() const {
     CHECK_(has_suggested_header() && "Must assign suggested_header first");
     CHECK_(!ignore_use() && "Ignored uses have no suggested header");
@@ -124,16 +124,19 @@ class OneIncludeOrForwardDeclareLine {
   bool is_desired() const { return is_desired_; }
   bool is_present() const { return is_present_; }
   const map<string, int>& symbol_counts() const { return symbol_counts_; }
+
   string quoted_include() const {
     CHECK_(IsIncludeLine() && "Must call quoted_include() on include lines");
     CHECK_(!fwd_decl_ && "quoted_include and fwd_decl are mutually exclusive");
     return quoted_include_;
   }
+
   const clang::FileEntry* included_file() const {
     CHECK_(IsIncludeLine() && "Must call included_file() on include lines");
     CHECK_(!fwd_decl_ && "included_file and fwd_decl are mutually exclusive");
     return included_file_;
   }
+
   const clang::NamedDecl* fwd_decl() const {
     CHECK_(!IsIncludeLine() && "Must call fwd_decl() on forward-declare lines");
     CHECK_(quoted_include_.empty() && !included_file_ &&
@@ -176,7 +179,6 @@ class OneIncludeOrForwardDeclareLine {
   const clang::NamedDecl* fwd_decl_;
 };
 
-
 // This class holds IWYU information about a single file (FileEntry)
 // -- referred to, in the comments below, as "this file."  The keys to
 // most of these methods are all quoted header paths, which are the
@@ -213,7 +215,7 @@ class IwyuFileInfo {
                   const string& quoted_includee, int linenumber);
   // definitely_keep_fwd_decl tells us that we should never suggest
   // the fwd-decl be removed, even if we don't see any uses of it.
-  void AddForwardDeclare(const clang::NamedDecl* forward_declare_decl,
+  void AddForwardDeclare(const clang::NamedDecl* fwd_decl,
                          bool definitely_keep_fwd_decl);
 
   void AddUsingDecl(const clang::UsingDecl* using_decl);
@@ -276,11 +278,13 @@ class IwyuFileInfo {
 
  private:
   const set<string>& direct_includes() const { return direct_includes_; }
+
   const set<string>& desired_includes() const {
     CHECK_(desired_includes_have_been_calculated_ &&
            "Must calculate desired includes before calling desired_includes()");
     return desired_includes_;
   }
+
   set<string> AssociatedQuotedIncludes() const {
     set<string> associated_quoted_includes;
     for (const IwyuFileInfo* associated : associated_headers_)
@@ -352,7 +356,6 @@ class IwyuFileInfo {
   set<string> desired_includes_;
   bool desired_includes_have_been_calculated_;
 };
-
 
 // Helpers for testing.
 

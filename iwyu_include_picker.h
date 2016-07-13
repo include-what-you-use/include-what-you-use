@@ -80,7 +80,7 @@ class IncludePicker {
   // perhaps.
   void AddDirectInclude(const string& includer_filepath,
                         const string& includee_filepath,
-                        const string& quoted_include_as_written);
+                        const string& quoted_include_as_typed);
 
   // Add this to say "map_to re-exports everything in file map_from".
   // Both map_to and map_from should be quoted includes.
@@ -89,14 +89,13 @@ class IncludePicker {
   // Indicate that the given quoted include should be considered
   // a "private" include.  If possible, we use the include-picker
   // mappings to map such includes to public (not-private) includs.
-  void MarkIncludeAsPrivate(const string& quoted_include);
+  void MarkIncludeAsPrivate(const string& quoted_filepath_pattern);
 
   // Add this to say that "any file whose name matches the
   // friend_regex is allowed to include includee_filepath".  The regex
   // uses the POSIX Entended Regular Expression syntax and should
   // match a quoted-include (starting and ending with "" or <>).
-  void AddFriendRegex(const string& includee_filepath,
-                      const string& quoted_friend_regex);
+  void AddFriendRegex(const string& includee, const string& friend_regex);
 
   // Call this after iwyu preprocessing is done.  No more calls to
   // AddDirectInclude() or AddMapping() are allowed after this.
@@ -186,11 +185,12 @@ class IncludePicker {
   void AddImplicitThirdPartyMappings();
 
   // Adds an entry to filepath_visibility_map_, with error checking.
-  void MarkVisibility(const string& quoted_include, IncludeVisibility vis);
+  void MarkVisibility(const string& quoted_filepath_pattern,
+                      IncludeVisibility vis);
 
   // Parse visibility from a string. Returns kUnusedVisibility if
   // string is not recognized.
-  IncludeVisibility ParseVisibility(const string& visibility_str) const;
+  IncludeVisibility ParseVisibility(const string& visibility) const;
 
   // Return the visibility of a given quoted_include if known, else
   // kUnusedVisibility.
