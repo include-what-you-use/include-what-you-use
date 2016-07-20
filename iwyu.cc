@@ -901,9 +901,25 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // This is to catch assigning template functions to function pointers.
   // For instance, 'MyFunctionPtr p = &TplFn<MyClass*>;': we need to
   // expand TplFn to see if it needs full type info for MyClass.
+  //
+  // We also use it to ignore unscoped enumerators in call-expressions.
+  // They are never forward-declarable, which means the author of a called
+  // function will always have had to include their definition. Avoid forcing
+  // that tax on callers as well.
   bool TraverseDeclRefExpr(clang::DeclRefExpr* expr) {
-    if (!Base::TraverseDeclRefExpr(expr))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
+    // The base TraverseDeclRefExpr traverses 'upwards' in the
+    // hierarchy so for Class::Enum, we'll see Enum -> NestedNameSpecifier ->
+    // Class, which is kind-of weird.
+    // Short-circuit unscoped enums entirely before further traversal.
+    if (current_ast_node()->template ParentIsA<CallExpr>() &&
+        IsUnscopedEnum(expr)) {
+      VERRS(5) << "Ignoring enumerator in call-expression: "
+               << PrintableStmt(expr) << " (automatic re-export)\n";
+      return true;
+    }
+
+    if (!Base::TraverseDeclRefExpr(expr)) return false;
+    if (CanIgnoreCurrentASTNode()) return true;
 
     // If it's a normal function call, that was already handled by a
     // CallExpr somewhere.  We want only assignments.

@@ -70,6 +70,7 @@ using clang::DependentTemplateName;
 using clang::DependentTemplateSpecializationType;
 using clang::ElaboratedType;
 using clang::EnumDecl;
+using clang::EnumType;
 using clang::ExplicitCastExpr;
 using clang::Expr;
 using clang::ExprWithCleanups;
@@ -377,6 +378,13 @@ bool IsMemberOfATypedef(const ASTNode* ast_node) {
     if (nns->getAsType() && isa<TypedefType>(nns->getAsType()))
       return true;
   }
+  return false;
+}
+
+bool IsUnscopedEnum(const DeclRefExpr* expr) {
+  if (const EnumType* enum_type = DynCastFrom(GetTypeOf(expr->getDecl())))
+    return !enum_type->getDecl()->isScoped();
+
   return false;
 }
 
