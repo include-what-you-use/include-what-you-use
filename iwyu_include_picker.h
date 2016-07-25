@@ -95,7 +95,8 @@ class IncludePicker {
   // friend_regex is allowed to include includee_filepath".  The regex
   // uses the POSIX Entended Regular Expression syntax and should
   // match a quoted-include (starting and ending with "" or <>).
-  void AddFriendRegex(const string& includee, const string& friend_regex);
+  void AddFriendRegex(const string& includee_filepath,
+                      const string& quoted_friend_regex);
 
   // Call this after iwyu preprocessing is done.  No more calls to
   // AddDirectInclude() or AddMapping() are allowed after this.

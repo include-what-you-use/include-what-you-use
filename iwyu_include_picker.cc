@@ -1102,9 +1102,9 @@ void IncludePicker::MarkIncludeAsPrivate(
   MarkVisibility(quoted_filepath_pattern, kPrivate);
 }
 
-void IncludePicker::AddFriendRegex(const string& includee,
-                                   const string& friend_regex) {
-  friend_to_headers_map_["@" + friend_regex].insert(includee);
+void IncludePicker::AddFriendRegex(const string& includee_filepath,
+                                   const string& quoted_friend_regex) {
+  friend_to_headers_map_["@" + quoted_friend_regex].insert(includee_filepath);
 }
 
 namespace {
@@ -1405,8 +1405,8 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
     return;
   }
 
-  for (Node& node : *array) {
-    Node* current_node = &node;
+  for (Node& array_item_node : *array) {
+    Node* current_node = &array_item_node;
 
     // Every item must be a JSON object ("mapping" in YAML terms.)
     MappingNode* mapping = llvm::dyn_cast<MappingNode>(current_node);
@@ -1416,13 +1416,13 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
       return;
     }
 
-    for (KeyValueNode &node : *mapping) {
+    for (KeyValueNode &mapping_item_node : *mapping) {
       // General form is { directive: <data> }.
-      const string directive = GetScalarValue(node.getKey());
+      const string directive = GetScalarValue(mapping_item_node.getKey());
 
       if (directive == "symbol") {
         // Symbol mapping.
-        vector<string> mapping = GetSequenceValue(node.getValue());
+        vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
         if (mapping.size() != 4) {
           json_stream.printError(current_node,
               "Symbol mapping expects a value on the form "
@@ -1451,7 +1451,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
         AddSymbolMapping(mapping[0], mapping[2], to_visibility);
       } else if (directive == "include") {
         // Include mapping.
-        vector<string> mapping = GetSequenceValue(node.getValue());
+        vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
         if (mapping.size() != 4) {
           json_stream.printError(current_node,
               "Include mapping expects a value on the form "
@@ -1495,7 +1495,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
             to_visibility);
       } else if (directive == "ref") {
         // Mapping ref.
-        string ref_file = GetScalarValue(node.getValue());
+        string ref_file = GetScalarValue(mapping_item_node.getValue());
         if (ref_file.empty()) {
           json_stream.printError(current_node,
               "Mapping ref expects a single filename value.");

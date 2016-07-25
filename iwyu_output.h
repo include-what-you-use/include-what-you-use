@@ -215,7 +215,7 @@ class IwyuFileInfo {
                   const string& quoted_includee, int linenumber);
   // definitely_keep_fwd_decl tells us that we should never suggest
   // the fwd-decl be removed, even if we don't see any uses of it.
-  void AddForwardDeclare(const clang::NamedDecl* fwd_decl,
+  void AddForwardDeclare(const clang::NamedDecl* forward_declare_decl,
                          bool definitely_keep_fwd_decl);
 
   void AddUsingDecl(const clang::UsingDecl* using_decl);
