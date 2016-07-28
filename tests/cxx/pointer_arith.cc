@@ -26,7 +26,7 @@ void PointerArithmetic() {
   // Pointer minus pointer (should really use ptrdiff_t, but I don't want to
   // have to include headers for it)
   // IWYU: IndirectClass is...*indirect.h
-  unsigned long x = p2 - p1;
+  long x = p2 - p1;
 
   // Pointer minus offset
   // IWYU: IndirectClass is...*indirect.h
@@ -45,6 +45,20 @@ void PointerArithmetic() {
   p1 += 100;
 }
 
+// Make sure pointer arithmetic with builtins does not yield IWYU warnings.
+void BuiltinPointerArithmetic() {
+  char c = 0;
+  char* pc = &c;
+  pc -= 10;
+  pc += 100;
+  long x = pc - &c;
+
+  int i = 0;
+  int* pi = &i;
+  pi -= 20;
+  pi += 200;
+  x = pi - &i;
+}
 
 /**** IWYU_SUMMARY
 
