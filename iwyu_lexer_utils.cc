@@ -107,7 +107,7 @@ vector<Token> FindArgumentsToDefined(
   const string range_str(text, range_length);
   const char* range_cstr = range_str.c_str();
 
-  VERRS(7) << "Lexing: " << range_str << "\n";
+  VERRS(8) << "Lexing: " << range_str << "\n";
   Lexer lexer(range.getBegin(), LangOptions(), range_cstr, range_cstr,
               range_cstr + range_length);
 
@@ -117,7 +117,7 @@ vector<Token> FindArgumentsToDefined(
          kExpectingLeftParenOrDefinedIdentifier,
          kExpectingDefinedIdentifier } state = kLookingForDefined;
   while (!lexer.LexFromRawLexer(token)) {
-    VERRS(7) << "Processing token \""
+    VERRS(8) << "Processing token \""
              << GetTokenText(token, data_getter)
              << "\" of type " << token.getName()
              << " in state " << state << "\n";
