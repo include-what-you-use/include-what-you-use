@@ -119,6 +119,7 @@ using clang::VarDecl;
 using llvm::ArrayRef;
 using llvm::PointerUnion;
 using llvm::cast;
+using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
@@ -895,10 +896,15 @@ bool IsFriendDecl(const Decl* decl) {
   return decl->getFriendObjectKind() != Decl::FOK_None;
 }
 
-bool IsForwardDecl(const clang::TagDecl* decl) {
-  return (isa<RecordDecl>(decl) &&   // not an enum
-          !decl->isCompleteDefinition() && !IsFriendDecl(decl) &&
-          !decl->isEmbeddedInDeclarator());
+bool IsForwardDecl(const NamedDecl* decl) {
+  if (const auto* record_decl = dyn_cast<RecordDecl>(decl)) {
+    return (!record_decl->getName().empty() &&
+            !record_decl->isCompleteDefinition() &&
+            !record_decl->isEmbeddedInDeclarator() &&
+            !IsFriendDecl(record_decl));
+  }
+
+  return false;
 }
 
 // Two possibilities: it's written as a nested class (that is, with a

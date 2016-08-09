@@ -1369,19 +1369,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return type;
   }
 
-  // Return any forward-declare of decl earlier in the same file as loc.
-  const NamedDecl* GetForwardDeclareInSameFile(const Decl* decl,
-                                               SourceLocation loc) {
-    set<const NamedDecl*> redecls = GetClassRedecls(DynCastFrom(decl));
-    for (const NamedDecl* redecl : redecls) {
-      if (IsBeforeInSameFile(redecl, loc)) {
-        return redecl;
-      }
-    }
-
-    return nullptr;
-  }
-
   // Get the canonical use location for a (location, decl) pair.
   // Decide whether the file expanding the macro or the file defining the macro
   // should be held responsible for a use.
@@ -1391,12 +1378,22 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (!IsInMacro(use_loc))
       return use_loc;
 
-    // If we're in a macro, and the macro file forward-declares decl, make sure
-    // we keep that forward-declaration.
-    const NamedDecl* fwd_decl = GetForwardDeclareInSameFile(decl, use_loc);
+    // If the macro definition file contains a forward-declaration for decl,
+    // we treat that as a use-attribution hint. See below for details.
+    const FileEntry* macro_def_file = GetFileEntry(GetSpellingLoc(use_loc));
+    const NamedDecl* fwd_decl = nullptr;
+    for (const NamedDecl* redecl : GetClassRedecls(decl)) {
+      if (GetFileEntry(redecl) == macro_def_file &&
+          IsForwardDecl(redecl)) {
+        fwd_decl = redecl;
+        break;
+      }
+    }
+
     if (fwd_decl) {
-      const FileEntry* used_in = GetFileEntry(use_loc);
-      preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
+      // Make sure we keep that forward-declaration, even if it's probably
+      // unused in this file.
+      preprocessor_info().FileInfoFor(macro_def_file)->ReportForwardDeclareUse(
           use_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()),
           nullptr);
     }
