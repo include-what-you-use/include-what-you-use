@@ -9,6 +9,7 @@
 #include "tests/cxx/indirect.h"
 #include "tests/cxx/macro_location-d2.h"
 #include "tests/cxx/macro_location-d3.h"
+#include "tests/cxx/macro_location-d4.h"
 
 class Foo;
 static Foo *foo = 0;
@@ -37,11 +38,23 @@ CONCAT(Concat, FwdDeclClass) *global_concat_ptr;
 // IWYU: ConcatClass is...*macro_location-i4.h
 CONCAT(Concat, Class) global_concat;
 
+// Make sure types defined and used only within a macro definition file
+// aren't attributed to the macro expansion loc.
+
+// IWYU: UNNAMED_TYPE_IN_MACRO is...*macro_location-i5.h
+UNNAMED_TYPE_IN_MACRO(500);
+
+void func() {
+  LOG_INFO("hello");
+  DECLARE_AND_USE_CLASS("hello again");
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/macro_location.h should add these lines:
 #include "tests/cxx/macro_location-i3.h"
 #include "tests/cxx/macro_location-i4.h"
+#include "tests/cxx/macro_location-i5.h"
 
 tests/cxx/macro_location.h should remove these lines:
 - #include "tests/cxx/macro_location-d3.h"  // lines XX-XX
@@ -50,8 +63,10 @@ tests/cxx/macro_location.h should remove these lines:
 The full include-list for tests/cxx/macro_location.h:
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/macro_location-d2.h"  // for ARRAYSIZE, CREATE_VAR, DECLARE_INDIRECT, NEW_CLASS, USE_CLASS
+#include "tests/cxx/macro_location-d4.h"  // for DECLARE_AND_USE_CLASS, LOG_INFO
 #include "tests/cxx/macro_location-i3.h"  // for Foo
 #include "tests/cxx/macro_location-i4.h"  // for ConcatClass, ConcatFwdDeclClass (ptr only)
+#include "tests/cxx/macro_location-i5.h"  // for UNNAMED_TYPE_IN_MACRO
 
 
 ***** IWYU_SUMMARY */
