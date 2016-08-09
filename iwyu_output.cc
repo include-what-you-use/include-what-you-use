@@ -527,20 +527,23 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
            << " -> " << GetFilePath(includee) << "\n";
 }
 
-void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
-                                     bool definitely_keep_fwd_decl) {
-  CHECK_(fwd_decl && "forward_declare_decl unexpectedly nullptr");
-  CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<RecordDecl>(fwd_decl))
+void IwyuFileInfo::AddForwardDeclare(
+    const clang::NamedDecl* forward_declare_decl,
+    bool definitely_keep_fwd_decl) {
+  CHECK_(forward_declare_decl && "forward_declare_decl unexpectedly nullptr");
+  CHECK_((isa<ClassTemplateDecl>(forward_declare_decl) ||
+            isa<RecordDecl>(forward_declare_decl))
          && "Can only forward declare classes and class templates");
-  lines_.push_back(OneIncludeOrForwardDeclareLine(fwd_decl));
+  lines_.push_back(OneIncludeOrForwardDeclareLine(forward_declare_decl));
   lines_.back().set_present();
   if (definitely_keep_fwd_decl)
     lines_.back().set_desired();
-  direct_forward_declares_.insert(fwd_decl);   // store in another way as well
+  // store in another way as well
+  direct_forward_declares_.insert(forward_declare_decl);
   VERRS(6) << "Found forward-declare: "
            << GetFilePath(file_) << ":" << lines_.back().LineNumberString()
-           << ": " << internal::PrintablePtr(fwd_decl)
-           << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
+           << ": " << internal::PrintablePtr(forward_declare_decl)
+           << internal::GetQualifiedNameAsString(forward_declare_decl) << "\n";
 }
 
 void IwyuFileInfo::AddUsingDecl(const UsingDecl* using_decl) {
@@ -1509,6 +1512,7 @@ int IwyuFileInfo::EmitWarningMessages(const vector<OneUse>& uses) {
 }
 
 namespace internal {
+
 template <class IncludeOrFwdDecl>
 bool Contains(const vector<OneIncludeOrForwardDeclareLine>& lines,
               const IncludeOrFwdDecl& item) {
