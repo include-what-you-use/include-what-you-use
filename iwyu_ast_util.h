@@ -375,9 +375,9 @@ class CurrentASTNodeUpdater {
 // uses ElaboratedType for namespaces ('ns::Foo myvar').
 bool IsElaborationNode(const ASTNode* ast_node);
 
-// See if a given ast_node is a namespace-qualified ElaboratedType
-// node. (E.g. 'class ns::Foo myyvar'.)
-bool IsNamespaceQualifiedNode(const ASTNode* ast_node);
+// See if a given ast_node is a qualified name part of an ElaboratedType
+// node (e.g. 'class ns::Foo x', 'class ::Global x' or 'class Outer::Inner x'.)
+bool IsQualifiedNameNode(const ASTNode* ast_node);
 
 // Return true if the given ast_node is inside a C++ method body.  Do
 // this by walking up the AST tree until you find a CXXMethodDecl,

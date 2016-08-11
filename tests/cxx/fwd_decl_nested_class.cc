@@ -24,6 +24,9 @@ class Foo {
   class UsedAsPtrArg;  // Necessary -- this use doesn't see the later dfn.
   class UsedAsPtrReturn;  // Necessary -- this use doesn't see the later dfn.
   class UsedAsPtrMember;  // Necessary -- this use doesn't see the later dfn.
+  class UsedAsFriend;  // Necessary -- used as part of a friend declaration
+
+  friend class Foo::UsedAsFriend;
 
   Foo() : init_(UsedFullyInInitializer()) { }
   ~Foo() { }
@@ -62,6 +65,7 @@ class Foo {
   class UsedAsPtrReturn { };
   class UsedAsPtrMember { };
   struct UsedFullyInMethodNotForwardDeclared { };
+  class UsedAsFriend { };
 
   UsedFullyInInitializer init_;
   UsedImplicitlyInInitializer implicit_;
@@ -85,6 +89,9 @@ class Outer {
   template<typename T> class UsedAsPtrArg;  // Necessary
   template<typename T> class UsedAsPtrReturn;  // Necessary
   template<typename T> class UsedAsPtrMember;  // Necessary
+  template<typename T> class UsedAsFriend;  // Necessary
+
+  friend class Outer::UsedAsFriend<int>;
 
   Outer() : init_(UsedFullyInInitializer<int>()) { }
   ~Outer() { }
@@ -121,6 +128,7 @@ class Outer {
   template<typename T> class UsedAsPtrReturn { };
   template<typename T> class UsedAsPtrMember { };
   template<typename T> class UsedFullyInMethodNotForwardDeclared { };
+  template<typename T> class UsedAsFriend { };
 
   UsedFullyInInitializer<int> init_;
   UsedImplicitlyInInitializer<int> implicit_;
@@ -130,11 +138,77 @@ class Outer {
 
 template<typename T> class Outer::NoUsageDefinedOutOfLine {};
 
+
+// Now do the same thing again, but the containing class is templated
+
+template<class T>
+class Container {
+  class NoUsage;  // Unnecessary
+  class UsedAsPtrInMethod;  // Unnecessary
+  class UsedFullyInMethod;  // Unnecessary
+  class UsedFullyInInitializer;  // Unnecessary
+  class UsedImplicitlyInInitializer;  // Unnecessary
+  class UsedInTypedef;  // Necessary
+  class UsedAsPtrArg;  // Necessary
+  class UsedAsPtrReturn;  // Necessary
+  class UsedAsPtrMember;  // Necessary
+  class UsedAsFriend;  // Necessary
+
+  friend class Container<T>::UsedAsFriend;
+
+  Container() : init_(UsedFullyInInitializer()) { }
+  ~Container() { }
+
+  // If a nested class is used in a body of a method, no preceding
+  // declaration/definition is needed.
+  void Bar1() {
+    UsedAsPtrInMethod* x;
+  }
+  void Bar2() {
+    UsedFullyInMethod x;
+    UsedFullyInMethodNotForwardDeclared y;
+    TplFn<UsedFullyInMethodNotForwardDeclared>();
+  }
+
+  // If a nested class is used in a typedef, a preceding declaration
+  // is needed.
+  typedef UsedInTypedef UsedInTypedefType;
+
+  // If a nested class is used in a method declaration, a preceding
+  // declaration is needed.
+  void Bar3(UsedAsPtrArg* p);
+  UsedAsPtrReturn* Bar4();
+
+  UsedAsPtrMember* x_;
+
+  class NoUsage { };
+  class UsedAsPtrInMethod { };
+  class UsedFullyInMethod { };
+  class UsedFullyInInitializer { };
+  class UsedImplicitlyInInitializer { };
+  class UsedImplicitlyInInitializerNeverDeclared { };
+  class UsedAsPtrArg { };
+  class UsedAsPtrReturn { };
+  class UsedAsPtrMember { };
+  class UsedFullyInMethodNotForwardDeclared { };
+  class UsedAsFriend { };
+
+  UsedFullyInInitializer init_;
+  UsedImplicitlyInInitializer implicit_;
+  UsedImplicitlyInInitializerNeverDeclared implicit_never_declared_;
+  UsedImplicitlyInInitializerNeverDeclared* implicit_never_declared_ptr_;
+};
+
 /**** IWYU_SUMMARY
 
 tests/cxx/fwd_decl_nested_class.cc should add these lines:
 
 tests/cxx/fwd_decl_nested_class.cc should remove these lines:
+- class Container::NoUsage;  // lines XX-XX
+- class Container::UsedAsPtrInMethod;  // lines XX-XX
+- class Container::UsedFullyInInitializer;  // lines XX-XX
+- class Container::UsedFullyInMethod;  // lines XX-XX
+- class Container::UsedImplicitlyInInitializer;  // lines XX-XX
 - class Foo::NoUsage;  // lines XX-XX
 - class Foo::UsedAsPtrInMethod;  // lines XX-XX
 - class Foo::UsedFullyInInitializer;  // lines XX-XX
@@ -148,12 +222,19 @@ tests/cxx/fwd_decl_nested_class.cc should remove these lines:
 - template <typename T> class Outer::UsedImplicitlyInInitializer;  // lines XX-XX
 
 The full include-list for tests/cxx/fwd_decl_nested_class.cc:
+class Container::UsedAsFriend;  // lines XX-XX
+class Container::UsedAsPtrArg;  // lines XX-XX
+class Container::UsedAsPtrMember;  // lines XX-XX
+class Container::UsedAsPtrReturn;  // lines XX-XX
+class Container::UsedInTypedef;  // lines XX-XX
 class Foo::NoUsageDefinedOutOfLine;  // lines XX-XX
+class Foo::UsedAsFriend;  // lines XX-XX
 class Foo::UsedAsPtrArg;  // lines XX-XX
 class Foo::UsedAsPtrMember;  // lines XX-XX
 class Foo::UsedAsPtrReturn;  // lines XX-XX
 class Foo::UsedInTypedef;  // lines XX-XX
 template <typename T> class Outer::NoUsageDefinedOutOfLine;  // lines XX-XX
+template <typename T> class Outer::UsedAsFriend;  // lines XX-XX
 template <typename T> class Outer::UsedAsPtrArg;  // lines XX-XX
 template <typename T> class Outer::UsedAsPtrMember;  // lines XX-XX
 template <typename T> class Outer::UsedAsPtrReturn;  // lines XX-XX

@@ -227,17 +227,13 @@ bool IsElaborationNode(const ASTNode* ast_node) {
   return elaborated_type && elaborated_type->getKeyword() != clang::ETK_None;
 }
 
-bool IsNamespaceQualifiedNode(const ASTNode* ast_node) {
+bool IsQualifiedNameNode(const ASTNode* ast_node) {
   if (ast_node == nullptr)
     return false;
   const ElaboratedType* elaborated_type = ast_node->GetAs<ElaboratedType>();
   if (elaborated_type == nullptr)
     return false;
-  const NestedNameSpecifier* qualifier = elaborated_type->getQualifier();
-  if (qualifier == nullptr)
-    return false;
-  return (qualifier->getKind() == NestedNameSpecifier::Global ||
-          qualifier->getKind() == NestedNameSpecifier::Namespace);
+  return elaborated_type->getQualifier() != nullptr;
 }
 
 bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
