@@ -3795,12 +3795,12 @@ class IwyuAstConsumer
       current_ast_node()->set_in_forward_declare_context(true);
       if (compiler()->getLangOpts().CPlusPlus) {
         // In C++, if we're already elaborated ('class Foo x') but not
-        // namespace-qualified ('class ns::Foo x') there's no need even to
-        // forward-declare.
+        // a qualified name ('class ns::Foo x', 'class Class::Nested x') there's
+        // no need even to forward-declare.
         // Note that enums are never forward-declarable, so elaborated enums are
-        // short-circuited in CanForwardDeclareType.
+        // already short-circuited in CanForwardDeclareType.
         const ASTNode* parent = current_ast_node()->parent();
-        if (!IsElaborationNode(parent) || IsNamespaceQualifiedNode(parent))
+        if (!IsElaborationNode(parent) || IsQualifiedNameNode(parent))
           ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
       } else {
         // In C, all struct references are elaborated, so we really never need
