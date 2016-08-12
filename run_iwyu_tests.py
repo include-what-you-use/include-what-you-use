@@ -206,14 +206,8 @@ class OneIwyuTest(unittest.TestCase):
     files_to_check = [PosixPath(f) for f in files_to_check]
 
     iwyu_flags = self._iwyu_flags_map.get(filename, None)
-    if iwyu_flags:
-      logging.info('%s: Using iwyu flags %s', filename, str(iwyu_flags))
-
     clang_flags = self._clang_flags_map.get(filename, [])
     clang_flags.extend(self._include_map.get(filename, []))
-    if clang_flags:
-      logging.info('%s: Using clang flags %s', filename, str(clang_flags))
-
     iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
                                           iwyu_flags, clang_flags, verbose=True)
 
