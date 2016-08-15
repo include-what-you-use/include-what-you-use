@@ -168,7 +168,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
  protected:
   // Preprocessor event handlers called by Clang.
-  void MacroExpands(const clang::Token& id,
+  void MacroExpands(const clang::Token& macro_use_token,
                     const clang::MacroDefinition& definition,
                     clang::SourceRange range,
                     const clang::MacroArgs* args) override;
@@ -203,7 +203,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
   void FileChanged(clang::SourceLocation loc, FileChangeReason reason,
                    clang::SrcMgr::CharacteristicKind file_type,
-                   clang::FileID PrevFID) override;
+                   clang::FileID exiting_from_id) override;
   void FileSkipped(const clang::FileEntry& file, const clang::Token &filename,
                    clang::SrcMgr::CharacteristicKind file_type) override;
   // FileChanged is actually a multi-plexer for 4 different callbacks.
@@ -281,7 +281,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
   // Return true if at the current point in the parse of the given file,
   // there is a pending "begin_exports" pragma.
-  bool HasOpenBeginExports(const clang::FileEntry* file_entry) const;
+  bool HasOpenBeginExports(const clang::FileEntry* file) const;
 
   // The C++ source file passed in as an argument to the compiler (as
   // opposed to other files seen via #includes).
