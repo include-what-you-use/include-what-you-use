@@ -315,8 +315,7 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
   return NormalizeHeaderSearchPaths(search_path_map);
 }
 
-void InitGlobals(clang::SourceManager* sm,
-                 clang::HeaderSearch* header_search) {
+void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
   CHECK_(sm && "InitGlobals() needs a non-nullptr SourceManager");
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);

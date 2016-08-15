@@ -51,7 +51,7 @@ class SourceManagerCharacterDataGetter : public CharacterDataGetterInterface {
 // Returns the source-code line from the current location until \n.
 string GetSourceTextUntilEndOfLine(
     clang::SourceLocation start_loc,
-    const CharacterDataGetterInterface& character_data_getter);
+    const CharacterDataGetterInterface& data_getter);
 
 // Returns the location right *after* the first occurrence of needle
 // after start_loc, if any.  (If none, returns an invalid source-loc.)
@@ -67,18 +67,18 @@ clang::SourceLocation GetLocationAfter(
 // If include_loc points to the second INC, we'll return '<stdio.h>'.
 string GetIncludeNameAsTyped(
     clang::SourceLocation include_loc,
-    const CharacterDataGetterInterface& character_data_getter);
+    const CharacterDataGetterInterface& data_getter);
 
 // Given the range of an #if or #elif statement, determine the
 // symbols which are arguments to "defined". This allows iwyu to
 // treat these symbols as if #ifdef was used instead.
 vector<clang::Token> FindArgumentsToDefined(
     clang::SourceRange range,
-    const CharacterDataGetterInterface& character_data_getter);
+    const CharacterDataGetterInterface& data_getter);
 
 // Get the text of a given token.
 string GetTokenText(const clang::Token& token,
-                    const CharacterDataGetterInterface& character_data_getter);
+                    const CharacterDataGetterInterface& data_getter);
 
 }  // namespace include_what_you_use
 

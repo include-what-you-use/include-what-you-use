@@ -976,20 +976,18 @@ void IncludePicker::AddDefaultMappings() {
       IWYU_ARRAYSIZE(stdlib_cpp_public_headers));
 }
 
-void IncludePicker::MarkVisibility(
-    const string& quoted_filepath_pattern,
-    IncludeVisibility vis) {
+void IncludePicker::MarkVisibility(const string& quoted_filepath_pattern,
+                                   IncludeVisibility visibility) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   // insert() leaves any old value alone, and only inserts if the key is new.
-  filepath_visibility_map_.insert(make_pair(quoted_filepath_pattern, vis));
-  CHECK_(filepath_visibility_map_[quoted_filepath_pattern] == vis)
+  filepath_visibility_map_.insert(
+      make_pair(quoted_filepath_pattern, visibility));
+  CHECK_(filepath_visibility_map_[quoted_filepath_pattern] == visibility)
       << " Same file seen with two different visibilities: "
       << quoted_filepath_pattern
-      << " Old vis: "
-      << filepath_visibility_map_[quoted_filepath_pattern]
-      << " New vis: "
-      << vis;
+      << " Old vis: " << filepath_visibility_map_[quoted_filepath_pattern]
+      << " New vis: " << visibility;
 }
 
 // AddDirectInclude lets us use some hard-coded rules to add filepath
@@ -999,7 +997,7 @@ void IncludePicker::MarkVisibility(
 // hides them in /bits/.)
 void IncludePicker::AddDirectInclude(const string& includer_filepath,
                                      const string& includee_filepath,
-                                     const string& quoted_include_as_typed) {
+                                     const string& quoted_include_as_written) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   // Note: the includer may be a .cc file, which is unnecessary to add
@@ -1009,7 +1007,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
 
   quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
   const pair<string, string> key(includer_filepath, includee_filepath);
-  includer_and_includee_to_include_as_typed_[key] = quoted_include_as_typed;
+  includer_and_includee_to_include_as_typed_[key] = quoted_include_as_written;
 
   // Mark the clang fake-file "<built-in>" as private, so we never try
   // to map anything to it.
@@ -1102,9 +1100,9 @@ void IncludePicker::MarkIncludeAsPrivate(
   MarkVisibility(quoted_filepath_pattern, kPrivate);
 }
 
-void IncludePicker::AddFriendRegex(const string& includee,
-                                   const string& friend_regex) {
-  friend_to_headers_map_["@" + friend_regex].insert(includee);
+void IncludePicker::AddFriendRegex(const string& includee_filepath,
+                                   const string& quoted_friend_regex) {
+  friend_to_headers_map_["@" + quoted_friend_regex].insert(includee_filepath);
 }
 
 namespace {

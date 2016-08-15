@@ -186,11 +186,12 @@ class IncludePicker {
   void AddImplicitThirdPartyMappings();
 
   // Adds an entry to filepath_visibility_map_, with error checking.
-  void MarkVisibility(const string& quoted_include, IncludeVisibility vis);
+  void MarkVisibility(const string& quoted_filepath_pattern,
+                      IncludeVisibility visibility);
 
   // Parse visibility from a string. Returns kUnusedVisibility if
   // string is not recognized.
-  IncludeVisibility ParseVisibility(const string& visibility_str) const;
+  IncludeVisibility ParseVisibility(const string& visibility) const;
 
   // Return the visibility of a given quoted_include if known, else
   // kUnusedVisibility.
