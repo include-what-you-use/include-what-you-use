@@ -36,7 +36,7 @@ const char* source_extensions[] = {
   ".cxx",
   ".CXX",
   ".cpp",
-  ".CPP"
+  ".CPP",
   ".c++",
   ".C++",
   ".cp"
