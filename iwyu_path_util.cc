@@ -25,6 +25,7 @@
 namespace include_what_you_use {
 
 namespace {
+
 vector<HeaderSearchPath>* header_search_paths;
 
 // Please keep this in sync with _SOURCE_EXTENSIONS in fix_includes.py.

@@ -1513,6 +1513,7 @@ int IwyuFileInfo::EmitWarningMessages(const vector<OneUse>& uses) {
 }
 
 namespace internal {
+
 template <class IncludeOrFwdDecl>
 bool Contains(const vector<OneIncludeOrForwardDeclareLine>& lines,
               const IncludeOrFwdDecl& item) {

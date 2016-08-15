@@ -101,6 +101,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   const clang::FileEntry* main_file() const {
     return main_file_;
   }
+
   const set<const clang::FileEntry*>* files_to_report_iwyu_violations_for()
       const {
     return &files_to_report_iwyu_violations_for_;

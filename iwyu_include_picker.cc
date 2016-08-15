@@ -1108,6 +1108,7 @@ void IncludePicker::AddFriendRegex(const string& includee,
 }
 
 namespace {
+
 // Given a map keyed by quoted filepath patterns, return a vector
 // containing the @-regexes among the keys.
 template <typename MapType>
@@ -1119,6 +1120,7 @@ vector<string> ExtractKeysMarkedAsRegexes(const MapType& m) {
   }
   return regex_keys;
 }
+
 }  // anonymous namespace
 
 // Expands the regex keys in filepath_include_map_ and
