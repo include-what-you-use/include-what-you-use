@@ -636,7 +636,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
         if (!dtor->hasBody() && dtor->isImplicit())
           sema.DefineImplicitDestructor(CurrentLoc(), dtor);
         if (!dtor->isDefined() && dtor->getTemplateInstantiationPattern())
-          sema.PendingInstantiations.push_back(make_pair(dtor, CurrentLoc()));
+          sema.PendingInstantiations.emplace_back(dtor, CurrentLoc());
       }
     }
 
