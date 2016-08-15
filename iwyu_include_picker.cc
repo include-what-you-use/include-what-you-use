@@ -51,6 +51,7 @@ using std::vector;
 using llvm::MemoryBuffer;
 using llvm::SourceMgr;
 using llvm::errs;
+using llvm::yaml::KeyValueNode;
 using llvm::yaml::MappingNode;
 using llvm::yaml::Node;
 using llvm::yaml::ScalarNode;
@@ -837,8 +838,8 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
   }
   if (status == kCalculating) {
     VERRS(0) << "Cycle in include-mapping:\n";
-    for (size_t i = 0; i < node_stack->size(); ++i)
-      VERRS(0) << "  " << (*node_stack)[i] << " ->\n";
+    for (const string& node : *node_stack)
+      VERRS(0) << "  " << node << " ->\n";
     VERRS(0) << "  " << key << "\n";
     CHECK_UNREACHABLE_("Cycle in include-mapping");  // cycle is a fatal error
   }
@@ -895,9 +896,8 @@ vector<string> GetSequenceValue(Node* node) {
 
   SequenceNode* sequence = llvm::dyn_cast<SequenceNode>(node);
   if (sequence != nullptr) {
-    for (SequenceNode::iterator it = sequence->begin();
-         it != sequence->end(); ++it) {
-      result.push_back(GetScalarValue(&*it));
+    for (Node& node : *sequence) {
+      result.push_back(GetScalarValue(&node));
     }
   }
 
@@ -1403,8 +1403,8 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
     return;
   }
 
-  for (SequenceNode::iterator it = array->begin(); it != array->end(); ++it) {
-    Node* current_node = &(*it);
+  for (Node& array_item_node : *array) {
+    Node* current_node = &array_item_node;
 
     // Every item must be a JSON object ("mapping" in YAML terms.)
     MappingNode* mapping = llvm::dyn_cast<MappingNode>(current_node);
@@ -1414,14 +1414,13 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
       return;
     }
 
-    for (MappingNode::iterator it = mapping->begin();
-        it != mapping->end(); ++it) {
+    for (KeyValueNode &mapping_item_node : *mapping) {
       // General form is { directive: <data> }.
-      const string directive = GetScalarValue(it->getKey());
+      const string directive = GetScalarValue(mapping_item_node.getKey());
 
       if (directive == "symbol") {
         // Symbol mapping.
-        vector<string> mapping = GetSequenceValue(it->getValue());
+        vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
         if (mapping.size() != 4) {
           json_stream.printError(current_node,
               "Symbol mapping expects a value on the form "
@@ -1450,7 +1449,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
         AddSymbolMapping(mapping[0], mapping[2], to_visibility);
       } else if (directive == "include") {
         // Include mapping.
-        vector<string> mapping = GetSequenceValue(it->getValue());
+        vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
         if (mapping.size() != 4) {
           json_stream.printError(current_node,
               "Include mapping expects a value on the form "
@@ -1494,7 +1493,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
             to_visibility);
       } else if (directive == "ref") {
         // Mapping ref.
-        string ref_file = GetScalarValue(it->getValue());
+        string ref_file = GetScalarValue(mapping_item_node.getValue());
         if (ref_file.empty()) {
           json_stream.printError(current_node,
               "Mapping ref expects a single filename value.");
