@@ -16,11 +16,8 @@
 #include "clang/Basic/SourceLocation.h"
 
 namespace clang {
-class Token;
-}  // namespace clang
-
-namespace clang {
 class SourceManager;
+class Token;
 }  // namespace clang
 
 namespace include_what_you_use {
