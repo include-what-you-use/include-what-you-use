@@ -40,6 +40,13 @@ bool ShouldPrintSymbolFromFile(const clang::FileEntry* file);
   if (!::include_what_you_use::ShouldPrint( \
           verbose_level)) ; else ::llvm::errs()
 
+// Prints to errs() if the verbose level is at a high enough level to
+// print symbols that occur in the given file.  This is only valid
+// when used inside a class, such as IwyuAstConsumer, that defines a
+// method named ShouldPrintSymbolFromFile().
+#define ERRSYM(file_entry) \
+  if (!ShouldPrintSymbolFromFile(file_entry)) ; else ::llvm::errs()
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_
