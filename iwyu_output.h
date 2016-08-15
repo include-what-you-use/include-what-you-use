@@ -29,7 +29,7 @@
 namespace clang {
 class FileEntry;
 class UsingDecl;
-}
+}  // namespace clang
 
 namespace include_what_you_use {
 

@@ -77,7 +77,7 @@
 namespace clang {
 class FileEntry;
 class MacroInfo;
-}
+}  // namespace clang
 
 namespace include_what_you_use {
 
