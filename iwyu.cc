@@ -200,7 +200,6 @@ using clang::TemplateArgument;
 using clang::TemplateArgumentList;
 using clang::TemplateArgumentLoc;
 using clang::TemplateName;
-using clang::TemplateSpecializationKind;
 using clang::TemplateSpecializationType;
 using clang::TranslationUnitDecl;
 using clang::Type;
