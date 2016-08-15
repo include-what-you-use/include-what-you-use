@@ -109,6 +109,12 @@ def _GetIwyuPath():
   return _IWYU_PATH
 
 
+def _ShellQuote(arg):
+  if ' ' in arg:
+    arg = '"' + arg + '"'
+  return arg
+
+
 def _GetCommandOutput(command):
   p = subprocess.Popen(command,
                        shell=True,
@@ -424,8 +430,11 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
   iwyu_flags = ['-Xiwyu ' + flag for flag in iwyu_flags]
 
   # TODO(csilvers): verify that has exit-status 0.
-  cmd = '"%s" %s %s %s' % (
-      _GetIwyuPath(), ' '.join(iwyu_flags), ' '.join(clang_flags), cc_file)
+  cmd = '%s %s %s %s' % (
+    _ShellQuote(_GetIwyuPath()),
+    ' '.join(iwyu_flags),
+    ' '.join(clang_flags),
+    cc_file)
   if verbose:
     print('>>> Running %s' % cmd)
   output = _GetCommandOutput(cmd)
