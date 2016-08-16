@@ -85,11 +85,12 @@ string NormalizeNamespaces(string symbol) {
 // Utilities for examining source files.
 
 // For a particular #include line that include_loc points to,
-// returns the include as typed by the user, including <> or "".
+// returns the include as written by the user, including <> or "".
 // This works even for computed #includes ('#include MACRO'): we
 // point to the string the macro expands to.
-static string GetIncludeNameAsTyped(SourceLocation include_loc) {
-  return GetIncludeNameAsTyped(include_loc, DefaultDataGetter());  // iwyu_lexer
+// Simplifying wrapper around the iwyu_lexer function.
+static string GetIncludeNameAsWritten(SourceLocation include_loc) {
+  return GetIncludeNameAsWritten(include_loc, DefaultDataGetter());
 }
 
 // For a particular #include line that include_loc points to,
@@ -375,7 +376,7 @@ void IwyuPreprocessorInfo::InsertIntoFileInfoMap(
 // instance, if it has an IWYU pragma saying to keep it.
 void IwyuPreprocessorInfo::MaybeProtectInclude(
     SourceLocation includer_loc, const FileEntry* includee,
-    const string& include_name_as_typed) {
+    const string& include_name_as_written) {
   const FileEntry* includer = GetFileEntry(includer_loc);
   if (IsBuiltinOrCommandLineFile(includer))
     return;
@@ -396,10 +397,10 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     protect_reason = "pragma_export";
     const string quoted_includer =
         ConvertToQuotedInclude(GetFilePath(includer));
-    MutableGlobalIncludePicker()->AddMapping(include_name_as_typed,
+    MutableGlobalIncludePicker()->AddMapping(include_name_as_written,
                                              quoted_includer);
     ERRSYM(includer) << "Adding pragma-export mapping: "
-                     << include_name_as_typed << " -> " << quoted_includer
+                     << include_name_as_written << " -> " << quoted_includer
                      << "\n";
 
   // We also always keep #includes of .c files: iwyu doesn't touch those.
@@ -422,9 +423,9 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   if (!protect_reason.empty()) {
     CHECK_(ContainsKey(iwyu_file_info_map_, includer));
     GetFromFileInfoMap(includer)->ReportIncludeFileUse(includee,
-                                                       include_name_as_typed);
+                                                       include_name_as_written);
     ERRSYM(includer) << "Marked dep: " << GetFilePath(includer)
-                     << " needs to keep " << include_name_as_typed
+                     << " needs to keep " << include_name_as_written
                      << " (reason: " << protect_reason << ")\n";
   }
 }
@@ -453,14 +454,14 @@ static void ProtectReexportIncludes(
 // 1) iwyu_file_info_map_ maps the includer as a FileEntry* to the
 //    includee both as the literal name used and as a FileEntry*.
 // 2) include_to_fileentry_map_ maps the includee's literal name
-//    as typed to the FileEntry* used.  This can be used (in a
+//    as written to the FileEntry* used.  This can be used (in a
 //    limited way, due to non-uniqueness concerns) to map between
 //    names and FileEntries.
 // We also tell this #include to the include-picker, which may
 // use it to fine-tune its include-picking algorithms.
 void IwyuPreprocessorInfo::AddDirectInclude(
     SourceLocation includer_loc, const FileEntry* includee,
-    const string& include_name_as_typed) {
+    const string& include_name_as_written) {
   if (IsBuiltinOrCommandLineFile(includee))
     return;
 
@@ -470,14 +471,14 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   const FileEntry* includer = GetFileEntry(includer_loc);
   if (ShouldReportIWYUViolationsFor(includer)) {
     CHECK_(includee != nullptr);
-    CHECK_(!include_name_as_typed.empty());
+    CHECK_(!include_name_as_written.empty());
   }
   ++num_includes_seen_[includer];
 
   GetFromFileInfoMap(includer)->AddInclude(
-      includee, include_name_as_typed, GetLineNumber(includer_loc));
+      includee, include_name_as_written, GetLineNumber(includer_loc));
   // Make sure the includee has a file-info-map entry too.
-  InsertIntoFileInfoMap(includee, include_name_as_typed);
+  InsertIntoFileInfoMap(includee, include_name_as_written);
 
   // The first #include in every translation unit might be a precompiled header
   // and we need to mark it as such for later analysis.
@@ -512,20 +513,20 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   // Because we use #include-next, the same include-name can map to
   // several files; we use the first such mapping we see, which is the
   // top of the #include-next chain.
-  if (!include_name_as_typed.empty()) {
-    if (!ContainsKey(include_to_fileentry_map_, include_name_as_typed)) {
-      include_to_fileentry_map_[include_name_as_typed] = includee;
+  if (!include_name_as_written.empty()) {
+    if (!ContainsKey(include_to_fileentry_map_, include_name_as_written)) {
+      include_to_fileentry_map_[include_name_as_written] = includee;
     }
   }
 
   // Tell the include-picker about this new include.
   MutableGlobalIncludePicker()->AddDirectInclude(
-      GetFilePath(includer), GetFilePath(includee), include_name_as_typed);
+      GetFilePath(includer), GetFilePath(includee), include_name_as_written);
 
-  MaybeProtectInclude(includer_loc, includee, include_name_as_typed);
+  MaybeProtectInclude(includer_loc, includee, include_name_as_written);
 
   ERRSYM(includer) << "Added an #include: " << GetFilePath(includer)
-                   << " -> " << include_name_as_typed << "\n";
+                   << " -> " << include_name_as_written << "\n";
 }
 
 //------------------------------------------------------------
@@ -663,15 +664,15 @@ void IwyuPreprocessorInfo::FileSkipped(const FileEntry& file,
                                        SrcMgr::CharacteristicKind file_type) {
   CHECK_(include_filename_loc_.isValid() &&
          "Must skip file only for actual inclusion directive");
-  const string include_name_as_typed =
-      GetIncludeNameAsTyped(include_filename_loc_);
+  const string include_name_as_written =
+      GetIncludeNameAsWritten(include_filename_loc_);
   const SourceLocation include_loc =
       GetInstantiationLoc(filename.getLocation());
   ERRSYM(GetFileEntry(include_loc))
-      << "[ (#include)  ] " << include_name_as_typed
+      << "[ (#include)  ] " << include_name_as_written
       << " (" << GetFilePath(&file) << ")\n";
 
-  AddDirectInclude(include_loc, &file, include_name_as_typed);
+  AddDirectInclude(include_loc, &file, include_name_as_written);
 }
 
 // Called when a file is #included.
@@ -681,19 +682,19 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   // include of the file that file_beginning is in.
   const SourceLocation include_loc = GlobalSourceManager()->getIncludeLoc(
       GlobalSourceManager()->getFileID(file_beginning));
-  string include_name_as_typed;
+  string include_name_as_written;
   if (!IsBuiltinOrCommandLineFile(GetFileEntry(include_loc))) {
     CHECK_(include_filename_loc_.isValid() &&
            "Include from not built-in file must have inclusion directive");
-    include_name_as_typed = GetIncludeNameAsTyped(include_filename_loc_);
+    include_name_as_written = GetIncludeNameAsWritten(include_filename_loc_);
   }
   ERRSYM(GetFileEntry(include_loc))
-      << "[ #include    ] " << include_name_as_typed
+      << "[ #include    ] " << include_name_as_written
       << " (" << GetFilePath(file_beginning) << ")\n";
 
   const FileEntry* const new_file = GetFileEntry(file_beginning);
   if (new_file)
-    AddDirectInclude(include_loc, new_file, include_name_as_typed);
+    AddDirectInclude(include_loc, new_file, include_name_as_written);
 
   if (IsBuiltinOrCommandLineFile(new_file))
     return;

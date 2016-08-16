@@ -3088,7 +3088,7 @@ class InstantiatedTemplateVisitor
     const Type* class_type = GetTypeOf(expr);
     if (CanIgnoreType(class_type))  return true;
 
-    // If the ctor type is a SubstTemplateTypeParmType, get the type-as-typed.
+    // If the ctor type is a SubstTemplateTypeParmType, get the type-as-written.
     const Type* actual_type = ResugarType(class_type);
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
     ReportTypeUse(caller_loc(), actual_type);

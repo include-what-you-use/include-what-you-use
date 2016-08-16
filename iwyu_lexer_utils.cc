@@ -69,8 +69,9 @@ SourceLocation GetLocationAfter(
   return start_loc.getLocWithOffset(needle_loc - data + needle.length());
 }
 
-string GetIncludeNameAsTyped(SourceLocation include_loc,
-                             const CharacterDataGetterInterface& data_getter) {
+string GetIncludeNameAsWritten(
+    SourceLocation include_loc,
+    const CharacterDataGetterInterface& data_getter) {
   const string data = GetSourceTextUntilEndOfLine(include_loc, data_getter);
   if (data.empty())
     return data;

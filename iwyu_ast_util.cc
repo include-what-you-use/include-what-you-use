@@ -508,7 +508,7 @@ static const Type* GetTemplateArgAsType(const TemplateArgument& tpl_arg) {
 // VarDecl 'vector<int(*)(const MyClass&)> x', it would return
 // (vector<int(*)(const MyClass&)>, int(*)(const MyClass&),
 // int(const MyClass&), int, const MyClass&, MyClass).  Note that
-// this function only returns types-as-typed, so it does *not* return
+// this function only returns types-as-written, so it does *not* return
 // alloc<int(*)(const MyClass&)>, even though it's part of vector.
 class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
  public:
@@ -666,7 +666,7 @@ set<FunctionDecl*> GetLateParsedFunctionDecls(TranslationUnitDecl* decl) {
 // contains the original map elements plus mapping for the components.
 // This is because when a type is 'owned' by the template
 // instantiator, all parts of the type are owned.  We only consider
-// type-components as typed.
+// type-components as written.
 static map<const Type*, const Type*> ResugarTypeComponents(
     const map<const Type*, const Type*>& resugar_map) {
   map<const Type*, const Type*> retval = resugar_map;
