@@ -243,12 +243,12 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // #include from iwyu removal.
   void MaybeProtectInclude(clang::SourceLocation includer_loc,
                            const clang::FileEntry* includee,
-                           const string& include_name_as_typed);
+                           const string& include_name_as_written);
 
   // Called whenever an #include is seen in the preprocessor output.
   void AddDirectInclude(clang::SourceLocation includer_loc,
                         const clang::FileEntry* includee,
-                        const string& include_name_as_typed);
+                        const string& include_name_as_written);
 
   // Report a "begin_exports"/"end_exports" pragma pair.
   // begin_line is first line, end_line is just after the last line.
@@ -304,7 +304,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // which we don't have.  Luckily, a vector works just as well.
   vector<clang::Token> macros_called_from_macros_;
 
-  // This maps from the include-name as typed in the program
+  // This maps from the include-name as written in the program
   // (including <>'s or ""'s) to the FileEntry we loaded for that
   // #include.
   map<string, const clang::FileEntry*> include_to_fileentry_map_;

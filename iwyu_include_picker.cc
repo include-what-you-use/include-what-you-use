@@ -1007,7 +1007,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
 
   quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
   const pair<string, string> key(includer_filepath, includee_filepath);
-  includer_and_includee_to_include_as_typed_[key] = quoted_include_as_written;
+  includer_and_includee_to_include_as_written_[key] = quoted_include_as_written;
 
   // Mark the clang fake-file "<built-in>" as private, so we never try
   // to map anything to it.
@@ -1265,7 +1265,7 @@ string IncludePicker::MaybeGetIncludeNameAsWritten(
     const string& includer_filepath, const string& includee_filepath) const {
   const pair<string, string> key(includer_filepath, includee_filepath);
   // I want to use GetOrDefault here, but it has trouble deducing tpl args.
-  const string* value = FindInMap(&includer_and_includee_to_include_as_typed_,
+  const string* value = FindInMap(&includer_and_includee_to_include_as_written_,
                                   key);
   return value ? *value : "";
 }
@@ -1323,17 +1323,17 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
   // We'll have called ConvertToQuotedInclude on members of retval,
   // but sometimes we can do better -- if included_filepath is in
   // retval, the iwyu-preprocessor may have stored the quoted-include
-  // as typed in including_filepath.  This is better to use than
+  // as written in including_filepath.  This is better to use than
   // ConvertToQuotedInclude because it avoids trouble when the same
   // file is accessible via different include search-paths, or is
   // accessed via a symlink.
-  const string& quoted_include_as_typed
+  const string& quoted_include_as_written
       = MaybeGetIncludeNameAsWritten(including_filepath, included_filepath);
-  if (!quoted_include_as_typed.empty()) {
+  if (!quoted_include_as_written.empty()) {
     vector<string>::iterator it = std::find(retval.begin(), retval.end(),
                                             quoted_includee);
     if (it != retval.end())
-      *it = quoted_include_as_typed;
+      *it = quoted_include_as_written;
   }
   return retval;
 }
