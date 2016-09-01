@@ -37,6 +37,9 @@ CONCAT(Concat, FwdDeclClass) *global_concat_ptr;
 // IWYU: ConcatClass is...*macro_location-i4.h
 CONCAT(Concat, Class) global_concat;
 
+// IWYU: ANONYMOUS_TYPE_IN_MACRO is...*macro_location-i3.h
+ANONYMOUS_TYPE_IN_MACRO(500);
+
 /**** IWYU_SUMMARY
 
 tests/cxx/macro_location.h should add these lines:
@@ -50,7 +53,7 @@ tests/cxx/macro_location.h should remove these lines:
 The full include-list for tests/cxx/macro_location.h:
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/macro_location-d2.h"  // for ARRAYSIZE, CREATE_VAR, DECLARE_INDIRECT, NEW_CLASS, USE_CLASS
-#include "tests/cxx/macro_location-i3.h"  // for Foo
+#include "tests/cxx/macro_location-i3.h"  // for ANONYMOUS_TYPE_IN_MACRO, Foo
 #include "tests/cxx/macro_location-i4.h"  // for ConcatClass, ConcatFwdDeclClass (ptr only)
 
 

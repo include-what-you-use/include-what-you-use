@@ -1374,6 +1374,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                                SourceLocation loc) {
     set<const NamedDecl*> redecls = GetClassRedecls(DynCastFrom(decl));
     for (const NamedDecl* redecl : redecls) {
+      // Anonymous types can't be forward-decls.
+      if (redecl->getName().empty())
+        continue;
       if (IsBeforeInSameFile(redecl, loc)) {
         return redecl;
       }
