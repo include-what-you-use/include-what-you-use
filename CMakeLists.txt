@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.4.3)
 
 if( POLICY CMP0048 )
   # Silence CMP0048 warning about missing project VERSION.
@@ -156,7 +156,8 @@ target_link_libraries(include-what-you-use
   LLVMObject # BitReader, Core, Support
   LLVMBitReader # Core, Support
   LLVMCore # Support
-  LLVMSupport
+  LLVMSupport # Demangle
+  LLVMDemangle
 )
 
 # Platform dependencies.
@@ -180,3 +181,7 @@ endif()
 
 install(TARGETS include-what-you-use RUNTIME DESTINATION bin)
 install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
+
+# Install mapping files
+file(GLOB MAPPING_FILES *.imp)
+install(FILES ${MAPPING_FILES} DESTINATION share/include-what-you-use)

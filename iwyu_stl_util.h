@@ -9,24 +9,20 @@
 
 // Utilities that make it easier to work with STL.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 
-#include <stddef.h>                     // for NULL
 #include <algorithm>                    // for find
 #include <map>                          // for map, multimap
 #include <set>                          // for set
-#include <utility>                      // for pair
 #include <vector>                       // for vector
 
 namespace include_what_you_use {
 
 using std::map;
 using std::multimap;
-using std::pair;
 using std::set;
 using std::vector;
-
 
 // Returns true if the associative container (e.g. set or map)
 // contains the given key.
@@ -62,9 +58,8 @@ template <class AssociativeContainer>
 bool ContainsAnyKey(
     const AssociativeContainer& container,
     const set<typename AssociativeContainer::key_type>& keys) {
-  for (typename set<typename AssociativeContainer::key_type>::const_iterator
-           it = keys.begin(); it != keys.end(); ++it) {
-    if (ContainsKey(container, *it))
+  for (const auto& key : keys) {
+    if (ContainsKey(container, key))
       return true;
   }
   return false;
@@ -81,16 +76,16 @@ const typename Map::mapped_type& GetOrDefault(
 }
 
 // Returns a pointer to (*a_map)[key] if key is in *a_map; otherwise
-// returns NULL.
+// returns nullptr.
 template <typename K, typename V>
 const V* FindInMap(const map<K, V>* a_map, const K& key) {
   const typename map<K, V>::const_iterator it = a_map->find(key);
-  return it == a_map->end() ? NULL : &it->second;
+  return it == a_map->end() ? nullptr : &it->second;
 }
 template <typename K, typename V>
 V* FindInMap(map<K, V>* a_map, const K& key) {
   const typename map<K, V>::iterator it = a_map->find(key);
-  return it == a_map->end() ? NULL : &it->second;
+  return it == a_map->end() ? nullptr : &it->second;
 }
 
 // Returns all values associated with the given key in the multimap.
@@ -150,91 +145,6 @@ vector<T> GetUniqueEntries(const vector<T>& v) {
   return retval;
 }
 
-
-// Utilities for writing concise loops over STL containers.
-//
-//   for (Each<T> it(&some_container); !it.AtEnd(); ++it) {
-//     ... access the current element via *it or it->something ...
-//   }
-//
-//   for (Each<Key, Value> it(&some_map); !it.AtEnd(); ++it) {
-//     ... access the key via it->first ...
-//     ... access the value via it->second ...
-//   }
-//
-// Benefit of Each over concise_iterator.h:
-//
-//   - Only the element type (as opposed to the entire container type)
-//     needs to be specified.
-//   - Safer as it doesn't allow the container to be a temporary object.
-//
-// Disadvantage:
-//
-//   - Slower (AtEnd(), ++, and iterator dereference all involve a
-//     virtual call).
-template <typename T, typename U = void>
-class Each;
-
-template <typename Element>
-class Each<Element, void> {  // implements Each<Element>
- public:
-  template <class Container>
-  explicit Each(const Container* container)
-      : impl_(new Impl<typename Container::const_iterator>(container->begin(),
-                                                           container->end())) {}
-  ~Each() { delete impl_; }
-
-  // Returns true if the iterator points to the end of the container.
-  bool AtEnd() const { return impl_->AtEnd(); }
-
-  // Advances the iterator.
-  void operator++() { impl_->Advance(); }
-
-  // Reads the current element.
-  const Element& operator*() const { return *impl_->Get(); }
-  const Element* operator->() const { return impl_->Get(); }
-
- private:
-  class ImplBase {
-   public:
-    virtual ~ImplBase() {}
-
-    virtual bool AtEnd() const = 0;
-    virtual void Advance() = 0;
-    virtual const Element* Get() const = 0;
-  };
-
-  template <typename Iter>
-  class Impl : public ImplBase {
-   public:
-    Impl(Iter begin, Iter end)
-        : current_(begin),
-          end_(end) {}
-
-    virtual bool AtEnd() const { return current_ == end_; }
-    virtual void Advance() { ++current_; }
-    virtual const Element* Get() const { return &(*current_); }
-
-   private:
-    Iter current_;
-    const Iter end_;
-  };
-
-  Each(const Each&);  // No implementation.
-  void operator=(const Each&);  // No implementation.
-
-  ImplBase* const impl_;
-};
-
-// Each<Key, Value> is just a short-hand for Each<pair<const Key, Value> >.
-template <typename Key, typename Value>
-class Each : public Each<pair<const Key, Value> > {
- public:
-  template <class Container>
-  explicit Each(const Container* container)
-      : Each<pair<const Key, Value> >(container) {}
-};
-
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_

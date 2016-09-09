@@ -9,8 +9,8 @@
 
 #include "iwyu_include_picker.h"
 
-#include <stddef.h>                     // for size_t
 #include <algorithm>                    // for find
+#include <cstddef>                      // for size_t
 // TODO(wan): make sure IWYU doesn't suggest <iterator>.
 #include <iterator>                     // for find
 // not hash_map: it's not as portable and needs hash<string>.
@@ -51,6 +51,7 @@ using std::vector;
 using llvm::MemoryBuffer;
 using llvm::SourceMgr;
 using llvm::errs;
+using llvm::yaml::KeyValueNode;
 using llvm::yaml::MappingNode;
 using llvm::yaml::Node;
 using llvm::yaml::ScalarNode;
@@ -788,17 +789,17 @@ bool IsQuotedFilepathPattern(const string& str) {
 void ExpandOnce(const IncludePicker::IncludeMap& m, vector<string>* nodes) {
   vector<string> nodes_and_children;
   set<string> seen_nodes_and_children;
-  for (Each<string> node(nodes); !node.AtEnd(); ++node) {
+  for (const string& node : *nodes) {
     // First insert the node itself, then all its kids.
-    if (!ContainsKey(seen_nodes_and_children, *node)) {
-      nodes_and_children.push_back(*node);
-      seen_nodes_and_children.insert(*node);
+    if (!ContainsKey(seen_nodes_and_children, node)) {
+      nodes_and_children.push_back(node);
+      seen_nodes_and_children.insert(node);
     }
-    if (const vector<string>* children = FindInMap(&m, *node)) {
-      for (Each<string> child(children); !child.AtEnd(); ++child) {
-        if (!ContainsKey(seen_nodes_and_children, *child)) {
-          nodes_and_children.push_back(*child);
-          seen_nodes_and_children.insert(*child);
+    if (const vector<string>* children = FindInMap(&m, node)) {
+      for (const string& child : *children) {
+        if (!ContainsKey(seen_nodes_and_children, child)) {
+          nodes_and_children.push_back(child);
+          seen_nodes_and_children.insert(child);
         }
       }
     }
@@ -837,8 +838,8 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
   }
   if (status == kCalculating) {
     VERRS(0) << "Cycle in include-mapping:\n";
-    for (size_t i = 0; i < node_stack->size(); ++i)
-      VERRS(0) << "  " << (*node_stack)[i] << " ->\n";
+    for (const string& node : *node_stack)
+      VERRS(0) << "  " << node << " ->\n";
     VERRS(0) << "  " << key << "\n";
     CHECK_UNREACHABLE_("Cycle in include-mapping");  // cycle is a fatal error
   }
@@ -853,9 +854,9 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
 
   // Keep track of node->second as we update it, to avoid duplicates.
   (*seen_nodes)[key] = kCalculating;
-  for (Each<string> child(&node->second); !child.AtEnd(); ++child) {
-    node_stack->push_back(*child);
-    MakeNodeTransitive(filename_map, seen_nodes, node_stack, *child);
+  for (const string& child : node->second) {
+    node_stack->push_back(child);
+    MakeNodeTransitive(filename_map, seen_nodes, node_stack, child);
     node_stack->pop_back();
   }
   (*seen_nodes)[key] = kDone;
@@ -873,15 +874,15 @@ void MakeMapTransitive(IncludePicker::IncludeMap* filename_map) {
   // the complete transitive closure.
   map<string, TransitiveStatus> seen_nodes;
   vector<string> node_stack;
-  for (Each<string, vector<string> > it(filename_map); !it.AtEnd(); ++it)
-    MakeNodeTransitive(filename_map, &seen_nodes, &node_stack, it->first);
+  for (const IncludePicker::IncludeMap::value_type& includes : *filename_map)
+    MakeNodeTransitive(filename_map, &seen_nodes, &node_stack, includes.first);
 }
 
 // Get a scalar value from a YAML node.
 // Returns empty string if it's not of type ScalarNode.
 string GetScalarValue(Node* node) {
   ScalarNode* scalar = llvm::dyn_cast<ScalarNode>(node);
-  if (scalar == NULL)
+  if (scalar == nullptr)
     return string();
 
   llvm::SmallString<8> storage;
@@ -894,10 +895,9 @@ vector<string> GetSequenceValue(Node* node) {
   vector<string> result;
 
   SequenceNode* sequence = llvm::dyn_cast<SequenceNode>(node);
-  if (sequence != NULL) {
-    for (SequenceNode::iterator it = sequence->begin();
-         it != sequence->end(); ++it) {
-      result.push_back(GetScalarValue(&*it));
+  if (sequence != nullptr) {
+    for (Node& node : *sequence) {
+      result.push_back(GetScalarValue(&node));
     }
   }
 
@@ -935,8 +935,8 @@ string FindFileInSearchPath(const vector<string>& search_path,
     return MakeAbsolutePath(filename);
   } else if (!IsAbsolutePath(filename)) {
     // If it's relative, scan search path.
-    for (Each<string> it(&search_path); !it.AtEnd(); ++it) {
-      string candidate = MakeAbsolutePath(*it, filename);
+    for (const string& base_path : search_path) {
+      string candidate = MakeAbsolutePath(base_path, filename);
       if (llvm::sys::fs::exists(candidate)) {
         return candidate;
       }
@@ -948,7 +948,7 @@ string FindFileInSearchPath(const vector<string>& search_path,
   return filename;
 }
 
-}  // namespace
+}  // anonymous namespace
 
 IncludePicker::IncludePicker(bool no_default_mappings)
     : symbol_include_map_(),
@@ -976,20 +976,18 @@ void IncludePicker::AddDefaultMappings() {
       IWYU_ARRAYSIZE(stdlib_cpp_public_headers));
 }
 
-void IncludePicker::MarkVisibility(
-    const string& quoted_filepath_pattern,
-    IncludeVisibility vis) {
+void IncludePicker::MarkVisibility(const string& quoted_filepath_pattern,
+                                   IncludeVisibility visibility) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   // insert() leaves any old value alone, and only inserts if the key is new.
-  filepath_visibility_map_.insert(make_pair(quoted_filepath_pattern, vis));
-  CHECK_(filepath_visibility_map_[quoted_filepath_pattern] == vis)
+  filepath_visibility_map_.insert(
+      make_pair(quoted_filepath_pattern, visibility));
+  CHECK_(filepath_visibility_map_[quoted_filepath_pattern] == visibility)
       << " Same file seen with two different visibilities: "
       << quoted_filepath_pattern
-      << " Old vis: "
-      << filepath_visibility_map_[quoted_filepath_pattern]
-      << " New vis: "
-      << vis;
+      << " Old vis: " << filepath_visibility_map_[quoted_filepath_pattern]
+      << " New vis: " << visibility;
 }
 
 // AddDirectInclude lets us use some hard-coded rules to add filepath
@@ -999,7 +997,7 @@ void IncludePicker::MarkVisibility(
 // hides them in /bits/.)
 void IncludePicker::AddDirectInclude(const string& includer_filepath,
                                      const string& includee_filepath,
-                                     const string& quoted_include_as_typed) {
+                                     const string& quoted_include_as_written) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   // Note: the includer may be a .cc file, which is unnecessary to add
@@ -1009,7 +1007,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
 
   quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
   const pair<string, string> key(includer_filepath, includee_filepath);
-  includer_and_includee_to_include_as_typed_[key] = quoted_include_as_typed;
+  includer_and_includee_to_include_as_written_[key] = quoted_include_as_written;
 
   // Mark the clang fake-file "<built-in>" as private, so we never try
   // to map anything to it.
@@ -1102,24 +1100,26 @@ void IncludePicker::MarkIncludeAsPrivate(
   MarkVisibility(quoted_filepath_pattern, kPrivate);
 }
 
-void IncludePicker::AddFriendRegex(const string& includee,
-                                   const string& friend_regex) {
-  friend_to_headers_map_["@" + friend_regex].insert(includee);
+void IncludePicker::AddFriendRegex(const string& includee_filepath,
+                                   const string& quoted_friend_regex) {
+  friend_to_headers_map_["@" + quoted_friend_regex].insert(includee_filepath);
 }
 
 namespace {
+
 // Given a map keyed by quoted filepath patterns, return a vector
 // containing the @-regexes among the keys.
 template <typename MapType>
 vector<string> ExtractKeysMarkedAsRegexes(const MapType& m) {
   vector<string> regex_keys;
-  for (Each<typename MapType::value_type> it(&m); !it.AtEnd(); ++it) {
-    if (StartsWith(it->first, "@"))
-      regex_keys.push_back(it->first);
+  for (const typename MapType::value_type& item : m) {
+    if (StartsWith(item.first, "@"))
+      regex_keys.push_back(item.first);
   }
   return regex_keys;
 }
-}  // namespace
+
+}  // anonymous namespace
 
 // Expands the regex keys in filepath_include_map_ and
 // friend_to_headers_map_ by matching them against all source files
@@ -1137,24 +1137,20 @@ void IncludePicker::ExpandRegexes() {
   // discarding the identity mappings.  TODO(wan): to improve
   // performance, don't construct more than one Regex object for each
   // element in the above vectors.
-  for (Each<string, set<string> > incmap(&quoted_includes_to_quoted_includers_);
-       !incmap.AtEnd(); ++incmap) {
-    const string& hdr = incmap->first;
-    for (Each<string> it(&filepath_include_map_regex_keys); !it.AtEnd(); ++it) {
-      const string& regex_key = *it;
+  for (const auto& incmap : quoted_includes_to_quoted_includers_) {
+    const string& hdr = incmap.first;
+    for (const string& regex_key : filepath_include_map_regex_keys) {
       const vector<string>& map_to = filepath_include_map_[regex_key];
       // Enclose the regex in ^(...)$ for full match.
       llvm::Regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
-      if (regex.match(hdr.c_str(), NULL) && !ContainsValue(map_to, hdr)) {
+      if (regex.match(hdr, nullptr) && !ContainsValue(map_to, hdr)) {
         Extend(&filepath_include_map_[hdr], filepath_include_map_[regex_key]);
         MarkVisibility(hdr, filepath_visibility_map_[regex_key]);
       }
     }
-    for (Each<string> it(&friend_to_headers_map_regex_keys);
-         !it.AtEnd(); ++it) {
-      const string& regex_key = *it;
+    for (const string& regex_key : friend_to_headers_map_regex_keys) {
       llvm::Regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
-      if (regex.match(hdr.c_str(), NULL)) {
+      if (regex.match(hdr, nullptr)) {
         InsertAllInto(friend_to_headers_map_[regex_key],
                       &friend_to_headers_map_[hdr]);
       }
@@ -1179,37 +1175,34 @@ void IncludePicker::ExpandRegexes() {
 //    means iwyu will never suggest adding y.h.
 void IncludePicker::AddImplicitThirdPartyMappings() {
   set<string> third_party_headers_with_explicit_mappings;
-  for (Each<IncludeMap::value_type>
-           it(&filepath_include_map_); !it.AtEnd(); ++it) {
-    if (IsThirdPartyFile(it->first))
-      third_party_headers_with_explicit_mappings.insert(it->first);
+  for (const IncludeMap::value_type& item : filepath_include_map_) {
+    if (IsThirdPartyFile(item.first))
+      third_party_headers_with_explicit_mappings.insert(item.first);
   }
 
   set<string> headers_included_from_non_third_party;
-  for (Each<string, set<string> >
-           it(&quoted_includes_to_quoted_includers_); !it.AtEnd(); ++it) {
-    for (Each<string> includer(&it->second); !includer.AtEnd(); ++includer) {
-      if (!IsThirdPartyFile(*includer)) {
-        headers_included_from_non_third_party.insert(it->first);
+  for (const auto& incmap : quoted_includes_to_quoted_includers_) {
+    for (const string& includer : incmap.second) {
+      if (!IsThirdPartyFile(includer)) {
+        headers_included_from_non_third_party.insert(incmap.first);
         break;
       }
     }
   }
 
-  for (Each<string, set<string> >
-           it(&quoted_includes_to_quoted_includers_); !it.AtEnd(); ++it) {
-    const string& includee = it->first;
+  for (const auto& incmap : quoted_includes_to_quoted_includers_) {
+    const string& includee = incmap.first;
     if (!IsThirdPartyFile(includee) ||
         ContainsKey(third_party_headers_with_explicit_mappings, includee) ||
         ContainsKey(headers_included_from_non_third_party, includee)) {
       continue;
     }
-    for (Each<string> includer(&it->second); !includer.AtEnd(); ++includer) {
+    for (const string& includer : incmap.second) {
       // From the 'if' statement above, we already know that includee
       // is not included from non-third-party code.
-      CHECK_(IsThirdPartyFile(*includer) && "Why not nixed!");
+      CHECK_(IsThirdPartyFile(includer) && "Why not nixed!");
       CHECK_(IsThirdPartyFile(includee) && "Why not nixed!");
-      AddMapping(includee, *includer);
+      AddMapping(includee, includer);
       if (GetVisibility(includee) == kUnusedVisibility) {
         MarkIncludeAsPrivate(includee);
       }
@@ -1237,10 +1230,8 @@ void IncludePicker::FinalizeAddedIncludes() {
   MakeMapTransitive(&filepath_include_map_);
   // Now that filepath_include_map_ is transitively closed, it's an
   // easy task to get the values of symbol_include_map_ closed too.
-  // We can't use Each<>() because we need a non-const iterator.
-  for (IncludePicker::IncludeMap::iterator it = symbol_include_map_.begin();
-       it != symbol_include_map_.end(); ++it) {
-    ExpandOnce(filepath_include_map_, &it->second);
+  for (IncludeMap::value_type& symbol_include : symbol_include_map_) {
+    ExpandOnce(filepath_include_map_, &symbol_include.second);
   }
 
   has_called_finalize_added_include_lines_ = true;
@@ -1262,10 +1253,10 @@ vector<string> IncludePicker::GetPublicValues(
 
   if (GetOrDefault(filepath_visibility_map_, key, kPublic) == kPublic)
     retval.push_back(key);                // we can map to ourself!
-  for (Each<string> it(values); !it.AtEnd(); ++it) {
-    CHECK_(!StartsWith(*it, "@"));
-    if (GetOrDefault(filepath_visibility_map_, *it, kPublic) == kPublic)
-      retval.push_back(*it);
+  for (const string& value : *values) {
+    CHECK_(!StartsWith(value, "@"));
+    if (GetOrDefault(filepath_visibility_map_, value, kPublic) == kPublic)
+      retval.push_back(value);
   }
   return retval;
 }
@@ -1274,7 +1265,7 @@ string IncludePicker::MaybeGetIncludeNameAsWritten(
     const string& includer_filepath, const string& includee_filepath) const {
   const pair<string, string> key(includer_filepath, includee_filepath);
   // I want to use GetOrDefault here, but it has trouble deducing tpl args.
-  const string* value = FindInMap(&includer_and_includee_to_include_as_typed_,
+  const string* value = FindInMap(&includer_and_includee_to_include_as_written_,
                                   key);
   return value ? *value : "";
 }
@@ -1286,9 +1277,10 @@ vector<string> IncludePicker::GetCandidateHeadersForSymbol(
 }
 
 vector<string> IncludePicker::GetCandidateHeadersForFilepath(
-    const string& filepath) const {
+    const string& filepath, const string& including_filepath) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
-  const string quoted_header = ConvertToQuotedInclude(filepath);
+  const string quoted_header = ConvertToQuotedInclude(
+      filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
   vector<string> retval = GetPublicValues(filepath_include_map_, quoted_header);
   if (retval.empty()) {
     // the filepath isn't in include_map, so just quote and return it.
@@ -1303,15 +1295,21 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepath(
 vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     const string& included_filepath, const string& including_filepath) const {
   vector<string> retval;
-  const string quoted_includer = ConvertToQuotedInclude(including_filepath);
-  const string quoted_includee = ConvertToQuotedInclude(included_filepath);
+  // We pass the own files path to ConvertToQuotedInclude so the quoted include
+  // for the case that there is no matching `-I` option is just the filename
+  // (e.g. "foo.cpp") instead of the absolute file path.
+  const string quoted_includer = ConvertToQuotedInclude(
+      including_filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
+  const string quoted_includee = ConvertToQuotedInclude(
+      included_filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
   const set<string>* headers_with_includer_as_friend =
       FindInMap(&friend_to_headers_map_, quoted_includer);
-  if (headers_with_includer_as_friend != NULL &&
+  if (headers_with_includer_as_friend != nullptr &&
       ContainsKey(*headers_with_includer_as_friend, included_filepath)) {
     retval.push_back(quoted_includee);
   } else {
-    retval = GetCandidateHeadersForFilepath(included_filepath);
+    retval =
+        GetCandidateHeadersForFilepath(included_filepath, including_filepath);
     if (retval.size() == 1) {
       const string& quoted_header = retval[0];
       if (GetVisibility(quoted_header) == kPrivate) {
@@ -1325,17 +1323,17 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
   // We'll have called ConvertToQuotedInclude on members of retval,
   // but sometimes we can do better -- if included_filepath is in
   // retval, the iwyu-preprocessor may have stored the quoted-include
-  // as typed in including_filepath.  This is better to use than
+  // as written in including_filepath.  This is better to use than
   // ConvertToQuotedInclude because it avoids trouble when the same
   // file is accessible via different include search-paths, or is
   // accessed via a symlink.
-  const string& quoted_include_as_typed
+  const string& quoted_include_as_written
       = MaybeGetIncludeNameAsWritten(including_filepath, included_filepath);
-  if (!quoted_include_as_typed.empty()) {
+  if (!quoted_include_as_written.empty()) {
     vector<string>::iterator it = std::find(retval.begin(), retval.end(),
                                             quoted_includee);
     if (it != retval.end())
-      *it = quoted_include_as_typed;
+      *it = quoted_include_as_written;
   }
   return retval;
 }
@@ -1349,8 +1347,8 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
   const vector<string>* all_mappers = FindInMap(&filepath_include_map_,
                                                 quoted_from);
   if (all_mappers) {
-    for (Each<string> it(all_mappers); !it.AtEnd(); ++it) {
-      if (*it == quoted_to)
+    for (const string& mapper : *all_mappers) {
+      if (mapper == quoted_to)
         return true;
     }
   }
@@ -1400,30 +1398,29 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
   // Get root sequence.
   Node* root = stream_begin->getRoot();
   SequenceNode *array = llvm::dyn_cast<SequenceNode>(root);
-  if (array == NULL) {
+  if (array == nullptr) {
     json_stream.printError(root, "Root element must be an array.");
     return;
   }
 
-  for (SequenceNode::iterator it = array->begin(); it != array->end(); ++it) {
-    Node* current_node = &(*it);
+  for (Node& array_item_node : *array) {
+    Node* current_node = &array_item_node;
 
     // Every item must be a JSON object ("mapping" in YAML terms.)
     MappingNode* mapping = llvm::dyn_cast<MappingNode>(current_node);
-    if (mapping == NULL) {
+    if (mapping == nullptr) {
       json_stream.printError(current_node,
           "Mapping directives must be objects.");
       return;
     }
 
-    for (MappingNode::iterator it = mapping->begin();
-        it != mapping->end(); ++it) {
+    for (KeyValueNode &mapping_item_node : *mapping) {
       // General form is { directive: <data> }.
-      const string directive = GetScalarValue(it->getKey());
+      const string directive = GetScalarValue(mapping_item_node.getKey());
 
       if (directive == "symbol") {
         // Symbol mapping.
-        vector<string> mapping = GetSequenceValue(it->getValue());
+        vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
         if (mapping.size() != 4) {
           json_stream.printError(current_node,
               "Symbol mapping expects a value on the form "
@@ -1452,7 +1449,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
         AddSymbolMapping(mapping[0], mapping[2], to_visibility);
       } else if (directive == "include") {
         // Include mapping.
-        vector<string> mapping = GetSequenceValue(it->getValue());
+        vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
         if (mapping.size() != 4) {
           json_stream.printError(current_node,
               "Include mapping expects a value on the form "
@@ -1496,7 +1493,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
             to_visibility);
       } else if (directive == "ref") {
         // Mapping ref.
-        string ref_file = GetScalarValue(it->getValue());
+        string ref_file = GetScalarValue(mapping_item_node.getValue());
         if (ref_file.empty()) {
           json_stream.printError(current_node,
               "Mapping ref expects a single filename value.");

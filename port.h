@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 // Source file for architecture-specific logic.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
+#ifndef INCLUDE_WHAT_YOU_USE_PORT_H_
+#define INCLUDE_WHAT_YOU_USE_PORT_H_
 
-#include <stdlib.h>  // for abort
+#include <cstdlib>   // for abort
 #include <iostream>
 #include "llvm/Support/Compiler.h"
 
@@ -27,7 +27,7 @@ class FatalMessageEmitter {
     stream() << file << ":" << line << ": Assertion failed: " << message;
   }
   LLVM_ATTRIBUTE_NORETURN ~FatalMessageEmitter() {
-    stream() << ::std::endl;
+    stream() << std::endl;
     ::abort();
 #ifdef LLVM_BUILTIN_UNREACHABLE
     // Windows systems and possibly others don't declare abort() to be noreturn,
@@ -35,7 +35,7 @@ class FatalMessageEmitter {
     LLVM_BUILTIN_UNREACHABLE;
 #endif
   }
-  ::std::ostream& stream() { return ::std::cerr; }
+  std::ostream& stream() { return std::cerr; }
 };
 
 // Helper class that allows an ostream to 'appear' as a void expression.
@@ -43,7 +43,7 @@ class OstreamVoidifier {
  public:
   // This has to be an operator with a precedence lower than << but
   // higher than ?:
-  void operator&(::std::ostream&) {}
+  void operator&(std::ostream&) {}
 };
 
 }  // namespace include_what_you_use
@@ -66,7 +66,7 @@ class OstreamVoidifier {
 #define snprintf _snprintf
 
 #define NOMINMAX  // Prevent Windows headers from redefining min/max.
-#include "Shlwapi.h"  // for PathMatchSpec
+#include "Shlwapi.h"  // for PathMatchSpecA
 
 // This undef is necessary to prevent conflicts between llvm
 // and Windows headers.
@@ -74,7 +74,7 @@ class OstreamVoidifier {
 #undef interface
 
 inline bool GlobMatchesPath(const char *glob, const char *path) {
-  return PathMatchSpec(path, glob);
+  return PathMatchSpecA(path, glob);
 }
 
 #else  // #if defined(_WIN32)
@@ -87,4 +87,4 @@ inline bool GlobMatchesPath(const char *glob, const char *path) {
 
 #endif  // #if defined(_WIN32)
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_PORT_H_
+#endif  // INCLUDE_WHAT_YOU_USE_PORT_H_

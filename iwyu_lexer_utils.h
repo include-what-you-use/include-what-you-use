@@ -7,9 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
 
 #include <string>                       // for string
 #include <vector>                       // for vector
@@ -17,18 +16,14 @@
 #include "clang/Basic/SourceLocation.h"
 
 namespace clang {
-class Token;
-}  // namespace clang
-
-namespace clang {
 class SourceManager;
+class Token;
 }  // namespace clang
 
 namespace include_what_you_use {
 
 using std::string;
 using std::vector;
-
 
 // Interface to get character data from a SourceLocation. This allows
 // tests to avoid constructing a SourceManager yet still allow iwyu to
@@ -44,7 +39,7 @@ class SourceManagerCharacterDataGetter : public CharacterDataGetterInterface {
  public:
   explicit SourceManagerCharacterDataGetter(
       const clang::SourceManager& source_manager);
-  virtual const char* GetCharacterData(clang::SourceLocation loc) const;
+  const char* GetCharacterData(clang::SourceLocation loc) const override;
 
  private:
   const clang::SourceManager& source_manager_;
@@ -53,7 +48,7 @@ class SourceManagerCharacterDataGetter : public CharacterDataGetterInterface {
 // Returns the source-code line from the current location until \n.
 string GetSourceTextUntilEndOfLine(
     clang::SourceLocation start_loc,
-    const CharacterDataGetterInterface& character_data_getter);
+    const CharacterDataGetterInterface& data_getter);
 
 // Returns the location right *after* the first occurrence of needle
 // after start_loc, if any.  (If none, returns an invalid source-loc.)
@@ -62,26 +57,26 @@ clang::SourceLocation GetLocationAfter(
     clang::SourceLocation start_loc, const string& needle,
     const CharacterDataGetterInterface& data_getter);
 
-// Returns the include-name as typed, including <>'s and ""'s.
+// Returns the include-name as written, including <>'s and ""'s.
 // Resolved computed includes first, so given
 //    #define INC  <stdio.h>
 //    #include INC
 // If include_loc points to the second INC, we'll return '<stdio.h>'.
-string GetIncludeNameAsTyped(
+string GetIncludeNameAsWritten(
     clang::SourceLocation include_loc,
-    const CharacterDataGetterInterface& character_data_getter);
+    const CharacterDataGetterInterface& data_getter);
 
 // Given the range of an #if or #elif statement, determine the
 // symbols which are arguments to "defined". This allows iwyu to
 // treat these symbols as if #ifdef was used instead.
 vector<clang::Token> FindArgumentsToDefined(
     clang::SourceRange range,
-    const CharacterDataGetterInterface& character_data_getter);
+    const CharacterDataGetterInterface& data_getter);
 
 // Get the text of a given token.
 string GetTokenText(const clang::Token& token,
-                    const CharacterDataGetterInterface& character_data_getter);
+                    const CharacterDataGetterInterface& data_getter);
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_

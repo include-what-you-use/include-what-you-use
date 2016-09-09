@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D3_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D3_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D3_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D3_H_
 
 #include <stdio.h>
 #include "tests/cxx/badinc-i3.h"
@@ -23,4 +23,4 @@ D3_Enum D3_Function(d3_namespace::D3_Struct* c) {
   return D31;
 }
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_D3_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_D3_H_

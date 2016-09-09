@@ -10,8 +10,8 @@
 // Facade header for exception types. We include this in catch.cc to provoke
 // IWYU warnings and replacements.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_CATCH_EXCEPTIONS_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_CATCH_EXCEPTIONS_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_CATCH_EXCEPTIONS_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_CATCH_EXCEPTIONS_H_
 
 #include "tests/cxx/catch-byptr.h"    // for CatchByPtr
 #include "tests/cxx/catch-byref.h"    // for CatchByRef
@@ -22,4 +22,4 @@
 
 #include <stdio.h>
 
-#endif // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_CATCH_EXCEPTIONS_H_
+#endif // INCLUDE_WHAT_YOU_USE_TESTS_CXX_CATCH_EXCEPTIONS_H_

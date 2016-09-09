@@ -9,8 +9,8 @@
 
 // File-path utilities for the IWYU checker.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
 
 #include <string>                       // for string, allocator, etc
 #include <vector>
@@ -43,21 +43,18 @@ bool IsHeaderFile(string path);
 // else return the input path.
 string Basename(const string& path);
 
-// On Microsoft platforms, convert \ to /.
-string CanonicalizeFilePath(const string& path);
-
-// Canonicalize slashes and ensure trailing slash.
-string CanonicalizeHeaderSearchPath(const string& path);
-
-// Removes enclosing <> or "", then strips uninteresting suffixes from
+// Normalizes the file path, then strips uninteresting suffixes from
 // the file name. Replaces "/internal/" with "/public/" and
-// "/include/" with "/src".  "Canonicalize" the path on Microsoft
-// platforms.
+// "/include/" with "/src".
 string GetCanonicalName(string file_path);
 
-// "Canonicals" the name on Microsoft platforms, then recursively
-// removes all "./" prefixes.
+// Replaces "\" by "/" (Microsoft platform paths) and collapses all dot
+// components in path.
 string NormalizeFilePath(const string& path);
+
+// Normalizes like NormalizeFilePath and ensures trailing slash.
+// Hence use only for directories!
+string NormalizeDirPath(const string& path);
 
 // Is path absolute?
 bool IsAbsolutePath(const string& path);
@@ -69,6 +66,11 @@ string MakeAbsolutePath(const string& base_path, const string& relative_path);
 // Get the parent of path.
 string GetParentPath(const string& path);
 
+// Try to strip the prefix_path from the front of path.
+// The path assumed to be normalized but either absolute or relative.
+// Return true if path was stripped.
+bool StripPathPrefix(string* path, const string& prefix_path);
+
 // Below, we talk 'quoted' includes.  A quoted include is something
 // that would be written on an #include line, complete with the <> or
 // "".  In the line '#include <time.h>', "<time.h>" is the quoted
@@ -76,7 +78,8 @@ string GetParentPath(const string& path);
 
 // Converts a file-path, such as /usr/include/stdio.h, to a
 // quoted include, such as <stdio.h>.
-string ConvertToQuotedInclude(const string& filepath);
+string ConvertToQuotedInclude(const string& filepath,
+                              const string& includer_path = "");
 
 // Returns true if the string is a quoted include.
 bool IsQuotedInclude(const string& s);
@@ -91,4 +94,4 @@ bool IsThirdPartyFile(string quoted_path);
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_

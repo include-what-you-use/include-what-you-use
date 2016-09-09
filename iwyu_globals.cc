@@ -9,9 +9,9 @@
 
 #include "iwyu_globals.h"
 
-#include <stdio.h>                      // for printf
-#include <stdlib.h>                     // for atoi, exit, getenv
 #include <algorithm>                    // for sort, make_pair
+#include <cstdio>                       // for printf
+#include <cstdlib>                      // for atoi, exit, getenv
 #include <map>                          // for map
 #include <set>                          // for set
 #include <string>                       // for string, operator<, etc
@@ -42,14 +42,14 @@ using std::vector;
 
 namespace include_what_you_use {
 
-static CommandlineFlags* commandline_flags = NULL;
-static clang::SourceManager* source_manager = NULL;
-static IncludePicker* include_picker = NULL;
+static CommandlineFlags* commandline_flags = nullptr;
+static clang::SourceManager* source_manager = nullptr;
+static IncludePicker* include_picker = nullptr;
 static const clang::LangOptions default_lang_options;
 static const clang::PrintingPolicy default_print_policy(default_lang_options);
-static SourceManagerCharacterDataGetter* data_getter = NULL;
-static FullUseCache* function_calls_full_use_cache = NULL;
-static FullUseCache* class_members_full_use_cache = NULL;
+static SourceManagerCharacterDataGetter* data_getter = nullptr;
+static FullUseCache* function_calls_full_use_cache = nullptr;
+static FullUseCache* class_members_full_use_cache = nullptr;
 static int ParseIwyuCommandlineFlags(int argc, char** argv);
 static int ParseInterceptedCommandlineFlags(int argc, char** argv);
 
@@ -136,10 +136,10 @@ OptionsParser::OptionsParser(int argc, char** argv) {
     else
       clang_argv_[clang_argc_++] = argv[i];
   }
-  // argv should be NULL-terminated
-  iwyu_argv[iwyu_argc] = NULL;
-  intercepted_argv[intercepted_argc] = NULL;
-  clang_argv_[clang_argc_] = NULL;
+  // argv should be nullptr-terminated
+  iwyu_argv[iwyu_argc] = nullptr;
+  intercepted_argv[intercepted_argc] = nullptr;
+  clang_argv_[clang_argc_] = nullptr;
 
   ParseInterceptedCommandlineFlags(intercepted_argc, intercepted_argv);
   ParseIwyuCommandlineFlags(iwyu_argc, iwyu_argv);
@@ -167,22 +167,22 @@ CommandlineFlags::CommandlineFlags()
 
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
   static const struct option longopts[] = {
-    {"check_also", required_argument, NULL, 'c'},  // can be specified >once
-    {"howtodebug", optional_argument, NULL, 'd'},
-    {"cwd", required_argument, NULL, 'p'},
-    {"transitive_includes_only", no_argument, NULL, 't'},
-    {"verbose", required_argument, NULL, 'v'},
-    {"mapping_file", required_argument, NULL, 'm'},
-    {"no_default_mappings", no_argument, NULL, 'n'},
-    {"prefix_header_includes", required_argument, NULL, 'x'},
-    {"pch_in_code", no_argument, NULL, 'h'},
-    {"max_line_length", optional_argument, NULL, 'l'},
-    {"no_comments", optional_argument, NULL, 'o'},
-    {0, 0, 0, 0}
+    {"check_also", required_argument, nullptr, 'c'},  // can be specified >once
+    {"howtodebug", optional_argument, nullptr, 'd'},
+    {"cwd", required_argument, nullptr, 'p'},
+    {"transitive_includes_only", no_argument, nullptr, 't'},
+    {"verbose", required_argument, nullptr, 'v'},
+    {"mapping_file", required_argument, nullptr, 'm'},
+    {"no_default_mappings", no_argument, nullptr, 'n'},
+    {"prefix_header_includes", required_argument, nullptr, 'x'},
+    {"pch_in_code", no_argument, nullptr, 'h'},
+    {"max_line_length", optional_argument, nullptr, 'l'},
+    {"no_comments", optional_argument, nullptr, 'o'},
+    {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "d::p:v:c:m:n";
   while (true) {
-    switch (getopt_long(argc, argv, shortopts, longopts, NULL)) {
+    switch (getopt_long(argc, argv, shortopts, longopts, nullptr)) {
       case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
       case 'd': howtodebug = optarg ? optarg : ""; break;
       case 'p': cwd = optarg; break;
@@ -225,13 +225,13 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
 // callbacks are supported (see FIXME in Driver::PrintVersion).
 static int ParseInterceptedCommandlineFlags(int argc, char** argv) {
   static const struct option longopts[] = {
-    {"help", no_argument, NULL, 'h'},
-    {"version", no_argument, NULL, 'v'},
-    {0, 0, 0, 0}
+    {"help", no_argument, nullptr, 'h'},
+    {"version", no_argument, nullptr, 'v'},
+    {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "";
   while (true) {
-    switch (getopt_long(argc, argv, shortopts, longopts, NULL)) {
+    switch (getopt_long(argc, argv, shortopts, longopts, nullptr)) {
       case 'h': PrintHelp(""); exit(EXIT_SUCCESS); break;
       case 'v': PrintVersion(); exit(EXIT_SUCCESS); break;
       case -1: return optind;   // means 'no more input'
@@ -252,7 +252,7 @@ const char CommandlineFlags::kUnspecified[] = "<flag-unspecified>";
 // Handles all iwyu-specific flags, like --verbose.  Returns the index into
 // argv past all the iwyu commandline flags.
 static int ParseIwyuCommandlineFlags(int argc, char** argv) {
-  CHECK_(commandline_flags == NULL && "Only parse commandline flags once");
+  CHECK_(commandline_flags == nullptr && "Only parse commandline flags once");
   commandline_flags = new CommandlineFlags;
   const int retval = commandline_flags->ParseArgv(argc, argv);
   SetVerboseLevel(commandline_flags->verbose);
@@ -282,9 +282,8 @@ static bool SortByDescendingLength(const HeaderSearchPath& left,
 static vector<HeaderSearchPath> NormalizeHeaderSearchPaths(
     const map<string, HeaderSearchPath::Type>& include_dirs_map) {
   vector<HeaderSearchPath> include_dirs;
-  for (Each<string, HeaderSearchPath::Type>
-           it(&include_dirs_map); !it.AtEnd(); ++it) {
-    include_dirs.push_back(HeaderSearchPath(it->first, it->second));
+  for (const pair<string, HeaderSearchPath::Type>& entry : include_dirs_map) {
+    include_dirs.push_back(HeaderSearchPath(entry.first, entry.second));
   }
 
   sort(include_dirs.begin(), include_dirs.end(), &SortByDescendingLength);
@@ -296,31 +295,28 @@ static vector<HeaderSearchPath> NormalizeHeaderSearchPaths(
 static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
     clang::HeaderSearch* header_search) {
   map<string, HeaderSearchPath::Type> search_path_map;
-  for (clang::HeaderSearch::search_dir_iterator
-           it = header_search->system_dir_begin();
+  for (auto it = header_search->system_dir_begin();
        it != header_search->system_dir_end(); ++it) {
     if (const DirectoryEntry* entry = it->getDir()) {
-      const string path = CanonicalizeHeaderSearchPath(entry->getName());
+      const string path = NormalizeDirPath(MakeAbsolutePath(entry->getName()));
       search_path_map[path] = HeaderSearchPath::kSystemPath;
     }
   }
-  for (clang::HeaderSearch::search_dir_iterator
-           it = header_search->search_dir_begin();
+  for (auto it = header_search->search_dir_begin();
        it != header_search->search_dir_end(); ++it) {
     if (const DirectoryEntry* entry = it->getDir()) {
       // search_dir_begin()/end() includes both system and user paths.
       // If it's a system path, it's already in the map, so everything
       // new is a user path.  The insert only 'takes' for new entries.
-      const string path = CanonicalizeHeaderSearchPath(entry->getName());
+      const string path = NormalizeDirPath(MakeAbsolutePath(entry->getName()));
       search_path_map.insert(make_pair(path, HeaderSearchPath::kUserPath));
     }
   }
   return NormalizeHeaderSearchPaths(search_path_map);
 }
 
-void InitGlobals(clang::SourceManager* sm,
-                 clang::HeaderSearch* header_search) {
-  CHECK_(sm && "InitGlobals() needs a non-NULL SourceManager");
+void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
+  CHECK_(sm && "InitGlobals() needs a non-nullptr SourceManager");
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
   vector<HeaderSearchPath> search_paths =
@@ -330,15 +326,16 @@ void InitGlobals(clang::SourceManager* sm,
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 
-  for (Each<HeaderSearchPath> it(&search_paths); !it.AtEnd(); ++it) {
-    const char* path_type_name
-        = (it->path_type == HeaderSearchPath::kSystemPath ? "system" : "user");
-    VERRS(6) << "Search path: " << it->path << " (" << path_type_name << ")\n";
+  for (const HeaderSearchPath& entry : search_paths) {
+    const char* path_type_name =
+        (entry.path_type == HeaderSearchPath::kSystemPath ? "system" : "user");
+    VERRS(6) << "Search path: " << entry.path << " (" << path_type_name
+             << ")\n";
   }
 
   // Add mappings.
-  for (Each<string> it(&GlobalFlags().mapping_files); !it.AtEnd(); ++it) {
-    include_picker->AddMappingsFromFile(*it);
+  for (const string& mapping_file : GlobalFlags().mapping_files) {
+    include_picker->AddMappingsFromFile(mapping_file);
   }
 }
 
@@ -386,23 +383,23 @@ FullUseCache* ClassMembersFullUseCache() {
 
 void AddGlobToReportIWYUViolationsFor(const string& glob) {
   CHECK_(commandline_flags && "Call ParseIwyuCommandlineFlags() before this");
-  commandline_flags->check_also.insert(CanonicalizeFilePath(glob));
+  commandline_flags->check_also.insert(NormalizeFilePath(glob));
 }
 
 bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file) {
   const string filepath = GetFilePath(file);
-  for (Each<string> it(&GlobalFlags().check_also); !it.AtEnd(); ++it)
-    if (GlobMatchesPath(it->c_str(), filepath.c_str()))
+  for (const string& glob : GlobalFlags().check_also)
+    if (GlobMatchesPath(glob.c_str(), filepath.c_str()))
       return true;
   return false;
 }
 
 void InitGlobalsAndFlagsForTesting() {
-  CHECK_(commandline_flags == NULL && "Only parse commandline flags once");
-  CHECK_(include_picker == NULL && "Only call InitGlobals[ForTesting] once");
+  CHECK_(commandline_flags == nullptr && "Only parse commandline flags once");
+  CHECK_(include_picker == nullptr && "Only call InitGlobals[ForTesting] once");
   commandline_flags = new CommandlineFlags;
-  source_manager = NULL;
-  data_getter = NULL;
+  source_manager = nullptr;
+  data_getter = nullptr;
   include_picker = new IncludePicker(GlobalFlags().no_default_mappings);
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;

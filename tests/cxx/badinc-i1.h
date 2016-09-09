@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I1_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I1_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I1_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I1_H_
 
 #include <stddef.h>  // For offsetof (in badinc.cc).
 #include <stdlib.h>  // also included from badinc-d1.h -- before this file
@@ -287,4 +287,4 @@ namespace i1_ns4 { namespace i1_subns { int i1_int_global4sub; } }
 namespace i1_ns5 { int i1_unused_global; }
 int i1_GlobalFunction(void) { return 1; }
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I1_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I1_H_

@@ -11,12 +11,12 @@
 // does is #include another file (which the .cc file is thus
 // #including indirectly).
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_DIRECT_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_DIRECT_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_DIRECT_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_DIRECT_H_
 
 #include "tests/cxx/indirect.h"
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_DIRECT_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_DIRECT_H_
 
 /**** IWYU_SUMMARY
 

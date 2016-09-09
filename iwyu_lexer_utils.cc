@@ -7,10 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "iwyu_lexer_utils.h"
 
-#include <string.h>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -70,8 +69,9 @@ SourceLocation GetLocationAfter(
   return start_loc.getLocWithOffset(needle_loc - data + needle.length());
 }
 
-string GetIncludeNameAsTyped(SourceLocation include_loc,
-                             const CharacterDataGetterInterface& data_getter) {
+string GetIncludeNameAsWritten(
+    SourceLocation include_loc,
+    const CharacterDataGetterInterface& data_getter) {
   const string data = GetSourceTextUntilEndOfLine(include_loc, data_getter);
   if (data.empty())
     return data;
@@ -108,7 +108,7 @@ vector<Token> FindArgumentsToDefined(
   const string range_str(text, range_length);
   const char* range_cstr = range_str.c_str();
 
-  VERRS(7) << "Lexing: " << range_str << "\n";
+  VERRS(8) << "Lexing: " << range_str << "\n";
   Lexer lexer(range.getBegin(), LangOptions(), range_cstr, range_cstr,
               range_cstr + range_length);
 
@@ -118,7 +118,7 @@ vector<Token> FindArgumentsToDefined(
          kExpectingLeftParenOrDefinedIdentifier,
          kExpectingDefinedIdentifier } state = kLookingForDefined;
   while (!lexer.LexFromRawLexer(token)) {
-    VERRS(7) << "Processing token \""
+    VERRS(8) << "Processing token \""
              << GetTokenText(token, data_getter)
              << "\" of type " << token.getName()
              << " in state " << state << "\n";

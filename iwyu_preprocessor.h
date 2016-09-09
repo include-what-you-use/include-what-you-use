@@ -55,8 +55,8 @@
 //      of the information about public vs private headers.
 //    * Testing and reporting membership in the main compilation unit.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
 
 #include <map>                          // for map
 #include <set>                          // for set
@@ -77,7 +77,7 @@
 namespace clang {
 class FileEntry;
 class MacroInfo;
-}
+}  // namespace clang
 
 namespace include_what_you_use {
 
@@ -88,11 +88,11 @@ using std::stack;
 using std::string;
 using std::vector;
 
-
 class IwyuPreprocessorInfo : public clang::PPCallbacks,
                              public clang::CommentHandler {
  public:
-  IwyuPreprocessorInfo() : main_file_(NULL), empty_file_info_(NULL, this, "") {}
+  IwyuPreprocessorInfo() : main_file_(nullptr),
+                           empty_file_info_(nullptr, this, "") {}
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
   void HandlePreprocessingDone();
@@ -101,25 +101,26 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   const clang::FileEntry* main_file() const {
     return main_file_;
   }
+
   const set<const clang::FileEntry*>* files_to_report_iwyu_violations_for()
       const {
     return &files_to_report_iwyu_violations_for_;
   }
 
   // Given a quoted include like '<vector>', or '"ads/base.h"',
-  // returns the FileEntry for that file, or NULL if none is
+  // returns the FileEntry for that file, or nullptr if none is
   // found.  If multiple files are included under the same
   // quoted-include name (which can happen via #include-next),
   // one is returned arbitrarily.  (But always the same one.)
   const clang::FileEntry* IncludeToFileEntry(const string quoted_include) const;
 
   // Returns an IwyuFileInfo struct (from iwyu_output.h) corresponding
-  // to the given file, or NULL if no such struct can be found.
+  // to the given file, or nullptr if no such struct can be found.
   // Note this is a const method that returns a non-const pointer.
   // Be careful if using this method in threaded contexts.
   IwyuFileInfo* FileInfoFor(const clang::FileEntry* file) const;
 
-  // Instead of returning NULL if no file info can be found, returns
+  // Instead of returning nullptr if no file info can be found, returns
   // an empty IwyuFileInfo struct.
   const IwyuFileInfo& FileInfoOrEmptyFor(const clang::FileEntry* file) const;
 
@@ -167,61 +168,56 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
  protected:
   // Preprocessor event handlers called by Clang.
-  virtual void MacroExpands(const clang::Token& id,
-                            const clang::MacroDefinition& definition,
-                            clang::SourceRange range,
-                            const clang::MacroArgs* args) override;
-  virtual void MacroDefined(const clang::Token& id,
-                            const clang::MacroDirective* directive) override;
+  void MacroExpands(const clang::Token& macro_use_token,
+                    const clang::MacroDefinition& definition,
+                    clang::SourceRange range,
+                    const clang::MacroArgs* args) override;
+  void MacroDefined(const clang::Token& id,
+                    const clang::MacroDirective* directive) override;
   // Not needed for iwyu:
   // virtual void MacroUndefined(const clang::Token&, const clang::MacroInfo*);
 
-  virtual void If(clang::SourceLocation loc,
-                  clang::SourceRange condition_range,
-                  ConditionValueKind condition_value) override;
-  virtual void Elif(clang::SourceLocation loc,
-                    clang::SourceRange condition_range,
-                    ConditionValueKind condition_value,
-                    clang::SourceLocation if_loc) override;
-  virtual void Ifdef(clang::SourceLocation loc,
-                     const clang::Token& id,
-                     const clang::MacroDefinition& definition) override;
-  virtual void Ifndef(clang::SourceLocation loc,
-                      const clang::Token& id,
-                      const clang::MacroDefinition& definition) override;
+  void If(clang::SourceLocation loc,
+          clang::SourceRange condition_range,
+          ConditionValueKind condition_value) override;
+  void Elif(clang::SourceLocation loc,
+            clang::SourceRange condition_range,
+            ConditionValueKind condition_value,
+            clang::SourceLocation if_loc) override;
+  void Ifdef(clang::SourceLocation loc, const clang::Token& id,
+             const clang::MacroDefinition& definition) override;
+  void Ifndef(clang::SourceLocation loc, const clang::Token& id,
+              const clang::MacroDefinition& definition) override;
   // Not needed for iwyu:
   // virtual void Else();
   // virtual void Endif();
 
-  virtual void InclusionDirective(clang::SourceLocation hash_loc,
-                                 const clang::Token& include_token,
-                                 llvm::StringRef filename,
-                                 bool is_angled,
-                                 clang::CharSourceRange filename_range,
-                                 const clang::FileEntry* file,
-                                 llvm::StringRef search_path,
-                                 llvm::StringRef relative_path,
-                                 const clang::Module* imported) override;
+  void InclusionDirective(clang::SourceLocation hash_loc,
+                          const clang::Token& include_token,
+                          llvm::StringRef filename, bool is_angled,
+                          clang::CharSourceRange filename_range,
+                          const clang::FileEntry* file,
+                          llvm::StringRef search_path,
+                          llvm::StringRef relative_path,
+                          const clang::Module* imported) override;
 
-  virtual void FileChanged(clang::SourceLocation loc, FileChangeReason reason,
-                           clang::SrcMgr::CharacteristicKind file_type,
-                           clang::FileID PrevFID) override;
-  virtual void FileSkipped(
-      const clang::FileEntry& file,
-      const clang::Token &filename,
-      clang::SrcMgr::CharacteristicKind file_type) override;
+  void FileChanged(clang::SourceLocation loc, FileChangeReason reason,
+                   clang::SrcMgr::CharacteristicKind file_type,
+                   clang::FileID exiting_from_id) override;
+  void FileSkipped(const clang::FileEntry& file, const clang::Token &filename,
+                   clang::SrcMgr::CharacteristicKind file_type) override;
   // FileChanged is actually a multi-plexer for 4 different callbacks.
   void FileChanged_EnterFile(clang::SourceLocation file_beginning);
   void FileChanged_ExitToFile(clang::SourceLocation include_loc,
-                              clang::FileID exiting_from);
+                              const clang::FileEntry* exiting_from);
   void FileChanged_RenameFile(clang::SourceLocation new_file);
   void FileChanged_SystemHeaderPragma(clang::SourceLocation loc);
 
   // CommentHandler callback.
   // Clang doc: The handler shall return true if it has pushed any
   // tokens to be read using e.g. EnterToken or EnterTokenStream.
-  virtual bool HandleComment(clang::Preprocessor& pp,
-                             clang::SourceRange comment_range) override;
+  bool HandleComment(clang::Preprocessor& pp,
+                     clang::SourceRange comment_range) override;
 
  private:
   // Returns true if includee is considered part of the main
@@ -247,12 +243,12 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // #include from iwyu removal.
   void MaybeProtectInclude(clang::SourceLocation includer_loc,
                            const clang::FileEntry* includee,
-                           const string& include_name_as_typed);
+                           const string& include_name_as_written);
 
   // Called whenever an #include is seen in the preprocessor output.
   void AddDirectInclude(clang::SourceLocation includer_loc,
                         const clang::FileEntry* includee,
-                        const string& include_name_as_typed);
+                        const string& include_name_as_written);
 
   // Report a "begin_exports"/"end_exports" pragma pair.
   // begin_line is first line, end_line is just after the last line.
@@ -285,7 +281,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
   // Return true if at the current point in the parse of the given file,
   // there is a pending "begin_exports" pragma.
-  bool HasOpenBeginExports(const clang::FileEntry* file_entry) const;
+  bool HasOpenBeginExports(const clang::FileEntry* file) const;
 
   // The C++ source file passed in as an argument to the compiler (as
   // opposed to other files seen via #includes).
@@ -308,7 +304,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // which we don't have.  Luckily, a vector works just as well.
   vector<clang::Token> macros_called_from_macros_;
 
-  // This maps from the include-name as typed in the program
+  // This maps from the include-name as written in the program
   // (including <>'s or ""'s) to the FileEntry we loaded for that
   // #include.
   map<string, const clang::FileEntry*> include_to_fileentry_map_;
@@ -365,4 +361,4 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_DRIVER_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_DRIVER_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_DRIVER_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_DRIVER_H_
 
 namespace clang {
 class CompilerInstance;
@@ -22,4 +22,4 @@ clang::CompilerInstance* CreateCompilerInstance(int argc, const char **argv);
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_DRIVER_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_DRIVER_H_

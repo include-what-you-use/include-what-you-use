@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_LATEPARSED_NOTCHECKED_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_LATEPARSED_NOTCHECKED_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_LATEPARSED_NOTCHECKED_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_LATEPARSED_NOTCHECKED_H_
 
 // A crazy late-parsed function template.
 // IWYU should not attempt to parse it, since it's not in a file signed up for
@@ -21,4 +21,4 @@ void unchecked() {
 // Here's a symbol we reference from the main test file.
 const int kUsableSymbol = 100;
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_LATEPARSED_NOTCHECKED_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_LATEPARSED_NOTCHECKED_H_

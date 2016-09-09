@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I3_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I3_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I3_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I3_H_
 
 // I only forward-declare things from this file.
 
@@ -58,4 +58,4 @@ struct I3_ForwardDeclareNamespaceTemplateStruct {
 }
 }
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I3_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I3_H_

@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 // The source manager is used in just too many places.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
 
 #include <set>                          // for set
 #include <string>                       // for string
@@ -35,7 +35,6 @@ static const int EXIT_SUCCESS_OFFSET = 2;
 
 using std::set;
 using std::string;
-
 using std::vector;
 
 class FullUseCache;
@@ -54,19 +53,18 @@ class OptionsParser {
 
   int clang_argc() const { return clang_argc_; }
   const char** clang_argv() const { return clang_argv_; }
+
  private:
   int clang_argc_;
   const char** clang_argv_;
 };
 
-void InitGlobals(clang::SourceManager* source_manager,
-                 clang::HeaderSearch* header_search);
+void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search);
 
 // Can be called by tests -- doesn't need a SourceManager or
 // argc/argv.  Note that GlobalSourceManager() and DefaultDataGetter()
 // will assert-fail if you call this instead of InitGlobals().
 void InitGlobalsAndFlagsForTesting();
-
 
 // TODO(csilvers): put all of these in the 'globals' namespace?
 
@@ -124,7 +122,6 @@ const SourceManagerCharacterDataGetter& DefaultDataGetter();
 FullUseCache* FunctionCallsFullUseCache();
 FullUseCache* ClassMembersFullUseCache();
 
-
 // These files are based on the commandline (--check_also flag plus argv).
 // They are specified as glob file-patterns (which behave just as they
 // do in the shell).  TODO(csilvers): use a prefix instead? allow '...'?
@@ -133,4 +130,4 @@ bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file);
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_

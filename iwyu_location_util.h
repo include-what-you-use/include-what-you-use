@@ -37,8 +37,8 @@
 // file path, line number, column number, and which file (if any)
 // #includes the file.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_FILE_UTIL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_FILE_UTIL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_LOCATION_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_LOCATION_UTIL_H_
 
 #include <string>                       // for string
 
@@ -61,14 +61,13 @@ namespace include_what_you_use {
 
 using std::string;
 
-
 //------------------------------------------------------------
 // Helper functions for FileEntry.
 
 // Some symbols are directly defined by the compiler.  For them, the
 // definition location points to the "<built-in>" file.
 inline bool IsBuiltinFile(const clang::FileEntry* file) {
-  return file == NULL;
+  return file == nullptr;
 }
 
 // There are two kinds of symbols that are not defined in the source
@@ -79,7 +78,8 @@ inline bool IsBuiltinFile(const clang::FileEntry* file) {
 // IsBuiltinOrCommandLineFile(file) returns true if it's either of the
 // two cases.
 inline bool IsBuiltinOrCommandLineFile(const clang::FileEntry* file) {
-  return IsBuiltinFile(file) || (!strcmp(file->getName(), "<command line>"));
+  return IsBuiltinFile(file) ||
+         (strcmp(file->getName(), "<command line>") == 0);
 }
 
 // When macro args are concatenated e.g. '#define CAT(A, B) A##B', their
@@ -144,7 +144,7 @@ inline const clang::FileEntry* GetLocFileEntry(clang::SourceLocation loc) {
 
 inline const clang::FileEntry* GetFileEntry(clang::SourceLocation loc) {
   if (!loc.isValid())
-    return NULL;
+    return nullptr;
 
   // We want where the user actually writes the token, instead of
   // where it appears as part of a macro expansion.  For example, in:
@@ -231,4 +231,4 @@ inline bool IsBeforeInSameFile(const T& a, const U& b) {
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_FILE_UTIL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_LOCATION_UTIL_H_

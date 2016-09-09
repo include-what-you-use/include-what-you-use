@@ -9,8 +9,8 @@
 
 // Utilities that make it easier to work with Clang's AST.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
 
 #include <map>                          // for map
 #include <set>                          // for set
@@ -55,7 +55,6 @@ using std::map;
 using std::set;
 using std::string;
 
-
 //------------------------------------------------------------
 // ASTNode and friends.
 
@@ -74,35 +73,35 @@ class ASTNode {
   // lives for at least as long as the ASTNode object does.
   ASTNode(const clang::Decl* decl, const clang::SourceManager& sm)
       : kind_(kDeclKind), as_decl_(decl),
-        parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
+        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
   ASTNode(const clang::Stmt* stmt, const clang::SourceManager& sm)
       : kind_(kStmtKind), as_stmt_(stmt),
-        parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
+        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
   ASTNode(const clang::Type* type, const clang::SourceManager& sm)
       : kind_(kTypeKind), as_type_(type),
-        parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
+        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
   ASTNode(const clang::TypeLoc* typeloc, const clang::SourceManager& sm)
       : kind_(kTypelocKind), as_typeloc_(typeloc),
-        parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
+        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
   ASTNode(const clang::NestedNameSpecifier* nns, const clang::SourceManager& sm)
       : kind_(kNNSKind), as_nns_(nns),
-        parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
+        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
   ASTNode(const clang::NestedNameSpecifierLoc* nnsloc,
           const clang::SourceManager& sm)
       : kind_(kNNSLocKind), as_nnsloc_(nnsloc),
-        parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
+        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
   ASTNode(const clang::TemplateName* template_name,
           const clang::SourceManager& sm)
       : kind_(kTemplateNameKind), as_template_name_(template_name),
-        parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
+        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
   ASTNode(const clang::TemplateArgument* template_arg,
           const clang::SourceManager& sm)
       : kind_(kTemplateArgumentKind), as_template_arg_(template_arg),
-        parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
+        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
   ASTNode(const clang::TemplateArgumentLoc* template_argloc,
           const clang::SourceManager& sm)
       : kind_(kTemplateArgumentLocKind), as_template_argloc_(template_argloc),
-        parent_(NULL), in_fwd_decl_context_(false), source_manager_(sm) { }
+        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
 
   // A 'forward-declare' context means some parent of us can be
   // forward-declared, which means we can be too.  e.g. in
@@ -120,7 +119,7 @@ class ASTNode {
   // The number of nodes above this node in the AST tree.
   int depth() const {
     int depth = 0;
-    for (const ASTNode* node = this; node != NULL; node = node->parent_)
+    for (const ASTNode* node = this; node != nullptr; node = node->parent_)
       depth++;
     return depth - 1;   // don't count "this"
   }
@@ -145,7 +144,7 @@ class ASTNode {
   // pointer is canonical (every instance of type X has the same
   // clang::Type*).  But for most, the value is canonical (each type
   // has the same QualType but not QualType*).  The IsA<> checks are
-  // needed to avoid false matches when target_node is NULL.
+  // needed to avoid false matches when target_node is nullptr.
   bool ContentIs(const clang::Decl* target_node) const {
     return IsA<clang::Decl>() && GetAs<clang::Decl>() == target_node;
   }
@@ -159,7 +158,7 @@ class ASTNode {
     if (!IsA<clang::TypeLoc>())
       return false;
     const clang::TypeLoc* type_loc = GetAs<clang::TypeLoc>();
-    if (type_loc == NULL || target_node == NULL)
+    if (type_loc == nullptr || target_node == nullptr)
       return type_loc == target_node;
     return *type_loc == *target_node;
   }
@@ -172,7 +171,7 @@ class ASTNode {
   // the exact same thing as ptr.  One use of this is to check for
   // recursion.
   template<typename T> bool StackContainsContent(const T* ptr) const {
-    for (const ASTNode* node = this; node != NULL; node = node->parent_) {
+    for (const ASTNode* node = this; node != nullptr; node = node->parent_) {
       if (node->ContentIs(ptr))
         return true;
     }
@@ -183,24 +182,24 @@ class ASTNode {
   template<typename To> const To* GetAncestorAs(int generation) const {
     const ASTNode* target_node = this;
     for (; generation > 0; --generation) {
-      if (target_node->parent_ == NULL)
-        return NULL;
+      if (target_node->parent_ == nullptr)
+        return nullptr;
       target_node = target_node->parent_;
     }
     // DynCast needs a dummy argument of type To* to help its resolution.
-    const To* dummy = NULL;
+    const To* dummy = nullptr;
     return target_node->DynCast<To>(dummy);
   }
 
   // Convenience methods.
 
   template<typename To> bool AncestorIsA(int generation) const {
-    return GetAncestorAs<To>(generation) != NULL;
+    return GetAncestorAs<To>(generation) != nullptr;
   }
 
   // Returns true if this node or any of its ancestors contains a T*.
   template<typename T> bool HasAncestorOfType() const {
-    for (const ASTNode* node = this; node != NULL; node = node->parent_) {
+    for (const ASTNode* node = this; node != nullptr; node = node->parent_) {
       if (node->IsA<T>())
         return true;
     }
@@ -230,18 +229,18 @@ class ASTNode {
   };
 
   // Returns a casted pointer if this object actually is of the given
-  // type (or a subclass of the given type), and NULL otherwise.  We
+  // type (or a subclass of the given type), and nullptr otherwise.  We
   // have to use overloading on To's kind_, in these helper
   // methods, in order to get llvm's dyn_cast to compile -- it gets
   // upset (at compile time, sadly) if from-type and to-type aren't in
   // the same type hierarchy.  So To must be specified both in the
   // template arg and in the method parameter.
   template<typename To> const To* DynCast(const clang::Decl*) const {
-    if (kind_ != kDeclKind) return NULL;
+    if (kind_ != kDeclKind) return nullptr;
     return ::llvm::dyn_cast<To>(as_decl_);
   }
   template<typename To> const To* DynCast(const clang::Stmt*) const {
-    if (kind_ != kStmtKind) return NULL;
+    if (kind_ != kStmtKind) return nullptr;
     return ::llvm::dyn_cast<To>(as_stmt_);
   }
   template<typename To> const To* DynCast(const clang::Type*) const {
@@ -252,11 +251,11 @@ class ASTNode {
     //   if (node.IsA<FooTypeLoc>()) ... else if (node.IsA<FooType>()) ...
     if (kind_ == kTypelocKind)
       return ::llvm::dyn_cast<To>(as_typeloc_->getTypePtr());
-    if (kind_ != kTypeKind) return NULL;
+    if (kind_ != kTypeKind) return nullptr;
     return ::llvm::dyn_cast<To>(as_type_);
   }
   template<typename To> const To* DynCast(const clang::TypeLoc*) const {
-    if (kind_ != kTypelocKind) return NULL;
+    if (kind_ != kTypelocKind) return nullptr;
     return ::llvm::dyn_cast<To>(as_typeloc_);
   }
   template<typename To> const To* DynCast(
@@ -265,16 +264,16 @@ class ASTNode {
     // that cares to distinguish, it should check for nnslocs first.
     if (kind_ == kNNSLocKind)
       return as_nnsloc_->getNestedNameSpecifier();
-    if (kind_ != kNNSKind) return NULL;
+    if (kind_ != kNNSKind) return nullptr;
     return as_nns_;
   }
   template<typename To> const To* DynCast(
       const clang::NestedNameSpecifierLoc*) const {
-    if (kind_ != kNNSLocKind) return NULL;
+    if (kind_ != kNNSLocKind) return nullptr;
     return as_nnsloc_;
   }
   template<typename To> const To* DynCast(const clang::TemplateName*) const {
-    if (kind_ != kTemplateNameKind) return NULL;
+    if (kind_ != kTemplateNameKind) return nullptr;
     return as_template_name_;
   }
   template<typename To> const To* DynCast(
@@ -285,12 +284,12 @@ class ASTNode {
     // distinguish, it should check for typelocs first.
     if (kind_ == kTemplateArgumentLocKind)
       return &as_template_argloc_->getArgument();
-    if (kind_ != kTemplateArgumentKind) return NULL;
+    if (kind_ != kTemplateArgumentKind) return nullptr;
     return as_template_arg_;
   }
   template<typename To> const To* DynCast(
       const clang::TemplateArgumentLoc*) const {
-    if (kind_ != kTemplateArgumentLocKind) return NULL;
+    if (kind_ != kTemplateArgumentLocKind) return nullptr;
     return as_template_argloc_;
   }
   // We also allow casting to void*
@@ -376,9 +375,9 @@ class CurrentASTNodeUpdater {
 // uses ElaboratedType for namespaces ('ns::Foo myvar').
 bool IsElaborationNode(const ASTNode* ast_node);
 
-// See if a given ast_node is a namespace-qualified ElaboratedType
-// node. (E.g. 'class ns::Foo myyvar'.)
-bool IsNamespaceQualifiedNode(const ASTNode* ast_node);
+// See if a given ast_node is a qualified name part of an ElaboratedType
+// node (e.g. 'class ns::Foo x', 'class ::Global x' or 'class Outer::Inner x'.)
+bool IsQualifiedNameNode(const ASTNode* ast_node);
 
 // Return true if the given ast_node is inside a C++ method body.  Do
 // this by walking up the AST tree until you find a CXXMethodDecl,
@@ -407,7 +406,7 @@ bool IsCXXConstructExprInInitializer(const ASTNode* ast_node);
 bool IsCXXConstructExprInNewExpr(const ASTNode* ast_node);
 
 // If ASTNode is of a kind that has a qualifier (something that
-// comes before the ::), return that, else return NULL.
+// comes before the ::), return that, else return nullptr.
 const clang::NestedNameSpecifier* GetQualifier(const ASTNode* ast_node);
 
 // Returns true if any parent is a typedef: my_typedef.a, or
@@ -417,7 +416,6 @@ bool IsMemberOfATypedef(const ASTNode* ast_node);
 
 // Returns the decl-context of the deepest decl in the ast-chain.
 const clang::DeclContext* GetDeclContext(const ASTNode* ast_node);
-
 
 //------------------------------------------------------------
 // Helper functions for working with raw Clang AST nodes.
@@ -500,7 +498,7 @@ bool HasImplicitConversionCtor(const clang::CXXRecordDecl* cxx_class);
 bool HasCovariantReturnType(const clang::CXXMethodDecl* method_decl);
 
 // If this decl is a (possibly templatized) class, return the decl
-// that defines the class, if present.  Otherwise return NULL.
+// that defines the class, if present.  Otherwise return nullptr.
 const clang::RecordDecl* GetDefinitionForClass(const clang::Decl* decl);
 
 // Given a class, returns a SourceRange that encompasses the beginning
@@ -627,12 +625,12 @@ set<const clang::NamedDecl*> GetClassRedecls(const clang::NamedDecl* decl);
 
 // Returns the redecl of decl that occurs first in the translation
 // unit (that is, is the first one you'd see if you did 'cc -E').
-// Returns NULL if the input is not a RecordDecl or ClassTemplateDecl.
+// Returns nullptr if the input is not a RecordDecl or ClassTemplateDecl.
 const clang::NamedDecl* GetFirstRedecl(const clang::NamedDecl* decl);
 
 // Given a class or class template, returns the declaration of that
 // class that specifies the values of the default template arguments.
-// If there are no default template arguments, returns NULL.
+// If there are no default template arguments, returns nullptr.
 const clang::ClassTemplateDecl* GetClassRedeclSpecifyingDefaultTplArgs(
     const clang::ClassTemplateDecl* decl);
 
@@ -648,7 +646,6 @@ const clang::NamedDecl* GetNonfriendClassRedecl(const clang::NamedDecl* decl);
 // Returns true if the innermost DeclContext for each decl is the
 // same, and it's a class (or struct).
 bool DeclsAreInSameClass(const clang::Decl* decl1, const clang::Decl* decl2);
-
 
 // --- Utilities for Type.
 
@@ -705,7 +702,7 @@ const clang::Type* RemovePointersAndReferencesAsWritten(
 // Remove one layer of pointers (or references) from type.  We go
 // through typedefs and the like, but only if we have to in order to
 // figure out the dereferenced type, which is why we don't just use
-// desugar().  Returns NULL if not a pointer.
+// desugar().  Returns nullptr if not a pointer.
 const clang::Type* RemovePointerFromType(const clang::Type* type);
 
 // This follows typedefs/etc to remove pointers, if necessary.
@@ -727,7 +724,7 @@ const clang::Type* RemovePointersAndReferences(const clang::Type* type);
 // If we're evaluating MyFunc<MyClass>() and see the type that's in
 // the function body, this function returns a decl for MyClass.
 //    If the type is built-in, or otherwise doesn't have a decl,
-// this function returns NULL.
+// this function returns nullptr.
 const clang::NamedDecl* TypeToDeclAsWritten(const clang::Type* type);
 
 // Returns true if it's possible to implicitly convert a value of a
@@ -739,7 +736,7 @@ bool HasImplicitConversionConstructor(const clang::Type* type);
 // the desugared type back to the original type-as-written, as
 // determined from the class's template arguments.  For default
 // template arguments that are not specified by the caller, we
-// map the type to NULL, to indicate there's no inherent sugaring.
+// map the type to nullptr, to indicate there's no inherent sugaring.
 // We also include mappings for component types: if we have an entry
 // 'vector<TypedefType>' -> 'vector<Foo>', we also add an entry
 // 'TypedefType' -> 'Foo'.
@@ -762,7 +759,7 @@ bool IsAddressOf(const clang::Expr* expr);
 
 // If this function call comes from a class method -- either a normal
 // one or a static one -- returns the type of the class.  Otherwise,
-// returns NULL.  Note that static class methods do *not* have a
+// returns nullptr.  Note that static class methods do *not* have a
 // CXXMemberCallExpr type, which is why we take a CallExpr.
 const clang::Type* TypeOfParentIfMethod(const clang::CallExpr* expr);
 
@@ -772,15 +769,15 @@ const clang::Type* TypeOfParentIfMethod(const clang::CallExpr* expr);
 // operator<<(ostream& a, int x)' to figure out what class the
 // operator 'logically' belongs to.  This is a heuristic (the operator
 // may "belong" to more than one argument, for instance), but covers
-// all the common cases.  Returns NULL if no class-type argument is
+// all the common cases.  Returns nullptr if no class-type argument is
 // found.
 const clang::Expr* GetFirstClassArgument(clang::CallExpr* expr);
 
-// Returns NULL if we're deleting an argument that has no destructor.
+// Returns nullptr if we're deleting an argument that has no destructor.
 const clang::CXXDestructorDecl* GetDestructorForDeleteExpr(
     const clang::CXXDeleteExpr* expr);
 
-// Returns NULL if the constructor has no corresponding destructor.
+// Returns nullptr if the constructor has no corresponding destructor.
 const clang::CXXDestructorDecl* GetSiblingDestructorFor(
     const clang::CXXConstructorDecl* ctor);
 const clang::CXXDestructorDecl* GetSiblingDestructorFor(
@@ -788,7 +785,7 @@ const clang::CXXDestructorDecl* GetSiblingDestructorFor(
 
 // Figuring out the function type is non-trivial because the callee
 // may be a function pointer.  This code is based on clang's Expr.cpp.
-// Should never return NULL.
+// Should never return nullptr.
 const clang::FunctionType* GetCalleeFunctionType(clang::CallExpr* expr);
 
 // Figuring out whether the to-type is a reference or not is different
@@ -803,4 +800,4 @@ clang::TemplateArgumentListInfo GetExplicitTplArgs(const clang::Expr* expr);
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_

@@ -9,12 +9,12 @@
 
 // This is a private file included directly by comment_pragmas.cc.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D3_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D3_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_COMMENT_PRAGMAS_D3_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_COMMENT_PRAGMAS_D3_H_
 
 // NOTE: comment_pragmas-i6.h explicitly exports this file.
 // IWYU pragma: private, include "tests/cxx/comment_pragmas-i6.h"
 
 class CommentPragmasD3 {};
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_COMMENT_PRAGMAS_D3_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_COMMENT_PRAGMAS_D3_H_

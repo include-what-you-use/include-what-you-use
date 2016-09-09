@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I4_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I4_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I4_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I4_H_
 
 int I4_Function() { return 1; }
 
-#endif // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_BADINC_I4_H_
+#endif // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_I4_H_

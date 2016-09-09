@@ -10,11 +10,11 @@
 // String utilities for the IWYU checker.
 //
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
 
-#include <ctype.h>
-#include <stddef.h>
+#include <cctype>
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -24,7 +24,6 @@ namespace include_what_you_use {
 
 using std::string;
 using std::vector;
-
 
 // Returns true if str starts with prefix.
 inline bool StartsWith(const string& str, const string& prefix) {
@@ -200,7 +199,6 @@ inline vector<string> SplitOnWhiteSpacePreservingQuotes(
   return retval;
 }
 
-
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_

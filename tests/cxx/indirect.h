@@ -12,8 +12,8 @@
 // definition of a symbol that will cause an iwyu violation in a .cc
 // file.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_INDIRECT_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_INDIRECT_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_INDIRECT_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_INDIRECT_H_
 
 class IndirectClass {
  public:
@@ -24,4 +24,4 @@ class IndirectClass {
 };
 
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_INDIRECT_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_INDIRECT_H_

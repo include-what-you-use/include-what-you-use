@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_FWD_DECL_CLASS_TEMPLATE_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_FWD_DECL_CLASS_TEMPLATE_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_FWD_DECL_CLASS_TEMPLATE_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_FWD_DECL_CLASS_TEMPLATE_H_
 
 #include "tests/cxx/fwd_decl_class_template-i1.h"
 
@@ -31,4 +31,4 @@ template <typename T> class ClassTemplateI1;
 
 ***** IWYU_SUMMARY */
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_TESTS_FWD_DECL_CLASS_TEMPLATE_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_FWD_DECL_CLASS_TEMPLATE_H_

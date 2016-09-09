@@ -98,6 +98,8 @@ class OneIwyuTest(unittest.TestCase):
       'deleted_implicit.cc' : ['-std=c++11'],
       'lambda_fwd_decl.cc': ['-std=c++11'],
       'lateparsed_template.cc': ['-fdelayed-template-parsing'],
+      'macro_defined_by_includer.cc': [
+          '-std=c++11', '-DCOMMAND_LINE_TYPE=double'],
       'ms_inline_asm.cc': ['-fms-extensions'],
       'prefix_header_attribution.cc': [self.Include('prefix_header_attribution-d1.h')],
       'prefix_header_includes_add.cc': prefix_headers,
@@ -111,36 +113,47 @@ class OneIwyuTest(unittest.TestCase):
       'associated_include.cc': ['.'],
       'backwards_includes.cc': ['.'],
       'badinc.cc': ['.'],
+      'badinc-extradef.cc': ['.'],
       'casts.cc': ['.'],
       'catch.cc': ['.'],
+      'check_also.cc': ['.'],
       'clmode.cc': ['.'],
       'comment_pragmas.cc': ['.'],
       'computed_include.cc': ['.'],
       'conversion_ctor.cc': ['.'],
+      'cvr.cc': ['.'],
       'default_template_arg_other_file.cc': ['.'],
       'depopulated_h_file.cc': ['.'],
       'derived_function_tpl_args.cc': ['.'],
       'double_include.cc': ['.'],
       'elaborated_struct.c': ['.'],
       'elaborated_type.cc': ['.'],
+      'external_including_internal.cc': ['.'],
       'forward_declare_in_macro.cc': ['.'],
       'fullinfo_for_templates.cc': ['.'],
       'fwd_decl_class_template.cc': ['.'],
       'fwd_decl_static_member.cc': ['.'],
       'fwd_decl_with_instantiation.cc': ['.'],
+      'header_in_subfolder.cc': ['.'],
       'implicit_ctor.cc': ['.'],
+      'include_cycle.cc': ['.'],
       'include_with_using.cc': ['.'],
+      'internal/internal_files.cc': ['.'],
       'iwyu_stricter_than_cpp.cc': ['.'],
       'keep_mapping.cc': ['.'],
       'lateparsed_template.cc': ['.'],
+      'macro_defined_by_includer.cc': ['.'],
       'macro_location.cc': ['.'],
       'member_expr.cc': ['.'],
       'multiple_include_paths.cc': ['.'],
+      'new_header_path_provided.cc': ['.'],
       'no_comments.cc': ['.'],
+      'no_fwd_decl_nested_class.cc': ['.'],
       'no_h_includes_cc.cc': ['.'],
       'non_transitive_include.cc': ['.'],
       'overloaded_class.cc': ['.'],
       'pch_in_code.cc': ['.'],
+      'pointer_arith.cc': ['.'],
       'precomputed_tpl_args.cc': ['.'],
       'prefix_header_attribution.cc': ['.'],
       'prefix_header_includes_add.cc': ['.'],
@@ -149,6 +162,7 @@ class OneIwyuTest(unittest.TestCase):
       're_fwd_decl.cc': ['.'],
       'redecls.cc': ['.'],
       'remove_fwd_decl_when_including.cc': ['.'],
+      'self_include.cc': ['.'],
       'sizeof_reference.cc': ['.'],
       'specialization_needs_decl.cc': ['.'],
       'system_namespaces.cc': ['.'],
@@ -158,8 +172,10 @@ class OneIwyuTest(unittest.TestCase):
       'typedef_chain_in_template.cc': ['.'],
       'typedef_chain_no_follow.cc': ['.'],
       'typedefs_and_resugaring.cc': ['.'],
+      'unused_class_template_ctor.cc': ['.'],
       'uses_printf.cc': ['.'],
       'using_aliased_symbol.cc': ['.'],
+      'using_aliased_symbol_unused.cc': ['.'],
       'varargs_and_references.cc': ['.'],
       'virtual_tpl_method.cc': ['.'],
     }
@@ -193,14 +209,8 @@ class OneIwyuTest(unittest.TestCase):
     files_to_check = [PosixPath(f) for f in files_to_check]
 
     iwyu_flags = self._iwyu_flags_map.get(filename, None)
-    if iwyu_flags:
-      logging.info('%s: Using iwyu flags %s', filename, str(iwyu_flags))
-
     clang_flags = self._clang_flags_map.get(filename, [])
     clang_flags.extend(self._include_map.get(filename, []))
-    if clang_flags:
-      logging.info('%s: Using clang flags %s', filename, str(clang_flags))
-
     iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
                                           iwyu_flags, clang_flags, verbose=True)
 

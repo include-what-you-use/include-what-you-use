@@ -9,8 +9,9 @@
 
 #include "iwyu_path_util.h"
 
-#include <stddef.h>
-#include <string.h>                     // for strlen
+#include <algorithm>                    // for std::replace
+#include <cstddef>
+#include <cstring>                      // for strlen
 #include <system_error>
 
 #include "iwyu_stl_util.h"
@@ -24,6 +25,7 @@
 namespace include_what_you_use {
 
 namespace {
+
 vector<HeaderSearchPath>* header_search_paths;
 
 // Please keep this in sync with _SOURCE_EXTENSIONS in fix_includes.py.
@@ -35,23 +37,23 @@ const char* source_extensions[] = {
   ".cxx",
   ".CXX",
   ".cpp",
-  ".CPP"
+  ".CPP",
   ".c++",
   ".C++",
   ".cp"
 };
 
-}  // namespace
+}  // anonymous namespace
 
 void SetHeaderSearchPaths(const vector<HeaderSearchPath>& search_paths) {
-  if (header_search_paths != NULL) {
+  if (header_search_paths != nullptr) {
     delete header_search_paths;
   }
   header_search_paths = new vector<HeaderSearchPath>(search_paths);
 }
 
 const vector<HeaderSearchPath>& HeaderSearchPaths() {
-  if (header_search_paths == NULL) {
+  if (header_search_paths == nullptr) {
     header_search_paths = new vector<HeaderSearchPath>();
   }
   return *header_search_paths;
@@ -64,8 +66,9 @@ bool IsHeaderFile(string path) {
   // Some headers don't have an extension (e.g. <string>), or have an
   // unusual one (the compiler doesn't care), so it's safer to
   // enumerate non-header extensions instead.
-  for (size_t i = 0; i < llvm::array_lengthof(source_extensions); ++i) {
-    if (EndsWith(path, source_extensions[i]))
+  //  for (size_t i = 0; i < llvm::array_lengthof(source_extensions); ++i) {
+  for (const char* source_extension : source_extensions) {
+    if (EndsWith(path, source_extension))
       return false;
   }
 
@@ -80,39 +83,15 @@ string Basename(const string& path) {
   return path;
 }
 
-string CanonicalizeFilePath(const string& path) {
-  string result = path;
-
-#ifdef _WIN32
-  // Canonicalise directory separators (forward slashes considered canonical.)
-  for (size_t i = 0; i < result.size(); ++i) {
-    if (result[i] == '\\')
-      result[i] = '/';
-  }
-#endif
-
-  // We may also want to collapse ../ here.
-
-  return result;
-}
-
-string CanonicalizeHeaderSearchPath(const string& path) {
-  string result = CanonicalizeFilePath(path);
-
-  // We want a trailing slash on all header search paths, because it makes it
-  // much easier to find the longest common path prefix.
-  if (!EndsWith(result, "/"))
-    result += "/";
-
-  return result;
-}
-
 string GetCanonicalName(string file_path) {
-  // Get rid of any <> and "" in case file_path is really an #include line.
-  StripLeft(&file_path, "\"") || StripLeft(&file_path, "<");
-  StripRight(&file_path, "\"") || StripRight(&file_path, ">");
+  // For this special 'path' we just return it.
+  // Note that we leave the 'quotes' to make it different from regular paths.
+  if (file_path == "<built-in>")
+    return file_path;
 
-  file_path = CanonicalizeFilePath(file_path);
+  CHECK_(!IsQuotedInclude(file_path));
+
+  file_path = NormalizeFilePath(file_path);
 
   bool stripped_ext = StripRight(&file_path, ".h")
       || StripRight(&file_path, ".hpp")
@@ -120,8 +99,8 @@ string GetCanonicalName(string file_path) {
       || StripRight(&file_path, ".hh")
       || StripRight(&file_path, ".inl");
   if (!stripped_ext) {
-    for (size_t i = 0; i < llvm::array_lengthof(source_extensions); ++i) {
-      if (StripRight(&file_path, source_extensions[i]))
+    for (const char* source_extension : source_extensions) {
+      if (StripRight(&file_path, source_extension))
         break;
     }
   }
@@ -146,9 +125,22 @@ string GetCanonicalName(string file_path) {
 }
 
 string NormalizeFilePath(const string& path) {
-  string result = CanonicalizeFilePath(path);
-  while (StripLeft(&result, "./")) {
-  }
+  llvm::SmallString<128> normalized(path);
+  llvm::sys::path::remove_dots(normalized);
+
+#ifdef _WIN32
+  // Canonicalize directory separators (forward slashes considered canonical.)
+  std::replace(normalized.begin(), normalized.end(), '\\', '/');
+#endif
+
+  return normalized.str();
+}
+
+string NormalizeDirPath(const string& path) {
+  string result = NormalizeFilePath(path);
+  // Ensure trailing slash.
+  if (!result.empty() && result.back() != '/')
+      result += '/';
   return result;
 }
 
@@ -157,7 +149,7 @@ bool IsAbsolutePath(const string& path) {
 }
 
 string MakeAbsolutePath(const string& path) {
-  llvm::SmallString<128> absolute_path(path.c_str());
+  llvm::SmallString<128> absolute_path(path);
   std::error_code error = llvm::sys::fs::make_absolute(absolute_path);
   CHECK_(!error);
 
@@ -165,7 +157,7 @@ string MakeAbsolutePath(const string& path) {
 }
 
 string MakeAbsolutePath(const string& base_path, const string& relative_path) {
-  llvm::SmallString<128> absolute_path(base_path.c_str());
+  llvm::SmallString<128> absolute_path(base_path);
   llvm::sys::path::append(absolute_path, relative_path);
 
   return absolute_path.str();
@@ -176,29 +168,46 @@ string GetParentPath(const string& path) {
   return parent.str();
 }
 
+bool StripPathPrefix(string* path, const string& prefix_path) {
+  // Only makes sense if both are absolute or both are relative (to same dir).
+  CHECK_(IsAbsolutePath(*path) == IsAbsolutePath(prefix_path));
+  return StripLeft(path, prefix_path);
+}
+
 // Converts a file-path, such as /usr/include/stdio.h, to a
 // quoted include, such as <stdio.h>.
-string ConvertToQuotedInclude(const string& filepath) {
-  // First, get rid of leading ./'s and the like.
-  string path = NormalizeFilePath(filepath);
+string ConvertToQuotedInclude(const string& filepath,
+                              const string& includer_path) {
+  // includer_path must be given as an absolute path.
+  CHECK_(includer_path.empty() || IsAbsolutePath(includer_path));
+
+  if (filepath == "<built-in>")
+    return filepath;
+
+  // Get path into same format as header search paths: Absolute and normalized.
+  string path = NormalizeFilePath(MakeAbsolutePath(filepath));
 
   // Case 1: Uses an explicit entry on the search path (-I) list.
   const vector<HeaderSearchPath>& search_paths = HeaderSearchPaths();
   // HeaderSearchPaths is sorted to be longest-first, so this
   // loop will prefer the longest prefix: /usr/include/c++/4.4/foo
   // will be mapped to <foo>, not <c++/4.4/foo>.
-  for (Each<HeaderSearchPath> it(&search_paths); !it.AtEnd(); ++it) {
+  for (const HeaderSearchPath& entry : search_paths) {
     // All header search paths have a trailing "/", so we'll get a perfect
     // quoted include by just stripping the prefix.
-    if (StripLeft(&path, it->path)) {
-      if (it->path_type == HeaderSearchPath::kSystemPath)
+
+    if (StripPathPrefix(&path, entry.path)) {
+      if (entry.path_type == HeaderSearchPath::kSystemPath)
         return "<" + path + ">";
       else
         return "\"" + path + "\"";
     }
   }
 
-  // Case 2: Uses the implicit "-I." entry on the search path.  Always local.
+  // Case 2:
+  // Uses the implicit "-I <basename current file>" entry on the search path.
+  if (!includer_path.empty())
+    StripPathPrefix(&path, NormalizeDirPath(includer_path));
   return "\"" + path + "\"";
 }
 

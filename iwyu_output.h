@@ -13,8 +13,8 @@
 // to sanitize symbol names, to emit desired include-lines properly,
 // etc.
 
-#ifndef DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
-#define DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 
 #include <map>                          // for map
 #include <set>                          // for set
@@ -29,7 +29,7 @@
 namespace clang {
 class FileEntry;
 class UsingDecl;
-}
+}  // namespace clang
 
 namespace include_what_you_use {
 
@@ -38,7 +38,6 @@ using std::pair;
 using std::set;
 using std::string;
 using std::vector;
-
 
 class IwyuPreprocessorInfo;
 
@@ -75,6 +74,7 @@ class OneUse {
   bool ignore_use() const { return ignore_use_; }
   bool is_iwyu_violation() const { return is_iwyu_violation_; }
   bool has_suggested_header() const { return !suggested_header_.empty(); }
+
   const string& suggested_header() const {
     CHECK_(has_suggested_header() && "Must assign suggested_header first");
     CHECK_(!ignore_use() && "Ignored uses have no suggested header");
@@ -124,16 +124,19 @@ class OneIncludeOrForwardDeclareLine {
   bool is_desired() const { return is_desired_; }
   bool is_present() const { return is_present_; }
   const map<string, int>& symbol_counts() const { return symbol_counts_; }
+
   string quoted_include() const {
     CHECK_(IsIncludeLine() && "Must call quoted_include() on include lines");
     CHECK_(!fwd_decl_ && "quoted_include and fwd_decl are mutually exclusive");
     return quoted_include_;
   }
+
   const clang::FileEntry* included_file() const {
     CHECK_(IsIncludeLine() && "Must call included_file() on include lines");
     CHECK_(!fwd_decl_ && "included_file and fwd_decl are mutually exclusive");
     return included_file_;
   }
+
   const clang::NamedDecl* fwd_decl() const {
     CHECK_(!IsIncludeLine() && "Must call fwd_decl() on forward-declare lines");
     CHECK_(quoted_include_.empty() && !included_file_ &&
@@ -176,7 +179,6 @@ class OneIncludeOrForwardDeclareLine {
   const clang::NamedDecl* fwd_decl_;
 };
 
-
 // This class holds IWYU information about a single file (FileEntry)
 // -- referred to, in the comments below, as "this file."  The keys to
 // most of these methods are all quoted header paths, which are the
@@ -213,7 +215,7 @@ class IwyuFileInfo {
                   const string& quoted_includee, int linenumber);
   // definitely_keep_fwd_decl tells us that we should never suggest
   // the fwd-decl be removed, even if we don't see any uses of it.
-  void AddForwardDeclare(const clang::NamedDecl* forward_declare_decl,
+  void AddForwardDeclare(const clang::NamedDecl* fwd_decl,
                          bool definitely_keep_fwd_decl);
 
   void AddUsingDecl(const clang::UsingDecl* using_decl);
@@ -235,9 +237,13 @@ class IwyuFileInfo {
                            const string& symbol);
   // TODO(dsturtevant): Can we determine in_cxx_method_body? Do we care?
 
+  // Called when using a macro in this file.
   void ReportMacroUse(clang::SourceLocation use_loc,
                       clang::SourceLocation dfn_loc,
                       const string& symbol);
+
+  // Called when somebody uses a macro defined in this file.
+  void ReportDefinedMacroUse(const clang::FileEntry* used_in);
 
   // We only allow forward-declaring of decls, not arbitrary symbols.
   void ReportForwardDeclareUse(clang::SourceLocation use_loc,
@@ -256,14 +262,18 @@ class IwyuFileInfo {
   void ReportIncludeFileUse(const clang::FileEntry* included_file,
                             const string& quoted_include);
 
-  // This is used when we see an "IWYU pragma: keep" comment
-  // on an include line.
-  void ReportPragmaKeep(const clang::FileEntry* included_file);
+  // This is used when we see a file we want to keep not due to symbol-use
+  // reasons.  For example, it can be #included with an "IWYU pragma: keep"
+  // comment or it can be an x-macro.
+  void ReportKnownDesiredFile(const clang::FileEntry* included_file);
 
   // This is used only in iwyu_preprocessor.cc.  TODO(csilvers): revamp?
   const set<const clang::FileEntry*>& direct_includes_as_fileentries() const {
     return direct_includes_as_fileentries_;
   }
+
+  // Called when all macros in the file are processed.
+  void HandlePreprocessingDone();
 
   // Resolve and pending analysis that needs to occur between AST traversal
   // and CalculateAndReportIwyuViolations.
@@ -276,29 +286,32 @@ class IwyuFileInfo {
 
  private:
   const set<string>& direct_includes() const { return direct_includes_; }
+
   const set<string>& desired_includes() const {
     CHECK_(desired_includes_have_been_calculated_ &&
            "Must calculate desired includes before calling desired_includes()");
     return desired_includes_;
   }
+
   set<string> AssociatedQuotedIncludes() const {
     set<string> associated_quoted_includes;
-    for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it)
-      associated_quoted_includes.insert((*it)->quoted_file_);
+    for (const IwyuFileInfo* associated : associated_headers_)
+      associated_quoted_includes.insert(associated->quoted_file_);
     return associated_quoted_includes;
   }
 
   set<const clang::FileEntry*> AssociatedFileEntries() const {
     set<const clang::FileEntry*> associated_file_entries;
-    for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it)
-      associated_file_entries.insert((*it)->file_);
+    for (const IwyuFileInfo* associated : associated_headers_)
+      associated_file_entries.insert(associated->file_);
     return associated_file_entries;
   }
 
   set<string> AssociatedDesiredIncludes() const {
     set<string> associated_desired_includes;
-    for (Each<const IwyuFileInfo*> it(&associated_headers_); !it.AtEnd(); ++it)
-      InsertAllInto((*it)->desired_includes(), &associated_desired_includes);
+    for (const IwyuFileInfo* associated : associated_headers_)
+      InsertAllInto(associated->desired_includes(),
+                    &associated_desired_includes);
     return associated_desired_includes;
   }
 
@@ -344,14 +357,17 @@ class IwyuFileInfo {
   set<const clang::FileEntry*> direct_includes_as_fileentries_;
   set<const clang::NamedDecl*> direct_forward_declares_;
 
-  // Holds any files included with the "IWYU pragma: keep" comment.
+  // Holds files forced to be kept.  For example, files included with the
+  // "IWYU pragma: keep" comment and x-macros.
   set<const clang::FileEntry*> kept_includes_;
+
+  // Holds files using macros defined in this file.
+  set<const clang::FileEntry*> macro_users_;
 
   // What we will recommend the #includes to be.
   set<string> desired_includes_;
   bool desired_includes_have_been_calculated_;
 };
-
 
 // Helpers for testing.
 
@@ -378,4 +394,4 @@ class FakeNamedDecl : public clang::NamedDecl {
 
 }  // namespace include_what_you_use
 
-#endif  // DEVTOOLS_MAINTENANCE_INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
