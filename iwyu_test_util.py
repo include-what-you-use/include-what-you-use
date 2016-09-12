@@ -11,7 +11,7 @@
 
 """Utilities for writing tests for IWYU.
 
-This script has been tested with python 2.4, 2.7, 3.1.3 and 3.2.
+This script has been tested with python 2.7, 3.1.3 and 3.2.
 In order to support all of these platforms there are a few unusual constructs:
  * print statements require parentheses
  * standard output must be decoded as utf-8
@@ -32,7 +32,7 @@ import subprocess
 import sys
 
 # These are the warning/error lines that iwyu.cc produces when --verbose >= 3
-_EXPECTED_DIAGNOSTICS_RE = re.compile(r'^(.*?):(\d+):.*//\s*IWYU:\s*(.*)$')
+_EXPECTED_DIAGNOSTICS_RE = re.compile(r'^\s*//\s*IWYU:\s*(.*)$')
 _ACTUAL_DIAGNOSTICS_RE = re.compile(r'^(.*?):(\d+):\d+:\s*'
                                     r'(?:warning|error|fatal error):\s*(.*)$')
 
@@ -109,6 +109,12 @@ def _GetIwyuPath():
   return _IWYU_PATH
 
 
+def _ShellQuote(arg):
+  if ' ' in arg:
+    arg = '"' + arg + '"'
+  return arg
+
+
 def _GetCommandOutput(command):
   p = subprocess.Popen(command,
                        shell=True,
@@ -120,32 +126,42 @@ def _GetCommandOutput(command):
   return lines
 
 
-def _GetExpectedDiagnosticRegexes(expected_diagnostic_specs):
-  """Returns a map: source file location => list of regexes for that line."""
+def _GetMatchingLines(regex, file_names):
+  """Returns a map: file location => string matching `regex`.
+  
+  File location is a tuple (file_name, line number starting from 1)."""
 
-  # Maps a source file location to the warning/error message regex specified
-  # on that line.
-  spec_loc_to_regex = {}
-  for line in expected_diagnostic_specs:
-    m = _EXPECTED_DIAGNOSTICS_RE.match(line.strip())
-    if m:
-      path, line_num, regex = m.groups()
-      if not regex:
-        # Allow the regex to be omitted if we are uninterested in the
-        # diagnostic message.
-        regex = r'.*'
-      spec_loc_to_regex[path, int(line_num)] = re.compile(regex)
+  loc_to_line = {}
+  for file_name in file_names:
+    with open(file_name) as fileobj:
+      for line_num, line in enumerate(fileobj):
+        m = regex.match(line)
+        if m:
+          loc_to_line[file_name, line_num + 1] = m.group()
+  return loc_to_line
+
+
+def _GetExpectedDiagnosticRegexes(spec_loc_to_line):
+  """Returns a map: source file location => list of regexes for that line."""
 
   # Maps a source file line location to a list of regexes for diagnostics
   # that should be generated for that line.
   expected_diagnostic_regexes = {}
   regexes = []
-  for loc in sorted(spec_loc_to_regex.keys()):
-    regexes.append(spec_loc_to_regex[loc])
+  for loc in sorted(spec_loc_to_line.keys()):
+    line = spec_loc_to_line[loc]
+    m = _EXPECTED_DIAGNOSTICS_RE.match(line.strip())
+    assert m is not None, "Input should contain only matching lines."
+    regex = m.group(1)
+    if not regex:
+      # Allow the regex to be omitted if we are uninterested in the
+      # diagnostic message.
+      regex = r'.*'
+    regexes.append(re.compile(regex))
     # Do we have a spec on the next line?
     path, line_num = loc
     next_line_loc = path, line_num + 1
-    if next_line_loc not in spec_loc_to_regex:
+    if next_line_loc not in spec_loc_to_line:
       expected_diagnostic_regexes[next_line_loc] = regexes
       regexes = []
 
@@ -414,16 +430,19 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
   iwyu_flags = ['-Xiwyu ' + flag for flag in iwyu_flags]
 
   # TODO(csilvers): verify that has exit-status 0.
-  cmd = '"%s" %s %s %s' % (
-      _GetIwyuPath(), ' '.join(iwyu_flags), ' '.join(clang_flags), cc_file)
+  cmd = '%s %s %s %s' % (
+    _ShellQuote(_GetIwyuPath()),
+    ' '.join(iwyu_flags),
+    ' '.join(clang_flags),
+    cc_file)
   if verbose:
     print('>>> Running %s' % cmd)
   output = _GetCommandOutput(cmd)
   print(''.join(output))
   sys.stdout.flush()      # don't commingle this output with the failure output
 
-  expected_diagnostics = _GetCommandOutput('grep -n -H "^ *// *IWYU" %s' %
-                                           (' '.join(cpp_files_to_check)))
+  expected_diagnostics = _GetMatchingLines(
+      _EXPECTED_DIAGNOSTICS_RE, cpp_files_to_check)
   failures = _CompareExpectedAndActualDiagnostics(
       _GetExpectedDiagnosticRegexes(expected_diagnostics),
       _GetActualDiagnostics(output))

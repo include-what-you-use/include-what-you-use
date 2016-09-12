@@ -98,6 +98,8 @@ class OneIwyuTest(unittest.TestCase):
       'deleted_implicit.cc' : ['-std=c++11'],
       'lambda_fwd_decl.cc': ['-std=c++11'],
       'lateparsed_template.cc': ['-fdelayed-template-parsing'],
+      'macro_defined_by_includer.cc': [
+          '-std=c++11', '-DCOMMAND_LINE_TYPE=double'],
       'ms_inline_asm.cc': ['-fms-extensions'],
       'prefix_header_attribution.cc': [self.Include('prefix_header_attribution-d1.h')],
       'prefix_header_includes_add.cc': prefix_headers,
@@ -140,6 +142,7 @@ class OneIwyuTest(unittest.TestCase):
       'iwyu_stricter_than_cpp.cc': ['.'],
       'keep_mapping.cc': ['.'],
       'lateparsed_template.cc': ['.'],
+      'macro_defined_by_includer.cc': ['.'],
       'macro_location.cc': ['.'],
       'member_expr.cc': ['.'],
       'multiple_include_paths.cc': ['.'],
@@ -150,6 +153,7 @@ class OneIwyuTest(unittest.TestCase):
       'non_transitive_include.cc': ['.'],
       'overloaded_class.cc': ['.'],
       'pch_in_code.cc': ['.'],
+      'pointer_arith.cc': ['.'],
       'precomputed_tpl_args.cc': ['.'],
       'prefix_header_attribution.cc': ['.'],
       'prefix_header_includes_add.cc': ['.'],
@@ -205,14 +209,8 @@ class OneIwyuTest(unittest.TestCase):
     files_to_check = [PosixPath(f) for f in files_to_check]
 
     iwyu_flags = self._iwyu_flags_map.get(filename, None)
-    if iwyu_flags:
-      logging.info('%s: Using iwyu flags %s', filename, str(iwyu_flags))
-
     clang_flags = self._clang_flags_map.get(filename, [])
     clang_flags.extend(self._include_map.get(filename, []))
-    if clang_flags:
-      logging.info('%s: Using clang flags %s', filename, str(clang_flags))
-
     iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
                                           iwyu_flags, clang_flags, verbose=True)
 

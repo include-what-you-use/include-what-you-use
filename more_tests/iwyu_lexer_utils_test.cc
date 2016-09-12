@@ -240,31 +240,31 @@ TEST(GetLocationAfter, BeginAfterStartOfText) {
             GetSourceTextUntilEndOfLine(after_loc, data_getter));
 }
 
-TEST(GetIncludeNameAsTyped, SystemInclude) {
+TEST(GetIncludeNameAsWritten, SystemInclude) {
   const char text[] = "#include <stdio.h>\n";
   StringCharacterDataGetter data_getter(text);
   SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation inc_loc = CreateSourceLocationFromOffset(begin_loc, 9);
   EXPECT_EQ("<stdio.h>",
-            GetIncludeNameAsTyped(inc_loc, data_getter));
+            GetIncludeNameAsWritten(inc_loc, data_getter));
 }
 
-TEST(GetIncludeNameAsTyped, NonsysytemInclude) {
+TEST(GetIncludeNameAsWritten, NonsysytemInclude) {
   const char text[] = "#include \"ads/util.h\"\n";
   StringCharacterDataGetter data_getter(text);
   SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation inc_loc = CreateSourceLocationFromOffset(begin_loc, 9);
   EXPECT_EQ("\"ads/util.h\"",
-            GetIncludeNameAsTyped(inc_loc, data_getter));
+            GetIncludeNameAsWritten(inc_loc, data_getter));
 }
 
-TEST(GetIncludeNameAsTyped, WithComments) {
+TEST(GetIncludeNameAsWritten, WithComments) {
   const char text[] = "#include <stdio.h>  // for printf\n";
   StringCharacterDataGetter data_getter(text);
   SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation inc_loc = CreateSourceLocationFromOffset(begin_loc, 9);
   EXPECT_EQ("<stdio.h>",
-            GetIncludeNameAsTyped(inc_loc, data_getter));
+            GetIncludeNameAsWritten(inc_loc, data_getter));
 }
 
 }  // namespace

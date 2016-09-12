@@ -77,7 +77,7 @@
 namespace clang {
 class FileEntry;
 class MacroInfo;
-}
+}  // namespace clang
 
 namespace include_what_you_use {
 
@@ -101,6 +101,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   const clang::FileEntry* main_file() const {
     return main_file_;
   }
+
   const set<const clang::FileEntry*>* files_to_report_iwyu_violations_for()
       const {
     return &files_to_report_iwyu_violations_for_;
@@ -167,7 +168,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
  protected:
   // Preprocessor event handlers called by Clang.
-  void MacroExpands(const clang::Token& id,
+  void MacroExpands(const clang::Token& macro_use_token,
                     const clang::MacroDefinition& definition,
                     clang::SourceRange range,
                     const clang::MacroArgs* args) override;
@@ -202,13 +203,13 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
   void FileChanged(clang::SourceLocation loc, FileChangeReason reason,
                    clang::SrcMgr::CharacteristicKind file_type,
-                   clang::FileID PrevFID) override;
+                   clang::FileID exiting_from_id) override;
   void FileSkipped(const clang::FileEntry& file, const clang::Token &filename,
                    clang::SrcMgr::CharacteristicKind file_type) override;
   // FileChanged is actually a multi-plexer for 4 different callbacks.
   void FileChanged_EnterFile(clang::SourceLocation file_beginning);
   void FileChanged_ExitToFile(clang::SourceLocation include_loc,
-                              clang::FileID exiting_from);
+                              const clang::FileEntry* exiting_from);
   void FileChanged_RenameFile(clang::SourceLocation new_file);
   void FileChanged_SystemHeaderPragma(clang::SourceLocation loc);
 
@@ -242,12 +243,12 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // #include from iwyu removal.
   void MaybeProtectInclude(clang::SourceLocation includer_loc,
                            const clang::FileEntry* includee,
-                           const string& include_name_as_typed);
+                           const string& include_name_as_written);
 
   // Called whenever an #include is seen in the preprocessor output.
   void AddDirectInclude(clang::SourceLocation includer_loc,
                         const clang::FileEntry* includee,
-                        const string& include_name_as_typed);
+                        const string& include_name_as_written);
 
   // Report a "begin_exports"/"end_exports" pragma pair.
   // begin_line is first line, end_line is just after the last line.
@@ -280,7 +281,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
   // Return true if at the current point in the parse of the given file,
   // there is a pending "begin_exports" pragma.
-  bool HasOpenBeginExports(const clang::FileEntry* file_entry) const;
+  bool HasOpenBeginExports(const clang::FileEntry* file) const;
 
   // The C++ source file passed in as an argument to the compiler (as
   // opposed to other files seen via #includes).
@@ -303,7 +304,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // which we don't have.  Luckily, a vector works just as well.
   vector<clang::Token> macros_called_from_macros_;
 
-  // This maps from the include-name as typed in the program
+  // This maps from the include-name as written in the program
   // (including <>'s or ""'s) to the FileEntry we loaded for that
   // #include.
   map<string, const clang::FileEntry*> include_to_fileentry_map_;

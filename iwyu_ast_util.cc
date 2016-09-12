@@ -22,6 +22,7 @@
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/ASTContext.h"
@@ -73,11 +74,8 @@ using clang::ExplicitCastExpr;
 using clang::Expr;
 using clang::ExprWithCleanups;
 using clang::FileEntry;
-using clang::FriendDecl;
-using clang::FriendTemplateDecl;
 using clang::FullSourceLoc;
 using clang::FunctionDecl;
-using clang::FunctionProtoType;
 using clang::FunctionType;
 using clang::ImplicitCastExpr;
 using clang::InjectedClassNameType;
@@ -118,6 +116,7 @@ using clang::UnaryOperator;
 using clang::UsingDirectiveDecl;
 using clang::ValueDecl;
 using clang::VarDecl;
+using llvm::ArrayRef;
 using llvm::PointerUnion;
 using llvm::cast;
 using llvm::dyn_cast_or_null;
@@ -225,17 +224,13 @@ bool IsElaborationNode(const ASTNode* ast_node) {
   return elaborated_type && elaborated_type->getKeyword() != clang::ETK_None;
 }
 
-bool IsNamespaceQualifiedNode(const ASTNode* ast_node) {
+bool IsQualifiedNameNode(const ASTNode* ast_node) {
   if (ast_node == nullptr)
     return false;
   const ElaboratedType* elaborated_type = ast_node->GetAs<ElaboratedType>();
   if (elaborated_type == nullptr)
     return false;
-  const NestedNameSpecifier* qualifier = elaborated_type->getQualifier();
-  if (qualifier == nullptr)
-    return false;
-  return (qualifier->getKind() == NestedNameSpecifier::Global ||
-          qualifier->getKind() == NestedNameSpecifier::Namespace);
+  return elaborated_type->getQualifier() != nullptr;
 }
 
 bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
@@ -451,7 +446,7 @@ string PrintableTemplateArgument(const TemplateArgument& arg) {
   std::string buffer;
   raw_string_ostream ostream(buffer);
   TemplateSpecializationType::PrintTemplateArgumentList(
-      ostream, &arg, 1, DefaultPrintPolicy());
+      ostream, ArrayRef<TemplateArgument>(arg), DefaultPrintPolicy());
   return ostream.str();
 }
 
@@ -459,7 +454,7 @@ string PrintableTemplateArgumentLoc(const TemplateArgumentLoc& arg) {
   std::string buffer;
   raw_string_ostream ostream(buffer);
   TemplateSpecializationType::PrintTemplateArgumentList(
-      ostream, &arg, 1, DefaultPrintPolicy());
+      ostream, ArrayRef<TemplateArgumentLoc>(arg), DefaultPrintPolicy());
   return ostream.str();
 }
 
@@ -513,7 +508,7 @@ static const Type* GetTemplateArgAsType(const TemplateArgument& tpl_arg) {
 // VarDecl 'vector<int(*)(const MyClass&)> x', it would return
 // (vector<int(*)(const MyClass&)>, int(*)(const MyClass&),
 // int(const MyClass&), int, const MyClass&, MyClass).  Note that
-// this function only returns types-as-typed, so it does *not* return
+// this function only returns types-as-written, so it does *not* return
 // alloc<int(*)(const MyClass&)>, even though it's part of vector.
 class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
  public:
@@ -671,19 +666,18 @@ set<FunctionDecl*> GetLateParsedFunctionDecls(TranslationUnitDecl* decl) {
 // contains the original map elements plus mapping for the components.
 // This is because when a type is 'owned' by the template
 // instantiator, all parts of the type are owned.  We only consider
-// type-components as typed.
+// type-components as written.
 static map<const Type*, const Type*> ResugarTypeComponents(
     const map<const Type*, const Type*>& resugar_map) {
   map<const Type*, const Type*> retval = resugar_map;
-  for (Each<const Type*, const Type*> it(&resugar_map); !it.AtEnd(); ++it) {
-    const set<const Type*>& components = GetComponentsOfType(it->second);
-    for (Each<const Type*> component_type(&components);
-         !component_type.AtEnd(); ++component_type) {
-      const Type* desugared_type = GetCanonicalType(*component_type);
+  for (const auto& types : resugar_map) {
+    const set<const Type*>& components = GetComponentsOfType(types.second);
+    for (const Type* component_type : components) {
+      const Type* desugared_type = GetCanonicalType(component_type);
       if (!ContainsKey(retval, desugared_type)) {
-        retval[desugared_type] = *component_type;
+        retval[desugared_type] = component_type;
         VERRS(6) << "Adding a type-components of interest: "
-                 << PrintableType(*component_type) << "\n";
+                 << PrintableType(component_type) << "\n";
       }
     }
   }
@@ -798,24 +792,24 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     InsertAllInto(GetComponentsOfType(argtype), &fn_arg_types);
   }
 
-  for (Each<const Type*> it(&fn_arg_types); !it.AtEnd(); ++it) {
+  for (const Type* type : fn_arg_types) {
     // See if any of the template args in retval are the desugared form of us.
-    const Type* desugared_type = GetCanonicalType(*it);
+    const Type* desugared_type = GetCanonicalType(type);
     if (ContainsKey(desugared_types, desugared_type)) {
-      retval[desugared_type] = *it;
-      if (desugared_type != *it) {
+      retval[desugared_type] = type;
+      if (desugared_type != type) {
         VERRS(6) << "Remapping template arg of interest: "
                  << PrintableType(desugared_type) << " -> "
-                 << PrintableType(*it) << "\n";
+                 << PrintableType(type) << "\n";
       }
     }
   }
 
   // Log the types we never mapped.
-  for (Each<const Type*, const Type*> it(&desugared_types); !it.AtEnd(); ++it) {
-    if (!ContainsKey(retval, it->first)) {
+  for (const auto& types : desugared_types) {
+    if (!ContainsKey(retval, types.first)) {
       VERRS(6) << "Ignoring unseen-in-fn-args template arg of interest: "
-               << PrintableType(it->first) << "\n";
+               << PrintableType(types.first) << "\n";
     }
   }
 
@@ -989,10 +983,10 @@ const NamedDecl* GetFirstRedecl(const NamedDecl* decl) {
   if (all_redecls.empty())  // input is not a class or class template
     return nullptr;
 
-  for (Each<const NamedDecl*> it(&all_redecls); !it.AtEnd(); ++it) {
-    const FullSourceLoc redecl_loc(GetLocation(*it), *GlobalSourceManager());
+  for (const NamedDecl* redecl : all_redecls) {
+    const FullSourceLoc redecl_loc(GetLocation(redecl), *GlobalSourceManager());
     if (redecl_loc.isBeforeInTranslationUnitThan(first_decl_loc)) {
-      first_decl = *it;
+      first_decl = redecl;
       first_decl_loc = redecl_loc;
     }
   }
@@ -1194,13 +1188,13 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
     // and compare it against each of the types in the template decl
     // (the latter are all desugared).  If there's a match, update
     // the mapping.
-    for (Each<const Type*> it(&arg_components); !it.AtEnd(); ++it) {
+    for (const Type* type : arg_components) {
       for (unsigned i = 0; i < tpl_args.size(); ++i) {
         if (const Type* arg_type = GetTemplateArgAsType(tpl_args[i])) {
-          if (GetCanonicalType(*it) == arg_type) {
-            retval[arg_type] = *it;
+          if (GetCanonicalType(type) == arg_type) {
+            retval[arg_type] = type;
             VERRS(6) << "Adding a template-class type of interest: "
-                     << PrintableType(*it) << "\n";
+                     << PrintableType(type) << "\n";
             explicit_args.insert(i);
           }
         }
