@@ -156,8 +156,7 @@ target_link_libraries(include-what-you-use
   LLVMObject # BitReader, Core, Support
   LLVMBitReader # Core, Support
   LLVMCore # Support
-  LLVMSupport # Demangle
-  LLVMDemangle
+  LLVMSupport
 )
 
 # Platform dependencies.
