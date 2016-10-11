@@ -78,8 +78,7 @@ inline bool IsBuiltinFile(const clang::FileEntry* file) {
 // IsBuiltinOrCommandLineFile(file) returns true if it's either of the
 // two cases.
 inline bool IsBuiltinOrCommandLineFile(const clang::FileEntry* file) {
-  return IsBuiltinFile(file) ||
-         (strcmp(file->getName(), "<command line>") == 0);
+  return IsBuiltinFile(file) || file->getName().equals("<command line>");
 }
 
 // When macro args are concatenated e.g. '#define CAT(A, B) A##B', their

@@ -3553,7 +3553,7 @@ class IwyuAstConsumer
 
       // Force parsing and AST building of the yet-uninstantiated function
       // template body.
-      clang::LateParsedTemplate* lpt = sema.LateParsedTemplateMap[fd];
+      clang::LateParsedTemplate* lpt = sema.LateParsedTemplateMap[fd].get();
       sema.LateTemplateParser(sema.OpaqueParser, *lpt);
     }
   }
