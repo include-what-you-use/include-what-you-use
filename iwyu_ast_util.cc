@@ -543,7 +543,7 @@ class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
 
 // A 'component' of a type is a type beneath it in the AST tree.
 // So 'Foo*' has component 'Foo', as does 'vector<Foo>', while
-// vector<pair<Foo, Bar> > has components pair<Foo,Bar>, Foo, and Bar.
+// vector<pair<Foo, Bar>> has components pair<Foo,Bar>, Foo, and Bar.
 set<const Type*> GetComponentsOfType(const Type* type) {
   TypeEnumerator type_enumerator;
   return type_enumerator.Enumerate(type);
@@ -662,7 +662,7 @@ set<FunctionDecl*> GetLateParsedFunctionDecls(TranslationUnitDecl* decl) {
 
 // Helper for the Get*ResugarMap*() functions.  Given a map from
 // desugared->resugared types, looks at each component of the
-// resugared type (eg, both hash_set<Foo>* and vector<hash_set<Foo> >
+// resugared type (eg, both hash_set<Foo>* and vector<hash_set<Foo>>
 // have two components: hash_set<Foo> and Foo), and returns a map that
 // contains the original map elements plus mapping for the components.
 // This is because when a type is 'owned' by the template

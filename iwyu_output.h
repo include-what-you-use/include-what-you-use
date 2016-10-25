@@ -108,8 +108,8 @@ class OneUse {
   string comment_;                 // If not empty, append to clang warning msg
   vector<string> public_headers_;  // header to #include if dfn hdr is private
   string suggested_header_;        // header that allows us to satisfy use
-  bool ignore_use_;                // set to true if use is discarded
-  bool is_iwyu_violation_;         // set to false when we figure out it's not
+  bool ignore_use_ = false;        // set to true if use is discarded
+  bool is_iwyu_violation_ = false; // set to false when we figure out it's not
 };
 
 class OneIncludeOrForwardDeclareLine {
@@ -169,8 +169,8 @@ class OneIncludeOrForwardDeclareLine {
   string line_;                     // '#include XXX' or 'class YYY;'
   int start_linenum_;
   int end_linenum_;
-  bool is_desired_;                 // IWYU will recommend this line
-  bool is_present_;                 // line was present before the IWYU run
+  bool is_desired_ = false;         // IWYU will recommend this line
+  bool is_present_ = false;         // line was present before the IWYU run
   map<string, int> symbol_counts_;  // how many times we referenced each symbol
   // Only either two following members are set for includes
   string quoted_include_;           // quoted file name we're including

@@ -830,7 +830,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   CHECK_(intends_to_provide_map_.empty() && "Should only call this fn once");
   // Figure out which of the header files we have are public.  We'll
   // map each one to a set of all private header files that map to it.
-  map<const FileEntry*, set<const FileEntry*> > private_headers_behind;
+  map<const FileEntry*, set<const FileEntry*>> private_headers_behind;
   for (const auto& fileinfo : iwyu_file_info_map_) {
     const FileEntry* header = fileinfo.first;
     const vector<string> public_headers_for_header =

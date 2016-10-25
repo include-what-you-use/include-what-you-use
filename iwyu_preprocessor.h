@@ -129,7 +129,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // for.  The motivation is that a file like <vector> #includes
   // <memory> and doesn't expect you to have to, even though
   // technically it's required whenever you create a vector<Foo>,
-  // which is really vector<Foo, alloc<Foo> >.  We say you don't have
+  // which is really vector<Foo, alloc<Foo>>.  We say you don't have
   // to #include <memory> because vector intends to provide the full
   // types from <memory> for you.
   //    The rule we use is every file intends to provide full type
@@ -324,21 +324,21 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // but is as close as we can be to matching the intent of the author
   // of the public/private system.
   map<const clang::FileEntry*,
-      set<const clang::FileEntry*> > intends_to_provide_map_;
+      set<const clang::FileEntry*>> intends_to_provide_map_;
 
   // Maps from a FileEntry* to all the files that this file includes,
   // either directly or indirectly.
   map<const clang::FileEntry*,
-      set<const clang::FileEntry*> > transitive_include_map_;
+      set<const clang::FileEntry*>> transitive_include_map_;
 
   // Maps from a FileEntry* to the quoted names of files that its file
   // is directed *not* to include via the "no_include" pragma.
-  map<const clang::FileEntry*, set<string> > no_include_map_;
+  map<const clang::FileEntry*, set<string>> no_include_map_;
 
   // Maps from a FileEntry* to the qualified names of symbols that its
   // file is directed *not* to forward-declare via the
   // "no_forward_declare" pragma.
-  map<const clang::FileEntry*, set<string> > no_forward_declare_map_;
+  map<const clang::FileEntry*, set<string>> no_forward_declare_map_;
 
   const IwyuFileInfo empty_file_info_;
 

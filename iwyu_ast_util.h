@@ -521,7 +521,7 @@ set<clang::FunctionDecl*> GetLateParsedFunctionDecls(
 //    MyFunc(typedef_type)
 // clang will say this is a call to MyFunc<canonical_type>().  Also:
 //    MyFunc(my_int_vector)
-// clang will say this is MyFunc<vector<int, alloc<int> >(), with
+// clang will say this is MyFunc<vector<int, alloc<int>>(), with
 // no indication that alloc<int> is actually a default parameter.
 // Equally bad:
 //    template<class T> void OtherFunc(MyClass<T> t) { ... }
@@ -660,7 +660,7 @@ const clang::Type* GetCanonicalType(const clang::Type* type);
 
 // A 'component' of a type is a type beneath it in the AST tree.
 // So 'Foo*' has component 'Foo', as does 'vector<Foo>', while
-// vector<pair<Foo, Bar> > has components pair<Foo,Bar>, Foo, and Bar.
+// vector<pair<Foo, Bar>> has components pair<Foo,Bar>, Foo, and Bar.
 set<const clang::Type*> GetComponentsOfType(const clang::Type* type);
 
 // The ElaborationType -- which says whether a type is preceded by

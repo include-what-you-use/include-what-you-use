@@ -240,11 +240,7 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
       use_loc_(use_loc),
       use_kind_(use_kind),             // full use or fwd-declare use
       in_cxx_method_body_(in_cxx_method_body),
-      comment_(comment ? comment : ""),
-      public_headers_(),
-      suggested_header_(),             // figure that out later
-      ignore_use_(false),
-      is_iwyu_violation_(false) {
+      comment_(comment ? comment : "") {
 }
 
 // This constructor always creates a full use.
@@ -257,12 +253,7 @@ OneUse::OneUse(const string& symbol_name, const FileEntry* dfn_file,
       decl_filepath_(dfn_filepath),
       use_loc_(use_loc),
       use_kind_(kFullUse),
-      in_cxx_method_body_(false),
-      comment_(),
-      public_headers_(),
-      suggested_header_(),
-      ignore_use_(false),
-      is_iwyu_violation_(false) {
+      in_cxx_method_body_(false) {
   // Sometimes dfn_filepath is actually a fully quoted include.  In
   // that case, we take that as an unchangable mapping that we
   // should never remove, so we make it the suggested header.
@@ -434,9 +425,10 @@ string MungedForwardDeclareLine(const NamedDecl* decl) {
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
     const NamedDecl* fwd_decl)
     : line_(internal::MungedForwardDeclareLine(fwd_decl)),
-      start_linenum_(-1), end_linenum_(-1),     // set 'for real' below
-      is_desired_(false), is_present_(false), symbol_counts_(),
-      quoted_include_(), included_file_(nullptr), fwd_decl_(fwd_decl) {
+      start_linenum_(-1),   // set 'for real' below
+      end_linenum_(-1),     // set 'for real' below
+      included_file_(nullptr),
+      fwd_decl_(fwd_decl) {
   const SourceRange decl_lines = GetSourceRangeOfClassDecl(fwd_decl);
   // We always want to use the instantiation line numbers: for code like
   //     FORWARD_DECLARE_CLASS(MyClass);
@@ -448,9 +440,10 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
     const FileEntry* included_file, const string& quoted_include, int linenum)
     : line_("#include " + quoted_include),
-      start_linenum_(linenum), end_linenum_(linenum),
-      is_desired_(false), is_present_(false), symbol_counts_(),
-      quoted_include_(quoted_include), included_file_(included_file),
+      start_linenum_(linenum),
+      end_linenum_(linenum),
+      quoted_include_(quoted_include),
+      included_file_(included_file),
       fwd_decl_(nullptr) {
 }
 
@@ -483,13 +476,6 @@ IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
     quoted_file_(quoted_include_name),
     is_prefix_header_(false),
     is_pch_in_code_(false),
-    associated_headers_(),
-    symbol_uses_(),
-    lines_(),
-    direct_includes_(),
-    direct_includes_as_fileentries_(),
-    direct_forward_declares_(),
-    desired_includes_(),
     desired_includes_have_been_calculated_(false)
 {}
 
@@ -817,7 +803,7 @@ set<string> CalculateMinimalIncludes(
       unmapped_uses.insert(&use);
   }
   while (!unmapped_uses.empty()) {
-    map<string, pair<int,int> > header_counts;   // total appearances, 1st's
+    map<string, pair<int,int>> header_counts;   // total appearances, 1st's
     for (OneUse* use : unmapped_uses) {
       CHECK_(!use->has_suggested_header());
       const vector<string>& public_headers = use->public_headers();
@@ -829,7 +815,7 @@ set<string> CalculateMinimalIncludes(
           ++header_counts[choice].second;  // increment first-in-list count
       }
     }
-    pair<string, pair<int, int> > best = *header_counts.begin();
+    pair<string, pair<int, int>> best = *header_counts.begin();
     for (const auto& header_count : header_counts) {
       // Use pair<>'s operator> to order for us.
       if (header_count.second > best.second)
@@ -1496,7 +1482,7 @@ static string GetWarningMsg(const OneUse& use) {
 }
 
 int IwyuFileInfo::EmitWarningMessages(const vector<OneUse>& uses) {
-  set<pair<int, string> > iwyu_warnings;   // line-number, warning-msg.
+  set<pair<int, string>> iwyu_warnings;   // line-number, warning-msg.
   for (const OneUse& use : uses) {
     if (use.is_iwyu_violation())
       iwyu_warnings.insert(make_pair(use.UseLinenum(), GetWarningMsg(use)));
@@ -1716,7 +1702,7 @@ class CountGt {
 // file.  For all symbols in this vector but not in m, we add them to
 // the end of the output as well, with a "(ptr only)" suffix.
 vector<string> GetSymbolsSortedByFrequency(const map<string, int>& m) {
-  vector<pair<string, int> > count_vector(m.begin(), m.end());
+  vector<pair<string, int>> count_vector(m.begin(), m.end());
   sort(count_vector.begin(), count_vector.end(), CountGt());
 
   vector<string> retval;

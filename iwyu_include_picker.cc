@@ -951,11 +951,7 @@ string FindFileInSearchPath(const vector<string>& search_path,
 }  // anonymous namespace
 
 IncludePicker::IncludePicker(bool no_default_mappings)
-    : symbol_include_map_(),
-      filepath_include_map_(),
-      filepath_visibility_map_(),
-      quoted_includes_to_quoted_includers_(),
-      has_called_finalize_added_include_lines_(false) {
+    : has_called_finalize_added_include_lines_(false) {
   if (!no_default_mappings) {
     AddDefaultMappings();
   }
@@ -1378,7 +1374,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
                                         const vector<string>& search_path) {
   string absolute_path = FindFileInSearchPath(search_path, filename);
 
-  llvm::ErrorOr<unique_ptr<MemoryBuffer> > bufferOrError =
+  llvm::ErrorOr<unique_ptr<MemoryBuffer>> bufferOrError =
       MemoryBuffer::getFile(absolute_path);
   if (std::error_code error = bufferOrError.getError()) {
     errs() << "Cannot open mapping file '" << absolute_path << "': "

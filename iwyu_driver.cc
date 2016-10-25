@@ -85,7 +85,7 @@ void ExpandArgsFromBuf(const char *Arg,
                        SmallVectorImpl<const char*> &ArgVector,
                        set<std::string> &SavedStrings) {
   const char *FName = Arg + 1;
-  ErrorOr<unique_ptr<MemoryBuffer> > MemBufOrErr = MemoryBuffer::getFile(FName);
+  ErrorOr<unique_ptr<MemoryBuffer>> MemBufOrErr = MemoryBuffer::getFile(FName);
   if (!MemBufOrErr) {
     ArgVector.push_back(SaveStringInSet(SavedStrings, Arg));
     return;

@@ -34,7 +34,6 @@ using std::map;
 using std::pair;
 using std::set;
 
-
 // This cache is used to store 'full use information' for a given
 // templated function call or type instantiation:
 // 1) If you call MyClass<Foo, Bar>::baz(), what template arguments
@@ -61,10 +60,10 @@ class FullUseCache {
   // caching reporting-info for.  Since what we report depends on
   // what the types-of-interest were, we store that in the key too.
   typedef pair<const void*,
-               map<const clang::Type*, const clang::Type*> > Key;
+               map<const clang::Type*, const clang::Type*>> Key;
   // The value are the types and decls we reported.
   typedef pair<const set<const clang::Type*>,
-               const set<const clang::NamedDecl*> > Value;
+               const set<const clang::NamedDecl*>> Value;
 
   void Insert(const void* decl_or_type,
               const map<const clang::Type*, const clang::Type*>& resugar_map,
