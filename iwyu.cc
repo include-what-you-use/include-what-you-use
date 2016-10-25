@@ -290,7 +290,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       : compiler_(compiler),
         current_ast_node_(nullptr) {}
 
-  virtual ~BaseAstVisitor() {}
+  virtual ~BaseAstVisitor() = default;
 
   //------------------------------------------------------------
   // Pure virtual methods that a subclass must implement.
@@ -1226,7 +1226,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       : Base(visitor_state->compiler),
         visitor_state_(visitor_state) {}
 
-  ~IwyuBaseAstVisitor() override {}
+  ~IwyuBaseAstVisitor() override = default;
 
   // To avoid having this-> pointers everywhere, we re-export Base's
   // functions that we use in this class.  This is a language nit(?)
@@ -2569,7 +2569,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // We detect because MyClass's parent is TemplateTemplateParmDecl.
   // TODO(csilvers): And not when they're a type that's in
   // known_fully_used_tpl_type_args_.  See if that solves the problem with
-  // I1_TemplateClass<std::vector<I1_Class> > i1_nested_templateclass(...)
+  // I1_TemplateClass<std::vector<I1_Class>> i1_nested_templateclass(...)
   void DetermineForwardDeclareStatusForTemplateArg(ASTNode* ast_node) {
     CHECK_(ast_node->IsA<TemplateArgument>() &&
            "Should only pass in a template arg to DFDSFTA");
@@ -2985,7 +2985,7 @@ class InstantiatedTemplateVisitor
 
   // When we see a template argument used inside an instantiated
   // template, we want to explore the type recursively.  For instance
-  // if we see Inner<Outer<Foo> >(), we want to recurse onto Foo.
+  // if we see Inner<Outer<Foo>>(), we want to recurse onto Foo.
   bool TraverseSubstTemplateTypeParmType(
       clang::SubstTemplateTypeParmType* type) {
     if (!Base::TraverseSubstTemplateTypeParmType(type))

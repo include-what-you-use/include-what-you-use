@@ -40,9 +40,9 @@ namespace include_what_you_use {
 // can be wrong for implicit template instantiations and functions.
 // (1) Consider the following code:
 //     template<class T> hash { ... };                    // tpl decl
-//     template<class T> hash<basic_string<T> > { ... };  // partial spec decl
-//     hash<basic_string<char> > myhash;
-// The decl associated with hash<basic_string<char> > is a third decl
+//     template<class T> hash<basic_string<T>> { ... };   // partial spec decl
+//     hash<basic_string<char>> myhash;
+// The decl associated with hash<basic_string<char>> is a third decl
 // that is formed implicitly from the partial-spec decl.  The bug(?) is
 // that clang gives the third decl the wrong location: it should have
 // the location of the partial-spec decl it is instantiating, but

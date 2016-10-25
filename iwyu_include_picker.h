@@ -69,7 +69,7 @@ enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
 
 class IncludePicker {
  public:
-  typedef map<string, vector<string> > IncludeMap;  // map_from to <map_to,...>
+  typedef map<string, vector<string>> IncludeMap;  // map_from to <map_to,...>
 
   explicit IncludePicker(bool no_default_mappings);
 
@@ -225,7 +225,7 @@ class IncludePicker {
 
   // All the includes we've seen so far, to help with globbing and
   // other dynamic mapping.  For each file, we list who #includes it.
-  map<string, set<string> > quoted_includes_to_quoted_includers_;
+  map<string, set<string>> quoted_includes_to_quoted_includers_;
 
   // Given the filepaths of an includer and includee, give the
   // include-as-written (including <>'s or ""'s) that the includer
@@ -242,7 +242,7 @@ class IncludePicker {
   // regular expressions expanded, e.g. if foo/bar/x.cc is processed,
   // friend_to_headers_map_["foo/bar/x.cc"] will be augmented with the
   // contents of friend_to_headers_map_["@\"foo/bar/.*\""].
-  map<string, set<string> > friend_to_headers_map_;
+  map<string, set<string>> friend_to_headers_map_;
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;

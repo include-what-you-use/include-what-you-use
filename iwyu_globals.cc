@@ -153,9 +153,7 @@ OptionsParser::~OptionsParser() {
 }
 
 CommandlineFlags::CommandlineFlags()
-    : check_also(),
-      howtodebug(CommandlineFlags::kUnspecified),
-      cwd(""),
+    : howtodebug(CommandlineFlags::kUnspecified),
       transitive_includes_only(false),
       verbose(getenv("IWYU_VERBOSE") ? atoi(getenv("IWYU_VERBOSE")) : 1),
       no_default_mappings(false),
