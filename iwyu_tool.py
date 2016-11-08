@@ -62,6 +62,10 @@ def main(compilation_db_path, source_files, verbose, iwyu_args):
     with open(compilation_db_path, 'r') as fileobj:
         compilation_db = json.load(fileobj)
 
+    # expand symlinks
+    for entry in compilation_db:
+        entry['file'] = os.path.realpath(entry['file'])
+
     # Cross-reference source files with compilation database
     source_files = [os.path.realpath(s) for s in source_files]
     if not source_files:
