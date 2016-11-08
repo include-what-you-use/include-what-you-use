@@ -132,8 +132,8 @@ def _bootstrap():
     def partition_args(argv):
         """ Split around '--' into driver args and IWYU args. """
         try:
-            dd = argv.index('--')
-            return argv[:dd], argv[dd+1:]
+            double_dash = argv.index('--')
+            return argv[:double_dash], argv[double_dash+1:]
         except ValueError:
             return argv, []
 
