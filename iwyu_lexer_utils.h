@@ -30,7 +30,7 @@ using std::vector;
 // get the character data from SourceLocations.
 class CharacterDataGetterInterface {
  public:
-  virtual ~CharacterDataGetterInterface() {}
+  virtual ~CharacterDataGetterInterface() = default;
   virtual const char* GetCharacterData(clang::SourceLocation loc) const = 0;
 };
 

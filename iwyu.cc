@@ -290,7 +290,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       : compiler_(compiler),
         current_ast_node_(nullptr) {}
 
-  virtual ~BaseAstVisitor() {}
+  virtual ~BaseAstVisitor() = default;
 
   //------------------------------------------------------------
   // Pure virtual methods that a subclass must implement.
@@ -1226,7 +1226,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       : Base(visitor_state->compiler),
         visitor_state_(visitor_state) {}
 
-  ~IwyuBaseAstVisitor() override {}
+  ~IwyuBaseAstVisitor() override = default;
 
   // To avoid having this-> pointers everywhere, we re-export Base's
   // functions that we use in this class.  This is a language nit(?)

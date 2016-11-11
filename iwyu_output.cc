@@ -69,7 +69,7 @@ namespace {
 
 class OutputLine {
  public:
-  OutputLine() {}
+  OutputLine() = default;
   explicit OutputLine(const string& line)
       : line_(line) {}
   OutputLine(const string& line, const vector<string>& symbols)
@@ -240,7 +240,9 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
       use_loc_(use_loc),
       use_kind_(use_kind),             // full use or fwd-declare use
       in_cxx_method_body_(in_cxx_method_body),
-      comment_(comment ? comment : "") {
+      comment_(comment ? comment : ""),
+      ignore_use_(false),
+      is_iwyu_violation_(false) {
 }
 
 // This constructor always creates a full use.
@@ -253,7 +255,9 @@ OneUse::OneUse(const string& symbol_name, const FileEntry* dfn_file,
       decl_filepath_(dfn_filepath),
       use_loc_(use_loc),
       use_kind_(kFullUse),
-      in_cxx_method_body_(false) {
+      in_cxx_method_body_(false),
+      ignore_use_(false),
+      is_iwyu_violation_(false) {
   // Sometimes dfn_filepath is actually a fully quoted include.  In
   // that case, we take that as an unchangable mapping that we
   // should never remove, so we make it the suggested header.
@@ -427,6 +431,8 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
     : line_(internal::MungedForwardDeclareLine(fwd_decl)),
       start_linenum_(-1),   // set 'for real' below
       end_linenum_(-1),     // set 'for real' below
+      is_desired_(false),
+      is_present_(false),
       included_file_(nullptr),
       fwd_decl_(fwd_decl) {
   const SourceRange decl_lines = GetSourceRangeOfClassDecl(fwd_decl);
@@ -442,6 +448,8 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
     : line_("#include " + quoted_include),
       start_linenum_(linenum),
       end_linenum_(linenum),
+      is_desired_(false),
+      is_present_(false),
       quoted_include_(quoted_include),
       included_file_(included_file),
       fwd_decl_(nullptr) {
