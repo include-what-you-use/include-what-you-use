@@ -2,6 +2,9 @@
 [
   { include: ["<__functional_base>", private, "<functional>", public ] },
   { include: ["<__mutex_base>", private, "<mutex>", public ] },
+  { symbol: [ "std::declval", private, "<utility>", public ] },
+  { symbol: [ "std::forward", private, "<utility>", public ] },
   { symbol: [ "std::move", private, "<algorithm>", public ] },
+  { symbol: [ "std::nullptr_t", private, "<cstddef>", public ] },
   { symbol: [ "std::string", private, "<string>", public ] },
 ]
