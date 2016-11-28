@@ -1027,6 +1027,14 @@ const Type* GetTypeOf(const Expr* expr) {
   return expr->getType().getTypePtr();
 }
 
+const Type* GetTypeOf(const CXXConstructExpr* expr) {
+  const Type* type = expr->getType().getTypePtr();
+  if (const clang::ArrayType* array_type = type->getAsArrayTypeUnsafe()) {
+    type = array_type->getElementType().getTypePtr();
+  }
+  return type;
+}
+
 const Type* GetTypeOf(const ValueDecl* decl) {
   return decl->getType().getTypePtr();
 }
