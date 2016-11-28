@@ -650,6 +650,8 @@ bool DeclsAreInSameClass(const clang::Decl* decl1, const clang::Decl* decl2);
 // --- Utilities for Type.
 
 const clang::Type* GetTypeOf(const clang::Expr* expr);
+// Returns the type of the constructed class.
+const clang::Type* GetTypeOf(const clang::CXXConstructExpr* expr);
 // Returns the type of the given variable, function, or enum declaration.
 const clang::Type* GetTypeOf(const clang::ValueDecl* decl);
 // ...or class, struct, union, enum, typedef, or template type.
