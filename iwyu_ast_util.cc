@@ -846,9 +846,14 @@ const NamedDecl* GetDefinitionAsWritten(const NamedDecl* decl) {
     if (const ClassTemplateDecl* tpl_decl = DynCastFrom(decl))
       decl = tpl_decl->getTemplatedDecl();  // convert back to CXXRecordDecl
   } else if (const FunctionDecl* func_decl = DynCastFrom(decl)) {
-    if (const FunctionDecl* tpl_pattern =
-        func_decl->getTemplateInstantiationPattern())
-      decl = tpl_pattern;
+    // If we're instantiated from a template, use the template pattern as the
+    // decl-as-written.
+    // But avoid friend declarations in templates, something happened in Clang
+    // r283207 that caused them to form a dedicated redecl chain, separate
+    // from all other redecls.
+    const FunctionDecl* tp_decl = func_decl->getTemplateInstantiationPattern();
+    if (tp_decl && tp_decl->getFriendObjectKind() == Decl::FOK_None)
+      decl = tp_decl;
   }
   // Then, get to definition.
   if (const NamedDecl* class_dfn = GetDefinitionForClass(decl)) {
