@@ -230,13 +230,19 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
 
   if (MatchTwoTokens(tokens, "private,", "include", 3, begin_loc)) {
     // 3rd token should be a quoted header.
+    const string& suggested = tokens[2];
+    if (!IsQuotedInclude(suggested)) {
+      Warn(begin_loc, "Suggested include must be a quoted header");
+      return;
+    }
+
     const string quoted_this_file
         = ConvertToQuotedInclude(GetFilePath(begin_loc));
-    MutableGlobalIncludePicker()->AddMapping(quoted_this_file, tokens[2]);
+    MutableGlobalIncludePicker()->AddMapping(quoted_this_file, suggested);
     MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_this_file);
     ERRSYM(this_file_entry) << "Adding private pragma-mapping: "
                             << quoted_this_file << " -> "
-                            << tokens[2] << "\n";
+                            << suggested << "\n";
     return;
   }
 
@@ -251,9 +257,15 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
 
   if (MatchOneToken(tokens, "no_include", 2, begin_loc)) {
     // 2nd token should be an quoted header.
-    no_include_map_[this_file_entry].insert(tokens[1]);
+    const string& inhibited = tokens[1];
+    if (!IsQuotedInclude(inhibited)) {
+      Warn(begin_loc, "Inhibited include must be a quoted header");
+      return;
+    }
+
+    no_include_map_[this_file_entry].insert(inhibited);
     ERRSYM(this_file_entry) << "Inhibiting include of "
-                            << tokens[1] << "\n";
+                            << inhibited << "\n";
     return;
   }
 
