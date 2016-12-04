@@ -29,6 +29,12 @@
 // IWYU: Unknown or malformed pragma \(foo\)
 // IWYU pragma: foo
 
+// IWYU: Suggested include must be a quoted header
+// IWYU pragma: private, include not-a-quoted-header.h
+
+// IWYU: Inhibited include must be a quoted header
+// IWYU pragma: no_include not-a-quoted-header.h
+
 // IWYU: begin_exports without an end_exports
 // IWYU pragma: begin_exports
 
