@@ -65,8 +65,6 @@ int main() {
   typedef IndirectClass LocalClass;
   LocalClass lc;
   LocalClass* lc_ptr = 0;
-  // TODO(csilvers): this is wrong. Figure out how to resugar in this case too.
-  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   Fn(lc);
   Fn(lc_ptr);
   FnWithPtr(lc_ptr);

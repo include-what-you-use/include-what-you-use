@@ -719,6 +719,23 @@ GetTplTypeResugarMapForFunctionExplicitTplArgs(
   return retval;
 }
 
+// Get the type of an expression while preserving as much type sugar as
+// possible. This was originally designed for use with function argument
+// expressions, and so might not work in a more general context.
+static const Type* GetSugaredTypeOf(const Expr* expr) {
+  // First, try to find an ImplicitCastExpr under the expr, and let that provide
+  // the type. This has a higher probability of yielding a sugared type.
+  for (const Stmt* child_expr : expr->children()) {
+    if (const auto* cast_expr = dyn_cast<ImplicitCastExpr>(child_expr)) {
+      return cast_expr->getType().getTypePtr();
+    }
+  }
+
+  // If we didn't find a type via ImplicitCastExpr, just return the type of the
+  // expr itself.
+  return GetTypeOf(expr);
+}
+
 map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     const FunctionDecl* decl, const Expr* calling_expr) {
   map<const Type*, const Type*> retval;
@@ -788,7 +805,7 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   //                 under it, take the pre-cast type instead?
   set<const Type*> fn_arg_types;
   for (unsigned i = 0; i < num_args; ++i) {
-    const Type* argtype = GetTypeOf(fn_args[i]);
+    const Type* argtype = GetSugaredTypeOf(fn_args[i]);
     // TODO(csilvers): handle RecordTypes that are a TemplateSpecializationDecl
     InsertAllInto(GetComponentsOfType(argtype), &fn_arg_types);
   }
