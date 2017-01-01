@@ -70,8 +70,6 @@ int main() {
   Fn(lc);
   Fn(lc_ptr);
   FnWithPtr(lc_ptr);
-  // TODO(csilvers): this is wrong. Figure out how to resugar in this case too.
-  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   FnWithReference(lc);
   FnWithReference(lc_ptr);
 
