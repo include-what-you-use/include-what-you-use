@@ -1763,7 +1763,7 @@ int main() {
   // IWYU: std::vector is...*<vector>
   // IWYU: std::vector<.*>::const_iterator is...*<vector>
   const std::vector<float>::const_iterator float_constit = float_vector.begin();
-  // IWYU: std::vector is...*<vector>
+  // IWYU: std::vector<.*>::const_iterator is...*<vector>
   (void)(float_it == float_constit);
   // IWYU: std::vector is...*<vector>
   // IWYU: std::vector<.*>::const_iterator is...*<vector>
@@ -1785,8 +1785,8 @@ int main() {
            // IWYU: std::vector is...*<vector>
            float_reverse_it = float_vector.rbegin();
        // IWYU: std::vector is...*<vector>
+       // IWYU: std::vector<.*>::reverse_iterator is...*<vector>
        float_reverse_it != float_vector.rbegin();
-       // IWYU: std::vector is...*<vector>
        // IWYU: std::vector<.*>::reverse_iterator is...*<vector>
        ++float_reverse_it) ;
   // IWYU: std::vector is...*<vector>
@@ -1798,8 +1798,8 @@ int main() {
            // IWYU: std::vector is...*<vector>
            float_const_reverse_it = float_vector.rbegin();
        // IWYU: std::vector is...*<vector>
+       // IWYU: std::vector<.*>::const_reverse_iterator is...*<vector>
        float_const_reverse_it != float_vector.rend();
-       // IWYU: std::vector is...*<vector>
        // IWYU: std::vector<.*>::const_reverse_iterator is...*<vector>
        ++float_const_reverse_it) ;
 
