@@ -1765,6 +1765,8 @@ int main() {
   const std::vector<float>::const_iterator float_constit = float_vector.begin();
   // IWYU: std::vector<.*>::const_iterator is...*<vector>
   (void)(float_it == float_constit);
+  // IWYU: std::vector<.*>::const_iterator is...*<vector>
+  (void)(float_constit == float_it);
   // IWYU: std::vector is...*<vector>
   // IWYU: std::vector<.*>::const_iterator is...*<vector>
   std::vector<float>::const_iterator float_forit;
