@@ -163,6 +163,7 @@ target_link_libraries(include-what-you-use
 if( WIN32 )
   target_link_libraries(include-what-you-use
     shlwapi
+    version
   )
 elseif( UNIX )
   include(FindCurses)
