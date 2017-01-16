@@ -1266,20 +1266,35 @@ const Type* TypeOfParentIfMethod(const CallExpr* expr) {
 }
 
 const Expr* GetFirstClassArgument(CallExpr* expr) {
-  for (CallExpr::arg_iterator it = expr->arg_begin();
-       it != expr->arg_end(); ++it) {
-    const Type* argtype = GetTypeOf(*it);
-    // Make sure we do the right thing given a function like
-    //    template <typename T> void operator>>(const T& x, ostream& os);
-    // In this case ('myclass >> os'), we want to be returning the
-    // type of os, not of myclass, and we do, because myclass will be
-    // a SubstTemplateTypeParmType, not a RecordType.
-    if (isa<SubstTemplateTypeParmType>(argtype))
-      continue;
-    argtype = argtype->getUnqualifiedDesugaredType();  // see through typedefs
-    if (isa<RecordType>(argtype) ||
-        isa<TemplateSpecializationType>(argtype)) {
-      return *it;
+  if (const FunctionDecl* callee_decl = expr->getDirectCallee()) {
+    if (isa<CXXMethodDecl>(callee_decl)) {
+      // If a method is called, return 'this'.
+      return expr->getArg(0);
+    }
+    // Handle free functions.
+    CHECK_(callee_decl->getNumParams() == expr->getNumArgs() &&
+        "Require one-to-one match between call arguments and decl parameters");
+    int params_count = callee_decl->getNumParams();
+    for (int i = 0; i < params_count; i++) {
+      // View argument types from the perspective of function declaration,
+      // not from the caller's perspective.  For example, function parameter
+      // can have template type but function argument is not necessarily
+      // a template when the function is called.
+      const Type* param_type = GetTypeOf(callee_decl->getParamDecl(i));
+      param_type = RemovePointersAndReferencesAsWritten(param_type);
+      // Make sure we do the right thing given a function like
+      //    template <typename T> void operator>>(const T& x, ostream& os);
+      // In this case ('myclass >> os'), we want to be returning the
+      // type of os, not of myclass, and we do, because myclass will be
+      // a SubstTemplateTypeParmType, not a RecordType.
+      if (isa<SubstTemplateTypeParmType>(param_type))
+        continue;
+      // See through typedefs.
+      param_type = param_type->getUnqualifiedDesugaredType();
+      if (isa<RecordType>(param_type) ||
+          isa<TemplateSpecializationType>(param_type)) {
+        return expr->getArg(i);
+      }
     }
   }
   return nullptr;
