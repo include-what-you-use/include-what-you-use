@@ -103,6 +103,9 @@ if( MINGW )
 endif()
 
 if( MSVC )
+  # Work around 'too many sections' error with MSVC
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+
   # Disable warnings for IWYU, and disable exceptions in MSVC's STL.
   add_definitions(
     -wd4722 # Suppress ''destructor'' : destructor never returns, potential memory leak
