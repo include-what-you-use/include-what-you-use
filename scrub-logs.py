@@ -26,7 +26,7 @@ def strip_path_prefix(line):
 
 
 def strip_addrs(line):
-    line = re.sub(r'\b(0x)?[0-9A-Fa-f]{6,16}\b', '', line)
+    line = re.sub(r'\b(0x)?[0-9A-Fa-f]{6,16}', '', line)
     return line
 
 
