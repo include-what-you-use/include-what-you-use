@@ -1,6 +1,6 @@
 # Include What You Use #
 
-This README was generated on 2017-01-16 18:38:58 UTC.
+This README was generated on 2017-01-30 19:01:29 UTC.
 
 For more in-depth documentation, see http://github.com/include-what-you-use/include-what-you-use/tree/master/docs.
 
@@ -42,7 +42,7 @@ In an out-of-tree configuration, we assume you already have compiled LLVM and Cl
         iwyu-trunk/include-what-you-use$ git checkout clang_3.2
         iwyu-trunk/include-what-you-use$ cd ..
 
-  * Create a build root and use CMake to generate a build system linked with LLVM/Clang prebuilts, e.g.
+  * Create a build root and use CMake to generate a build system linked with LLVM/Clang prebuilts. Note that CMake settings need to match exactly, so you may need to add `-DCMAKE_BUILD_TYPE=Release` or more to the command-line below:
 
         # This example uses the Makefile generator, but anything should work.
         iwyu-trunk$ mkdir build && cd build
