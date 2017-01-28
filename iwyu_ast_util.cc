@@ -1272,12 +1272,14 @@ const Expr* GetFirstClassArgument(CallExpr* expr) {
       return expr->getArg(0);
     }
     // Handle free functions.
+    CHECK_(callee_decl->getNumParams() == expr->getNumArgs() &&
+        "Require one-to-one match between call arguments and decl parameters");
     int params_count = callee_decl->getNumParams();
     for (int i = 0; i < params_count; i++) {
-      // View argument types from the perspective of function body, not from
-      // the caller's perspective.  For example, function parameter can have
-      // template type but function argument is not necesserily a template
-      // when the function is called.
+      // View argument types from the perspective of function declaration,
+      // not from the caller's perspective.  For example, function parameter
+      // can have template type but function argument is not necessarily
+      // a template when the function is called.
       const Type* param_type = GetTypeOf(callee_decl->getParamDecl(i));
       param_type = RemovePointersAndReferencesAsWritten(param_type);
       // Make sure we do the right thing given a function like
