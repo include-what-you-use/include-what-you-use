@@ -45,8 +45,10 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
       -D_SCL_SECURE_NO_WARNINGS
 
       # Disabled warnings.
+      -wd4141 # Suppress ''modifier' : used more than once' (because of __forceinline combined with inline)
       -wd4146 # Suppress 'unary minus operator applied to unsigned type, result still unsigned'
       -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
+      -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
       -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
       -wd4345 # Suppress 'behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized'
       -wd4355 # Suppress ''this' : used in base member initializer list'
@@ -103,14 +105,14 @@ if( MINGW )
 endif()
 
 if( MSVC )
-  # Work around 'too many sections' error with MSVC
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
-
   # Disable warnings for IWYU, and disable exceptions in MSVC's STL.
   add_definitions(
     -wd4722 # Suppress ''destructor'' : destructor never returns, potential memory leak
     -D_HAS_EXCEPTIONS=0
   )
+
+  # Enable bigobj support and sane C++ exception semantics.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /EHsc")
 
   # Put project in solution folder
   set_target_properties(include-what-you-use
@@ -167,6 +169,7 @@ target_link_libraries(include-what-you-use
 if( WIN32 )
   target_link_libraries(include-what-you-use
     shlwapi
+    version # For clangDriver's MSVCToolchain
   )
 elseif( UNIX )
   include(FindCurses)
