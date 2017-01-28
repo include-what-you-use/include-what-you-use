@@ -35,7 +35,7 @@ In an out-of-tree configuration, we assume you already have compiled LLVM and Cl
         iwyu-trunk/include-what-you-use$ git checkout clang_3.2
         iwyu-trunk/include-what-you-use$ cd ..
 
-  * Create a build root and use CMake to generate a build system linked with LLVM/Clang prebuilts, e.g.
+  * Create a build root and use CMake to generate a build system linked with LLVM/Clang prebuilts. Note that CMake settings need to match exactly, so you may need to add `-DCMAKE_BUILD_TYPE=Release` or more to the command-line below:
 
         # This example uses the Makefile generator, but anything should work.
         iwyu-trunk$ mkdir build && cd build
