@@ -13,6 +13,7 @@
 // expansions when the macro is written in a to-ignore file.
 
 #include "tests/cxx/macro_location.h"
+#include "tests/cxx/macro_location-inet.h"
 
 struct A {
   // This doesn't require us to forward-declare ToBeDeclared because it's
@@ -26,6 +27,13 @@ struct A {
 
 class ToBeDeclaredLater1 { };
 class ToBeDeclaredLater2 { };
+
+// This is lifted from a reduced repro case for htons of inet.h.
+// Its nesting provokes something that isn't covered by the rest of the
+// macro_location suite.
+int my_htons(int x) {
+  return htons(x);
+}
 
 /**** IWYU_SUMMARY
 
