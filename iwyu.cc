@@ -1375,62 +1375,61 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   SourceLocation GetCanonicalUseLocation(SourceLocation use_loc,
                                          const NamedDecl* decl) {
     // If we're not in a macro, just echo the use location.
-    if (!IsInMacro(use_loc))
+    if (!use_loc.isMacroID())
       return use_loc;
 
-    // If the macro definition file contains a forward-declaration for decl,
-    // we treat that as a use-attribution hint. See below for details.
-    const FileEntry* macro_def_file = GetFileEntry(GetSpellingLoc(use_loc));
+    VERRS(5) << "Trying to determine use location for '"
+             << PrintableDecl(decl) << "'\n";
+
+    clang::SourceManager* sm = GlobalSourceManager();
+    SourceLocation spelling_loc = sm->getSpellingLoc(use_loc);
+    SourceLocation expansion_loc = sm->getExpansionLoc(use_loc);
+
+    // If the file defining the macro contains a forward decl, keep it around
+    // and treat it as a hint that the expansion loc is responsible for the
+    // symbol.
+    const FileEntry* macro_def_file = GetLocFileEntry(spelling_loc);
+    VERRS(5) << "Macro is defined in file '" << GetFilePath(macro_def_file)
+             << "'. Looking for fwd-decl hint...\n";
+
     const NamedDecl* fwd_decl = nullptr;
     for (const NamedDecl* redecl : GetClassRedecls(decl)) {
-      if (GetFileEntry(redecl) == macro_def_file &&
-          IsForwardDecl(redecl)) {
+      if (GetFileEntry(redecl) == macro_def_file && IsForwardDecl(redecl)) {
         fwd_decl = redecl;
+
+        // Make sure we keep that forward-declaration, even if it's probably
+        // unused in this file.
+        IwyuFileInfo* file_info =
+            preprocessor_info().FileInfoFor(macro_def_file);
+        file_info->ReportForwardDeclareUse(
+            spelling_loc, fwd_decl,
+            IsNodeInsideCXXMethodBody(current_ast_node()), nullptr);
         break;
       }
     }
 
-    if (fwd_decl) {
-      // Make sure we keep that forward-declaration, even if it's probably
-      // unused in this file.
-      preprocessor_info().FileInfoFor(macro_def_file)->ReportForwardDeclareUse(
-          use_loc, decl, IsNodeInsideCXXMethodBody(current_ast_node()),
-          nullptr);
-    }
-
     // Resolve the best use location based on our current knowledge.
     //
-    // 1) If the macro definition file forward-declares the used decl, that's a
-    //    hint that it wants the expansion location to take responsibility.
-    // 2) If the symbol being used is passed as an argument to the macro, we
-    //    want the expansion location to take responsibility (that thing they
-    //    passed in is something they know about, and the macro doesn't.)
-    // 3) If the use_loc is in <scratch space>, we assume it's formed by macro
+    // 1) If the use_loc is in <scratch space>, we assume it's formed by macro
     //    argument concatenation, and attribute responsibility to the expansion
     //    location.
+    // 2) If the macro definition file forward-declares the used decl, that's a
+    //    hint that it wants the expansion location to take responsibility.
     //
-    // Otherwise, the macro file is responsible for including the symbol.
-    SourceLocation expansion_loc = GetInstantiationLoc(use_loc);
-    const char* responsible = "expansion";
-
-    if (fwd_decl != nullptr) {
-      VERRS(5) << "Macro file has a forward-decl attribution hint.\n";
+    // Otherwise, the spelling loc is responsible.
+    if (IsInScratchSpace(spelling_loc)) {
+      VERRS(5) << "Spelling location is in <scratch space>, presumably as a "
+                  "result of macro arg concatenation.\n";
       use_loc = expansion_loc;
-    } else if (IsInScratchSpace(use_loc)) {
-      VERRS(5) << "Decl was used in <scratch space>, presumably as a result of "
-                  "macro arg concatenation.\n";
-      use_loc = expansion_loc;
-    } else if (GlobalSourceManager()->isMacroArgExpansion(use_loc)) {
-      VERRS(5) << "Use location is a macro arg expansion.\n";
+    } else if (fwd_decl != nullptr) {
+      VERRS(5) << "Found a forward-decl in macro definition file.\n";
       use_loc = expansion_loc;
     } else {
-      use_loc = GetSpellingLoc(use_loc);
-      responsible = "definition";
+      use_loc = spelling_loc;
     }
 
-    VERRS(5) << "Attributing " << decl->getNameAsString() << " use to macro "
-             << responsible << " location at " << PrintableLoc(use_loc)
-             << ".\n";
+    VERRS(4) << "Attributing use of '" << PrintableDecl(decl)
+             << "' to location at " << PrintableLoc(use_loc) << ".\n";
 
     return use_loc;
   }
