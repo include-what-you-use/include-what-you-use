@@ -402,10 +402,16 @@ string PrintableSourceRange(SourceRange range) {
   return PrintableLoc(range.getBegin()) + " - " + PrintableLoc(range.getEnd());
 }
 
-string PrintableDecl(const Decl* decl) {
-  std::string buffer;    // llvm wants regular string, not our versa-string
+string PrintableDecl(const Decl* decl, bool terse/*=true*/) {
+  // Use the terse flag to limit the level of output to one line.
+  clang::PrintingPolicy policy = decl->getASTContext().getPrintingPolicy();
+  policy.TerseOutput = terse;
+  policy.SuppressInitializers = terse;
+  policy.PolishForDeclaration = terse;
+
+  std::string buffer;
   raw_string_ostream ostream(buffer);
-  decl->print(ostream);  // Note: can also set indentation and printingpolicy
+  decl->print(ostream, policy);
   return ostream.str();
 }
 
