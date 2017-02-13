@@ -1889,6 +1889,13 @@ size_t PrintableDiffs(const string& filename,
 void IwyuFileInfo::HandlePreprocessingDone() {
   // Check macros defined by includer.  Requires file preprocessing to be
   // finished to know all direct includes and all macro usages.
+  //
+  // Exclude prefix headers from mapping heuristics.  Includes in prefix
+  // headers are kept regardless of their usage in includer.  And entire
+  // include-what-you-use principle isn't really applicable to prefix headers.
+  if (is_prefix_header()) {
+    return;
+  }
   bool should_report_violations = ShouldReportIWYUViolationsFor(file_);
   std::list<const FileEntry*> direct_macro_use_includees;
   std::set_intersection(macro_users_.begin(), macro_users_.end(),
