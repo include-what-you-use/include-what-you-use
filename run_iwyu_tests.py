@@ -99,7 +99,8 @@ class OneIwyuTest(unittest.TestCase):
       'lambda_fwd_decl.cc': ['-std=c++11'],
       'lateparsed_template.cc': ['-fdelayed-template-parsing'],
       'macro_defined_by_includer.cc': [
-          '-std=c++11', '-DCOMMAND_LINE_TYPE=double'],
+          '-std=c++11', '-DCOMMAND_LINE_TYPE=double',
+          self.Include('macro_defined_by_includer-prefix.h')],
       'ms_inline_asm.cc': ['-fms-extensions'],
       'prefix_header_attribution.cc': [self.Include('prefix_header_attribution-d1.h')],
       'prefix_header_includes_add.cc': prefix_headers,
