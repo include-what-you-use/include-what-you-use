@@ -146,6 +146,28 @@ If the expression contains spaces, it must be enclosed in quotes.
       AlsoPrivate p;
 
 
+### IWYU pragma: associated ###
+
+Associated headers have special significance in IWYU, they're analyzed together with their .cpp file to give an optimal result for the whole component.
+
+By default, IWYU uses the .cpp file's stem (filename without extension) to automatically detect which is the associated header, but sometimes local conventions don't allow a component's .cpp and header file to share a stem, which makes life harder for IWYU.
+
+You can explicitly mark an arbitrary `#include` directive as denoting the associated header with `IWYU pragma: associated`:
+
+    component/public.h:
+      struct Foo {
+        void Bar();
+      };
+
+    component/component.cc:
+      #include "component/public.h"  // IWYU pragma: associated
+
+      void Foo::Bar() {
+      }
+
+You can mark multiple `#include` directives as associated and they will all be considered as such.
+
+
 ### Which pragma should I use? ###
 
 Ideally, IWYU should be smart enough to understand your intentions (and intentions of the authors of libraries you use), so the first answer should always be: none.
