@@ -292,6 +292,13 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
     return;
   }
 
+  if (MatchOneToken(tokens, "associated", 1, begin_loc)) {
+    if (associated_pragma_location_.isInvalid()) {
+      associated_pragma_location_ = begin_loc;
+    }
+    return;
+  }
+
   // "keep" and "export" are handled in MaybeProtectInclude.
   if (!MatchOneToken(tokens, "keep", 1, begin_loc)
       && !MatchOneToken(tokens, "export", 1, begin_loc)) {
@@ -521,6 +528,22 @@ void IwyuPreprocessorInfo::AddDirectInclude(
              << " as associated header of " << GetFilePath(includer) << ".\n";
   }
 
+  // Besides marking headers as "associated header" with heuristics, the user
+  // can directly mark headers with the associated pragma.
+  const FileEntry* associated_includer =
+      GetFileEntry(associated_pragma_location_);
+  if (associated_pragma_location_.isValid() &&
+      associated_includer == includer) {
+    GetFromFileInfoMap(includer)->AddAssociatedHeader(
+        GetFromFileInfoMap(includee));
+    VERRS(4) << "Marked " << GetFilePath(includee)
+             << " as associated header of " << GetFilePath(includer)
+             << " due to associated pragma.\n";
+
+    AddGlobToReportIWYUViolationsFor(GetFilePath(includee));
+    associated_pragma_location_ = SourceLocation();
+  }
+
   // Also keep track of what FileEntry we ended up using for this name.
   // Because we use #include-next, the same include-name can map to
   // several files; we use the first such mapping we see, which is the
@@ -685,6 +708,9 @@ void IwyuPreprocessorInfo::FileSkipped(const FileEntry& file,
       << " (" << GetFilePath(&file) << ")\n";
 
   AddDirectInclude(include_loc, &file, include_name_as_written);
+  if (ShouldReportIWYUViolationsFor(&file)) {
+    files_to_report_iwyu_violations_for_.insert(&file);
+  }
 }
 
 // Called when a file is #included.
