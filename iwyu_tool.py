@@ -114,7 +114,7 @@ def run_iwyu(cwd, compile_command, iwyu_args, verbose, formatter):
     formatter(get_output(cwd, command))
 
 
-def main(compilation_db_path, source_files, verbose, formatter, iwyu_args):
+def main(compilation_db_path, source_files, verbose, ignore_dirs, formatter, iwyu_args):
     """ Entry point. """
     # Canonicalize compilation database path
     if os.path.isdir(compilation_db_path):
@@ -150,6 +150,11 @@ def main(compilation_db_path, source_files, verbose, formatter, iwyu_args):
             else:
                 print('WARNING: \'%s\' not found in compilation database.' %
                       source)
+
+    # Remove entries with directory belonging to any ignore_dirs
+    if ignore_dirs:
+        entries[:] = [entry for entry in entries if all(not entry['directory']
+                     .startswith(os.path.realpath(ignore)) for ignore in ignore_dirs)]
 
     # Run analysis
     try:
@@ -203,6 +208,8 @@ def _bootstrap():
     parser.add_argument('source', nargs='*',
                         help='Zero or more source files to run IWYU on. '
                         'Defaults to all in compilation database.')
+    parser.add_argument('-i', '--ignore', nargs='+',
+                        help='Directories in build path to ignore')
 
     def partition_args(argv):
         """ Split around '--' into driver args and IWYU args. """
@@ -214,7 +221,7 @@ def _bootstrap():
     argv, iwyu_args = partition_args(sys.argv[1:])
     args = parser.parse_args(argv)
 
-    sys.exit(main(args.dbpath, args.source, args.verbose,
+    sys.exit(main(args.dbpath, args.source, args.verbose, args.ignore,
                   FORMATTERS[args.output_format], iwyu_args))
 
 
