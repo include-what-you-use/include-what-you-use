@@ -104,7 +104,7 @@ We also include, in this directory, a tool that automatically fixes up your sour
 If you don't like the way `fix_includes.py` munges your `#include` lines, you can control its behavior via flags. `fix_includes.py --help` will give a full list, but these are some common ones:
 
   * `-b`: Put blank lines between system and Google includes
-  * `--nocomments`: Don't add the 'why' comments next to includes
+  * `--no_comments`: Don't add the 'why' comments next to includes
 
 
 
