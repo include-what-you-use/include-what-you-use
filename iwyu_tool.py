@@ -152,9 +152,10 @@ def main(compilation_db_path, source_files, verbose, ignore_dirs, formatter, iwy
                       source)
 
     # Remove entries with directory belonging to any ignore_dirs
-    if ignore_dirs:
-        entries[:] = [entry for entry in entries if all(not entry['directory']
-                     .startswith(os.path.realpath(ignore)) for ignore in ignore_dirs)]
+    def is_ignored(dirpath):
+        return any(dirpath.startswith(os.path.realpath(i)) for i in ignore_dirs)
+
+    entries[:] = [e for e in entries if not is_ignored(e['directory'])]
 
     # Run analysis
     try:
@@ -208,7 +209,7 @@ def _bootstrap():
     parser.add_argument('source', nargs='*',
                         help='Zero or more source files to run IWYU on. '
                         'Defaults to all in compilation database.')
-    parser.add_argument('-i', '--ignore', nargs='+',
+    parser.add_argument('-i', '--ignore', nargs='+', default=[],
                         help='Directories in build path to ignore')
 
     def partition_args(argv):
