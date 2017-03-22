@@ -151,11 +151,13 @@ def main(compilation_db_path, source_files, verbose, ignore_dirs, formatter, iwy
                 print('WARNING: \'%s\' not found in compilation database.' %
                       source)
 
-    # Remove entries with directory belonging to any ignore_dirs
-    def is_ignored(dirpath):
-        return any(dirpath.startswith(os.path.realpath(i)) for i in ignore_dirs)
 
-    entries[:] = [e for e in entries if not is_ignored(e['directory'])]
+    # Remove entries with directory belonging to any ignore_dirs
+    ignore_dirs = [os.path.realpath(i) for i in ignore_dirs]
+    def is_ignored(dirpath):
+        return any(dirpath.startswith(i) for i in ignore_dirs)
+
+    entries = [e for e in entries if not is_ignored(e['directory'])]
 
     # Run analysis
     try:
