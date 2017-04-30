@@ -1417,13 +1417,10 @@ int main() {
   local_i2_template_class.InlFileTemplateClassFn();
   // IWYU: I2_TemplateClass is...*badinc-i2.h
   local_i2_template_class.a();
-  // TODO(csilvers): these first three errors are wrong, due to a bug
-  // in IntendsToProvide.  The file defining this template method
-  // *should* be providing badinc-i2-inl.h, but isn't (iwyu will
-  // suggest we add it).  So we don't detect that that file is
-  // responsible for these symbols, and not us.
-  // IWYU: I2_TemplateClass::I2_TemplateClass<.*> is...*badinc-i2-inl.h
-  // IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
+  // TODO(csilvers): this first error is wrong, due to a bug in
+  // IntendsToProvide.  The file defining this template method *should* be
+  // providing badinc-i2-inl.h, but isn't (iwyu will suggest we add it).
+  // So we don't detect that file as responsible for these symbols, and not us.
   // IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
   // IWYU: I2_TemplateClass is...*badinc-i2.h
   local_i2_template_class.CcFileFn();
