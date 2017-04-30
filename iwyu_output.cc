@@ -1944,15 +1944,16 @@ void IwyuFileInfo::ResolvePendingAnalysis() {
   for (map<const UsingDecl*, bool>::value_type using_decl_status
       : using_decl_referenced_) {
     if (!using_decl_status.second) {
+      // There are valid cases where there is no shadow decl, e.g. if a derived
+      // class has a using declaration for a member, but also hides it.
+      // Only report the target if we have a shadow decl.
       const UsingDecl* using_decl = using_decl_status.first;
-      // It should not be possible to get here with a using decl without any
-      // shadow decls because doing so would imply that the input code we're
-      // analyzing code doesn't compile.
-      CHECK_(using_decl->shadow_size() > 0);
-      ReportForwardDeclareUse(using_decl->getUsingLoc(),
-        using_decl->shadow_begin()->getTargetDecl(),
-        /* in_cxx_method_body */ false,
-        "(for un-referenced using)");
+      if (using_decl->shadow_size() > 0) {
+        ReportForwardDeclareUse(using_decl->getUsingLoc(),
+                                using_decl->shadow_begin()->getTargetDecl(),
+                                /* in_cxx_method_body */ false,
+                                "(for un-referenced using)");
+      }
     }
   }
 }
