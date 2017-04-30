@@ -12,7 +12,18 @@
 // it's not actually used.
 
 #include "using_unused-declare.h"
+#include "using_unused-baseclass.h"
+
 using ns::symbol;
+
+class Hiding : public Base {
+  // Introduce a using shadow decl which is subsequently discarded when this
+  // class hides the using-decl with its own declaration.
+  // This used to trigger an assertion failure.
+  using Base::Method;
+
+  void Method();
+};
 
 /**** IWYU_SUMMARY
 
