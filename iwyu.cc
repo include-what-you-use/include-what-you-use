@@ -898,20 +898,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
         const_cast<CXXDestructorDecl*>(dtor), parent_type, expr);
   }
 
-  // This is to catch assigning template functions to function pointers.
+  // This is to catch function pointers to templates.
   // For instance, 'MyFunctionPtr p = &TplFn<MyClass*>;': we need to
   // expand TplFn to see if it needs full type info for MyClass.
   bool TraverseDeclRefExpr(clang::DeclRefExpr* expr) {
     if (!Base::TraverseDeclRefExpr(expr))  return false;
     if (CanIgnoreCurrentASTNode())  return true;
-
-    // If it's a normal function call, that was already handled by a
-    // CallExpr somewhere.  We want only assignments.
-    if (current_ast_node()->template ParentIsA<CallExpr>() ||
-        (current_ast_node()->template ParentIsA<ImplicitCastExpr>() &&
-         current_ast_node()->template AncestorIsA<CallExpr>(2))) {
-      return true;
-    }
 
     if (FunctionDecl* fn_decl = DynCastFrom(expr->getDecl())) {
       // If fn_decl has a class-name before it -- 'MyClass::method' --
