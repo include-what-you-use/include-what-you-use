@@ -1889,42 +1889,6 @@ int main() {
   local_d1_copy_class = D1CopyClassFn(I12);
   local_d1_copy_class.a();
 
-  // Test (templated) function pointers and method pointers.
-  // IWYU: I1_Class needs a declaration
-  // IWYU: I1_Enum is...*badinc-i1.h
-  // IWYU: I1_Function is...*badinc-i1.h
-  I1_Enum (*local_fn_ptr)(I1_Class*) = &I1_Function;
-  // IWYU: I1_Class is...*badinc-i1.h
-  int (*static_method_ptr)() = &I1_Class::s;
-  // IWYU: I1_Struct is...*badinc-i1.h
-  // IWYU: I1_Struct needs a declaration
-  // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
-  int (*tpl_fn_ptr)() = &I1_TemplateMethodOnlyClass<I1_Struct>::stat;
-  // IWYU: I1_Class is...*badinc-i1.h
-  // IWYU: I1_Class needs a declaration
-  // IWYU: I1_Struct needs a declaration
-  // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
-  int (*tpl_fn_ptr2)() = &I1_TemplateMethodOnlyClass<I1_Struct>::t<I1_Class>;
-  // IWYU: I1_Class is...*badinc-i1.h
-  int (I1_Class::*method_ptr)() const = &I1_Class::a;
-  // IWYU: I1_Struct is...*badinc-i1.h
-  // IWYU: I1_Struct needs a declaration
-  // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
-  I1_Struct (I1_TemplateMethodOnlyClass<I1_Struct>::*tpl_method_ptr)()
-      // IWYU: I1_Struct is...*badinc-i1.h
-      // IWYU: I1_Struct needs a declaration
-      // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
-      = &I1_TemplateMethodOnlyClass<I1_Struct>::a;
-  // IWYU: I1_Struct needs a declaration
-  // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
-  // IWYU: I2_Struct is...*badinc-i2.h
-  I2_Struct (I1_TemplateMethodOnlyClass<I1_Struct>::*tpl_method_ptr2)()
-      // IWYU: I1_Struct needs a declaration
-      // IWYU: I2_Struct is...*badinc-i2.h
-      // IWYU: I2_Struct needs a declaration
-      // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
-      = &I1_TemplateMethodOnlyClass<I1_Struct>::c<I2_Struct>;
-
   // Check use of a macro inside an #ifdef.
   // IWYU: I2_MACRO is...*badinc-i2.h
 #ifdef I2_MACRO

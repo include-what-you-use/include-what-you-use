@@ -116,6 +116,7 @@ class OneIwyuTest(unittest.TestCase):
       'backwards_includes.cc': ['.'],
       'badinc.cc': ['.'],
       'badinc-extradef.cc': ['.'],
+      'funcptrs.cc': ['.'],
       'casts.cc': ['.'],
       'catch.cc': ['.'],
       'check_also.cc': ['.'],

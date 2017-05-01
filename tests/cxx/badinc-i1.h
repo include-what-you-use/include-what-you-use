@@ -115,7 +115,6 @@ class I1_TemplateMethodOnlyClass {
  public:
   FOO a() { FOO retval; return retval; }
   FOO* b() { FOO* retval = NULL; return retval; }
-  static int stat() { FOO foo; (void)foo; return 2; }
   template<typename BAR> BAR c() { return BAR(); }
   template<typename BAR> BAR* d() { BAR* retval = NULL; return retval; }
   template<typename BAR> int e(BAR* b) { return (int)b->size(); }
