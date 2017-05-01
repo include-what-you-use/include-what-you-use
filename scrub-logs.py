@@ -18,6 +18,7 @@ values and path prefixes from ast-dump output, so they can be diffed directly.
 
 import re
 import sys
+import fileinput
 
 
 def strip_path_prefix(line):
@@ -30,16 +31,15 @@ def strip_addrs(line):
     return line
 
 
-def main(args):
-    with open(args[1]) as fd:
-        for line in fd:
-            line = line.strip()
-            line = strip_addrs(line)
-            line = strip_path_prefix(line)
-            print(line)
+def main():
+    for line in fileinput.input():
+        line = line.strip()
+        line = strip_addrs(line)
+        line = strip_path_prefix(line)
+        print(line)
 
     return 0
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    sys.exit(main())
