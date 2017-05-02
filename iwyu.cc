@@ -205,6 +205,7 @@ using clang::TranslationUnitDecl;
 using clang::Type;
 using clang::TypeLoc;
 using clang::TypedefDecl;
+using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryExprOrTypeTraitExpr;
 using clang::UsingDecl;
@@ -3042,7 +3043,7 @@ class InstantiatedTemplateVisitor
     // you do 'Foo<MyClass>::value_type m;'?
     for (const ASTNode* ast_node = current_ast_node();
          ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
-      if (ast_node->IsA<TypedefDecl>())
+      if (ast_node->IsA<TypedefNameDecl>())
         return Base::VisitSubstTemplateTypeParmType(type);
     }
 

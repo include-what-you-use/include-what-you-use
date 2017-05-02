@@ -106,6 +106,7 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_add.cc': prefix_headers,
       'prefix_header_includes_keep.cc': prefix_headers,
       'prefix_header_includes_remove.cc': prefix_headers,
+      'typedef_in_template.cc': ['-std=c++11'],
     }
     include_map = {
       'alias_template.cc': ['.'],
