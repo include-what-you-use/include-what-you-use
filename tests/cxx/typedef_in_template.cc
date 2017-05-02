@@ -15,6 +15,9 @@ class Container {
   // Should not be an iwyu violation for T
   typedef T value_type;
 
+  // C++11 alias declaration, should not be an iwyu violation for T
+  using alias_type = T;
+
   // IWYU: Pair is...*typedef_in_template-i1.h
   typedef Pair<T,T> pair_type;
 };
@@ -34,6 +37,9 @@ void Declarations() {
 
   // IWYU: Class needs a declaration
   Container<Class>::pair_type pt;
+
+  // IWYU: Class needs a declaration
+  Container<Class>::alias_type at;
 }
 
 
