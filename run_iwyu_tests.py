@@ -173,6 +173,7 @@ class OneIwyuTest(unittest.TestCase):
       'template_specialization.cc': ['.'],
       'typedef_chain_in_template.cc': ['.'],
       'typedef_chain_no_follow.cc': ['.'],
+      'typedef_in_template.cc': ['.'],
       'typedefs_and_resugaring.cc': ['.'],
       'unused_class_template_ctor.cc': ['.'],
       'uses_printf.cc': ['.'],

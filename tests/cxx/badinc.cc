@@ -619,11 +619,6 @@ H_TemplateStruct<I1_TemplateClass<int> > h_template_struct_tplclass_arg;
 // via a default template argument.
 // IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
 H_TemplateTemplateClass<> h_templatetemplateclass;
-// These do not need the full type for I1_Class because they're tpl params.
-// IWYU: I1_Class needs a declaration
-H_TypedefStruct<I1_Class>::t_type h_typdef_struct_t;
-// IWYU: I1_Class needs a declaration
-H_TypedefStruct<I1_Class>::pair_type h_typdef_struct_pair;
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class needs a declaration
 // IWYU: I2_TemplateFn is...*badinc-i2.h
