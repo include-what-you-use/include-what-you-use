@@ -274,13 +274,6 @@ template<class T, class Functor = OperateOn<T> > class H_TemplateStruct {
   void a() { return ts.a(); }
 };
 
-template<class T> struct H_TypedefStruct {
-  // Should not be an iwyu violation for T
-  typedef T t_type;
-  // IWYU: std::pair is...*<utility>
-  typedef std::pair<T, T> pair_type;
-};
-
 // IWYU: I2_EnumForTypedefs is...*badinc-i2.h
 typedef I2_EnumForTypedefs H_Typedef;
 // IWYU: std::set is...*<set>
@@ -382,7 +375,6 @@ H_TemplateTemplateClass<H_TemplateClass> h_i2_templatetemlpate_class;
 tests/cxx/badinc.h should add these lines:
 #include <stdio.h>
 #include <set>
-#include <utility>
 #include <vector>
 #include "tests/cxx/badinc-i2-inl.h"
 #include "tests/cxx/badinc-i2.h"
@@ -400,7 +392,6 @@ The full include-list for tests/cxx/badinc.h:
 #include <queue>  // for queue
 #include <set>  // for set
 #include <string>  // for string
-#include <utility>  // for pair
 #include <vector>  // for vector
 #include "tests/cxx/badinc-d3.h"  // for D3_Enum, D3_Enum::D31
 #include "tests/cxx/badinc-i2-inl.h"  // for I2_Class::I2_Class, I2_Class::InlFileFn, I2_Class::InlFileStaticFn, I2_Class::InlFileTemplateFn, I2_Class::~I2_Class, I2_TemplateClass::I2_TemplateClass<FOO>, I2_TemplateClass::InlFileTemplateClassFn, I2_TemplateClass::~I2_TemplateClass<FOO>
