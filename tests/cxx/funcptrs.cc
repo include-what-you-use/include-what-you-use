@@ -8,10 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 // Tests that function pointers make the right claims for involved types.
-// Function pointer expressions come in two flavors:
+// Function pointer expressions come in three flavors:
 //
-// 1) Assignments: int (*fptr)(int) = function
+// 1) Assignments: int (*fptr)(int) = function;
 // 2) Calls: FunctionThatTakesFptr(function);
+// 3) Naked expressions: &function;
 //
 // A 'function' can be a free function, a static member function, a member
 // function, or any template instantiation of the above.
@@ -67,6 +68,15 @@ void FreeFunctions() {
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: FunctionTemplate is...*funcptrs-i1.h
   FunctionThatTakesFptr(FunctionTemplate<Retval>);
+
+  // Naked function pointer expressions
+  // IWYU: Function is...*funcptrs-i1.h
+  &Function;
+
+  // IWYU: Retval needs a declaration
+  // IWYU: Retval is...*funcptrs-i1.h
+  // IWYU: FunctionTemplate is...*funcptrs-i1.h
+  &FunctionTemplate<Retval>;
 }
 
 void ClassMembers() {
@@ -103,6 +113,23 @@ void ClassMembers() {
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: Class is...*funcptrs-i1.h
   FunctionThatTakesMptr(&Class::MemberTemplate<Retval>);
+
+  // Naked function pointer expressions
+  // IWYU: Class is...*funcptrs-i1.h
+  &Class::StaticMemberFunction;
+
+  // IWYU: Retval needs a declaration
+  // IWYU: Retval is...*funcptrs-i1.h
+  // IWYU: Class is...*funcptrs-i1.h
+  &Class::StaticMemberTemplate<Retval>;
+
+  // IWYU: Class is...*funcptrs-i1.h
+  &Class::MemberFunction;
+
+  // IWYU: Retval needs a declaration
+  // IWYU: Retval is...*funcptrs-i1.h
+  // IWYU: Class is...*funcptrs-i1.h
+  &Class::MemberTemplate<Retval>;
 }
 
 void ClassTemplateMembers() {
@@ -154,6 +181,27 @@ void ClassTemplateMembers() {
   // IWYU: ClassTemplate is...*funcptrs-i1.h
   // IWYU: Class needs a declaration
   FunctionThatTakesMptr(&ClassTemplate<Class>::MemberTemplate<Retval>);
+
+  // Naked class template member function pointer expressions
+  // IWYU: ClassTemplate is...*funcptrs-i1.h
+  // IWYU: Class needs a declaration
+  &ClassTemplate<Class>::StaticMemberFunction;
+
+  // IWYU: Retval needs a declaration
+  // IWYU: Retval is...*funcptrs-i1.h
+  // IWYU: ClassTemplate is...*funcptrs-i1.h
+  // IWYU: Class needs a declaration
+  &ClassTemplate<Class>::StaticMemberTemplate<Retval>;
+
+  // IWYU: ClassTemplate is...*funcptrs-i1.h
+  // IWYU: Class needs a declaration
+  &ClassTemplate<Class>::MemberFunction;
+
+  // IWYU: Retval needs a declaration
+  // IWYU: Retval is...*funcptrs-i1.h
+  // IWYU: ClassTemplate is...*funcptrs-i1.h
+  // IWYU: Class needs a declaration
+  &ClassTemplate<Class>::MemberTemplate<Retval>;
 }
 
 /**** IWYU_SUMMARY
