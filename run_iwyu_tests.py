@@ -96,6 +96,7 @@ class OneIwyuTest(unittest.TestCase):
       'clmode.cc': ['--driver-mode=cl', '/GF', '/Os', '/W2'],
       'conversion_ctor.cc': ['-std=c++11'],
       'deleted_implicit.cc' : ['-std=c++11'],
+      'funcptrs.cc': ['-Wno-unused'],
       'lambda_fwd_decl.cc': ['-std=c++11'],
       'lateparsed_template.cc': ['-fdelayed-template-parsing'],
       'macro_defined_by_includer.cc': [
