@@ -36,6 +36,7 @@ class CXXRecordDecl;
 class CallExpr;
 class CastExpr;
 class ClassTemplateDecl;
+class DeclRefExpr;
 class Expr;
 class FunctionDecl;
 class NamedDecl;
@@ -413,6 +414,10 @@ const clang::NestedNameSpecifier* GetQualifier(const ASTNode* ast_node);
 // MyTypedef::a, or MyTypedef::subclass::a, etc.  Note it does
 // *not* return true if the ast_node itself is a typedef.
 bool IsMemberOfATypedef(const ASTNode* ast_node);
+
+// Return true if expr refers to an enumerator whose type is a unscoped,
+// pre-C++11, enum decl.
+bool IsUnscopedEnum(const clang::DeclRefExpr* expr);
 
 // Returns the decl-context of the deepest decl in the ast-chain.
 const clang::DeclContext* GetDeclContext(const ASTNode* ast_node);
