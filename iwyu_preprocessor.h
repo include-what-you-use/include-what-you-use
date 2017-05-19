@@ -261,6 +261,9 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Process @headername directives in a file.
   void ProcessHeadernameDirectivesInFile(clang::SourceLocation file_beginning);
 
+  // Process #error directives pointing to another header.
+  void ProcessErrorDirectivesInFile(clang::SourceLocation file_beginning);
+
   // Checks whether it's OK to use the given macro defined in file defined_in.
   void ReportMacroUse(const string& name,
                       clang::SourceLocation usage_location,

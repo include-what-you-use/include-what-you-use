@@ -77,6 +77,12 @@ vector<clang::Token> FindArgumentsToDefined(
 string GetTokenText(const clang::Token& token,
                     const CharacterDataGetterInterface& data_getter);
 
+// Given a location at the beginning of a file, enumerate all #error directives
+// and return their messages.
+std::vector<std::string> FindErrorDirectives(
+    clang::SourceLocation file_begin,
+    const CharacterDataGetterInterface& data_getter);
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
