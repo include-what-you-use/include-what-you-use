@@ -95,7 +95,7 @@ def get_output(cwd, command):
     return process.communicate()[0].decode("utf-8").splitlines()
 
 
-def run_iwyu(cwd, compile_command, iwyu_args, verbose, formatter):
+def run_iwyu(cwd, compile_command, iwyu_args, remove_args, verbose, formatter):
     """ Rewrite compile_command to an IWYU command, and run it. """
     compiler, _, args = compile_command.partition(' ')
     if compiler.endswith('cl.exe'):
@@ -105,8 +105,9 @@ def run_iwyu(cwd, compile_command, iwyu_args, verbose, formatter):
         clang_args = []
 
     iwyu_args = ['-Xiwyu ' + a for a in iwyu_args]
+    filtered_args = [a for a in args.split(' ') if a not in remove_args and a != '']
     command = ['include-what-you-use'] + clang_args + iwyu_args
-    command = '%s %s' % (' '.join(command), args.strip())
+    command = '%s %s' % (' '.join(command), ' '.join(filtered_args))
 
     if verbose:
         print('%s:' % command)
@@ -114,7 +115,7 @@ def run_iwyu(cwd, compile_command, iwyu_args, verbose, formatter):
     formatter(get_output(cwd, command))
 
 
-def main(compilation_db_path, source_files, verbose, formatter, iwyu_args):
+def main(compilation_db_path, source_files, remove_args, verbose, formatter, iwyu_args):
     """ Entry point. """
     # Canonicalize compilation database path
     if os.path.isdir(compilation_db_path):
@@ -155,7 +156,7 @@ def main(compilation_db_path, source_files, verbose, formatter, iwyu_args):
     try:
         for entry in entries:
             cwd, compile_command = entry['directory'], entry['command']
-            run_iwyu(cwd, compile_command, iwyu_args, verbose, formatter)
+            run_iwyu(cwd, compile_command, iwyu_args, remove_args, verbose, formatter)
     except OSError as why:
         print('ERROR: Failed to launch include-what-you-use: %s' % why)
         return 1
@@ -200,6 +201,9 @@ def _bootstrap():
                         help='Output format (default: %s)' % DEFAULT_FORMAT)
     parser.add_argument('-p', metavar='<build-path>', required=True,
                         help='Compilation database path', dest='dbpath')
+    parser.add_argument('-r', '--remove-args', nargs='+', default=[],
+                        help='List of arguments that shoulbe be removed from '
+                        'the command JSON value.', dest='remove')
     parser.add_argument('source', nargs='*',
                         help='Zero or more source files to run IWYU on. '
                         'Defaults to all in compilation database.')
@@ -214,7 +218,7 @@ def _bootstrap():
     argv, iwyu_args = partition_args(sys.argv[1:])
     args = parser.parse_args(argv)
 
-    sys.exit(main(args.dbpath, args.source, args.verbose,
+    sys.exit(main(args.dbpath, args.source, args.remove, args.verbose,
                   FORMATTERS[args.output_format], iwyu_args))
 
 
