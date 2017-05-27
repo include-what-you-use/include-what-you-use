@@ -1,6 +1,6 @@
 # Include What You Use #
 
-This README was generated on 2017-01-30 19:01:29 UTC.
+This README was generated on 2017-06-02 16:44:40 UTC.
 
 For more in-depth documentation, see http://github.com/include-what-you-use/include-what-you-use/tree/master/docs.
 
@@ -84,6 +84,11 @@ This weirdness is tracked in [issue 100](https://github.com/include-what-you-use
 
 ### How to Run ###
 
+The original design was built for Make, but a number of alternative run modes have come up over the years.
+
+
+#### Plugging into Make ####
+
 The easiest way to run IWYU over your codebase is to run
 
       make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use
@@ -96,7 +101,52 @@ or
 
 Include-what-you-use only analyzes .cc (or .cpp) files built by `make`, along with their corresponding .h files.  If your project has a .h file with no corresponding .cc file, IWYU will ignore it unless you use the `--check_also` switch to add it for analysis together with a .cc file.
 
-We also include, in this directory, a tool that automatically fixes up your source files based on the IWYU recommendations.  This is also alpha-quality software!  Here's how to use it (requires python):
+
+#### Using with CMake ####
+
+CMake has grown native support for IWYU as of version 3.3. See [their documentation](https://cmake.org/cmake/help/latest/prop_tgt/LANG_INCLUDE_WHAT_YOU_USE.html) for CMake-side details.
+
+The `CMAKE_CXX_INCLUDE_WHAT_YOU_USE` option enables a mode where CMake first compiles a source file, and then runs IWYU on it.
+
+Use it like this:
+
+      mkdir build && cd build
+      CC="clang" CXX="clang++" cmake -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="path/to/iwyu any iwyu args" ...
+
+or, on Windows systems:
+
+      mkdir build && cd build
+      cmake -DCMAKE_CXX_COMPILER="%VCINSTALLDIR%/bin/cl.exe" -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="path/to/iwyu any iwyu args" -G Ninja ...
+
+The option appears to be separately supported for both C and C++, so use `CMAKE_C_INCLUDE_WHAT_YOU_USE` for C code.
+
+Note that with Microsoft's Visual C++ compiler, IWYU needs the `--driver-mode=cl` argument to understand the MSVC options from CMake.
+
+
+#### Using with a compilation database ####
+
+The `iwyu_tool.py` script predates the native CMake support, and works off the [compilation database format](https://clang.llvm.org/docs/JSONCompilationDatabase.html). For example, CMake generates such a database named `compile_commands.json` with the `CMAKE_EXPORT_COMPILE_COMMANDS` option enabled.
+
+The script's command-line syntax is designed to mimic Clang's LibTooling, but they are otherwise unrelated. It can be used like this:
+
+      mkdir build && cd build
+      CC="clang" CXX="clang++" cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ...
+      iwyu_tool.py -p .
+
+or, on Windows systems:
+
+      mkdir build && cd build
+      cmake -DCMAKE_CXX_COMPILER="%VCINSTALLDIR%/bin/cl.exe" -DCMAKE_C_COMPILER="%VCINSTALLDIR%/VC/bin/cl.exe" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -G Ninja ...
+      python iwyu_tool.py -p .
+
+Unless a source filename is provided, all files in the project will be analyzed.
+
+See `iwyu_tool.py --help` for more options.
+
+
+#### Applying fixes ####
+
+We also include a tool that automatically fixes up your source files based on the IWYU recommendations.  This is also alpha-quality software!  Here's how to use it (requires python):
 
       make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use 2> /tmp/iwyu.out
       python fix_includes.py < /tmp/iwyu.out
@@ -105,7 +155,6 @@ If you don't like the way `fix_includes.py` munges your `#include` lines, you ca
 
   * `-b`: Put blank lines between system and Google includes
   * `--nocomments`: Don't add the 'why' comments next to includes
-
 
 
 ### How to Correct IWYU Mistakes ###
