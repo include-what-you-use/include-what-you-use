@@ -106,9 +106,11 @@
 #include "tests/cxx/comment_pragmas-d22.h" // IWYU pragma: keep
 #include "tests/cxx/comment_pragmas-d22.h"
 
-
 class CommentPragmasD19;  // Needed, but removed due to no_forward_declare.
 class CommentPragmasTest21a;  // Needed but removed due to no_forward_declare.
+
+class ForwardDeclaredUnnecessary1;  // IWYU pragma: keep
+class ForwardDeclaredUnnecessary2;  /* IWYU pragma: keep */
 
 // The following classes are all defined in public files exported by i2.h.
 // IWYU: CommentPragmasI2 is...*comment_pragmas-i1.h
@@ -243,5 +245,7 @@ The full include-list for tests/cxx/comment_pragmas.cc:
 #include "tests/cxx/comment_pragmas-i8.h"  // for CommentPragmasI8
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/no_such_file.h"  // for CommentPragmasD2
+class ForwardDeclaredUnnecessary1;  // lines XX-XX
+class ForwardDeclaredUnnecessary2;  // lines XX-XX
 
 ***** IWYU_SUMMARY */

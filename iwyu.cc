@@ -105,6 +105,7 @@
 #include "iwyu_ast_util.h"
 #include "iwyu_cache.h"
 #include "iwyu_globals.h"
+#include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
@@ -3660,6 +3661,12 @@ class IwyuAstConsumer
             if (decl == first_decl)
               definitely_keep_fwd_decl = true;
           }
+        }
+      } else {
+        SourceLocation decl_end_location = decl->getSourceRange().getEnd();
+        if (LineHasText(decl_end_location, "// IWYU pragma: keep") ||
+            LineHasText(decl_end_location, "/* IWYU pragma: keep")) {
+          definitely_keep_fwd_decl = true;
         }
       }
 

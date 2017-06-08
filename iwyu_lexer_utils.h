@@ -25,6 +25,11 @@ namespace include_what_you_use {
 using std::string;
 using std::vector;
 
+// For a particular source line that source_location points to,
+// returns true if the given text occurs on the line.
+// (Case sensitive.)
+bool LineHasText(clang::SourceLocation source_location, llvm::StringRef text);
+
 // Interface to get character data from a SourceLocation. This allows
 // tests to avoid constructing a SourceManager yet still allow iwyu to
 // get the character data from SourceLocations.
@@ -46,7 +51,7 @@ class SourceManagerCharacterDataGetter : public CharacterDataGetterInterface {
 };
 
 // Returns the source-code line from the current location until \n.
-string GetSourceTextUntilEndOfLine(
+llvm::StringRef GetSourceTextUntilEndOfLine(
     clang::SourceLocation start_loc,
     const CharacterDataGetterInterface& data_getter);
 
