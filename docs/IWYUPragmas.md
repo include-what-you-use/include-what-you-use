@@ -7,12 +7,14 @@ All pragmas start with `// IWYU pragma: ` or `/* IWYU pragma: `. They are case-s
 
 ### IWYU pragma: keep ###
 
-This pragma applies to a single `#include` directive. It forces IWYU to keep an inclusion even if it is deemed unnecessary.
+This pragma applies to a single `#include` directive or forward declaration. It forces IWYU to keep an inclusion even if it is deemed unnecessary.
 
     main.cc:
       #include <vector> // IWYU pragma: keep
+     
+      class ForwardDeclaration; // IWYU pragma: keep
 
-In this case, `std::vector` isn't used, so `<vector>` would normally be discarded, but the pragma instructs IWYU to leave it.
+In this case, `std::vector` isn't used, so `<vector>` would normally be discarded, but the pragma instructs IWYU to leave it. Similarly the class `ForwardDeclaration` isn't used but is kept because of the pragma on it.
 
 
 ### IWYU pragma: export ###

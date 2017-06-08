@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "iwyu_lexer_utils.h"
+#include "iwyu_globals.h"
 
 #include <cstring>
 #include <string>
@@ -28,10 +29,17 @@ using clang::SourceLocation;
 using clang::SourceManager;
 using clang::SourceRange;
 using clang::Token;
+using llvm::StringRef;
 using std::string;
 using std::vector;
 
 namespace include_what_you_use {
+
+bool LineHasText(SourceLocation source_location, StringRef text) {
+  const StringRef data =
+      GetSourceTextUntilEndOfLine(source_location, DefaultDataGetter());
+  return data.find(text) != StringRef::npos;
+}
 
 // SourceManagerCharacterDataGetter method implementations.
 SourceManagerCharacterDataGetter::SourceManagerCharacterDataGetter(
@@ -48,14 +56,13 @@ const char* SourceManagerCharacterDataGetter::GetCharacterData(
   return data;
 }
 
-string GetSourceTextUntilEndOfLine(
-    SourceLocation start_loc,
-    const CharacterDataGetterInterface& data_getter) {
+StringRef GetSourceTextUntilEndOfLine(
+    SourceLocation start_loc, const CharacterDataGetterInterface& data_getter) {
   const char* data = data_getter.GetCharacterData(start_loc);
   const char* line_end = strchr(data, '\n');
   if (!line_end)
     return data;
-  return string(data, line_end - data);
+  return StringRef(data, line_end - data);
 }
 
 SourceLocation GetLocationAfter(
