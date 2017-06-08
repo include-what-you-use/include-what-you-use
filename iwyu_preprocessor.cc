@@ -93,16 +93,6 @@ static string GetIncludeNameAsWritten(SourceLocation include_loc) {
   return GetIncludeNameAsWritten(include_loc, DefaultDataGetter());
 }
 
-// For a particular #include line that include_loc points to,
-// returns true if the given text occurs on the line.
-// (Case sensitive.)
-static bool IncludeLineHasText(SourceLocation include_loc,
-                               const string& text) {
-  const string data = GetSourceTextUntilEndOfLine(include_loc,
-                                                  DefaultDataGetter());
-  return data.find(text) != string::npos;
-}
-
 //------------------------------------------------------------
 // Utilities on macros.
 
@@ -405,13 +395,13 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   // TODO(dsturtevant): As written "// // IWYU pragma: keep" is incorrectly
   // interpreted as a pragma. Maybe do "keep" and "export" pragma handling
   // in HandleComment?
-  if (IncludeLineHasText(includer_loc, "// IWYU pragma: keep") ||
-      IncludeLineHasText(includer_loc, "/* IWYU pragma: keep")) {
+  if (LineHasText(includer_loc, "// IWYU pragma: keep") ||
+      LineHasText(includer_loc, "/* IWYU pragma: keep")) {
     protect_reason = "pragma_keep";
     FileInfoFor(includer)->ReportKnownDesiredFile(includee);
 
-  } else if (IncludeLineHasText(includer_loc, "// IWYU pragma: export") ||
-             IncludeLineHasText(includer_loc, "/* IWYU pragma: export") ||
+  } else if (LineHasText(includer_loc, "// IWYU pragma: export") ||
+             LineHasText(includer_loc, "/* IWYU pragma: export") ||
              HasOpenBeginExports(includer)) {
     protect_reason = "pragma_export";
     const string quoted_includer =
