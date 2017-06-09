@@ -160,7 +160,8 @@ target_link_libraries(include-what-you-use
   LLVMProfileData # Core, Support, Object
   LLVMObject # BitReader, Core, Support
   LLVMBitReader # Core, Support
-  LLVMCore # Support
+  LLVMCore # BinaryFormat, Support
+  LLVMBinaryFormat # Support
   LLVMSupport # Demangle
   LLVMDemangle
 )
