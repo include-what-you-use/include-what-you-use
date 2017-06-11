@@ -88,7 +88,7 @@ For example;
 
 The symbol visibility is largely redundant -- it must always be `private`. It isn't entirely clear why symbol visibility needs to be specified, and it might be removed moving forward.
 
-Like `include`, `symbol` directives support the `@`-prefixed regex syntax in the first entry.
+Unlike `include`, `symbol` directives do not support the `@`-prefixed regex syntax in the first entry. Track the [following bug](https://github.com/include-what-you-use/include-what-you-use/issues/233) for updates.
 
 
 #### Mapping Refs ####
