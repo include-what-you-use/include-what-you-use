@@ -26,6 +26,7 @@ import json
 import argparse
 import subprocess
 import re
+from multiprocessing import Pool
 
 
 def iwyu_formatter(output):
@@ -95,7 +96,7 @@ def get_output(cwd, command):
     return process.communicate()[0].decode("utf-8").splitlines()
 
 
-def run_iwyu(cwd, compile_command, iwyu_args, verbose, formatter):
+def run_iwyu(cwd, compile_command, iwyu_args, verbose):
     """ Rewrite compile_command to an IWYU command, and run it. """
     compiler, _, args = compile_command.partition(' ')
     if compiler.endswith('cl.exe'):
@@ -111,7 +112,7 @@ def run_iwyu(cwd, compile_command, iwyu_args, verbose, formatter):
     if verbose:
         print('%s:' % command)
 
-    formatter(get_output(cwd, command))
+    return get_output(cwd, command)
 
 
 def main(compilation_db_path, source_files, verbose, formatter, iwyu_args):
@@ -153,9 +154,12 @@ def main(compilation_db_path, source_files, verbose, formatter, iwyu_args):
 
     # Run analysis
     try:
+        pool = Pool()
         for entry in entries:
             cwd, compile_command = entry['directory'], entry['command']
-            run_iwyu(cwd, compile_command, iwyu_args, verbose, formatter)
+            pool.apply_async(run_iwyu, (cwd, compile_command, iwyu_args, verbose), callback = formatter)
+        pool.close()
+        pool.join()
     except OSError as why:
         print('ERROR: Failed to launch include-what-you-use: %s' % why)
         return 1
