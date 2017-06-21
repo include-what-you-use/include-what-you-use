@@ -154,12 +154,22 @@ def main(compilation_db_path, source_files, verbose, formatter, iwyu_args):
 
     # Run analysis
     try:
+
         pool = Pool()
+        # results doesn't contain actual results, it serves exception handeling
+        # https://stackoverflow.com/a/28660669
+        results = []
         for entry in entries:
             cwd, compile_command = entry['directory'], entry['command']
-            pool.apply_async(run_iwyu, (cwd, compile_command, iwyu_args, verbose), callback = formatter)
+            results.append(pool.apply_async(run_iwyu,
+                                            (cwd, compile_command, iwyu_args, verbose),
+                                            callback = formatter
+                                           )
+                          )
         pool.close()
         pool.join()
+        for r in results:
+            r.get()
     except OSError as why:
         print('ERROR: Failed to launch include-what-you-use: %s' % why)
         return 1
