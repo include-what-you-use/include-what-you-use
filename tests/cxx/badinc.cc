@@ -1841,7 +1841,6 @@ int main() {
   // IWYU: I1_Class needs a declaration
   H_TemplateFunction<I1_Class*>(&i1_class);
   H_TemplateFunction(&i1_class);
-  // IWYU: I1_Enum is...*badinc-i1.h
   // IWYU: I22 is...*badinc-i2.h
   h_templateclass2.static_out_of_line(I22);
   // IWYU: I22 is...*badinc-i2.h
@@ -1944,7 +1943,7 @@ The full include-list for tests/cxx/badinc.cc:
 #include <fstream>  // for fstream
 #include <list>  // for list
 #include <new>  // for operator new
-#include <string>  // for allocator, basic_string, basic_string<>::iterator, operator+, string
+#include <string>  // for basic_string, basic_string<>::iterator, operator+, string
 #include <typeinfo>  // for type_info
 #include "tests/cxx/badinc-d1.h"  // for D1CopyClassFn, D1Function, D1_Class, D1_CopyClass, D1_Enum, D1_Enum::D11, D1_I1_Typedef, D1_StructPtr, D1_Subclass, D1_TemplateClass, D1_TemplateStructWithDefaultParam, MACRO_CALLING_I4_FUNCTION
 #include "tests/cxx/badinc-d4.h"  // for D4_ClassForOperator, operator<<

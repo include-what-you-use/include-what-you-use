@@ -2553,6 +2553,20 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // forward-declarable, even if we're part of a pointer type, or in
     // a template argument, or whatever.
     current_ast_node()->set_in_forward_declare_context(false);
+
+    // When a method is defined outside of a class it has nns as qualifier.
+    // But for method call it doesn't matter if method is defined inside
+    // a class or outside of it.  Skip traversing NestedNameSpecifier
+    // in this case.
+    const ASTNode* ast_node = current_ast_node();
+    if (const CXXMethodDecl* parent = ast_node->GetParentAs<CXXMethodDecl>()) {
+      if ((nns == parent->getQualifier()) &&
+          ast_node->AncestorIsA<CallExpr>(2)) {
+        VERRS(7) << "Skip traversing FunctionDecl qualifier "
+                 << PrintableNestedNameSpecifier(nns) << "\n";
+        return false;
+      }
+    }
     return true;
   }
 
