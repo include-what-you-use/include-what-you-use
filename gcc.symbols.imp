@@ -104,6 +104,7 @@
   # add them in by hand as I discover them.
   { symbol: [ "EOF", private, "<stdio.h>", public ] },
   { symbol: [ "EOF", private, "<libio.h>", public ] },
+  { symbol: [ "FILE", private, "<stdio.h>", public ] },
   { symbol: [ "va_list", private, "<stdarg.h>", public ] },
   # These are symbols that could be defined in either stdlib.h or
   # malloc.h, but we always want the stdlib location.
