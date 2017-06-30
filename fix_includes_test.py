@@ -3187,6 +3187,23 @@ The full include-list for barrier_includes.h:
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
+  def testSortingMainCUIncludeWithUpperCaseH(self):
+    """Check that we identify when first .H file is a main-cu #include."""
+    infile = """\
+#include <stdio.h>
+#include "foo.H"
+"""
+    expected_output = """\
+#include "foo.H"
+#include <stdio.h>
+"""
+    self.RegisterFileContents({'foo.cc': infile})
+    num_files_modified = fix_includes.SortIncludesInFiles(
+        ['foo.cc'], self.flags)
+    self.assertListEqual(expected_output.strip().split('\n'),
+                         self.actual_after_contents)
+    self.assertEqual(1, num_files_modified)
+
   def testSortingMainCUIncludeInSameDirectoryWithInl(self):
     """Check that we identify when first -inl.h file is a main-cu #include."""
     infile = """\
