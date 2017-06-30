@@ -94,6 +94,7 @@ string GetCanonicalName(string file_path) {
   file_path = NormalizeFilePath(file_path);
 
   bool stripped_ext = StripRight(&file_path, ".h")
+      || StripRight(&file_path, ".H")
       || StripRight(&file_path, ".hpp")
       || StripRight(&file_path, ".hxx")
       || StripRight(&file_path, ".hh")

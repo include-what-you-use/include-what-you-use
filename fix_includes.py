@@ -1437,7 +1437,7 @@ def _IsMainCUInclude(line_info, filename):
     return False
   # First, normalize the includee by getting rid of -inl.h and .h
   # suffixes (for the #include) and the "'s around the #include line.
-  canonical_include = re.sub(r'(-inl\.h|\.h)$',
+  canonical_include = re.sub(r'(-inl\.h|\.h|\.H)$',
                              '', line_info.key.replace('"', ''))
   # Then normalize includer by stripping extension and Google's test suffixes.
   canonical_file, _ = os.path.splitext(filename)
