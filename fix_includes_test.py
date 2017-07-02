@@ -2791,6 +2791,29 @@ The full include-list for keep_nolint:
     self.assertEqual('end', parser._RE_TO_NAME[parser.current_section])
     self.assertEqual('myfile.cc', parser.filename)
 
+  def testIWYUOutputParserMatchSectionHeadingWindowsPaths(self):
+    # Windows path names can contain the ':' character, so make sure that parses
+    # correctly. IWYU uses POSIX-style forward slashes consistently, so follow
+    # suit here.
+    parser = fix_includes.IWYUOutputParser()
+    self.assertTrue(parser._ProcessOneLine(
+        'C:/src/myfile.cc should add these lines:'))
+    self.assertEqual(parser._ADD_SECTION_RE, parser.current_section)
+    self.assertEqual('add', parser._RE_TO_NAME[parser.current_section])
+    self.assertEqual('C:/src/myfile.cc', parser.filename)
+
+    self.assertTrue(parser._ProcessOneLine(
+        'C:/src/myfile.cc should remove these lines:'))
+    self.assertEqual(parser._REMOVE_SECTION_RE, parser.current_section)
+    self.assertEqual('remove', parser._RE_TO_NAME[parser.current_section])
+    self.assertEqual('C:/src/myfile.cc', parser.filename)
+
+    self.assertTrue(parser._ProcessOneLine(
+        'The full include-list for C:/src/myfile.cc:'))
+    self.assertEqual(parser._TOTAL_SECTION_RE, parser.current_section)
+    self.assertEqual('total', parser._RE_TO_NAME[parser.current_section])
+    self.assertEqual('C:/src/myfile.cc', parser.filename)
+
   def testIWYUOutputParserProcessOneLineProcessNoEditsHeader(self):
     parser = fix_includes.IWYUOutputParser()
     line = '(myfile.cc has correct #includes/fwd-decls)'
