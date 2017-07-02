@@ -286,10 +286,10 @@ class IWYUOutputParser(object):
   # #includes and forward-declares should be added to the output file,
   # what should be removed, and what the end result is.  The first line
   # of each section also has the filename.
-  _ADD_SECTION_RE = re.compile(r'^(.*) should add these lines:$')
-  _REMOVE_SECTION_RE = re.compile(r'^(.*) should remove these lines:$')
-  _TOTAL_SECTION_RE = re.compile(r'^The full include-list for ([^:]*):$')
-  _SECTION_END_RE = re.compile(r'^---$')
+  _ADD_SECTION_RE = re.compile(r'^(.*) should add these lines:\r?\n?$')
+  _REMOVE_SECTION_RE = re.compile(r'^(.*) should remove these lines:\r?\n?$')
+  _TOTAL_SECTION_RE = re.compile(r'^The full include-list for (.*):\r?\n?$')
+  _SECTION_END_RE = re.compile(r'^---\r?\n?$')
 
   # Alternately, if a file does not need any iwyu modifications (though
   # it still may need its #includes sorted), iwyu will emit this:
