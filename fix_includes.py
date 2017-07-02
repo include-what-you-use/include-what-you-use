@@ -288,7 +288,7 @@ class IWYUOutputParser(object):
   # of each section also has the filename.
   _ADD_SECTION_RE = re.compile(r'^(.*) should add these lines:$')
   _REMOVE_SECTION_RE = re.compile(r'^(.*) should remove these lines:$')
-  _TOTAL_SECTION_RE = re.compile(r'^The full include-list for ([^:]*):$')
+  _TOTAL_SECTION_RE = re.compile(r'^The full include-list for (.*):$')
   _SECTION_END_RE = re.compile(r'^---$')
 
   # Alternately, if a file does not need any iwyu modifications (though
