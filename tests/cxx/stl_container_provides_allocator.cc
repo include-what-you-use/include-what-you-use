@@ -27,6 +27,7 @@ void foo() {
   std::uninitialized_fill(buffer, buffer + 4, 0);
 
   std::vector<int> v;
+  (void)v.begin();
 }
 
 /**** IWYU_SUMMARY
