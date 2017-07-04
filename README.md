@@ -1,7 +1,5 @@
 # Include What You Use #
 
-This README was generated on 2017-06-02 16:44:40 UTC.
-
 For more in-depth documentation, see http://github.com/include-what-you-use/include-what-you-use/tree/master/docs.
 
 
@@ -165,4 +163,3 @@ If you don't like the way `fix_includes.py` munges your `#include` lines, you ca
   * If `fix_includes.py` has suggested a private header file (such as `<bits/stl_vector.h>`) instead of the proper public header file (`<vector>`), you can fix this by inserting a specially crafted comment near top of the private file (assuming you can write to it): '`// IWYU pragma: private, include "the/public/file.h"`'.  
 
 Current IWYU pragmas are described in [IWYUPragmas](docs/IWYUPragmas.md).
-
