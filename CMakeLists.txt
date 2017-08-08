@@ -173,11 +173,9 @@ if( WIN32 )
     version # For clangDriver's MSVCToolchain
   )
 elseif( UNIX )
-  include(FindCurses)
   target_link_libraries(include-what-you-use
     pthread
     z
-    ${CURSES_LIBRARIES}
     ${CMAKE_DL_LIBS}
   )
 else()
