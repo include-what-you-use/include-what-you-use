@@ -26,7 +26,7 @@ import json
 import argparse
 import subprocess
 import re
-from multiprocessing import Pool
+import multiprocessing
 
 
 def iwyu_formatter(output):
@@ -155,17 +155,15 @@ def main(compilation_db_path, source_files, verbose, formatter, iwyu_args):
     # Run analysis
     try:
 
-        pool = Pool()
-        # results doesn't contain actual results, it serves exception handeling
-        # https://stackoverflow.com/a/28660669
+        pool = multiprocessing.Pool()
+        # No actual results in `results`, it's only used for exception handling.
+        # Details here: https://stackoverflow.com/a/28660669.
         results = []
         for entry in entries:
             cwd, compile_command = entry['directory'], entry['command']
             results.append(pool.apply_async(run_iwyu,
                                             (cwd, compile_command, iwyu_args, verbose),
-                                            callback = formatter
-                                           )
-                          )
+                                            callback=formatter))
         pool.close()
         pool.join()
         for r in results:
