@@ -115,7 +115,7 @@ def run_iwyu(cwd, compile_command, iwyu_args, verbose):
     return get_output(cwd, command)
 
 
-def main(compilation_db_path, source_files, verbose, formatter, iwyu_args):
+def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args):
     """ Entry point. """
     # Canonicalize compilation database path
     if os.path.isdir(compilation_db_path):
@@ -155,7 +155,7 @@ def main(compilation_db_path, source_files, verbose, formatter, iwyu_args):
     # Run analysis
     try:
 
-        pool = multiprocessing.Pool()
+        pool = multiprocessing.Pool(jobs)
         # No actual results in `results`, it's only used for exception handling.
         # Details here: https://stackoverflow.com/a/28660669.
         results = []
@@ -210,6 +210,8 @@ def _bootstrap():
     parser.add_argument('-o', '--output-format', type=str,
                         choices=FORMATTERS.keys(), default=DEFAULT_FORMAT,
                         help='Output format (default: %s)' % DEFAULT_FORMAT)
+    parser.add_argument('-j', '--jobs', type=int,
+                        help='Number of concurrent subprocesses')
     parser.add_argument('-p', metavar='<build-path>', required=True,
                         help='Compilation database path', dest='dbpath')
     parser.add_argument('source', nargs='*',
@@ -227,7 +229,7 @@ def _bootstrap():
     args = parser.parse_args(argv)
 
     sys.exit(main(args.dbpath, args.source, args.verbose,
-                  FORMATTERS[args.output_format], iwyu_args))
+                  FORMATTERS[args.output_format], args.jobs, iwyu_args))
 
 
 if __name__ == '__main__':
