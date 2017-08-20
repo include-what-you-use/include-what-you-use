@@ -174,9 +174,12 @@ if( WIN32 )
   )
 elseif( UNIX )
   include(FindCurses)
+  include(FindBacktrace)
+
   target_link_libraries(include-what-you-use
     pthread
     z
+    ${Backtrace_LIBRARIES}
     ${CURSES_LIBRARIES}
     ${CMAKE_DL_LIBS}
   )
