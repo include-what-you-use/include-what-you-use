@@ -210,7 +210,7 @@ def _bootstrap():
     parser.add_argument('-o', '--output-format', type=str,
                         choices=FORMATTERS.keys(), default=DEFAULT_FORMAT,
                         help='Output format (default: %s)' % DEFAULT_FORMAT)
-    parser.add_argument('-j', '--jobs', type=int,
+    parser.add_argument('-j', '--jobs', type=int, default=1
                         help='Number of concurrent subprocesses')
     parser.add_argument('-p', metavar='<build-path>', required=True,
                         help='Compilation database path', dest='dbpath')
