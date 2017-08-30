@@ -92,6 +92,11 @@ inline string GetFilePath(const clang::FileEntry* file) {
           NormalizeFilePath(file->getName()));
 }
 
+inline string GetFileFullPath(const clang::FileEntry* file) {
+  return (IsBuiltinFile(file) || file->tryGetRealPathName().empty())
+          ? "<built-in>" : NormalizeFilePath(file->tryGetRealPathName());
+}
+
 //------------------------------------------------------------
 // Helper functions for SourceLocation
 

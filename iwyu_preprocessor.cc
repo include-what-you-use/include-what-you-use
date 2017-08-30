@@ -988,8 +988,12 @@ bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(
   // currently sometimes called with a nullptr main_file_.
   if (!includee)
     return false;
-  if (GetCanonicalName(GetFilePath(includee)) ==
-      GetCanonicalName(GetFilePath(main_file_)))
+
+  auto const includeeFullpath = GetFileFullPath(includee);
+  auto const mainFileFullpath = GetFileFullPath(main_file_);
+
+  if (GetCanonicalName(includeeFullpath) ==
+      GetCanonicalName(mainFileFullpath))
     return true;
   // Heuristic: if the main compilation unit's *first* include is
   // a file with the same basename, assume that it's the 'associated'
@@ -1001,8 +1005,8 @@ bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(
   int first_include_index = GlobalFlags().pch_in_code ? 2 : 1;
   if (includer == main_file_ &&
       ContainsKeyValue(num_includes_seen_, includer, first_include_index)) {
-    if (GetCanonicalName(Basename(GetFilePath(includee))) ==
-        GetCanonicalName(Basename(GetFilePath(main_file_))))
+    if (GetCanonicalName(Basename(includeeFullpath)) ==
+        GetCanonicalName(Basename(mainFileFullpath)))
       return true;
   }
   return false;

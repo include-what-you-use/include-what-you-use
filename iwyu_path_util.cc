@@ -122,6 +122,11 @@ string GetCanonicalName(string file_path) {
   if (include_pos != string::npos)
     file_path = (file_path.substr(0, include_pos) + "/src/" +
                  file_path.substr(include_pos + strlen("/include/")));
+
+#ifdef _WIN32
+  std::transform(file_path.begin(), file_path.end(), file_path.begin(), tolower);
+#endif
+
   return file_path;
 }
 

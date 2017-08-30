@@ -95,6 +95,9 @@ def get_output(cwd, command):
                                stderr=subprocess.STDOUT)
     return process.communicate()[0].decode("utf-8").splitlines()
 
+def normalize_path(path):
+    return os.path.normcase(os.path.normpath(os.path.realpath(path)))
+
 
 def run_iwyu(cwd, compile_command, iwyu_args, verbose):
     """ Rewrite compile_command to an IWYU command, and run it. """
@@ -133,10 +136,10 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args)
 
     # expand symlinks
     for entry in compilation_db:
-        entry['file'] = os.path.realpath(entry['file'])
+        entry['file'] = normalize_path(entry['file'])
 
     # Cross-reference source files with compilation database
-    source_files = [os.path.realpath(s) for s in source_files]
+    source_files = [normalize_path(s) for s in source_files]
     if not source_files:
         # No source files specified, analyze entire compilation database
         entries = compilation_db
