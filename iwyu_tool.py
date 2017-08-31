@@ -145,9 +145,8 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args)
         # warn for the rest.
         entries = []
         for source in source_files:
-            matches = [e for e in compilation_db if e['file'] == source]
-            if matches:
-                entries.extend(matches)
+            if os.path.isdir(source) or os.path.isfile(source):
+                entries.extend([e for e in compilation_db if e['file'].startswith(source)])
             else:
                 print('WARNING: \'%s\' not found in compilation database.' %
                       source)
@@ -215,8 +214,8 @@ def _bootstrap():
     parser.add_argument('-p', metavar='<build-path>', required=True,
                         help='Compilation database path', dest='dbpath')
     parser.add_argument('source', nargs='*',
-                        help='Zero or more source files to run IWYU on. '
-                        'Defaults to all in compilation database.')
+                        help='Zero or more source files (or directories) to '
+                        'run IWYU on. Defaults to all in compilation database.')
 
     def partition_args(argv):
         """ Split around '--' into driver args and IWYU args. """
