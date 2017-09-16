@@ -2157,10 +2157,11 @@ def FixManyFiles(iwyu_records, flags):
   for iwyu_record in iwyu_records:
     try:
       fixed_lines = GetFixedFile(iwyu_record, flags)
-      if not flags.dry_run and fixed_lines is not None:
+      if fixed_lines is not None:
         file_and_fix_pairs.append((iwyu_record.filename, fixed_lines))
-        if (flags.checkout_command and
-            not os.access(iwyu_record.filename, os.W_OK)):
+        if flags.checkout_command and \
+           not flags.dry_run and \
+           not os.access(iwyu_record.filename, os.W_OK):
           files_to_checkout.append(iwyu_record.filename)
     except FixIncludesError as why:
       print('ERROR: %s - skipping file %s' % (why, iwyu_record.filename))
@@ -2187,8 +2188,9 @@ def FixManyFiles(iwyu_records, flags):
       checkout_command += (' -c %d' % flags.append_to_cl)
     _RunCommand(checkout_command, files_to_checkout)
 
-  for filename, fixed_lines in file_and_fix_pairs:
-    _WriteFileContents(filename, fixed_lines)
+  if not flags.dry_run:
+    for filename, fixed_lines in file_and_fix_pairs:
+      _WriteFileContents(filename, fixed_lines)
 
   files_fixed = [filename for filename, _ in file_and_fix_pairs]
 
