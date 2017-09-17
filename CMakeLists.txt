@@ -139,7 +139,31 @@ target_link_libraries(include-what-you-use
 
 # LLVM dependencies.
 target_link_libraries(include-what-you-use
-  LLVM-4.0
+  LLVMX86AsmParser # MC, MCParser, Support, X86CodeGen, X86Desc, X86Info
+  LLVMX86CodeGen # Analysis, AsmPrinter, CodeGen, Core, MC, Support, Target, 
+                 # X86AsmPrinter, X86Desc, X86Info, X86Utils
+  LLVMX86Desc # MC, MCDisassembler, Object, Support, X86AsmPrinter, X86Info
+  LLVMX86AsmPrinter # MC, Support, X86Utils
+  LLVMX86Info # Support
+  LLVMX86Utils # Core, Support
+  LLVMCodeGen # Analysis, Core, MC, Scalar, Support, Target, TransformUtils
+  LLVMipo
+  LLVMScalarOpts
+  LLVMInstCombine
+  LLVMTransformUtils
+  LLVMTarget # Analysis, MC, Core, Support
+  LLVMAnalysis # Core, Support
+  LLVMOption # Support
+  LLVMMCDisassembler # MC, Support
+  LLVMMCParser # MC, Support
+  LLVMMC # Object, Support
+  LLVMProfileData # Core, Support, Object
+  LLVMObject # BitReader, Core, Support
+  LLVMBitReader # Core, Support
+  LLVMCore # BinaryFormat, Support
+  LLVMBinaryFormat # Support
+  LLVMSupport # Demangle
+  LLVMDemangle
 )
 
 # Platform dependencies.
