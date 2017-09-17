@@ -291,7 +291,7 @@ The full include-list for unified_diff.cc:
 -#include <notused.h>
 
  int main() { return 0; }
-IWYU edited 0 files on your behalf.
+IWYU edited 1 files on your behalf.
 
 """
 
@@ -3388,7 +3388,7 @@ The full include-list for dry_run:
     num_modified_files = fix_includes.ProcessIWYUOutput(
         StringIO(iwyu_output), ['dry_run'], self.flags)
     self.assertListEqual([], self.actual_after_contents)
-    self.assertEqual(0, num_modified_files)
+    self.assertEqual(1, num_modified_files)
 
   def testAddForwardDeclareAndKeepIwyuNamespaceFormat(self):
     """Tests that --keep_iwyu_namespace_format writes namespace lines
