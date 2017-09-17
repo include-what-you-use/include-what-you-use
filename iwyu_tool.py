@@ -96,10 +96,22 @@ def get_output(cwd, command):
     return process.communicate()[0].decode("utf-8").splitlines()
 
 
-def run_iwyu(cwd, compile_command, iwyu_args, verbose):
+def run_iwyu(dbentry, iwyu_args, verbose):
     """ Rewrite compile_command to an IWYU command, and run it. """
-    compiler, _, args = compile_command.partition(' ')
-    if compiler.endswith('cl.exe'):
+    cwd = dbentry['directory']
+
+    if 'arguments' in dbentry:
+        # arguments is a command-line in list form
+        arguments = dbentry['arguments']
+        compile_command, compile_args = arguments[0], arguments[1:]
+        compile_args = ' '.join(compile_args)
+    elif 'command' in dbentry:
+        # command is a command-line in string form
+        compile_command, _, compile_args = dbentry['command'].partition(' ')
+    else:
+        raise ValueError('Invalid compilation database entry: %s' % dbentry)
+
+    if compile_command.endswith('cl.exe'):
         # If the compiler name is cl.exe, let IWYU be cl-compatible
         clang_args = ['--driver-mode=cl']
     else:
@@ -107,7 +119,7 @@ def run_iwyu(cwd, compile_command, iwyu_args, verbose):
 
     iwyu_args = ['-Xiwyu ' + a for a in iwyu_args]
     command = ['include-what-you-use'] + clang_args + iwyu_args
-    command = '%s %s' % (' '.join(command), args.strip())
+    command = '%s %s' % (' '.join(command), compile_args.strip())
 
     if verbose:
         print('%s:' % command)
@@ -160,9 +172,8 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args)
         # Details here: https://stackoverflow.com/a/28660669.
         results = []
         for entry in entries:
-            cwd, compile_command = entry['directory'], entry['command']
             results.append(pool.apply_async(run_iwyu,
-                                            (cwd, compile_command, iwyu_args, verbose),
+                                            (entry, iwyu_args, verbose),
                                             callback=formatter))
         pool.close()
         pool.join()
