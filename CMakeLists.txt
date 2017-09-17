@@ -160,7 +160,8 @@ target_link_libraries(include-what-you-use
   LLVMProfileData # Core, Support, Object
   LLVMObject # BitReader, Core, Support
   LLVMBitReader # Core, Support
-  LLVMCore # Support
+  LLVMCore # BinaryFormat, Support
+  LLVMBinaryFormat # Support
   LLVMSupport # Demangle
   LLVMDemangle
 )
@@ -173,9 +174,12 @@ if( WIN32 )
   )
 elseif( UNIX )
   include(FindCurses)
+  include(FindBacktrace)
+
   target_link_libraries(include-what-you-use
     pthread
     z
+    ${Backtrace_LIBRARIES}
     ${CURSES_LIBRARIES}
     ${CMAKE_DL_LIBS}
   )
