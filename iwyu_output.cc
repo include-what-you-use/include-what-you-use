@@ -235,8 +235,9 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
     : symbol_name_(internal::GetQualifiedNameAsString(decl)),
       short_symbol_name_(internal::GetShortNameAsString(decl)),
       decl_(decl),
-      decl_file_(GetFileEntry(decl)),
-      decl_filepath_(GetFilePath(decl)),
+      decl_loc_(GetInstantiationLoc(GetLocation(decl))),
+      decl_file_(GetFileEntry(decl_loc_)),
+      decl_filepath_(GetFilePath(decl_file_)),
       use_loc_(use_loc),
       use_kind_(use_kind),             // full use or fwd-declare use
       in_cxx_method_body_(in_cxx_method_body),
@@ -1120,6 +1121,11 @@ void ProcessFullUse(OneUse* use,
     // See if we also recorded a use of the parent.
     const NamedDecl* parent_dfn
         = GetDefinitionAsWritten(method_dfn->getParent());
+
+    const FileEntry* decl_file_entry = GetFileEntry(use->decl_loc());
+    const FileEntry* parent_file_entry =
+        GetFileEntry(GetInstantiationLoc(GetLocation(parent_dfn)));
+
     // We want to map the definition-files to their public headers if
     // they're private headers (so bits/stl_vector.h and
     // bits/vector.tcc are counted as the "same" file for this test).
@@ -1128,16 +1134,16 @@ void ProcessFullUse(OneUse* use,
     // mapping to choose, and it's important we use the one that iwyu
     // will pick later).  TODO(csilvers): figure out that case too.
     const IncludePicker& picker = GlobalIncludePicker();
-    const vector<string>& method_dfn_files
-        = picker.GetCandidateHeadersForFilepath(GetFilePath(method_dfn));
-    const vector<string>& parent_dfn_files
-        = picker.GetCandidateHeadersForFilepath(GetFilePath(parent_dfn));
+    const vector<string>& method_dfn_files =
+        picker.GetCandidateHeadersForFilepath(GetFilePath(decl_file_entry));
+    const vector<string>& parent_dfn_files =
+        picker.GetCandidateHeadersForFilepath(GetFilePath(parent_file_entry));
     bool same_file;
     if (method_dfn_files.size() == 1 && parent_dfn_files.size() == 1) {
       same_file = (method_dfn_files[0] == parent_dfn_files[0]);
     } else {
       // Fall back on just checking the filenames: can't figure out public.
-      same_file = (GetFileEntry(method_dfn) == GetFileEntry(parent_dfn));
+      same_file = (decl_file_entry == parent_file_entry);
     }
     if (same_file) {
       VERRS(6) << "Ignoring use of " << use->symbol_name()
