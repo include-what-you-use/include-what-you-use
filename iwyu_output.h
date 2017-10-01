@@ -68,6 +68,7 @@ class OneUse {
   const clang::FileEntry* decl_file() const { return decl_file_; }
   const string& decl_filepath() const { return decl_filepath_; }
   clang::SourceLocation use_loc() const { return use_loc_; }
+  clang::SourceLocation decl_loc() const { return decl_loc_; }
   bool is_full_use() const { return use_kind_ == kFullUse; }
   bool in_cxx_method_body() const { return in_cxx_method_body_; }
   const string& comment() const { return comment_; }
@@ -100,6 +101,7 @@ class OneUse {
   string symbol_name_;             // the symbol being used
   string short_symbol_name_;       // 'short' form of the symbol being used
   const clang::NamedDecl* decl_;   // decl of the symbol, if we know it
+  clang::SourceLocation decl_loc_;     // where the decl is attributed to live
   const clang::FileEntry* decl_file_;  // file entry where the symbol lives
   string decl_filepath_;           // filepath where the symbol lives
   clang::SourceLocation use_loc_;  // where the symbol is used from
