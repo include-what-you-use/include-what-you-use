@@ -163,6 +163,7 @@ using clang::CallExpr;
 using clang::ClassTemplateDecl;
 using clang::ClassTemplateSpecializationDecl;
 using clang::CompilerInstance;
+using clang::ConstructorUsingShadowDecl;
 using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
@@ -618,8 +619,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     clang::Sema& sema = compiler_->getSema();
     DeclContext::lookup_result ctors = sema.LookupConstructors(decl);
     for (NamedDecl* ctor_lookup : ctors) {
-      // Ignore templated constructors.
-      if (isa<FunctionTemplateDecl>(ctor_lookup))
+      // Ignore templated or inheriting constructors.
+      if (isa<FunctionTemplateDecl>(ctor_lookup) ||
+          isa<UsingDecl>(ctor_lookup) ||
+          isa<ConstructorUsingShadowDecl>(ctor_lookup))
         continue;
       CXXConstructorDecl* ctor = cast<CXXConstructorDecl>(ctor_lookup);
       if (!ctor->hasBody() && !ctor->isDeleted() && ctor->isImplicit()) {
