@@ -1,5 +1,7 @@
 # Include What You Use #
 
+[![Build Status](https://travis-ci.org/include-what-you-use/include-what-you-use.svg?branch=master)](https://travis-ci.org/include-what-you-use/include-what-you-use)
+
 For more in-depth documentation, see http://github.com/include-what-you-use/include-what-you-use/tree/master/docs.
 
 
