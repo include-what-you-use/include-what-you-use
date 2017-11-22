@@ -874,6 +874,7 @@ set<string> CalculateMinimalIncludes(
 // A6) If any of the redeclarations of this declaration is in the same
 //     file as the use (and before it), and is actually a definition,
 //     discard the forward-declare use.
+// A7) If --no_fwd_decls has been passed, recategorize as a full use.
 
 // Trimming symbol uses (1st pass):
 // B1) If the definition of a full use comes after the use, change the
@@ -1031,6 +1032,11 @@ void ProcessForwardDeclare(OneUse* use,
       use->set_ignore_use();
       return;
     }
+  }
+
+  // (A7) If --no_fwd_decls has been passed, recategorize as a full use.
+  if (GlobalFlags().no_fwd_decls) {
+    use->set_full_use();
   }
 }
 

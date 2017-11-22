@@ -98,8 +98,9 @@ struct CommandlineFlags {
   int max_line_length;
   // Policy regarding files included via -include option.  No short option.
   PrefixHeaderIncludePolicy prefix_header_include_policy;
-  bool pch_in_code;  // Treat the first seen include as a PCH. No short option.
-  bool no_comments;  // Disable 'why' comments. No short option.
+  bool pch_in_code;   // Treat the first seen include as a PCH. No short option.
+  bool no_comments;   // Disable 'why' comments. No short option.
+  bool no_fwd_decls;  // Disable forward declarations.
 };
 
 const CommandlineFlags& GlobalFlags();
