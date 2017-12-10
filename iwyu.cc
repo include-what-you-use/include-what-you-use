@@ -2819,19 +2819,20 @@ class InstantiatedTemplateVisitor
   // This isn't a Stmt, but sometimes we need to fully instantiate
   // a template class to get at a field of it, for instance:
   // MyClass<T>::size_type s;
-  void ScanInstantiatedType(
-      const Type* type, const ASTNode* caller_ast_node,
-      const map<const Type*, const Type*>& resugar_map) {
+  void ScanInstantiatedType(ASTNode* caller_ast_node,
+                            const map<const Type*, const Type*>& resugar_map) {
     Clear();
     caller_ast_node_ = caller_ast_node;
     resugar_map_ = resugar_map;
 
-    // Make sure that the caller didn't already put the type on the ast-stack.
-    CHECK_(caller_ast_node->GetAs<Type>() != type && "AST node already set");
-    // caller_ast_node requires a non-const ASTNode, but our node is
-    // const.  This cast is safe because we don't do anything with this
-    // node (instead, we immediately push a new node on top of it).
-    set_current_ast_node(const_cast<ASTNode*>(caller_ast_node));
+    // The caller node *is* the current node, unlike ScanInstantiatedFunction
+    // which instead starts in the context of the parent expression and relies
+    // on a TraverseDecl call to push the decl to the top of the AST stack.
+    set_current_ast_node(caller_ast_node);
+
+    const TemplateSpecializationType* type =
+        caller_ast_node->GetAs<TemplateSpecializationType>();
+    CHECK_(type != nullptr && "Not a template specialization");
 
     // As in TraverseExpandedTemplateFunctionHelper, we ignore all AST nodes
     // that will be reported when we traverse the uninstantiated type.
@@ -2841,7 +2842,8 @@ class InstantiatedTemplateVisitor
           const_cast<NamedDecl*>(type_decl_as_written));
     }
 
-    TraverseType(QualType(type, 0));
+    TraverseTemplateSpecializationType(
+        const_cast<TemplateSpecializationType*>(type));
   }
 
   //------------------------------------------------------------
@@ -3774,18 +3776,22 @@ class IwyuAstConsumer
   bool VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
 
-    const Type* arg_type = expr->getTypeOfArgument().getTypePtr();
+    const Type* arg_type =
+        RemoveElaboration(expr->getTypeOfArgument().getTypePtr());
     // Calling sizeof on a reference-to-X is the same as calling it on X.
     if (const ReferenceType* reftype = DynCastFrom(arg_type)) {
       arg_type = reftype->getPointeeTypeAsWritten().getTypePtr();
     }
-    if (!IsTemplatizedType(arg_type))
-      return Base::VisitUnaryExprOrTypeTraitExpr(expr);
 
-    const map<const Type*, const Type*> resugar_map
-        = GetTplTypeResugarMapForClass(arg_type);
-    instantiated_template_visitor_.ScanInstantiatedType(
-        arg_type, current_ast_node(), resugar_map);
+    if (const TemplateSpecializationType* arg_tmpl = DynCastFrom(arg_type)) {
+      // Special case: We are instantiating the type in the context of an
+      // expression. Need to push the type to the AST stack explicitly.
+      ASTNode node(arg_tmpl, *GlobalSourceManager());
+      node.SetParent(current_ast_node());
+
+      instantiated_template_visitor_.ScanInstantiatedType(
+          &node, GetTplTypeResugarMapForClass(arg_type));
+    }
 
     return Base::VisitUnaryExprOrTypeTraitExpr(expr);
   }
@@ -3852,12 +3858,9 @@ class IwyuAstConsumer
     if (!CanForwardDeclareType(current_ast_node())) {
       const map<const Type*, const Type*> resugar_map
           = GetTplTypeResugarMapForClass(type);
-      // ScanInstantiatedType requires that type not already be on the
-      // ast-stack that it sees, but in our case it will be.  So we
-      // pass in the parent-node.
-      const ASTNode* ast_parent = current_ast_node()->parent();
-      instantiated_template_visitor_.ScanInstantiatedType(
-          type, ast_parent, resugar_map);
+
+      instantiated_template_visitor_.ScanInstantiatedType(current_ast_node(),
+                                                          resugar_map);
     }
 
     return Base::VisitTemplateSpecializationType(type);
