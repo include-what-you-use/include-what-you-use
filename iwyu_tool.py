@@ -27,6 +27,7 @@ import argparse
 import subprocess
 import re
 import multiprocessing
+import copy
 
 
 def iwyu_formatter(output):
@@ -127,7 +128,8 @@ def run_iwyu(dbentry, iwyu_args, verbose):
     return get_output(cwd, command)
 
 
-def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args):
+def main(compilation_db_path, source_files, verbose, formatter, jobs,
+         assume_path, iwyu_args):
     """ Entry point. """
     # Canonicalize compilation database path
     if os.path.isdir(compilation_db_path):
@@ -149,6 +151,23 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args)
 
     # Cross-reference source files with compilation database
     source_files = [os.path.realpath(s) for s in source_files]
+
+    # Handle assumed path by creating missing entries for the sources.
+    if assume_path:
+        assume_path = os.path.realpath(assume_path)
+        matches = [e for e in compilation_db if e['file'] == assume_path]
+        if matches:
+            match = matches[0]
+            for source in source_files:
+                entry = copy.copy(match)
+                entry['command'] = match['command'].replace(assume_path,
+                                                            '-x c++ ' + source)
+                entry['file'] = source
+                compilation_db.append(entry)
+        else:
+                print('WARNING: assumed path \'%s\' not found in compilation '
+                      'database.' % source)
+
     if not source_files:
         # No source files specified, analyze entire compilation database
         entries = compilation_db
@@ -225,6 +244,9 @@ def _bootstrap():
                         help='Number of concurrent subprocesses')
     parser.add_argument('-p', metavar='<build-path>', required=True,
                         help='Compilation database path', dest='dbpath')
+    parser.add_argument('-a', metavar='<file-name>', default=None,
+                        help='Assume this filename when reading from the '
+                        'compilation database.', dest='assumepath')
     parser.add_argument('source', nargs='*',
                         help='Zero or more source files to run IWYU on. '
                         'Defaults to all in compilation database.')
@@ -240,7 +262,8 @@ def _bootstrap():
     args = parser.parse_args(argv)
 
     sys.exit(main(args.dbpath, args.source, args.verbose,
-                  FORMATTERS[args.output_format], args.jobs, iwyu_args))
+                  FORMATTERS[args.output_format], args.jobs,
+                  args.assumepath, iwyu_args))
 
 
 if __name__ == '__main__':
