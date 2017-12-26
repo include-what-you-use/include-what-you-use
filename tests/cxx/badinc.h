@@ -244,7 +244,7 @@ class H_TemplateTemplateClass {
   // TODO(csilvers): attribute this use here, not at the caller sites.
   // TODO(csilvers): IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
   // IWYU: I2_Enum is...*badinc-i2.h
-  // IWYU: I2_Enum::I21 is...*badinc-i2.h
+  // IWYU: I21 is...*badinc-i2.h
   H_TemplateTemplateClass() : t(T<I2_Enum>(I21)) {}
   // IWYU: I2_Enum is...*badinc-i2.h
   T<I2_Enum> t;
