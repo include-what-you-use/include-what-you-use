@@ -43,6 +43,7 @@ using clang::CXXMethodDecl;
 using clang::CXXRecordDecl;
 using clang::Decl;
 using clang::DeclContext;
+using clang::EnumDecl;
 using clang::FileEntry;
 using clang::FunctionDecl;
 using clang::NamedDecl;
@@ -210,6 +211,12 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
         ostream << *record_decl << "::";
     } else if (const FunctionDecl *function_decl = DynCastFrom(*it)) {
       ostream << *function_decl << "::";   // could also add in '<< "()"'
+    } else if (const EnumDecl* enum_decl = DynCastFrom(*it)) {
+      if (enum_decl->isScoped()) {
+        ostream << *(cast<NamedDecl>(*it)) << "::";
+      } else {
+        // Don't add a scope prefix for old-style unscoped enums.
+      }
     } else {
       ostream << *(cast<NamedDecl>(*it)) << "::";
     }
