@@ -1520,8 +1520,9 @@ int main() {
   // IWYU: std::vector is...*<vector>
   // IWYU: I2_Enum is...*badinc-i2.h
   std::vector<I2_Enum> local_enum_vector;
-  // I2_Enum here is redundant but harmless.
-  // IWYU: I2_Enum is...*badinc-i2.h
+  // TODO: In C++03 and earlier I2_Enum is required below. The fact that this
+  // depends on standard version indicates a bug in our template handling, as
+  // the instantiation chain is different in old vs. new standard libraries.
   // IWYU: std::vector is...*<vector>
   // IWYU: I21 is...*badinc-i2.h
   local_enum_vector.push_back(I21);
