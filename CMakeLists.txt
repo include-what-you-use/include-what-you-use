@@ -70,23 +70,6 @@ else()
   message(STATUS "IWYU in-tree configuration")
 endif()
 
-# Pick up Git revision so we can report it in version information.
-find_package(Git MODULE)
-if( Git_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git" )
-  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE IWYU_GIT_REV
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-endif()
-
-if( NOT IWYU_GIT_REV )
-  message(WARNING "IWYU Git version info not found, "
-                  "DO NOT release from this build tree!")
-endif()
-
-
-add_definitions(-DIWYU_GIT_REV="${IWYU_GIT_REV}")
-
 add_executable(include-what-you-use
   iwyu.cc
   iwyu_ast_util.cc
@@ -197,6 +180,25 @@ else()
     "No platform link-dependencies added.")
 endif()
 
+# Pick up Git revision so we can report it in version information.
+if( NOT DEFINED IWYU_GIT_REV )
+  find_package(Git MODULE)
+
+  if( Git_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git" )
+    execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      OUTPUT_VARIABLE IWYU_GIT_REV
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    add_definitions(-DIWYU_GIT_REV="${IWYU_GIT_REV}")
+  endif()
+endif()
+
+if( NOT IWYU_GIT_REV )
+  message(WARNING "IWYU Git version info not found, "
+    "DO NOT release from this build tree!")
+endif()
+
+# Install programs
 install(TARGETS include-what-you-use RUNTIME DESTINATION bin)
 install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
 
