@@ -57,69 +57,33 @@ if( MSVC )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /EHsc")
 endif()
 
-# LLVM/Clang dependencies.
+# Link dependencies.
+set(CLANG_LIBS
+   clangFrontend
+   clangDriver
+   clangSema
+   clangAST
+   clangBasic
+   )
+
+set(LLVM_LIBS
+  LLVMX86AsmParser
+  LLVMX86Desc
+  LLVMX86Info
+  LLVMSupport
+  )
+
 target_link_libraries(include-what-you-use
   PRIVATE
-  clangFrontend
-  clangSerialization
-  clangDriver
-  clangParse
-  clangSema
-  clangAnalysis
-  clangAST
-  clangBasic
-  clangEdit
-  clangLex
-  LLVMX86AsmParser # MC, MCParser, Support, X86CodeGen, X86Desc, X86Info
-  LLVMX86CodeGen # Analysis, AsmPrinter, CodeGen, Core, MC, Support, Target, 
-                 # X86AsmPrinter, X86Desc, X86Info, X86Utils
-  LLVMX86Desc # MC, MCDisassembler, Object, Support, X86AsmPrinter, X86Info
-  LLVMX86AsmPrinter # MC, Support, X86Utils
-  LLVMX86Info # Support
-  LLVMX86Utils # Core, Support
-  LLVMCodeGen # Analysis, Core, MC, Scalar, Support, Target, TransformUtils
-  LLVMipo
-  LLVMScalarOpts
-  LLVMInstCombine
-  LLVMTransformUtils
-  LLVMTarget # Analysis, MC, Core, Support
-  LLVMAnalysis # Core, Support
-  LLVMOption # Support
-  LLVMMCDisassembler # MC, Support
-  LLVMMCParser # MC, Support
-  LLVMMC # Object, Support
-  LLVMProfileData # Core, Support, Object
-  LLVMObject # BitReader, Core, Support
-  LLVMBitReader # Core, Support
-  LLVMCore # BinaryFormat, Support
-  LLVMBinaryFormat # Support
-  LLVMSupport # Demangle
-  LLVMDemangle
+  ${CLANG_LIBS}
+  ${LLVM_LIBS}
 )
 
-# Platform dependencies.
 if( WIN32 )
   target_link_libraries(include-what-you-use
     PRIVATE
     shlwapi
-    version # For clangDriver's MSVCToolchain
   )
-elseif( UNIX )
-  include(FindCurses)
-  include(FindBacktrace)
-
-  target_link_libraries(include-what-you-use
-    PRIVATE
-    pthread
-    z
-    ${Backtrace_LIBRARIES}
-    ${CURSES_LIBRARIES}
-    ${CMAKE_DL_LIBS}
-  )
-else()
-  message(WARNING
-    "Unknown system: ${CMAKE_SYSTEM_NAME}. "
-    "No platform link-dependencies added.")
 endif()
 
 # Pick up Git revision so we can report it in version information.
