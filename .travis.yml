@@ -30,7 +30,7 @@ script:
 # Build IWYU
  - mkdir build
  - cd build
- - cmake -GNinja -DLLVM_DIR=$CMAKE_PATH -DClang_DIR=$CMAKE_PATH/../clang -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
+ - cmake -GNinja -DLLVM_DIR=$CMAKE_PATH -DClang_DIR=/usr/share/llvm-$VERSION/cmake/ -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
  - ninja install
 
 # Test IWYU
