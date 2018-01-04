@@ -7,7 +7,6 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
     # Silence CMP0048 warning about missing project VERSION.
     cmake_policy(SET CMP0048 NEW)
   endif()
-
   project(include-what-you-use)
 
   find_package(LLVM CONFIG REQUIRED)
@@ -17,6 +16,7 @@ else()
   message(STATUS "IWYU in-tree configuration")
 endif()
 
+# Pick up LLVM/Clang build settings
 include(AddLLVM)
 include(HandleLLVMOptions)
 
@@ -24,7 +24,7 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(
   ${LLVM_INCLUDE_DIRS}
   ${CLANG_INCLUDE_DIRS}
-  )
+)
 
 add_llvm_executable(include-what-you-use
   iwyu.cc
@@ -52,7 +52,7 @@ if( MSVC )
   add_definitions(
     -wd4722 # Suppress ''destructor'' : destructor never returns, potential memory leak
     -D_HAS_EXCEPTIONS=0
-  )
+)
 
   # Enable bigobj support and sane C++ exception semantics.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /EHsc")
@@ -65,14 +65,14 @@ set(CLANG_LIBS
    clangSema
    clangAST
    clangBasic
-   )
+)
 
 set(LLVM_LIBS
   LLVMX86AsmParser
   LLVMX86Desc
   LLVMX86Info
   LLVMSupport
-  )
+)
 
 target_link_libraries(include-what-you-use
   PRIVATE
