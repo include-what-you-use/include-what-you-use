@@ -24,7 +24,6 @@ before_install:
  - CMAKE_PATH=`llvm-config-$VERSION --cmakedir`
  - BIN_PATH=`llvm-config-$VERSION --bindir`
  - echo $CMAKE_PATH
- - find / -name "ClangConfig.cmake"
 
 script:
 # Build IWYU
