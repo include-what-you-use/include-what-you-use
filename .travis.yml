@@ -23,6 +23,7 @@ before_install:
  # Absolute paths to LLVM's root and bin directory
  - CMAKE_PATH=`llvm-config-$VERSION --cmakedir`
  - BIN_PATH=`llvm-config-$VERSION --bindir`
+ - echo $CMAKE_PATH
 
 script:
 # Build IWYU
