@@ -23,7 +23,7 @@ else()
   message(STATUS "IWYU: in-tree configuration")
 endif()
 
-# Pick up LLVM/Clang build settings
+# LLVM/Clang build settings
 include(AddLLVM)
 include(HandleLLVMOptions)
 
@@ -33,6 +33,7 @@ include_directories(
   ${CLANG_INCLUDE_DIRS}
   )
 
+# IWYU build settings
 add_llvm_executable(include-what-you-use
   iwyu.cc
   iwyu_ast_util.cc
@@ -49,11 +50,6 @@ add_llvm_executable(include-what-you-use
   iwyu_verrs.cc
   )
 
-if (MINGW)
-  # Work around 'too many sections' error with MINGW/GCC
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
-endif()
-
 if (MSVC)
   # Disable warnings for IWYU, and disable exceptions in MSVC's STL.
   add_definitions(
@@ -63,6 +59,9 @@ if (MSVC)
 
   # Enable bigobj support and sane C++ exception semantics.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /EHsc")
+elseif (MINGW)
+  # Work around 'too many sections' error with MINGW/GCC
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
 endif()
 
 # Link dependencies.
