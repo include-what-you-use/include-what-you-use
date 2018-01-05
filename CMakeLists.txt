@@ -13,6 +13,9 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   message(STATUS "IWYU found LLVM (version: ${LLVM_VERSION})")
 
   find_package(Clang CONFIG REQUIRED)
+  if (NOT Clang_VERSION)
+    set(Clang_VERSION "unknown")
+  endif()
   message(STATUS "IWYU found Clang (version: ${Clang_VERSION})")
 
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
