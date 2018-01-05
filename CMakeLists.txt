@@ -66,7 +66,7 @@ if( MSVC )
 endif()
 
 # Link dependencies.
-set(CLANG_LIBS
+set(IWYU_CLANG_DEPS
   clangFrontend
   clangDriver
   clangSema
@@ -74,7 +74,7 @@ set(CLANG_LIBS
   clangBasic
   )
 
-set(LLVM_LIBS
+set(IWYU_LLVM_DEPS
   LLVMX86AsmParser
   LLVMX86Desc
   LLVMX86Info
@@ -83,8 +83,8 @@ set(LLVM_LIBS
 
 target_link_libraries(include-what-you-use
   PRIVATE
-  ${CLANG_LIBS}
-  ${LLVM_LIBS}
+  ${IWYU_CLANG_DEPS}
+  ${IWYU_LLVM_DEPS}
 )
 
 if( WIN32 )
