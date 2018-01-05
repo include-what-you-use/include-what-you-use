@@ -63,19 +63,19 @@ endif()
 
 # Link dependencies.
 set(CLANG_LIBS
-   clangFrontend
-   clangDriver
-   clangSema
-   clangAST
-   clangBasic
-)
+  clangFrontend
+  clangDriver
+  clangSema
+  clangAST
+  clangBasic
+  )
 
 set(LLVM_LIBS
   LLVMX86AsmParser
   LLVMX86Desc
   LLVMX86Info
   LLVMSupport
-)
+  )
 
 target_link_libraries(include-what-you-use
   PRIVATE
