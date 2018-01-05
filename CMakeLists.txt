@@ -10,11 +10,12 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   project(include-what-you-use)
 
   find_package(LLVM CONFIG REQUIRED)
-  find_package(Clang CONFIG REQUIRED)
-  list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
+  message(STATUS "IWYU found LLVM (version: ${LLVM_VERSION})")
 
-  message(STATUS "Found LLVM version ${LLVM_VERSION}")
-  message(STATUS "Found Clang version ${Clang_VERSION}")
+  find_package(Clang CONFIG REQUIRED)
+  message(STATUS "IWYU found Clang (version: ${Clang_VERSION})")
+
+  list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
 else()
   message(STATUS "IWYU in-tree configuration")
 endif()
