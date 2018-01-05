@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.4.3)
 
-if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(STATUS "IWYU: out-of-tree configuration")
 
-  if( POLICY CMP0048 )
+  if (POLICY CMP0048)
     # Silence CMP0048 warning about missing project VERSION.
     cmake_policy(SET CMP0048 NEW)
   endif()
@@ -49,12 +49,12 @@ add_llvm_executable(include-what-you-use
   iwyu_verrs.cc
   )
 
-if( MINGW )
+if (MINGW)
   # Work around 'too many sections' error with MINGW/GCC
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
 endif()
 
-if( MSVC )
+if (MSVC)
   # Disable warnings for IWYU, and disable exceptions in MSVC's STL.
   add_definitions(
     -wd4722 # Suppress ''destructor'' : destructor never returns, potential memory leak
@@ -87,7 +87,7 @@ target_link_libraries(include-what-you-use
   ${IWYU_LLVM_DEPS}
   )
 
-if( WIN32 )
+if (WIN32)
   target_link_libraries(include-what-you-use
     PRIVATE
     shlwapi
@@ -95,10 +95,10 @@ if( WIN32 )
 endif()
 
 # Pick up Git revision so we can report it in version information.
-if( NOT DEFINED IWYU_GIT_REV )
+if (NOT DEFINED IWYU_GIT_REV)
   find_package(Git MODULE)
 
-  if( Git_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git" )
+  if (Git_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
     execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE IWYU_GIT_REV
@@ -107,7 +107,7 @@ if( NOT DEFINED IWYU_GIT_REV )
   endif()
 endif()
 
-if( NOT IWYU_GIT_REV )
+if (NOT IWYU_GIT_REV)
   message(WARNING "IWYU: Git version info not found, "
     "DO NOT release from this build tree!")
 endif()
