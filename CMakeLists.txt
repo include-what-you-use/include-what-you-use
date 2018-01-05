@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.4.3)
 
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
-  message(STATUS "IWYU out-of-tree configuration")
+  message(STATUS "IWYU: out-of-tree configuration")
 
   if( POLICY CMP0048 )
     # Silence CMP0048 warning about missing project VERSION.
@@ -10,17 +10,17 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   project(include-what-you-use)
 
   find_package(LLVM CONFIG REQUIRED)
-  message(STATUS "IWYU found LLVM (version: ${LLVM_VERSION})")
+  message(STATUS "IWYU: found LLVM (version ${LLVM_VERSION})")
 
   find_package(Clang CONFIG REQUIRED)
   if (NOT Clang_VERSION)
     set(Clang_VERSION "unknown")
   endif()
-  message(STATUS "IWYU found Clang (version: ${Clang_VERSION})")
+  message(STATUS "IWYU: found Clang (version ${Clang_VERSION})")
 
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
 else()
-  message(STATUS "IWYU in-tree configuration")
+  message(STATUS "IWYU: in-tree configuration")
 endif()
 
 # Pick up LLVM/Clang build settings
@@ -108,7 +108,7 @@ if( NOT DEFINED IWYU_GIT_REV )
 endif()
 
 if( NOT IWYU_GIT_REV )
-  message(WARNING "IWYU Git version info not found, "
+  message(WARNING "IWYU: Git version info not found, "
     "DO NOT release from this build tree!")
 endif()
 
