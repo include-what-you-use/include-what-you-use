@@ -31,7 +31,7 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(
   ${LLVM_INCLUDE_DIRS}
   ${CLANG_INCLUDE_DIRS}
-)
+  )
 
 add_llvm_executable(include-what-you-use
   iwyu.cc
@@ -47,7 +47,7 @@ add_llvm_executable(include-what-you-use
   iwyu_path_util.cc
   iwyu_preprocessor.cc
   iwyu_verrs.cc
-)
+  )
 
 if( MINGW )
   # Work around 'too many sections' error with MINGW/GCC
@@ -59,7 +59,7 @@ if( MSVC )
   add_definitions(
     -wd4722 # Suppress ''destructor'' : destructor never returns, potential memory leak
     -D_HAS_EXCEPTIONS=0
-)
+    )
 
   # Enable bigobj support and sane C++ exception semantics.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /EHsc")
@@ -85,13 +85,13 @@ target_link_libraries(include-what-you-use
   PRIVATE
   ${IWYU_CLANG_DEPS}
   ${IWYU_LLVM_DEPS}
-)
+  )
 
 if( WIN32 )
   target_link_libraries(include-what-you-use
     PRIVATE
     shlwapi
-  )
+    )
 endif()
 
 # Pick up Git revision so we can report it in version information.
