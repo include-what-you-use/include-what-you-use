@@ -29,7 +29,7 @@ list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
 include(AddLLVM)
 include(HandleLLVMOptions)
 
-add_definitions(${LLVM_DEFLINITIONS})
+add_definitions(${LLVM_DEFINITIONS})
 include_directories(
   ${LLVM_INCLUDE_DIRS}
   ${CLANG_INCLUDE_DIRS}
