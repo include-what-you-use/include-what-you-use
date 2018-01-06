@@ -12,22 +12,24 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(LLVM CONFIG REQUIRED)
   message(STATUS "IWYU: found LLVM (version ${LLVM_VERSION})")
 
-  find_package(Clang CONFIG REQUIRED)
-  if (NOT Clang_VERSION)
-    set(Clang_VERSION "unknown")
+  find_package(Clang CONFIG)
+  if (Clang_FOUND)
+    message(STATUS "IWYU: found a Clang")
+  else()
+    # Use workaround hack for broken Clang packaging, e.g.:
+    # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=862328
+    include("${CMAKE_CURRENT_SOURCE_DIR}/clang-skeleton.cmake")
   endif()
-  message(STATUS "IWYU: found Clang (version ${Clang_VERSION})")
-
-  list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
 else()
   message(STATUS "IWYU: in-tree configuration")
 endif()
 
 # LLVM/Clang build settings
+list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
 include(AddLLVM)
 include(HandleLLVMOptions)
 
-add_definitions(${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFLINITIONS})
 include_directories(
   ${LLVM_INCLUDE_DIRS}
   ${CLANG_INCLUDE_DIRS}
