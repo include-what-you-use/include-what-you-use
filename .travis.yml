@@ -21,15 +21,14 @@ before_install:
  - VERSION=`ls -t /usr/lib/ | grep '^llvm-' | head -n 1 | sed -E 's/llvm-(.+)/\1/'`
 
  # Absolute paths to LLVM's root and bin directory
- - CMAKE_PATH=`llvm-config-$VERSION --cmakedir`
+ - PREFIX_PATH=`llvm-config-$VERSION --prefix`
  - BIN_PATH=`llvm-config-$VERSION --bindir`
- - echo $CMAKE_PATH
 
 script:
 # Build IWYU
  - mkdir build
  - cd build
- - cmake -GNinja -DLLVM_DIR=$CMAKE_PATH -DClang_DIR=/usr/share/llvm-$VERSION/cmake/ -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
+ - cmake -GNinja -DCMAKE_PREFIX_PATH=$PREFIX_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
  - ninja install
 
 # Test IWYU
