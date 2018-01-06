@@ -12,7 +12,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(LLVM CONFIG REQUIRED)
   message(STATUS "IWYU: found LLVM (version ${LLVM_VERSION})")
 
-  find_package(Clang CONFIG)
+  find_package(Clang ${LLVM_VERSION} CONFIG)
   if (Clang_FOUND)
     message(STATUS "IWYU: found a Clang")
   else()
