@@ -69,7 +69,7 @@ set(IWYU_CLANG_DEPS
   clangBasic
   )
 
-if (TARGET LLVM)
+if (TARGET LLVM OR LLVM_BUILD_LLVM_DYLIB)
   # Link LLVM shared lib if available.
   set(IWYU_LLVM_DEPS
     LLVM
