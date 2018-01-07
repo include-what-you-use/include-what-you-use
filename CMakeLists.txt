@@ -69,12 +69,20 @@ set(IWYU_CLANG_DEPS
   clangBasic
   )
 
-set(IWYU_LLVM_DEPS
-  LLVMX86AsmParser
-  LLVMX86Desc
-  LLVMX86Info
-  LLVMSupport
-  )
+if (TARGET LLVM)
+  # Link LLVM shared lib if available.
+  set(IWYU_LLVM_DEPS
+    LLVM
+    )
+else()
+  # Otherwise use individual static libs.
+  set(IWYU_LLVM_DEPS
+    LLVMX86AsmParser
+    LLVMX86Desc
+    LLVMX86Info
+    LLVMSupport
+    )
+endif()
 
 target_link_libraries(include-what-you-use
   PRIVATE
