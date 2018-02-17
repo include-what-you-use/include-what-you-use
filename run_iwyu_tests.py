@@ -108,6 +108,7 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_add.cc': prefix_headers,
       'prefix_header_includes_keep.cc': prefix_headers,
       'prefix_header_includes_remove.cc': prefix_headers,
+      'range_for.cc': ['-std=c++11'],
       'typedef_in_template.cc': ['-std=c++11'],
       'inheriting_ctor.cc': ['-std=c++11'],
     }
@@ -167,6 +168,7 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_add.cc': ['.'],
       'prefix_header_includes_keep.cc': ['.'],
       'prefix_header_includes_remove.cc': ['.'],
+      'range_for.cc': ['.'],
       're_fwd_decl.cc': ['.'],
       'redecls.cc': ['.'],
       'remove_fwd_decl_when_including.cc': ['.'],

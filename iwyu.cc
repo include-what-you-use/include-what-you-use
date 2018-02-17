@@ -1983,6 +1983,24 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return Base::VisitCXXCatchStmt(stmt);
   }
 
+  // The type of the for-range-init expression is fully required, because the
+  // compiler generates method calls to it, e.g. 'for (auto t : ts)' translates
+  // roughly into 'for (auto i = std::begin(ts); i != std::end(ts); ++i)'.
+  // Both the iterator type and the begin/end calls depend on the complete type
+  // of ts, so make sure we include it.
+  bool VisitCXXForRangeStmt(clang::CXXForRangeStmt* stmt) {
+    if (CanIgnoreCurrentASTNode()) return true;
+
+    if (const Type* type = stmt->getRangeInit()->getType().getTypePtrOrNull()) {
+      ReportTypeUse(CurrentLoc(), RemovePointersAndReferencesAsWritten(type));
+
+      // TODO: We should probably find a way to require inclusion of any
+      // argument-dependent begin/end declarations.
+    }
+
+    return Base::VisitCXXForRangeStmt(stmt);
+  }
+
   // When casting non-pointers, iwyu will do the right thing
   // automatically, but sometimes when casting from one pointer to
   // another, you still need the full type information of both types:
