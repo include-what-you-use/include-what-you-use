@@ -1867,7 +1867,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   bool VisitFunctionDecl(clang::FunctionDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
 
-    if (!decl->isThisDeclarationADefinition()) {
+    if (decl->isThisDeclarationADefinition()) {
+      // For free functions, report use of all previously seen decls.
+      if (decl->getKind() == Decl::Function) {
+        FunctionDecl* redecl = decl;
+        while ((redecl = redecl->getPreviousDecl()))
+          ReportDeclUse(CurrentLoc(), redecl);
+      }
+    } else {
       // Make all our types forward-declarable...
       current_ast_node()->set_in_forward_declare_context(true);
     }

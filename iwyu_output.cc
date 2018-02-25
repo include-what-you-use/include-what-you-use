@@ -578,7 +578,12 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
                                        const char* comment) {
   if (decl) {
     // Since we need the full symbol, we need the decl's definition-site.
-    decl = GetDefinitionAsWritten(decl);
+    // But only if we're not defining the function, in which case we want to use
+    // all its preceding declarations, and not try to canonicalize.
+    if (!(flags & UF_FunctionDfn)) {
+      decl = GetDefinitionAsWritten(decl);
+    }
+
     symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kFullUse,
                                   flags, comment));
     LogSymbolUse("Marked full-info use of decl", symbol_uses_.back());
@@ -1095,18 +1100,23 @@ void ProcessFullUse(OneUse* use,
   // definition from iwyu's point of view.)  We don't bother with
   // RedeclarableTemplate<> types (FunctionTemplateDecl), since for
   // those types, iwyu *does* care about the definition vs declaration.
-  set<const NamedDecl*> all_redecls;
-  if (isa<RecordDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
-    all_redecls.insert(use->decl());    // for classes, just consider the dfn
-  else
-    all_redecls = GetNonclassRedecls(use->decl());
-  for (const NamedDecl* redecl : all_redecls) {
-    if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
-      VERRS(6) << "Ignoring use of " << use->symbol_name()
-               << " (" << use->PrintableUseLoc() << "): definition is present: "
-               << PrintableLoc(GetLocation(use->decl())) << "\n";
-      use->set_ignore_use();
-      return;
+  // All this is moot when FunctionDecls are being defined, all their redecls
+  // are separately registered as uses so that a definition anchors all its
+  // declarations.
+  if (!use->is_function_being_defined()) {
+    set<const NamedDecl*> all_redecls;
+    if (isa<RecordDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
+      all_redecls.insert(use->decl());  // for classes, just consider the dfn
+    else
+      all_redecls = GetNonclassRedecls(use->decl());
+    for (const NamedDecl* redecl : all_redecls) {
+      if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
+        VERRS(6) << "Ignoring use of " << use->symbol_name() << " ("
+                 << use->PrintableUseLoc() << "): definition is present: "
+                 << PrintableLoc(GetLocation(use->decl())) << "\n";
+        use->set_ignore_use();
+        return;
+      }
     }
   }
 
