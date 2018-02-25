@@ -268,6 +268,16 @@ UseFlags ComputeUseFlags(const ASTNode* ast_node) {
   if (IsNodeInsideCXXMethodBody(ast_node))
     flags |= UF_InCxxMethodBody;
 
+  // Definitions of free functions are a little special, because they themselves
+  // count as uses of all prior declarations (ideally we should probably just
+  // require one but it's hard so say which, so we pick all previously seen).
+  // Later IWYU analysis phases do some canonicalization that isn't
+  // necessary/valid for this case, so mark it up for later.
+  if (const auto* fd = ast_node->GetAs<FunctionDecl>()) {
+    if (fd->getKind() == Decl::Function && fd->isThisDeclarationADefinition())
+      flags |= UF_FunctionDfn;
+  }
+
   return flags;
 }
 
