@@ -262,6 +262,15 @@ bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
   return false;
 }
 
+UseFlags ComputeUseFlags(const ASTNode* ast_node) {
+  UseFlags flags = UF_None;
+
+  if (IsNodeInsideCXXMethodBody(ast_node))
+    flags |= UF_InCxxMethodBody;
+
+  return flags;
+}
+
 bool IsNestedClassAsWritten(const ASTNode* ast_node) {
   return (ast_node->IsA<RecordDecl>() &&
           (ast_node->ParentIsA<CXXRecordDecl>() ||

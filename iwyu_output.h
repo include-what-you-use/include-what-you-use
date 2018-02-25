@@ -22,6 +22,7 @@
 #include <vector>                       // for vector
 
 #include "iwyu_stl_util.h"
+#include "iwyu_use_flags.h"
 #include "port.h"  // for CHECK_
 #include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
@@ -50,7 +51,7 @@ class OneUse {
   OneUse(const clang::NamedDecl* decl,
          clang::SourceLocation use_loc,
          UseKind use_kind,
-         bool in_cxx_method_body,
+         UseFlags flags,
          const char* comment);
   // Both dfn_file and dfn_filepath are specified to allow to create OneUse
   // with dfn_filepath and without dfn_file.  For example, in
@@ -70,7 +71,7 @@ class OneUse {
   clang::SourceLocation use_loc() const { return use_loc_; }
   clang::SourceLocation decl_loc() const { return decl_loc_; }
   bool is_full_use() const { return use_kind_ == kFullUse; }
-  bool in_cxx_method_body() const { return in_cxx_method_body_; }
+  bool in_cxx_method_body() const { return (use_flags_ & UF_InCxxMethodBody); }
   const string& comment() const { return comment_; }
   bool ignore_use() const { return ignore_use_; }
   bool is_iwyu_violation() const { return is_iwyu_violation_; }
@@ -106,7 +107,7 @@ class OneUse {
   string decl_filepath_;           // filepath where the symbol lives
   clang::SourceLocation use_loc_;  // where the symbol is used from
   UseKind use_kind_;               // kFullUse or kForwardDeclareUse
-  bool in_cxx_method_body_;        // true if use is inside a C++ method body
+  UseFlags use_flags_;             // flags describing features of the use
   string comment_;                 // If not empty, append to clang warning msg
   vector<string> public_headers_;  // header to #include if dfn hdr is private
   string suggested_header_;        // header that allows us to satisfy use
@@ -230,7 +231,7 @@ class IwyuFileInfo {
 
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
                            const clang::NamedDecl* decl,
-                           bool in_cxx_method_body, const char* comment);
+                           UseFlags flags, const char* comment);
   // This is used for symbols with a made up dfn_filepath.  Currently it's used
   // only for placement operator new in templates (see
   // IwyuBaseAstVisitor::VisitCXXNewExpr).
@@ -250,13 +251,13 @@ class IwyuFileInfo {
   // We only allow forward-declaring of decls, not arbitrary symbols.
   void ReportForwardDeclareUse(clang::SourceLocation use_loc,
                                const clang::NamedDecl* decl,
-                               bool in_cxx_method_body, const char* comment);
+                               UseFlags flags, const char* comment);
 
   // Called whenever a NamedDecl is accessed through a UsingDecl.
   // ie: using std::swap; swap(a, b); 
   void ReportUsingDeclUse(clang::SourceLocation use_loc,
                           const clang::UsingDecl* using_decl,
-                          bool in_cxx_method_body, const char* comment);
+                          UseFlags flags, const char* comment);
 
   // This is used when we see a // NOLINT comment, for instance.  It says
   // '#include this header file as-is, without any public-header mapping.'

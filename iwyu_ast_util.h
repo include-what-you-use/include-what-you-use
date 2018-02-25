@@ -16,6 +16,7 @@
 #include <set>                          // for set
 #include <string>                       // for string
 
+#include "iwyu_use_flags.h"
 #include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "clang/AST/DeclBase.h"
@@ -385,6 +386,10 @@ bool IsQualifiedNameNode(const ASTNode* ast_node);
 // also check if the node is in an initializer (either explicitly or
 // implicitly), or the implicit (non-body) code of a destructor.
 bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node);
+
+// Return UseFlags for the current node.
+// These flags provide context around the use to help later IWYU analysis,
+UseFlags ComputeUseFlags(const ASTNode* ast_node);
 
 // Return true if we're a nested class as written, that is, we're a
 // class decl inside another class decl.  The parent class may be

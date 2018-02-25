@@ -1400,7 +1400,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
             preprocessor_info().FileInfoFor(macro_def_file);
         file_info->ReportForwardDeclareUse(
             spelling_loc, fwd_decl,
-            IsNodeInsideCXXMethodBody(current_ast_node()), nullptr);
+            ComputeUseFlags(current_ast_node()), nullptr);
         break;
       }
     }
@@ -1649,7 +1649,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, target_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+        used_loc, target_decl, ComputeUseFlags(current_ast_node()),
         comment);
 
     // Sometimes using a decl drags in a few other uses as well:
@@ -1668,7 +1668,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         = GetUsingDeclarationOf(used_decl, 
               GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
-          used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+          used_loc, using_decl, ComputeUseFlags(current_ast_node()),
           "(for using decl)");
     }
 
@@ -1720,7 +1720,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, target_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+        used_loc, target_decl, ComputeUseFlags(current_ast_node()),
         comment);
 
     // If we're a use that depends on a using declaration, make sure
@@ -1729,7 +1729,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         = GetUsingDeclarationOf(used_decl, 
               GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
-          used_loc, using_decl, IsNodeInsideCXXMethodBody(current_ast_node()),
+          used_loc, using_decl, ComputeUseFlags(current_ast_node()),
           "(for using decl)");
     }
   }
