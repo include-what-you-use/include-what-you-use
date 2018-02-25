@@ -237,7 +237,7 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
 
 // Holds information about a single full or fwd-decl use of a symbol.
 OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
-               OneUse::UseKind use_kind, bool in_cxx_method_body,
+               OneUse::UseKind use_kind, UseFlags flags,
                const char* comment)
     : symbol_name_(internal::GetQualifiedNameAsString(decl)),
       short_symbol_name_(internal::GetShortNameAsString(decl)),
@@ -247,7 +247,7 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
       decl_filepath_(GetFilePath(decl_file_)),
       use_loc_(use_loc),
       use_kind_(use_kind),             // full use or fwd-declare use
-      in_cxx_method_body_(in_cxx_method_body),
+      use_flags_(flags),
       comment_(comment ? comment : ""),
       ignore_use_(false),
       is_iwyu_violation_(false) {
@@ -263,7 +263,7 @@ OneUse::OneUse(const string& symbol_name, const FileEntry* dfn_file,
       decl_filepath_(dfn_filepath),
       use_loc_(use_loc),
       use_kind_(kFullUse),
-      in_cxx_method_body_(false),
+      use_flags_(UF_None),
       ignore_use_(false),
       is_iwyu_violation_(false) {
   // Sometimes dfn_filepath is actually a fully quoted include.  In
@@ -574,13 +574,13 @@ static void LogSymbolUse(const string& prefix, const OneUse& use) {
 
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
                                        const NamedDecl* decl,
-                                       bool in_cxx_method_body,
+                                       UseFlags flags,
                                        const char* comment) {
   if (decl) {
     // Since we need the full symbol, we need the decl's definition-site.
     decl = GetDefinitionAsWritten(decl);
     symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kFullUse,
-                                  in_cxx_method_body, comment));
+                                  flags, comment));
     LogSymbolUse("Marked full-info use of decl", symbol_uses_.back());
   }
 }
@@ -617,7 +617,7 @@ void IwyuFileInfo::ReportKnownDesiredFile(const FileEntry* included_file) {
 
 void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
                                            const NamedDecl* decl,
-                                           bool in_cxx_method_body,
+                                           UseFlags flags,
                                            const char* comment) {
   if (!decl)
     return;
@@ -626,13 +626,13 @@ void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
   // happened here, replace the friend with a real fwd decl.
   decl = GetNonfriendClassRedecl(decl);
   symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse,
-                                in_cxx_method_body, comment));
+                                flags, comment));
   LogSymbolUse("Marked fwd-decl use of decl", symbol_uses_.back());
 }
 
 void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
                                       const UsingDecl* using_decl,
-                                      bool in_cxx_method_body,
+                                      UseFlags flags,
                                       const char* comment) {  
   // If accessing a symbol through a using decl in the same file that contains
   // the using decl, we must mark the using decl as referenced. At the end of
@@ -648,7 +648,7 @@ void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
   // When a symbol is accessed through a using decl, we must report
   // that as a full use of the using decl because whatever file that
   // using decl is in is now required.
-  ReportFullSymbolUse(use_loc, using_decl, in_cxx_method_body, comment);
+  ReportFullSymbolUse(use_loc, using_decl, flags, comment);
 }
 
 // Given a collection of symbol-uses for symbols defined in various
@@ -1970,7 +1970,7 @@ void IwyuFileInfo::ResolvePendingAnalysis() {
       if (using_decl->shadow_size() > 0) {
         ReportForwardDeclareUse(using_decl->getUsingLoc(),
                                 using_decl->shadow_begin()->getTargetDecl(),
-                                /* in_cxx_method_body */ false,
+                                /* flags */ UF_None,
                                 "(for un-referenced using)");
       }
     }
