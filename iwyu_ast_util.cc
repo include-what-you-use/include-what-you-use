@@ -452,16 +452,26 @@ string PrintableTemplateName(const TemplateName& tpl_name) {
 string PrintableTemplateArgument(const TemplateArgument& arg) {
   std::string buffer;
   raw_string_ostream ostream(buffer);
+#if __clang_major__ > 5
   printTemplateArgumentList(ostream, ArrayRef<TemplateArgument>(arg),
                             DefaultPrintPolicy());
+#else
+  TemplateSpecializationType::PrintTemplateArgumentList(
+      ostream, ArrayRef<TemplateArgument>(arg), DefaultPrintPolicy());
+#endif
   return ostream.str();
 }
 
 string PrintableTemplateArgumentLoc(const TemplateArgumentLoc& arg) {
   std::string buffer;
   raw_string_ostream ostream(buffer);
+#if __clang_major__ > 5
   printTemplateArgumentList(ostream, ArrayRef<TemplateArgumentLoc>(arg),
                             DefaultPrintPolicy());
+#else
+  TemplateSpecializationType::PrintTemplateArgumentList(
+      ostream, ArrayRef<TemplateArgumentLoc>(arg), DefaultPrintPolicy());
+#endif
   return ostream.str();
 }
 
