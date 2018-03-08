@@ -114,9 +114,7 @@
   { include: ["<tr1_impl/unordered_set>", private, "<unordered_set>", public ] },
   { include: ["<tr1_impl/utility>", private, "<tr1/utility>", public ] },
   { include: ["<tr1_impl/utility>", private, "<utility>", public ] },
-  # This didn't come from the grep, but seems to be where swap()
-  # is defined?
-  { include: ["<bits/move.h>", private, "<algorithm>", public ] },   # for swap<>()
+  { include: ["<bits/move.h>", private, "<utility>", public ] },
   # Hash and hashtable-based containers.
   { include: ["<tr1_impl/functional_hash.h>", private, "<tr1/functional>", public ] },
   { include: ["<tr1_impl/functional_hash.h>", private, "<tr1/unordered_map>", public ] },
