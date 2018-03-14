@@ -111,12 +111,12 @@ The `CMAKE_CXX_INCLUDE_WHAT_YOU_USE` option enables a mode where CMake first com
 Use it like this:
 
       mkdir build && cd build
-      CC="clang" CXX="clang++" cmake -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="path/to/iwyu any iwyu args" ...
+      CC="clang" CXX="clang++" cmake -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="path/to/iwyu;-Xiwyu;any;-Xwiyu;iwyu;-Xwiyu;args" ...
 
 or, on Windows systems:
 
       mkdir build && cd build
-      cmake -DCMAKE_CXX_COMPILER="%VCINSTALLDIR%/bin/cl.exe" -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="path/to/iwyu any iwyu args" -G Ninja ...
+      cmake -DCMAKE_CXX_COMPILER="%VCINSTALLDIR%/bin/cl.exe" -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="path/to/iwyu;-Xiwyu;any;-Xwiyu;iwyu;-Xwiyu;args" -G Ninja ...
 
 The option appears to be separately supported for both C and C++, so use `CMAKE_C_INCLUDE_WHAT_YOU_USE` for C code.
 
