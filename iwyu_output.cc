@@ -1371,8 +1371,7 @@ void CalculateIwyuForForwardDeclareUse(
 }
 
 void CalculateIwyuForFullUse(OneUse* use,
-                             const set<string>& actual_includes,
-                             const set<string>& desired_includes) {
+                             const set<string>& actual_includes) {
   CHECK_(!use->ignore_use() && "Trying to calculate on an ignored use");
   CHECK_(use->is_full_use() && "CalculateIwyuForFullUse requires a full use");
   CHECK_(use->has_suggested_header() && "All full uses must have a header");
@@ -1462,7 +1461,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
       = Union(associated_direct_includes, direct_includes());
 
   // (C2) + (C3) Find the minimal 'set cover' for all symbol uses.
-  const set<string>& desired_set_cover = internal::CalculateMinimalIncludes(
+  const set<string> desired_set_cover = internal::CalculateMinimalIncludes(
       direct_includes(), associated_direct_includes, uses);
 
   // (C4) Remove .cc files from desired-includes unless they're in actual-inc.
@@ -1490,8 +1489,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
           &use, effective_direct_includes, effective_desired_includes,
           AssociatedFileEntries());
     } else {
-      internal::CalculateIwyuForFullUse(
-          &use, effective_direct_includes, effective_desired_includes);
+      internal::CalculateIwyuForFullUse(&use, effective_direct_includes);
     }
   }
 }
