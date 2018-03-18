@@ -19,11 +19,6 @@ mentioned in the output, removing their old #include lines and
 replacing them with the lines given by the include_what_you_use
 script.
 
-We only edit files that are writeable (presumably open for p4 edit),
-unless the user supplies a command to make files writeable via the
---checkout_command flag (eg '--checkout_command="p4 edit"').
-
-
 This script runs in four stages.  In the first, it groups physical
 lines together to form 'move spans'.  A 'move span' is the atomic unit
 for moving or deleting code.  A move span is either a) an #include
@@ -67,10 +62,8 @@ __author__ = 'csilvers@google.com (Craig Silverstein)'
 import difflib
 import optparse
 import os
-import pipes  # For (undocumented) pipes.quote
 import re
 import sys
-import subprocess
 from collections import OrderedDict
 
 _USAGE = """\
@@ -85,11 +78,9 @@ modifies the files mentioned in the output, removing their old
 include_what_you_use script.  It also sorts the #include and
 forward-declare lines.
 
-Only writable files (those opened for p4 edit) are modified (unless
---checkout_command is specified).  All files mentioned in the
-include-what-you-use script are modified, unless filenames are
-specified on the commandline, in which case only those files are
-modified.
+All files mentioned in the include-what-you-use script are modified,
+unless filenames are specified on the commandline, in which case only
+those files are modified.
 
 The exit code is the number of files that were modified (or that would
 be modified if --dry_run was specified) unless that number exceeds 100,
@@ -519,32 +510,11 @@ def _ReadFile(filename):
   return None
 
 
-def _ReadWriteableFile(filename, ignore_writeable):
-  """Read from filename and return a list of file lines.
-
-  Given a filename, if the file is found and is writable, read
-  the file contents and return it as a list of lines (newlines
-  removed).  If the file is not found or is not writable, or if
-  there is another IO error, return None.
-
-  Arguments:
-    filename: the name of the file to read.
-    ignore_writeable: if True, don't check whether the file is writeable;
-       return the contents anyway.
-
-  Returns:
-    A list of lines (without trailing newline) from filename, or None
-    if the file is not writable, or cannot be read.
-  """
-  if os.access(filename, os.W_OK) or ignore_writeable:
-    return _ReadFile(filename)
-  return None
-
-
 def _WriteFileContentsToFileObject(f, file_lines, line_ending):
   """Write the given file-lines to the file."""
   f.write(line_ending.join(file_lines))
   f.write(line_ending)
+
 
 def _DetectLineEndings(filename):
   """Detect line ending of given file."""
@@ -562,6 +532,7 @@ def _DetectLineEndings(filename):
   finally:
     f.close()
 
+
 def _WriteFileContents(filename, file_lines):
   """Write the given file-lines to the file."""
   try:
@@ -574,36 +545,6 @@ def _WriteFileContents(filename, file_lines):
       f.close()
   except (IOError, OSError) as why:
     print("Error writing '%s': %s" % (filename, why))
-
-
-def _CreateCommandLine(command, args):
-  """Join the command with the args in a shell-quoted way."""
-  ret = '%s %s' % (command, ' '.join(map(pipes.quote, args)))
-  print('Running: ' + ret)
-  return ret
-
-
-def _GetCommandOutputLines(command, args):
-  """Return an iterable over the output lines of the given shell command."""
-  full_command = _CreateCommandLine(command, args)
-  proc = subprocess.Popen(full_command, shell=True, stdout=subprocess.PIPE)
-  return proc.stdout
-
-
-def _RunCommand(command, args):
-  """Run the given shell command."""
-  for line in _GetCommandOutputLines(command, args):
-    print(line, end=None)
-
-
-def _GetCommandOutputWithInput(command, stdin_text):
-  """Return the output of the given command fed the stdin_text."""
-  print(command)
-  proc = subprocess.Popen(command,
-                          stdin=subprocess.PIPE,
-                          stdout=subprocess.PIPE,
-                          shell=True)
-  return proc.communicate(input=stdin_text)[0]
 
 
 def PrintFileDiff(old_file_contents, new_file_contents):
@@ -2040,17 +1981,13 @@ def GetFixedFile(iwyu_record, flags):
       of the include-what-you-use script (run at verbose level 1 or
       higher) pertaining to a single source file.
       iwyu_record.filename indicates what file to edit.
-    flags: commandline flags, as parsed by optparse.  We use
-       flags.dry_run and flags.checkout_command, which determine
-       whether we try to fix unwritable files, and other flags
-       indirectly.
+    flags: commandline flags, as parsed by optparse.
 
   Returns:
     A list of strings representing the 'fixed' file, if the file has
     changed, or None if the file hasn't changed at all.
   """
-  file_contents = _ReadWriteableFile(iwyu_record.filename,
-                                     flags.dry_run or flags.checkout_command)
+  file_contents = _ReadFile(iwyu_record.filename)
   if not file_contents:
     print('(skipping %s: not a writable file)' % iwyu_record.filename)
     return None
@@ -2070,68 +2007,6 @@ def GetFixedFile(iwyu_record, flags):
   return fixed_lines
 
 
-
-
-def CreateCLForCheckoutCommand(checkout_command, invoking_command):
-  """Create a CL using a command inferred from the checkout_command.
-
-  Arguments:
-    checkout_commmand: The command specified with --checkout_command
-    invoking_command: If not None, the command line passed to iwyu.py
-
-  Returns:
-    A CL number on success, else None.
-
-  If the checkout_command is 'p4|g4|v4 edit' then attempt to create a
-  CL with an appropriate description. On success, return the CL
-  number. Otherwise return None.
-  """
-  if checkout_command in ('p4 edit', 'g4 edit', 'v4 edit'):
-    what4 = checkout_command.split(' ')[0]
-  else:
-    # We don't know how to create a CL. Punt.
-    return None
-
-  description_lines = ['\tInclude what you use.\n']
-  if invoking_command:
-    description_lines.append(
-          '\tThe following command was run to modify the files:\n')
-    description_lines.append('\t' + invoking_command + '\n')
-
-  # The change description must be of a certain form. First invoke
-  # '<what4> client -o' to create a template, then replace
-  # '<enter description here>' with the desired description.
-  # The lines after that are File lines, which we will discard
-  # here, because we will add the files via '<what4> edit -c <CL#>'.
-  input_lines = []
-  description_added = False
-  output_lines = []
-  for line in _GetCommandOutputLines(what4, ['change', '-o']):
-    output_lines.append(line)
-    if line == '\t<enter description here>\n':
-      input_lines.extend(description_lines)
-      description_added = True
-      break
-    else:
-      input_lines.append(line)
-
-  if not description_added:
-    print('ERROR: Didn\'t find "\t<enter description here>" in'
-          ' "%s change -o" output' % what4)
-    for line in output_lines:
-      print(line, end=None)
-    return None
-
-  input_text = ''.join(input_lines)
-  output =  _GetCommandOutputWithInput('%s change -i'
-                                       % what4, input_text)
-  # Parse output for "Changelist XXX created."
-  m = re.match(r'Change (\d+) created.', output)
-  if not m:
-    print('ERROR: Unexpected change creation output "%s"' % output)
-    return None
-  return m.group(1)
-
 def FixManyFiles(iwyu_records, flags):
   """Given a list of iwyu_records, fix each file listed in the record.
 
@@ -2145,48 +2020,19 @@ def FixManyFiles(iwyu_records, flags):
       the parsed output of the include-what-you-use script (run at
       verbose level 1 or higher) pertaining to a single source file.
       iwyu_record.filename indicates what file to edit.
-    flags: commandline flags, as parsed by optparse.  We use
-       flags.dry_run and flags.checkout_command, which determine
-       how we read and write files, and other flags indirectly.
+    flags: commandline flags, as parsed by optparse..
 
   Returns:
     The number of files fixed (as opposed to ones that needed no fixing).
   """
   file_and_fix_pairs = []
-  files_to_checkout = []
   for iwyu_record in iwyu_records:
     try:
       fixed_lines = GetFixedFile(iwyu_record, flags)
       if fixed_lines is not None:
         file_and_fix_pairs.append((iwyu_record.filename, fixed_lines))
-        if flags.checkout_command and \
-           not flags.dry_run and \
-           not os.access(iwyu_record.filename, os.W_OK):
-          files_to_checkout.append(iwyu_record.filename)
     except FixIncludesError as why:
       print('ERROR: %s - skipping file %s' % (why, iwyu_record.filename))
-
-  # It's much faster to check out all the files at once.
-  if flags.checkout_command and files_to_checkout:
-    checkout_command = flags.checkout_command
-    # If --create_cl_if_possible was specified, AND if all files that
-    # need fixing are not writable (not opened for edit in this
-    # client), try to create a CL to contain those edits.  This is to
-    # avoid inadvertently creating multiple CLs.
-    if (flags.create_cl_if_possible and
-        len(files_to_checkout) == len(file_and_fix_pairs)):
-      cl = CreateCLForCheckoutCommand(flags.checkout_command,
-                                      flags.invoking_command_line)
-      if cl:
-        # Assumption: the checkout command supports the '-c <CL#>' syntax.
-        checkout_command += (' -c ' + cl)
-    # Else if --append_to_cl was specified, add the files that need
-    # editing to the specified (existing) CL.
-    # NOTE: If one or more of these files is already open, this will
-    # presumably fail.
-    elif flags.append_to_cl:
-      checkout_command += (' -c %d' % flags.append_to_cl)
-    _RunCommand(checkout_command, files_to_checkout)
 
   if not flags.dry_run:
     for filename, fixed_lines in file_and_fix_pairs:
@@ -2264,10 +2110,8 @@ def SortIncludesInFiles(files_to_process, flags):
   """For each file in files_to_process, sort its #includes.
 
   This reads each input file, sorts the #include lines, and replaces
-  the input file with the result.  Like ProcessIWYUOutput, this
-  requires that the file be writable, or that flags.checkout_command
-  be set.  SortIncludesInFiles does not add or remove any #includes.
-  It also ignores forward-declares.
+  the input file with the result. SortIncludesInFiles does not add
+  or remove any #includes.  It also ignores forward-declares.
 
   Arguments:
     files_to_process: a list (or set) of filenames.
@@ -2278,7 +2122,6 @@ def SortIncludesInFiles(files_to_process, flags):
     The number of files that had to be modified (because they weren't
     already all correct, that is, already in sorted order).
   """
-  num_fixes_made = 0
   sort_only_iwyu_records = []
   for filename in files_to_process:
     # An empty iwyu record has no adds or deletes, so its only effect
@@ -2324,26 +2167,6 @@ def main(argv):
                     help=('fix_includes.py will skip editing any file whose'
                           ' name matches this regular expression.'))
 
-  parser.add_option('--checkout_command', default=None,
-                    help=('A command, such as "p4 edit", to run on all the'
-                          ' non-writeable files before modifying them.  The'
-                          ' filenames will be appended to the command after'
-                          ' a space.  The command will not be run on any file'
-                          ' that does not need to change.'))
-
-  parser.add_option('--create_cl_if_possible', action='store_true',
-                    default=True,
-                    help=('If --checkout_command is "p4|g4|v4 edit" and'
-                          ' all files to be modified needed to be checked out,'
-                          ' then create a CL containing those files.'))
-  parser.add_option('--nocreate_cl_if_possible', action='store_false',
-                    dest='create_cl_if_possible')
-
-  parser.add_option('--append_to_cl', action='store',
-                    default=None, type='int', dest='append_to_cl',
-                    help=('If provided, with a checkout_command, add files'
-                          ' that need fixing to the specified existing CL.'))
-
   parser.add_option('--separate_project_includes', default=None,
                     help=('Sort #includes for current project separately'
                           ' from all other #includes.  This flag specifies'
@@ -2356,7 +2179,6 @@ def main(argv):
   parser.add_option('--invoking_command_line', default=None,
                     help=('Internal flag used by iwyu.py, It should be the'
                           ' command line used to invoke iwyu.py'))
-
 
   parser.add_option('-m', '--keep_iwyu_namespace_format', action='store_true',
                     default=False,
@@ -2379,10 +2201,6 @@ def main(argv):
       not flags.separate_project_includes.endswith(os.path.sep) and
       not flags.separate_project_includes.endswith('/')):
     flags.separate_project_includes += os.path.sep
-
-  if flags.append_to_cl and flags.create_cl_if_possible:
-    sys.exit('FATAL ERROR: At most one of --append_to_cl and '
-             '--create_cl_if_possible allowed')
 
   if flags.sort_only:
     if not files_to_modify:
