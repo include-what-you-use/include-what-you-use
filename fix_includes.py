@@ -501,6 +501,35 @@ class LineInfo(object):
             % (line, type_id, self.key, self.move_span, self.reorder_span))
 
 
+class FileInfo(object):
+  """ Details about a file's storage encoding  """
+  DEFAULT_LINESEP = os.linesep
+
+  def __init__(self, linesep):
+    self.linesep = linesep
+
+  @staticmethod
+  def parse(filename):
+    """ Return a FileInfo object describing file encoding details. """
+    with open(filename, 'rb') as f:
+      content = f.read()
+
+    linesep = FileInfo.guess_linesep(content)
+    return FileInfo(linesep)
+
+  @staticmethod
+  def guess_linesep(bytebuf):
+    """ Return most frequent line separator of buffer. """
+    win = bytebuf.count(b'\r\n')
+    unix = bytebuf.count(b'\n') - win
+    if win > unix:
+      return '\r\n'
+    elif unix > win:
+      return '\n'
+
+    return FileInfo.DEFAULT_LINESEP
+
+
 def _ReadFile(filename):
   """Read from filename and return a list of file lines."""
   try:
@@ -510,31 +539,16 @@ def _ReadFile(filename):
   return None
 
 
-def _DetectLineEndings(filename):
-  """Detect line ending of given file."""
-
-  # Find out which file ending is used first. The
-  # first lines indicate the line ending for the whole file
-  # so pathological files with mixed endings aren't handled properly!
-  f = open(filename, 'U')
-  try:
-    while f.newlines is None:
-      if f.readline() == '':
-        break
-    return f.newlines if f.newlines != None and \
-        type(f.newlines) is not tuple else '\n'
-  finally:
-    f.close()
-
-
 def _WriteFile(filename, file_lines):
   """Write the given file-lines to the file."""
   try:
-    line_ending = _DetectLineEndings(filename)
+    # Detect encoding details
+    fileinfo = FileInfo.parse(filename)
+
     # Open file in binary mode to preserve line endings
     with open(filename, 'wb') as f:
-      f.write(line_ending.join(file_lines))
-      f.write(line_ending)
+      f.write(fileinfo.linesep.join(file_lines))
+      f.write(fileinfo.linesep)
   except (IOError, OSError) as why:
     print("Error writing '%s': %s" % (filename, why))
 
