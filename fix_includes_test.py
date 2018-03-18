@@ -46,12 +46,15 @@ class FakeFlags(object):
 class FixIncludesBase(unittest.TestCase):
   """Does setup that every test will want."""
 
-  def _ReadFile(self, filename):
+  def _ReadFile(self, filename, fileinfo):
     assert filename in self.before_map, filename
     return self.before_map[filename]
 
-  def _WriteFile(self, filename, file_lines):
-      self.actual_after_contents.extend(file_lines)
+  def _ParseFileInfo(self, filename):
+      return fix_includes.FileInfo('\n')
+
+  def _WriteFile(self, filename, fileinfo, contents):
+      return self.actual_after_contents.extend(contents)
 
   def setUp(self):
     self.flags = FakeFlags()
@@ -63,7 +66,11 @@ class FixIncludesBase(unittest.TestCase):
 
     # INPUT: fix_includes._ReadFile takes a filename
     # and returns the contents of filename (as a list).
+    # FileInfo controls encoding details of the file,
+    # wire it to return something that agrees with the
+    # tests.
     fix_includes._ReadFile = self._ReadFile
+    fix_includes.FileInfo.parse = self._ParseFileInfo
 
     # OUTPUT: Instead of writing to file, save full output.
     self.actual_after_contents = []
