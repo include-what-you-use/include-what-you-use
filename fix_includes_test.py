@@ -3434,5 +3434,30 @@ namespace ns { namespace ns4 { class Baz; } }
                       ['fix_includes.py', '-s'])
 
 
+class FileInfoTest(unittest.TestCase):
+  """ Unit test for file info detection """
+
+  def testEndingsWindows(self):
+    buf = b'first\r\nsecond\r\nthird\r\n'
+    self.assertEqual('\r\n', fix_includes.FileInfo.guess_linesep(buf))
+
+  def testEndingsUnix(self):
+    buf = b'first\nsecond\nthird\n'
+    self.assertEqual('\n', fix_includes.FileInfo.guess_linesep(buf))
+
+  def testEndingsMixedUnixMajority(self):
+    buf = b'first\nsecond\nsecond-and-a-half\r\nthird\nfourth\r\n'
+    self.assertEqual('\n', fix_includes.FileInfo.guess_linesep(buf))
+
+  def testEndingsMixedWindowsMajority(self):
+    buf = b'first\nsecond\r\nsecond-and-a-half\r\nthird\nfourth\r\n'
+    self.assertEqual('\r\n', fix_includes.FileInfo.guess_linesep(buf))
+
+  def testEndingsMixedTie(self):
+    buf = b'first\nsecond\nthird\r\nfourth\r\n'
+    self.assertEqual(fix_includes.FileInfo.DEFAULT_LINESEP,
+                     fix_includes.FileInfo.guess_linesep(buf))
+
+
 if __name__ == '__main__':
   unittest.main()
