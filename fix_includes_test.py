@@ -51,7 +51,7 @@ class FixIncludesBase(unittest.TestCase):
     return self.before_map[filename]
 
   def _ParseFileInfo(self, filename):
-      return fix_includes.FileInfo('\n')
+      return fix_includes.FileInfo('\n', 'utf-8')
 
   def _WriteFile(self, filename, fileinfo, contents):
       return self.actual_after_contents.extend(contents)
@@ -3464,6 +3464,25 @@ class FileInfoTest(unittest.TestCase):
     buf = b'first\nsecond\nthird\r\nfourth\r\n'
     self.assertEqual(fix_includes.FileInfo.DEFAULT_LINESEP,
                      fix_includes.FileInfo.guess_linesep(buf))
+
+  def testEncodingASCII(self):
+    buf = b'abcdefgh'
+    self.assertEqual('ascii', fix_includes.FileInfo.guess_encoding(buf))
+
+  def testEncodingUTF8BOM(self):
+    buf = b'\xef\xbb\xbfSomeASCIIButWithTheBOM'
+    self.assertEqual('utf-8', fix_includes.FileInfo.guess_encoding(buf))
+
+  def testEncodingUTF8NoBOM(self):
+    # This is a recurring test input in Swedish, translates to "shrimp sandwich"
+    # and contains all three Swedish exotic characters.
+    buf = b'r\xc3\xa4ksm\xc3\xb6rg\xc3\xa5s'
+    self.assertEqual('utf-8', fix_includes.FileInfo.guess_encoding(buf))
+
+  def testEncodingISO8859_1(self):
+    # Yours truly
+    buf = b'Kim Gr\xe4sman'
+    self.assertEqual('windows-1250', fix_includes.FileInfo.guess_encoding(buf))
 
 
 if __name__ == '__main__':

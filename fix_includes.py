@@ -504,9 +504,11 @@ class LineInfo(object):
 class FileInfo(object):
   """ Details about a file's storage encoding  """
   DEFAULT_LINESEP = os.linesep
+  DEFAULT_ENCODING = 'utf-8'
 
-  def __init__(self, linesep):
+  def __init__(self, linesep, encoding):
     self.linesep = linesep
+    self.encoding = encoding
 
   @staticmethod
   def parse(filename):
@@ -515,7 +517,8 @@ class FileInfo(object):
       content = f.read()
 
     linesep = FileInfo.guess_linesep(content)
-    return FileInfo(linesep)
+    encoding = FileInfo.guess_encoding(content)
+    return FileInfo(linesep, encoding)
 
   @staticmethod
   def guess_linesep(bytebuf):
@@ -529,11 +532,41 @@ class FileInfo(object):
 
     return FileInfo.DEFAULT_LINESEP
 
+  @staticmethod
+  def guess_encoding(bytebuf):
+    """ Return approximate encoding for buffer.
+
+    This is heavily heuristic, and will return any supported encoding that can
+    describe the file without losing information, not necessarily the *right*
+    encoding. This is usually OK, because IWYU typically only adds ASCII content
+    (or content pulled from the file itself).
+    """
+    def try_decode(buf, encoding):
+      try:
+        buf.decode(encoding, errors='strict')
+      except UnicodeError:
+        return False
+      return True
+
+    # Special-case UTF-8 BOM
+    if bytebuf[0:3] == b'\xef\xbb\xbf':
+      if try_decode(bytebuf, 'utf-8'):
+        return 'utf-8'
+
+    encodings = ['ascii', 'utf-8', 'windows-1250', 'windows-1252']
+    for encoding in encodings:
+      if try_decode(bytebuf, encoding):
+        return encoding
+
+    return FileInfo.DEFAULT_ENCODING
+
 
 def _ReadFile(filename, fileinfo):
   """Read from filename and return a list of file lines."""
   try:
-    return open(filename).read().splitlines()
+    with open(filename, 'rb') as f:
+      content = f.read()
+      return content.decode(fileinfo.encoding).splitlines()
   except (IOError, OSError) as why:
     print("Skipping '%s': %s" % (filename, why))
   return None
@@ -542,10 +575,10 @@ def _ReadFile(filename, fileinfo):
 def _WriteFile(filename, fileinfo, file_lines):
   """Write the given file-lines to the file."""
   try:
-    # Open file in binary mode to preserve line endings
     with open(filename, 'wb') as f:
-      f.write(fileinfo.linesep.join(file_lines))
-      f.write(fileinfo.linesep)
+      content = fileinfo.linesep.join(file_lines) + fileinfo.linesep
+      content = content.encode(fileinfo.encoding)
+      f.write(content)
   except (IOError, OSError) as why:
     print("Error writing '%s': %s" % (filename, why))
 
