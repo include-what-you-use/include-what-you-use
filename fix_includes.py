@@ -543,8 +543,8 @@ def _ReadWriteableFile(filename, ignore_writeable):
 
 def _WriteFileContentsToFileObject(f, file_lines, line_ending):
   """Write the given file-lines to the file."""
-  f.write(line_ending.join(file_lines))
-  f.write(line_ending)
+  f.write(line_ending.join(file_lines).encode())
+  f.write(line_ending.encode())
 
 def _DetectLineEndings(filename):
   """Detect line ending of given file."""
