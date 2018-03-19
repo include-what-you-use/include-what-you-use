@@ -1965,46 +1965,18 @@ def FixFileLines(iwyu_record, file_lines, flags):
     output_lines.extend(new_lines)
     line_number = current_reorder_span[1]               # go to end of span
 
-  return output_lines
+  return [line for line in output_lines if line is not None]
 
 
-def GetFixedFile(iwyu_record, flags):
-  """Figure out #include and forward-declare line fixes of one file.
-
-  Given an iwyu record for a single file, listing the #includes and
-  forward-declares to add, remove, and re-sort, loads the file, makes
-  the fixes, and returns the fixed file as a list of lines.  The flags
-  affect the details of the fixing.
-
-  Arguments:
-    iwyu_record: an IWYUOutputRecord object holding the parsed output
-      of the include-what-you-use script (run at verbose level 1 or
-      higher) pertaining to a single source file.
-      iwyu_record.filename indicates what file to edit.
-    flags: commandline flags, as parsed by optparse.
-
-  Returns:
-    A list of strings representing the 'fixed' file, if the file has
-    changed, or None if the file hasn't changed at all.
+def FixOneFile(iwyu_record, file_contents, flags):
+  """Parse a file guided by an iwyu_record and flags and apply IWYU fixes.
+  Returns two lists of lines (old, fixed).
   """
-  file_contents = _ReadFile(iwyu_record.filename)
-  if not file_contents:
-    print('(skipping %s: not a writable file)' % iwyu_record.filename)
-    return None
-  print(">>> Fixing #includes in '%s'" % iwyu_record.filename)
   file_lines = ParseOneFile(file_contents, iwyu_record)
   old_lines = [fl.line for fl in file_lines
                if fl is not None and fl.line is not None]
   fixed_lines = FixFileLines(iwyu_record, file_lines, flags)
-  fixed_lines = [line for line in fixed_lines if line is not None]
-  if old_lines == fixed_lines:
-    print("No changes in file ", iwyu_record.filename)
-    return None
-
-  if flags.dry_run:
-    PrintFileDiff(old_lines, fixed_lines)
-
-  return fixed_lines
+  return old_lines, fixed_lines
 
 
 def FixManyFiles(iwyu_records, flags):
@@ -2025,24 +1997,30 @@ def FixManyFiles(iwyu_records, flags):
   Returns:
     The number of files fixed (as opposed to ones that needed no fixing).
   """
-  file_and_fix_pairs = []
+  files_fixed = 0
   for iwyu_record in iwyu_records:
     try:
-      fixed_lines = GetFixedFile(iwyu_record, flags)
-      if fixed_lines is not None:
-        file_and_fix_pairs.append((iwyu_record.filename, fixed_lines))
+      file_contents = _ReadFile(iwyu_record.filename)
+      if not file_contents:
+        continue
+
+      print(">>> Fixing #includes in '%s'" % iwyu_record.filename)
+      old_lines, fixed_lines = FixOneFile(iwyu_record, file_contents, flags)
+      if old_lines == fixed_lines:
+        print("No changes in file %s" % iwyu_record.filename)
+        continue
+
+      if flags.dry_run:
+        PrintFileDiff(old_lines, fixed_lines)
+      else:
+        _WriteFileContents(iwyu_record.filename, fixed_lines)
+
+      files_fixed += 1
     except FixIncludesError as why:
       print('ERROR: %s - skipping file %s' % (why, iwyu_record.filename))
 
-  if not flags.dry_run:
-    for filename, fixed_lines in file_and_fix_pairs:
-      _WriteFileContents(filename, fixed_lines)
-
-  files_fixed = [filename for filename, _ in file_and_fix_pairs]
-
-  print('IWYU edited %d files on your behalf.\n' % len(files_fixed))
-
-  return len(files_fixed)
+  print('IWYU edited %d files on your behalf.\n' % files_fixed)
+  return files_fixed
 
 
 def ProcessIWYUOutput(f, files_to_process, flags):
