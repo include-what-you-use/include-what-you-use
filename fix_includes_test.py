@@ -50,6 +50,9 @@ class FixIncludesBase(unittest.TestCase):
     assert filename in self.before_map, filename
     return self.before_map[filename]
 
+  def _WriteFile(self, filename, file_lines):
+      self.actual_after_contents.extend(file_lines)
+
   def setUp(self):
     self.flags = FakeFlags()
 
@@ -64,8 +67,7 @@ class FixIncludesBase(unittest.TestCase):
 
     # OUTPUT: Instead of writing to file, save full output.
     self.actual_after_contents = []
-    fix_includes._WriteFileContents = \
-        lambda filename, contents: self.actual_after_contents.extend(contents)
+    fix_includes._WriteFile = self._WriteFile
 
     # Stub out stdout
     self.stdout_stub = StringIO()

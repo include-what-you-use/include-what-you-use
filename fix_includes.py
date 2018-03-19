@@ -510,12 +510,6 @@ def _ReadFile(filename):
   return None
 
 
-def _WriteFileContentsToFileObject(f, file_lines, line_ending):
-  """Write the given file-lines to the file."""
-  f.write(line_ending.join(file_lines))
-  f.write(line_ending)
-
-
 def _DetectLineEndings(filename):
   """Detect line ending of given file."""
 
@@ -533,16 +527,14 @@ def _DetectLineEndings(filename):
     f.close()
 
 
-def _WriteFileContents(filename, file_lines):
+def _WriteFile(filename, file_lines):
   """Write the given file-lines to the file."""
   try:
     line_ending = _DetectLineEndings(filename)
     # Open file in binary mode to preserve line endings
-    f = open(filename, 'wb')
-    try:
-      _WriteFileContentsToFileObject(f, file_lines, line_ending)
-    finally:
-      f.close()
+    with open(filename, 'wb') as f:
+      f.write(line_ending.join(file_lines))
+      f.write(line_ending)
   except (IOError, OSError) as why:
     print("Error writing '%s': %s" % (filename, why))
 
@@ -2013,7 +2005,7 @@ def FixManyFiles(iwyu_records, flags):
       if flags.dry_run:
         PrintFileDiff(old_lines, fixed_lines)
       else:
-        _WriteFileContents(iwyu_record.filename, fixed_lines)
+        _WriteFile(iwyu_record.filename, fixed_lines)
 
       files_fixed += 1
     except FixIncludesError as why:
