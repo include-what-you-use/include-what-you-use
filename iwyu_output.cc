@@ -468,8 +468,8 @@ bool OneIncludeOrForwardDeclareLine::HasSymbolUse(const string& symbol_name)
   return ContainsKey(symbol_counts_, symbol_name);
 }
 
-void OneIncludeOrForwardDeclareLine::AddSymbolUse(const string& symbol_name) {
-  ++symbol_counts_[symbol_name];
+void OneIncludeOrForwardDeclareLine::AddSymbolUses(const string& symbol_name, int count) {
+  symbol_counts_[symbol_name] += count;
 }
 
 bool OneIncludeOrForwardDeclareLine::IsIncludeLine() const {
@@ -1437,6 +1437,64 @@ void CalculateIwyuForFullUse(OneUse* use,
   }
 }
 
+// This function adjusts IWYU's analysis so that immediate headers are allowed
+// to re-export their own transitive include graph.
+void PruneTransitivelyPresent(vector<OneIncludeOrForwardDeclareLine>& lines,
+                              const IwyuPreprocessorInfo* preprocessor_info) {
+  // Build a mapping from every include line to every other line that's
+  // transitively included by it.
+  typedef std::pair<OneIncludeOrForwardDeclareLine*,
+                    OneIncludeOrForwardDeclareLine*>
+      IncludeEdge;
+  std::vector<IncludeEdge> include_map;
+  for (OneIncludeOrForwardDeclareLine& target : lines) {
+    if (!target.IsIncludeLine())
+      continue;
+
+    for (OneIncludeOrForwardDeclareLine& source : lines) {
+      if (!source.IsIncludeLine())
+        continue;
+
+      // IwyuPreprocessorInfo contains an identity mapping, but we only want
+      // proper transitive dependencies here.
+      if (source.included_file() == target.included_file())
+        continue;
+
+      if (preprocessor_info->FileTransitivelyIncludes(source.included_file(),
+                                                      target.included_file())) {
+        include_map.emplace_back(&source, &target);
+      }
+    }
+  }
+
+  // Sort+unique include edges
+  std::sort(include_map.begin(), include_map.end());
+  include_map.erase(std::unique(include_map.begin(), include_map.end()),
+                    include_map.end());
+
+  // Move symbol uses and desired status from indirect to immediate include
+  // lines when the immediate can cover for the indirect.
+  for (IncludeEdge& edge : include_map) {
+    OneIncludeOrForwardDeclareLine* immediate = edge.first;
+    OneIncludeOrForwardDeclareLine* indirect = edge.second;
+
+    // If the indirect include is not desired or already present, we're actually
+    // including-what-we-use, which is great! Nothing to do here.
+    if (!indirect->is_desired() || indirect->is_present())
+      continue;
+
+    for (const auto& p : indirect->symbol_counts()) {
+      immediate->AddSymbolUses(p.first, p.second);
+    }
+
+    immediate->set_desired();
+    indirect->clear_desired();
+
+    VERRS(5) << "Ignoring include " << indirect->quoted_include()
+             << ", already transitively available via "
+             << immediate->quoted_include() << "\n";
+  }
+}
 }  // namespace internal
 
 void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
@@ -2036,6 +2094,10 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
         preprocessor_info_->IncludeIsInhibited(file_, line.quoted_include())) {
       line.clear_desired();
     }
+  }
+
+  if (GlobalFlags().tolerate_transitive) {
+    internal::PruneTransitivelyPresent(lines_, preprocessor_info_);
   }
 
   internal::CleanupPrefixHeaderIncludes(preprocessor_info_, &lines_);

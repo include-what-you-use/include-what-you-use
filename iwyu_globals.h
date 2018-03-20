@@ -102,6 +102,7 @@ struct CommandlineFlags {
   bool no_comments;   // Disable 'why' comments. No short option.
   bool no_fwd_decls;  // Disable forward declarations.
   bool quoted_includes_first; // Place quoted includes first in sort order.  
+  bool tolerate_transitive; // Tolerate transitively included files
 };
 
 const CommandlineFlags& GlobalFlags();
