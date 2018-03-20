@@ -161,7 +161,7 @@ class OneIncludeOrForwardDeclareLine {
   void clear_desired() { is_desired_ = false; }
   void clear_line_numbers() { start_linenum_ = end_linenum_ = -1; }
   // Another symbol we're using that's defined in this file.
-  void AddSymbolUse(const string& symbol_name);
+  void AddSymbolUse(const string& symbol_name, int multiplicity = 1);
   bool HasSymbolUse(const string& symbol_name) const;
 
   bool LineNumbersMatch(const OneIncludeOrForwardDeclareLine& that) const {
