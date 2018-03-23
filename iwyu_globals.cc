@@ -95,7 +95,7 @@ static void PrintHelp(const char* extra_msg) {
          "   --no_fwd_decls: do not use forward declarations.\n"
          "   --tolerate_transitive: If a file uses symbols from both a.h and b.h\n"
          "        and includes a.h, tolerate b.h both when it is included and \n"
-	 "        when\n it is not.\n"
+         "        when it is not.\n"
          "   --verbose=<level>: the higher the level, the more output.\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
@@ -186,7 +186,6 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"tolerate_transitive", optional_argument, nullptr, 'r'},
     {nullptr, 0, nullptr, 0}
   };
-  // TODO: This doesn't cover all options!
   static const char shortopts[] = "d::p:v:c:m:n";
   while (true) {
     switch (getopt_long(argc, argv, shortopts, longopts, nullptr)) {

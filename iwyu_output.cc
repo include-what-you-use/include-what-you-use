@@ -468,8 +468,8 @@ bool OneIncludeOrForwardDeclareLine::HasSymbolUse(const string& symbol_name)
   return ContainsKey(symbol_counts_, symbol_name);
 }
 
-void OneIncludeOrForwardDeclareLine::AddSymbolUse(const string& symbol_name, int multiplicity) {
-  symbol_counts_[symbol_name] += multiplicity;
+void OneIncludeOrForwardDeclareLine::AddSymbolUses(const string& symbol_name, int count) {
+  symbol_counts_[symbol_name] += count;
 }
 
 bool OneIncludeOrForwardDeclareLine::IsIncludeLine() const {
@@ -1430,47 +1430,59 @@ void CalculateIwyuForFullUse(OneUse* use,
 // but not present but transitively included by some
 // OneIncludedOrForwardDeclareLine b that is desired and present
 // and adds a's symbol counts to b.
-vector<OneIncludeOrForwardDeclareLine> TolerateTransitively(vector<OneIncludeOrForwardDeclareLine> const & oiofdls,
+vector<OneIncludeOrForwardDeclareLine> PruneTransitivelyPresent(
+    vector<OneIncludeOrForwardDeclareLine> const& lines,
     const IwyuPreprocessorInfo* preprocessor_info) {
-  // In the first step, we copy all oiofdl's that
+  // In the first step, we copy all lines that
   // * are either no include lines,
   // * or that are an include file and present,
   // * or that are an include file, not present and not desired,
   // * or that are an include file, not present, desired, and whose include_file
-  //   isn't transitively included by another oiofdl which is an include file
+  //   isn't transitively included by another line which is an include file
   // into one range and the remaining ones into another range.
-  const auto pred = [&oiofdls, preprocessor_info] (OneIncludeOrForwardDeclareLine const & target) {
-    if(!target.IsIncludeLine() || target.is_present() || !target.is_desired()) {
+  const auto pred = [&lines, preprocessor_info](
+                        OneIncludeOrForwardDeclareLine const& target) {
+    if (!target.IsIncludeLine() || target.is_present() ||
+        !target.is_desired()) {
       return true;
     }
     // Check if target is transitively included by some source.
     // This must be proper, equality does not suffice.
-    for(const OneIncludeOrForwardDeclareLine & source : oiofdls) {
-      if(!source.IsIncludeLine()) {
+    for (const OneIncludeOrForwardDeclareLine& source : lines) {
+      if (!source.IsIncludeLine()) {
         continue;
       }
-      if(source.included_file() == target.included_file()) {
+      if (source.included_file() == target.included_file()) {
         continue;
       }
 
-      if(preprocessor_info->FileTransitivelyIncludes(source.included_file(), target.included_file())) {
+      if (preprocessor_info->FileTransitivelyIncludes(source.included_file(),
+                                                      target.included_file())) {
         return false;
       }
     }
     return true;
   };
   vector<OneIncludeOrForwardDeclareLine> first, second;
-  first.reserve(oiofdls.size());
-  second.reserve(oiofdls.size());
-  std::partition_copy(oiofdls.cbegin(), oiofdls.cend(), std::back_inserter(first), std::back_inserter(second), pred);
-  // Now add the symbols from range second to the corresponding elements of range first.
-  for(const OneIncludeOrForwardDeclareLine & target : second) {
-    const auto iter = std::find_if(first.begin(), first.end(), [&target, preprocessor_info] (const OneIncludeOrForwardDeclareLine & source) {
-        return preprocessor_info->FileTransitivelyIncludes(source.included_file(), target.included_file());
-        });
-    CHECK_(iter != first.end() && "Internal error, cannot find the source for a transitive tolerate target");
-    for(const auto & p : target.symbol_counts()) {
-      iter->AddSymbolUse(p.first, p.second);
+  first.reserve(lines.size());
+  second.reserve(lines.size());
+  std::partition_copy(lines.cbegin(), lines.cend(), std::back_inserter(first),
+                      std::back_inserter(second), pred);
+  // Now add the symbols from range second to the corresponding elements of
+  // range first.
+  for (const OneIncludeOrForwardDeclareLine& target : second) {
+    const auto iter =
+        std::find_if(first.begin(), first.end(),
+                     [&target, preprocessor_info](
+                         const OneIncludeOrForwardDeclareLine& source) {
+                       return preprocessor_info->FileTransitivelyIncludes(
+                           source.included_file(), target.included_file());
+                     });
+    CHECK_(iter != first.end() &&
+           "Internal error, cannot find the source for a transitive tolerate "
+           "target");
+    for (const auto& p : target.symbol_counts()) {
+      iter->AddSymbolUses(p.first, p.second);
     }
     // iter is desired now because target was.
     CHECK_(target.is_desired() && "Internal error, target must be desired");
@@ -2061,7 +2073,7 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   }
 
   if (GlobalFlags().tolerate_transitive) {
-	  lines_ = internal::TolerateTransitively(lines_, preprocessor_info_);
+	  lines_ = internal::PruneTransitivelyPresent(lines_, preprocessor_info_);
   }
 
   internal::CleanupPrefixHeaderIncludes(preprocessor_info_, &lines_);
