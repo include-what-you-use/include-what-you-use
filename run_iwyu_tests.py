@@ -76,6 +76,7 @@ class OneIwyuTest(unittest.TestCase):
                                     '--transitive_includes_only'],
       'no_h_includes_cc.cc': [self.CheckAlsoExtension('.c')],
       'no_comments.cc': ['--no_comments'],
+      'no_fwd_decls.cc': ['--no_fwd_decls'],
       'overloaded_class.cc': [self.CheckAlsoExtension('-i1.h')],
       'pch_in_code.cc': ['--pch_in_code', '--prefix_header_includes=remove'],
       'prefix_header_attribution.cc': ['--prefix_header_includes=remove'],
@@ -107,7 +108,9 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_add.cc': prefix_headers,
       'prefix_header_includes_keep.cc': prefix_headers,
       'prefix_header_includes_remove.cc': prefix_headers,
+      'range_for.cc': ['-std=c++11'],
       'typedef_in_template.cc': ['-std=c++11'],
+      'inheriting_ctor.cc': ['-std=c++11'],
     }
     include_map = {
       'alias_template.cc': ['.'],
@@ -153,6 +156,7 @@ class OneIwyuTest(unittest.TestCase):
       'new_header_path_provided.cc': ['.'],
       'no_comments.cc': ['.'],
       'no_fwd_decl_nested_class.cc': ['.'],
+      'no_fwd_decls.cc': ['.'],
       'no_h_includes_cc.cc': ['.'],
       'non_transitive_include.cc': ['.'],
       'overloaded_class.cc': ['.'],
@@ -164,6 +168,7 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_add.cc': ['.'],
       'prefix_header_includes_keep.cc': ['.'],
       'prefix_header_includes_remove.cc': ['.'],
+      'range_for.cc': ['.'],
       're_fwd_decl.cc': ['.'],
       'redecls.cc': ['.'],
       'remove_fwd_decl_when_including.cc': ['.'],

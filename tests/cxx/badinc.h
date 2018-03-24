@@ -244,7 +244,7 @@ class H_TemplateTemplateClass {
   // TODO(csilvers): attribute this use here, not at the caller sites.
   // TODO(csilvers): IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
   // IWYU: I2_Enum is...*badinc-i2.h
-  // IWYU: I2_Enum::I21 is...*badinc-i2.h
+  // IWYU: I21 is...*badinc-i2.h
   H_TemplateTemplateClass() : t(T<I2_Enum>(I21)) {}
   // IWYU: I2_Enum is...*badinc-i2.h
   T<I2_Enum> t;
@@ -393,9 +393,9 @@ The full include-list for tests/cxx/badinc.h:
 #include <set>  // for set
 #include <string>  // for string
 #include <vector>  // for vector
-#include "tests/cxx/badinc-d3.h"  // for D3_Enum, D3_Enum::D31
+#include "tests/cxx/badinc-d3.h"  // for D31, D3_Enum
 #include "tests/cxx/badinc-i2-inl.h"  // for I2_Class::I2_Class, I2_Class::InlFileFn, I2_Class::InlFileStaticFn, I2_Class::InlFileTemplateFn, I2_Class::~I2_Class, I2_TemplateClass::I2_TemplateClass<FOO>, I2_TemplateClass::InlFileTemplateClassFn, I2_TemplateClass::~I2_TemplateClass<FOO>
-#include "tests/cxx/badinc-i2.h"  // for I2_Class, I2_Enum, I2_Enum::I21, I2_Enum::I22, I2_EnumForTypedefs, I2_MACRO, I2_Struct, I2_TemplateClass, I2_Typedef, I2_TypedefOnly_Class (ptr only), TemplateForHClassTplFn (ptr only)
+#include "tests/cxx/badinc-i2.h"  // for I21, I22, I2_Class, I2_Enum, I2_EnumForTypedefs, I2_MACRO, I2_Struct, I2_TemplateClass, I2_Typedef, I2_TypedefOnly_Class (ptr only), TemplateForHClassTplFn (ptr only)
 class Cc_Class;  // lines XX-XX
 // TODO(csilvers): this should change to struct Cc_Struct.
 class Cc_Struct;  // lines XX-XX

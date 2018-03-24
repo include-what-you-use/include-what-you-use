@@ -36,52 +36,12 @@ class FakeFlags(object):
     self.comments = True
     self.dry_run = False
     self.ignore_re = None
-    self.checkout_command = None
     self.safe_headers = False
     self.separate_project_includes = None
-    self.create_cl_if_possible = True
     self.invoking_command_line = 'iwyu.py my_targets'
     self.find_affected_targets = True
     self.keep_iwyu_namespace_format = False
 
-class FakeRunCommand(object):
-  def __init__(self):
-    self.command = None
-    self.args = None
-
-  def RunCommand(self, command, args):
-    self.command = command
-    self.args = args
-
-
-class FakeGetCommandOutputWithInput(object):
-  def __init__(self, stdout):
-    self.stdout = stdout
-    self.command = None
-    self.stdin = None
-
-  def GetCommandOutputWithInput(self, command, stdin):
-    print('GetCommandOutputWithInput(%s, ...)' % command)
-    self.command = command
-    self.stdin = stdin
-    return self.stdout
-
-
-class FakeGetCommandOutputLines(object):
-  def __init__(self):
-    self.stdout_lines_map = {}
-    self.command = None
-    self.args = None
-
-  def GetCommandOutputLines(self, command, args):
-    print('GetCommandOutputLines(%s, %s)' % (command, args))
-    self.command = command
-    self.args = args
-    return self.stdout_lines_map[command]
-
-  def SetCommandOutputLines(self, command, lines):
-    lines = [line + '\n' for line in lines]
-    self.stdout_lines_map[command] = lines
 
 class FixIncludesBase(unittest.TestCase):
   """Does setup that every test will want."""
@@ -89,6 +49,9 @@ class FixIncludesBase(unittest.TestCase):
   def _ReadFile(self, filename):
     assert filename in self.before_map, filename
     return self.before_map[filename]
+
+  def _WriteFile(self, filename, file_lines):
+      self.actual_after_contents.extend(file_lines)
 
   def setUp(self):
     self.flags = FakeFlags()
@@ -104,52 +67,11 @@ class FixIncludesBase(unittest.TestCase):
 
     # OUTPUT: Instead of writing to file, save full output.
     self.actual_after_contents = []
-    fix_includes._WriteFileContents = \
-        lambda filename, contents: self.actual_after_contents.extend(contents)
-
-    # Stub out OS writeability check to say all files are writeable.
-    fix_includes.os.access = \
-        lambda filename, flags: True
-
-    # Stub out the checkout command; keep a list of all files checked out.
-    self.fake_checkout_command = FakeRunCommand()
-    fix_includes._RunCommand = self.fake_checkout_command.RunCommand
-
-    # Stub out the CL creation command.
-    self.fake_cl_creation_command = (
-        FakeGetCommandOutputWithInput('Change 1234 created.\n'))
-    fix_includes._GetCommandOutputWithInput = (
-        self.fake_cl_creation_command.GetCommandOutputWithInput)
-
-    # Create a generic 'stubber'.
-    self.fake_get_command_output_lines = FakeGetCommandOutputLines()
-    fix_includes._GetCommandOutputLines = (
-        self.fake_get_command_output_lines.GetCommandOutputLines)
-
-    # Stub out the CL template command.
-    self.fake_get_command_output_lines.SetCommandOutputLines(
-        'g4', ['Description:',
-               '\t<enter description here>',
-               '',
-               'Files:',
-               '\tthis_file_should_not_appear_in_the_cl'])
-
-    # Stub out the find_clients_of_files command.
-    self.find_clients_of_files_command = (
-        '/google/data/ro/projects/cymbal/tools/find_clients_of_files.par')
-    self.fake_get_command_output_lines.SetCommandOutputLines(
-        self.find_clients_of_files_command,
-        ['==== 1 targets from 1 packages are affected',
-         '==== targets',
-         '//foo/bar:a'])
+    fix_includes._WriteFile = self._WriteFile
 
     # Stub out stdout
     self.stdout_stub = StringIO()
     fix_includes.sys.stdout = self.stdout_stub
-
-  def SetFindClientsOfFilesOutput(self, output_lines):
-    self.fake_get_command_output_lines.SetCommandOutputLines(
-        self.find_clients_of_files_command, output_lines)
 
   def RegisterFileContents(self, file_contents_map):
     """Parses and stores the given map from filename to file-contents.
@@ -230,11 +152,6 @@ class FixIncludesBase(unittest.TestCase):
     self.assertListEqual(expected_after, self.actual_after_contents)
     if expected_num_modified_files is not None:
       self.assertEqual(expected_num_modified_files, num_modified_files)
-
-  def MakeFilesUnwriteable(self):
-    """Stub out OS writeability check to say all files are NOT writeable."""
-    fix_includes.os.access = \
-        lambda filename, flags: False
 
 
 class FixIncludesTest(FixIncludesBase):
@@ -2895,36 +2812,6 @@ The full include-list for no_key:
                       iwyu_output.splitlines(),
                       self.flags)
 
-  def testNotWriteable(self):
-    """Test that files don't get rewritten if they are not writeable."""
-    infile = """\
-// Copyright 2010
-
-#include <notused.h>
-#include "used.h"
-
-int main() { return 0; }
-"""
-    iwyu_output = """\
-unwritable should add these lines:
-#include <stdio.h>
-#include "used2.h"
-
-unwritable should remove these lines:
-- #include <notused.h>  // lines 3-3
-
-The full include-list for unwritable:
-#include <stdio.h>
-#include "used.h"
-#include "used2.h"
----
-"""
-    self.RegisterFileContents({'unwritable': infile})
-    self.MakeFilesUnwriteable()
-    # No files are written, because they are not writeable.
-    self.ProcessAndTest(iwyu_output, unedited_files=['unwritable'])
-
-
   def testFileSpecifiedOnCommandline(self):
     """Test we limit editing to files specified on the commandline."""
     changed_infile = """\
@@ -3100,7 +2987,6 @@ int main() { return 0; }
     self.assertListEqual(expected_output.strip().split('\n'),
                          self.actual_after_contents)
     self.assertEqual(2, num_files_modified)
-
 
   def testSortingIncludesAlreadySorted(self):
     """Tests sorting includes only, when includes are already sorted."""

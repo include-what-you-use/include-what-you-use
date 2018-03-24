@@ -125,6 +125,7 @@ endif()
 
 # Clang dependencies.
 target_link_libraries(include-what-you-use
+  PRIVATE
   clangFrontend
   clangSerialization
   clangDriver
@@ -139,6 +140,7 @@ target_link_libraries(include-what-you-use
 
 # LLVM dependencies.
 target_link_libraries(include-what-you-use
+  PRIVATE
   LLVMX86AsmParser # MC, MCParser, Support, X86CodeGen, X86Desc, X86Info
   LLVMX86CodeGen # Analysis, AsmPrinter, CodeGen, Core, MC, Support, Target, 
                  # X86AsmPrinter, X86Desc, X86Info, X86Utils
@@ -169,6 +171,7 @@ target_link_libraries(include-what-you-use
 # Platform dependencies.
 if( WIN32 )
   target_link_libraries(include-what-you-use
+    PRIVATE
     shlwapi
     version # For clangDriver's MSVCToolchain
   )
@@ -177,6 +180,7 @@ elseif( UNIX )
   include(FindBacktrace)
 
   target_link_libraries(include-what-you-use
+    PRIVATE
     pthread
     z
     ${Backtrace_LIBRARIES}

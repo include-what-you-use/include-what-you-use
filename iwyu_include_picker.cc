@@ -662,9 +662,7 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<tr1_impl/unordered_set>", kPrivate, "<unordered_set>", kPublic },
   { "<tr1_impl/utility>", kPrivate, "<tr1/utility>", kPublic },
   { "<tr1_impl/utility>", kPrivate, "<utility>", kPublic },
-  // This didn't come from the grep, but seems to be where swap()
-  // is defined?
-  { "<bits/move.h>", kPrivate, "<algorithm>", kPublic },   // for swap<>()
+  { "<bits/move.h>", kPrivate, "<utility>", kPublic },
   // Hash and hashtable-based containers.
   { "<tr1_impl/functional_hash.h>", kPrivate, "<tr1/functional>", kPublic },
   { "<tr1_impl/functional_hash.h>", kPrivate, "<tr1/unordered_map>", kPublic },

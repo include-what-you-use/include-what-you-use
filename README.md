@@ -1,5 +1,7 @@
 # Include What You Use #
 
+[![Build Status](https://travis-ci.org/include-what-you-use/include-what-you-use.svg?branch=master)](https://travis-ci.org/include-what-you-use/include-what-you-use)
+
 For more in-depth documentation, see http://github.com/include-what-you-use/include-what-you-use/tree/master/docs.
 
 
@@ -19,7 +21,9 @@ While we work to get IWYU quality up, we will be stinting new features, and will
 
 ### How to Build ###
 
-Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. Usually such discrepancies are detected by build bot and fixed promptly.
+Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. Usually such discrepancies are detected by build bot and fixed promptly. The master branch follows Clang trunk.
+
+We also have convenience tags and branches for released versions of Clang (called `clang_<version>`, e.g. `clang_5.0`). To build against a Clang release, check out the corresponding branch in IWYU before configuring the build. More details in the instructions below.
 
 We support two build configurations: out-of-tree and in-tree.
  
@@ -109,12 +113,12 @@ The `CMAKE_CXX_INCLUDE_WHAT_YOU_USE` option enables a mode where CMake first com
 Use it like this:
 
       mkdir build && cd build
-      CC="clang" CXX="clang++" cmake -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="path/to/iwyu any iwyu args" ...
+      CC="clang" CXX="clang++" cmake -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="path/to/iwyu;-Xiwyu;any;-Xwiyu;iwyu;-Xwiyu;args" ...
 
 or, on Windows systems:
 
       mkdir build && cd build
-      cmake -DCMAKE_CXX_COMPILER="%VCINSTALLDIR%/bin/cl.exe" -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="path/to/iwyu any iwyu args" -G Ninja ...
+      cmake -DCMAKE_CXX_COMPILER="%VCINSTALLDIR%/bin/cl.exe" -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="path/to/iwyu;-Xiwyu;any;-Xwiyu;iwyu;-Xwiyu;args" -G Ninja ...
 
 The option appears to be separately supported for both C and C++, so use `CMAKE_C_INCLUDE_WHAT_YOU_USE` for C code.
 
