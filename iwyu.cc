@@ -2583,23 +2583,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     ASTNode* ast_node = current_ast_node();
     ast_node->set_in_forward_declare_context(false);
 
-    // For method calls it doesn't matter if a method is defined inside
-    // a class or outside of it.  We detect out-of-class method calls with
-    // the pattern
-    //
-    //   CallExpr
-    //   `-CXXMethodDecl
-    //     `-NestedNameSpecifier
-    //
-    // and skip traversing method qualifier as in-class methods don't have it.
-    if (const CXXMethodDecl* parent = ast_node->GetParentAs<CXXMethodDecl>()) {
-      if ((nns == parent->getQualifier()) &&
-          ast_node->AncestorIsA<CallExpr>(2)) {
-        VERRS(7) << "Skipping traversal of CXXMethodDecl qualifier "
-                 << PrintableNestedNameSpecifier(nns) << "\n";
-        return false;
-      }
-    }
     return true;
   }
 
@@ -3000,8 +2983,27 @@ class InstantiatedTemplateVisitor
   bool TraverseTemplateSpecializationTypeHelper(
       const clang::TemplateSpecializationType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
-    if (CanForwardDeclareType(current_ast_node()))
-      current_ast_node()->set_in_forward_declare_context(true);
+
+    // Skip the template traversal if this occurrence of the template name is
+    // just a class qualifier for an out of line method, as opposed to an object
+    // instantiation, where the templated code would need to be inspected.
+    //
+    // Class<T,U>::method() {
+    // |-Type---^
+    // |-NNS------^
+    // |-CXXMethodDecl--^
+    ASTNode* ast_node = current_ast_node();
+    if (const auto* nns = ast_node->GetParentAs<NestedNameSpecifier>()) {
+      if (nns->getAsType() == type) {
+        if (const auto* method = ast_node->GetAncestorAs<CXXMethodDecl>(2)) {
+          CHECK_(nns == method->getQualifier());
+          return true;
+        }
+      }
+    }
+
+    if (CanForwardDeclareType(ast_node))
+      ast_node->set_in_forward_declare_context(true);
     return TraverseDataAndTypeMembersOfClassHelper(type);
   }
 
