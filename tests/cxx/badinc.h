@@ -203,8 +203,15 @@ class H_TemplateClass {
     I2_Class i2_class;
     (void)i2_class;
   }
+
   // IWYU: I2_Enum is...*badinc-i2.h
   static FOO static_out_of_line(I2_Enum i2_enum);
+
+  // IWYU: I2_Enum is...*badinc-i2.h
+  static FOO static_inline(I2_Enum i2_enum) {
+    return static_out_of_line(i2_enum);
+  }
+
   // IWYU: I2_Enum is...*badinc-i2.h
   static FOO static_never_defined(I2_Enum i2_enum);
   struct H_TplNestedStruct {
