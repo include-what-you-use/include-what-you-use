@@ -1520,9 +1520,7 @@ int main() {
   // IWYU: std::vector is...*<vector>
   // IWYU: I2_Enum is...*badinc-i2.h
   std::vector<I2_Enum> local_enum_vector;
-  // TODO: In C++03 and earlier I2_Enum is required below. The fact that this
-  // depends on standard version indicates a bug in our template handling, as
-  // the instantiation chain is different in old vs. new standard libraries.
+  // IWYU: I2_Enum is...*badinc-i2.h
   // IWYU: std::vector is...*<vector>
   // IWYU: I21 is...*badinc-i2.h
   local_enum_vector.push_back(I21);
@@ -1843,9 +1841,16 @@ int main() {
   H_TemplateFunction<I1_Class*>(&i1_class);
   H_TemplateFunction(&i1_class);
   // IWYU: I22 is...*badinc-i2.h
+  // IWYU: I1_Enum is...*badinc-i1.h
   h_templateclass2.static_out_of_line(I22);
   // IWYU: I22 is...*badinc-i2.h
+  // IWYU: I1_Enum is...*badinc-i1.h
+  h_templateclass2.static_inline(I22);
+  // IWYU: I22 is...*badinc-i2.h
   h_templateclass2.h_nested_struct.tplnested(I22);
+  // TODO: I1_Enum should be reported here as a full use but isn't,
+  // because we are not properly handling the dependent type FOO in
+  // the nested struct.
   // IWYU: I22 is...*badinc-i2.h
   h_templateclass2.h_nested_struct.static_tplnested(I22);
   // This should not cause warnings for the i2_class destructor
