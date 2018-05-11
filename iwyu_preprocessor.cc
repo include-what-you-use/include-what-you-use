@@ -654,7 +654,8 @@ void IwyuPreprocessorInfo::InclusionDirective(
     const FileEntry* file,
     StringRef search_path,
     StringRef relative_path,
-    const clang::Module* imported) {
+    const clang::Module* imported,
+    SrcMgr::CharacteristicKind file_type) {
   include_filename_loc_ = filename_range.getBegin();
 }
 
