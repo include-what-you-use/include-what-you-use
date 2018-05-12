@@ -25,50 +25,50 @@ Include-what-you-use makes heavy use of Clang internals, and will occasionally b
 
 We also have convenience tags and branches for released versions of Clang (called `clang_<version>`, e.g. `clang_5.0`). To build against a Clang release, check out the corresponding branch in IWYU before configuring the build. More details in the instructions below.
 
-We support two build configurations: out-of-tree and in-tree.
- 
+We assume you already have compiled LLVM and Clang libraries on your system, either via packages for your platform or built from source.
 
-#### Building out-of-tree ####
+> NOTE: If you use the Debian/Ubuntu packaging available from <https://apt.llvm.org>, you'll need the following packages installed:
+>
+> - `llvm-<version>-dev`
+> - `libclang-<version>-dev`
+> - `clang-<version>`
+>
+> Packaging for other platforms will likely be subtly different.
 
-In an out-of-tree configuration, we assume you already have compiled LLVM and Clang headers and libs somewhere on your filesystem, such as via the `libclang-dev` package.
+To set up an environment for building:
 
-  * Create a directory for IWYU development, e.g. `iwyu-trunk`
+  * Create a directory for IWYU development, e.g. `iwyu`
 
   * Clone the IWYU Git repo:
 
-        iwyu-trunk$ git clone https://github.com/include-what-you-use/include-what-you-use.git
+        iwyu$ git clone https://github.com/include-what-you-use/include-what-you-use.git
 
-  * Presumably, you'll be building IWYU with a released version of LLVM and Clang, so check out the corresponding branch. For example if you have Clang 3.2 installed, use the `clang_3.2` branch. IWYU `master` tracks LLVM & Clang trunk:
+  * Presumably, you'll be building IWYU with a released version of LLVM and Clang, so check out the corresponding branch. For example, if you have Clang 6.0 installed, use the `clang_6.0` branch. IWYU `master` tracks LLVM & Clang trunk:
 
-        iwyu-trunk$ cd include-what-you-use
-        iwyu-trunk/include-what-you-use$ git checkout clang_3.2
-        iwyu-trunk/include-what-you-use$ cd ..
+        iwyu$ cd include-what-you-use
+        iwyu/include-what-you-use$ git checkout clang_6.0
 
-  * Create a build root and use CMake to generate a build system linked with LLVM/Clang prebuilts. Note that CMake settings need to match exactly, so you may need to add `-DCMAKE_BUILD_TYPE=Release` or more to the command-line below:
+  * Create a build root and use CMake to generate a build system linked with LLVM/Clang prebuilts:
 
         # This example uses the Makefile generator, but anything should work.
-        iwyu-trunk$ mkdir build && cd build
-        iwyu-trunk/build$ cmake -G "Unix Makefiles" -DIWYU_LLVM_ROOT_PATH=/usr/lib/llvm-3.4 ../include-what-you-use
+        iwyu/include-what-you-use$ cd ..
+        iwyu$ mkdir build && cd build
+
+        # For IWYU 0.10/Clang 6 and earlier
+        iwyu/build$ cmake -G "Unix Makefiles" -DIWYU_LLVM_ROOT_PATH=/usr/lib/llvm-6.0 ../include-what-you-use
+
+        # For IWYU 0.11/Clang 7 and later
+        iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/usr/lib/llvm-7 ../include-what-you-use
+
+    or, if you have a local LLVM and Clang build tree, you can specify that as `CMAKE_PREFIX_PATH` for IWYU 0.11 and later:
+
+        iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/llvm-trunk/build ../include-what-you-use
 
   * Once CMake has generated a build system, you can invoke it directly from `build`, e.g.
 
-        iwyu-trunk/build$ make
+        iwyu/build$ make
 
-This configuration is more useful if you want to get IWYU up and running quickly without building Clang and LLVM from scratch.
-
-
-#### Building in-tree ####
-
-You will need the Clang and LLVM trees on your system, such as by [checking out](http://clang.llvm.org/get_started.html) their SVN trees (but don't configure or build before you've done the following.)
-
-  * Clone the IWYU Git repo into the Clang source tree:
-
-        llvm/tools/clang/tools$ git clone https://github.com/include-what-you-use/include-what-you-use.git
-
-  * Edit `tools/clang/tools/CMakeLists.txt` and put in `add_subdirectory(include-what-you-use)`
-  * Once this is done, IWYU is recognized and picked up by CMake workflow as described in the Clang Getting Started guide
-
-This configuration is more useful if you're actively developing IWYU against Clang trunk. It's easier to set up correctly, but it requires that you build all of LLVM and Clang.
+Instructions for building Clang are available at <https://clang.llvm.org/get_started.html>.
 
 
 ### How to Install ###
