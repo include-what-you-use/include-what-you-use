@@ -587,6 +587,7 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<bits/ostream_insert.h>", kPrivate, "<ostream>", kPublic },
   { "<bits/postypes.h>", kPrivate, "<iostream>", kPublic },
   { "<bits/slice_array.h>", kPrivate, "<valarray>", kPublic },
+  { "<bits/std_function.h>", kPrivate, "<functional>", kPublic },
   { "<bits/stl_algo.h>", kPrivate, "<algorithm>", kPublic },
   { "<bits/stl_algobase.h>", kPrivate, "<algorithm>", kPublic },
   { "<bits/stl_bvector.h>", kPrivate, "<vector>", kPublic },
