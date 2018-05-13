@@ -39,6 +39,7 @@
   { include: ["<bits/ostream_insert.h>", private, "<ostream>", public ] },
   { include: ["<bits/postypes.h>", private, "<iostream>", public ] },
   { include: ["<bits/slice_array.h>", private, "<valarray>", public ] },
+  { include: ["<bits/std_function.h>", private, "<functional>", public ] },
   { include: ["<bits/stl_algo.h>", private, "<algorithm>", public ] },
   { include: ["<bits/stl_algobase.h>", private, "<algorithm>", public ] },
   { include: ["<bits/stl_bvector.h>", private, "<vector>", public ] },
