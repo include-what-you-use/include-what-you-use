@@ -207,6 +207,17 @@ class ASTNode {
     return false;
   }
 
+  template <typename To>
+  const To* GetAncestorOfType() const {
+    const ASTNode* ast_node = this;
+    for (; ast_node != nullptr; ast_node = ast_node->parent()) {
+      if (const To* to = ast_node->GetAs<To>()) {
+        return to;
+      }
+    }
+    return nullptr;
+  }
+
   template<typename To> const To* GetParentAs() const {
     return GetAncestorAs<To>(1);
   }

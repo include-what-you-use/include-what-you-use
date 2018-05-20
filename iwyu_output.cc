@@ -1560,6 +1560,17 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   VERRS(6) << "--- Calculating IWYU violations for "
            << GetFilePath(file_) << " ---\n";
 
+  // Remove any uses part of an override decl -- they are covered for by the
+  // base class from where they were overridden, and the header for the base
+  // class must already be included because we derive from it.
+  for (OneUse& use : *uses) {
+    if (use.flags() & UF_OverrideDecl) {
+      VERRS(6) << "Ignoring use of " << use.symbol_name() << " ("
+               << use.PrintableUseLoc() << "): re-exported from base class\n";
+      use.set_ignore_use();
+    }
+  }
+
   // We have to do the steps in order, because a forward-declare use may
   // turn into a full use, and need to be processed in the full-use step
   // too.

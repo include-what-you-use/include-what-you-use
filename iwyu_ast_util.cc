@@ -86,6 +86,7 @@ using clang::NamedDecl;
 using clang::NestedNameSpecifier;
 using clang::ObjCObjectType;
 using clang::OverloadExpr;
+using clang::ParmVarDecl;
 using clang::PointerType;
 using clang::QualType;
 using clang::QualifiedTemplateName;
@@ -112,6 +113,7 @@ using clang::Type;
 using clang::TypeAliasTemplateDecl;
 using clang::TypeDecl;
 using clang::TypeLoc;
+using clang::TypeSourceInfo;
 using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryOperator;
@@ -270,11 +272,80 @@ bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
   return false;
 }
 
+// This is subtle and a little complicated.
+//
+// In order to override a method, we must derive from a base class, and to do
+// that we must include the base class header. So we can use that as an include
+// optimization; there's no reason for derived class headers to include or
+// declare all the same types as their base class header for the purpose of
+// spelling out the override. We already know all those types are available
+// because the base class header _is_ included.
+
+// There's no canonical place in AST traversal to detect if a use is part of an
+// overridden method signature, VisitFunctionDecl reports full uses of return
+// type and 'autocast' parameters. All other uses are reported as descendant AST
+// nodes are visited (such as exception specifications, pointer and reference
+// type parameters, etc.)
+//
+// Instead, whenever a use is reported we walk back up the tree and see if
+// we're part of an override signature, which can then be ignored.
+//
+// Return true if the given ast_node is inside the signature of a C++ method
+// that overrides a virtual method in a base class.
+static bool IsNodeInsideCXXMethodOverrideSignature(const ASTNode* ast_node) {
+  // This analysis only makes sense for the signature, not the body.
+  // But the IsNodeInsideCXXMethodBody check is basically as expensive as this
+  // entire function, so let's not do it again.
+  // CHECK_(!IsNodeInsideCXXMethodBody(ast_node));
+
+  // Walk up and find a containing CXXMethodDecl, and make sure it overrides a
+  // base method.
+  const auto* method = ast_node->GetAncestorOfType<CXXMethodDecl>();
+  if (!method || !method->size_overridden_methods()) {
+    return false;
+  }
+
+  // Now we know this node is part of a C++ method signature overriding a base.
+
+  if (HasCovariantReturnType(method)) {
+    // Covariant return types require that the full return type is available,
+    // so don't special-case the return type for functions with covariance.
+  } else {
+    // See if this node is part of the return type.
+
+    // VisitFunctionDecl reports return type with the function's AST node, so
+    // ignore everything coming from the method itself.
+    if (ast_node->ContentIs(method)) {
+      return true;
+    }
+
+    if (ast_node->ContentIs(method->getReturnType().getTypePtr())) {
+      return true;
+    }
+
+    // The return type could be a type loc, though never seen this in practice.
+    const TypeSourceInfo* tsi = method->getTypeSourceInfo();
+    const TypeLoc retloc = tsi->getTypeLoc();
+    if (ast_node->ContentIs(&retloc)) {
+      return true;
+    }
+  }
+
+  // See if this node is part of the method's parameter list.
+  const auto* node_param = ast_node->GetAncestorOfType<ParmVarDecl>();
+  if (node_param) {
+    for (const ParmVarDecl* param : method->parameters()) {
+      if (param == node_param) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 UseFlags ComputeUseFlags(const ASTNode* ast_node) {
   UseFlags flags = UF_None;
-
-  if (IsNodeInsideCXXMethodBody(ast_node))
-    flags |= UF_InCxxMethodBody;
 
   // Definitions of free functions are a little special, because they themselves
   // count as uses of all prior declarations (ideally we should probably just
@@ -284,6 +355,12 @@ UseFlags ComputeUseFlags(const ASTNode* ast_node) {
   if (const auto* fd = ast_node->GetAs<FunctionDecl>()) {
     if (fd->getKind() == Decl::Function && fd->isThisDeclarationADefinition())
       flags |= UF_FunctionDfn;
+  }
+
+  if (IsNodeInsideCXXMethodBody(ast_node)) {
+    flags |= UF_InCxxMethodBody;
+  } else if (IsNodeInsideCXXMethodOverrideSignature(ast_node)) {
+    flags |= UF_OverrideDecl;
   }
 
   return flags;
