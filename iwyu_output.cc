@@ -1426,68 +1426,69 @@ void CalculateIwyuForFullUse(OneUse* use,
   }
 }
 
-// This function removes all OneIncludeOrForwardDeclareLines a that are desired
-// but not present but transitively included by some
-// OneIncludedOrForwardDeclareLine b that is desired and present and adds a's
-// symbol counts to b.
+// This function removes all include lines `a` that are desired but not present but
+// transitively included by some include line `b` that is desired and present and
+// adds `a`'s symbol counts to `b`.
 vector<OneIncludeOrForwardDeclareLine> PruneTransitivelyPresent(
-    const vector<OneIncludeOrForwardDeclareLine> & lines,
+    const vector<OneIncludeOrForwardDeclareLine>& lines,
     const IwyuPreprocessorInfo* preprocessor_info) {
   // In the first step, we copy all lines that are an include line, not present,
   // desired, and whose include_file is transitively included by another line
-  // which is a desired include line into a range second and the remaining ones
-  // into another range first.
-  // This is because elements of range second are then precisely those whose
-  // symbols are already exposed through a different header that will is to be
-  // included anyway, so they can be omitted.
-  const auto is_transitively_present = [&lines, preprocessor_info](
-                        const OneIncludeOrForwardDeclareLine & target) {
-    if (!target.IsIncludeLine() || target.is_present() ||
-        !target.is_desired()) {
-      return true;
-    }
-    // Check if target is transitively included by some valid source.
-    // This must be proper, equality does not suffice.
-    for (const OneIncludeOrForwardDeclareLine& source : lines) {
-      if (!source.IsIncludeLine() || !source.is_desired() ||
-          source.included_file() == target.included_file()) {
-        continue;
-      }
+  // which is a desired include line into a range `indirect` and the remaining
+  // ones into another range `direct`. This is because elements of range
+  // `indirect` are then precisely those whose symbols are already exposed
+  // through a different header that is to be included anyway, so they can be
+  // omitted.
+  const auto is_transitively_present =
+      [&lines,
+       preprocessor_info](const OneIncludeOrForwardDeclareLine& target) {
+        if (!target.IsIncludeLine() || target.is_present() ||
+            !target.is_desired()) {
+          return false;
+        }
+        // Check if target is transitively included by some relevant source.
+        // This must be proper, equality does not suffice.
+        for (const OneIncludeOrForwardDeclareLine& source : lines) {
+          if (source.included_file() == target.included_file() ||
+              !source.is_desired() || !source.IsIncludeLine()) {
+            continue;
+          }
 
-      if (preprocessor_info->FileTransitivelyIncludes(source.included_file(),
-                                                      target.included_file())) {
+          if (preprocessor_info->FileTransitivelyIncludes(
+                  source.included_file(), target.included_file())) {
+            return true;
+          }
+        }
         return false;
-      }
-    }
-    return true;
-  };
+      };
 
-  vector<OneIncludeOrForwardDeclareLine> first, second;
-  first.reserve(lines.size());
-  second.reserve(lines.size());
-  std::partition_copy(lines.cbegin(), lines.cend(), std::back_inserter(first),
-                      std::back_inserter(second), is_transitively_present);
-  // Now add the symbols uses from elements of range second to the corresponding
-  // source elements of range first so that these sources are now listed as
-  // including the corresponding symbols because they do transitively.
-  for (const OneIncludeOrForwardDeclareLine& target : second) {
-    const auto iter =
-        std::find_if(first.begin(), first.end(),
+  vector<OneIncludeOrForwardDeclareLine> indirect, direct;
+  indirect.reserve(lines.size());
+  direct.reserve(lines.size());
+  std::partition_copy(lines.cbegin(), lines.cend(), std::back_inserter(indirect),
+                      std::back_inserter(direct), is_transitively_present);
+  // Now add the symbol uses from elements of range indirect to the
+  // corresponding source elements of range direct so that these sources are now
+  // listed as including the corresponding symbols because they do transitively.
+  for (const OneIncludeOrForwardDeclareLine& target : indirect) {
+    const auto source =
+        std::find_if(direct.begin(), direct.end(),
                      [&target, preprocessor_info](
-                         const OneIncludeOrForwardDeclareLine& source) {
+                         const OneIncludeOrForwardDeclareLine& s) {
                        return preprocessor_info->FileTransitivelyIncludes(
-                           source.included_file(), target.included_file());
+                           s.included_file(), target.included_file());
                      });
-    CHECK_(iter != first.end()) << "Cannot find the source for an element"
-	    "that was sorted out because it had a source";
+    CHECK_(source != direct.end())
+        << "Cannot find the source for an element"
+           "that was sorted out because it had a source";
     for (const auto& p : target.symbol_counts()) {
-      iter->AddSymbolUses(p.first, p.second);
+      source->AddSymbolUses(p.first, p.second);
     }
-    // iter is desired now because target was.
+    // source is desired now because target was.
     CHECK_(target.is_desired()) << "Target must be desired";
-    iter->set_desired();
+    source->set_desired();
   }
-  return first;
+  return direct;
 }
 
 }  // namespace internal
