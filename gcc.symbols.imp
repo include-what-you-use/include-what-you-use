@@ -97,6 +97,7 @@
   { symbol: [ "size_t", private, "<stdlib.h>", public ] },
   { symbol: [ "size_t", private, "<string.h>", public ] },
   { symbol: [ "size_t", private, "<time.h>", public ] },
+  { symbol: [ "size_t", private, "<uchar.h>", public ] },
   { symbol: [ "size_t", private, "<wchar.h>", public ] },
   # Macros that can be defined in more than one file, don't have the
   # same __foo_defined guard that other types do, so the grep above
