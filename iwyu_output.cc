@@ -1788,9 +1788,9 @@ enum class LineSortOrdinal : int {
 };
 
 template <typename T>
-std::underlying_type_t<T> underlying_cast(T val) {
-  static_assert(std::is_enum<T>::value, "underyling_cast only works with enums");
-  return static_cast<std::underlying_type_t<T>>(val);
+typename std::underlying_type<T>::type underlying_cast(T val) {
+  static_assert(std::is_enum<T>::value, "underlying_cast only works with enums");
+  return static_cast<typename std::underlying_type<T>::type>(val);
 }
 
 LineSortOrdinal GetLineSortOrdinal(const OneIncludeOrForwardDeclareLine& line,
