@@ -94,6 +94,8 @@ static void PrintHelp(const char* extra_msg) {
          "   --no_comments: do not add 'why' comments.\n"
          "   --no_fwd_decls: do not use forward declarations.\n"
          "   --verbose=<level>: the higher the level, the more output.\n"
+         "   --quoted_includes_first: when sorting includes, place quoted\n"
+         "        ones first.\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
          "options without -Xiwyu prefix:\n"
@@ -162,7 +164,8 @@ CommandlineFlags::CommandlineFlags()
       prefix_header_include_policy(CommandlineFlags::kAdd),
       pch_in_code(false),
       no_comments(false),
-      no_fwd_decls(false) {
+      no_fwd_decls(false),
+      quoted_includes_first(false) {
 }
 
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
@@ -179,6 +182,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"max_line_length", optional_argument, nullptr, 'l'},
     {"no_comments", optional_argument, nullptr, 'o'},
     {"no_fwd_decls", optional_argument, nullptr, 'f'},
+    {"quoted_includes_first", no_argument, nullptr, 'q' },
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "d::p:v:c:m:n";
@@ -210,6 +214,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         max_line_length = atoi(optarg);
         CHECK_((max_line_length >= 0) && "Max line length must be positive");
         break;
+      case 'q': quoted_includes_first = true; break;
       case -1: return optind;   // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");
