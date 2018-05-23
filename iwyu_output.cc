@@ -1776,27 +1776,53 @@ OutputLine PrintableIncludeOrForwardDeclareLine(
 
 typedef pair<int, string> LineSortKey;
 
+enum class LineSortOrdinal : int {
+  kPrecompiledHeader,
+  kAssociatedHeader,
+  kAssociatedInlineDefinitions,
+  kProjectLocalHeader,
+  kCHeader,
+  kCppHeader,
+  kOtherHeader,
+  kForwardDeclaration
+};
+
+template <typename T>
+std::underlying_type_t<T> underlying_cast(T val) {
+  static_assert(std::is_enum<T>::value, "underyling_cast only works with enums");
+  return static_cast<std::underlying_type_t<T>>(val);
+}
+
+LineSortOrdinal GetLineSortOrdinal(const OneIncludeOrForwardDeclareLine& line,
+                                   const set<string>& associated_quoted_includes,
+                                   const IwyuFileInfo* file_info) {
+  if (!line.IsIncludeLine())
+    return LineSortOrdinal::kForwardDeclaration;
+  if (file_info && file_info->is_pch_in_code())
+    return LineSortOrdinal::kPrecompiledHeader;
+
+  const auto& quotedInclude = line.quoted_include();
+  if (ContainsKey(associated_quoted_includes, quotedInclude)) {
+    if (EndsWith(quotedInclude, "-inl.h\""))
+      return LineSortOrdinal::kAssociatedInlineDefinitions;
+    return LineSortOrdinal::kAssociatedHeader;
+  }
+  if (EndsWith(quotedInclude, "\""))
+    return LineSortOrdinal::kProjectLocalHeader;
+  if (EndsWith(quotedInclude, ".h>"))
+    return LineSortOrdinal::kCHeader;
+  if (EndsWith(quotedInclude, ">"))
+    return LineSortOrdinal::kCppHeader;
+  return LineSortOrdinal::kOtherHeader;
+}
+
 // The sort key of an include/forward-declare line is an (int, string)
-// pair.  The string is always the line itself.  The int is a category:
-// 0: PCH in code, 1: associated .h, 2: associated -inl.h, 3: C header,
-// 4: c++ header, 5: other header, 6: forward-declare.
+// pair.  The string is always the line itself.  The int is the category.
 LineSortKey GetSortKey(const OneIncludeOrForwardDeclareLine& line,
                        const set<string>& associated_quoted_includes,
                        const IwyuFileInfo* file_info) {
-  if (!line.IsIncludeLine())
-    return LineSortKey(6, line.line());
-  if (file_info && file_info->is_pch_in_code())
-    return LineSortKey(0, line.line());
-  if (ContainsKey(associated_quoted_includes, line.quoted_include())) {
-    if (EndsWith(line.quoted_include(), "-inl.h\""))
-      return LineSortKey(2, line.line());
-    return LineSortKey(1, line.line());
-  }
-  if (EndsWith(line.quoted_include(), ".h>"))
-    return LineSortKey(3, line.line());
-  if (EndsWith(line.quoted_include(), ">"))
-    return LineSortKey(4, line.line());
-  return LineSortKey(5, line.line());
+  const auto sortOrdinal = GetLineSortOrdinal(line, associated_quoted_includes, file_info);
+  return LineSortKey(underlying_cast(sortOrdinal), line.line());
 }
 
 // filename is "this" filename: the file being emitted.
