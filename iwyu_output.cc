@@ -1778,6 +1778,7 @@ enum class LineSortOrdinal {
   PrecompiledHeader,
   AssociatedHeader,
   AssociatedInlineDefinitions,
+  QuotedInclude,
   CHeader,
   CppHeader,
   OtherHeader,
@@ -1794,15 +1795,18 @@ LineSortOrdinal GetLineSortOrdinal(const OneIncludeOrForwardDeclareLine& line,
   if (file_info && file_info->is_pch_in_code())
     return LineSortOrdinal::PrecompiledHeader;
 
-  const std::string quotedInclude = line.quoted_include();
-  if (ContainsKey(associated_quoted_includes, quotedInclude)) {
-    if (EndsWith(quotedInclude, "-inl.h\""))
+  const std::string quoted_include = line.quoted_include();
+  if (ContainsKey(associated_quoted_includes, quoted_include)) {
+    if (EndsWith(quoted_include, "-inl.h\""))
       return LineSortOrdinal::AssociatedInlineDefinitions;
     return LineSortOrdinal::AssociatedHeader;
   }
-  if (EndsWith(quotedInclude, ".h>"))
+
+  if (GlobalFlags().quoted_includes_first && EndsWith(quoted_include, "\""))
+    return LineSortOrdinal::QuotedInclude;
+  if (EndsWith(quoted_include, ".h>"))
     return LineSortOrdinal::CHeader;
-  if (EndsWith(quotedInclude, ">"))
+  if (EndsWith(quoted_include, ">"))
     return LineSortOrdinal::CppHeader;
   return LineSortOrdinal::OtherHeader;
 }

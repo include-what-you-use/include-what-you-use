@@ -84,6 +84,7 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_keep.cc': ['--prefix_header_includes=keep'],
       'prefix_header_includes_remove.cc': ['--prefix_header_includes=remove'],
       'prefix_header_operator_new.cc': ['--prefix_header_includes=remove'],
+      'quoted_includes_first.cc': ['--pch_in_code', '--quoted_includes_first'],
     }
     prefix_headers = [self.Include('prefix_header_includes-d1.h'),
                       self.Include('prefix_header_includes-d2.h'),
@@ -168,6 +169,7 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_add.cc': ['.'],
       'prefix_header_includes_keep.cc': ['.'],
       'prefix_header_includes_remove.cc': ['.'],
+      'quoted_includes_first.cc' : ['.'],
       'range_for.cc': ['.'],
       're_fwd_decl.cc': ['.'],
       'redecls.cc': ['.'],
