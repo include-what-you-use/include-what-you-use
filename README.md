@@ -2,8 +2,7 @@
 
 [![Build Status](https://travis-ci.org/include-what-you-use/include-what-you-use.svg?branch=master)](https://travis-ci.org/include-what-you-use/include-what-you-use)
 
-For more in-depth documentation, see http://github.com/include-what-you-use/include-what-you-use/tree/master/docs.
-
+For more in-depth documentation, see [docs](docs).
 
 ## Instructions for Users ##
 
@@ -11,13 +10,11 @@ For more in-depth documentation, see http://github.com/include-what-you-use/incl
 
 This puts us in a state where every file includes the headers it needs to declare the symbols that it uses.  When every file includes what it uses, then it is possible to edit any file and remove unused headers, without fear of accidentally breaking the upwards dependencies of that file.  It also becomes easy to automatically track and update dependencies in the source code.
 
-
 ### CAVEAT ###
 
 This is alpha quality software -- at best (as of February 2011).  It was written to work specifically in the Google source tree, and may make assumptions, or have gaps, that are immediately and embarrassingly evident in other types of code.  For instance, we only run this on C++ code, not C or Objective C.  Even for Google code, the tool still makes a lot of mistakes.
 
 While we work to get IWYU quality up, we will be stinting new features, and will prioritize reported bugs along with the many existing, known bugs.  The best chance of getting a problem fixed is to submit a patch that fixes it (along with a unittest case that verifies the fix)!
-
 
 ### How to Build ###
 
@@ -29,47 +26,46 @@ We assume you already have compiled LLVM and Clang libraries on your system, eit
 
 > NOTE: If you use the Debian/Ubuntu packaging available from <https://apt.llvm.org>, you'll need the following packages installed:
 >
-> - `llvm-<version>-dev`
-> - `libclang-<version>-dev`
-> - `clang-<version>`
+> * `llvm-<version>-dev`
+> * `libclang-<version>-dev`
+> * `clang-<version>`
 >
 > Packaging for other platforms will likely be subtly different.
 
 To set up an environment for building:
 
-  * Create a directory for IWYU development, e.g. `iwyu`
+* Create a directory for IWYU development, e.g. `iwyu`
 
-  * Clone the IWYU Git repo:
+* Clone the IWYU Git repo:
 
-        iwyu$ git clone https://github.com/include-what-you-use/include-what-you-use.git
+      iwyu$ git clone https://github.com/include-what-you-use/include-what-you-use.git
 
-  * Presumably, you'll be building IWYU with a released version of LLVM and Clang, so check out the corresponding branch. For example, if you have Clang 6.0 installed, use the `clang_6.0` branch. IWYU `master` tracks LLVM & Clang trunk:
+* Presumably, you'll be building IWYU with a released version of LLVM and Clang, so check out the corresponding branch. For example, if you have Clang 6.0 installed, use the `clang_6.0` branch. IWYU `master` tracks LLVM & Clang trunk:
 
-        iwyu$ cd include-what-you-use
-        iwyu/include-what-you-use$ git checkout clang_6.0
+      iwyu$ cd include-what-you-use
+      iwyu/include-what-you-use$ git checkout clang_6.0
 
-  * Create a build root and use CMake to generate a build system linked with LLVM/Clang prebuilts:
+* Create a build root and use CMake to generate a build system linked with LLVM/Clang prebuilts:
 
-        # This example uses the Makefile generator, but anything should work.
-        iwyu/include-what-you-use$ cd ..
-        iwyu$ mkdir build && cd build
+      # This example uses the Makefile generator, but anything should work.
+      iwyu/include-what-you-use$ cd ..
+      iwyu$ mkdir build && cd build
 
-        # For IWYU 0.10/Clang 6 and earlier
-        iwyu/build$ cmake -G "Unix Makefiles" -DIWYU_LLVM_ROOT_PATH=/usr/lib/llvm-6.0 ../include-what-you-use
+      # For IWYU 0.10/Clang 6 and earlier
+      iwyu/build$ cmake -G "Unix Makefiles" -DIWYU_LLVM_ROOT_PATH=/usr/lib/llvm-6.0 ../include-what-you-use
 
-        # For IWYU 0.11/Clang 7 and later
-        iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/usr/lib/llvm-7 ../include-what-you-use
+      # For IWYU 0.11/Clang 7 and later
+      iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/usr/lib/llvm-7 ../include-what-you-use
 
-    or, if you have a local LLVM and Clang build tree, you can specify that as `CMAKE_PREFIX_PATH` for IWYU 0.11 and later:
+  or, if you have a local LLVM and Clang build tree, you can specify that as `CMAKE_PREFIX_PATH` for IWYU 0.11 and later:
 
-        iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/llvm-trunk/build ../include-what-you-use
+      iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/llvm-trunk/build ../include-what-you-use
 
-  * Once CMake has generated a build system, you can invoke it directly from `build`, e.g.
+* Once CMake has generated a build system, you can invoke it directly from `build`, e.g.
 
-        iwyu/build$ make
+      iwyu/build$ make
 
 Instructions for building Clang are available at <https://clang.llvm.org/get_started.html>.
-
 
 ### How to Install ###
 
@@ -83,11 +79,9 @@ So for IWYU to function correctly, you need to copy in the Clang headers at a go
 
 This weirdness is tracked in [issue 100](https://github.com/include-what-you-use/include-what-you-use/issues/100), hopefully we can make this more transparent over time.
 
-
 ### How to Run ###
 
 The original design was built for Make, but a number of alternative run modes have come up over the years.
-
 
 #### Plugging into Make ####
 
@@ -102,7 +96,6 @@ or
 (include-what-you-use always exits with an error code, so the build system knows it didn't build a .o file.  Hence the need for `-k`.)
 
 Include-what-you-use only analyzes .cc (or .cpp) files built by `make`, along with their corresponding .h files.  If your project has a .h file with no corresponding .cc file, IWYU will ignore it unless you use the `--check_also` switch to add it for analysis together with a .cc file.
-
 
 #### Using with CMake ####
 
@@ -124,7 +117,6 @@ The option appears to be separately supported for both C and C++, so use `CMAKE_
 
 Note that with Microsoft's Visual C++ compiler, IWYU needs the `--driver-mode=cl` argument to understand the MSVC options from CMake.
 
-
 #### Using with a compilation database ####
 
 The `iwyu_tool.py` script predates the native CMake support, and works off the [compilation database format](https://clang.llvm.org/docs/JSONCompilationDatabase.html). For example, CMake generates such a database named `compile_commands.json` with the `CMAKE_EXPORT_COMPILE_COMMANDS` option enabled.
@@ -145,7 +137,6 @@ Unless a source filename is provided, all files in the project will be analyzed.
 
 See `iwyu_tool.py --help` for more options.
 
-
 #### Applying fixes ####
 
 We also include a tool that automatically fixes up your source files based on the IWYU recommendations.  This is also alpha-quality software!  Here's how to use it (requires python):
@@ -155,15 +146,14 @@ We also include a tool that automatically fixes up your source files based on th
 
 If you don't like the way `fix_includes.py` munges your `#include` lines, you can control its behavior via flags. `fix_includes.py --help` will give a full list, but these are some common ones:
 
-  * `-b`: Put blank lines between system and Google includes
-  * `--nocomments`: Don't add the 'why' comments next to includes
-
+* `-b`: Put blank lines between system and Google includes
+* `--nocomments`: Don't add the 'why' comments next to includes
 
 ### How to Correct IWYU Mistakes ###
 
-  * If `fix_includes.py` has removed an `#include` you actually need, add it back in with the comment '`// IWYU pragma: keep`' at the end of the `#include` line.  Note that the comment is case-sensitive.
-  * If `fix_includes.py` has added an `#include` you don't need, just take it out.  We hope to come up with a more permanent way of fixing later.
-  * If `fix_includes.py` has wrongly added or removed a forward-declare, just fix it up manually.
-  * If `fix_includes.py` has suggested a private header file (such as `<bits/stl_vector.h>`) instead of the proper public header file (`<vector>`), you can fix this by inserting a specially crafted comment near top of the private file (assuming you can write to it): '`// IWYU pragma: private, include "the/public/file.h"`'.  
+* If `fix_includes.py` has removed an `#include` you actually need, add it back in with the comment '`// IWYU pragma: keep`' at the end of the `#include` line.  Note that the comment is case-sensitive.
+* If `fix_includes.py` has added an `#include` you don't need, just take it out.  We hope to come up with a more permanent way of fixing later.
+* If `fix_includes.py` has wrongly added or removed a forward-declare, just fix it up manually.
+* If `fix_includes.py` has suggested a private header file (such as `<bits/stl_vector.h>`) instead of the proper public header file (`<vector>`), you can fix this by inserting a specially crafted comment near top of the private file (assuming you can write to it): '`// IWYU pragma: private, include "the/public/file.h"`'.
 
 Current IWYU pragmas are described in [IWYUPragmas](docs/IWYUPragmas.md).

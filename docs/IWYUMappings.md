@@ -1,4 +1,4 @@
-## IWYU Mappings ##
+# IWYU Mappings #
 
 One of the difficult problems for IWYU is distinguishing between which header contains a symbol definition and which header is the actual documented header to include for that symbol.
 
@@ -12,13 +12,11 @@ However, many mappings are toolchain- and version-dependent. Symbol homes and `#
 
 Any mappings outside of the default set can therefore be specified as external *mapping files*.
 
-
-### Default Mappings ###
+## Default Mappings ##
 
 IWYU's default mappings are hard-coded in `iwyu_include_picker.cc`, and are very GCC-centric. There are both symbol- and include mappings for GNU libstdc++ and libc.
 
-
-### Mapping Files ###
+## Mapping Files ##
 
 The mapping files conventionally use the `.imp` file extension, for "Iwyu MaPping" (terrible, I know). They use a [JSON](http://json.org/) meta-format with the following general form:
 
@@ -29,9 +27,9 @@ The mapping files conventionally use the `.imp` file extension, for "Iwyu MaPpin
 
 Directives can be one of the literal strings:
 
-  * `include`
-  * `symbol`
-  * `ref`
+* `include`
+* `symbol`
+* `ref`
 
 and data varies between the directives, see below.
 
@@ -39,13 +37,12 @@ Note that you can mix directives of different kinds within the same mapping file
 
 IWYU uses LLVM's YAML/JSON parser to interpret the mapping files, and it has some idiosyncrasies:
 
-  * Comments use a Python-style `#` prefix, not Javascript's `//`
-  * Single-word strings can be left un-quoted
+* Comments use a Python-style `#` prefix, not Javascript's `//`
+* Single-word strings can be left un-quoted
 
 If the YAML parser is ever made more rigorous, it might be wise not to lean on non-standard behavior, so apart from comment style, try to keep mapping files in line with the JSON spec.
 
-
-#### Include Mappings ####
+### Include Mappings ###
 
 The `include` directive specifies a mapping between two include names (relative path, including quotes or angle brackets.)
 
@@ -53,10 +50,10 @@ This is typically used to map from a private implementation detail header to a p
 
 Data for this directive is a list of four strings containing:
 
-  * The include name to map from
-  * The visibility of the include name to map from
-  * The include name to map to
-  * The visibility of the include name to map to
+* The include name to map from
+* The visibility of the include name to map from
+* The include name to map to
+* The visibility of the include name to map to
 
 For example;
 
@@ -70,17 +67,16 @@ Include mappings support a special wildcard syntax for the first entry:
 
 The `@` prefix is a signal that the remaining content is a regex, and can be used to re-map a whole subdirectory of private headers to a public facade header.
 
-
-#### Symbol Mappings ####
+### Symbol Mappings ###
 
 The `symbol` directive maps from a qualified symbol name to its authoritative header.
 
 Data for this directive is a list of four strings containing:
 
-  * The symbol name to map from
-  * The visibility of the symbol
-  * The include name to map to
-  * The visibility of the include name to map to
+* The symbol name to map from
+* The visibility of the symbol
+* The include name to map to
+* The visibility of the include name to map to
 
 For example;
 
@@ -90,8 +86,7 @@ The symbol visibility is largely redundant -- it must always be `private`. It is
 
 Unlike `include`, `symbol` directives do not support the `@`-prefixed regex syntax in the first entry. Track the [following bug](https://github.com/include-what-you-use/include-what-you-use/issues/233) for updates.
 
-
-#### Mapping Refs ####
+### Mapping Refs ###
 
 The last kind of directive, `ref`, is used to pull in another mapping file, much like the C preprocessor's `#include` directive. Data for this directive is a single string: the filename to include.
 
@@ -102,8 +97,7 @@ For example;
 
 The rationale for the `ref` directive was to make it easier to compose project-specific mappings from a set of library-oriented mapping files. For example, IWYU might ship with mapping files for [Boost](http://www.boost.org), the SCL, various C standard libraries, the Windows API, the [Poco Library](http://pocoproject.org), etc. Depending on what your specific project uses, you could easily create an aggregate mapping file with refs to the relevant mappings.
 
-
-#### Specifying Mapping Files ####
+### Specifying Mapping Files ###
 
 Mapping files are specified on the command-line using the `--mapping_file` switch:
 
