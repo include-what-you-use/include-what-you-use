@@ -17,7 +17,7 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
 
   if( DEFINED IWYU_LLVM_INCLUDE_PATH AND DEFINED IWYU_LLVM_LIB_PATH )
     # User provided include/lib paths, fall through
-  elseif ( DEFINED IWYU_LLVM_ROOT_PATH )
+  elseif( DEFINED IWYU_LLVM_ROOT_PATH )
     # Synthesize include/lib relative to a root.
     set(IWYU_LLVM_INCLUDE_PATH ${IWYU_LLVM_ROOT_PATH}/include)
     set(IWYU_LLVM_LIB_PATH ${IWYU_LLVM_ROOT_PATH}/lib)
@@ -68,6 +68,13 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   endif()
 else()
   message(STATUS "IWYU in-tree configuration")
+
+  if( NOT DEFINED IWYU_USE_LLVM_DYLIB )
+    if( TARGET LLVM OR LLVM_BUILD_LLVM_DYLIB )
+      # Link with LLVM dynamically if LLVM produces that target.
+      set(IWYU_USE_LLVM_DYLIB ON)
+    endif()
+  endif()
 endif()
 
 # Pick up Git revision so we can report it in version information.
@@ -139,33 +146,41 @@ target_link_libraries(include-what-you-use
 )
 
 # LLVM dependencies.
+if( IWYU_USE_LLVM_DYLIB )
+  set(IWYU_LLVM_LIBS LLVM)
+else()
+  set(IWYU_LLVM_LIBS
+    LLVMX86AsmParser # MC, MCParser, Support, X86CodeGen, X86Desc, X86Info
+    LLVMX86CodeGen # Analysis, AsmPrinter, CodeGen, Core, MC, Support, Target,
+                   # X86AsmPrinter, X86Desc, X86Info, X86Utils
+    LLVMX86Desc # MC, MCDisassembler, Object, Support, X86AsmPrinter, X86Info
+    LLVMX86AsmPrinter # MC, Support, X86Utils
+    LLVMX86Info # Support
+    LLVMX86Utils # Core, Support
+    LLVMCodeGen # Analysis, Core, MC, Scalar, Support, Target, TransformUtils
+    LLVMipo
+    LLVMScalarOpts
+    LLVMInstCombine
+    LLVMTransformUtils
+    LLVMTarget # Analysis, MC, Core, Support
+    LLVMAnalysis # Core, Support
+    LLVMOption # Support
+    LLVMMCDisassembler # MC, Support
+    LLVMMCParser # MC, Support
+    LLVMMC # Object, Support
+    LLVMProfileData # Core, Support, Object
+    LLVMObject # BitReader, Core, Support
+    LLVMBitReader # Core, Support
+    LLVMCore # BinaryFormat, Support
+    LLVMBinaryFormat # Support
+    LLVMSupport # Demangle
+    LLVMDemangle
+    )
+endif()
+
 target_link_libraries(include-what-you-use
   PRIVATE
-  LLVMX86AsmParser # MC, MCParser, Support, X86CodeGen, X86Desc, X86Info
-  LLVMX86CodeGen # Analysis, AsmPrinter, CodeGen, Core, MC, Support, Target, 
-                 # X86AsmPrinter, X86Desc, X86Info, X86Utils
-  LLVMX86Desc # MC, MCDisassembler, Object, Support, X86AsmPrinter, X86Info
-  LLVMX86AsmPrinter # MC, Support, X86Utils
-  LLVMX86Info # Support
-  LLVMX86Utils # Core, Support
-  LLVMCodeGen # Analysis, Core, MC, Scalar, Support, Target, TransformUtils
-  LLVMipo
-  LLVMScalarOpts
-  LLVMInstCombine
-  LLVMTransformUtils
-  LLVMTarget # Analysis, MC, Core, Support
-  LLVMAnalysis # Core, Support
-  LLVMOption # Support
-  LLVMMCDisassembler # MC, Support
-  LLVMMCParser # MC, Support
-  LLVMMC # Object, Support
-  LLVMProfileData # Core, Support, Object
-  LLVMObject # BitReader, Core, Support
-  LLVMBitReader # Core, Support
-  LLVMCore # BinaryFormat, Support
-  LLVMBinaryFormat # Support
-  LLVMSupport # Demangle
-  LLVMDemangle
+  ${IWYU_LLVM_LIBS}
 )
 
 # Platform dependencies.
