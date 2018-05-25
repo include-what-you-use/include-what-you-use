@@ -1,11 +1,10 @@
-## Why Include What You Use Is Difficult ##
+# Why Include What You Use Is Difficult #
 
 This section is informational, for folks who are wondering why include-what-you-use requires so much code and yet still has so many errors.
 
 Include-what-you-use has the most problems with templates and macros. If your code doesn't use either, IWYU will probably do great. And, you're probably not actually programming in C++...
 
-
-### Use Versus Forward Declare ###
+## Use Versus Forward Declare ##
 
 Include-what-you-use has to be able to tell when a symbol is being used in a way that you can forward-declare it. Otherwise, if you wrote
 
@@ -30,8 +29,7 @@ But that's not enough: when instantiating the templates, we need to keep track o
 
 In this case, the caller of `MyFunc` is not using the full type of `MyClass`, because the template parameter is only used as a pointer. On the other hand, the file that defines `MyFunc` is using the full type information for `MyClass`. The end result is that the caller can forward-declare `MyClass`, but the file defining `MyFunc` has to `#include "myclass.h"`.
 
-
-### Handling Template Arguments ###
+## Handling Template Arguments ##
 
 Even figuring out what types are 'used' with a template can be difficult. Consider the following two declarations:
 
@@ -54,8 +52,7 @@ Even normal template arguments can be confusing. Consider this templated functio
 
 and you call `MyFunc(FunctionReturningAFunctionPointer())`. What types are being used where, in this case?
 
-
-### Who is Responsible for Dependent Template Types? ###
+## Who is Responsible for Dependent Template Types? ##
 
 If you say `vector<MyClass> v;`, it's clear that you, and not `vector.h` are responsible for the use of `MyClass`, even though all the functions that use `MyClass` are defined in `vector.h`. (OK, technically, these functions are not "defined" in a particular location, they're instantiated from template methods written in `vector.h`, but for us it works out the same.)
 
@@ -79,8 +76,7 @@ In C++, `strchr` is a templatized function (different impls for `char*` and `con
 
 As you can imagine, distinguishing all these cases is extremely difficult. To get it exactly right would require re-implementing C++'s (byzantine) lookup rules, which we have not yet tackled.
 
-
-### Template Template Types ###
+## Template Template Types ##
 
 Let's say you have a function
 
@@ -90,8 +86,7 @@ Let's say you have a function
 
 And you call `MyFunc<hash_set>`. Who is responsible for the 'use' of `hash<string>`, and thus needs to `#include "myhash.h"`? I think it has to be the caller, even if the  caller never uses the `string` type in its file at all. This is rather counter-intuitive. Luckily, it's also rather rare.
 
-
-### Typedefs ###
+## Typedefs ##
 
 Suppose you `#include` a file `"foo.h"` that has typedef `hash_map<Foo, Bar> MyMap;`. And you have this code:
 
@@ -108,13 +103,11 @@ The compiler sees this as syntactic sugar for `find<hash_map<Foo, Bar, hash<Foo>
 
 Not only is the template argument `hash_map` instead of `MyMap`, it includes all the default template arguments, with no indication they're default arguments. All the tricks we used above to intelligently ignore default template arguments are worthless here. We have to jump through lots of hoops so this code doesn't require you to `#include` not only `<hash_map>`, but `<alloc>` and `<utility>` as well.
 
-
-### Macros ###
+## Macros ##
 
 It's no surprise macros cause a huge problem for include-what-you-use. Basically, all the problems of templates also apply to macros, but worse: with templates you can analyze the uninstantiated template, but with macros, you can't analyze the uninstantiated macro -- it likely doesn't even parse cleanly in isolation. As a result, we have very few tools to distinguish when the author of a macro is responsible for a symbol used in a macro, and when the caller of the macro is responsible.
 
-
-### Includes with Side Effects ###
+## Includes with Side Effects ##
 
 While not a major problem, this indicates the myriad "gotchas" that exist around include-what-you-use: removing an `#include` and replacing it with a forward-declare may be dangerous even if no symbols are fully used from the `#include`.  Consider the following code:
 
@@ -136,8 +129,7 @@ Another case is a header file like this:
 
 We might think we can remove an `#include` of `foo.h` and replace it by `#include "module_writer.h"`, but that is likely to break the build if `module_writer.h` requires `MODULE_NAME` be defined.  Since my file doesn't participate in this dependency at all, it won't even notice it.  IWYU needs to keep track of dependencies between files it's not even trying to analyze!
 
-
-### Private Includes ###
+## Private Includes ##
 
 Suppose you write `vector<int> v;`. You are using vector, and thus have to `#include <vector>`. Even this seemingly easy case is difficult, because vector isn't actually defined in `<vector>`; it's defined in `<bits/stl_vector.h>`. The C++ standard library has hundreds of private files that users are not supposed to `#include` directly. Third party libraries have hundreds more.  There's no general way to distinguish private from public headers; we have to manually construct the proper mapping.
 
@@ -145,8 +137,7 @@ In the future, we hope to provide a way for users to annotate if a file is publi
 
 The mappings themselves can be ambiguous. For instance, `NULL` is provided by many files, including `stddef.h`, `stdlib.h`, and more. If you use `NULL`, what header file should IWYU suggest? We have rules to try to minimize the number of `#includes` you have to add; it can get rather involved.
 
-
-### Unparsed Code ###
+## Unparsed Code ##
 
 Conditional `#includes` are a problem for IWYU when the condition is false:
 
@@ -158,14 +149,14 @@ Conditional `#includes` are a problem for IWYU when the condition is false:
 
     void StartProcess() {
         #if defined(LOG_VERBOSE)
-        LogVerbose("Starting process"); 
+        LogVerbose("Starting process");
         #endif
         ...
     }
 
 If you're running IWYU without that preprocessor definition set, it has no way of telling if `verbose_logger.h` is a necessary `#include` or not.
 
-### Placing New Includes and Forward-Declares ###
+## Placing New Includes and Forward-Declares ##
 
 Figuring out where to insert new `#includes` and forward-declares is a complex problem of its own (one that is the responsibility of `fix_includes.py`). In general, we want to put new `#includes` with existing `#includes`. But the existing `#includes` may be broken up into sections, either because of conditional `#includes` (with `#ifdefs`), or macros (such as `#define __GNU_SOURCE`), or for other reasons. Some forward-declares may need to come early in the file, and some may prefer to come later (after we're in an appropriate namespace, for instance).
 
