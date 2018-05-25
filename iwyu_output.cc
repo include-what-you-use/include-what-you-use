@@ -1774,29 +1774,45 @@ OutputLine PrintableIncludeOrForwardDeclareLine(
     GetSymbolsSortedByFrequency(line.symbol_counts()));
 }
 
-typedef pair<int, string> LineSortKey;
+enum class LineSortOrdinal {
+  PrecompiledHeader,
+  AssociatedHeader,
+  AssociatedInlineDefinitions,
+  CHeader,
+  CppHeader,
+  OtherHeader,
+  ForwardDeclaration
+};
 
-// The sort key of an include/forward-declare line is an (int, string)
-// pair.  The string is always the line itself.  The int is a category:
-// 0: PCH in code, 1: associated .h, 2: associated -inl.h, 3: C header,
-// 4: c++ header, 5: other header, 6: forward-declare.
+using LineSortKey = pair<LineSortOrdinal, string>;
+
+LineSortOrdinal GetLineSortOrdinal(const OneIncludeOrForwardDeclareLine& line,
+                                   const set<string>& associated_quoted_includes,
+                                   const IwyuFileInfo* file_info) {
+  if (!line.IsIncludeLine())
+    return LineSortOrdinal::ForwardDeclaration;
+  if (file_info && file_info->is_pch_in_code())
+    return LineSortOrdinal::PrecompiledHeader;
+
+  const std::string quotedInclude = line.quoted_include();
+  if (ContainsKey(associated_quoted_includes, quotedInclude)) {
+    if (EndsWith(quotedInclude, "-inl.h\""))
+      return LineSortOrdinal::AssociatedInlineDefinitions;
+    return LineSortOrdinal::AssociatedHeader;
+  }
+  if (EndsWith(quotedInclude, ".h>"))
+    return LineSortOrdinal::CHeader;
+  if (EndsWith(quotedInclude, ">"))
+    return LineSortOrdinal::CppHeader;
+  return LineSortOrdinal::OtherHeader;
+}
+
+// The sort key of an include/forward-declare line is a (LineSortOrdinal, string)
+// pair.  The string is always the line itself.
 LineSortKey GetSortKey(const OneIncludeOrForwardDeclareLine& line,
                        const set<string>& associated_quoted_includes,
                        const IwyuFileInfo* file_info) {
-  if (!line.IsIncludeLine())
-    return LineSortKey(6, line.line());
-  if (file_info && file_info->is_pch_in_code())
-    return LineSortKey(0, line.line());
-  if (ContainsKey(associated_quoted_includes, line.quoted_include())) {
-    if (EndsWith(line.quoted_include(), "-inl.h\""))
-      return LineSortKey(2, line.line());
-    return LineSortKey(1, line.line());
-  }
-  if (EndsWith(line.quoted_include(), ".h>"))
-    return LineSortKey(3, line.line());
-  if (EndsWith(line.quoted_include(), ">"))
-    return LineSortKey(4, line.line());
-  return LineSortKey(5, line.line());
+  return LineSortKey(GetLineSortOrdinal(line, associated_quoted_includes, file_info), line.line());
 }
 
 // filename is "this" filename: the file being emitted.
