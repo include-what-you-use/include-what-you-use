@@ -9,7 +9,7 @@
 # equivalents.
 # In each case, I ordered them so <sys/types.h> was first, if it was
 # an option for this type.  That's the preferred #include all else
-# equal.  The visibility on the symbol-name is ignored; by convension
+# equal.  The visibility on the symbol-name is ignored; by convention
 # we always set it to private.
 [
   { symbol: [ "blksize_t", private, "<sys/types.h>", public ] },
