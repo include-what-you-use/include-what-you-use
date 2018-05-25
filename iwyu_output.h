@@ -129,7 +129,7 @@ class OneIncludeOrForwardDeclareLine {
   bool is_present() const { return is_present_; }
   const map<string, int>& symbol_counts() const { return symbol_counts_; }
 
-  string quoted_include() const {
+  const string& quoted_include() const {
     CHECK_(IsIncludeLine() && "Must call quoted_include() on include lines");
     CHECK_(!fwd_decl_ && "quoted_include and fwd_decl are mutually exclusive");
     return quoted_include_;
