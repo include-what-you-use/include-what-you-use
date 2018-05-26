@@ -1426,24 +1426,24 @@ void CalculateIwyuForFullUse(OneUse* use,
   }
 }
 
-// This function removes all include lines `a` that are desired but not present but
-// transitively included by some include line `b` that is desired and present and
-// adds `a`'s symbol counts to `b`.
+// This function removes all include lines 'a' that are desired but not present but
+// transitively included by some include line 'b' that is desired and present and
+// adds 'a''s symbol counts to 'b'.
 vector<OneIncludeOrForwardDeclareLine> PruneTransitivelyPresent(
     const vector<OneIncludeOrForwardDeclareLine>& lines,
     const IwyuPreprocessorInfo* preprocessor_info) {
   // In the first step, we copy all lines that are an include line, not present,
   // desired, and whose include_file is transitively included by another line
-  // which is a desired include line into a range `indirect` and the remaining
-  // ones into another range `direct`. This is because elements of range
-  // `indirect` are then precisely those whose symbols are already exposed
+  // which is a desired include line into a range 'indirect' and the remaining
+  // ones into another range 'direct'. This is because elements of range
+  // 'indirect' are then precisely those whose symbols are already exposed
   // through a different header that is to be included anyway, so they can be
   // omitted.
   const auto is_transitively_present =
       [&lines,
        preprocessor_info](const OneIncludeOrForwardDeclareLine& target) {
-        if (!target.IsIncludeLine() || target.is_present() ||
-            !target.is_desired()) {
+        if (!target.is_present() || !target.is_desired() ||
+            target.IsIncludeLine()) {
           return false;
         }
         // Check if target is transitively included by some relevant source.
@@ -1471,7 +1471,7 @@ vector<OneIncludeOrForwardDeclareLine> PruneTransitivelyPresent(
   // corresponding source elements of range direct so that these sources are now
   // listed as including the corresponding symbols because they do transitively.
   for (const OneIncludeOrForwardDeclareLine& target : indirect) {
-    const auto source =
+    const vector<OneIncludeOrForwardDeclareLine>::iterator source =
         std::find_if(direct.begin(), direct.end(),
                      [&target, preprocessor_info](
                          const OneIncludeOrForwardDeclareLine& s) {
@@ -1479,7 +1479,7 @@ vector<OneIncludeOrForwardDeclareLine> PruneTransitivelyPresent(
                            s.included_file(), target.included_file());
                      });
     CHECK_(source != direct.end())
-        << "Cannot find the source for an element"
+        << "Cannot find the source for an element "
            "that was sorted out because it had a source";
     for (const auto& p : target.symbol_counts()) {
       source->AddSymbolUses(p.first, p.second);
@@ -2073,7 +2073,7 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   }
 
   if (GlobalFlags().tolerate_transitive) {
-	  lines_ = internal::PruneTransitivelyPresent(lines_, preprocessor_info_);
+    lines_ = internal::PruneTransitivelyPresent(lines_, preprocessor_info_);
   }
 
   internal::CleanupPrefixHeaderIncludes(preprocessor_info_, &lines_);
