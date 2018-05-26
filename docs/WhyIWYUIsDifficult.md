@@ -150,12 +150,20 @@ The mappings themselves can be ambiguous. For instance, `NULL` is provided by ma
 
 Conditional `#includes` are a problem for IWYU when the condition is false:
 
-    #if _MSC_VER
-    #include <foo>
+    #if defined(LOG_VERBOSE)
+    #include <verbose_logger.h>
     #endif
 
-If we're not running under windows (and IWYU does not currently run under windows), we have no way of telling if foo is a necessary `#include` or not.
+    ...
 
+    void StartProcess() {
+        #if defined(LOG_VERBOSE)
+        LogVerbose("Starting process"); 
+        #endif
+        ...
+    }
+
+If you're running IWYU without that preprocessor definition set, it has no way of telling if `verbose_logger.h` is a necessary `#include` or not.
 
 ### Placing New Includes and Forward-Declares ###
 
