@@ -93,6 +93,9 @@ static void PrintHelp(const char* extra_msg) {
          "        file names (default: 80).\n"
          "   --no_comments: do not add 'why' comments.\n"
          "   --no_fwd_decls: do not use forward declarations.\n"
+         "   --tolerate_transitive: If a file uses symbols from both a.h and b.h\n"
+         "        and includes a.h, tolerate b.h both when it is included and \n"
+         "        when it is not.\n"
          "   --verbose=<level>: the higher the level, the more output.\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
@@ -162,7 +165,8 @@ CommandlineFlags::CommandlineFlags()
       prefix_header_include_policy(CommandlineFlags::kAdd),
       pch_in_code(false),
       no_comments(false),
-      no_fwd_decls(false) {
+      no_fwd_decls(false),
+      tolerate_transitive(false) {
 }
 
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
@@ -179,6 +183,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"max_line_length", optional_argument, nullptr, 'l'},
     {"no_comments", optional_argument, nullptr, 'o'},
     {"no_fwd_decls", optional_argument, nullptr, 'f'},
+    {"tolerate_transitive", optional_argument, nullptr, 'r'},
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "d::p:v:c:m:n";
@@ -193,6 +198,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case 'n': no_default_mappings = true; break;
       case 'o': no_comments = true; break;
       case 'f': no_fwd_decls = true; break;
+      case 'r': tolerate_transitive = true; break;
       case 'x':
         if (strcmp(optarg, "add") == 0) {
           prefix_header_include_policy = CommandlineFlags::kAdd;

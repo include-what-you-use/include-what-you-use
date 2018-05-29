@@ -468,8 +468,8 @@ bool OneIncludeOrForwardDeclareLine::HasSymbolUse(const string& symbol_name)
   return ContainsKey(symbol_counts_, symbol_name);
 }
 
-void OneIncludeOrForwardDeclareLine::AddSymbolUse(const string& symbol_name) {
-  ++symbol_counts_[symbol_name];
+void OneIncludeOrForwardDeclareLine::AddSymbolUses(const string& symbol_name, int count) {
+  symbol_counts_[symbol_name] += count;
 }
 
 bool OneIncludeOrForwardDeclareLine::IsIncludeLine() const {
@@ -1426,6 +1426,71 @@ void CalculateIwyuForFullUse(OneUse* use,
   }
 }
 
+// This function removes all include lines 'a' that are desired but not present but
+// transitively included by some include line 'b' that is desired and present and
+// adds 'a''s symbol counts to 'b'.
+vector<OneIncludeOrForwardDeclareLine> PruneTransitivelyPresent(
+    const vector<OneIncludeOrForwardDeclareLine>& lines,
+    const IwyuPreprocessorInfo* preprocessor_info) {
+  // In the first step, we copy all lines that are an include line, not present,
+  // desired, and whose include_file is transitively included by another line
+  // which is a desired include line into a range 'indirect' and the remaining
+  // ones into another range 'direct'. This is because elements of range
+  // 'indirect' are then precisely those whose symbols are already exposed
+  // through a different header that is to be included anyway, so they can be
+  // omitted.
+  const auto is_transitively_present =
+      [&lines,
+       preprocessor_info](const OneIncludeOrForwardDeclareLine& target) {
+        if (!target.is_present() || !target.is_desired() ||
+            target.IsIncludeLine()) {
+          return false;
+        }
+        // Check if target is transitively included by some relevant source.
+        // This must be proper, equality does not suffice.
+        for (const OneIncludeOrForwardDeclareLine& source : lines) {
+          if (source.included_file() == target.included_file() ||
+              !source.is_desired() || !source.IsIncludeLine()) {
+            continue;
+          }
+
+          if (preprocessor_info->FileTransitivelyIncludes(
+                  source.included_file(), target.included_file())) {
+            return true;
+          }
+        }
+        return false;
+      };
+
+  vector<OneIncludeOrForwardDeclareLine> indirect, direct;
+  indirect.reserve(lines.size());
+  direct.reserve(lines.size());
+  std::partition_copy(lines.cbegin(), lines.cend(), std::back_inserter(indirect),
+                      std::back_inserter(direct), is_transitively_present);
+  // Now add the symbol uses from elements of range indirect to the
+  // corresponding source elements of range direct so that these sources are now
+  // listed as including the corresponding symbols because they do transitively.
+  for (const OneIncludeOrForwardDeclareLine& target : indirect) {
+    const vector<OneIncludeOrForwardDeclareLine>::iterator source =
+        std::find_if(direct.begin(), direct.end(),
+                     [&target, preprocessor_info](
+                         const OneIncludeOrForwardDeclareLine& s) {
+                       return preprocessor_info->FileTransitivelyIncludes(
+                           s.included_file(), target.included_file());
+                     });
+    CHECK_(source != direct.end())
+        << "Cannot find the source for an element "
+           "that was sorted out because it had a source";
+    for (const auto& p : target.symbol_counts()) {
+      source->AddSymbolUses(p.first, p.second);
+    }
+    // source is desired now because target was.
+    CHECK_(target.is_desired()) << "Target must be desired";
+    source->set_desired();
+  }
+  return direct;
+}
+
 }  // namespace internal
 
 void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
@@ -2021,6 +2086,10 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
         preprocessor_info_->IncludeIsInhibited(file_, line.quoted_include())) {
       line.clear_desired();
     }
+  }
+
+  if (GlobalFlags().tolerate_transitive) {
+    lines_ = internal::PruneTransitivelyPresent(lines_, preprocessor_info_);
   }
 
   internal::CleanupPrefixHeaderIncludes(preprocessor_info_, &lines_);
