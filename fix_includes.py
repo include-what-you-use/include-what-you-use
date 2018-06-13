@@ -104,10 +104,12 @@ _ENDIF_RE = re.compile(r'\s*#\s*endif\b')
 _NAMESPACE_START_RE = re.compile(r'\s*(namespace\b[^{]*{\s*)+(//.*)?$|'
                                  r'\s*(U_NAMESPACE_BEGIN)|'
                                  r'\s*(HASH_NAMESPACE_DECLARATION_START)')
-# Also detect Allman style namespaces.  Use a continue regex for validation
-# but don't add it to the normal regex list.
+# Also detect Allman and mixed style namespaces.  Use a continue regex for
+# validation and to correctly set the line info.
 _NAMESPACE_START_ALLMAN_RE = re.compile(r'\s*(namespace\b[^{]*)+(//.*)?$')
-_NAMESPACE_CONTINUE_ALLMAN_RE = re.compile(r'\s*{\s*(//.*)?$')
+_NAMESPACE_START_MIXED_RE = re.compile(
+  r'\s*(namespace\b[^{]*{\s*)+(namespace\b[^{]*)+(//.*)?$')
+_NAMESPACE_CONTINUE_ALLMAN_MIXED_RE = re.compile(r'\s*{\s*(//.*)?$')
 _NAMESPACE_END_RE = re.compile(r'\s*(})|'
                                r'\s*(U_NAMESPACE_END)|'
                                r'\s*(HASH_NAMESPACE_DECLARATION_END)')
@@ -128,9 +130,13 @@ _HEADER_GUARD_DEFINE_RE = re.compile(r'\s*#\s*define\s+')
 # We annotate every line in the source file by the re it matches, or None.
 # Note that not all of the above RE's are represented here; for instance,
 # we fold _C_COMMENT_START_RE and _C_COMMENT_END_RE into _COMMENT_LINE_RE.
+# The _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE is also set on lines when allman
+# and mixed namespaces are detected but the RE is too easy to match to add
+# under normal circumstances (must always be proceded by allman/mixed).
 _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
                _NAMESPACE_START_RE, _NAMESPACE_START_ALLMAN_RE,
-               _NAMESPACE_END_RE, _IF_RE, _ELSE_RE, _ENDIF_RE,
+               _NAMESPACE_START_MIXED_RE, _NAMESPACE_END_RE,
+               _IF_RE, _ELSE_RE, _ENDIF_RE,
                _INCLUDE_RE, _FORWARD_DECLARE_RE,
                _HEADER_GUARD_RE, _HEADER_GUARD_DEFINE_RE,
                _PRAGMA_ONCE_LINE_RE,
@@ -687,7 +693,7 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
   """
   seen_types = set()
   in_c_style_comment = False
-  in_allman_namespace = False
+  in_allman_or_mixed_namespace = False
   for line_info in file_lines:
     if line_info.line is None:
       line_info.type = None
@@ -711,9 +717,10 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
       in_c_style_comment = False
     elif in_c_style_comment:
       line_info.type = _COMMENT_LINE_RE
-    elif in_allman_namespace and _NAMESPACE_CONTINUE_ALLMAN_RE.match(line_info.line):
-      in_allman_namespace = False
-      line_info.type = _NAMESPACE_CONTINUE_ALLMAN_RE
+    elif (in_allman_or_mixed_namespace and
+         _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE.match(line_info.line)):
+      in_allman_or_mixed_namespace = False
+      line_info.type = _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE
     else:
       for type_re in _LINE_TYPES:
         # header-guard-define-re has a two-part decision criterion: it
@@ -727,9 +734,10 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
           line_info.type = type_re
           if type_re == _INCLUDE_RE:
             line_info.key = m.group(1)   # get the 'key' for the #include.
-          elif type_re == _NAMESPACE_START_ALLMAN_RE:
-            # set in_allman_namespace to true in order to find {}
-            in_allman_namespace = True
+          elif type_re in (_NAMESPACE_START_ALLMAN_RE,
+                           _NAMESPACE_START_MIXED_RE):
+            # set in_allman_or_mixed_namespace to true to find the next {
+            in_allman_or_mixed_namespace = True
           break
       else:    # for/else
         line_info.type = None   # means we didn't match any re
@@ -981,10 +989,11 @@ def _DeleteEmptyNamespaces(file_lines):
     line_info = file_lines[start_line]
     if (line_info.deleted or 
        (line_info.type != _NAMESPACE_START_RE and
-        line_info.type != _NAMESPACE_START_ALLMAN_RE)):
+        line_info.type != _NAMESPACE_START_ALLMAN_RE and
+        line_info.type != _NAMESPACE_START_MIXED_RE)):
       start_line += 1
       continue
-    if line_info.type == _NAMESPACE_START_RE:
+    if line_info.type in (_NAMESPACE_START_RE, _NAMESPACE_START_MIXED_RE):
       # Because multiple namespaces can be on one line
       # ("namespace foo { namespace bar { ..."), we need to count.
       # We use the max because line may have 0 '{'s if it's a macro.
@@ -994,6 +1003,10 @@ def _DeleteEmptyNamespaces(file_lines):
       # For Allman namespaces, keep the start line and increment
       # the namespace depths when the actual brace is encountered.
       namespace_depth = 0
+    else:
+      # We should have handled all the namespace styles above!
+      assert False, ('unknown namespace type',
+                     _LINE_TYPES.index(line_info.type))
     end_line = start_line + 1
     while end_line < len(file_lines):
       line_info = file_lines[end_line]
@@ -1001,10 +1014,11 @@ def _DeleteEmptyNamespaces(file_lines):
         end_line += 1
       elif line_info.type in (_COMMENT_LINE_RE, _BLANK_LINE_RE):
         end_line += 1                # ignore blank lines
-      elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_RE:
+      elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE:
         namespace_depth += 1
         end_line += 1
-      elif line_info.type == _NAMESPACE_START_RE:     # nested namespace
+      elif line_info.type in (_NAMESPACE_START_RE, _NAMESPACE_START_MIXED_RE):
+        # nested namespace
         namespace_depth += max(line_info.line.count('{'), 1)
         end_line += 1
       elif line_info.type == _NAMESPACE_START_ALLMAN_RE:
@@ -1214,7 +1228,8 @@ def _ShouldInsertBlankLine(decorated_move_span, next_decorated_move_span,
       next_line += 1
     return (next_line and next_line < len(file_lines) and
             file_lines[next_line].type in 
-            (_NAMESPACE_START_RE, _NAMESPACE_START_ALLMAN_RE, None))
+            (_NAMESPACE_START_RE, _NAMESPACE_START_ALLMAN_RE,
+            _NAMESPACE_START_MIXED_RE, None))
 
   # We never insert a blank line between two spans of the same kind.
   # Nor do we ever insert a blank line at EOF.
@@ -1281,10 +1296,10 @@ def _GetToplevelReorderSpans(file_lines):
     line_info = file_lines[line_number]
     if line_info.deleted:
       continue
-    if line_info.type == _NAMESPACE_START_RE:
+    if line_info.type in (_NAMESPACE_START_RE, _NAMESPACE_START_MIXED_RE):
       # The 'max' is because the namespace-re may be a macro.
       namespace_depth += max(line_info.line.count('{'), 1)
-    elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_RE:
+    elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE:
       namespace_depth += 1
     elif line_info.type == _NAMESPACE_END_RE:
       namespace_depth -= max(line_info.line.count('}'), 1)
@@ -1374,15 +1389,16 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
         break
       namespace_prefix += ('namespace %s { ' % m.group(1).strip())
 
-    elif line_info.type == _NAMESPACE_START_ALLMAN_RE:
-      # Trim any possibly comments on namespace to properly build
+    elif line_info.type in (_NAMESPACE_START_ALLMAN_RE,
+                            _NAMESPACE_START_MIXED_RE):
+      # Trim any possible comments on namespace to properly build
       # the namespace level spans
       m = simple_allman_namespace_re.match(line_info.line)
       if not m:
         break
       namespace_prefix += ('namespace %s' % m.group(1).strip())
 
-    elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_RE:
+    elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE:
       # Append to the simplified allman namespace
       namespace_prefix += ' { '
 

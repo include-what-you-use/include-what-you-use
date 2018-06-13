@@ -306,39 +306,6 @@ The full include-list for empty_namespace:
     self.RegisterFileContents({'empty_namespace': infile})
     self.ProcessAndTest(iwyu_output)
 
-  def testRemovePartOfEmptyNamespace(self):
-    """Tests we remove a namespace if empty, but not enclosing namespaces."""
-    infile = """\
-// Copyright 2010
-
-namespace maps_transit_realtime {
-namespace service_alerts {
-class StaticServiceAlertStore;
-namespace trigger {                  ///-
-class Trigger;                       ///-
-}  // namespace trigger              ///-
-namespace ui {                       ///-
-class Alert;                         ///-
-}  // namespace ui                   ///-
-}  // namespace service_alerts
-}  // namespace maps_transit_realtime
-
-int main() { return 0; }
-"""
-    iwyu_output = """\
-empty_internal_namespace should add these lines:
-
-empty_internal_namespace should remove these lines:
-- namespace maps_transit_realtime { namespace service_alerts { namespace trigger { class Trigger; } } }  // lines 7-7
-- namespace maps_transit_realtime { namespace service_alerts { namespace ui { class Alert; } } }  // lines 10-10
-
-The full include-list for empty_internal_namespace:
-namespace maps_transit_realtime { namespace service_alerts { class StaticServiceAlertStore; } }   // lines 5-5
----
-"""
-    self.RegisterFileContents({'empty_internal_namespace': infile})
-    self.ProcessAndTest(iwyu_output)
-
   def testRemoveEmptyAllmanNamespace(self):
     """Tests we remove a namespace with allman braces if we remove all fwd-decls inside it."""
     infile = """\
@@ -376,6 +343,74 @@ The full include-list for empty_namespace:
     self.RegisterFileContents({'empty_namespace': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testRemoveEmptyMixedNamespace(self):
+    """Tests we remove a namespace with mixed braces if we remove all fwd-decls inside it."""
+    infile = """\
+// Copyright 2010
+
+#include <stdio.h>
+
+namespace ns                     ///-
+{                                ///-
+class Foo;                       ///-
+namespace ns2 { namespace ns3    ///-
+{                                ///-
+class Bar;                       ///-
+}                                ///-
+}                                ///-
+class Baz;                       ///-
+}                                ///-
+                                 ///-
+int main() { return 0; }
+"""
+    iwyu_output = """\
+empty_namespace should add these lines:
+
+empty_namespace should remove these lines:
+- class Foo;  // lines 7-7
+- namespace ns { namespace ns2 { namespace ns3 { class Bar; } } }  // lines 10-10
+- namespace ns { class Baz; } }  // lines 13-13
+
+The full include-list for empty_namespace:
+#include <stdio.h>
+---
+"""
+    self.RegisterFileContents({'empty_namespace': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testRemovePartOfEmptyNamespace(self):
+    """Tests we remove a namespace if empty, but not enclosing namespaces."""
+    infile = """\
+// Copyright 2010
+
+namespace maps_transit_realtime {
+namespace service_alerts {
+class StaticServiceAlertStore;
+namespace trigger {                  ///-
+class Trigger;                       ///-
+}  // namespace trigger              ///-
+namespace ui {                       ///-
+class Alert;                         ///-
+}  // namespace ui                   ///-
+}  // namespace service_alerts
+}  // namespace maps_transit_realtime
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+empty_internal_namespace should add these lines:
+
+empty_internal_namespace should remove these lines:
+- namespace maps_transit_realtime { namespace service_alerts { namespace trigger { class Trigger; } } }  // lines 7-7
+- namespace maps_transit_realtime { namespace service_alerts { namespace ui { class Alert; } } }  // lines 10-10
+
+The full include-list for empty_internal_namespace:
+namespace maps_transit_realtime { namespace service_alerts { class StaticServiceAlertStore; } }   // lines 5-5
+---
+"""
+    self.RegisterFileContents({'empty_internal_namespace': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testRemovePartOfEmptyAllmanNamespace(self):
     """Tests we remove a namespace with allman braces if empty, but not enclosing namespaces."""
     infile = """\
@@ -408,6 +443,41 @@ empty_internal_namespace should remove these lines:
 
 The full include-list for empty_internal_namespace:
 namespace maps_transit_realtime { namespace service_alerts { class StaticServiceAlertStore; } }   // lines 7-7
+---
+"""
+    self.RegisterFileContents({'empty_internal_namespace': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testRemovePartOfEmptyMixedNamespace(self):
+    """Tests we remove a namespace with mixed braces if empty, but not enclosing namespaces."""
+    infile = """\
+// Copyright 2010
+
+namespace maps_transit_realtime
+{
+class StaticServiceAlertStore;
+namespace service_alerts { namespace trigger    ///-
+{                                               ///-
+class Trigger;                                  ///-
+}  // namespace trigger                         ///-
+namespace ui                                    ///-
+{                                               ///-
+class Alert;                                    ///-
+}  // namespace ui                              ///-
+}  // namespace service_alerts                  ///-
+}  // namespace maps_transit_realtime
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+empty_internal_namespace should add these lines:
+
+empty_internal_namespace should remove these lines:
+- namespace maps_transit_realtime { namespace service_alerts { namespace trigger { class Trigger; } } }  // lines 8-8
+- namespace maps_transit_realtime { namespace service_alerts { namespace ui { class Alert; } } }  // lines 12-12
+
+The full include-list for empty_internal_namespace:
+namespace maps_transit_realtime { class StaticServiceAlertStore; }   // lines 5-5
 ---
 """
     self.RegisterFileContents({'empty_internal_namespace': infile})
@@ -2648,6 +2718,33 @@ namespace foo    ///-
 class Bar;       ///-
 #endif           ///-
 }                ///-
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+iterative_namespace should add these lines:
+
+iterative_namespace should remove these lines:
+- class Bar;  // lines 6-6
+
+The full include-list for iterative_namespace:
+---
+"""
+    self.RegisterFileContents({'iterative_namespace': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testIterativeMixedNamespaceDelete(self):
+    """Tests deleting a namespace with mixed braces with an emptied #ifdef inside it."""
+    infile = """\
+// Copyright 2010
+                                 ///-
+namespace foo { namespace baz    ///-
+{                                ///-
+#ifdef FWD_DECL                  ///-
+class Bar;                       ///-
+#endif                           ///-
+}                                ///-
+}                                ///-
 
 int main() { return 0; }
 """
