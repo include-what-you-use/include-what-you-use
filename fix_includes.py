@@ -2101,6 +2101,10 @@ def ProcessIWYUOutput(f, files_to_process, flags):
       print('(skipping %s: it matches --ignore_re, which is %s)' % (
           filename, flags.ignore_re))
       continue
+    if flags.only_re and not re.search(flags.only_re, filename):
+      print('(skipping %s: it does not match --only_re, which is %s)' % (
+          filename, flags.only_re))
+      continue
 
     if filename in iwyu_output_records:
       iwyu_output_records[filename].Merge(iwyu_record)
@@ -2182,6 +2186,10 @@ def main(argv):
   parser.add_option('--ignore_re', default=None,
                     help=('fix_includes.py will skip editing any file whose'
                           ' name matches this regular expression.'))
+
+  parser.add_option('--only_re', default=None,
+                    help='fix_includes.py will skip editing any file whose'
+                         ' name does not match this regular exression.')
 
   parser.add_option('--separate_project_includes', default=None,
                     help=('Sort #includes for current project separately'
