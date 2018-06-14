@@ -36,6 +36,7 @@ class FakeFlags(object):
     self.comments = True
     self.dry_run = False
     self.ignore_re = None
+    self.only_re = None
     self.safe_headers = False
     self.separate_project_includes = None
     self.invoking_command_line = 'iwyu.py my_targets'
@@ -2904,6 +2905,97 @@ The full include-list for changed:
     # unchanged should not be edited, since it matches ignore_re.
     self.flags.ignore_re = 'nch'
     self.ProcessAndTest(iwyu_output, unedited_files=['unchanged'])
+
+  def testOnlyRe(self):
+    """Test the behavior of the --only_re flag."""
+    changed_infile = """\
+// Copyright 2010
+
+#include <notused.h>  ///-
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+int main() { return 0; }
+"""
+    unchanged_infile = """\
+// Copyright 2010
+
+#include <notused.h>
+#include "used.h"
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+output should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+output should remove these lines:
+- #include <notused.h>  // lines 3-3
+
+The full include-list for output:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    # Have the exact same iwyu output for 'alice.cpp' as for 'bob.cpp'.
+    iwyu_output = (iwyu_output.replace('output', 'alice.cpp') +
+                   iwyu_output.replace('output', 'bob.cpp'))
+
+    self.RegisterFileContents({'alice.cpp': changed_infile,
+                               'bob.cpp': unchanged_infile})
+    # only alice.cpp should be edited, since it matches only_re.
+    self.flags.only_re = 'lice'
+    self.ProcessAndTest(iwyu_output, unedited_files=['bob.cpp'])
+
+  def testIgnoreAndOnlyRe(self):
+    """Test the behavior of both --ignore_re and --only_re flags."""
+    changed_infile = """\
+// Copyright 2010
+
+#include <notused.h>  ///-
+///+#include <stdio.h>
+#include "used.h"
+///+#include "used2.h"
+
+int main() { return 0; }
+"""
+    unchanged_infile = """\
+// Copyright 2010
+
+#include <notused.h>
+#include "used.h"
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+output should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+output should remove these lines:
+- #include <notused.h>  // lines 3-3
+
+The full include-list for output:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
+"""
+    # Have the exact same iwyu output for 'alice.cpp' as for 'bob.cpp' and 'charlie.cpp'
+    iwyu_output = (iwyu_output.replace('output', 'alice.cpp') +
+                   iwyu_output.replace('output', 'bob.cpp') +
+                   iwyu_output.replace('output', 'charlie.cpp'))
+
+    self.RegisterFileContents({'alice.cpp': changed_infile,
+                               'bob.cpp': unchanged_infile,
+                               'charlie.cpp': changed_infile})
+    # only alice.cpp should be edited, since it matches only_re and not ignore_re
+    self.flags.only_re = 'li'
+    self.flags.ignore_re = 'char'
+    self.ProcessAndTest(iwyu_output, unedited_files=['bob.cpp', 'charlie.cpp'])
 
   def testSortIncludes(self):
     """Test sorting includes only -- like running fix_includes.py -s."""
