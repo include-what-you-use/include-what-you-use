@@ -2189,7 +2189,7 @@ def main(argv):
 
   parser.add_option('--only_re', default=None,
                     help='fix_includes.py will skip editing any file whose'
-                         ' name does not match this regular exression.')
+                         ' name does not match this regular expression.')
 
   parser.add_option('--separate_project_includes', default=None,
                     help=('Sort #includes for current project separately'
