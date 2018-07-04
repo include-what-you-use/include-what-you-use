@@ -24,6 +24,14 @@ include_directories(
   ${CLANG_INCLUDE_DIRS}
   )
 
+set(LLVM_LINK_COMPONENTS
+  Option
+  Support
+  X86AsmParser
+  X86Desc
+  X86Info
+  )
+
 add_llvm_executable(include-what-you-use
   iwyu.cc
   iwyu_ast_util.cc
@@ -61,18 +69,6 @@ if (MSVC)
     )
 endif()
 
-# Prefer dynamic library if it exists.
-if (TARGET LLVM)
-  message(STATUS "IWYU: Linking LLVM dynamically")
-  set(IWYU_LLVM_LIBS LLVM)
-else()
-  message(STATUS "IWYU: Linking LLVM statically")
-  set(IWYU_LLVM_LIBS
-    LLVMSupport
-    LLVMX86AsmParser
-    )
-endif()
-
 target_link_libraries(include-what-you-use
   PRIVATE
   clangBasic
@@ -81,7 +77,6 @@ target_link_libraries(include-what-you-use
   clangSema
   clangFrontend
   clangDriver
-  ${IWYU_LLVM_LIBS}
   )
 
 # Platform dependencies.
