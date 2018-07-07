@@ -2067,7 +2067,7 @@ def FixFileLines(iwyu_record, file_lines, flags):
   # For every move-span in our file -- that's every #include and
   # forward-declare we saw -- 'decorate' the move-range to allow us
   # to sort them.
-  move_spans = set([fl.move_span for fl in file_lines if fl.move_span])
+  move_spans = OrderedSet([fl.move_span for fl in file_lines if fl.move_span])
   decorated_move_spans = []
   for (start_line, end_line) in move_spans:
     decorated_span = _DecoratedMoveSpanLines(iwyu_record, file_lines,
@@ -2101,7 +2101,10 @@ def FixFileLines(iwyu_record, file_lines, flags):
   # Add a sentinel decorated move-span, to make life easy, and sort.
   decorated_move_spans.append(((len(file_lines), len(file_lines)),
                                _EOF_KIND, '', []))
-  decorated_move_spans.sort()
+  if flags.reorder:
+    decorated_move_spans.sort()
+  else:
+    decorated_move_spans.sort(key=lambda x: x[0:-2])
 
   # Now go through all the lines of the input file and construct the
   # output file.  Before we get to the next reorder-span, we just
@@ -2310,6 +2313,14 @@ def main(argv):
                           ' header files; just add new ones [default]'))
   parser.add_option('--nosafe_headers', action='store_false',
                     dest='safe_headers')
+
+  # --reorder and --no-reorder share the same destination variable.
+  parser.add_option('--reorder', action='store_true', default=False,
+                    help=('Re-order lines relative to other similar lines '
+                          '(e.g. headers relative to other headers)'))
+  parser.add_option('--noreorder', action='store_false', dest='reorder',
+                    help=('Do not re-order lines relative to other similar '
+                          'lines.'))
 
   parser.add_option('-s', '--sort_only', action='store_true',
                     help=('Just sort #includes of files listed on cmdline;'
