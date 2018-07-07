@@ -3505,11 +3505,11 @@ namespace A { class AC; } // A
 """
     self.RegisterFileContents({'test_reordering': infile})
     self.flags.reorder = True
-    num_files_modified = fix_includes.SortIncludesInFiles(['sort'], self.flags)
+    num_files_modified = fix_includes.SortIncludesInFiles(['inclusions_reordered.cc'], self.flags)
     self.assertListEqual(expected_output_headers_reordered.strip().split('\n'), self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
     self.flags.reorder = False
-    num_files_modified = fix_includes.SortIncludesInFiles(['sort'], self.flags)
+    num_files_modified = fix_includes.SortIncludesInFiles(['inclusions_not_reordered.cc'], self.flags)
     self.assertListEqual(expected_output_headers_not_reordered.strip().split('\n'), self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
