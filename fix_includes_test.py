@@ -3503,7 +3503,9 @@ namespace A { class AC; } // A
 // endif
 #endif
 """
-    self.RegisterFileContents({'test_reordering': infile})
+    self.RegisterFileContents({'inclusions_reordered.cc': infile})
+    self.RegisterFileContents({'inclusions_not_reordered.cc': infile})
+    
     self.flags.reorder = True
     num_files_modified = fix_includes.SortIncludesInFiles(['inclusions_reordered.cc'], self.flags)
     self.assertListEqual(expected_output_headers_reordered.strip().split('\n'), self.actual_after_contents)
