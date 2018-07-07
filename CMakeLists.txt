@@ -1,14 +1,10 @@
 cmake_minimum_required(VERSION 3.4.3)
 
-if (POLICY CMP0048)
-  # Silence CMP0048 warning about missing project VERSION.
-  cmake_policy(SET CMP0048 NEW)
-endif()
-
-project(include-what-you-use)
-
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(STATUS "IWYU: out-of-tree configuration")
+
+  cmake_policy(SET CMP0048 NEW)
+  project(include-what-you-use)
 
   find_package(LLVM CONFIG REQUIRED)
   find_package(Clang CONFIG REQUIRED)
