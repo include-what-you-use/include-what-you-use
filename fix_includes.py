@@ -2177,7 +2177,7 @@ def main(argv):
                     help=('Re-order lines relative to other similar lines '
                           '(eg, headers relative to other headers)'))
 
-  parser.add_option('--no-reorder', default=False, action='store_false', dest='reorder'
+  parser.add_option('--no-reorder', default=False, action='store_false', dest='reorder',
                     help=('Do not re-order lines relative to other similar lines.'))
 
   parser.add_option('-s', '--sort_only', action='store_true',
