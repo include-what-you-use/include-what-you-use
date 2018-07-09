@@ -307,7 +307,7 @@ The full include-list for empty_namespace:
     self.ProcessAndTest(iwyu_output)
 
   def testRemoveEmptyAllmanNamespace(self):
-    """Tests we remove a namespace with allman braces if we remove all fwd-decls inside it."""
+    """Tests we remove a namespace with Allman braces if we remove all fwd-decls inside it."""
     infile = """\
 // Copyright 2010
 
@@ -412,7 +412,7 @@ namespace maps_transit_realtime { namespace service_alerts { class StaticService
     self.ProcessAndTest(iwyu_output)
 
   def testRemovePartOfEmptyAllmanNamespace(self):
-    """Tests we remove a namespace with allman braces if empty, but not enclosing namespaces."""
+    """Tests we remove a namespace with Allman braces if empty, but not enclosing namespaces."""
     infile = """\
 // Copyright 2010
 
@@ -2708,7 +2708,7 @@ The full include-list for iterative_namespace:
     self.ProcessAndTest(iwyu_output)
 
   def testIterativeAllmanNamespaceDelete(self):
-    """Tests deleting an allman namespace with an emptied #ifdef inside it."""
+    """Tests deleting an Allman namespace with an emptied #ifdef inside it."""
     infile = """\
 // Copyright 2010
                  ///-
