@@ -3441,7 +3441,7 @@ namespace ns { namespace ns4 { class Baz; } }
     self.assertRaises(SystemExit, fix_includes.main,
                       ['fix_includes.py', '-s'])
 
-  def testNoReorderingInclusions(self):
+  def testReorderingInclusions(self):
     """Make sure inclusions do not get re-ordered relative to each-other"""
     infile = """\
 // namespace B
@@ -3483,6 +3483,34 @@ namespace A { class AC; } // A
 // endif
 #endif
 """
+    self.RegisterFileContents({'inclusions_reordered.cc': infile})
+    self.flags.reorder = True
+    num_files_modified = fix_includes.SortIncludesInFiles(['inclusions_reordered.cc'], self.flags)
+    self.assertListEqual(expected_output_headers_reordered.strip().split('\n'), self.actual_after_contents)
+    self.assertEqual(1, num_files_modified)
+
+  def testNoReorderingInclusions(self):
+    """Make sure inclusions do not get re-ordered relative to each-other"""
+    infile = """\
+// namespace B
+namespace B { class BC; } // B
+// namespace A
+namespace A { class AC; } // A
+// b
+#include "b"  // b
+// c
+#include <c>  // c
+// a
+#include <a>  // a
+// a
+#include "a"  // a
+// asdf
+#ifdef asdf
+// x
+#include <x>  // x
+// endif
+#endif
+"""
     expected_output_headers_not_reordered = """\
 // namespace B
 namespace B { class BC; } // B
@@ -3507,12 +3535,6 @@ namespace A { class AC; } // A
     self.flags.reorder = False
     num_files_modified = fix_includes.SortIncludesInFiles(['inclusions_not_reordered.cc'], self.flags)
     self.assertListEqual(expected_output_headers_not_reordered.strip().split('\n'), self.actual_after_contents)
-    self.assertEqual(1, num_files_modified)
-    
-    self.RegisterFileContents({'inclusions_reordered.cc': infile})
-    self.flags.reorder = True
-    num_files_modified = fix_includes.SortIncludesInFiles(['inclusions_reordered.cc'], self.flags)
-    self.assertListEqual(expected_output_headers_reordered.strip().split('\n'), self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
 
