@@ -1929,7 +1929,7 @@ def FixFileLines(iwyu_record, file_lines, flags):
   # For every move-span in our file -- that's every #include and
   # forward-declare we saw -- 'decorate' the move-range to allow us
   # to sort them.
-  move_spans = OrderedSet([fl.move_span for fl in file_lines if fl.move_span])  decorated_move_spans = []
+  move_spans = OrderedSet([fl.move_span for fl in file_lines if fl.move_span])
   for (start_line, end_line) in move_spans:
     decorated_span = _DecoratedMoveSpanLines(iwyu_record, file_lines,
                                              file_lines[start_line:end_line],
