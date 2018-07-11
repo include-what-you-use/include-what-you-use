@@ -1324,12 +1324,12 @@ def _GetToplevelReorderSpans(file_lines):
   return good_reorder_spans
 
 
-def _GetFirstNamespaceLevelReorderSpan(file_lines):
-  """Returns the first reorder-span inside a namespace, if it's easy to do.
+def _GetNamespaceLevelReorderSpans(file_lines):
+  """Returns a list of reorder-spans inside namespaces, if it's easy to do.
 
   This routine is meant to handle the simple case where code consists
   of includes and forward-declares, and then a 'namespace
-  my_namespace'.  We return the reorder span of the inside-namespace
+  my_namespace'.  We return the reorder spans of the inside-namespace
   forward-declares, which is a good place to insert new
   inside-namespace forward-declares (rather than putting these new
   forward-declares at the top level).
@@ -1339,87 +1339,159 @@ def _GetFirstNamespaceLevelReorderSpan(file_lines):
   it then continues until it finds a forward-declare line, or a
   non-namespace contentful line.  In the former case, it figures out
   the reorder-span this forward-declare line is part of, while in the
-  latter case it creates a new reorder-span.  It returns
-  (enclosing_namespaces, reorder_span).
+  latter case it creates a new reorder-span.  A list of these namespace
+  reorder spans are returned so they can all be checked.  These elements
+  are in the form (enclosing_namespace, reorder_span).
 
   Arguments:
     file_lines: an array of LineInfo objects with .type and
-       .reorder_span filled in.
+     .reorder_span filled in.
 
   Returns:
-    (None, None) if we could not find a first namespace-level
-    reorder-span, or (enclosing_namespaces, reorder_span), where
-    enclosing_namespaces is a string that looks like (for instance)
+    [] if we could not find any namespace-level reorder-spans, or
+    [(enclosing_namespace, reorder_span), ...], where enclosing_namespace
+    is a string that looks like (for instance)
     'namespace ns1 { namespace ns2 {', and reorder-span is a
     [start_line, end_line) pair.
   """
-  simple_namespace_re = re.compile(
-    r'^\s*namespace\s+([^{\s]+)\s*\{\s*(//.*)?$')
-  simple_allman_namespace_re = re.compile(
-    r'^\s*namespace\s+([^{\s]+)\s*(//.*)?$')
-  namespace_prefix = ''
 
-  for line_number in range(len(file_lines)):
-    line_info = file_lines[line_number]
+  def _GetNamespaceNames(namespace_line):
+    """Returns a list of namespace names given a namespace line.  Anonymous
+    namespaces will return an empty string
+    """
+    namespace_re = re.compile(r'\s*namespace\b(.*)')
+    namespaces = []
+    namespace_line = namespace_line.split("/")[0] # remove C++ comments
+    namespace_line = namespace_line.split("{") # extract all namespaces
+    for namespace in namespace_line:
+      m = namespace_re.match(namespace)
+      if m:
+        namespaces.append(m.group(1).strip())
 
-    if line_info.deleted:
-      continue
+    return namespaces
 
-    # If we're an empty line, just ignore us.  Likewise with #include
-    # lines, which aren't 'contentful' for our purposes, and the
-    # header guard, which is (by definition) the only kind of #ifdef
-    # that we can be inside and still considered at the "top level".
-    if line_info.type in (_COMMENT_LINE_RE, _BLANK_LINE_RE, _INCLUDE_RE,
-                          _HEADER_GUARD_RE, _HEADER_GUARD_DEFINE_RE,
-                          _PRAGMA_ONCE_LINE_RE):
-      continue
+  namespace_reorder_spans = {}
+  try:
+    namespace_prefixes = []
+    namespace_prefix = ''
+    ifdef_depth = 0
+    namespace_depth = 0
 
-    # If we're a 'contentful' line such as a (non-header-guard) #ifdef, bail.
-    elif line_info.type in (_IF_RE, _NAMESPACE_END_RE, _ELSE_RE, _ENDIF_RE,
-                            None):    # None is a 'normal' contentful line
-      # TODO(csilvers): we could probably keep going if there are no
-      # braces on the line.  We could also keep track of our #ifdef
-      # depth instead of bailing on #else and #endif, and only accept
-      # the fwd-decl-inside-namespace if it's at ifdef-depth 0.
-      break
+    for line_number in range(len(file_lines)):
+      line_info = file_lines[line_number]
 
-    elif line_info.type == _NAMESPACE_START_RE:
-      # Only handle the simple case of 'namespace <foo> {'
-      m = simple_namespace_re.match(line_info.line)
-      if not m:
+      if line_info.deleted:
+        continue
+
+      # If we're an empty line, just ignore us.  Likewise with #include
+      # lines, which aren't 'contentful' for our purposes, and the
+      # header guard, which is (by definition) the only kind of #ifdef
+      # that we can be inside and still considered at the "top level".
+      if line_info.type in (_COMMENT_LINE_RE,
+                            _BLANK_LINE_RE,
+                            _INCLUDE_RE,
+                            _HEADER_GUARD_RE,
+                            _HEADER_GUARD_DEFINE_RE,
+                            _PRAGMA_ONCE_LINE_RE):
+        continue
+
+      # If we're a 'contentful' line such as a (non-header-guard) #ifdef, add
+      # to the ifdef depth.  If we encounter #endif, reduce the ifdef depth.
+      # Only keep track of namespaces when ifdef depth is 0
+      elif line_info.type == _IF_RE:
+        ifdef_depth += 1
+
+      elif line_info.type == _ELSE_RE:
+        continue
+
+      elif line_info.type == _ENDIF_RE:
+        ifdef_depth -= 1
+
+      elif ifdef_depth != 0:
+        # skip lines until we're outside of an ifdef block
+        continue
+
+      # Build the simplified namespace lists and namespace depths.  When
+      # any new namespace is encountered, add the namespace to the list
+      # using the next line to cover namespaces without forward declares.
+      # When a forward declare is found, add the concatenated namespaces
+      # to the list.  Once a contentful line (None) has been found, add
+      # the final namespace if we're still inside one and stop searching.
+      elif line_info.type == _NAMESPACE_START_RE:
+        for namespace in _GetNamespaceNames(line_info.line):
+          if not namespace:
+            namespace_prefixes.append('namespace { ')
+          else:
+            namespace_prefixes.append('namespace %s { ' % namespace)
+          namespace_depth += 1
+        
+        namespace_reorder_spans[''.join(namespace_prefixes)] = (
+          line_number+1, line_number+1)
+
+      elif line_info.type == _NAMESPACE_START_ALLMAN_RE:
+        for namespace in _GetNamespaceNames(line_info.line):
+          if not namespace:
+            namespace_prefix += 'namespace'
+          else:
+            namespace_prefix += 'namespace %s' % namespace
+
+      elif line_info.type == _NAMESPACE_START_MIXED_RE:
+        # For mixed namespace styles, we need to append normalized prefixes
+        # using regular and Allman style.  Treat the first elements as
+        # normal and only treat the final element as Allman.  By the
+        # nature of mixed namespaces, there will always be more than
+        # one namespace so it is okay to assume that _GetNamespaceNames
+        # will always return multiple records.
+        namespaces = _GetNamespaceNames(line_info.line)
+        for namespace in namespaces[:-1]:
+          if not namespace:
+            namespace_prefixes.append('namespace { ')
+          else:
+            namespace_prefixes.append('namespace %s { ' % namespace)
+          namespace_depth += 1
+        else:
+          if not namespaces[-1]:
+            namespace_prefix += 'namespace'
+          else:
+            namespace_prefix += 'namespace %s' % namespaces[-1]
+
+      elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE:
+        # Append to the simplified allman namespace
+        namespace_prefix += ' { '
+        namespace_prefixes.append(namespace_prefix)
+        namespace_depth += 1
+        namespace_reorder_spans[''.join(namespace_prefixes)] = (
+          line_number+1, line_number+1)
+        namespace_prefix = ''  # reset this in case we find more
+
+      elif line_info.type == _NAMESPACE_END_RE:
+        # remove C++ comments and count the ending brackets
+        namespace_end_count = line_info.line.split("/")[0].count("}")
+        for i in range(namespace_end_count):
+          namespace_depth -= 1
+          namespace_prefixes.pop()
+
+      elif line_info.type == _FORWARD_DECLARE_RE:
+        # If we're not in a namespace, keep going.  Otherwise, this is
+        # just the situation we're looking for!  Update the dictionary
+        # with the better reorder span
+        if namespace_depth > 0:
+          namespace_reorder_spans[''.join(namespace_prefixes)] = (
+            line_info.reorder_span)
+
+      elif line_info.type == None:
         break
-      namespace_prefix += ('namespace %s { ' % m.group(1).strip())
 
-    elif line_info.type in (_NAMESPACE_START_ALLMAN_RE,
-                            _NAMESPACE_START_MIXED_RE):
-      # Trim any possible comments on namespace to properly build
-      # the namespace level spans
-      m = simple_allman_namespace_re.match(line_info.line)
-      if not m:
-        break
-      namespace_prefix += ('namespace %s' % m.group(1).strip())
+      else:
+        # We should have handled all the cases above!
+        assert False, ('unknown line-info type',
+                       _LINE_TYPES.index(line_info.type))
+  except:
+    # namespace detection could be tricky so take what we have
+    pass
 
-    elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE:
-      # Append to the simplified Allman namespace
-      namespace_prefix += ' { '
-
-    elif line_info.type == _FORWARD_DECLARE_RE:
-      # If we're not in a namespace, keep going.  Otherwise, this is
-      # just the situation we're looking for!
-      if namespace_prefix:
-        return (namespace_prefix, line_info.reorder_span)
-
-    else:
-      # We should have handled all the cases above!
-      assert False, ('unknown line-info type',
-                     _LINE_TYPES.index(line_info.type))
-
-  # We stopped because we hit a contentful line (or, possibly, a
-  # weird-looking namespace).  If we're inside the first-namespace,
-  # return this position as a good place to insert forward-declares.
-  if namespace_prefix:
-    return (namespace_prefix, (line_number, line_number))
-  return (None, None)
+  # return a reverse sorted list so longest matches are checked first
+  return sorted(list(namespace_reorder_spans.items()), reverse=True)
 
 
 # These are potential 'kind' arguments to _FirstReorderSpanWith.
@@ -1815,9 +1887,8 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines, flags):
   if reorder_span is None:     # must be a new #include we're adding
     # If we're a forward-declare inside a namespace, see if there's a
     # reorder span inside the same namespace we can fit into.
-    if kind == _FORWARD_DECLARE_KIND:
-      (namespace_prefix, possible_reorder_span) = \
-          _GetFirstNamespaceLevelReorderSpan(file_lines)
+    namespace_reorder_spans = _GetNamespaceLevelReorderSpans(file_lines)
+    for namespace_prefix, possible_reorder_span in namespace_reorder_spans:
       if (namespace_prefix and possible_reorder_span and
           firstline.line.startswith(namespace_prefix)):
         # Great, we can go into this reorder_span.  We also need to
@@ -1828,7 +1899,9 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines, flags):
         if new_firstline:
           assert all_lines[first_contentful_line] == firstline.line
           all_lines[first_contentful_line] = new_firstline
+          sort_key = re.sub(r'\s+', '', new_firstline)
           reorder_span = possible_reorder_span
+          break
 
     # If that didn't work out, find a top-level reorder span to go into.
     if reorder_span is None:
@@ -1944,7 +2017,9 @@ def _GetSymbolNameFromForwardDeclareLine(line):
   """
   iwyu_namespace_re = re.compile(r'namespace ([^{]*) { ')
   symbolname_re = re.compile(r'([A-Za-z0-9_]+)')
-  namespaces_in_line = iwyu_namespace_re.findall(line)
+  # turn anonymous namespaces into their proper symbol representation
+  namespaces_in_line = iwyu_namespace_re.findall(line.replace(
+    "namespace {", "namespace (anonymous namespace) {"))
   symbols_in_line = symbolname_re.findall(line)
   symbol_name = symbols_in_line[-1]
   if (namespaces_in_line):
