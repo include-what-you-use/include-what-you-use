@@ -2172,10 +2172,16 @@ def main(argv):
   parser.add_option('--nosafe_headers', action='store_false',
                     dest='safe_headers')
 
+  # --reorder and --no-reorder share the same destination variable.  Omitting
+  # the default here would still produce the intended behavior, however if
+  # the code is re-organized such that these two specifications are swapped
+  # relative to each-other there will be a change in behavior.
   parser.add_option('--reorder', default=False, action='store_true', dest='reorder',
                     help=('Re-order lines relative to other similar lines '
                           '(eg, headers relative to other headers)'))
 
+  # --reorder and --no-reorder share the same destination variable.  Omitting
+  # the default here would make the default True.
   parser.add_option('--no-reorder', default=False, action='store_false', dest='reorder',
                     help=('Do not re-order lines relative to other similar lines.'))
 
