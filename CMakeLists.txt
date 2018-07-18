@@ -18,10 +18,20 @@ endif()
 
 message(STATUS "IWYU: configuring for LLVM ${LLVM_VERSION}...")
 
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+set(IWYU_RESOURCE_DIR ${CLANG_RESOURCE_DIR}
+  CACHE PATH "Target path where clang resources are installed")
+configure_file(iwyu_config.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/include/iwyu_config.h @ONLY)
+
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(
   ${LLVM_INCLUDE_DIRS}
   ${CLANG_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_BINARY_DIR}/include/
   )
 
 set(LLVM_LINK_COMPONENTS
@@ -107,3 +117,7 @@ install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
 # Install mapping files
 file(GLOB MAPPING_FILES *.imp)
 install(FILES ${MAPPING_FILES} DESTINATION share/include-what-you-use)
+
+if (NOT IWYU_RESOURCE_DIR EQUAL CLANG_RESOURCE_DIR)
+  install(DIRECTORY ${CLANG_RESOURCE_DIR} DESTINATION ${IWYU_RESOURCE_DIR})
+endif()

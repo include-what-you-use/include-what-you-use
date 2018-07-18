@@ -104,6 +104,7 @@
 
 #include "iwyu_ast_util.h"
 #include "iwyu_cache.h"
+#include "iwyu_config.h"
 #include "iwyu_globals.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
@@ -118,6 +119,7 @@
 #include "iwyu_verrs.h"
 #include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -3997,6 +3999,22 @@ int main(int argc, char **argv) {
   std::unique_ptr<clang::CompilerInstance> compiler(CreateCompilerInstance(
       options_parser.clang_argc(), options_parser.clang_argv()));
   if (compiler) {
+    // Figure out the absolute path to the resource-dir, which might be relative
+    // to the install directory
+    StringRef Executable = argv[0];
+    llvm::SmallString<128> AbsoluteResourceDir(IWYU_RESOURCE_DIR);
+    llvm::SmallString<128> P = llvm::sys::path::parent_path(Executable);
+    llvm::sys::path::append(P, "..");
+    if (std::error_code EC =
+            llvm::sys::fs::make_absolute(P, AbsoluteResourceDir))
+      llvm::errs() << "Warning: could not make absolute file: '" << EC.message()
+                   << '\n';
+
+    // Add the resource dir as a system header source
+    compiler->getHeaderSearchOpts().AddPath(
+        AbsoluteResourceDir, clang::frontend::IncludeDirGroup::System, false,
+        false);
+
     // Create and execute the frontend to generate an LLVM bitcode module.
     std::unique_ptr<clang::ASTFrontendAction> action(new IwyuAction);
     compiler->ExecuteAction(*action);
