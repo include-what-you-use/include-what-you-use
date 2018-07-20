@@ -120,7 +120,6 @@ using llvm::ArrayRef;
 using llvm::PointerUnion;
 using llvm::cast;
 using llvm::dyn_cast;
-using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
 using llvm::raw_string_ostream;
@@ -618,7 +617,7 @@ const RecordDecl* GetDefinitionForClass(const Decl* decl) {
   const RecordDecl* as_record = DynCastFrom(decl);
   const ClassTemplateDecl* as_tpl = DynCastFrom(decl);
   if (as_tpl) {  // Convert the template to its underlying class defn.
-    as_record = dyn_cast_or_null<RecordDecl>(as_tpl->getTemplatedDecl());
+    as_record = DynCastFrom(as_tpl->getTemplatedDecl());
   }
   if (as_record) {
     if (const RecordDecl* record_dfn = as_record->getDefinition()) {
