@@ -1045,7 +1045,11 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
     NodeSet* node_set = &nodeset_decl_cache_[decl];
     if (node_set->empty()) {
       if (decl->isImplicit()) {
-        TraverseImplicitDeclHelper(dyn_cast_or_null<FunctionDecl>(decl));
+        // TODO: For now, it is only working for functions. Check if it could
+        // make sense for other implicit decls too (e.g. BuiltinTemplateDecl)
+        if (FunctionDecl* func = DynCastFrom(decl)) {
+          TraverseImplicitDeclHelper(func);
+        }
       } else {
         TraverseDecl(decl);
       }
