@@ -216,7 +216,6 @@ using clang::ValueDecl;
 using clang::VarDecl;
 using llvm::cast;
 using llvm::dyn_cast;
-using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
 using std::make_pair;
@@ -2490,8 +2489,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())  return true;
     // ... only if this NewExpr involves a constructor call.
     const Expr* initializer = expr->getInitializer();
-    if (const CXXConstructExpr* cce =
-            dyn_cast_or_null<CXXConstructExpr>(initializer)) {
+    if (const CXXConstructExpr* cce = DynCastFrom(initializer)) {
       ReportIfReferenceVararg(cce->getArgs(),
                               cce->getNumArgs(),
                               cce->getConstructor());
