@@ -3306,9 +3306,18 @@ class InstantiatedTemplateVisitor
       return true;
     }
 
-    const ClassTemplateSpecializationDecl* class_decl
-        = DynCastFrom(TypeToDeclAsWritten(type));
-    CHECK_(class_decl && "TemplateSpecializationType is not a TplSpecDecl?");
+    const NamedDecl* named_decl = TypeToDeclAsWritten(type);
+    const ClassTemplateSpecializationDecl* class_decl = DynCastFrom(named_decl);
+
+    // Bail out if we are not a proper class
+    if (class_decl == nullptr) {
+      // If the template specialization decl is not sugar for a class, we
+      // expect it to be another kind of template decl, like a built-in.
+      CHECK_(llvm::isa<clang::TemplateDecl>(named_decl))
+          << "TemplateSpecializationType has no decl of type TemplateDecl?";
+      return true;
+    }
+
     if (ContainsKey(traversed_decls_, class_decl))
       return true;   // avoid recursion & repetition
     traversed_decls_.insert(class_decl);

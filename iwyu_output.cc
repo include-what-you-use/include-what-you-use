@@ -1120,16 +1120,27 @@ void ProcessFullUse(OneUse* use,
     }
   }
 
-  // (B3) Discard symbol uses for builtin symbols, including new/delete.
-  // TODO(csilvers): we could use getBuiltinID(), but it returns
-  // non-zero for things like malloc.  Figure out how to use it.
-  if (const FunctionDecl* fn_decl = DynCastFrom(use->decl())) {
-    if (StartsWith(use->symbol_name(), "__builtin_")) {
+  // (B3) Discard symbol uses for builtin symbols, including new/delete and
+  // template builtins.
+  if (isa<clang::BuiltinTemplateDecl>(use->decl())) {
+    VERRS(6) << "Ignoring use of " << use->symbol_name()
+             << " (" << use->PrintableUseLoc() << "): built-in template\n";
+    use->set_ignore_use();
+    return;
+  }
+  // A compiler builtin without a predefined header file (e.g. __builtin_..)
+  if (const clang::IdentifierInfo* iden = use->decl()->getIdentifier()) {
+    if (iden->getBuiltinID() != 0 &&
+        !clang::Builtin::Context::isBuiltinFunc(use->symbol_name().c_str())) {
       VERRS(6) << "Ignoring use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "): built-in function\n";
       use->set_ignore_use();
       return;
     }
+  }
+  // Special case for operators new/delete: Only treated as built-in if they
+  // are the default, non-placement versions.
+  if (const FunctionDecl* fn_decl = DynCastFrom(use->decl())) {
     const string dfn_file = GetFilePath(fn_decl);
     if (IsDefaultNewOrDelete(fn_decl, ConvertToQuotedInclude(dfn_file))) {
       VERRS(6) << "Ignoring use of " << use->symbol_name()
