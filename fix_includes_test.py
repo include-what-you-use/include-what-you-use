@@ -389,12 +389,12 @@ namespace service_alerts {
 class StaticServiceAlertStore;
 namespace trigger {                  ///-
 class Trigger;                       ///-
-}  // namespace trigger              ///-
+} // namespace trigger               ///-
 namespace ui {                       ///-
 class Alert;                         ///-
-}  // namespace ui                   ///-
-}  // namespace service_alerts
-}  // namespace maps_transit_realtime
+} // namespace ui                    ///-
+} // namespace service_alerts
+} // namespace maps_transit_realtime
 
 int main() { return 0; }
 """
@@ -425,13 +425,13 @@ class StaticServiceAlertStore;
 namespace trigger                    ///-
 {                                    ///-
 class Trigger;                       ///-
-}  // namespace trigger              ///-
+} // namespace trigger               ///-
 namespace ui                         ///-
 {                                    ///-
 class Alert;                         ///-
-}  // namespace ui                   ///-
-}  // namespace service_alerts
-}  // namespace maps_transit_realtime
+} // namespace ui                    ///-
+} // namespace service_alerts
+} // namespace maps_transit_realtime
 
 int main() { return 0; }
 """
@@ -460,13 +460,13 @@ class StaticServiceAlertStore;
 namespace service_alerts { namespace trigger    ///-
 {                                               ///-
 class Trigger;                                  ///-
-}  // namespace trigger                         ///-
+} // namespace trigger                          ///-
 namespace ui                                    ///-
 {                                               ///-
 class Alert;                                    ///-
-}  // namespace ui                              ///-
-}  // namespace service_alerts                  ///-
-}  // namespace maps_transit_realtime
+} // namespace ui                               ///-
+} // namespace service_alerts                   ///-
+} // namespace maps_transit_realtime
 
 int main() { return 0; }
 """
@@ -935,14 +935,14 @@ template<typename T> class Nest::NestedTplClass;  // lines 11-11
 
 ///+namespace Bar {
 ///+class Baz;
-///+}  // namespace Bar
+///+} // namespace Bar
 ///+
 using Bar::baz;
 
 namespace Foo { class Bang; }  ///-
 ///+namespace Foo {
 ///+class Bang;
-///+}  // namespace Foo
+///+} // namespace Foo
 
 int main() { return 0; }
 """
@@ -974,12 +974,12 @@ namespace Foo { class Bang; }  // lines 7-7
 ///+namespace ns3 {
 ///+class Bar;
 ///+template <typename T> class Bang;
-///+}  // namespace ns3
-///+}  // namespace ns2
+///+} // namespace ns3
+///+} // namespace ns2
 ///+namespace ns4 {
 ///+class Baz;
-///+}  // namespace ns4
-///+}  // namespace ns
+///+} // namespace ns4
+///+} // namespace ns
 ///+
 
 int main() { return 0; }
@@ -1022,7 +1022,7 @@ class NsFoo;
 ///+namespace ns3 {
 ///+class NsBang;
 ///+template <typename T> class NsBaz;
-///+}  // namespace ns3
+///+} // namespace ns3
 template <typename T> class NsBar;
 
 }
@@ -1071,7 +1071,7 @@ class NsFoo;
 ///+namespace ns3 {
 ///+class NsBang;
 ///+template <typename T> class NsBaz;
-///+}  // namespace ns3
+///+} // namespace ns3
 template <typename T> class NsBar;
 
 }
@@ -1111,8 +1111,8 @@ class Bar;
 ///+namespace ns2 {
 ///+class NsBang;
 ///+template <typename T> class NsBaz;
-///+}  // namespace ns2
-///+}  // namespace ns
+///+} // namespace ns2
+///+} // namespace ns
 template <typename T> class Baz;
 
 #ifdef THIS_IS_A_CONTENTFUL_LINE
@@ -1169,7 +1169,7 @@ namespace ns {
 ///+namespace ns3 {
 ///+class NsBang;
 ///+template <typename T> class NsBaz;
-///+}  // namespace ns3
+///+} // namespace ns3
 ///+
 int MyFunction() { }
 
@@ -1687,7 +1687,7 @@ class FileAClass;   // kept for file A, not for file B
 class FileBClass;   // kept for file B, not for file A   ///-
 ///+namespace foo {
 ///+template <typename Arg1> ClassTemplate;
-///+}  // namespace foo
+///+} // namespace foo
 ///+template <typename Arg1> ClassTemplate;
 """
     iwyu_output = """\
@@ -1750,7 +1750,7 @@ template <typename Arg2> ClassTemplate;
 class FileAClass;
 ///+namespace foo {
 ///+template <typename Arg1> ClassTemplate;
-///+}  // namespace foo
+///+} // namespace foo
 ///+template <typename Arg1> ClassTemplate;
 """
     iwyu_output = """\
@@ -2458,7 +2458,7 @@ namespace foo {
 // It will, unless we wrongly say the #define is a header-guard define.
 ///+namespace bar {
 ///+class Baz;
-///+}  // namespace bar
+///+} // namespace bar
 ///+
 #define NOT_A_HEADER_GUARD_LINE 1
 }
@@ -2604,7 +2604,7 @@ namespace A {            ///-
    namespace B {         ///-
      class Delete3;      ///-
    }                     ///-
-}  // namespace A        ///-
+} // namespace A         ///-
 
 int main() { return 0; }
 """
@@ -2663,10 +2663,10 @@ class FwdDecl;  // lines 7-7
 
 ///+namespace ns1 {
 ///+class ForwardDeclared;
-///+}  // namespace ns1
+///+} // namespace ns1
 ///+namespace ns2 {
 ///+class ForwardDeclared;
-///+}  // namespace ns2
+///+} // namespace ns2
 """
     iwyu_output = """\
 identical_names should add these lines:
@@ -3500,7 +3500,7 @@ The full include-list for barrier_includes.h:
 class Query;
 ///+namespace util {
 ///+class Status;
-///+}  // namespace util
+///+} // namespace util
 
 namespace structuredsearch {
 
