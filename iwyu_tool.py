@@ -26,10 +26,11 @@ import os
 import re
 import sys
 import json
+import time
 import shlex
 import argparse
+import tempfile
 import subprocess
-import multiprocessing
 
 
 CORRECT_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
@@ -112,6 +113,42 @@ def find_include_what_you_use():
 
 IWYU_EXECUTABLE = find_include_what_you_use()
 
+class Process(object):
+    """ Manages an IWYU process in flight """
+    def __init__(self, proc, outfile):
+        self.proc = proc
+        self.outfile = outfile
+        self.output = None
+
+    def poll(self):
+        """ Return the exit code if the process has completed, None otherwise.
+        """
+        return self.proc.poll()
+
+    def get_output(self):
+        """ Return stdout+stderr output of the process.
+
+        This call blocks until the process is complete, then returns the output.
+        """
+        if not self.output:
+            self.proc.wait()
+            self.outfile.seek(0)
+            self.output = self.outfile.read().decode("utf-8")
+            self.outfile.close()
+
+        return self.output
+
+    @classmethod
+    def start(cls, invocation):
+        """ Start a Process for the invocation and capture stdout+stderr. """
+        outfile = tempfile.TemporaryFile(prefix='iwyu')
+        process = subprocess.Popen(
+            invocation.command,
+            cwd=invocation.cwd,
+            stdout=outfile,
+            stderr=subprocess.STDOUT)
+        return cls(process, outfile)
+
 
 class Invocation(object):
     """ Holds arguments of an IWYU invocation. """
@@ -143,17 +180,13 @@ class Invocation(object):
         command = [IWYU_EXECUTABLE] + extra_args + compile_args
         return cls(command, entry['directory'])
 
-    def run(self, verbose):
+
+    def start(self, verbose):
         """ Run invocation and collect output. """
         if verbose:
             print('# %s' % self)
 
-        process = subprocess.Popen(
-            self.command,
-            cwd=self.cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
-        return process.communicate()[0].decode('utf-8')
+        return Process.start(self)
 
 
 def parse_compilation_db(compilation_db_path):
@@ -197,37 +230,28 @@ def slice_compilation_db(compilation_db, selection):
 
     return new_db
 
-
-def _run_iwyu(invocation, verbose):
-    """ Start the process described by invocation.
-
-    Only necessary because multiprocessing can't pickle instance methods.
-    """
-    return invocation.run(verbose)
-
-
 def execute(invocations, verbose, formatter, jobs):
-    """ Execute all invocations with at most `jobs` in parallel. """
-    try:
-        pool = multiprocessing.Pool(jobs)
-        # No actual results in `results`, it's only used for exception handling.
-        # Details here: https://stackoverflow.com/a/28660669.
-        results = []
-
+    """ Launch processes described by invocations. """
+    if jobs == 1:
         for invocation in invocations:
-            results.append(
-                pool.apply_async(
-                    _run_iwyu, (invocation, verbose),
-                    callback=lambda x: print(formatter(x))))
-        pool.close()
-        pool.join()
-        for r in results:
-            r.get()
-    except OSError as why:
-        print('ERROR: Failed to launch include-what-you-use: %s' % why)
-        return 1
+            print(formatter(invocation.start(verbose).get_output()))
+        return
 
-    return 0
+    pending = []
+    while invocations or pending:
+        # Collect completed IWYU processes and print results.
+        complete = [proc for proc in pending if proc.poll() is not None]
+        for proc in complete:
+            pending.remove(proc)
+            print(formatter(proc.get_output()))
+
+        # Schedule new processes if there's room.
+        n = jobs - len(pending)
+        pending.extend(i.start(verbose) for i in invocations[:n])
+        invocations = invocations[n:]
+
+        # Yield CPU.
+        time.sleep(0.0001)
 
 
 def main(compilation_db_path, source_files, verbose, formatter, jobs,
