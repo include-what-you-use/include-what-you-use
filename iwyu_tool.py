@@ -26,8 +26,10 @@ import os
 import re
 import sys
 import json
+import time
 import shlex
 import argparse
+import tempfile
 import subprocess
 import multiprocessing
 
@@ -112,6 +114,36 @@ def find_include_what_you_use():
 
 IWYU_EXECUTABLE = find_include_what_you_use()
 
+class Process(object):
+    def __init__(self, proc, outfile):
+        self.proc = proc
+        self.outfile = outfile
+        self.output = None
+
+    def poll(self):
+        return self.proc.poll()
+
+    def get_output(self):
+        if not self.output:
+            self.proc.wait()
+            self.outfile.seek(0)
+            self.output = self.outfile.read().decode("utf-8")
+            self.outfile.close()
+
+        return self.output
+
+    @classmethod
+    def start(cls, invocation, verbose):
+        if verbose:
+            print('# %s' % invocation)
+
+        outfile = tempfile.TemporaryFile(prefix='iwyu')
+        process = subprocess.Popen(
+            invocation.command,
+            cwd=invocation.cwd,
+            stdout=outfile,
+            stderr=subprocess.STDOUT)
+        return cls(process, outfile)
 
 class Invocation(object):
     """ Holds arguments of an IWYU invocation. """
@@ -143,17 +175,13 @@ class Invocation(object):
         command = [IWYU_EXECUTABLE] + extra_args + compile_args
         return cls(command, entry['directory'])
 
+
     def run(self, verbose):
         """ Run invocation and collect output. """
         if verbose:
             print('# %s' % self)
 
-        process = subprocess.Popen(
-            self.command,
-            cwd=self.cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
-        return process.communicate()[0].decode('utf-8')
+        return Process.start(self, verbose)
 
 
 def parse_compilation_db(compilation_db_path):
@@ -197,41 +225,31 @@ def slice_compilation_db(compilation_db, selection):
 
     return new_db
 
-
-def _run_iwyu(invocation, verbose):
-    """ Start the process described by invocation.
-
-    Only necessary because multiprocessing can't pickle instance methods.
-    """
-    return invocation.run(verbose)
-
-
 def execute(invocations, verbose, formatter, jobs):
-    """ Execute all invocations with at most `jobs` in parallel. """
-    try:
-        pool = multiprocessing.Pool(jobs)
-        # No actual results in `results`, it's only used for exception handling.
-        # Details here: https://stackoverflow.com/a/28660669.
-        results = []
-
+    if jobs == 1:
         for invocation in invocations:
-            results.append(
-                pool.apply_async(
-                    _run_iwyu, (invocation, verbose),
-                    callback=lambda x: print(formatter(x))))
-        pool.close()
-        pool.join()
-        for r in results:
-            r.get()
-    except OSError as why:
-        print('ERROR: Failed to launch include-what-you-use: %s' % why)
-        return 1
+            print(formatter(invocation.run(verbose).get_output()))
+        return
 
-    return 0
+    pending = []
+    while invocations or pending:
+        # get complete iwyu processes
+        complete = [proc for proc in pending if proc.poll() is not None]
+
+        for proc in complete:
+            # handle iwyu output
+            pending.remove(proc)
+            print(formatter(proc.get_output()))
+            proc.close()
+
+        n = jobs - len(pending)
+        pending.extend(e.run(verbose) for e in invocations[:n])
+        invocations = invocations[n:]
+
+        time.sleep(0) # yield cpu
 
 
-def main(compilation_db_path, source_files, verbose, formatter, jobs,
-         iwyu_args):
+def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args):
     """ Entry point. """
 
     try:

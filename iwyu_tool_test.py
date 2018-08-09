@@ -19,6 +19,23 @@ try:
 except ImportError:
     from io import StringIO
 
+class MockProcess(object):
+    def __init__(self, block, content):
+        self.block = block
+        self.content = content
+    def poll(self):
+        if self.block > 0:
+            from time import sleep
+            sleep(self.block)
+        return 0
+
+    def get_output(self):
+        self.poll()
+        return self.content
+
+    def close(self):
+        pass
+
 class MockInvocation(iwyu_tool.Invocation):
     def __init__(self, command=None, cwd=''):
         iwyu_tool.Invocation.__init__(self, command or [], cwd)
@@ -34,7 +51,7 @@ class MockInvocation(iwyu_tool.Invocation):
     def run(self, verbose):
         if self._will_block > 0:
             time.sleep(self._will_block)
-        return self._will_return
+        return MockProcess(self._will_block, self._will_return)
 
 
 class IWYUToolTestBase(unittest.TestCase):
@@ -65,7 +82,7 @@ class IWYUToolTests(IWYUToolTestBase):
     def test_invocation(self):
         invocation = MockInvocation()
         invocation.will_return('BAR')
-        self.assertEqual(self._execute([invocation]), 0)
+        self._execute([invocation])
         self.assertEqual(self.stdout_stub.getvalue(), 'BAR\n')
 
     def test_order_asynchronous(self):
@@ -73,7 +90,7 @@ class IWYUToolTests(IWYUToolTestBase):
         for n, invocation in enumerate(invocations):
             invocation.will_return('BAR%d' % n)
             invocation.will_block(random.random() / 100)
-        self.assertEqual(self._execute(invocations, jobs=100), 0)
+        self._execute(invocations, jobs=100)
         self.assertSetEqual(
             set('BAR%d' % n for n in range(100)),
             set(self.stdout_stub.getvalue().splitlines()))
@@ -83,7 +100,7 @@ class IWYUToolTests(IWYUToolTestBase):
         for n, invocation in enumerate(invocations):
             invocation.will_return('BAR%d' % n)
             invocation.will_block(random.random() / 100)
-        self.assertEqual(self._execute(invocations, jobs=1), 0)
+        self._execute(invocations, jobs=1)
         self.assertEqual(['BAR%d' % n for n in range(100)],
                          self.stdout_stub.getvalue().splitlines())
 
