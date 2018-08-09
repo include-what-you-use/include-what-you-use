@@ -29,6 +29,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(IWYU_RESOURCE_DIR ${CLANG_RESOURCE_DIR}
   CACHE PATH "Target path where clang resources are installed")
+option(IWYU_BUNDLE_RESOURCES
+  "Install clang resource headers into the path specified by IWYU_RESOURCE_DIR"
+  OFF)
 configure_file(iwyu_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/iwyu_config.h @ONLY)
 
@@ -123,6 +126,11 @@ install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
 file(GLOB MAPPING_FILES *.imp)
 install(FILES ${MAPPING_FILES} DESTINATION share/include-what-you-use)
 
-if (NOT IWYU_RESOURCE_DIR EQUAL CLANG_RESOURCE_DIR)
+if (IWYU_BUNDLE_RESOURCES AND NOT IWYU_RESOURCE_DIR EQUAL CLANG_RESOURCE_DIR)
+  if (IS_ABSOLUTE "${IWYU_RESOURCE_DIR}")
+    message(WARNING
+      "You are installing resource headers into an absolute destination, "
+      "is that intentional?")
+  endif()
   install(DIRECTORY ${CLANG_RESOURCE_DIR} DESTINATION ${IWYU_RESOURCE_DIR})
 endif()
