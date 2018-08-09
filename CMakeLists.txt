@@ -9,6 +9,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(LLVM CONFIG REQUIRED)
   find_package(Clang CONFIG REQUIRED)
 
+  get_target_property(CLANG_BIN clang LOCATION)
+  execute_process(COMMAND ${CLANG_BIN} -print-resource-dir
+                  OUTPUT_VARIABLE CLANG_INSTALL_RESOURCE_DIR)
+  set(CLANG_RESOURCE_DIR ${CLANG_INSTALL_RESOURCE_DIR}/include)
+
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
   include(AddLLVM)
   include(HandleLLVMOptions)
