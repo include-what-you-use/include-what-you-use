@@ -1194,7 +1194,7 @@ template <typename T> class Baz;  // lines 6-6
 ---
 """
     self.RegisterFileContents({'add_fwd_decl_inside_namespace_without_fwd_decl':
-                                 infile})
+                               infile})
     self.ProcessAndTest(iwyu_output)
 
   def testAddForwardDeclareInsideNamespaceWithUnnamedNamespace(self):
@@ -1236,7 +1236,7 @@ namespace ns { namespace { template <typename T> class NsBar; } }  // lines 13-1
 ---
 """
     self.RegisterFileContents({'add_fwd_decl_inside_namespace_unnamed_ns':
-                                 infile})
+                               infile})
     self.ProcessAndTest(iwyu_output)
 
   def testRemoveNamespaces(self):
