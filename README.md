@@ -12,9 +12,9 @@ This puts us in a state where every file includes the headers it needs to declar
 
 ### CAVEAT ###
 
-This is alpha quality software -- at best (as of February 2011).  It was written to work specifically in the Google source tree, and may make assumptions, or have gaps, that are immediately and embarrassingly evident in other types of code.  For instance, we only run this on C++ code, not C or Objective C.  Even for Google code, the tool still makes a lot of mistakes.
+This is alpha quality software -- at best (as of July 2018).  It was originally written to work specifically in the Google source tree, and may make assumptions, or have gaps, that are immediately and embarrassingly evident in other types of code.
 
-While we work to get IWYU quality up, we will be stinting new features, and will prioritize reported bugs along with the many existing, known bugs.  The best chance of getting a problem fixed is to submit a patch that fixes it (along with a unittest case that verifies the fix)!
+While we work to get IWYU quality up, we will be stinting new features, and will prioritize reported bugs along with the many existing, known bugs.  The best chance of getting a problem fixed is to submit a patch that fixes it (along with a test case that verifies the fix)!
 
 ### How to Build ###
 
