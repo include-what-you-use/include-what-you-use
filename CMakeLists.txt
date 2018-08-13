@@ -23,12 +23,10 @@ endif()
 
 message(STATUS "IWYU: configuring for LLVM ${LLVM_VERSION}...")
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
 set(IWYU_RESOURCE_DIR ${CLANG_RESOURCE_DIR}
-  CACHE PATH "Target path where clang resources are installed")
+  CACHE PATH "Target path where clang resources are installed or located")
 option(IWYU_BUNDLE_RESOURCES
   "Install clang resource headers into the path specified by IWYU_RESOURCE_DIR"
   OFF)
@@ -132,5 +130,6 @@ if (IWYU_BUNDLE_RESOURCES AND NOT IWYU_RESOURCE_DIR EQUAL CLANG_RESOURCE_DIR)
       "You are installing resource headers into an absolute destination, "
       "is that intentional?")
   endif()
-  install(DIRECTORY ${CLANG_RESOURCE_DIR} DESTINATION ${IWYU_RESOURCE_DIR})
+  install(DIRECTORY ${CLANG_INSTALL_RESOURCE_DIR}
+          DESTINATION ${IWYU_RESOURCE_DIR})
 endif()
