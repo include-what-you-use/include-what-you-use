@@ -1,4 +1,4 @@
-//===--- iwyu_confi.h - iwyu build configurations -------------------------===//
+//===--- iwyu_config.h - iwyu build configurations ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef IWYU_CONFIG_H_IN
-#define IWYU_CONFIG_H_IN
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H_IN
+#define INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H_IN
 
 // Location of the clang resource headers
 #define IWYU_RESOURCE_DIR "@IWYU_RESOURCE_DIR@"
 
-#endif /* IWYU_CONFIG_H_IN */
+#endif /* INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H_IN */

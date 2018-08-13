@@ -19,6 +19,8 @@
 #include <string>
 #include <utility>
 
+#include "iwyu_config.h"
+
 #include "llvm/ADT/ArrayRef.h"  // IWYU pragma: keep
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Triple.h"
@@ -26,6 +28,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -247,9 +250,20 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
 
   // Infer the builtin include path if unspecified.
   if (compiler->getHeaderSearchOpts().UseBuiltinIncludes &&
-      compiler->getHeaderSearchOpts().ResourceDir.empty())
-    compiler->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(argv[0], main_addr);
+      compiler->getHeaderSearchOpts().ResourceDir.empty()) {
+    // Figure out the absolute path to the resource-dir, which might be relative
+    // to the install directory
+    StringRef Executable = llvm::sys::fs::getMainExecutable(argv[0], main_addr);
+    SmallString<128> AbsoluteResourceDir(IWYU_RESOURCE_DIR);
+    SmallString<128> P = llvm::sys::path::parent_path(Executable);
+    llvm::sys::path::append(P, "..");
+    if (std::error_code EC = llvm::sys::fs::make_absolute(P, AbsoluteResourceDir))
+      errs() << "Warning: could not make absolute path: '" << EC.message()
+             << '\n';
+
+    // Add the resource dir as a system header source
+    compiler->getHeaderSearchOpts().ResourceDir = AbsoluteResourceDir.str();
+  }
 
   return compiler;
 }
