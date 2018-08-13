@@ -1377,9 +1377,7 @@ def _GetNamespaceLevelReorderSpans(file_lines):
     ifdef_depth = 0
     namespace_depth = 0
 
-    for line_number in range(len(file_lines)):
-      line_info = file_lines[line_number]
-
+    for line_number, line_info in enumerate(file_lines):
       if line_info.deleted:
         continue
 
@@ -1408,8 +1406,7 @@ def _GetNamespaceLevelReorderSpans(file_lines):
         ifdef_depth -= 1
 
       elif ifdef_depth != 0:
-        # skip lines until we're outside of an ifdef block
-        continue
+        continue # skip lines until we're outside of an ifdef block
 
       # Build the simplified namespace lists and namespace depths.  When
       # any new namespace is encountered, add the namespace to the list
@@ -1449,23 +1446,23 @@ def _GetNamespaceLevelReorderSpans(file_lines):
           else:
             namespace_prefixes.append('namespace %s { ' % namespace)
           namespace_depth += 1
+
+        if not namespaces[-1]:
+          namespace_prefix += 'namespace'
         else:
-          if not namespaces[-1]:
-            namespace_prefix += 'namespace'
-          else:
-            namespace_prefix += 'namespace %s' % namespaces[-1]
+          namespace_prefix += 'namespace %s' % namespaces[-1]
 
       elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE:
-        # Append to the simplified allman namespace
+        # Append to the simplified allman namespace.
         namespace_prefix += ' { '
         namespace_prefixes.append(namespace_prefix)
         namespace_depth += 1
         namespace_reorder_spans[''.join(namespace_prefixes)] = (
           line_number+1, line_number+1)
-        namespace_prefix = ''  # reset this in case we find more
+        namespace_prefix = '' # reset this in case we find more
 
       elif line_info.type == _NAMESPACE_END_RE:
-        # remove C++ comments and count the ending brackets
+        # Remove C++ comments and count the ending brackets.
         namespace_end_count = line_info.line.split("/")[0].count("}")
         for i in range(namespace_end_count):
           namespace_depth -= 1
@@ -1486,12 +1483,14 @@ def _GetNamespaceLevelReorderSpans(file_lines):
         # We should have handled all the cases above!
         assert False, ('unknown line-info type',
                        _LINE_TYPES.index(line_info.type))
-  except:
-    # namespace detection could be tricky so take what we have
+  except Exception as why:
+    # Namespace detection could be tricky so take what we have and return.
+    print('DEBUG: Namespace detection returned prematurely because of an \
+          exception: %s' % (why))
     pass
 
   # return a reverse sorted list so longest matches are checked first
-  return sorted(list(namespace_reorder_spans.items()), reverse=True)
+  return sorted(namespace_reorder_spans.items(), reverse=True)
 
 
 # These are potential 'kind' arguments to _FirstReorderSpanWith.
@@ -2017,7 +2016,7 @@ def _GetSymbolNameFromForwardDeclareLine(line):
   """
   iwyu_namespace_re = re.compile(r'namespace ([^{]*) { ')
   symbolname_re = re.compile(r'([A-Za-z0-9_]+)')
-  # turn anonymous namespaces into their proper symbol representation
+  # Turn anonymous namespaces into their proper symbol representation.
   namespaces_in_line = iwyu_namespace_re.findall(line.replace(
     "namespace {", "namespace (anonymous namespace) {"))
   symbols_in_line = symbolname_re.findall(line)
