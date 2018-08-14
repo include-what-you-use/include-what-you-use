@@ -11,6 +11,6 @@
 #define INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H
 
 // Location of the clang resource headers
-#define IWYU_RESOURCE_DIR "@IWYU_RESOURCE_DIR@"
+#define IWYU_RESOURCE_DIR "@IWYU_CONFIG_RESOURCE_DIR@"
 
 #endif /* INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H */

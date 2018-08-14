@@ -11,13 +11,16 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   get_target_property(CLANG_BIN clang LOCATION)
   execute_process(COMMAND ${CLANG_BIN} -print-resource-dir
-                  OUTPUT_VARIABLE CLANG_INSTALL_RESOURCE_DIR
+                  OUTPUT_VARIABLE clang_default_resource_dir
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
   include(AddLLVM)
   include(HandleLLVMOptions)
 else()
+  if (CLANG_RESOURCE_DIR)
+    set(clang_default_resource_dir "${CLANG_RESOURCE_DIR}")
+  endif()
   message(STATUS "IWYU: in-tree configuration")
 endif()
 
@@ -25,11 +28,25 @@ message(STATUS "IWYU: configuring for LLVM ${LLVM_VERSION}...")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
-set(IWYU_RESOURCE_DIR ${CLANG_RESOURCE_DIR}
-  CACHE PATH "Target path where clang resources are installed or located")
-option(IWYU_BUNDLE_RESOURCES
-  "Install clang resource headers into the path specified by IWYU_RESOURCE_DIR"
+set(IWYU_CLANG_RESOURCE_DIR ${clang_default_resource_dir}/include CACHE
+    PATH "Path to the clang resource headers")
+option(IWYU_INSTALL_RESOURCES
+  "Install clang resource headers into the path specified by IWYU_TARGET_RESOURCE_DIR"
   OFF)
+if (IWYU_INSTALL_RESOURCES)
+  set(IWYU_TARGET_RESOURCE_DIR "share/include-what-you-use/include" CACHE
+      STRING "Relative path the clang resource headers will be installed to")
+
+  if (IS_ABSOLUTE "${IWYU_CONFIG_RESOURCE_DIR}")
+    message(FATAL_ERROR
+            "You are installing resource headers into an absolute destination")
+  endif()
+  file(COPY ${IWYU_CLANG_RESOURCE_DIR}/ DESTINATION ${IWYU_CONFIG_RESOURCE_DIR})
+  set(IWYU_CONFIG_RESOURCE_DIR ${IWYU_TARGET_RESOURCE_DIR})
+else()
+  set(IWYU_CONFIG_RESOURCE_DIR ${IWYU_CLANG_RESOURCE_DIR})
+endif()
+
 configure_file(iwyu_config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/iwyu_config.h @ONLY)
 
@@ -124,12 +141,8 @@ install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
 file(GLOB MAPPING_FILES *.imp)
 install(FILES ${MAPPING_FILES} DESTINATION share/include-what-you-use)
 
-if (IWYU_BUNDLE_RESOURCES AND NOT IWYU_RESOURCE_DIR EQUAL CLANG_RESOURCE_DIR)
-  if (IS_ABSOLUTE "${IWYU_RESOURCE_DIR}")
-    message(WARNING
-      "You are installing resource headers into an absolute destination, "
-      "is that intentional?")
-  endif()
-  install(DIRECTORY ${CLANG_INSTALL_RESOURCE_DIR}
-          DESTINATION ${IWYU_RESOURCE_DIR})
+if (IWYU_INSTALL_RESOURCES AND NOT
+    IWYU_TARGET_RESOURCE_DIR EQUAL IWYU_CLANG_RESOURCE_DIR)
+  install(DIRECTORY ${IWYU_CLANG_RESOURCE_DIR}
+          DESTINATION ${IWYU_TARGET_RESOURCE_DIR})
 endif()
