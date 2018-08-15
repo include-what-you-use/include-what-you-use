@@ -34,13 +34,12 @@ option(IWYU_INSTALL_RESOURCES
 if (IWYU_INSTALL_RESOURCES)
   set(IWYU_TARGET_RESOURCE_DIR "share/include-what-you-use/include" CACHE
       STRING "Relative path the clang resource headers will be installed to")
+  set(IWYU_CONFIG_RESOURCE_DIR ${IWYU_TARGET_RESOURCE_DIR})
 
   if (IS_ABSOLUTE "${IWYU_CONFIG_RESOURCE_DIR}")
-    message(FATAL_ERROR
-            "You are installing resource headers into an absolute destination")
+    message(FATAL_ERROR "IWYU_TARGET_RESOURCE_DIR must be a relative path")
   endif()
   file(COPY ${IWYU_CLANG_RESOURCE_DIR}/ DESTINATION ${IWYU_CONFIG_RESOURCE_DIR})
-  set(IWYU_CONFIG_RESOURCE_DIR ${IWYU_TARGET_RESOURCE_DIR})
 else()
   set(IWYU_CONFIG_RESOURCE_DIR ${IWYU_CLANG_RESOURCE_DIR})
 endif()
@@ -139,8 +138,7 @@ install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
 file(GLOB MAPPING_FILES *.imp)
 install(FILES ${MAPPING_FILES} DESTINATION share/include-what-you-use)
 
-if (IWYU_INSTALL_RESOURCES AND NOT
-    IWYU_TARGET_RESOURCE_DIR EQUAL IWYU_CLANG_RESOURCE_DIR)
+if (IWYU_INSTALL_RESOURCES)
   install(DIRECTORY ${IWYU_CLANG_RESOURCE_DIR}
           DESTINATION ${IWYU_TARGET_RESOURCE_DIR})
 endif()

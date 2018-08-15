@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H
-#define INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H_
 
 // Location of the clang resource headers
 #define IWYU_RESOURCE_DIR "@IWYU_CONFIG_RESOURCE_DIR@"
 
-#endif /* INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H */
+#endif // INCLUDE_WHAT_YOU_USE_IWYU_CONFIG_H_
