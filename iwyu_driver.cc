@@ -254,13 +254,17 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
       compiler->getHeaderSearchOpts().ResourceDir.empty()) {
     // Figure out the absolute path to the resource-dir, which might be relative
     // to the install directory
-    std::string AbsoluteResourceDir = IWYU_RESOURCE_DIR;
-    if (!IsAbsolutePath(AbsoluteResourceDir))
-      AbsoluteResourceDir = MakeAbsolutePath(GetParentPath(GetParentPath(path)),
-                                             AbsoluteResourceDir);
+    std::string resource_dir = IWYU_RESOURCE_DIR;
+    // resource_dir is empty in an in-tree build
+    if (resource_dir != "") {
+      if (!IsAbsolutePath(resource_dir)) {
+        auto install_prefix = GetParentPath(GetParentPath(path));
+        resource_dir = MakeAbsolutePath(install_prefix, resource_dir);
+      }
 
-    // Add the inferred resource dir
-    compiler->getHeaderSearchOpts().ResourceDir = AbsoluteResourceDir;
+      // Add the inferred resource dir
+      compiler->getHeaderSearchOpts().ResourceDir = resource_dir;
+    }
   }
 
   return compiler;
