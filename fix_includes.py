@@ -1345,7 +1345,7 @@ def _GetNamespaceLevelReorderSpans(file_lines):
 
   Arguments:
     file_lines: an array of LineInfo objects with .type and
-     .reorder_span filled in.
+    .reorder_span filled in.
 
   Returns:
     [] if we could not find any namespace-level reorder-spans, or
@@ -1373,9 +1373,8 @@ def _GetNamespaceLevelReorderSpans(file_lines):
   namespace_reorder_spans = {}
   try:
     namespace_prefixes = []
-    namespace_prefix = ''
+    pending_namespace_prefix = ''
     ifdef_depth = 0
-    namespace_depth = 0
 
     for line_number, line_info in enumerate(file_lines):
       if line_info.deleted:
@@ -1417,20 +1416,19 @@ def _GetNamespaceLevelReorderSpans(file_lines):
       elif line_info.type == _NAMESPACE_START_RE:
         for namespace in _GetNamespaceNames(line_info.line):
           if not namespace:
-            namespace_prefixes.append('namespace { ')
+            namespace_prefixes.append('namespace {')
           else:
-            namespace_prefixes.append('namespace %s { ' % namespace)
-          namespace_depth += 1
+            namespace_prefixes.append('namespace %s {' % namespace)
         
-        namespace_reorder_spans[''.join(namespace_prefixes)] = (
+        namespace_reorder_spans[' '.join(namespace_prefixes)] = (
           line_number+1, line_number+1)
 
       elif line_info.type == _NAMESPACE_START_ALLMAN_RE:
         for namespace in _GetNamespaceNames(line_info.line):
           if not namespace:
-            namespace_prefix += 'namespace'
+            pending_namespace_prefix += 'namespace'
           else:
-            namespace_prefix += 'namespace %s' % namespace
+            pending_namespace_prefix += 'namespace %s' % namespace
 
       elif line_info.type == _NAMESPACE_START_MIXED_RE:
         # For mixed namespace styles, we need to append normalized prefixes
@@ -1442,38 +1440,34 @@ def _GetNamespaceLevelReorderSpans(file_lines):
         namespaces = _GetNamespaceNames(line_info.line)
         for namespace in namespaces[:-1]:
           if not namespace:
-            namespace_prefixes.append('namespace { ')
+            namespace_prefixes.append('namespace {')
           else:
-            namespace_prefixes.append('namespace %s { ' % namespace)
-          namespace_depth += 1
+            namespace_prefixes.append('namespace %s {' % namespace)
 
         if not namespaces[-1]:
-          namespace_prefix += 'namespace'
+          pending_namespace_prefix += 'namespace'
         else:
-          namespace_prefix += 'namespace %s' % namespaces[-1]
+          pending_namespace_prefix += 'namespace %s' % namespaces[-1]
 
       elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE:
         # Append to the simplified allman namespace.
-        namespace_prefix += ' { '
-        namespace_prefixes.append(namespace_prefix)
-        namespace_depth += 1
-        namespace_reorder_spans[''.join(namespace_prefixes)] = (
+        pending_namespace_prefix += ' {'
+        namespace_prefixes.append(pending_namespace_prefix)
+        namespace_reorder_spans[' '.join(namespace_prefixes)] = (
           line_number+1, line_number+1)
-        namespace_prefix = '' # reset this in case we find more
+        pending_namespace_prefix = '' # reset this in case we find more
 
       elif line_info.type == _NAMESPACE_END_RE:
         # Remove C++ comments and count the ending brackets.
         namespace_end_count = line_info.line.split("/")[0].count("}")
-        for i in range(namespace_end_count):
-          namespace_depth -= 1
-          namespace_prefixes.pop()
+        namespace_prefixes = namespace_prefixes[:-namespace_end_count]
 
       elif line_info.type == _FORWARD_DECLARE_RE:
         # If we're not in a namespace, keep going.  Otherwise, this is
         # just the situation we're looking for!  Update the dictionary
         # with the better reorder span
-        if namespace_depth > 0:
-          namespace_reorder_spans[''.join(namespace_prefixes)] = (
+        if len(namespace_prefixes) > 0:
+          namespace_reorder_spans[' '.join(namespace_prefixes)] = (
             line_info.reorder_span)
 
       elif line_info.type == None:
@@ -1485,8 +1479,8 @@ def _GetNamespaceLevelReorderSpans(file_lines):
                        _LINE_TYPES.index(line_info.type))
   except Exception as why:
     # Namespace detection could be tricky so take what we have and return.
-    print('DEBUG: Namespace detection returned prematurely because of an \
-          exception: %s' % (why))
+    print('DEBUG: Namespace detection returned prematurely because of an '
+          'exception: %s' % (why))
     pass
 
   # return a reverse sorted list so longest matches are checked first
