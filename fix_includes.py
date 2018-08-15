@@ -1880,21 +1880,22 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines, flags):
   if reorder_span is None:     # must be a new #include we're adding
     # If we're a forward-declare inside a namespace, see if there's a
     # reorder span inside the same namespace we can fit into.
-    namespace_reorder_spans = _GetNamespaceLevelReorderSpans(file_lines)
-    for namespace_prefix, possible_reorder_span in namespace_reorder_spans:
-      if (namespace_prefix and possible_reorder_span and
-          firstline.line.startswith(namespace_prefix)):
-        # Great, we can go into this reorder_span.  We also need to
-        # modify all-lines because this line doesn't need the
-        # namespace prefix anymore.  Make sure we can do that before
-        # succeeding.
-        new_firstline = _RemoveNamespacePrefix(firstline.line, namespace_prefix)
-        if new_firstline:
-          assert all_lines[first_contentful_line] == firstline.line
-          all_lines[first_contentful_line] = new_firstline
-          sort_key = re.sub(r'\s+', '', new_firstline)
-          reorder_span = possible_reorder_span
-          break
+    if kind == _FORWARD_DECLARE_KIND:
+      namespace_reorder_spans = _GetNamespaceLevelReorderSpans(file_lines)
+      for namespace_prefix, possible_reorder_span in namespace_reorder_spans:
+        if (namespace_prefix and possible_reorder_span and
+            firstline.line.startswith(namespace_prefix)):
+          # Great, we can go into this reorder_span.  We also need to
+          # modify all-lines because this line doesn't need the
+          # namespace prefix anymore.  Make sure we can do that before
+          # succeeding.
+          new_firstline = _RemoveNamespacePrefix(firstline.line, namespace_prefix)
+          if new_firstline:
+            assert all_lines[first_contentful_line] == firstline.line
+            all_lines[first_contentful_line] = new_firstline
+            sort_key = re.sub(r'\s+', '', new_firstline)
+            reorder_span = possible_reorder_span
+            break
 
     # If that didn't work out, find a top-level reorder span to go into.
     if reorder_span is None:
