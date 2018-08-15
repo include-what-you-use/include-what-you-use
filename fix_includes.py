@@ -1424,7 +1424,12 @@ def _GetNamespaceLevelReorderSpans(file_lines):
           line_number+1, line_number+1)
 
       elif line_info.type == _NAMESPACE_START_ALLMAN_RE:
-        for namespace in _GetNamespaceNames(line_info.line):
+        pending_namespace_prefix = ''
+        namespaces = _GetNamespaceNames(line_info.line)
+        if len(namespaces) != 1:
+          raise FixIncludesError('Allman namespace found containing multiple '
+                                 'names: %s', line_info.line)
+        for namespace in namespaces:
           if not namespace:
             pending_namespace_prefix += 'namespace'
           else:
@@ -1437,6 +1442,7 @@ def _GetNamespaceLevelReorderSpans(file_lines):
         # nature of mixed namespaces, there will always be more than
         # one namespace so it is okay to assume that _GetNamespaceNames
         # will always return multiple records.
+        pending_namespace_prefix = ''
         namespaces = _GetNamespaceNames(line_info.line)
         for namespace in namespaces[:-1]:
           if not namespace:
@@ -1451,11 +1457,13 @@ def _GetNamespaceLevelReorderSpans(file_lines):
 
       elif line_info.type == _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE:
         # Append to the simplified allman namespace.
+        if pending_namespace_prefix == '':
+          raise FixIncludesError('Namespace bracket found without an associated '
+                                 'namespace name at line: %s', line_number)
         pending_namespace_prefix += ' {'
         namespace_prefixes.append(pending_namespace_prefix)
         namespace_reorder_spans[' '.join(namespace_prefixes)] = (
           line_number+1, line_number+1)
-        pending_namespace_prefix = '' # reset this in case we find more
 
       elif line_info.type == _NAMESPACE_END_RE:
         # Remove C++ comments and count the ending brackets.
