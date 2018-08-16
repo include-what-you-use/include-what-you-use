@@ -1407,12 +1407,14 @@ def _GetNamespaceLevelReorderSpans(file_lines):
       elif ifdef_depth != 0:
         continue # skip lines until we're outside of an ifdef block
 
-      # Build the simplified namespace lists and namespace depths.  When
-      # any new namespace is encountered, add the namespace to the list
-      # using the next line to cover namespaces without forward declares.
-      # When a forward declare is found, add the concatenated namespaces
-      # to the list.  Once a contentful line (None) has been found, add
-      # the final namespace if we're still inside one and stop searching.
+      # Build the simplified namespace dictionary.  When any new namespace is
+      # encountered, add the namespace to the list using the next line to cover
+      # namespaces without forward declarations.  When a forward declare is
+      # found, update the dictionary using the existing namespace span that the
+      # forward declare contains.  Once a contentful line (None) has been found
+      # or any exception occurs, return the results that have been found.  Any
+      # forward declare that wasn't able to have a proper namespace name found
+      # will still propigate to the top of the file.
       elif line_info.type == _NAMESPACE_START_RE:
         for namespace in _GetNamespaceNames(line_info.line):
           if not namespace:
