@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 """ Driver to consume a Clang compilation database and invoke IWYU.
 
 Example usage with CMake:
@@ -29,11 +31,6 @@ import subprocess
 import multiprocessing
 
 
-def iwyu_formatter(output):
-    """ Process iwyu's output, basically a no-op. """
-    print('\n'.join(output))
-
-
 CORRECT_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 SHOULD_ADD_RE = re.compile(r'^(.*?) should add these lines:$')
 SHOULD_REMOVE_RE = re.compile(r'^(.*?) should remove these lines:$')
@@ -47,11 +44,14 @@ GENERAL, ADD, REMOVE, LIST = range(4)
 
 def clang_formatter(output):
     """ Process iwyu's output into something clang-like. """
+    formatted = []
+
     state = (GENERAL, None)
-    for line in output:
+    for line in output.splitlines():
         match = CORRECT_RE.match(line)
         if match:
-            print('%s:1:1: note: #includes/fwd-decls are correct' % match.groups(1))
+            formatted.append('%s:1:1: note: #includes/fwd-decls are correct' %
+                             match.groups(1))
             continue
         match = SHOULD_ADD_RE.match(line)
         if match:
@@ -69,20 +69,23 @@ def clang_formatter(output):
         elif not line.strip():
             continue
         elif state[0] == GENERAL:
-            print(line)
+            formatted.append(line)
         elif state[0] == ADD:
-            print('%s:1:1: error: add the following line' % state[1])
-            print(line)
+            formatted.append('%s:1:1: error: add the following line' % state[1])
+            formatted.append(line)
         elif state[0] == REMOVE:
             match = LINES_RE.match(line)
             line_no = match.group(2) if match else '1'
-            print('%s:%s:1: error: remove the following line' % (state[1], line_no))
-            print(match.group(1))
+            formatted.append('%s:%s:1: error: remove the following line' %
+                             (state[1], line_no))
+            formatted.append(match.group(1))
+
+    return os.linesep.join(formatted)
 
 
 DEFAULT_FORMAT = 'iwyu'
 FORMATTERS = {
-    'iwyu': iwyu_formatter,
+    'iwyu': lambda output: output,
     'clang': clang_formatter
 }
 
@@ -104,7 +107,7 @@ def get_output(cwd, command):
                                shell=True,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)
-    return process.communicate()[0].decode("utf-8").splitlines()
+    return process.communicate()[0].decode('utf-8')
 
 
 def run_iwyu(dbentry, iwyu_args, verbose):
@@ -182,7 +185,7 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args)
         for entry in entries:
             results.append(pool.apply_async(run_iwyu,
                                             (entry, iwyu_args, verbose),
-                                            callback=formatter))
+                                            callback=lambda x: print(formatter(x))))
         pool.close()
         pool.join()
         for r in results:
