@@ -91,9 +91,26 @@ FORMATTERS = {
 }
 
 
-IWYU_EXECUTABLE = 'include-what-you-use'
-if sys.platform.startswith('win'):
-    IWYU_EXECUTABLE += '.exe'
+def find_include_what_you_use():
+    """ Find IWYU executable and return its full pathname. """
+
+    # TODO: Investigate using shutil.which when Python 2 has passed away.
+    executable_name = 'include-what-you-use'
+    if sys.platform.startswith('win'):
+        executable_name += '.exe'
+
+    search_path = [os.path.dirname(__file__)]
+    search_path += os.environ.get('PATH', '').split(os.pathsep)
+
+    for dirpath in search_path:
+        full = os.path.join(dirpath, executable_name)
+        if os.path.isfile(full):
+            return full
+
+    return None
+
+
+IWYU_EXECUTABLE = find_include_what_you_use()
 
 
 def run_iwyu(dbentry, extra_args, verbose):
@@ -109,6 +126,9 @@ def run_iwyu(dbentry, extra_args, verbose):
     else:
         raise ValueError('Invalid compilation database entry: %s' % dbentry)
 
+    if not IWYU_EXECUTABLE:
+        raise ValueError('No include-what-you-use found on PATH')
+
     # Rewrite the compile command for IWYU
     compile_command, compile_args = command[0], command[1:]
     if compile_command.endswith('cl.exe'):
@@ -120,18 +140,8 @@ def run_iwyu(dbentry, extra_args, verbose):
     if verbose:
         print('# ' + ' '.join(command))
 
-    # Environment dictionary handling from https://stackoverflow.com/a/4453495
-    # ensures that: The current environment is not altered, instead it is
-    # copied for the child process, then the directory of iwyu_tool.py is
-    # prepended to the PATH variable.
-    env = os.environ.copy()
-    path_variable = os.path.dirname(__file__)
-    if 'PATH' in env:
-        path_variable += os.pathsep + env['PATH']
-    env['PATH'] = path_variable
     process = subprocess.Popen(command,
                                cwd=cwd,
-                               env=env,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)
     return process.communicate()[0].decode('utf-8')
