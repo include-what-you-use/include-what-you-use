@@ -165,36 +165,47 @@ def parse_compilation_db(compilation_db_path):
     return compilation_db
 
 
+def slice_compilation_db(compilation_db, selection):
+    """ Return a new compilation database reduced to the paths in selection. """
+    if not selection:
+        return compilation_db
+
+    # Canonicalize selection paths to match compilation database.
+    selection = [os.path.realpath(p) for p in selection]
+
+    new_db = []
+    for path in selection:
+        if not os.path.exists(path):
+            print('WARNING: \'%s\' not found on disk.' % path)
+            continue
+
+        matches = [e for e in compilation_db if e['file'].startswith(path)]
+        if not matches:
+            print('WARNING: \'%s\' not found in compilation database.' % path)
+            continue
+
+        new_db.extend(matches)
+
+    return new_db
+
+
 def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args):
     """ Entry point. """
+
     try:
         compilation_db = parse_compilation_db(compilation_db_path)
     except IOError as why:
         print('Failed to parse JSON compilation database: %s' % why)
         return 1
 
-    # Cross-reference source files with compilation database
-    source_files = [os.path.realpath(s) for s in source_files]
-    if not source_files:
-        # No source files specified, analyze entire compilation database
-        entries = compilation_db
-    else:
-        # Source files specified, analyze the ones appearing in compilation db,
-        # warn for the rest.
-        entries = []
-        for source in source_files:
-            if os.path.isdir(source) or os.path.isfile(source):
-                entries.extend([e for e in compilation_db if e['file'].startswith(source)])
-            else:
-                print('WARNING: \'%s\' not found in compilation database.' %
-                      source)
+    compilation_db = slice_compilation_db(compilation_db, source_files)
 
     try:
         pool = multiprocessing.Pool(jobs)
         # No actual results in `results`, it's only used for exception handling.
         # Details here: https://stackoverflow.com/a/28660669.
         results = []
-        for entry in entries:
+        for entry in compilation_db:
             results.append(pool.apply_async(run_iwyu,
                                             (entry, iwyu_args, verbose),
                                             callback=lambda x: print(formatter(x))))
