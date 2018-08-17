@@ -26,6 +26,7 @@ import os
 import re
 import sys
 import json
+import shlex
 import argparse
 import subprocess
 import multiprocessing
@@ -90,8 +91,35 @@ FORMATTERS = {
 }
 
 
-def get_output(cwd, command):
-    """ Run the given command and return its output as a string. """
+IWYU_EXECUTABLE = 'include-what-you-use'
+if sys.platform.startswith('win'):
+    IWYU_EXECUTABLE += '.exe'
+
+
+def run_iwyu(dbentry, extra_args, verbose):
+    """ Transform dbentry to an IWYU command, and run it. """
+    cwd = dbentry['directory']
+
+    if 'arguments' in dbentry:
+        # arguments is a command-line in list form.
+        command = dbentry['arguments']
+    elif 'command' in dbentry:
+        # command is a command-line in string form, split to list.
+        command = shlex.split(dbentry['command'])
+    else:
+        raise ValueError('Invalid compilation database entry: %s' % dbentry)
+
+    # Rewrite the compile command for IWYU
+    compile_command, compile_args = command[0], command[1:]
+    if compile_command.endswith('cl.exe'):
+        # If the compiler name is cl.exe, let IWYU be cl-compatible.
+        extra_args = ['--driver-mode=cl'] + extra_args
+
+    command = [IWYU_EXECUTABLE] + extra_args + compile_args
+
+    if verbose:
+        print('# ' + ' '.join(command))
+
     # Environment dictionary handling from https://stackoverflow.com/a/4453495
     # ensures that: The current environment is not altered, instead it is
     # copied for the child process, then the directory of iwyu_tool.py is
@@ -104,41 +132,9 @@ def get_output(cwd, command):
     process = subprocess.Popen(command,
                                cwd=cwd,
                                env=env,
-                               shell=True,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)
     return process.communicate()[0].decode('utf-8')
-
-
-def run_iwyu(dbentry, iwyu_args, verbose):
-    """ Transform dbentry to an IWYU command, and run it. """
-    cwd = dbentry['directory']
-
-    if 'arguments' in dbentry:
-        # arguments is a command-line in list form.
-        arguments = dbentry['arguments']
-        compile_command, compile_args = arguments[0], arguments[1:]
-        compile_args = ' '.join(compile_args)
-    elif 'command' in dbentry:
-        # command is a command-line in string form.
-        compile_command, _, compile_args = dbentry['command'].partition(' ')
-    else:
-        raise ValueError('Invalid compilation database entry: %s' % dbentry)
-
-    if compile_command.endswith('cl.exe'):
-        # If the compiler name is cl.exe, let IWYU be cl-compatible.
-        clang_args = ['--driver-mode=cl']
-    else:
-        clang_args = []
-
-    iwyu_args = ['-Xiwyu ' + a for a in iwyu_args]
-    command = ['include-what-you-use'] + clang_args + iwyu_args
-    command = '%s %s' % (' '.join(command), compile_args.strip())
-
-    if verbose:
-        print('%s:' % command)
-
-    return get_output(cwd, command)
 
 
 def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args):
@@ -251,6 +247,11 @@ def _bootstrap():
             return argv, []
     argv, iwyu_args = partition_args(sys.argv[1:])
     args = parser.parse_args(argv)
+
+    # Force -Xiwyu prefix to iwyu_args so users don't have to provide prefix
+    # explicitly.
+    prefixes = ['-Xiwyu'] * len(iwyu_args)
+    iwyu_args = list(sum(zip(prefixes, iwyu_args), ()))
 
     sys.exit(main(args.dbpath, args.source, args.verbose,
                   FORMATTERS[args.output_format], args.jobs, iwyu_args))
