@@ -147,25 +147,31 @@ def run_iwyu(dbentry, extra_args, verbose):
     return process.communicate()[0].decode('utf-8')
 
 
-def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args):
-    """ Entry point. """
-    # Canonicalize compilation database path
+def parse_compilation_db(compilation_db_path):
+    """ Parse JSON compilation database and return a canonicalized form. """
     if os.path.isdir(compilation_db_path):
         compilation_db_path = os.path.join(compilation_db_path,
                                            'compile_commands.json')
 
+    # Read compilation db from disk.
     compilation_db_path = os.path.realpath(compilation_db_path)
-    if not os.path.isfile(compilation_db_path):
-        print('ERROR: No such file or directory: \'%s\'' % compilation_db_path)
-        return 1
-
-    # Read compilation db from disk
     with open(compilation_db_path, 'r') as fileobj:
         compilation_db = json.load(fileobj)
 
-    # expand symlinks
+    # Expand symlinks.
     for entry in compilation_db:
         entry['file'] = os.path.realpath(entry['file'])
+
+    return compilation_db
+
+
+def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args):
+    """ Entry point. """
+    try:
+        compilation_db = parse_compilation_db(compilation_db_path)
+    except IOError as why:
+        print('Failed to parse JSON compilation database: %s' % why)
+        return 1
 
     # Cross-reference source files with compilation database
     source_files = [os.path.realpath(s) for s in source_files]
