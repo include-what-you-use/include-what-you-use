@@ -113,35 +113,44 @@ def find_include_what_you_use():
 IWYU_EXECUTABLE = find_include_what_you_use()
 
 
-def run_iwyu(dbentry, extra_args, verbose):
-    """ Transform dbentry to an IWYU command, and run it. """
-    cwd = dbentry['directory']
+class Invocation(object):
+    """ Holds arguments of an IWYU invocation. """
+    def __init__(self, command, cwd):
+        self.command = command
+        self.cwd = cwd
 
-    if 'arguments' in dbentry:
-        # arguments is a command-line in list form.
-        command = dbentry['arguments']
-    elif 'command' in dbentry:
-        # command is a command-line in string form, split to list.
-        command = shlex.split(dbentry['command'])
-    else:
-        raise ValueError('Invalid compilation database entry: %s' % dbentry)
+    def __str__(self):
+        return ' '.join(self.command)
 
-    if not IWYU_EXECUTABLE:
-        raise ValueError('No include-what-you-use found on PATH')
+    @staticmethod
+    def from_compile_command(entry, extra_args):
+        """ Parse a JSON compilation database entry into new Invocation. """
+        if 'arguments' in entry:
+            # arguments is a command-line in list form.
+            command = entry['arguments']
+        elif 'command' in entry:
+            # command is a command-line in string form, split to list.
+            command = shlex.split(entry['command'])
+        else:
+            raise ValueError('Invalid compilation database entry: %s' % entry)
 
-    # Rewrite the compile command for IWYU
-    compile_command, compile_args = command[0], command[1:]
-    if compile_command.endswith('cl.exe'):
-        # If the compiler name is cl.exe, let IWYU be cl-compatible.
-        extra_args = ['--driver-mode=cl'] + extra_args
+        # Rewrite the compile command for IWYU
+        compile_command, compile_args = command[0], command[1:]
+        if compile_command.endswith('cl.exe'):
+            # If the compiler name is cl.exe, let IWYU be cl-compatible.
+            extra_args = ['--driver-mode=cl'] + extra_args
 
-    command = [IWYU_EXECUTABLE] + extra_args + compile_args
+        command = [IWYU_EXECUTABLE] + extra_args + compile_args
+        return Invocation(command, entry['directory'])
 
+
+def run_iwyu(invocation, verbose):
+    """ Run invocation and collect output. """
     if verbose:
-        print('# ' + ' '.join(command))
+        print('# %s' % invocation)
 
-    process = subprocess.Popen(command,
-                               cwd=cwd,
+    process = subprocess.Popen(invocation.command,
+                               cwd=invocation.cwd,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)
     return process.communicate()[0].decode('utf-8')
@@ -200,14 +209,18 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args)
 
     compilation_db = slice_compilation_db(compilation_db, source_files)
 
+    # Transform compilation db entries into a list of IWYU invocations.
+    invocations = [Invocation.from_compile_command(e, iwyu_args)
+                   for e in compilation_db]
+
     try:
         pool = multiprocessing.Pool(jobs)
         # No actual results in `results`, it's only used for exception handling.
         # Details here: https://stackoverflow.com/a/28660669.
         results = []
-        for entry in compilation_db:
+        for invocation in invocations:
             results.append(pool.apply_async(run_iwyu,
-                                            (entry, iwyu_args, verbose),
+                                            (invocation, verbose),
                                             callback=lambda x: print(formatter(x))))
         pool.close()
         pool.join()
