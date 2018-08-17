@@ -21,11 +21,11 @@ See iwyu_tool.py -h for more details on command-line arguments.
 """
 
 import os
+import re
 import sys
 import json
 import argparse
 import subprocess
-import re
 import multiprocessing
 
 
@@ -108,22 +108,22 @@ def get_output(cwd, command):
 
 
 def run_iwyu(dbentry, iwyu_args, verbose):
-    """ Rewrite compile_command to an IWYU command, and run it. """
+    """ Transform dbentry to an IWYU command, and run it. """
     cwd = dbentry['directory']
 
     if 'arguments' in dbentry:
-        # arguments is a command-line in list form
+        # arguments is a command-line in list form.
         arguments = dbentry['arguments']
         compile_command, compile_args = arguments[0], arguments[1:]
         compile_args = ' '.join(compile_args)
     elif 'command' in dbentry:
-        # command is a command-line in string form
+        # command is a command-line in string form.
         compile_command, _, compile_args = dbentry['command'].partition(' ')
     else:
         raise ValueError('Invalid compilation database entry: %s' % dbentry)
 
     if compile_command.endswith('cl.exe'):
-        # If the compiler name is cl.exe, let IWYU be cl-compatible
+        # If the compiler name is cl.exe, let IWYU be cl-compatible.
         clang_args = ['--driver-mode=cl']
     else:
         clang_args = []
@@ -174,9 +174,7 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args)
                 print('WARNING: \'%s\' not found in compilation database.' %
                       source)
 
-    # Run analysis
     try:
-
         pool = multiprocessing.Pool(jobs)
         # No actual results in `results`, it's only used for exception handling.
         # Details here: https://stackoverflow.com/a/28660669.
@@ -198,6 +196,7 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args)
 
 def _bootstrap():
     """ Parse arguments and dispatch to main(). """
+
     # This hackery is necessary to add the forwarded IWYU args to the
     # usage and help strings.
     def customize_usage(parser):
@@ -219,7 +218,7 @@ def _bootstrap():
 
         parser.format_help = custom_help
 
-    # Parse arguments
+    # Parse arguments.
     parser = argparse.ArgumentParser(
         description='Include-what-you-use compilation database driver.',
         epilog='Assumes include-what-you-use is available on the PATH.')
@@ -236,8 +235,9 @@ def _bootstrap():
     parser.add_argument('-p', metavar='<build-path>', required=True,
                         help='Compilation database path', dest='dbpath')
     parser.add_argument('source', nargs='*',
-                        help='Zero or more source files (or directories) to '
-                        'run IWYU on. Defaults to all in compilation database.')
+                        help=('Zero or more source files (or directories) to '
+                              'run IWYU on. Defaults to all in compilation '
+                              'database.'))
 
     def partition_args(argv):
         """ Split around '--' into driver args and IWYU args. """
