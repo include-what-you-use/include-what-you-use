@@ -42,6 +42,7 @@ class FakeFlags(object):
     self.invoking_command_line = 'iwyu.py my_targets'
     self.find_affected_targets = True
     self.keep_iwyu_namespace_format = False
+    self.reorder = True
 
 
 class FixIncludesBase(unittest.TestCase):
@@ -3992,6 +3993,102 @@ namespace ns { namespace ns4 { class Baz; } }
     # -s without any files to sort.
     self.assertRaises(SystemExit, fix_includes.main,
                       ['fix_includes.py', '-s'])
+
+  def testReorderingInclusions(self):
+    """Make sure inclusions do not get re-ordered relative to each-other"""
+    infile = """\
+// namespace B
+namespace B { class BC; } // B
+// namespace A
+namespace A { class AC; } // A
+// b
+#include "b"  // b
+// c
+#include <c>  // c
+// a
+#include <a>  // a
+// a
+#include "a"  // a
+// asdf
+#ifdef asdf
+// x
+#include <x>  // x
+// endif
+#endif
+"""
+    expected_output_headers_reordered = """\
+// namespace B
+namespace B { class BC; } // B
+// namespace A
+namespace A { class AC; } // A
+// a
+#include <a>  // a
+// c
+#include <c>  // c
+// a
+#include "a"  // a
+// b
+#include "b"  // b
+// asdf
+#ifdef asdf
+// x
+#include <x>  // x
+// endif
+#endif
+"""
+    self.RegisterFileContents({'inclusions_reordered.cc': infile})
+    self.flags.reorder = True
+    num_files_modified = fix_includes.SortIncludesInFiles(['inclusions_reordered.cc'], self.flags)
+    self.assertListEqual(expected_output_headers_reordered.strip().split('\n'), self.actual_after_contents)
+    self.assertEqual(1, num_files_modified)
+
+  def testNoReorderingInclusions(self):
+    """Make sure inclusions do not get re-ordered relative to each-other"""
+    infile = """\
+// namespace B
+namespace B { class BC; } // B
+// namespace A
+namespace A { class AC; } // A
+// b
+#include "b"  // b
+// c
+#include <c>  // c
+// a
+#include <a>  // a
+// a
+#include "a"  // a
+// asdf
+#ifdef asdf
+// x
+#include <x>  // x
+// endif
+#endif
+"""
+    expected_output_headers_not_reordered = """\
+// namespace B
+namespace B { class BC; } // B
+// namespace A
+namespace A { class AC; } // A
+// c
+#include <c>  // c
+// a
+#include <a>  // a
+// b
+#include "b"  // b
+// a
+#include "a"  // a
+// asdf
+#ifdef asdf
+// x
+#include <x>  // x
+// endif
+#endif
+"""
+    self.RegisterFileContents({'inclusions_not_reordered.cc': infile})
+    self.flags.reorder = False
+    num_files_modified = fix_includes.SortIncludesInFiles(['inclusions_not_reordered.cc'], self.flags)
+    self.assertListEqual(expected_output_headers_not_reordered.strip().split('\n'), self.actual_after_contents)
+    self.assertEqual(1, num_files_modified)
 
 
 class FileInfoTest(unittest.TestCase):
