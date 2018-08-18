@@ -1099,20 +1099,14 @@ template <typename T> class Baz;  // lines 9-9
     self.RegisterFileContents({'add_fwd_decl_with_hdr_guard': infile})
     self.ProcessAndTest(iwyu_output)
 
-  def testDoNotAddForwardDeclareInsideNamespaceWithContentfulLine(self):
-    """Tests that for 'confusing' code, we keep fwd-decl at the top."""
+  def testAddForwardDeclareInsideNamespaceWithIfDef(self):
+    """Tests that ifdef blocks are ignored when finding namespaces."""
     infile = """\
 // Copyright 2010
 
 #include "foo.h"
 
 class Bar;
-///+namespace ns {
-///+namespace ns2 {
-///+class NsBang;
-///+template <typename T> class NsBaz;
-///+}  // namespace ns2
-///+}  // namespace ns
 template <typename T> class Baz;
 
 #ifdef THIS_IS_A_CONTENTFUL_LINE
@@ -1123,8 +1117,10 @@ namespace ns {
 
 namespace ns2 {
 
+///+class NsBang;
 class NsFoo;
 template <typename T> class NsBar;
+///+template <typename T> class NsBaz;
 
 }
 
@@ -1133,13 +1129,13 @@ template <typename T> class NsBar;
 int main() { return 0; }
 """
     iwyu_output = """\
-do_not_add_fwd_decl_inside_namespace should add these lines:
+add_forward_declares_after_ifdef_code should add these lines:
 namespace ns { namespace ns2 { class NsBang; } }
 namespace ns { namespace ns2 { template <typename T> class NsBaz; } }
 
-do_not_add_fwd_decl_inside_namespace should remove these lines:
+add_forward_declares_after_ifdef_code should remove these lines:
 
-The full include-list for do_not_add_fwd_decl_inside_namespace:
+The full include-list for add_forward_declares_after_ifdef_code:
 #include "foo.h"  // lines 3-3
 class Bar;  // lines 5-5
 namespace ns { namespace ns2 { class NsBang; } }
@@ -1149,7 +1145,7 @@ namespace ns { namespace ns2 { template <typename T> class NsBaz; } }
 template <typename T> class Baz;  // lines 6-6
 ---
 """
-    self.RegisterFileContents({'do_not_add_fwd_decl_inside_namespace': infile})
+    self.RegisterFileContents({'add_forward_declares_after_ifdef_code': infile})
     self.ProcessAndTest(iwyu_output)
 
   def testAddForwardDeclareInsideNamespaceWithoutForwardDeclaresAlready(self):
@@ -1165,7 +1161,7 @@ template <typename T> class Baz;
 namespace ns {
 
   namespace  ns2   {   // we sure do love nesting our namespaces!
-
+///-
 ///+namespace ns3 {
 ///+class NsBang;
 ///+template <typename T> class NsBaz;
@@ -1197,6 +1193,40 @@ template <typename T> class Baz;  // lines 6-6
                                infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testAddForwardDeclareInsideNamespaceWithCompactEndings(self):
+    """Tests we put fwd-decls inside an ns when using compact namespace endings."""
+    infile = """\
+// Copyright 2010
+
+namespace ns { namespace  ns1 { namespace ns2 {
+class Ns2Bang;
+}} // namespace ns2 // namespace ns1
+///+class NsBar;
+class NsBaz;
+                                      ///-
+namespace ns3 { namespace ns4 {       ///-
+class Ns4Bye;                         ///-
+}} // namespace ns4 // namespace ns3  ///-
+}  // namespace ns
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_decl_inside_namespace_without_compact_endings should add these lines:
+namespace ns { class NsBar; }
+
+add_fwd_decl_inside_namespace_without_compact_endings should remove these lines:
+- namespace ns { namespace ns1 { namespace ns2 { namespace ns3 { namespace ns4 { class Ns4Bye; } } } } } // lines 9-9
+
+The full include-list for add_fwd_decl_inside_namespace_without_compact_endings:
+namespace ns { namespace ns1 { namespace ns2 { class Ns2Bang; } } } // lines 4-4
+namespace ns { class NsBaz; } // lines 6-6
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_inside_namespace_without_compact_endings':
+                               infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testAddForwardDeclareInsideNamespaceWithUnnamedNamespace(self):
     """Tests that unnamed namespaces do not mess up our in-ns calculation."""
     infile = """\
@@ -1207,7 +1237,6 @@ template <typename T> class Baz;  // lines 6-6
 class Bar;
 
 namespace ns {
-///+
 ///+class NsBang;
 ///+template <typename T> class NsBaz;
 
@@ -1229,13 +1258,248 @@ add_fwd_decl_inside_namespace_unnamed_ns should remove these lines:
 The full include-list for add_fwd_decl_inside_namespace_unnamed_ns:
 #include "foo.h"  // lines 3-3
 class Bar;  // lines 5-5
-namespace ns { namespace { class NsFoo; } }  // lines 12-12
+namespace ns { namespace { class NsFoo; } }  // lines 10-10
 namespace ns { class NsBang; }
 namespace ns { template <typename T> class NsBaz; }
-namespace ns { namespace { template <typename T> class NsBar; } }  // lines 13-13
+namespace ns { namespace { template <typename T> class NsBar; } }  // lines 11-11
 ---
 """
     self.RegisterFileContents({'add_fwd_decl_inside_namespace_unnamed_ns':
+                               infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareInsideNamespacesWithUnnamedNamespaceAndContent(self):
+    """Tests that nested namespaces with forward declares still get new additions."""
+    infile = """\
+// Copyright 2010
+
+#include "foo.h"
+
+class Bar;
+///+class Baz;
+
+namespace ns {
+///+class NsBang;
+///+template <typename T> class NsBaz;
+
+namespace   {
+///+class NsBaz;
+class NsFoo;
+template <typename T> class NsBar;
+}
+
+namespace ns1 {
+///+class Ns1Bar;
+///+class Ns1Baz;
+class Ns1Foo;
+
+int ns_int = 5; // here's my contentful line
+}
+}
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_decl_inside_namespaces_with_existing_content should add these lines:
+class Baz;
+namespace ns { class NsBang; }
+namespace ns { template <typename T> class NsBaz; }
+namespace ns { namespace { class NsBaz; } }
+namespace ns { namespace ns1 { class Ns1Bar; } }
+namespace ns { namespace ns1 { class Ns1Baz; } }
+
+add_fwd_decl_inside_namespaces_with_existing_content should remove these lines:
+
+The full include-list for add_fwd_decl_inside_namespaces_with_existing_content:
+#include "foo.h"  // lines 3-3
+class Bar;  // lines 5-5
+class Baz;
+namespace ns { namespace { class NsFoo; } }  // lines 10-10
+namespace ns { namespace { class NsBaz; } } 
+namespace ns { class NsBang; }
+namespace ns { template <typename T> class NsBaz; }
+namespace ns { namespace { template <typename T> class NsBar; } }  // lines 11-11
+namespace ns { namespace ns1 { class Ns1Foo; } }  // lines 15-15
+namespace ns { namespace ns1 { class Ns1Bar; } }
+namespace ns { namespace ns1 { class Ns1Baz; } }
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_inside_namespaces_with_existing_content':
+                               infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareInsideAllmanNamespacesWithUnnamedNamespaceAndContent(self):
+    """Tests that nested Allman namespaces with forward declares still get new additions."""
+    infile = """\
+// Copyright 2010
+
+#include "foo.h"
+
+class Bar;
+///+class Baz;
+
+namespace ns
+{
+///+class NsBang;
+///+template <typename T> class NsBaz;
+
+namespace
+{
+///+class NsBaz;
+class NsFoo;
+template <typename T> class NsBar;
+}
+
+namespace ns1
+{
+///+class Ns1Bar;
+///+class Ns1Baz;
+class Ns1Foo;
+
+int ns_int = 5; // here's my contentful line
+}
+}
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_decl_inside_allman_namespaces_with_existing_content should add these lines:
+class Baz;
+namespace ns { class NsBang; }
+namespace ns { template <typename T> class NsBaz; }
+namespace ns { namespace { class NsBaz; } }
+namespace ns { namespace ns1 { class Ns1Bar; } }
+namespace ns { namespace ns1 { class Ns1Baz; } }
+
+add_fwd_decl_inside_allman_namespaces_with_existing_content should remove these lines:
+
+The full include-list for add_fwd_decl_inside_allman_namespaces_with_existing_content:
+#include "foo.h"  // lines 3-3
+class Bar;  // lines 5-5
+class Baz;
+namespace ns { namespace { class NsFoo; } }  // lines 12-12
+namespace ns { namespace { class NsBaz; } } 
+namespace ns { class NsBang; }
+namespace ns { template <typename T> class NsBaz; }
+namespace ns { namespace { template <typename T> class NsBar; } }  // lines 13-13
+namespace ns { namespace ns1 { class Ns1Foo; } }  // lines 18-18
+namespace ns { namespace ns1 { class Ns1Bar; } }
+namespace ns { namespace ns1 { class Ns1Baz; } }
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_inside_allman_namespaces_with_existing_content':
+                               infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareInsideMixedNamespacesWithUnnamedNamespaceAndContent(self):
+    """Tests that nested mixed namespaces with forward declares still get new additions."""
+    infile = """\
+// Copyright 2010
+
+#include "bar.h"
+///+
+///+class Baz;
+///+
+namespace ns { namespace ns1 { namespace ns2
+{
+///+class Ns2Bang;
+///+template <typename T> class Ns2Baz;
+///+
+namespace
+{
+///+class NsaBaz;
+class NsaFoo;
+template <typename T> class NsaBar;
+} // namespace
+namespace ns3 {
+///+class Ns3Bar;
+///+class Ns3Baz;
+class Ns3Foo;
+///+
+int ns3_int = 5; // here's my contentful line
+} // namespace ns3
+} // namespace ns2
+} // namespace ns1
+} // namespace ns
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_decl_inside_mixed_namespaces_with_existing_content should add these lines:
+class Baz;
+namespace ns { namespace ns1 { namespace ns2 { class Ns2Bang; } } }
+namespace ns { namespace ns1 { namespace ns2 { template <typename T> class Ns2Baz; } } }
+namespace ns { namespace ns1 { namespace ns2 { namespace { class NsaBaz; } } } }
+namespace ns { namespace ns1 { namespace ns2 { namespace ns3 { class Ns3Bar; } } } }
+namespace ns { namespace ns1 { namespace ns2 { namespace ns3 { class Ns3Baz; } } } }
+
+add_fwd_decl_inside_mixed_namespaces_with_existing_content should remove these lines:
+
+The full include-list for add_fwd_decl_inside_mixed_namespaces_with_existing_content:
+#include "bar.h"  // lines 3-3
+#include "foo.h"
+class Baz;
+namespace ns { namespace ns1 { namespace ns2 { class Ns2Bang; } } }
+namespace ns { namespace ns1 { namespace ns2 { template <typename T> class Ns2Baz; } } }
+namespace ns { namespace ns1 { namespace ns2 { namespace { class NsaFoo; } } } } // lines 8-8
+namespace ns { namespace ns1 { namespace ns2 { namespace { template <typename T> class NsaBar; } } } } // lines 9-9
+namespace ns { namespace ns1 { namespace ns2 { namespace { class NsaBaz; } } } }
+namespace ns { namespace ns1 { namespace ns2 { namespace ns3 { class Ns3Bar; } } } }
+namespace ns { namespace ns1 { namespace ns2 { namespace ns3 { class Ns3Baz; } } } }
+namespace ns { namespace ns1 { namespace ns2 { namespace ns3 { class Ns3Foo; } } } } // lines 12-12
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_inside_mixed_namespaces_with_existing_content':
+                               infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareInsideNestedNamespacesAndTopLevelForComplexNamespaces(self):
+    """Tests that nested namespaces still get new additions while putting hard to resolve forward declares at the top."""
+    infile = """\
+// Copyright 2010
+
+///+namespace ns {
+///+class NsBang;
+///+namespace ns1 {
+///+Ns1Bang;
+///+}  // namespace ns1
+///+}  // namespace ns
+///+
+namespace ns { namespace ns1 { namespace ns2 {
+class Ns2Bang;
+class Ns2Bar;  ///-
+///+class Ns2Baz;
+///+
+namespace ns3 {
+///+class Ns3Bang;
+class Ns3Baz;
+} // namespace ns3
+} // namespace ns2
+} // namespace ns1
+} // namespace ns
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+add_fwd_decl_inside_nested_namespaces_and_top_level_for_complex_namespaces should add these lines:
+namespace ns { class NsBang; }
+namespace ns { namespace ns1 { Ns1Bang; }
+namespace ns { namespace ns1 { namespace ns2 { class Ns2Baz; } } }
+namespace ns { namespace ns1 { namespace ns2 { namespace ns3 { class Ns3Bang; } } } }
+
+add_fwd_decl_inside_nested_namespaces_and_top_level_for_complex_namespaces should remove these lines:
+- namespace ns { namespace ns1 { namespace ns2 { class Ns2Bar; } } } // lines 5-5
+
+The full include-list for add_fwd_decl_inside_nested_namespaces_and_top_level_for_complex_namespaces:
+namespace ns { class NsBang; }
+namespace ns { namespace ns1 { Ns1Bang; }
+namespace ns { namespace ns1 { namespace ns2 { class Ns2Bang; } } } // lines 4-4
+namespace ns { namespace ns1 { namespace ns2 { class Ns2Baz; } } }
+namespace ns { namespace ns1 { namespace ns2 { namespace ns3 { class Ns3Bang; } } } }
+namespace ns { namespace ns1 { namespace ns2 { namespace ns3 { class Ns3Baz; } } } } // lines 7-7
+---
+"""
+    self.RegisterFileContents({'add_fwd_decl_inside_nested_namespaces_and_top_level_for_complex_namespaces':
                                infile})
     self.ProcessAndTest(iwyu_output)
 
@@ -2454,12 +2718,12 @@ The full include-list for simple_with_comment.h:
 #define IDENTIFYING_HEADER_GUARD_LINES_H_
 
 namespace foo {
-// The namespace decl should come before this #define, not after.
-// It will, unless we wrongly say the #define is a header-guard define.
 ///+namespace bar {
 ///+class Baz;
 ///+}  // namespace bar
 ///+
+// The namespace decl should come before this #define, not after.
+// It will, unless we wrongly say the #define is a header-guard define.
 #define NOT_A_HEADER_GUARD_LINE 1
 }
 
@@ -3630,7 +3894,7 @@ template <typename T> class Baz;
 
 
 namespace ns {
-
+///-
 ///+class NsFoo;
 ///+namespace ns2 { namespace ns3 { class NsBaz; } }
 ///+namespace ns2 { namespace ns3 { template <typename T> class NsBang; } }
