@@ -2348,10 +2348,6 @@ def main(argv):
                           ' same project.  If not specified, project #includes'
                           ' will be sorted with other non-system #includes.'))
 
-  parser.add_option('--invoking_command_line', default=None,
-                    help=('Internal flag used by iwyu.py, It should be the'
-                          ' command line used to invoke iwyu.py'))
-
   parser.add_option('-m', '--keep_iwyu_namespace_format', action='store_true',
                     default=False,
                     help=('Keep forward-declaration namespaces in IWYU format, '

@@ -39,8 +39,6 @@ class FakeFlags(object):
     self.only_re = None
     self.safe_headers = False
     self.separate_project_includes = None
-    self.invoking_command_line = 'iwyu.py my_targets'
-    self.find_affected_targets = True
     self.keep_iwyu_namespace_format = False
     self.reorder = True
 
