@@ -2314,7 +2314,6 @@ def main(argv):
   parser.add_option('--nosafe_headers', action='store_false',
                     dest='safe_headers')
 
-  # --reorder and --no-reorder share the same destination variable.
   parser.add_option('--reorder', action='store_true', default=False,
                     help=('Re-order lines relative to other similar lines '
                           '(e.g. headers relative to other headers)'))
