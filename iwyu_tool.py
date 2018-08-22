@@ -91,6 +91,28 @@ FORMATTERS = {
 }
 
 
+def split_command(cmdstr):
+    """ Split a command string into a list, respecting shell quoting. """
+    def strip_quotes(arg):
+        if arg.startswith('"') and arg.endswith('"'):
+            return arg[1:-1]
+        return arg
+
+    # shlex.split with posix=False is known to not work perfectly for Windows
+    # command-lines, but it seems good enough in the general case for
+    # compilation databases.
+    windows = sys.platform.startswith('win')
+    cmd = shlex.split(cmdstr, posix=not windows)
+
+    # However, it does retain quotes around arguments which causes
+    # double-quoting and escaping when Windows subprocess translates the
+    # argument list back into a command-line string. Strip them.
+    if windows:
+        cmd = [strip_quotes(a) for a in cmd]
+
+    return cmd
+
+
 def find_include_what_you_use():
     """ Find IWYU executable and return its full pathname. """
 
@@ -130,7 +152,7 @@ class Invocation(object):
             command = entry['arguments']
         elif 'command' in entry:
             # command is a command-line in string form, split to list.
-            command = shlex.split(entry['command'])
+            command = split_command(entry['command'])
         else:
             raise ValueError('Invalid compilation database entry: %s' % entry)
 
