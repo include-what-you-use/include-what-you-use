@@ -91,6 +91,37 @@ FORMATTERS = {
 }
 
 
+if sys.platform.startswith('win'):
+    # Case-insensitive match on Windows
+    def normcase(s):
+        return s.lower()
+else:
+    def normcase(s):
+        return s
+
+
+def is_subpath_of(path, parent):
+    """ Return True if path is equal to or fully contained within parent.
+
+    Assumes both paths are canonicalized with os.path.realpath.
+    """
+    parent = normcase(parent)
+    path = normcase(path)
+
+    if path == parent:
+        return True
+
+    if not path.startswith(parent):
+        return False
+
+    # Now we know parent is a prefix of path, but they only share lineage if the
+    # difference between them starts with a path separator, e.g. /a/b/c/file
+    # is not a parent of /a/b/c/file.cpp, but /a/b/c and /a/b/c/ are.
+    parent = parent.rstrip(os.path.sep)
+    suffix = path[len(parent):]
+    return suffix.startswith(os.path.sep)
+
+
 def split_command(cmdstr):
     """ Split a command string into a list, respecting shell quoting. """
     def strip_quotes(arg):
@@ -210,12 +241,12 @@ def slice_compilation_db(compilation_db, selection):
             print('WARNING: \'%s\' not found on disk.' % path)
             continue
 
-        matches = [e for e in compilation_db if e['file'].startswith(path)]
-        if not matches:
+        found = [e for e in compilation_db if is_subpath_of(e['file'], path)]
+        if not found:
             print('WARNING: \'%s\' not found in compilation database.' % path)
             continue
 
-        new_db.extend(matches)
+        new_db.extend(found)
 
     return new_db
 
