@@ -135,6 +135,65 @@ def is_msvc_driver(compile_command):
     return False
 
 
+def win_split(cmdline):
+    """ Minimal implementation of shlex.split for Windows following
+    https://msdn.microsoft.com/en-us/library/windows/desktop/17w5ykft.aspx.
+    """
+    def split_iter(cmdline):
+        in_quotes = False
+        backslashes = 0
+        arg = ''
+        for c in cmdline:
+            if c == '\\':
+                # MSDN: Backslashes are interpreted literally, unless they
+                # immediately precede a double quotation mark.
+                # Buffer them until we know what comes next.
+                backslashes += 1
+            elif c == '"':
+                # Quotes can either be an escaped quote or the start of a quoted
+                # string. Paraphrasing MSDN:
+                # Before quotes, place one backslash in the arg for every pair
+                # of leading backslashes. If the number of backslashes is odd,
+                # retain the double quotation mark, otherwise interpret it as a
+                # string delimiter and switch state.
+                arg += '\\' * (backslashes // 2)
+                if backslashes % 2 == 1:
+                    arg += c
+                else:
+                    in_quotes = not in_quotes
+                backslashes = 0
+            elif c in (' ', '\t') and not in_quotes:
+                # MSDN: Arguments are delimited by white space, which is either
+                # a space or a tab [but only outside of a string].
+                arg += '\\' * backslashes
+                yield arg
+                arg = ''
+                backslashes = 0
+            else:
+                # Flush buffered backslashes and append.
+                arg += '\\' * backslashes
+                arg += c
+                backslashes = 0
+
+        if arg:
+            arg += '\\' * backslashes
+            yield arg
+
+    return list(split_iter(cmdline))
+
+
+def split_command(cmdstr):
+    """ Split a command string into a list, respecting shell quoting. """
+    if sys.platform.startswith('win'):
+        # shlex.split does not work for Windows command-lines, so special-case
+        # to our own implementation.
+        cmd = win_split(cmdstr)
+    else:
+        cmd = shlex.split(cmdstr)
+
+    return cmd
+
+
 def find_include_what_you_use():
     """ Find IWYU executable and return its full pathname. """
     if 'IWYU_BINARY' in os.environ:
@@ -213,7 +272,7 @@ class Invocation(object):
             command = entry['arguments']
         elif 'command' in entry:
             # command is a command-line in string form, split to list.
-            command = shlex.split(entry['command'])
+            command = split_command(entry['command'])
         else:
             raise ValueError('Invalid compilation database entry: %s' % entry)
 

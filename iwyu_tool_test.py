@@ -147,6 +147,60 @@ class IWYUToolTests(unittest.TestCase):
         self.assertTrue(iwyu_tool.is_msvc_driver("Clang-CL.exe"))
         self.assertTrue(iwyu_tool.is_msvc_driver("Clang-CL"))
 
+    def test_split_command(self):
+        self.assertEqual(['a', 'b', 'c d'],
+                         iwyu_tool.split_command('a b "c d"'))
+
+        self.assertEqual(['c', '-Idir/with spaces', 'x'],
+                         iwyu_tool.split_command('c -I"dir/with spaces" x'))
+
+
+class WinSplitTests(unittest.TestCase):
+    """ iwyu_tool.win_split is subtle and complex enough that it warrants a
+    dedicated test suite.
+    """
+
+    def assert_win_split(self, cmdstr, expected):
+        self.assertEqual(expected,
+                         iwyu_tool.win_split(cmdstr))
+
+    def test_msdn_examples(self):
+        """ Examples from below, detailing how to parse command-lines:
+        https://msdn.microsoft.com/en-us/library/windows/desktop/17w5ykft.aspx
+        """
+        self.assert_win_split('"abc" d e',
+                              ['abc', 'd', 'e'])
+        self.assert_win_split(r'a\\b d"e f"g h',
+                              [r'a\\b', 'de fg', 'h'])
+        self.assert_win_split(r'a\\\"b c d',
+                              [r'a\"b', 'c', 'd'])
+        self.assert_win_split(r'a\\\\"b c" d e',
+                              [r'a\\b c', 'd', 'e'])
+
+        # Extra: odd number of backslashes before non-quote (should be
+        # interpreted literally).
+        self.assert_win_split(r'a\\\b d"e f"g h',
+                              [r'a\\\b', 'de fg', 'h'])
+
+    def test_trailing_backslash(self):
+        """ Check that args with trailing backslash are retained. """
+        self.assert_win_split('a\\ b c', ['a\\', 'b', 'c'])
+        self.assert_win_split('a\\\\ b c', ['a\\\\', 'b', 'c'])
+
+        # Last arg has dedicated handling, make sure backslashes are flushed.
+        self.assert_win_split('b c a\\', ['b', 'c', 'a\\'])
+
+    def test_cmake_examples(self):
+        """ Example of observed CMake outputs that are hard to split. """
+        self.assert_win_split(r'-I"..\tools\clang\tools\iwyu\inc ludes" -A',
+                              [r'-I..\tools\clang\tools\iwyu\inc ludes', '-A'])
+
+        self.assert_win_split(r'clang -Idir\\using\\os\\seps f.cc',
+                              ['clang', r'-Idir\\using\\os\\seps', 'f.cc'])
+
+        self.assert_win_split(r'clang -Idir\using\os\seps f.cc',
+                              ['clang', r'-Idir\using\os\seps', 'f.cc'])
+
 
 if __name__ == '__main__':
     unittest.main()
