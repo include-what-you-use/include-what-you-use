@@ -120,6 +120,21 @@ def is_subpath_of(path, parent):
     return suffix.startswith(os.path.sep)
 
 
+def is_msvc_driver(compile_command):
+    """ Return True if compile_command matches an MSVC CL-style driver. """
+    compile_command = normcase(compile_command)
+
+    if compile_command.endswith('cl.exe'):
+        # Native MSVC compiler or clang-cl.exe
+        return True
+
+    if compile_command.endswith('clang-cl'):
+        # Cross clang-cl on non-Windows
+        return True
+
+    return False
+
+
 def find_include_what_you_use():
     """ Find IWYU executable and return its full pathname. """
     if 'IWYU_BINARY' in os.environ:
@@ -204,8 +219,8 @@ class Invocation(object):
 
         # Rewrite the compile command for IWYU
         compile_command, compile_args = command[0], command[1:]
-        if compile_command.endswith('cl.exe'):
-            # If the compiler name is cl.exe, let IWYU be cl-compatible.
+        if is_msvc_driver(compile_command):
+            # If the compiler is cl-compatible, let IWYU be cl-compatible.
             extra_args = ['--driver-mode=cl'] + extra_args
 
         command = [IWYU_EXECUTABLE] + extra_args + compile_args

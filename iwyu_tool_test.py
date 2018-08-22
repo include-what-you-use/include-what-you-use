@@ -122,6 +122,31 @@ class IWYUToolTests(unittest.TestCase):
         # Case-insensitive match.
         self.assertTrue(iwyu_tool.is_subpath_of('C:\\Bee\\C.c', 'c:\\BEE'))
 
+    def test_from_cl_compile_command(self):
+        invocation = iwyu_tool.Invocation.from_compile_command(
+            {
+                'directory': '/a',
+                'command': 'cl.exe -I. x.cc',
+                'file': 'x.cc'
+            }, [])
+        # Adds --driver-mode=cl if argv[0] is MSVC driver.
+        self.assertEqual(
+            invocation.command,
+            [iwyu_tool.IWYU_EXECUTABLE, '--driver-mode=cl', '-I.', 'x.cc'])
+
+    def test_is_msvc_driver(self):
+        self.assertTrue(iwyu_tool.is_msvc_driver("cl.exe"))
+        self.assertTrue(iwyu_tool.is_msvc_driver("clang-cl.exe"))
+        self.assertTrue(iwyu_tool.is_msvc_driver("clang-cl"))
+        self.assertFalse(iwyu_tool.is_msvc_driver("something"))
+
+    @unittest.skipIf(not sys.platform.startswith('win'), 'Windows only')
+    def test_is_msvc_driver_windows(self):
+        # Case-insensitive match on Windows
+        self.assertTrue(iwyu_tool.is_msvc_driver("CL.EXE"))
+        self.assertTrue(iwyu_tool.is_msvc_driver("Clang-CL.exe"))
+        self.assertTrue(iwyu_tool.is_msvc_driver("Clang-CL"))
+
 
 if __name__ == '__main__':
     unittest.main()
