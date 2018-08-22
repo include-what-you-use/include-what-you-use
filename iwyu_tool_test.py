@@ -8,7 +8,7 @@
 # License. See LICENSE.TXT for details.
 #
 ##===----------------------------------------------------------------------===##
-
+import sys
 import time
 import random
 import unittest
@@ -101,6 +101,26 @@ class IWYUToolTests(unittest.TestCase):
         self._execute(invocations, jobs=1)
         self.assertEqual(['BAR%d' % n for n in range(100)],
                          self.stdout_stub.getvalue().splitlines())
+
+    @unittest.skipIf(sys.platform.startswith('win'), "POSIX only")
+    def test_is_subpath_of_posix(self):
+        self.assertTrue(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/b'))
+        self.assertTrue(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/b/'))
+        self.assertTrue(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/b/c.c'))
+        self.assertFalse(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/b/c'))
+        self.assertFalse(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/x'))
+        # No case-insensitive match.
+        self.assertFalse(iwyu_tool.is_subpath_of('/A/Bee/C.c', '/a/BEE'))
+
+    @unittest.skipIf(not sys.platform.startswith('win'), "Windows only")
+    def test_is_subpath_of_windows(self):
+        self.assertTrue(iwyu_tool.is_subpath_of('\\a\\b\\c.c', '\\a\\b'))
+        self.assertTrue(iwyu_tool.is_subpath_of('\\a\\b\\c.c', '\\a\\b\\'))
+        self.assertTrue(iwyu_tool.is_subpath_of('\\a\\b\\c.c', '\\a\\b\\c.c'))
+        self.assertFalse(iwyu_tool.is_subpath_of('\\a\\b\\c.c', '\\a\\b\\c'))
+        self.assertFalse(iwyu_tool.is_subpath_of('\\a\\b\\c.c', '\\a\\x'))
+        # Case-insensitive match.
+        self.assertTrue(iwyu_tool.is_subpath_of('C:\\Bee\\C.c', 'c:\\BEE'))
 
 
 if __name__ == '__main__':
