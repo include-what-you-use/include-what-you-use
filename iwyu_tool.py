@@ -122,8 +122,8 @@ class Invocation(object):
     def __str__(self):
         return ' '.join(self.command)
 
-    @staticmethod
-    def from_compile_command(entry, extra_args):
+    @classmethod
+    def from_compile_command(cls, entry, extra_args):
         """ Parse a JSON compilation database entry into new Invocation. """
         if 'arguments' in entry:
             # arguments is a command-line in list form.
@@ -141,19 +141,19 @@ class Invocation(object):
             extra_args = ['--driver-mode=cl'] + extra_args
 
         command = [IWYU_EXECUTABLE] + extra_args + compile_args
-        return Invocation(command, entry['directory'])
+        return cls(command, entry['directory'])
 
+    def run(self, verbose):
+        """ Run invocation and collect output. """
+        if verbose:
+            print('# %s' % self)
 
-def run_iwyu(invocation, verbose):
-    """ Run invocation and collect output. """
-    if verbose:
-        print('# %s' % invocation)
-
-    process = subprocess.Popen(invocation.command,
-                               cwd=invocation.cwd,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.STDOUT)
-    return process.communicate()[0].decode('utf-8')
+        process = subprocess.Popen(
+            self.command,
+            cwd=self.cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        return process.communicate()[0].decode('utf-8')
 
 
 def parse_compilation_db(compilation_db_path):
@@ -198,7 +198,40 @@ def slice_compilation_db(compilation_db, selection):
     return new_db
 
 
-def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args):
+def _run_iwyu(invocation, verbose):
+    """ Start the process described by invocation.
+
+    Only necessary because multiprocessing can't pickle instance methods.
+    """
+    return invocation.run(verbose)
+
+
+def execute(invocations, verbose, formatter, jobs):
+    """ Execute all invocations with at most `jobs` in parallel. """
+    try:
+        pool = multiprocessing.Pool(jobs)
+        # No actual results in `results`, it's only used for exception handling.
+        # Details here: https://stackoverflow.com/a/28660669.
+        results = []
+
+        for invocation in invocations:
+            results.append(
+                pool.apply_async(
+                    _run_iwyu, (invocation, verbose),
+                    callback=lambda x: print(formatter(x))))
+        pool.close()
+        pool.join()
+        for r in results:
+            r.get()
+    except OSError as why:
+        print('ERROR: Failed to launch include-what-you-use: %s' % why)
+        return 1
+
+    return 0
+
+
+def main(compilation_db_path, source_files, verbose, formatter, jobs,
+         iwyu_args):
     """ Entry point. """
 
     try:
@@ -210,28 +243,11 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args)
     compilation_db = slice_compilation_db(compilation_db, source_files)
 
     # Transform compilation db entries into a list of IWYU invocations.
-    invocations = [Invocation.from_compile_command(e, iwyu_args)
-                   for e in compilation_db]
+    invocations = [
+        Invocation.from_compile_command(e, iwyu_args) for e in compilation_db
+    ]
 
-    try:
-        pool = multiprocessing.Pool(jobs)
-        # No actual results in `results`, it's only used for exception handling.
-        # Details here: https://stackoverflow.com/a/28660669.
-        results = []
-        for invocation in invocations:
-            results.append(pool.apply_async(run_iwyu,
-                                            (invocation, verbose),
-                                            callback=lambda x: print(formatter(x))))
-        pool.close()
-        pool.join()
-        for r in results:
-            r.get()
-    except OSError as why:
-        print('ERROR: Failed to launch include-what-you-use: %s' % why)
-        return 1
-
-    return 0
-
+    return execute(invocations, verbose, formatter, jobs)
 
 def _bootstrap():
     """ Parse arguments and dispatch to main(). """
