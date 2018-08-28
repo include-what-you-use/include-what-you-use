@@ -23,7 +23,6 @@ try:
 except ImportError:
     from io import StringIO
 
-import os
 import re
 import sys
 # I use unittest instead of googletest to ease opensourcing.
