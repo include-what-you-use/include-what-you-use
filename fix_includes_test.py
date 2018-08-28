@@ -3978,7 +3978,7 @@ namespace ns { namespace ns4 { class Baz; } }
     self.RegisterFileContents({'add_fwd_declare_keep_iwyu_namespace': infile})
     self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
 
-  def testbasedir(self):
+  def testBasedir(self):
     self.flags.basedir = "/project/build/"
     iwyu_output = """\
 ../src/source.cc should add these lines:
@@ -3998,6 +3998,40 @@ int main() { return 0; }
 """
     self.RegisterFileContents({'/project/src/source.cc': infile})
     self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
+
+  def testBasedirWithFilesToProcess(self):
+    self.flags.basedir = "/project/build/"
+    iwyu_output = """\
+../src/changed.cc should add these lines:
+
+../src/changed.cc should remove these lines:
+- #include <unused.h> // lines 1-1
+
+The full include-list for ../src/changed.cc:
+#include <used.h>
+---
+"""
+    changed_file = """\
+#include <unused.h> ///-
+#include <used.h>
+
+int main() { return 0; }
+"""
+    unchanged_file = """\
+#include <unused.h>
+#include <used.h>
+
+int main() { return 0; }
+"""
+
+    iwyu_output += iwyu_output.replace('changed.cc', 'unchanged.cc')
+
+    self.RegisterFileContents({
+        '/project/src/changed.cc': changed_file,
+        '/project/src/unchanged.cc': unchanged_file
+        })
+    self.ProcessAndTest(iwyu_output, cmdline_files=['/project/src/changed.cc'],
+                        unedited_files=['/project/src/unchanged.cc'])
 
   def testMain(self):
     """Make sure calling main doesn't crash.  Inspired by a syntax-error bug."""
