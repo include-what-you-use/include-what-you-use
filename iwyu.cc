@@ -3975,6 +3975,7 @@ class IwyuAction : public ASTFrontendAction {
     compiler.getPreprocessor().addPPCallbacks(
         std::unique_ptr<PPCallbacks>(preprocessor_consumer));
     compiler.getPreprocessor().addCommentHandler(preprocessor_consumer);
+    compiler.getPreprocessor().enableIncrementalProcessing();
 
     auto* const visitor_state
         = new VisitorState(&compiler, *preprocessor_consumer);
