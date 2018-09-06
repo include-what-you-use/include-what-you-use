@@ -9,6 +9,8 @@
 #
 ##===----------------------------------------------------------------------===##
 
+import time
+import random
 import unittest
 import iwyu_tool
 
@@ -31,8 +33,7 @@ class MockInvocation(iwyu_tool.Invocation):
 
     def run_iwyu(self, verbose):
         if self._will_block > 0:
-            from time import sleep
-            sleep(self._will_block)
+            time.sleep(self._will_block)
         return self._will_return
 
 
@@ -78,8 +79,7 @@ class IWYUToolTests(IWYUToolTestBase):
         invocations = [MockInvocation([], '') for _ in range(100)]
         for n, invocation in enumerate(invocations):
             invocation.will_return('BAR%d' % n)
-            from random import random
-            invocation.will_block(random() / 100)
+            invocation.will_block(random.random() / 100)
         self.assertEqual(self._process_invocations(invocations, jobs=100), 0)
         self.assertSetEqual(
             set('BAR%d' % n for n in range(100)),
@@ -89,8 +89,7 @@ class IWYUToolTests(IWYUToolTestBase):
         invocations = [MockInvocation([], '') for _ in range(100)]
         for n, invocation in enumerate(invocations):
             invocation.will_return('BAR%d' % n)
-            from random import random
-            invocation.will_block(random() / 100)
+            invocation.will_block(random.random() / 100)
         self.assertEqual(self._process_invocations(invocations, jobs=1), 0)
         self.assertEqual(['BAR%d' % n for n in range(100)],
                          self.stdout_stub.getvalue()[:-1].splitlines())
