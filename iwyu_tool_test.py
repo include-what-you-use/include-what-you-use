@@ -18,15 +18,15 @@ except ImportError:
     from io import StringIO
 
 class MockInvocation(iwyu_tool.Invocation):
-    def __init__(self, *args):
-        iwyu_tool.Invocation.__init__(self, *args)
+    def __init__(self, command=None, cwd=''):
+        iwyu_tool.Invocation.__init__(self, command or [], cwd)
         self._will_return = ''
         self._will_block = 0
 
-    def willBlock(self, seconds):
+    def will_block(self, seconds):
         self._will_block = seconds
 
-    def willReturn(self, content):
+    def will_return(self, content):
         self._will_return = content
 
     def run_iwyu(self, verbose):
@@ -42,33 +42,27 @@ class IWYUToolTestBase(unittest.TestCase):
         self.stdout_stub = StringIO()
         iwyu_tool.sys.stdout = self.stdout_stub
 
-    def _getInvocation(self, entry):
-        return MockInvocation.from_compile_command(entry, self.iwyu_args)
-
-    def _processInvocations(self,
-                            invocations,
-                            verbose=False,
-                            formatter=None,
-                            jobs=1):
+    def _process_invocations(self,
+                             invocations,
+                             verbose=False,
+                             formatter=None,
+                             jobs=1):
         if formatter is None:
             formatter = iwyu_tool.DEFAULT_FORMAT
         formatter = iwyu_tool.FORMATTERS.get(formatter, formatter)
 
-        return iwyu_tool.process_invocations(invocations, verbose, formatter,
-                                             jobs)
+        return iwyu_tool.execute(invocations, verbose, formatter, jobs)
 
 
 class IWYUToolTests(IWYUToolTestBase):
     def test_from_compile_command(self):
         self.iwyu_args = ['-foo']
-        invocation = self._getInvocation({
-            'directory':
-            '/home/user/llvm/build',
-            'command':
-            '/usr/bin/clang++ -Iinclude file.cc',
-            'file':
-            'file.cc'
-        })
+        invocation = iwyu_tool.Invocation.from_compile_command(
+            {
+                'directory': '/home/user/llvm/build',
+                'command': '/usr/bin/clang++ -Iinclude file.cc',
+                'file': 'file.cc'
+            }, self.iwyu_args)
         self.assertEqual(
             invocation.command,
             [iwyu_tool.IWYU_EXECUTABLE, '-foo', '-Iinclude', 'file.cc'])
@@ -76,30 +70,30 @@ class IWYUToolTests(IWYUToolTestBase):
 
     def test_invocation(self):
         invocation = MockInvocation([], '')
-        invocation.willReturn('BAR')
-        self.assertFalse(self._processInvocations([invocation]))
+        invocation.will_return('BAR')
+        self.assertEqual(self._process_invocations([invocation]), 0)
         self.assertEqual(self.stdout_stub.getvalue(), 'BAR\n')
 
     def test_order_asynchronous(self):
         invocations = [MockInvocation([], '') for _ in range(100)]
         for n, invocation in enumerate(invocations):
-            invocation.willReturn('BAR%d' % n)
+            invocation.will_return('BAR%d' % n)
             from random import random
-            invocation.willBlock(random() / 100)
-        self.assertFalse(self._processInvocations(invocations, jobs=100))
+            invocation.will_block(random() / 100)
+        self.assertEqual(self._process_invocations(invocations, jobs=100), 0)
         self.assertSetEqual(
             set('BAR%d' % n for n in range(100)),
-            set(self.stdout_stub.getvalue()[:-1].split('\n')))
+            set(self.stdout_stub.getvalue()[:-1].splitlines()))
 
     def test_order_synchronous(self):
         invocations = [MockInvocation([], '') for _ in range(100)]
         for n, invocation in enumerate(invocations):
-            invocation.willReturn('BAR%d' % n)
+            invocation.will_return('BAR%d' % n)
             from random import random
-            invocation.willBlock(random() / 100)
-        self.assertFalse(self._processInvocations(invocations, jobs=1))
+            invocation.will_block(random() / 100)
+        self.assertEqual(self._process_invocations(invocations, jobs=1), 0)
         self.assertEqual(['BAR%d' % n for n in range(100)],
-                         self.stdout_stub.getvalue()[:-1].split('\n'))
+                         self.stdout_stub.getvalue()[:-1].splitlines())
 
 
 if __name__ == '__main__':

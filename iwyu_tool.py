@@ -143,7 +143,7 @@ class Invocation(object):
         command = [IWYU_EXECUTABLE] + extra_args + compile_args
         return cls(command, entry['directory'])
 
-    def run_iwyu(self, verbose):
+    def run(self, verbose):
         """ Run invocation and collect output. """
         if verbose:
             print('# %s' % self)
@@ -198,9 +198,9 @@ def slice_compilation_db(compilation_db, selection):
     return new_db
 
 def _run_iwyu(invocation, verbose):
-    return invocation.run_iwyu(verbose)
+    return invocation.run(verbose)
 
-def process_invocations(invocations, verbose, formatter, jobs):
+def execute(invocations, verbose, formatter, jobs):
     try:
         pool = multiprocessing.Pool(jobs)
         # No actual results in `results`, it's only used for exception handling.
@@ -240,7 +240,7 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
         Invocation.from_compile_command(e, iwyu_args) for e in compilation_db
     ]
 
-    return process_invocations(invocations, verbose, formatter, jobs)
+    return execute(invocations, verbose, formatter, jobs)
 
 def _bootstrap():
     """ Parse arguments and dispatch to main(). """
