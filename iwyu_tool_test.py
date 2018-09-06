@@ -48,8 +48,7 @@ class IWYUToolTestBase(unittest.TestCase):
                              verbose=False,
                              formatter=None,
                              jobs=1):
-        if formatter is None:
-            formatter = iwyu_tool.DEFAULT_FORMAT
+        formatter = formatter or iwyu_tool.DEFAULT_FORMAT
         formatter = iwyu_tool.FORMATTERS.get(formatter, formatter)
 
         return iwyu_tool.execute(invocations, verbose, formatter, jobs)
