@@ -594,6 +594,10 @@ bool IsDefaultNewOrDelete(const clang::FunctionDecl* decl,
 // Returns true if this decl is part of a friend decl.
 bool IsFriendDecl(const clang::Decl* decl);
 
+// Returns true if this decl is an explicit template instantiation declaration
+// or definition.
+bool IsExplicitInstantiation(const clang::Decl* decl);
+
 // Returns true if a named decl looks like a forward-declaration of a
 // class (rather than a definition, a friend declaration, or an 'in
 // place' declaration like 'struct Foo' in 'void MyFunc(struct Foo*);'
