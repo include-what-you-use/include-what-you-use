@@ -82,14 +82,14 @@ SourceLocation GetLocation(const clang::Decl* decl) {
 // return the member loc.  Otherwise, we have to guess if the entire
 // member-expression (all of 'b.m') is in a macro or not.  We look at
 // getMemberLoc(), the start of the member ('m') , and
-// getBase()->getLocEnd(), the end of the base ('b').  If they're both
+// getBase()->getEndLoc(), the end of the base ('b').  If they're both
 // on the same line of the same file, then the . or -> must be there
 // too, and return that as the location.  Otherwise, we assume that
 // one or the other is in a macro, but the . or -> is not, and use the
 // instantiation (not spelling) location of the macro.
 static SourceLocation GetMemberExprLocation(const MemberExpr* member_expr) {
   const SourceLocation member_start = member_expr->getMemberLoc();
-  const SourceLocation base_end = member_expr->getBase()->getLocEnd();
+  const SourceLocation base_end = member_expr->getBase()->getEndLoc();
 
   if (member_expr->isImplicitAccess() || base_end.isInvalid())
     return member_start;
@@ -148,7 +148,7 @@ SourceLocation GetLocation(const clang::Stmt* stmt) {
     stmt = unary_op->getSubExpr()->IgnoreParenImpCasts();
   }
 
-  return stmt->getLocStart();
+  return stmt->getBeginLoc();
 }
 
 SourceLocation GetLocation(const clang::TypeLoc* typeloc) {
