@@ -3731,11 +3731,20 @@ class IwyuAstConsumer
   //    template <class T> struct Foo;
   //    template<> struct Foo<int> { ... };
   // we don't want iwyu to recommend removing the 'forward declare' of Foo.
+  //
+  // Additionally, this type of decl is also used to represent explicit template
+  // instantiations, in which case we want the full type, not only a forward
+  // declaration.
   bool VisitClassTemplateSpecializationDecl(
       clang::ClassTemplateSpecializationDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
     ClassTemplateDecl* specialized_decl = decl->getSpecializedTemplate();
-    ReportDeclForwardDeclareUse(CurrentLoc(), specialized_decl);
+
+    if (IsExplicitInstantiation(decl))
+      ReportDeclUse(CurrentLoc(), specialized_decl);
+    else
+      ReportDeclForwardDeclareUse(CurrentLoc(), specialized_decl);
+
     return Base::VisitClassTemplateSpecializationDecl(decl);
   }
 
