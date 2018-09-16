@@ -2,7 +2,13 @@ cmake_minimum_required(VERSION 3.4.3)
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(STATUS "IWYU: out-of-tree configuration")
+  set(IWYU_IN_TREE OFF)
+else()
+  message(STATUS "IWYU: in-tree configuration")
+  set(IWYU_IN_TREE ON)
+endif()
 
+if (NOT IWYU_IN_TREE)
   cmake_policy(SET CMP0048 NEW)
   project(include-what-you-use)
 
@@ -12,8 +18,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
   include(AddLLVM)
   include(HandleLLVMOptions)
-else()
-  message(STATUS "IWYU: in-tree configuration")
 endif()
 
 message(STATUS "IWYU: configuring for LLVM ${LLVM_VERSION}...")
