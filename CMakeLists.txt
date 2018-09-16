@@ -54,6 +54,13 @@ add_llvm_executable(include-what-you-use
   iwyu_verrs.cc
   )
 
+if (IWYU_IN_TREE)
+  # Add a dependency on clang-headers to ensure the builtin headers are
+  # available when IWYU is executed from the build dir.
+  # The clang-headers target is only available in in-tree builds.
+  add_dependencies(include-what-you-use clang-headers)
+endif()
+
 if (MINGW)
   # Work around 'too many sections' error with MINGW/GCC
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
