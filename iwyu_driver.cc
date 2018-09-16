@@ -156,7 +156,6 @@ void ExpandArgv(int argc, const char **argv,
 }  // anonymous namespace
 
 CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
-  void* main_addr = (void*) (intptr_t) GetExecutablePath;
   std::string path = GetExecutablePath(argv[0]);
   IntrusiveRefCntPtr<DiagnosticOptions> diagnostic_options =
     new DiagnosticOptions;
@@ -244,12 +243,6 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   compiler->createDiagnostics();
   if (!compiler->hasDiagnostics())
     return nullptr;
-
-  // Infer the builtin include path if unspecified.
-  if (compiler->getHeaderSearchOpts().UseBuiltinIncludes &&
-      compiler->getHeaderSearchOpts().ResourceDir.empty())
-    compiler->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(argv[0], main_addr);
 
   return compiler;
 }
