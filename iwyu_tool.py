@@ -115,15 +115,25 @@ def find_include_what_you_use():
 IWYU_EXECUTABLE = find_include_what_you_use()
 
 class Process(object):
+    """ Manages an IWYU process in flight """
     def __init__(self, proc, outfile):
         self.proc = proc
         self.outfile = outfile
         self.output = None
 
     def poll(self):
+        """
+        Returns None if the IWYU process is still running,
+        the return code otherwise
+        """
         return self.proc.poll()
 
     def get_output(self):
+        """
+        Return the standard output of the IWYU process.
+
+        This call blocks until the process is complete, then returns the output.
+        """
         if not self.output:
             self.proc.wait()
             self.outfile.seek(0)
@@ -133,10 +143,11 @@ class Process(object):
         return self.output
 
     @classmethod
-    def start(cls, invocation, verbose):
-        if verbose:
-            print('# %s' % invocation)
-
+    def start(cls, invocation):
+        """
+        Start an IWYU process for the invocation, and return the Process
+        wrapper for it.
+        """
         outfile = tempfile.TemporaryFile(prefix='iwyu')
         process = subprocess.Popen(
             invocation.command,
@@ -176,12 +187,12 @@ class Invocation(object):
         return cls(command, entry['directory'])
 
 
-    def run(self, verbose):
+    def start(self, verbose):
         """ Run invocation and collect output. """
         if verbose:
             print('# %s' % self)
 
-        return Process.start(self, verbose)
+        return Process.start(self)
 
 
 def parse_compilation_db(compilation_db_path):
@@ -228,7 +239,7 @@ def slice_compilation_db(compilation_db, selection):
 def execute(invocations, verbose, formatter, jobs):
     if jobs == 1:
         for invocation in invocations:
-            print(formatter(invocation.run(verbose).get_output()))
+            print(formatter(invocation.start(verbose).get_output()))
         return
 
     pending = []
@@ -240,16 +251,16 @@ def execute(invocations, verbose, formatter, jobs):
             # handle iwyu output
             pending.remove(proc)
             print(formatter(proc.get_output()))
-            proc.close()
 
         n = jobs - len(pending)
-        pending.extend(e.run(verbose) for e in invocations[:n])
+        pending.extend(i.start(verbose) for i in invocations[:n])
         invocations = invocations[n:]
 
-        time.sleep(0) # yield cpu
+        time.sleep(0.0001) # yield cpu
 
 
-def main(compilation_db_path, source_files, verbose, formatter, jobs, iwyu_args):
+def main(compilation_db_path, source_files, verbose, formatter, jobs,
+         iwyu_args):
     """ Entry point. """
 
     try:

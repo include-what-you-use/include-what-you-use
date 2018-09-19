@@ -23,18 +23,16 @@ class MockProcess(object):
     def __init__(self, block, content):
         self.block = block
         self.content = content
+        self.complete_ts = time.time() + block
+
     def poll(self):
-        if self.block > 0:
-            from time import sleep
-            sleep(self.block)
+        if time.time() < self.complete_ts:
+            return None
         return 0
 
     def get_output(self):
         self.poll()
         return self.content
-
-    def close(self):
-        pass
 
 class MockInvocation(iwyu_tool.Invocation):
     def __init__(self, command=None, cwd=''):
@@ -48,7 +46,7 @@ class MockInvocation(iwyu_tool.Invocation):
     def will_return(self, content):
         self._will_return = content
 
-    def run(self, verbose):
+    def start(self, verbose):
         if self._will_block > 0:
             time.sleep(self._will_block)
         return MockProcess(self._will_block, self._will_return)
