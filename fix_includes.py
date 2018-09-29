@@ -2275,9 +2275,15 @@ def ProcessIWYUOutput(f, files_to_process, flags, cwd):
 
 
 def NormalizeFilePath(basedir, filename):
-    if basedir and not os.path.isabs(filename):
-        return os.path.normpath(os.path.join(basedir, filename))
-    return filename
+  """ Normalize filename to be comparable.
+
+  If basedir has a value and filename is not already absolute, make filename
+  absolute. Otherwise return filename as-is.
+  """
+  if basedir and not os.path.isabs(filename):
+    return os.path.normpath(os.path.join(basedir, filename))
+  return filename
+
 
 def SortIncludesInFiles(files_to_process, flags):
   """For each file in files_to_process, sort its #includes.
