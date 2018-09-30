@@ -22,7 +22,6 @@ except ImportError:
 
 class MockProcess(object):
     def __init__(self, block, content):
-        self.block = block
         self.content = content
         self.complete_ts = time.time() + block
 
@@ -32,7 +31,9 @@ class MockProcess(object):
         return 0
 
     def get_output(self):
-        self.poll()
+        remaining = self.complete_ts - time.time()
+        if remaining > 0:
+            time.sleep(remaining)
         return self.content
 
 
@@ -49,8 +50,6 @@ class MockInvocation(iwyu_tool.Invocation):
         self._will_return = content
 
     def start(self, verbose):
-        if self._will_block > 0:
-            time.sleep(self._will_block)
         return MockProcess(self._will_block, self._will_return)
 
 
