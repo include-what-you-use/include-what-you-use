@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-
-from __future__ import print_function
-
 """ Driver to consume a Clang compilation database and invoke IWYU.
 
 Example usage with CMake:
@@ -21,7 +18,7 @@ Example usage with CMake:
 
 See iwyu_tool.py -h for more details on command-line arguments.
 """
-
+from __future__ import print_function
 import os
 import re
 import sys
@@ -115,6 +112,7 @@ def find_include_what_you_use():
 
 IWYU_EXECUTABLE = find_include_what_you_use()
 
+
 class Process(object):
     """ Manages an IWYU process in flight """
     def __init__(self, proc, outfile):
@@ -182,7 +180,6 @@ class Invocation(object):
         command = [IWYU_EXECUTABLE] + extra_args + compile_args
         return cls(command, entry['directory'])
 
-
     def start(self, verbose):
         """ Run invocation and collect output. """
         if verbose:
@@ -232,6 +229,7 @@ def slice_compilation_db(compilation_db, selection):
 
     return new_db
 
+
 def execute(invocations, verbose, formatter, jobs):
     """ Launch processes described by invocations. """
     if jobs == 1:
@@ -248,9 +246,9 @@ def execute(invocations, verbose, formatter, jobs):
             print(formatter(proc.get_output()))
 
         # Schedule new processes if there's room.
-        n = jobs - len(pending)
-        pending.extend(i.start(verbose) for i in invocations[:n])
-        invocations = invocations[n:]
+        capacity = jobs - len(pending)
+        pending.extend(i.start(verbose) for i in invocations[:capacity])
+        invocations = invocations[capacity:]
 
         # Yield CPU.
         time.sleep(0.0001)
@@ -274,6 +272,7 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
     ]
 
     return execute(invocations, verbose, formatter, jobs)
+
 
 def _bootstrap():
     """ Parse arguments and dispatch to main(). """

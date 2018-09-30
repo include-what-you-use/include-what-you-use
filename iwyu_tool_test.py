@@ -19,6 +19,7 @@ try:
 except ImportError:
     from io import StringIO
 
+
 class MockProcess(object):
     def __init__(self, block, content):
         self.block = block
@@ -33,6 +34,7 @@ class MockProcess(object):
     def get_output(self):
         self.poll()
         return self.content
+
 
 class MockInvocation(iwyu_tool.Invocation):
     def __init__(self, command=None, cwd=''):
@@ -52,18 +54,16 @@ class MockInvocation(iwyu_tool.Invocation):
         return MockProcess(self._will_block, self._will_return)
 
 
-class IWYUToolTestBase(unittest.TestCase):
-    def setUp(self):
-        self.stdout_stub = StringIO()
-        iwyu_tool.sys.stdout = self.stdout_stub
-
+class IWYUToolTests(unittest.TestCase):
     def _execute(self, invocations, verbose=False, formatter=None, jobs=1):
         formatter = formatter or iwyu_tool.DEFAULT_FORMAT
         formatter = iwyu_tool.FORMATTERS.get(formatter, formatter)
         return iwyu_tool.execute(invocations, verbose, formatter, jobs)
 
+    def setUp(self):
+        self.stdout_stub = StringIO()
+        iwyu_tool.sys.stdout = self.stdout_stub
 
-class IWYUToolTests(IWYUToolTestBase):
     def test_from_compile_command(self):
         iwyu_args = ['-foo']
         invocation = iwyu_tool.Invocation.from_compile_command(
