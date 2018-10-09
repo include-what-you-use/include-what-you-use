@@ -2540,8 +2540,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   bool VisitTemplateSpecializationType(
       clang::TemplateSpecializationType* type) {
-    if (CanIgnoreCurrentASTNode())  return true;
-    if (CanIgnoreType(type))  return true;
+    if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
+      return true;
 
     const NamedDecl* decl = TypeToDeclAsWritten(type);
 
@@ -2857,13 +2857,8 @@ class InstantiatedTemplateVisitor
 
   string GetSymbolAnnotation() const override { return " in tpl"; }
 
-  // We only care about types that would have been dependent in the
-  // uninstantiated template: that is, SubstTemplateTypeParmType types
-  // or types derived from them.  We use nodes_to_ignore_ to select
-  // down to those.  Even amongst subst-type, we only want ones in the
-  // resugar-map: the rest we have chosen to ignore for some reason.
   bool CanIgnoreType(const Type* type) const override {
-    if (nodes_to_ignore_.Contains(type))
+    if (!IsTypeInteresting(type) || !IsKnownTemplateParam(type))
       return true;
 
     // If we're a default template argument, we should ignore the type
@@ -2871,7 +2866,7 @@ class InstantiatedTemplateVisitor
     // should not ignore it -- the caller is responsible for the type.
     // This captures cases like hash_set<Foo>, where the caller is
     // responsible for defining hash<Foo>.
-    // SomeInstantiatedTemplateIntendsToProvide handles the case we
+    // IsProvidedByTemplate handles the case we
     // have a templated class that #includes "foo.h" and has a
     // scoped_ptr<Foo>: we say the templated class provides Foo, even
     // though it's scoped_ptr.h that's actually trying to call
@@ -2879,14 +2874,24 @@ class InstantiatedTemplateVisitor
     // TODO(csilvers): this isn't ideal: ideally we'd want
     // 'TheInstantiatedTemplateForWhichTypeWasADefaultTemplateArgumentIntendsToProvide',
     // but clang doesn't store that information.
-    if (IsDefaultTemplateParameter(type))
-      return SomeInstantiatedTemplateIntendsToProvide(type);
+    return IsDefaultTemplateParameter(type) && IsProvidedByTemplate(type);
+  }
 
-    // If we're not in the resugar-map at all, we're not a type
-    // corresponding to the template being instantiated, so we
-    // can be ignored.
+
+  bool IsTypeInteresting(const Type* type) const {
+    // We only care about types that would have been dependent in the
+    // uninstantiated template: that is, SubstTemplateTypeParmType types
+    // or types derived from them. We use nodes_to_ignore_ to select down
+    // to those.
+    return !nodes_to_ignore_.Contains(type);
+  }
+
+  bool IsKnownTemplateParam(const Type* type) const {
+    // Among all subst-type params, we only want those in the resugar-map. If
+    // we're not in the resugar-map at all, we're not a type corresponding to
+    // the template being instantiated, so we can be ignored.
     type = RemoveSubstTemplateTypeParm(type);
-    return !ContainsKey(resugar_map_, type);
+    return ContainsKey(resugar_map_, type);
   }
 
   // We ignore function calls in nodes_to_ignore_, which were already
@@ -3005,8 +3010,9 @@ class InstantiatedTemplateVisitor
 
   bool TraverseSubstTemplateTypeParmTypeHelper(
       const clang::SubstTemplateTypeParmType* type) {
-    if (CanIgnoreCurrentASTNode())  return true;
-    if (CanIgnoreType(type))  return true;
+    if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
+      return true;
+
     const Type* actual_type = ResugarType(type);
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
     return TraverseType(QualType(actual_type, 0));
@@ -3034,8 +3040,8 @@ class InstantiatedTemplateVisitor
   // instantiate a template type, the instantiation has type
   // SubstTemplateTypeParmTypeLoc in the AST tree.
   bool VisitSubstTemplateTypeParmType(clang::SubstTemplateTypeParmType* type) {
-    if (CanIgnoreCurrentASTNode())  return true;
-    if (CanIgnoreType(type))  return true;
+    if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
+      return true;
 
     // Figure out how this type was actually written.  clang always
     // canonicalizes SubstTemplateTypeParmType, losing typedef info, etc.
@@ -3158,10 +3164,10 @@ class InstantiatedTemplateVisitor
     return SourceLocation();   // an invalid source-loc
   }
 
-  bool SomeInstantiatedTemplateIntendsToProvide(const NamedDecl* decl) const {
+  bool IsProvidedByTemplate(const NamedDecl* decl) const {
     return GetLocOfTemplateThatProvides(decl).isValid();
   }
-  bool SomeInstantiatedTemplateIntendsToProvide(const Type* type) const {
+  bool IsProvidedByTemplate(const Type* type) const {
     type = RemoveSubstTemplateTypeParm(type);
     type = RemovePointersAndReferences(type);  // get down to the decl
     if (const NamedDecl* decl = TypeToDeclAsWritten(type))
