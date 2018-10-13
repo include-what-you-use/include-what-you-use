@@ -22,6 +22,7 @@
 #include "llvm/ADT/ArrayRef.h"  // IWYU pragma: keep
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/FileSystem.h"
@@ -46,7 +47,6 @@ using clang::DiagnosticIDs;
 using clang::DiagnosticOptions;
 using clang::DiagnosticsEngine;
 using clang::TextDiagnosticPrinter;
-using clang::driver::ArgStringList;
 using clang::driver::Command;
 using clang::driver::Compilation;
 using clang::driver::Driver;
@@ -61,6 +61,7 @@ using llvm::StringRef;
 using llvm::cast;
 using llvm::errs;
 using llvm::isa;
+using llvm::opt::ArgStringList;
 using llvm::raw_svector_ostream;
 using llvm::sys::getDefaultTargetTriple;
 using std::set;
