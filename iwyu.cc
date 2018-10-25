@@ -109,6 +109,7 @@
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
+#include "iwyu_use_flags.h"
 // This is needed for
 // preprocessor_info().PublicHeaderIntendsToProvide().  Somehow IWYU
 // removes it mistakenly.
@@ -1632,12 +1633,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Checkers, that tell iwyu_output about uses of symbols.
   // We let, but don't require, subclasses to override these.
 
-  // The comment, if not nullptr, is extra text that is included along
-  // with the warning message that iwyu emits.
+  // The comment, if not nullptr, is extra text that is included along with
+  // the warning message that iwyu emits. The extra use flags is optional
+  // info that can be assigned to the use (see the UF_* constants)
   virtual void ReportDeclUse(SourceLocation used_loc,
                              const NamedDecl* used_decl,
-                             const char* comment = nullptr) {
-
+                             const char* comment = nullptr,
+                             UseFlags extra_use_flags = 0) {
     const NamedDecl* target_decl = used_decl;
 
     // Sometimes a shadow decl comes between us and the 'real' decl.
@@ -1649,12 +1651,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreDecl(target_decl))
       return;
 
+    const UseFlags use_flags =
+        ComputeUseFlags(current_ast_node()) | extra_use_flags;
+
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, target_decl, ComputeUseFlags(current_ast_node()),
-        comment);
+        used_loc, target_decl, use_flags, comment);
 
     // Sometimes using a decl drags in a few other uses as well:
 
@@ -1672,8 +1676,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         = GetUsingDeclarationOf(used_decl, 
               GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
-          used_loc, using_decl, ComputeUseFlags(current_ast_node()),
-          "(for using decl)");
+          used_loc, using_decl, use_flags, "(for using decl)");
     }
 
     // For typedefs, the user of the type is sometimes the one
@@ -2909,19 +2912,20 @@ class InstantiatedTemplateVisitor
   // (if templates call other templates, we have to find the right
   // template).
   void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl,
-                     const char* comment = nullptr) override {
+                     const char* comment = nullptr,
+                     UseFlags extra_use_flags = 0) override {
     const SourceLocation actual_used_loc = GetLocOfTemplateThatProvides(decl);
     if (actual_used_loc.isValid()) {
       // If a template is responsible for this decl, then we don't add
       // it to the cache; the cache is only for decls that the
       // original caller is responsible for.
-      Base::ReportDeclUse(actual_used_loc, decl, comment);
+      Base::ReportDeclUse(actual_used_loc, decl, comment, extra_use_flags);
     } else {
       // Let all the currently active types and decls know about this
       // report, so they can update their cache entries.
       for (CacheStoringScope* storer : cache_storers_)
         storer->NoteReportedDecl(decl);
-      Base::ReportDeclUse(caller_loc(), decl, comment);
+      Base::ReportDeclUse(caller_loc(), decl, comment, extra_use_flags);
     }
   }
 
