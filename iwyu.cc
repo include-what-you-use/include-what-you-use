@@ -217,6 +217,7 @@ using clang::ValueDecl;
 using clang::VarDecl;
 using llvm::cast;
 using llvm::dyn_cast;
+using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
 using std::make_pair;
@@ -2831,7 +2832,8 @@ class InstantiatedTemplateVisitor
 
     // As in TraverseExpandedTemplateFunctionHelper, we ignore all AST nodes
     // that will be reported when we traverse the uninstantiated type.
-    if (const NamedDecl* type_decl_as_written = TypeToDeclAsWritten(type)) {
+    if (const NamedDecl* type_decl_as_written =
+            GetDefinitionAsWritten(TypeToDeclAsWritten(type))) {
       AstFlattenerVisitor nodeset_getter(compiler());
       nodes_to_ignore_ = nodeset_getter.GetNodesBelow(
           const_cast<NamedDecl*>(type_decl_as_written));
@@ -3110,7 +3112,49 @@ class InstantiatedTemplateVisitor
     // We attribute all uses in an instantiated template to the
     // template's caller.
     ReportTypeUse(caller_loc(), actual_type);
+
+    // Also report all previous explicit instantiations (declarations and
+    // definitions) as uses of the caller's location.
+    ReportExplicitInstantiations(actual_type);
+
     return Base::VisitSubstTemplateTypeParmType(type);
+  }
+
+  bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    CHECK_(current_ast_node()->GetAs<TemplateSpecializationType>() == type)
+        << "The current node must be equal to the template spec. type";
+
+    // Report previous explicit instantiations here, only if the type is needed
+    // fully.
+    if (!CanForwardDeclareType(current_ast_node()))
+      ReportExplicitInstantiations(type);
+
+    return Base::VisitTemplateSpecializationType(type);
+  }
+
+  void ReportExplicitInstantiations(const Type* type) {
+    const auto* decl = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+        TypeToDeclAsWritten(type));
+
+    if (decl == nullptr)
+      return;
+
+    // Go through all previous redecls and filter out those that are not
+    // explicit template instantiations or already provided by the template.
+    for (const NamedDecl* redecl : decl->redecls()) {
+      if (!IsExplicitInstantiation(redecl) ||
+          !GlobalSourceManager()->isBeforeInTranslationUnit(
+              redecl->getLocation(), caller_loc()) ||
+          IsProvidedByTemplate(decl))
+        continue;
+
+      // Report the specific decl that points to the explicit instantiation
+      Base::ReportDeclUse(caller_loc(), redecl, "(for explicit instantiation)",
+                          UF_ExplicitInstantiation);
+    }
   }
 
   // If constructing an object, check the type we're constructing.
