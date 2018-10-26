@@ -2053,8 +2053,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_NonAtomicToAtomic:
       case clang::CK_ReinterpretMemberPointer:
       case clang::CK_BuiltinFnToFnPtr:
-      case clang::CK_ZeroToOCLEvent: // OpenCL event_t is a built-in type.
-      case clang::CK_ZeroToOCLQueue: // OpenCL queue_t is a built-in type.
+      case clang::CK_ZeroToOCLOpaqueType: // OpenCL opaque types are built-in.
       case clang::CK_IntToOCLSampler: // OpenCL sampler_t is a built-in type.
       case clang::CK_AddressSpaceConversion:  // Address spaces are associated
                                               // with pointers, so no need for
