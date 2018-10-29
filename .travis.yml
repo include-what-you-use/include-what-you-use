@@ -5,12 +5,12 @@ addons:
   apt:
     sources:
      - ubuntu-toolchain-r-test
-     - llvm-toolchain-trusty-7.0
+     - llvm-toolchain-trusty-7
     packages:
      - ninja-build
-     - llvm-7.0-dev
-     - libclang-7.0-dev
-     - clang-7.0
+     - llvm-7-dev
+     - libclang-7-dev
+     - clang-7
 
 before_install:
  # Install a supported cmake version (>= 3.4.3)
@@ -18,8 +18,8 @@ before_install:
  - sudo sh cmake.sh --skip-license --exclude-subdir --prefix=/usr/local
 
  # Absolute paths to LLVM's root and bin directory
- - ROOT_PATH=`llvm-config-7.0 --prefix`
- - BIN_PATH=`llvm-config-7.0 --bindir`
+ - ROOT_PATH=`llvm-config-7 --prefix`
+ - BIN_PATH=`llvm-config-7 --bindir`
 
 script:
 # Build IWYU
