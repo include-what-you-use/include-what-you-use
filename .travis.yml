@@ -5,24 +5,21 @@ addons:
   apt:
     sources:
      - ubuntu-toolchain-r-test
-     - llvm-toolchain-trusty
+     - llvm-toolchain-trusty-7.0
     packages:
      - ninja-build
-     - llvm-dev
-     - libclang-dev
-     - clang
+     - llvm-7.0-dev
+     - libclang-7.0-dev
+     - clang-7.0
 
 before_install:
  # Install a supported cmake version (>= 3.4.3)
  - wget -O cmake.sh https://cmake.org/files/v3.10/cmake-3.10.0-rc1-Linux-x86_64.sh 
  - sudo sh cmake.sh --skip-license --exclude-subdir --prefix=/usr/local
 
- # Extract the version number from the most-recently installed LLVM
- - VERSION=`ls -t /usr/lib/ | grep '^llvm-' | head -n 1 | sed -E 's/llvm-(.+)/\1/'`
-
  # Absolute paths to LLVM's root and bin directory
- - ROOT_PATH=`llvm-config-$VERSION --prefix`
- - BIN_PATH=`llvm-config-$VERSION --bindir`
+ - ROOT_PATH=`llvm-config-7.0 --prefix`
+ - BIN_PATH=`llvm-config-7.0 --bindir`
 
 script:
 # Build IWYU
