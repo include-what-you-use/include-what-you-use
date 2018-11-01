@@ -94,6 +94,8 @@ FORMATTERS = {
 
 def find_include_what_you_use():
     """ Find IWYU executable and return its full pathname. """
+    if 'IWYU_BINARY' in os.environ:
+        return os.environ.get('IWYU_BINARY')
 
     # TODO: Investigate using shutil.which when Python 2 has passed away.
     executable_name = 'include-what-you-use'
