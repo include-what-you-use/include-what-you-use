@@ -191,6 +191,7 @@ class OneIwyuTest(unittest.TestCase):
       'using_aliased_symbol_unused.cc': ['.'],
       'varargs_and_references.cc': ['.'],
       'virtual_tpl_method.cc': ['.'],
+      'template_use.cc': ['.'],
     }
     # Internally, we like it when the paths start with rootdir.
     self._iwyu_flags_map = dict((posixpath.join(self.rootdir, k), v)
