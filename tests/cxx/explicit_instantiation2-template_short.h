@@ -12,4 +12,6 @@
 
 extern template class Template<short>;
 
+extern template class ProvidedTemplate<short>;
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_EXPLICIT_INSTANTIATION2_TEMPLATE_SHORT_H_
