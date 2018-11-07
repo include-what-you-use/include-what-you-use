@@ -29,6 +29,8 @@
 // 6: Fwd-decl use in a template, provided as a default parameter.
 // 9: Implicit instantiation of Template<int>
 // 10: Specialization of Template<T>
+// 11: Explicit instantiation with a dependent instantiation declaration, but
+//     provided by the template helper itself.
 
 
 // IWYU: Template is...*explicit_instantiation-template.h
@@ -81,6 +83,8 @@ template <> class Template<char> {};
 
 TemplateAsDefaultFull<char> t10; // 10
 
+TemplateAsDefaultFullProvided<> t11; // 11
+
 /**** IWYU_SUMMARY
 
 tests/cxx/explicit_instantiation2.cc should add these lines:
@@ -93,7 +97,7 @@ tests/cxx/explicit_instantiation2.cc should remove these lines:
 
 The full include-list for tests/cxx/explicit_instantiation2.cc:
 #include "explicit_instantiation-template.h"  // for Template
-#include "explicit_instantiation2-template_helpers.h"  // for FullUseArg, FwdDeclUseArg, TemplateAsDefaultFull, TemplateAsDefaultFwd, TemplateTemplateArgShortFull, TemplateTemplateArgShortFwd
+#include "explicit_instantiation2-template_helpers.h"  // for FullUseArg, FwdDeclUseArg, TemplateAsDefaultFull, TemplateAsDefaultFullProvided, TemplateAsDefaultFwd, TemplateTemplateArgShortFull, TemplateTemplateArgShortFwd
 #include "explicit_instantiation2-template_short.h"  // for Template
 
 ***** IWYU_SUMMARY */

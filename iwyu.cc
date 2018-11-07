@@ -3207,7 +3207,7 @@ class InstantiatedTemplateVisitor
          ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
       if (preprocessor_info().PublicHeaderIntendsToProvide(
               GetFileEntry(ast_node->GetLocation()),
-              GetFileEntry(decl)))
+              GetFileEntry(decl->getLocation())))
         return ast_node->GetLocation();
     }
     return SourceLocation();   // an invalid source-loc
@@ -3219,8 +3219,10 @@ class InstantiatedTemplateVisitor
   bool IsProvidedByTemplate(const Type* type) const {
     type = RemoveSubstTemplateTypeParm(type);
     type = RemovePointersAndReferences(type);  // get down to the decl
-    if (const NamedDecl* decl = TypeToDeclAsWritten(type))
+    if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
+      decl = GetDefinitionAsWritten(decl);
       return GetLocOfTemplateThatProvides(decl).isValid();
+    }
     return true;   // we always provide non-decl types like int, etc.
   }
 

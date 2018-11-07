@@ -37,4 +37,12 @@ class TemplateTemplateArgShortFwd {
   T<short>* t;
 };
 
+template <class T>
+class ProvidedTemplate {};
+
+template <class U = short, class T = ProvidedTemplate<U>>
+class TemplateAsDefaultFullProvided {
+  T t;
+};
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_EXPLICIT_INSTANTIATION2_TEMPLATE_HELPERS_H_
