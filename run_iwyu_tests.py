@@ -104,6 +104,7 @@ class OneIwyuTest(unittest.TestCase):
       'macro_defined_by_includer.cc': [
           '-std=c++11', '-DCOMMAND_LINE_TYPE=double',
           self.Include('macro_defined_by_includer-prefix.h')],
+      'macro_location.cc': ['-Wno-sizeof-pointer-div'],
       'ms_inline_asm.cc': ['-fms-extensions'],
       'prefix_header_attribution.cc': [self.Include('prefix_header_attribution-d1.h')],
       'prefix_header_includes_add.cc': prefix_headers,
