@@ -108,7 +108,7 @@ def find_include_what_you_use():
     for dirpath in search_path:
         full = os.path.join(dirpath, executable_name)
         if os.path.isfile(full):
-            return full
+            return os.path.realpath(full)
 
     return None
 
