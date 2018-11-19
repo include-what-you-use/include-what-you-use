@@ -169,7 +169,7 @@ class Invocation(object):
             command = entry['arguments']
         elif 'command' in entry:
             # command is a command-line in string form, split to list.
-            command = shlex.split(entry['command'])
+            command = shlex.split(entry['command'], posix=not sys.platform.startswith('win'))
         else:
             raise ValueError('Invalid compilation database entry: %s' % entry)
 

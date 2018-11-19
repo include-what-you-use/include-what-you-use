@@ -9,6 +9,8 @@
 #
 ##===----------------------------------------------------------------------===##
 
+import os
+import sys
 import time
 import random
 import unittest
@@ -101,7 +103,22 @@ class IWYUToolTests(IWYUToolTestBase):
         self._execute(invocations, jobs=1)
         self.assertEqual(['BAR%d' % n for n in range(100)],
                          self.stdout_stub.getvalue().splitlines())
-
+    def test_from_compile_command_splitting_adequately_the_command(self):
+        iwyu_args = []
+        invocation = iwyu_tool.Invocation.from_compile_command(
+            {
+                'directory': '/home/user/llvm/build',
+                'command': '/usr/bin/clang++ -I{} file.cc'.format(os.path.join('include', 'a', 'directory', 'using', 'os', 'separators')),
+                'file': 'file.cc'
+            }, iwyu_args)
+        if sys.platform.startswith('win'):
+            self.assertEqual(
+                invocation.command,
+                [iwyu_tool.IWYU_EXECUTABLE, '-Iinclude\\a\\directory\\using\\os\\separators', 'file.cc'])
+        else:
+            self.assertEqual(
+                invocation.command,
+                [iwyu_tool.IWYU_EXECUTABLE, '-Iinclude/a/directory/using/os/separators', 'file.cc'])            
 
 if __name__ == '__main__':
     unittest.main()
