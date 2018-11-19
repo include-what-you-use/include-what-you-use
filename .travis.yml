@@ -32,4 +32,4 @@ script:
  - cd ..
  - python run_iwyu_tests.py -- build/bin/include-what-you-use
  - python fix_includes_test.py
-
+ - python iwyu_tool_test.py
