@@ -4209,7 +4209,7 @@ class FileInfoTest(unittest.TestCase):
 
   def testEncodingUTF8BOM(self):
     buf = b'\xef\xbb\xbfSomeASCIIButWithTheBOM'
-    self.assertEqual('utf-8', fix_includes.FileInfo.guess_encoding(buf))
+    self.assertEqual('utf-8-sig', fix_includes.FileInfo.guess_encoding(buf))
 
   def testEncodingUTF8NoBOM(self):
     # This is a recurring test input in Swedish, translates to "shrimp sandwich"
