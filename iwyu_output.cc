@@ -754,8 +754,10 @@ set<string> CalculateMinimalIncludes(
     // this is a file that the use-file is re-exporting symbols for,
     // and we should keep the #include as-is.
     const string use_file = ConvertToQuotedInclude(GetFilePath(use.use_loc()));
-    if (use.PublicHeadersContain(use_file)) {
-      use.set_suggested_header(ConvertToQuotedInclude(use.decl_filepath()));
+    const string decl_file = ConvertToQuotedInclude(use.decl_filepath());
+    if (use.PublicHeadersContain(use_file) &&
+        ContainsKey(direct_includes, decl_file)) {
+      use.set_suggested_header(decl_file);
       desired_headers.insert(use.suggested_header());
       LogIncludeMapping("private header", use);
     } else if (use.public_headers().size() == 1) {

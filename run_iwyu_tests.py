@@ -137,6 +137,7 @@ class OneIwyuTest(unittest.TestCase):
       'double_include.cc': ['.'],
       'elaborated_struct.c': ['.'],
       'elaborated_type.cc': ['.'],
+      'export_nesting.cc': ['.'],
       'external_including_internal.cc': ['.'],
       'forward_declare_in_macro.cc': ['.'],
       'fullinfo_for_templates.cc': ['.'],
