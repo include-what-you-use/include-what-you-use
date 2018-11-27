@@ -595,13 +595,18 @@ def _WriteFile(filename, fileinfo, file_lines):
     print("Error writing '%s': %s" % (filename, why))
 
 
-def PrintFileDiff(old_file_contents, new_file_contents):
+def PrintFileDiff(old_file_contents, new_file_contents, filename, flags):
+  file_rel_to = flags.patch_relpath
+  if file_rel_to is not None:
+    filename = os.path.relpath(filename, file_rel_to)
   """Print a unified diff between files, specified as lists of lines."""
-  diff = difflib.unified_diff(old_file_contents, new_file_contents)
-  # skip the '--- <filename>/+++ <filename>' lines at the start
+  diff = difflib.unified_diff(old_file_contents, new_file_contents,
+    fromfile="a/{}".format(filename), tofile="b/{}".format(filename))
   try:
-    next(diff)
-    next(diff)
+    if file_rel_to is None:
+      # skip the '--- <filename>/+++ <filename>' lines at the start
+      next(diff)
+      next(diff)
     print('\n'.join(l.rstrip() for l in diff))
   except StopIteration:
     pass
@@ -2192,7 +2197,7 @@ def FixManyFiles(iwyu_records, flags):
         continue
 
       if flags.dry_run:
-        PrintFileDiff(old_lines, fixed_lines)
+        PrintFileDiff(old_lines, fixed_lines, iwyu_record.filename, flags)
       else:
         _WriteFile(iwyu_record.filename, fileinfo, fixed_lines)
 
@@ -2350,6 +2355,11 @@ def main(argv):
                           ' else min(the number of files that would be'
                           ' modified, 100)'))
 
+  parser.add_option('--patch_relpath', default=None,
+                    help=('Provide a relative path to generate a diff'
+                          ' that can be applied as a patch. It implies'
+                          ' --dry_run'))
+
   parser.add_option('--ignore_re', default=None,
                     help=('fix_includes.py will skip editing any file whose'
                           ' name matches this regular expression.'))
@@ -2387,6 +2397,9 @@ def main(argv):
     files_to_modify = set(files_to_modify)
   else:
     files_to_modify = None
+
+  if flags.patch_relpath:
+    flags.dry_run = True
 
   if (flags.separate_project_includes and
       not flags.separate_project_includes.startswith('<') and  # 'special' vals
