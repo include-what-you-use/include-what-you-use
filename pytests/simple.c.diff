@@ -1,0 +1,15 @@
+--- simple.c.input
++++ simple.c
+@@ -1,8 +1,10 @@
+// Copyright 2010
+
+-#include <notused.h>  ///-
++#include <stdio.h>
++
+///+#include <stdio.h>
+#include "used.h"
++#include "used2.h"
+///+#include "used2.h"
+
+int main() { return 0; }
+

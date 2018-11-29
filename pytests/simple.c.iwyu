@@ -1,0 +1,12 @@
+simple.c should add these lines:
+#include <stdio.h>
+#include "used2.h"
+
+simple.c should remove these lines:
+- #include <notused.h>  // lines 3-3
+
+The full include-list for simple.c:
+#include <stdio.h>
+#include "used.h"
+#include "used2.h"
+---
