@@ -2033,15 +2033,71 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // On the other hand, if foo.h used to have it but is removing it,
   // we *do* need to add it.
   set<string> associated_desired_includes = AssociatedDesiredIncludes();
-
-  CalculateIwyuViolations(&symbol_uses_);
-  EmitWarningMessages(symbol_uses_);
+  auto SU = symbol_uses_;
+  CalculateIwyuViolations(&SU);
   internal::CalculateDesiredIncludesAndForwardDeclares(
-      symbol_uses_, associated_desired_includes, kept_includes_,  &lines_);
+      SU, associated_desired_includes, kept_includes_, &lines_);
+
+  //
+  // If a #include file is kept, then all of it's symbol uses are kept.
+  // All of the included file symbols may not be in the current file.
+  // So for each desired include file add it's symbols to the
+  // current file's and recalculate the needed includes.
+  // Because each iteration may add more symbols, stop when the
+  // desired list of includes or the use list does not grow.
+  size_t old_desired, desired, old_uses;
+  desired = 0;
+  for (OneIncludeOrForwardDeclareLine &line : lines_)
+    if (line.IsIncludeLine() && line.is_desired())
+      desired++;
+
+  do {
+    old_uses = SU.size();
+    old_desired = desired;
+    for (OneIncludeOrForwardDeclareLine &line : lines_) {
+      if (line.IsIncludeLine() && line.is_desired()) {
+        auto FI = line.included_file();
+        auto IFI = preprocessor_info_->FileInfoFor(FI);
+        auto DSU = IFI->symbol_uses_;
+        for (auto d : DSU) {
+          auto d_symbol_name = d.symbol_name();
+          if (d_symbol_name.size()) {
+            bool found = false;
+            for (auto s : SU) {
+              auto s_symbol_name = s.symbol_name();
+              if (s_symbol_name.size()) {
+                if (s_symbol_name == d_symbol_name) {
+                  found = true;
+                  break;
+                }
+              }
+            }
+            if (!found)
+              SU.push_back(d);
+          }
+        }
+      }
+    }
+    // Nothing added, bail early
+    if (old_uses == SU.size())
+      break;
+
+    CalculateIwyuViolations(&SU);
+    internal::CalculateDesiredIncludesAndForwardDeclares(
+        SU, associated_desired_includes, kept_includes_, &lines_);
+
+    desired = 0;
+    for (OneIncludeOrForwardDeclareLine &line : lines_)
+      if (line.IsIncludeLine() && line.is_desired())
+        desired++;
+
+  } while (old_desired != desired);
+
+  EmitWarningMessages(SU);
 
   // Remove desired inclusions that have been inhibited by pragma
   // "no_include".
-  for (OneIncludeOrForwardDeclareLine& line : lines_) {
+  for (OneIncludeOrForwardDeclareLine &line : lines_) {
     if (line.IsIncludeLine() &&
         preprocessor_info_->IncludeIsInhibited(file_, line.quoted_include())) {
       line.clear_desired();

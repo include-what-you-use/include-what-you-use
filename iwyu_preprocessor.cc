@@ -789,23 +789,33 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
   if (!dfn_location.isValid() || GetFilePath(dfn_location) == "<built-in>")
     return;
   const FileEntry* used_in = GetFileEntry(usage_location);
-  if (ShouldReportIWYUViolationsFor(used_in)) {
-    // ignore symbols used outside foo.{h,cc}
+  //
+  // Can not ignore macro not used in command_flag->check_also
+  // because of possible header interdependency
+  // ex/
+  // b.h:
+  //   #define B 1
+  // a.h:
+  //   int b = B;
+  //   int a() { return 0; }
+  // main.c:
+  //   #include b.h
+  //   #include a.h
+  //   int main() { return a(); }
 
-    // TODO(csilvers): this isn't really a symbol use -- it may be ok
-    // that the symbol isn't defined.  For instance:
-    //    foo.h: #define FOO
-    //    bar.h: #ifdef FOO ... #else ... #endif
-    //    baz.cc: #include "foo.h"
-    //            #include "bar.h"
-    //    bang.cc: #include "bar.h"
-    // We don't want to say that bar.h 'uses' FOO, and thus needs to
-    // #include foo.h -- adding that #include could break bang.cc.
-    // I think the solution is to have a 'soft' use -- don't remove it
-    // if it's there, but don't add it if it's not.  Or something.
-    GetFromFileInfoMap(used_in)->ReportMacroUse(usage_location, dfn_location,
-                                                name);
-  }
+  // TODO(csilvers): this isn't really a symbol use -- it may be ok
+  // that the symbol isn't defined.  For instance:
+  //    foo.h: #define FOO
+  //    bar.h: #ifdef FOO ... #else ... #endif
+  //    baz.cc: #include "foo.h"
+  //            #include "bar.h"
+  //    bang.cc: #include "bar.h"
+  // We don't want to say that bar.h 'uses' FOO, and thus needs to
+  // #include foo.h -- adding that #include could break bang.cc.
+  // I think the solution is to have a 'soft' use -- don't remove it
+  // if it's there, but don't add it if it's not.  Or something.
+  GetFromFileInfoMap(used_in)->ReportMacroUse(usage_location, dfn_location,
+					      name);
   const FileEntry* defined_in = GetFileEntry(dfn_location);
   GetFromFileInfoMap(defined_in)->ReportDefinedMacroUse(used_in);
 }
