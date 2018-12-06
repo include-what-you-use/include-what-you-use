@@ -61,7 +61,8 @@ class OneUse {
   OneUse(const string& symbol_name,
          const clang::FileEntry* dfn_file,
          const string& dfn_filepath,
-         clang::SourceLocation use_loc);
+         clang::SourceLocation use_loc,
+	 UseFlags use_flags = UF_None);
 
   const string& symbol_name() const { return symbol_name_; }
   const string& short_symbol_name() const { return short_symbol_name_; }
@@ -73,6 +74,7 @@ class OneUse {
   bool is_full_use() const { return use_kind_ == kFullUse; }
   bool in_cxx_method_body() const { return (use_flags_ & UF_InCxxMethodBody); }
   bool is_function_being_defined() const { return (use_flags_ & UF_FunctionDfn); }
+  bool is_macro() const { return (use_flags_ & UF_Macro); }
   const string& comment() const { return comment_; }
   bool ignore_use() const { return ignore_use_; }
   bool is_iwyu_violation() const { return is_iwyu_violation_; }

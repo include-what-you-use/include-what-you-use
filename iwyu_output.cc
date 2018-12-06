@@ -255,7 +255,8 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
 
 // This constructor always creates a full use.
 OneUse::OneUse(const string& symbol_name, const FileEntry* dfn_file,
-               const string& dfn_filepath, SourceLocation use_loc)
+               const string& dfn_filepath, SourceLocation use_loc,
+	       UseFlags use_flags)
     : symbol_name_(symbol_name),
       short_symbol_name_(symbol_name),
       decl_(nullptr),
@@ -263,7 +264,7 @@ OneUse::OneUse(const string& symbol_name, const FileEntry* dfn_file,
       decl_filepath_(dfn_filepath),
       use_loc_(use_loc),
       use_kind_(kFullUse),
-      use_flags_(UF_None),
+      use_flags_(use_flags),
       ignore_use_(false),
       is_iwyu_violation_(false) {
   // Sometimes dfn_filepath is actually a fully quoted include.  In
@@ -601,7 +602,7 @@ void IwyuFileInfo::ReportMacroUse(clang::SourceLocation use_loc,
                                   clang::SourceLocation dfn_loc,
                                   const string& symbol) {
   symbol_uses_.push_back(OneUse(symbol, GetFileEntry(dfn_loc),
-                                GetFilePath(dfn_loc), use_loc));
+                                GetFilePath(dfn_loc), use_loc, UF_Macro));
   LogSymbolUse("Marked full-info use of macro", symbol_uses_.back());
 }
 
