@@ -212,6 +212,7 @@ using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryExprOrTypeTraitExpr;
 using clang::UsingDecl;
+using clang::UsingDirectiveDecl;
 using clang::UsingShadowDecl;
 using clang::ValueDecl;
 using clang::VarDecl;
@@ -3797,6 +3798,20 @@ class IwyuAstConsumer
       ReportDeclForwardDeclareUse(CurrentLoc(), specialized_decl);
 
     return Base::VisitClassTemplateSpecializationDecl(decl);
+  }
+
+  // Track use of namespace in using directive decl
+  // a.h:
+  //   namespace a { ... };
+  //
+  // b.cpp:
+  //   include "a.h"
+  //   using namespace a;
+  //   ...
+  bool VisitUsingDirectiveDecl(clang::UsingDirectiveDecl *decl) {
+    if (CanIgnoreCurrentASTNode())  return true;
+    ReportDeclUse(CurrentLoc(), decl->getNominatedNamespaceAsWritten());
+    return Base::VisitUsingDirectiveDecl(decl);
   }
 
   // If you say 'typedef Foo Bar', then clients can use Bar however
