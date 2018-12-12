@@ -90,6 +90,7 @@ target_link_libraries(include-what-you-use
   clangSema
   clangFrontend
   clangDriver
+  clangSerialization
   )
 
 # Platform dependencies.
