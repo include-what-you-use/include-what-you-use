@@ -170,6 +170,26 @@ class OneIncludeOrForwardDeclareLine {
             this->end_linenum_ == that.end_linenum_);
   }
 
+  bool operator<(const OneIncludeOrForwardDeclareLine &RHS) const {
+    if (IsIncludeLine() && RHS.IsIncludeLine()) {
+      return *included_file_ < *RHS.included_file_;
+    }
+    return false;
+  }
+  bool operator>(const OneIncludeOrForwardDeclareLine &RHS) const {
+    if (IsIncludeLine() && RHS.IsIncludeLine()) {
+      return *RHS.included_file_ < *included_file_;
+    }
+    return false;
+  }
+  bool operator==(const OneIncludeOrForwardDeclareLine &RHS) const {
+    if (IsIncludeLine() && RHS.IsIncludeLine()) {
+      return !((*RHS.included_file_ < *included_file_) ||
+              (*included_file_ < *RHS.included_file_));
+    }
+    return false;
+  }
+
  private:
   string line_;                     // '#include XXX' or 'class YYY;'
   int start_linenum_;

@@ -1793,51 +1793,6 @@ OutputLine PrintableIncludeOrForwardDeclareLine(
     GetSymbolsSortedByFrequency(line.symbol_counts()));
 }
 
-enum class LineSortOrdinal {
-  PrecompiledHeader,
-  AssociatedHeader,
-  AssociatedInlineDefinitions,
-  QuotedInclude,
-  CHeader,
-  CppHeader,
-  OtherHeader,
-  ForwardDeclaration
-};
-
-using LineSortKey = pair<LineSortOrdinal, string>;
-
-LineSortOrdinal GetLineSortOrdinal(const OneIncludeOrForwardDeclareLine& line,
-                                   const set<string>& associated_quoted_includes,
-                                   const IwyuFileInfo* file_info) {
-  if (!line.IsIncludeLine())
-    return LineSortOrdinal::ForwardDeclaration;
-  if (file_info && file_info->is_pch_in_code())
-    return LineSortOrdinal::PrecompiledHeader;
-
-  const std::string quoted_include = line.quoted_include();
-  if (ContainsKey(associated_quoted_includes, quoted_include)) {
-    if (EndsWith(quoted_include, "-inl.h\""))
-      return LineSortOrdinal::AssociatedInlineDefinitions;
-    return LineSortOrdinal::AssociatedHeader;
-  }
-
-  if (GlobalFlags().quoted_includes_first && EndsWith(quoted_include, "\""))
-    return LineSortOrdinal::QuotedInclude;
-  if (EndsWith(quoted_include, ".h>"))
-    return LineSortOrdinal::CHeader;
-  if (EndsWith(quoted_include, ">"))
-    return LineSortOrdinal::CppHeader;
-  return LineSortOrdinal::OtherHeader;
-}
-
-// The sort key of an include/forward-declare line is a (LineSortOrdinal, string)
-// pair.  The string is always the line itself.
-LineSortKey GetSortKey(const OneIncludeOrForwardDeclareLine& line,
-                       const set<string>& associated_quoted_includes,
-                       const IwyuFileInfo* file_info) {
-  return LineSortKey(GetLineSortOrdinal(line, associated_quoted_includes, file_info), line.line());
-}
-
 // filename is "this" filename: the file being emitted.
 // associated_filepaths are the quoted-include form of associated_headers_.
 size_t PrintableDiffs(const string& filename,
@@ -1852,77 +1807,87 @@ size_t PrintableDiffs(const string& filename,
 
   const set<string>& aqi = associated_quoted_includes;  // short alias
 
-  // Sort all the output-lines: system headers before user headers
-  // before forward-declares, etc.  The easiest way to do this is to
-  // just put them all in multimap whose key is a sort-order (multimap
-  // because some headers might be listed twice in the source file.)
-  multimap<LineSortKey, const OneIncludeOrForwardDeclareLine*> sorted_lines;
-  for (const OneIncludeOrForwardDeclareLine& line : lines) {
-    const IwyuFileInfo* file_info = nullptr;
-    if (line.IsIncludeLine())
-      file_info = preprocessor_info->FileInfoFor(line.included_file());
-
-    sorted_lines.insert(make_pair(GetSortKey(line, aqi, file_info), &line));
-  }
-
-  // First, check if there are no adds or deletes.  If so, we print a
-  // shorter summary line.
-  bool no_adds_or_deletes = true;
-  for (const auto& key_line : sorted_lines) {
-    const OneIncludeOrForwardDeclareLine* line = key_line.second;
-    if ((line->is_desired() && !line->is_present()) || // add
-        (line->is_present() && !line->is_desired())) { // delete
-      no_adds_or_deletes = false;
-      break;
+  vector<OneIncludeOrForwardDeclareLine> includes, not_includes, fwd_decls, not_fwd_decls;
+  size_t num_edits = 0;
+  for (const OneIncludeOrForwardDeclareLine &line: lines) {
+    if (line.is_desired()) {
+      if (line.IsIncludeLine())
+	includes.push_back(line);
+      else
+	fwd_decls.push_back(line);
+      if (!line.is_present())
+	num_edits++;
+    } else {
+      if (line.IsIncludeLine())
+	not_includes.push_back(line);
+      else
+	not_fwd_decls.push_back(line);
+      if (line.is_present())
+	num_edits++;
     }
   }
-  if (no_adds_or_deletes) {
+  if (num_edits == 0) {
     output = "\n(" + filename + " has correct #includes/fwd-decls)\n";
     return 0;
   }
-
-  size_t num_edits = 0;
+  // sort by uid and remove duplicates
+  auto sort_by_uid = [](OneIncludeOrForwardDeclareLine a, OneIncludeOrForwardDeclareLine b) -> bool {
+    return a.included_file()->getUID() < b.included_file()->getUID();
+  };
+  std::sort(includes.begin(), includes.end(), sort_by_uid);
+  includes.erase(std::unique(includes.begin(), includes.end()), includes.end());
+  std::sort(not_includes.begin(), not_includes.end(), sort_by_uid);
+  not_includes.erase(std::unique(not_includes.begin(), not_includes.end()), not_includes.end());
+  // sort by line and remove duplicates
+  auto sort_by_string = [](OneIncludeOrForwardDeclareLine a, OneIncludeOrForwardDeclareLine b) -> bool {
+    return a.line() < b.line();
+  };
+  std::sort(fwd_decls.begin(), fwd_decls.end(), sort_by_string);
+  fwd_decls.erase(std::unique(fwd_decls.begin(), fwd_decls.end()), fwd_decls.end());
 
   // First, new desired includes and forward-declares.
   if (ShouldPrint(1)) {
     output_lines.push_back(
       OutputLine("\n" + filename + " should add these lines:"));
-    for (const auto& key_line : sorted_lines) {
-      const OneIncludeOrForwardDeclareLine* line = key_line.second;
-      if (line->is_desired() && !line->is_present()) {
-        output_lines.push_back(
-          PrintableIncludeOrForwardDeclareLine(*line, aqi));
-        ++num_edits;
-      }
-    }
+    for (auto include : includes)
+      if (!include.is_present())
+	output_lines.push_back
+	  (PrintableIncludeOrForwardDeclareLine(include, aqi));
+    for (auto fwd_decl : fwd_decls)
+      if (!fwd_decl.is_present())
+	output_lines.push_back
+	  (PrintableIncludeOrForwardDeclareLine(fwd_decl, aqi));
   }
 
   // Second, includes and forward-declares that should be removed.
   if (ShouldPrint(1)) {
     output_lines.push_back(
         OutputLine("\n" + filename + " should remove these lines:"));
-    for (const auto& key_line : sorted_lines) {
-      const OneIncludeOrForwardDeclareLine* line = key_line.second;
-      if (line->is_present() && !line->is_desired()) {
-        output_lines.push_back(
-            PrintableIncludeOrForwardDeclareLine(*line, aqi));
-        output_lines.back().add_prefix("- ");
-
-        ++num_edits;
+    for (auto not_include : not_includes)
+      if (not_include.is_present()) {
+	output_lines.push_back
+	  (PrintableIncludeOrForwardDeclareLine(not_include, aqi));
+	output_lines.back().add_prefix("- ");
       }
-    }
+    for (auto not_fwd_decl : not_fwd_decls)
+      if (not_fwd_decl.is_present()) {
+	output_lines.push_back
+	  (PrintableIncludeOrForwardDeclareLine(not_fwd_decl, aqi));
+	output_lines.back().add_prefix("- ");
+      }
   }
 
   // Finally, print the final, complete include-and-forward-declare list.
   if (ShouldPrint(0)) {
     output_lines.push_back(
       OutputLine("\nThe full include-list for " + filename + ":"));
-    for (const auto& key_line : sorted_lines) {
-      const OneIncludeOrForwardDeclareLine* line = key_line.second;
-      if (line->is_desired()) {
-        output_lines.push_back(
-          PrintableIncludeOrForwardDeclareLine(*line, aqi));
-      }
+    for (const auto include : includes) {
+      output_lines.push_back(
+          PrintableIncludeOrForwardDeclareLine(include, aqi));
+    }
+    for (const auto fwd_decl : fwd_decls) {
+      output_lines.push_back(
+          PrintableIncludeOrForwardDeclareLine(fwd_decl, aqi));
     }
   }
 
