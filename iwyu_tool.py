@@ -165,9 +165,11 @@ def win_split(cmdline):
             elif c in (' ', '\t') and not in_quotes:
                 # MSDN: Arguments are delimited by white space, which is either
                 # a space or a tab [but only outside of a string].
+                # Flush backslashes and return arg bufferd so far, unless empty.
                 arg += '\\' * backslashes
-                yield arg
-                arg = ''
+                if arg:
+                    yield arg
+                    arg = ''
                 backslashes = 0
             else:
                 # Flush buffered backslashes and append.
