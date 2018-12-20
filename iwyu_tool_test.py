@@ -200,6 +200,14 @@ class WinSplitTests(unittest.TestCase):
         self.assert_win_split(r'clang -Idir\using\os\seps f.cc',
                               ['clang', r'-Idir\using\os\seps', 'f.cc'])
 
+    def test_consecutive_spaces(self):
+        """ Consecutive spaces outside of quotes should be folded. """
+        self.assert_win_split('clang  -I.      -A',
+                              ['clang', '-I.', '-A'])
+
+        self.assert_win_split('clang  -I. \t     -A',
+                              ['clang', '-I.', '-A'])
+
 
 if __name__ == '__main__':
     unittest.main()
