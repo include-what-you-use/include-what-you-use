@@ -72,8 +72,10 @@ Instructions for building Clang are available at <https://clang.llvm.org/get_sta
 If you're building IWYU out-of-tree or installing pre-built binaries, you need to make sure it can find Clang built-in headers (`stdarg.h` and friends.)
 
 Clang's default policy is to look in `path/to/clang-executable/../lib/clang/<clang ver>/include`. So if Clang 3.5.0 is installed in `/usr/bin`, it will search for built-ins in `/usr/lib/clang/3.5.0/include`.
+(Note: on some distributions, it may be /usr/lib64/...)
 
 Clang tools have the same policy by default, so in order for IWYU to analyze any non-trivial code, it needs to find Clang's built-ins in `path/to/iwyu/../lib/clang/3.5.0/include` where `3.5.0` is a stand-in for the version of Clang your IWYU was built against.
+(Note: on some distributions, it may be `path/to/iwyu/../lib64/clang/3.5.0/include` )
 
 So for IWYU to function correctly, you need to copy in the Clang headers at a good location before running.
 
