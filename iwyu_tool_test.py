@@ -14,8 +14,10 @@ import random
 import unittest
 import iwyu_tool
 
-import mock
-
+try:
+    from unittest.mock import patch, MagicMock
+except ImportError:
+    from mock import patch, MagicMock
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -213,50 +215,50 @@ class WinSplitTests(unittest.TestCase):
 class BootstrapTests(unittest.TestCase):
     def setUp(self):
         self.main = iwyu_tool.main
-        iwyu_tool.main =  mock.MagicMock()
+        iwyu_tool.main =  MagicMock()
 
     def tearDown(self):
         iwyu_tool.main = self.main
 
-    @mock.patch('sys.exit')
+    @patch('sys.exit')
     def test_argument_parser_sets_argument_correctly(self, sys_exit):
         """ Check that arguments are verbatim injected to iwyu. """
         sys_exit.return_value = 0
-        with mock.patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1"]):
+        with patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1"]):
             iwyu_tool._bootstrap()
         self.assertIn(["arg1"], iwyu_tool.main.call_args[0])
 
-    @mock.patch('sys.exit')
+    @patch('sys.exit')
     def test_argument_parser_does_include_xiwyu_flag(self, sys_exit):
         """ Check that -Xiwyu and --iwyu_opt arguments are passed to the iwyu call. """
         sys_exit.return_value = 0
-        with mock.patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"]):
+        with patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"]):
             iwyu_tool._bootstrap()
         self.assertIn(["arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"], iwyu_tool.main.call_args[0])
 
-    @mock.patch('argparse.ArgumentParser.parse_args')
-    @mock.patch('sys.exit')
+    @patch('argparse.ArgumentParser.parse_args')
+    @patch('sys.exit')
     def test_argument_parser_is_created_and_adequatelly_called(self, sys_exit, parse_args):
         """ Check that parser is created with all the arguments provided when called. """
         sys_exit.return_value = 0
-        _parse_args = mock.MagicMock()
+        _parse_args = MagicMock()
         parse_args.return_value = _parse_args
         _parse_args.output_format = iwyu_tool.DEFAULT_FORMAT
-        with mock.patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1"]):
+        with patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1"]):
             iwyu_tool._bootstrap()
         parse_args.assert_called_with(["-p", "."])
 
-    @mock.patch('argparse.ArgumentParser.parse_args')
-    @mock.patch('sys.exit')
+    @patch('argparse.ArgumentParser.parse_args')
+    @patch('sys.exit')
     def test_argument_parser_uses_the_first_separator_for_splitting_arguments(self, sys_exit, parse_args):
         """ Check that in case of using several '--' separator, the first one is used for separating
         the iwyu_tool arguments from those of iwyu.
         """
         sys_exit.return_value = 0
-        _parse_args = mock.MagicMock()
+        _parse_args = MagicMock()
         parse_args.return_value = _parse_args
         _parse_args.output_format = iwyu_tool.DEFAULT_FORMAT
-        with mock.patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1", "--", "another_arg1"]):
+        with patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1", "--", "another_arg1"]):
             iwyu_tool._bootstrap()
         parse_args.assert_called_with(["-p", "."])
         self.assertIn(["arg1", "--", "another_arg1"], iwyu_tool.main.call_args[0])
