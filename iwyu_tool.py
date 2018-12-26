@@ -329,12 +329,6 @@ def _bootstrap():
             return argv, []
     argv, iwyu_args = partition_args(sys.argv[1:])
     args = parser.parse_args(argv)
-
-    # Force -Xiwyu prefix to iwyu_args so users don't have to provide prefix
-    # explicitly.
-    prefixes = ['-Xiwyu'] * len(iwyu_args)
-    iwyu_args = list(sum(zip(prefixes, iwyu_args), ()))
-
     sys.exit(main(args.dbpath, args.source, args.verbose,
                   FORMATTERS[args.output_format], args.jobs, iwyu_args))
 

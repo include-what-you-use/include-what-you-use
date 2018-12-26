@@ -13,6 +13,9 @@ import time
 import random
 import unittest
 import iwyu_tool
+import sys
+
+import mock
 
 try:
     from cStringIO import StringIO
@@ -101,6 +104,35 @@ class IWYUToolTests(IWYUToolTestBase):
         self._execute(invocations, jobs=1)
         self.assertEqual(['BAR%d' % n for n in range(100)],
                          self.stdout_stub.getvalue().splitlines())
+
+class BootstrapTests(unittest.TestCase):
+    def setUp(self):
+        self.main = iwyu_tool.main
+        self.argparse = iwyu_tool.argparse
+        iwyu_tool.main =  mock.MagicMock()
+
+    def tearDown(self):
+        iwyu_tool.main = self.main
+        iwyu_tool.argparse = self.argparse
+
+    @mock.patch('sys.exit')
+    def test_argument_parser_sets_argument_correctly(self, sys_exit):
+        sys_exit.return_value = 0
+        with mock.patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1"]):
+            iwyu_tool._bootstrap()
+        iwyu_tool.main.assert_called_with(".", mock.ANY, mock.ANY, mock.ANY , mock.ANY, ["arg1"])
+    
+    @mock.patch('argparse.ArgumentParser.parse_args')
+    @mock.patch('sys.exit')
+    def test_argument_parser_is_created(self, sys_exit, parse_args):
+        sys_exit.return_value = 0
+        _parse_args = mock.MagicMock()
+        parse_args.return_value = _parse_args
+        _parse_args.output_format = iwyu_tool.DEFAULT_FORMAT
+        with mock.patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".",]):
+            iwyu_tool._bootstrap()
+            parse_args.assert_called_with(["-p", "."])
+
 
 
 if __name__ == '__main__':
