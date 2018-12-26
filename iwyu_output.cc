@@ -237,12 +237,12 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
 
 // Holds information about a single full or fwd-decl use of a symbol.
 OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
-               OneUse::UseKind use_kind, UseFlags flags,
-               const char* comment)
+               SourceLocation decl_loc, OneUse::UseKind use_kind,
+               UseFlags flags, const char* comment)
     : symbol_name_(internal::GetQualifiedNameAsString(decl)),
       short_symbol_name_(internal::GetShortNameAsString(decl)),
       decl_(decl),
-      decl_loc_(GetInstantiationLoc(GetLocation(decl))),
+      decl_loc_(GetInstantiationLoc(decl_loc)),
       decl_file_(GetFileEntry(decl_loc_)),
       decl_filepath_(GetFilePath(decl_file_)),
       use_loc_(use_loc),
@@ -577,15 +577,23 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
                                        UseFlags flags,
                                        const char* comment) {
   if (decl) {
-    // Since we need the full symbol, we need the decl's definition-site.
-    // But only if we're not defining the function, in which case we want to use
-    // all its preceding declarations, and not try to canonicalize.
-    if (!(flags & UF_FunctionDfn)) {
-      decl = GetDefinitionAsWritten(decl);
+    const NamedDecl* report_decl;
+    SourceLocation report_decl_loc;
+
+    if ((flags & (UF_FunctionDfn | UF_ExplicitInstantiation)) == 0) {
+      // Since we need the full symbol, we need the decl's definition-site too.
+      // Also, by default we canonicalize the location, using GetLocation.
+      report_decl = GetDefinitionAsWritten(decl);
+      report_decl_loc = GetLocation(report_decl);
+    } else {
+      // However, if we're defining the function or we are targeting an explicit
+      // instantiation, we want to use it as-is and not try to canonicalize at all.
+      report_decl = decl;
+      report_decl_loc = decl->getLocation();
     }
 
-    symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kFullUse,
-                                  flags, comment));
+    symbol_uses_.push_back(OneUse(report_decl, use_loc, report_decl_loc,
+                                  OneUse::kFullUse, flags, comment));
     LogSymbolUse("Marked full-info use of decl", symbol_uses_.back());
   }
 }
@@ -630,8 +638,8 @@ void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
   // combines friend decls with true forward-declare decls.  If that
   // happened here, replace the friend with a real fwd decl.
   decl = GetNonfriendClassRedecl(decl);
-  symbol_uses_.push_back(OneUse(decl, use_loc, OneUse::kForwardDeclareUse,
-                                flags, comment));
+  symbol_uses_.push_back(OneUse(decl, use_loc, GetLocation(decl),
+                                OneUse::kForwardDeclareUse, flags, comment));
   LogSymbolUse("Marked fwd-decl use of decl", symbol_uses_.back());
 }
 

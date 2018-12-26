@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-
-from __future__ import print_function
-
 """ Driver to consume a Clang compilation database and invoke IWYU.
 
 Example usage with CMake:
@@ -21,7 +18,7 @@ Example usage with CMake:
 
 See iwyu_tool.py -h for more details on command-line arguments.
 """
-
+from __future__ import print_function
 import os
 import re
 import sys
@@ -92,6 +89,113 @@ FORMATTERS = {
 }
 
 
+if sys.platform.startswith('win'):
+    # Case-insensitive match on Windows
+    def normcase(s):
+        return s.lower()
+else:
+    def normcase(s):
+        return s
+
+
+def is_subpath_of(path, parent):
+    """ Return True if path is equal to or fully contained within parent.
+
+    Assumes both paths are canonicalized with os.path.realpath.
+    """
+    parent = normcase(parent)
+    path = normcase(path)
+
+    if path == parent:
+        return True
+
+    if not path.startswith(parent):
+        return False
+
+    # Now we know parent is a prefix of path, but they only share lineage if the
+    # difference between them starts with a path separator, e.g. /a/b/c/file
+    # is not a parent of /a/b/c/file.cpp, but /a/b/c and /a/b/c/ are.
+    parent = parent.rstrip(os.path.sep)
+    suffix = path[len(parent):]
+    return suffix.startswith(os.path.sep)
+
+
+def is_msvc_driver(compile_command):
+    """ Return True if compile_command matches an MSVC CL-style driver. """
+    compile_command = normcase(compile_command)
+
+    if compile_command.endswith('cl.exe'):
+        # Native MSVC compiler or clang-cl.exe
+        return True
+
+    if compile_command.endswith('clang-cl'):
+        # Cross clang-cl on non-Windows
+        return True
+
+    return False
+
+
+def win_split(cmdline):
+    """ Minimal implementation of shlex.split for Windows following
+    https://msdn.microsoft.com/en-us/library/windows/desktop/17w5ykft.aspx.
+    """
+    def split_iter(cmdline):
+        in_quotes = False
+        backslashes = 0
+        arg = ''
+        for c in cmdline:
+            if c == '\\':
+                # MSDN: Backslashes are interpreted literally, unless they
+                # immediately precede a double quotation mark.
+                # Buffer them until we know what comes next.
+                backslashes += 1
+            elif c == '"':
+                # Quotes can either be an escaped quote or the start of a quoted
+                # string. Paraphrasing MSDN:
+                # Before quotes, place one backslash in the arg for every pair
+                # of leading backslashes. If the number of backslashes is odd,
+                # retain the double quotation mark, otherwise interpret it as a
+                # string delimiter and switch state.
+                arg += '\\' * (backslashes // 2)
+                if backslashes % 2 == 1:
+                    arg += c
+                else:
+                    in_quotes = not in_quotes
+                backslashes = 0
+            elif c in (' ', '\t') and not in_quotes:
+                # MSDN: Arguments are delimited by white space, which is either
+                # a space or a tab [but only outside of a string].
+                # Flush backslashes and return arg bufferd so far, unless empty.
+                arg += '\\' * backslashes
+                if arg:
+                    yield arg
+                    arg = ''
+                backslashes = 0
+            else:
+                # Flush buffered backslashes and append.
+                arg += '\\' * backslashes
+                arg += c
+                backslashes = 0
+
+        if arg:
+            arg += '\\' * backslashes
+            yield arg
+
+    return list(split_iter(cmdline))
+
+
+def split_command(cmdstr):
+    """ Split a command string into a list, respecting shell quoting. """
+    if sys.platform.startswith('win'):
+        # shlex.split does not work for Windows command-lines, so special-case
+        # to our own implementation.
+        cmd = win_split(cmdstr)
+    else:
+        cmd = shlex.split(cmdstr)
+
+    return cmd
+
+
 def find_include_what_you_use():
     """ Find IWYU executable and return its full pathname. """
     if 'IWYU_BINARY' in os.environ:
@@ -108,12 +212,13 @@ def find_include_what_you_use():
     for dirpath in search_path:
         full = os.path.join(dirpath, executable_name)
         if os.path.isfile(full):
-            return full
+            return os.path.realpath(full)
 
     return None
 
 
 IWYU_EXECUTABLE = find_include_what_you_use()
+
 
 class Process(object):
     """ Manages an IWYU process in flight """
@@ -169,19 +274,18 @@ class Invocation(object):
             command = entry['arguments']
         elif 'command' in entry:
             # command is a command-line in string form, split to list.
-            command = shlex.split(entry['command'])
+            command = split_command(entry['command'])
         else:
             raise ValueError('Invalid compilation database entry: %s' % entry)
 
         # Rewrite the compile command for IWYU
         compile_command, compile_args = command[0], command[1:]
-        if compile_command.endswith('cl.exe'):
-            # If the compiler name is cl.exe, let IWYU be cl-compatible.
+        if is_msvc_driver(compile_command):
+            # If the compiler is cl-compatible, let IWYU be cl-compatible.
             extra_args = ['--driver-mode=cl'] + extra_args
 
         command = [IWYU_EXECUTABLE] + extra_args + compile_args
         return cls(command, entry['directory'])
-
 
     def start(self, verbose):
         """ Run invocation and collect output. """
@@ -223,14 +327,15 @@ def slice_compilation_db(compilation_db, selection):
             print('WARNING: \'%s\' not found on disk.' % path)
             continue
 
-        matches = [e for e in compilation_db if e['file'].startswith(path)]
-        if not matches:
+        found = [e for e in compilation_db if is_subpath_of(e['file'], path)]
+        if not found:
             print('WARNING: \'%s\' not found in compilation database.' % path)
             continue
 
-        new_db.extend(matches)
+        new_db.extend(found)
 
     return new_db
+
 
 def execute(invocations, verbose, formatter, jobs):
     """ Launch processes described by invocations. """
@@ -248,9 +353,9 @@ def execute(invocations, verbose, formatter, jobs):
             print(formatter(proc.get_output()))
 
         # Schedule new processes if there's room.
-        n = jobs - len(pending)
-        pending.extend(i.start(verbose) for i in invocations[:n])
-        invocations = invocations[n:]
+        capacity = jobs - len(pending)
+        pending.extend(i.start(verbose) for i in invocations[:capacity])
+        invocations = invocations[capacity:]
 
         # Yield CPU.
         time.sleep(0.0001)
@@ -274,6 +379,7 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
     ]
 
     return execute(invocations, verbose, formatter, jobs)
+
 
 def _bootstrap():
     """ Parse arguments and dispatch to main(). """

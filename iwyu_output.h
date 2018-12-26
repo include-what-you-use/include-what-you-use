@@ -50,6 +50,7 @@ class OneUse {
 
   OneUse(const clang::NamedDecl* decl,
          clang::SourceLocation use_loc,
+         clang::SourceLocation decl_loc,
          UseKind use_kind,
          UseFlags flags,
          const char* comment);

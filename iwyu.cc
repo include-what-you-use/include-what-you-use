@@ -109,6 +109,7 @@
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
+#include "iwyu_use_flags.h"
 // This is needed for
 // preprocessor_info().PublicHeaderIntendsToProvide().  Somehow IWYU
 // removes it mistakenly.
@@ -211,11 +212,13 @@ using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryExprOrTypeTraitExpr;
 using clang::UsingDecl;
+using clang::UsingDirectiveDecl;
 using clang::UsingShadowDecl;
 using clang::ValueDecl;
 using clang::VarDecl;
 using llvm::cast;
 using llvm::dyn_cast;
+using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
 using std::make_pair;
@@ -1632,12 +1635,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Checkers, that tell iwyu_output about uses of symbols.
   // We let, but don't require, subclasses to override these.
 
-  // The comment, if not nullptr, is extra text that is included along
-  // with the warning message that iwyu emits.
+  // The comment, if not nullptr, is extra text that is included along with
+  // the warning message that iwyu emits. The extra use flags is optional
+  // info that can be assigned to the use (see the UF_* constants)
   virtual void ReportDeclUse(SourceLocation used_loc,
                              const NamedDecl* used_decl,
-                             const char* comment = nullptr) {
-
+                             const char* comment = nullptr,
+                             UseFlags extra_use_flags = 0) {
     const NamedDecl* target_decl = used_decl;
 
     // Sometimes a shadow decl comes between us and the 'real' decl.
@@ -1649,12 +1653,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreDecl(target_decl))
       return;
 
+    const UseFlags use_flags =
+        ComputeUseFlags(current_ast_node()) | extra_use_flags;
+
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, target_decl, ComputeUseFlags(current_ast_node()),
-        comment);
+        used_loc, target_decl, use_flags, comment);
 
     // Sometimes using a decl drags in a few other uses as well:
 
@@ -1672,8 +1678,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         = GetUsingDeclarationOf(used_decl, 
               GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
-          used_loc, using_decl, ComputeUseFlags(current_ast_node()),
-          "(for using decl)");
+          used_loc, using_decl, use_flags, "(for using decl)");
     }
 
     // For typedefs, the user of the type is sometimes the one
@@ -2829,7 +2834,8 @@ class InstantiatedTemplateVisitor
 
     // As in TraverseExpandedTemplateFunctionHelper, we ignore all AST nodes
     // that will be reported when we traverse the uninstantiated type.
-    if (const NamedDecl* type_decl_as_written = TypeToDeclAsWritten(type)) {
+    if (const NamedDecl* type_decl_as_written =
+            GetDefinitionAsWritten(TypeToDeclAsWritten(type))) {
       AstFlattenerVisitor nodeset_getter(compiler());
       nodes_to_ignore_ = nodeset_getter.GetNodesBelow(
           const_cast<NamedDecl*>(type_decl_as_written));
@@ -2910,19 +2916,20 @@ class InstantiatedTemplateVisitor
   // (if templates call other templates, we have to find the right
   // template).
   void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl,
-                     const char* comment = nullptr) override {
+                     const char* comment = nullptr,
+                     UseFlags extra_use_flags = 0) override {
     const SourceLocation actual_used_loc = GetLocOfTemplateThatProvides(decl);
     if (actual_used_loc.isValid()) {
       // If a template is responsible for this decl, then we don't add
       // it to the cache; the cache is only for decls that the
       // original caller is responsible for.
-      Base::ReportDeclUse(actual_used_loc, decl, comment);
+      Base::ReportDeclUse(actual_used_loc, decl, comment, extra_use_flags);
     } else {
       // Let all the currently active types and decls know about this
       // report, so they can update their cache entries.
       for (CacheStoringScope* storer : cache_storers_)
         storer->NoteReportedDecl(decl);
-      Base::ReportDeclUse(caller_loc(), decl, comment);
+      Base::ReportDeclUse(caller_loc(), decl, comment, extra_use_flags);
     }
   }
 
@@ -3107,7 +3114,49 @@ class InstantiatedTemplateVisitor
     // We attribute all uses in an instantiated template to the
     // template's caller.
     ReportTypeUse(caller_loc(), actual_type);
+
+    // Also report all previous explicit instantiations (declarations and
+    // definitions) as uses of the caller's location.
+    ReportExplicitInstantiations(actual_type);
+
     return Base::VisitSubstTemplateTypeParmType(type);
+  }
+
+  bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    CHECK_(current_ast_node()->GetAs<TemplateSpecializationType>() == type)
+        << "The current node must be equal to the template spec. type";
+
+    // Report previous explicit instantiations here, only if the type is needed
+    // fully.
+    if (!CanForwardDeclareType(current_ast_node()))
+      ReportExplicitInstantiations(type);
+
+    return Base::VisitTemplateSpecializationType(type);
+  }
+
+  void ReportExplicitInstantiations(const Type* type) {
+    const auto* decl = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+        TypeToDeclAsWritten(type));
+
+    if (decl == nullptr)
+      return;
+
+    // Go through all previous redecls and filter out those that are not
+    // explicit template instantiations or already provided by the template.
+    for (const NamedDecl* redecl : decl->redecls()) {
+      if (!IsExplicitInstantiation(redecl) ||
+          !GlobalSourceManager()->isBeforeInTranslationUnit(
+              redecl->getLocation(), caller_loc()) ||
+          IsProvidedByTemplate(decl))
+        continue;
+
+      // Report the specific decl that points to the explicit instantiation
+      Base::ReportDeclUse(caller_loc(), redecl, "(for explicit instantiation)",
+                          UF_ExplicitInstantiation);
+    }
   }
 
   // If constructing an object, check the type we're constructing.
@@ -3159,7 +3208,7 @@ class InstantiatedTemplateVisitor
          ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
       if (preprocessor_info().PublicHeaderIntendsToProvide(
               GetFileEntry(ast_node->GetLocation()),
-              GetFileEntry(decl)))
+              GetFileEntry(decl->getLocation())))
         return ast_node->GetLocation();
     }
     return SourceLocation();   // an invalid source-loc
@@ -3171,8 +3220,10 @@ class InstantiatedTemplateVisitor
   bool IsProvidedByTemplate(const Type* type) const {
     type = RemoveSubstTemplateTypeParm(type);
     type = RemovePointersAndReferences(type);  // get down to the decl
-    if (const NamedDecl* decl = TypeToDeclAsWritten(type))
+    if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
+      decl = GetDefinitionAsWritten(decl);
       return GetLocOfTemplateThatProvides(decl).isValid();
+    }
     return true;   // we always provide non-decl types like int, etc.
   }
 
@@ -3732,12 +3783,35 @@ class IwyuAstConsumer
   //    template <class T> struct Foo;
   //    template<> struct Foo<int> { ... };
   // we don't want iwyu to recommend removing the 'forward declare' of Foo.
+  //
+  // Additionally, this type of decl is also used to represent explicit template
+  // instantiations, in which case we want the full type, not only a forward
+  // declaration.
   bool VisitClassTemplateSpecializationDecl(
       clang::ClassTemplateSpecializationDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
     ClassTemplateDecl* specialized_decl = decl->getSpecializedTemplate();
-    ReportDeclForwardDeclareUse(CurrentLoc(), specialized_decl);
+
+    if (IsExplicitInstantiation(decl))
+      ReportDeclUse(CurrentLoc(), specialized_decl);
+    else
+      ReportDeclForwardDeclareUse(CurrentLoc(), specialized_decl);
+
     return Base::VisitClassTemplateSpecializationDecl(decl);
+  }
+
+  // Track use of namespace in using directive decl
+  // a.h:
+  //   namespace a { ... };
+  //
+  // b.cpp:
+  //   include "a.h"
+  //   using namespace a;
+  //   ...
+  bool VisitUsingDirectiveDecl(clang::UsingDirectiveDecl *decl) {
+    if (CanIgnoreCurrentASTNode())  return true;
+    ReportDeclUse(CurrentLoc(), decl->getNominatedNamespaceAsWritten());
+    return Base::VisitUsingDirectiveDecl(decl);
   }
 
   // If you say 'typedef Foo Bar', then clients can use Bar however

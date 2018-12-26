@@ -562,8 +562,8 @@ class FileInfo(object):
 
     # Special-case UTF-8 BOM
     if bytebuf[0:3] == b'\xef\xbb\xbf':
-      if try_decode(bytebuf, 'utf-8'):
-        return 'utf-8'
+      if try_decode(bytebuf, 'utf-8-sig'):
+        return 'utf-8-sig'
 
     encodings = ['ascii', 'utf-8', 'windows-1250', 'windows-1252']
     for encoding in encodings:

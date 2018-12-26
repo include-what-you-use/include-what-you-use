@@ -8,7 +8,7 @@
 # License. See LICENSE.TXT for details.
 #
 ##===----------------------------------------------------------------------===##
-
+import sys
 import time
 import random
 import unittest
@@ -22,9 +22,9 @@ try:
 except ImportError:
     from io import StringIO
 
+
 class MockProcess(object):
     def __init__(self, block, content):
-        self.block = block
         self.content = content
         self.complete_ts = time.time() + block
 
@@ -34,8 +34,11 @@ class MockProcess(object):
         return 0
 
     def get_output(self):
-        self.poll()
+        remaining = self.complete_ts - time.time()
+        if remaining > 0:
+            time.sleep(remaining)
         return self.content
+
 
 class MockInvocation(iwyu_tool.Invocation):
     def __init__(self, command=None, cwd=''):
@@ -50,23 +53,19 @@ class MockInvocation(iwyu_tool.Invocation):
         self._will_return = content
 
     def start(self, verbose):
-        if self._will_block > 0:
-            time.sleep(self._will_block)
         return MockProcess(self._will_block, self._will_return)
 
 
-class IWYUToolTestBase(unittest.TestCase):
-    def setUp(self):
-        self.stdout_stub = StringIO()
-        iwyu_tool.sys.stdout = self.stdout_stub
-
+class IWYUToolTests(unittest.TestCase):
     def _execute(self, invocations, verbose=False, formatter=None, jobs=1):
         formatter = formatter or iwyu_tool.DEFAULT_FORMAT
         formatter = iwyu_tool.FORMATTERS.get(formatter, formatter)
         return iwyu_tool.execute(invocations, verbose, formatter, jobs)
 
+    def setUp(self):
+        self.stdout_stub = StringIO()
+        iwyu_tool.sys.stdout = self.stdout_stub
 
-class IWYUToolTests(IWYUToolTestBase):
     def test_from_compile_command(self):
         iwyu_args = ['-foo']
         invocation = iwyu_tool.Invocation.from_compile_command(
@@ -105,6 +104,113 @@ class IWYUToolTests(IWYUToolTestBase):
         self.assertEqual(['BAR%d' % n for n in range(100)],
                          self.stdout_stub.getvalue().splitlines())
 
+    @unittest.skipIf(sys.platform.startswith('win'), "POSIX only")
+    def test_is_subpath_of_posix(self):
+        self.assertTrue(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/b'))
+        self.assertTrue(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/b/'))
+        self.assertTrue(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/b/c.c'))
+        self.assertFalse(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/b/c'))
+        self.assertFalse(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/x'))
+        # No case-insensitive match.
+        self.assertFalse(iwyu_tool.is_subpath_of('/A/Bee/C.c', '/a/BEE'))
+
+    @unittest.skipIf(not sys.platform.startswith('win'), "Windows only")
+    def test_is_subpath_of_windows(self):
+        self.assertTrue(iwyu_tool.is_subpath_of('\\a\\b\\c.c', '\\a\\b'))
+        self.assertTrue(iwyu_tool.is_subpath_of('\\a\\b\\c.c', '\\a\\b\\'))
+        self.assertTrue(iwyu_tool.is_subpath_of('\\a\\b\\c.c', '\\a\\b\\c.c'))
+        self.assertFalse(iwyu_tool.is_subpath_of('\\a\\b\\c.c', '\\a\\b\\c'))
+        self.assertFalse(iwyu_tool.is_subpath_of('\\a\\b\\c.c', '\\a\\x'))
+        # Case-insensitive match.
+        self.assertTrue(iwyu_tool.is_subpath_of('C:\\Bee\\C.c', 'c:\\BEE'))
+
+    def test_from_cl_compile_command(self):
+        invocation = iwyu_tool.Invocation.from_compile_command(
+            {
+                'directory': '/a',
+                'command': 'cl.exe -I. x.cc',
+                'file': 'x.cc'
+            }, [])
+        # Adds --driver-mode=cl if argv[0] is MSVC driver.
+        self.assertEqual(
+            invocation.command,
+            [iwyu_tool.IWYU_EXECUTABLE, '--driver-mode=cl', '-I.', 'x.cc'])
+
+    def test_is_msvc_driver(self):
+        self.assertTrue(iwyu_tool.is_msvc_driver("cl.exe"))
+        self.assertTrue(iwyu_tool.is_msvc_driver("clang-cl.exe"))
+        self.assertTrue(iwyu_tool.is_msvc_driver("clang-cl"))
+        self.assertFalse(iwyu_tool.is_msvc_driver("something"))
+
+    @unittest.skipIf(not sys.platform.startswith('win'), 'Windows only')
+    def test_is_msvc_driver_windows(self):
+        # Case-insensitive match on Windows
+        self.assertTrue(iwyu_tool.is_msvc_driver("CL.EXE"))
+        self.assertTrue(iwyu_tool.is_msvc_driver("Clang-CL.exe"))
+        self.assertTrue(iwyu_tool.is_msvc_driver("Clang-CL"))
+
+    def test_split_command(self):
+        self.assertEqual(['a', 'b', 'c d'],
+                         iwyu_tool.split_command('a b "c d"'))
+
+        self.assertEqual(['c', '-Idir/with spaces', 'x'],
+                         iwyu_tool.split_command('c -I"dir/with spaces" x'))
+
+
+class WinSplitTests(unittest.TestCase):
+    """ iwyu_tool.win_split is subtle and complex enough that it warrants a
+    dedicated test suite.
+    """
+
+    def assert_win_split(self, cmdstr, expected):
+        self.assertEqual(expected,
+                         iwyu_tool.win_split(cmdstr))
+
+    def test_msdn_examples(self):
+        """ Examples from below, detailing how to parse command-lines:
+        https://msdn.microsoft.com/en-us/library/windows/desktop/17w5ykft.aspx
+        """
+        self.assert_win_split('"abc" d e',
+                              ['abc', 'd', 'e'])
+        self.assert_win_split(r'a\\b d"e f"g h',
+                              [r'a\\b', 'de fg', 'h'])
+        self.assert_win_split(r'a\\\"b c d',
+                              [r'a\"b', 'c', 'd'])
+        self.assert_win_split(r'a\\\\"b c" d e',
+                              [r'a\\b c', 'd', 'e'])
+
+        # Extra: odd number of backslashes before non-quote (should be
+        # interpreted literally).
+        self.assert_win_split(r'a\\\b d"e f"g h',
+                              [r'a\\\b', 'de fg', 'h'])
+
+    def test_trailing_backslash(self):
+        """ Check that args with trailing backslash are retained. """
+        self.assert_win_split('a\\ b c', ['a\\', 'b', 'c'])
+        self.assert_win_split('a\\\\ b c', ['a\\\\', 'b', 'c'])
+
+        # Last arg has dedicated handling, make sure backslashes are flushed.
+        self.assert_win_split('b c a\\', ['b', 'c', 'a\\'])
+
+    def test_cmake_examples(self):
+        """ Example of observed CMake outputs that are hard to split. """
+        self.assert_win_split(r'-I"..\tools\clang\tools\iwyu\inc ludes" -A',
+                              [r'-I..\tools\clang\tools\iwyu\inc ludes', '-A'])
+
+        self.assert_win_split(r'clang -Idir\\using\\os\\seps f.cc',
+                              ['clang', r'-Idir\\using\\os\\seps', 'f.cc'])
+
+        self.assert_win_split(r'clang -Idir\using\os\seps f.cc',
+                              ['clang', r'-Idir\using\os\seps', 'f.cc'])
+
+    def test_consecutive_spaces(self):
+        """ Consecutive spaces outside of quotes should be folded. """
+        self.assert_win_split('clang  -I.      -A',
+                              ['clang', '-I.', '-A'])
+
+        self.assert_win_split('clang  -I. \t     -A',
+                              ['clang', '-I.', '-A'])
+
 class BootstrapTests(unittest.TestCase):
     def setUp(self):
         self.main = iwyu_tool.main
@@ -132,7 +238,6 @@ class BootstrapTests(unittest.TestCase):
         with mock.patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".",]):
             iwyu_tool._bootstrap()
             parse_args.assert_called_with(["-p", "."])
-
 
 
 if __name__ == '__main__':

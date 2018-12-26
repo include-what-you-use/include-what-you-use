@@ -105,6 +105,7 @@ using clang::TemplateArgumentLoc;
 using clang::TemplateDecl;
 using clang::TemplateName;
 using clang::TemplateParameterList;
+using clang::TemplateSpecializationKind;
 using clang::TemplateSpecializationType;
 using clang::TranslationUnitDecl;
 using clang::Type;
@@ -153,6 +154,13 @@ void DumpASTNode(llvm::raw_ostream& ostream, const ASTNode* node) {
   } else {
     CHECK_UNREACHABLE_("Unknown kind for ASTNode");
   }
+}
+
+TemplateSpecializationKind GetTemplateSpecializationKind(const Decl* decl) {
+  if (const auto* record = dyn_cast<CXXRecordDecl>(decl)) {
+    return record->getTemplateSpecializationKind();
+  }
+  return clang::TSK_Undeclared;
 }
 
 }  // anonymous namespace
@@ -942,12 +950,20 @@ bool IsFriendDecl(const Decl* decl) {
   return decl->getFriendObjectKind() != Decl::FOK_None;
 }
 
+bool IsExplicitInstantiation(const clang::Decl* decl) {
+  TemplateSpecializationKind kind = GetTemplateSpecializationKind(decl);
+  return kind == clang::TSK_ExplicitInstantiationDeclaration ||
+         kind == clang::TSK_ExplicitInstantiationDefinition;
+}
+
 bool IsForwardDecl(const NamedDecl* decl) {
-  if (const auto* record_decl = dyn_cast<RecordDecl>(decl)) {
+  if (const auto* record_decl = dyn_cast<CXXRecordDecl>(decl)) {
+
     return (!record_decl->getName().empty() &&
             !record_decl->isCompleteDefinition() &&
             !record_decl->isEmbeddedInDeclarator() &&
-            !IsFriendDecl(record_decl));
+            !IsFriendDecl(record_decl) &&
+            !IsExplicitInstantiation(record_decl));
   }
 
   return false;
