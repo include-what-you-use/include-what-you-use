@@ -228,11 +228,11 @@ class BootstrapTests(unittest.TestCase):
 
     @mock.patch('sys.exit')
     def test_argument_parser_does_include_xiwyu_flag(self, sys_exit):
-        """ Check that -Xiwyu argument is passed to the iwyu call. """
+        """ Check that -Xiwyu and --iwyu_opt arguments are passed to the iwyu call. """
         sys_exit.return_value = 0
-        with mock.patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1", "-Xiwyu", "arg2"]):
+        with mock.patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"]):
             iwyu_tool._bootstrap()
-        self.assertIn(["arg1", "-Xiwyu", "arg2"], iwyu_tool.main.call_args[0])
+        self.assertIn(["arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"], iwyu_tool.main.call_args[0])
 
     @mock.patch('argparse.ArgumentParser.parse_args')
     @mock.patch('sys.exit')
