@@ -38,9 +38,6 @@ class MockProcess(object):
 
 
 class MockInvocation(iwyu_tool.Invocation):
-    """ Provides a stub object to be used for a non-real
-        sys.exit call. 
-    """    
     def __init__(self, command=None, cwd=''):
         iwyu_tool.Invocation.__init__(self, command or [], cwd)
         self._will_return = ''
