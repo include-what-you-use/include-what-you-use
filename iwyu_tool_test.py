@@ -15,10 +15,6 @@ import unittest
 import iwyu_tool
 
 try:
-    from unittest.mock import patch, MagicMock
-except ImportError:
-    from mock import patch, MagicMock
-try:
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO
@@ -42,6 +38,9 @@ class MockProcess(object):
 
 
 class MockInvocation(iwyu_tool.Invocation):
+    """ Provides a stub object to be used for a non-real
+        sys.exit call. 
+    """    
     def __init__(self, command=None, cwd=''):
         iwyu_tool.Invocation.__init__(self, command or [], cwd)
         self._will_return = ''
@@ -56,6 +55,57 @@ class MockInvocation(iwyu_tool.Invocation):
     def start(self, verbose):
         return MockProcess(self._will_block, self._will_return)
 
+class StubSysExit(object):
+    """ Provides an object that configures an stub behaviour of
+        the sys.exit method. It is possible to modify the value that
+        will be returned
+    """    
+    def __init__(self):
+        self.real_sys_exit = sys.exit
+        sys.exit = lambda x: self._will_return
+        self._will_return = 0
+
+    def reset(self):
+        sys.exit = self.real_sys_exit
+
+    def will_return(self, content):
+        self._will_return = content   
+
+class StubSysArgv(object):
+    """ Provides an object that configures an stub behaviour of
+        the sys.argv method. It is possible to modify the set of
+        values that sys.argv provides.
+    """  
+    def __init__(self, values=[]):
+        self.real_sys_argv = sys.argv
+        sys.argv = values
+
+    def reset(self):
+        sys.argv = self.real_sys_argv
+
+class MockIwyuToolMain(object):
+    """ Provides an object that configures a mock'd behaviour
+        of the iwyu_tool.main method, being possible to obtain
+        the arguments used in the called within the section tested.
+    """     
+    def __init__(self):
+        self.real_iwyu_tool_main = iwyu_tool.main
+        iwyu_tool.main = self._iwyu_tool_main_mock
+        self._will_return = ''
+        self._call_args = []
+
+    def reset(self):
+        iwyu_tool.main = self.real_iwyu_tool_main
+
+    def get_call_args(self):
+        return self._call_args
+
+    def will_return(self, content):
+        self._will_return = content      
+
+    def _iwyu_tool_main_mock(self, *args):
+        self._call_args = args
+        return self._will_return
 
 class IWYUToolTests(unittest.TestCase):
     def _execute(self, invocations, verbose=False, formatter=None, jobs=1):
@@ -214,54 +264,27 @@ class WinSplitTests(unittest.TestCase):
 
 class BootstrapTests(unittest.TestCase):
     def setUp(self):
-        self.main = iwyu_tool.main
-        iwyu_tool.main =  MagicMock()
+        self.iwyu_tool_main_mock =  MockIwyuToolMain()
+        self.sys_exit_stub = StubSysExit()
+        self.sys_exit_stub.will_return(0)
 
     def tearDown(self):
-        iwyu_tool.main = self.main
+        self.iwyu_tool_main_mock.reset()
+        self.sys_exit_stub.reset()
 
-    @patch('sys.exit')
-    def test_argument_parser_sets_argument_correctly(self, sys_exit):
+    def test_argument_parser_sets_argument_correctly(self):
         """ Check that arguments are verbatim injected to iwyu. """
-        sys_exit.return_value = 0
-        with patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1"]):
-            iwyu_tool._bootstrap()
-        self.assertIn(["arg1"], iwyu_tool.main.call_args[0])
+        argv_stub = StubSysArgv(["iwyu_tool.py", "-p", ".", "--", "arg1"])
+        iwyu_tool._bootstrap()
+        iwyu_call_args = self.iwyu_tool_main_mock.get_call_args()
+        self.assertIn(["arg1"], iwyu_call_args)
 
-    @patch('sys.exit')
-    def test_argument_parser_does_include_xiwyu_flag(self, sys_exit):
+    def test_argument_parser_does_include_xiwyu_flag(self):
         """ Check that -Xiwyu and --iwyu_opt arguments are passed to the iwyu call. """
-        sys_exit.return_value = 0
-        with patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"]):
-            iwyu_tool._bootstrap()
-        self.assertIn(["arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"], iwyu_tool.main.call_args[0])
-
-    @patch('argparse.ArgumentParser.parse_args')
-    @patch('sys.exit')
-    def test_argument_parser_is_created_and_adequatelly_called(self, sys_exit, parse_args):
-        """ Check that parser is created with all the arguments provided when called. """
-        sys_exit.return_value = 0
-        _parse_args = MagicMock()
-        parse_args.return_value = _parse_args
-        _parse_args.output_format = iwyu_tool.DEFAULT_FORMAT
-        with patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1"]):
-            iwyu_tool._bootstrap()
-        parse_args.assert_called_with(["-p", "."])
-
-    @patch('argparse.ArgumentParser.parse_args')
-    @patch('sys.exit')
-    def test_argument_parser_uses_the_first_separator_for_splitting_arguments(self, sys_exit, parse_args):
-        """ Check that in case of using several '--' separator, the first one is used for separating
-        the iwyu_tool arguments from those of iwyu.
-        """
-        sys_exit.return_value = 0
-        _parse_args = MagicMock()
-        parse_args.return_value = _parse_args
-        _parse_args.output_format = iwyu_tool.DEFAULT_FORMAT
-        with patch.object(sys, 'argv', ["iwyu_tool.py", "-p", ".", "--", "arg1", "--", "another_arg1"]):
-            iwyu_tool._bootstrap()
-        parse_args.assert_called_with(["-p", "."])
-        self.assertIn(["arg1", "--", "another_arg1"], iwyu_tool.main.call_args[0])
+        argv_stub = StubSysArgv(["iwyu_tool.py", "-p", ".", "--", "arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"])
+        iwyu_tool._bootstrap()
+        iwyu_call_args = self.iwyu_tool_main_mock.get_call_args()
+        self.assertIn(["arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"], iwyu_call_args)        
 
 if __name__ == '__main__':
     unittest.main()
