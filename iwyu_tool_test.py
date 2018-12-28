@@ -292,7 +292,7 @@ class BootstrapTests(unittest.TestCase):
         iwyu_call_args = self.iwyu_tool_main_mock.get_call_args()
         self.assertIn('ccom_db_path', iwyu_call_args)                   # ccom_db_path
         self.assertIn(["source_dir_1", "source_dir_2"], iwyu_call_args) # source code directories
-        self.assertIn(["arg1", "--", "another_arg1"], iwyu_call_args)   # ccom_db_path
+        self.assertIn(["arg1", "--", "another_arg1"], iwyu_call_args)   # iwyu arguments
 
 if __name__ == '__main__':
     unittest.main()
