@@ -12,6 +12,7 @@ import sys
 import time
 import random
 import unittest
+import inspect
 import iwyu_tool
 
 try:
@@ -86,18 +87,30 @@ class MockIwyuToolMain(object):
         the arguments used in the called within the section tested.
     """     
     def __init__(self):
+        self._iwyu_tool_main_args = inspect.getargspec(iwyu_tool.main).args
         self.real_iwyu_tool_main = iwyu_tool.main
         iwyu_tool.main = self._iwyu_tool_main_mock
-        self._call_args = []
+        self._call_args = {}
+        for arg in self._iwyu_tool_main_args:
+            self._call_args[arg] = ''
 
     def reset(self):
         iwyu_tool.main = self.real_iwyu_tool_main
 
     def get_call_args(self):
+        """ Returns a dictionary built with the iwyu_tool.main API keys filled
+            with the arguments used in the last call.
+        """
         return self._call_args   
 
-    def _iwyu_tool_main_mock(self, *args):
-        self._call_args = args
+    def _iwyu_tool_main_mock(self, *args, **kwargs):
+        assert len(args) + len(kwargs) <= self._iwyu_tool_main_args
+        index = 0
+        for idx, arg in enumerate(args):
+            key_idx = self._iwyu_tool_main_args[idx]
+            self._call_args[key_idx] = arg
+        for key, arg in kwargs.iteritems():
+            self._call_args[key] = arg
 
 class IWYUToolTests(unittest.TestCase):
     def _execute(self, invocations, verbose=False, formatter=None, jobs=1):
@@ -266,10 +279,10 @@ class BootstrapTests(unittest.TestCase):
 
     def test_argument_parser_sets_argument_correctly(self):
         """ Check that arguments are injected verbatim to iwyu. """
-        argv_stub = StubSysArgv(["iwyu_tool.py", "-p", ".", "--", "arg1"])
+        argv_stub = StubSysArgv(['iwyu_tool.py', '-p', '.', '--', 'arg1'])
         iwyu_tool._bootstrap()
-        iwyu_call_args = self.iwyu_tool_main_mock.get_call_args()
-        self.assertIn(["arg1"], iwyu_call_args)
+        call_args = self.iwyu_tool_main_mock.get_call_args()
+        self.assertEqual(['arg1'], call_args['iwyu_args'])
 
     def test_argument_parser_does_include_iwyu_flags(self):
         """ Check that arguments that appear after the '--' delimiter are 
@@ -277,30 +290,33 @@ class BootstrapTests(unittest.TestCase):
         special delimiter and in the form of --arg or arg as well as being 
         a non -Xiwyu preceeded argument
         """
-        argv_stub = StubSysArgv(["iwyu_tool.py", "-p", ".", "--",\
-                                 "-Xiwyu", "arg1",\
-                                 "-Xiwyu", "--arg2",\
-                                 "-non-iwyu-arg"])
+        argv_stub = StubSysArgv(['iwyu_tool.py', '-p', '.', '--',\
+                                 '-Xiwyu', 'arg1',\
+                                 '-Xiwyu', '--arg2',\
+                                 '-non-iwyu-arg'])
         iwyu_tool._bootstrap()
-        iwyu_call_args = self.iwyu_tool_main_mock.get_call_args()
-        self.assertIn(["-Xiwyu", "arg1", "-Xiwyu", "--arg2", "-non-iwyu-arg"],\
-                         iwyu_call_args)        
+        call_args = self.iwyu_tool_main_mock.get_call_args()
+        self.assertEqual(['-Xiwyu', 'arg1', '-Xiwyu', '--arg2',\
+                         '-non-iwyu-arg'], call_args['iwyu_args'])
 
     def test_argument_parser_uses_the_first_separator_for_splitting_args(self):
         """ Check that in case of using several '--' separator, the first one
          is used for separating the iwyu_tool arguments from those of iwyu.
         """
-        argv_stub = StubSysArgv(["iwyu_tool.py", "-p", "ccom_db_path",\
-                                 "source_dir_1", "source_dir_2", "--", "arg1",\
-                                 "--", "another_arg1"])
+        argv_stub = StubSysArgv(['iwyu_tool.py', '-p', 'ccom_db_path',\
+                                 'source_dir_1', 'source_dir_2', '--', 'arg1',\
+                                 '--', 'another_arg1'])
         iwyu_tool._bootstrap()
-        iwyu_call_args = self.iwyu_tool_main_mock.get_call_args()
+        call_args = self.iwyu_tool_main_mock.get_call_args()
         # ccom_db_path
-        self.assertIn('ccom_db_path', iwyu_call_args)
+        self.assertEqual('ccom_db_path',\
+                        call_args['compilation_db_path'])
         # source code directories
-        self.assertIn(["source_dir_1", "source_dir_2"], iwyu_call_args)
+        self.assertEqual(['source_dir_1', 'source_dir_2'],\
+                        call_args['source_files'])
         # iwyu arguments
-        self.assertIn(["arg1", "--", "another_arg1"], iwyu_call_args)
+        self.assertEqual(['arg1', '--', 'another_arg1'],\
+                        call_args['iwyu_args'])
 
 if __name__ == '__main__':
     unittest.main()
