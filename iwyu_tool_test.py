@@ -88,21 +88,16 @@ class MockIwyuToolMain(object):
     def __init__(self):
         self.real_iwyu_tool_main = iwyu_tool.main
         iwyu_tool.main = self._iwyu_tool_main_mock
-        self._will_return = ''
         self._call_args = []
 
     def reset(self):
         iwyu_tool.main = self.real_iwyu_tool_main
 
     def get_call_args(self):
-        return self._call_args
-
-    def will_return(self, content):
-        self._will_return = content      
+        return self._call_args   
 
     def _iwyu_tool_main_mock(self, *args):
         self._call_args = args
-        return self._will_return
 
 class IWYUToolTests(unittest.TestCase):
     def _execute(self, invocations, verbose=False, formatter=None, jobs=1):
@@ -270,29 +265,42 @@ class BootstrapTests(unittest.TestCase):
         self.sys_exit_stub.reset()
 
     def test_argument_parser_sets_argument_correctly(self):
-        """ Check that arguments are verbatim injected to iwyu. """
+        """ Check that arguments are injected verbatim to iwyu. """
         argv_stub = StubSysArgv(["iwyu_tool.py", "-p", ".", "--", "arg1"])
         iwyu_tool._bootstrap()
         iwyu_call_args = self.iwyu_tool_main_mock.get_call_args()
         self.assertIn(["arg1"], iwyu_call_args)
 
-    def test_argument_parser_does_include_xiwyu_flag(self):
-        """ Check that -Xiwyu and --iwyu_opt arguments are passed to the iwyu call. """
-        argv_stub = StubSysArgv(["iwyu_tool.py", "-p", ".", "--", "arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"])
-        iwyu_tool._bootstrap()
-        iwyu_call_args = self.iwyu_tool_main_mock.get_call_args()
-        self.assertIn(["arg1", "-Xiwyu", "arg2", "--iwyu_opt", "arg3"], iwyu_call_args)        
-
-    def test_argument_parser_uses_the_first_separator_for_splitting_arguments(self):
-        """ Check that in case of using several '--' separator, the first one is used for separating
-        the iwyu_tool arguments from those of iwyu.
+    def test_argument_parser_does_include_iwyu_flags(self):
+        """ Check that arguments that appear after the '--' delimiter are 
+        injected as they are considering the case of being preceeded by -Xiwyu 
+        special delimiter and in the form of --arg or arg as well as being 
+        a non -Xiwyu preceeded argument
         """
-        argv_stub = StubSysArgv(["iwyu_tool.py", "-p", "ccom_db_path", "source_dir_1", "source_dir_2", "--", "arg1", "--", "another_arg1"])
+        argv_stub = StubSysArgv(["iwyu_tool.py", "-p", ".", "--",\
+                                 "-Xiwyu", "arg1",\
+                                 "-Xiwyu", "--arg2",\
+                                 "-non-iwyu-arg"])
         iwyu_tool._bootstrap()
         iwyu_call_args = self.iwyu_tool_main_mock.get_call_args()
-        self.assertIn('ccom_db_path', iwyu_call_args)                   # ccom_db_path
-        self.assertIn(["source_dir_1", "source_dir_2"], iwyu_call_args) # source code directories
-        self.assertIn(["arg1", "--", "another_arg1"], iwyu_call_args)   # iwyu arguments
+        self.assertIn(["-Xiwyu", "arg1", "-Xiwyu", "--arg2", "-non-iwyu-arg"],\
+                         iwyu_call_args)        
+
+    def test_argument_parser_uses_the_first_separator_for_splitting_args(self):
+        """ Check that in case of using several '--' separator, the first one
+         is used for separating the iwyu_tool arguments from those of iwyu.
+        """
+        argv_stub = StubSysArgv(["iwyu_tool.py", "-p", "ccom_db_path",\
+                                 "source_dir_1", "source_dir_2", "--", "arg1",\
+                                 "--", "another_arg1"])
+        iwyu_tool._bootstrap()
+        iwyu_call_args = self.iwyu_tool_main_mock.get_call_args()
+        # ccom_db_path
+        self.assertIn('ccom_db_path', iwyu_call_args)
+        # source code directories
+        self.assertIn(["source_dir_1", "source_dir_2"], iwyu_call_args)
+        # iwyu arguments
+        self.assertIn(["arg1", "--", "another_arg1"], iwyu_call_args)
 
 if __name__ == '__main__':
     unittest.main()
