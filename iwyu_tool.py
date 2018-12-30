@@ -362,7 +362,7 @@ def execute(invocations, verbose, formatter, jobs):
 
 
 def main(compilation_db_path, source_files, verbose, formatter, jobs,
-         iwyu_args):
+         extra_args):
     """ Entry point. """
 
     try:
@@ -375,7 +375,7 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
 
     # Transform compilation db entries into a list of IWYU invocations.
     invocations = [
-        Invocation.from_compile_command(e, iwyu_args) for e in compilation_db
+        Invocation.from_compile_command(e, extra_args) for e in compilation_db
     ]
 
     return execute(invocations, verbose, formatter, jobs)
@@ -433,10 +433,10 @@ def _bootstrap():
             return argv[:double_dash], argv[double_dash+1:]
         except ValueError:
             return argv, []
-    argv, iwyu_args = partition_args(sys.argv[1:])
+    argv, extra_args = partition_args(sys.argv[1:])
     args = parser.parse_args(argv)
     sys.exit(main(args.dbpath, args.source, args.verbose,
-                  FORMATTERS[args.output_format], args.jobs, iwyu_args))
+                  FORMATTERS[args.output_format], args.jobs, extra_args))
 
 
 if __name__ == '__main__':

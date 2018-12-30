@@ -123,13 +123,13 @@ class IWYUToolTests(unittest.TestCase):
         iwyu_tool.sys.stdout = self.stdout_stub
 
     def test_from_compile_command(self):
-        iwyu_args = ['-foo']
+        extra_args = ['-foo']
         invocation = iwyu_tool.Invocation.from_compile_command(
             {
                 'directory': '/home/user/llvm/build',
                 'command': '/usr/bin/clang++ -Iinclude file.cc',
                 'file': 'file.cc'
-            }, iwyu_args)
+            }, extra_args)
         self.assertEqual(
             invocation.command,
             [iwyu_tool.IWYU_EXECUTABLE, '-foo', '-Iinclude', 'file.cc'])
@@ -282,7 +282,7 @@ class BootstrapTests(unittest.TestCase):
         argv_stub = StubSysArgv(['iwyu_tool.py', '-p', '.', '--', 'arg1'])
         iwyu_tool._bootstrap()
         call_args = self.iwyu_tool_main_mock.get_call_args()
-        self.assertEqual(['arg1'], call_args['iwyu_args'])
+        self.assertEqual(['arg1'], call_args['extra_args'])
 
     def test_argument_parser_does_include_iwyu_flags(self):
         """ Check that arguments that appear after the '--' delimiter are 
@@ -297,7 +297,7 @@ class BootstrapTests(unittest.TestCase):
         iwyu_tool._bootstrap()
         call_args = self.iwyu_tool_main_mock.get_call_args()
         self.assertEqual(['-Xiwyu', 'arg1', '-Xiwyu', '--arg2',\
-                         '-non-iwyu-arg'], call_args['iwyu_args'])
+                         '-non-iwyu-arg'], call_args['extra_args'])
 
     def test_argument_parser_uses_the_first_separator_for_splitting_args(self):
         """ Check that in case of using several '--' separator, the first one
@@ -316,7 +316,7 @@ class BootstrapTests(unittest.TestCase):
                         call_args['source_files'])
         # iwyu arguments
         self.assertEqual(['arg1', '--', 'another_arg1'],\
-                        call_args['iwyu_args'])
+                        call_args['extra_args'])
 
 if __name__ == '__main__':
     unittest.main()
