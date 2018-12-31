@@ -57,7 +57,7 @@ class StubSysExit(object):
     """ Provides an object that configures an stub behaviour of
         the sys.exit method. It is possible to modify the value that
         will be returned
-    """    
+    """
     def __init__(self):
         self.real_sys_exit = sys.exit
         sys.exit = lambda x: self._will_return
@@ -67,15 +67,17 @@ class StubSysExit(object):
         sys.exit = self.real_sys_exit
 
     def will_return(self, content):
-        self._will_return = content   
+        self._will_return = content
 
 class StubSysArgv(object):
     """ Provides an object that configures an stub behaviour of
         the sys.argv method. It is possible to modify the set of
         values that sys.argv provides.
-    """  
-    def __init__(self, values=[]):
+    """
+    def __init__(self, values=None):
         self.real_sys_argv = sys.argv
+        if values is None:
+            values = []
         sys.argv = values
 
     def reset(self):
@@ -85,7 +87,7 @@ class MockIwyuToolMain(object):
     """ Provides an object that configures a mock'd behaviour
         of the iwyu_tool.main method, being possible to obtain
         the arguments used in the called within the section tested.
-    """     
+    """
     def __init__(self):
         self._iwyu_tool_main_args = inspect.getargspec(iwyu_tool.main).args
         self.real_iwyu_tool_main = iwyu_tool.main
@@ -101,11 +103,10 @@ class MockIwyuToolMain(object):
         """ Returns a dictionary built with the iwyu_tool.main API keys filled
             with the arguments used in the last call.
         """
-        return self._call_args   
+        return self._call_args
 
     def _iwyu_tool_main_mock(self, *args, **kwargs):
         assert len(args) + len(kwargs) <= self._iwyu_tool_main_args
-        index = 0
         for idx, arg in enumerate(args):
             key_idx = self._iwyu_tool_main_args[idx]
             self._call_args[key_idx] = arg
@@ -269,7 +270,7 @@ class WinSplitTests(unittest.TestCase):
 
 class BootstrapTests(unittest.TestCase):
     def setUp(self):
-        self.iwyu_tool_main_mock =  MockIwyuToolMain()
+        self.iwyu_tool_main_mock = MockIwyuToolMain()
         self.sys_exit_stub = StubSysExit()
         self.sys_exit_stub.will_return(0)
 
@@ -285,9 +286,9 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(['arg1'], call_args['extra_args'])
 
     def test_argument_parser_does_include_iwyu_flags(self):
-        """ Check that arguments that appear after the '--' delimiter are 
-        injected as they are considering the case of being preceeded by -Xiwyu 
-        special delimiter and in the form of --arg or arg as well as being 
+        """ Check that arguments that appear after the '--' delimiter are
+        injected as they are considering the case of being preceeded by -Xiwyu
+        special delimiter and in the form of --arg or arg as well as being
         a non -Xiwyu preceeded argument
         """
         argv_stub = StubSysArgv(['iwyu_tool.py', '-p', '.', '--',\
