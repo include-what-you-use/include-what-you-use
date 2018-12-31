@@ -381,8 +381,8 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
     return execute(invocations, verbose, formatter, jobs)
 
 
-def _bootstrap():
-    """ Parse arguments and dispatch to main(). """
+def _bootstrap(sys_argv):
+    """ Parse sys_argv arguments and dispatch to main(). """
 
     # This hackery is necessary to add the forwarded IWYU args to the
     # usage and help strings.
@@ -433,11 +433,13 @@ def _bootstrap():
             return argv[:double_dash], argv[double_dash+1:]
         except ValueError:
             return argv, []
-    argv, extra_args = partition_args(sys.argv[1:])
+    argv, extra_args = partition_args(sys_argv[1:])
     args = parser.parse_args(argv)
-    sys.exit(main(args.dbpath, args.source, args.verbose,
-                  FORMATTERS[args.output_format], args.jobs, extra_args))
+    main(
+        args.dbpath, args.source, args.verbose,
+        FORMATTERS[args.output_format], args.jobs, extra_args
+        )
 
 
 if __name__ == '__main__':
-    _bootstrap()
+    sys.exit(_bootstrap(sys.argv))
