@@ -381,7 +381,7 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
     return execute(invocations, verbose, formatter, jobs)
 
 
-def _bootstrap():
+def _bootstrap(sys_argv):
     """ Parse arguments and dispatch to main(). """
 
     # This hackery is necessary to add the forwarded IWYU args to the
@@ -433,7 +433,7 @@ def _bootstrap():
             return argv[:double_dash], argv[double_dash+1:]
         except ValueError:
             return argv, []
-    argv, extra_args = partition_args(sys.argv[1:])
+    argv, extra_args = partition_args(sys_argv[1:])
     args = parser.parse_args(argv)
 
     # Force -Xiwyu prefix to extra_args so users don't have to provide prefix
@@ -441,9 +441,9 @@ def _bootstrap():
     prefixes = ['-Xiwyu'] * len(extra_args)
     extra_args = list(sum(zip(prefixes, extra_args), ()))
 
-    sys.exit(main(args.dbpath, args.source, args.verbose,
-                  FORMATTERS[args.output_format], args.jobs, extra_args))
+    return main(args.dbpath, args.source, args.verbose,
+                FORMATTERS[args.output_format], args.jobs, extra_args)
 
 
 if __name__ == '__main__':
-    _bootstrap()
+    sys.exit(_bootstrap(sys.argv))
