@@ -11,6 +11,7 @@
 import sys
 import time
 import random
+import inspect
 import unittest
 import iwyu_tool
 
@@ -51,6 +52,26 @@ class MockInvocation(iwyu_tool.Invocation):
 
     def start(self, verbose):
         return MockProcess(self._will_block, self._will_return)
+
+
+class MockIwyuToolMain(object):
+    """ Replacement for iwyu_tool.main to capture parsed arguments. """
+    def __init__(self):
+        self.argspec = inspect.getargspec(iwyu_tool.main).args
+        self.real_iwyu_tool_main = iwyu_tool.main
+        iwyu_tool.main = self._mock
+        self.call_args = {}
+
+    def reset(self):
+        iwyu_tool.main = self.real_iwyu_tool_main
+
+    def _mock(self, *args, **kwargs):
+        for i, arg in enumerate(args):
+            name = self.argspec[i]
+            self.call_args[name] = arg
+
+        self.call_args.update(kwargs)
+        return 0
 
 
 class IWYUToolTests(unittest.TestCase):
@@ -207,6 +228,48 @@ class WinSplitTests(unittest.TestCase):
 
         self.assert_win_split('clang  -I. \t     -A',
                               ['clang', '-I.', '-A'])
+
+
+class BootstrapTests(unittest.TestCase):
+    def setUp(self):
+        self.main = MockIwyuToolMain()
+
+    def tearDown(self):
+        self.main.reset()
+
+    def test_argparse_args(self):
+        """ Argparse arguments are forwarded to main. """
+        argv = ['iwyu_tool.py', '-v', '-o', 'clang', '-j', '12', '-p', '.',
+                'src1', 'src2']
+        iwyu_tool._bootstrap(argv)
+        self.assertEqual('.', self.main.call_args['compilation_db_path'])
+        self.assertEqual(['src1', 'src2'], self.main.call_args['source_files'])
+        self.assertEqual(True, self.main.call_args['verbose'])
+        self.assertEqual(iwyu_tool.FORMATTERS['clang'],
+                         self.main.call_args['formatter'])
+        self.assertEqual(12, self.main.call_args['jobs'])
+        self.assertEqual([], self.main.call_args['extra_args'])
+
+    def test_extra_args(self):
+        """ Extra arguments after '--' are forwarded to main. """
+        argv = ['iwyu_tool.py', '-p', '.', '--', '-extra1', '-extra2']
+        iwyu_tool._bootstrap(argv)
+        self.assertEqual(['-extra1', '-extra2'],
+                         self.main.call_args['extra_args'])
+
+    def test_extra_iwyu_args(self):
+        """ Extra arguments with '-Xiwyu' prefix are forwarded verbatim. """
+        argv = ['iwyu_tool.py', '-p', '.', '--', '-Xiwyu', '--arg']
+        iwyu_tool._bootstrap(argv)
+        self.assertEqual(['-Xiwyu', '--arg'], self.main.call_args['extra_args'])
+
+    def test_extra_args_with_sep(self):
+        """ If there are multiple '--' separators, subsequent ones are forwarded
+        verbatim as part of extra arguments. """
+        argv = ['iwyu_tool.py', '-p', '.', '--', 'arg1', '--', 'another_arg1']
+        iwyu_tool._bootstrap(argv)
+        self.assertEqual(['arg1', '--', 'another_arg1'],
+                         self.main.call_args['extra_args'])
 
 
 if __name__ == '__main__':
