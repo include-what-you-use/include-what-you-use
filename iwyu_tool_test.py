@@ -64,13 +64,13 @@ class IWYUToolTests(unittest.TestCase):
         iwyu_tool.sys.stdout = self.stdout_stub
 
     def test_from_compile_command(self):
-        iwyu_args = ['-foo']
+        extra_args = ['-foo']
         invocation = iwyu_tool.Invocation.from_compile_command(
             {
                 'directory': '/home/user/llvm/build',
                 'command': '/usr/bin/clang++ -Iinclude file.cc',
                 'file': 'file.cc'
-            }, iwyu_args)
+            }, extra_args)
         self.assertEqual(
             invocation.command,
             [iwyu_tool.IWYU_EXECUTABLE, '-foo', '-Iinclude', 'file.cc'])
