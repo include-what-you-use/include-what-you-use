@@ -126,6 +126,9 @@ _HEADER_GUARD_RE = re.compile(r'$.HEADER_GUARD_RE')
 # know the previous line was a header-guard line, we're not that picky
 # about this one.
 _HEADER_GUARD_DEFINE_RE = re.compile(r'\s*#\s*define\s+')
+# Pragma to mark the associated header (for use when it cannot be deduced from
+# the filename)
+_IWYU_PRAGMA_ASSOCIATED_RE = re.compile(r'IWYU\s*pragma:\s*associated')
 
 # We annotate every line in the source file by the re it matches, or None.
 # Note that not all of the above RE's are represented here; for instance,
@@ -1548,6 +1551,8 @@ def _IsMainCUInclude(line_info, filename):
   """
   if line_info.type != _INCLUDE_RE or _IsSystemInclude(line_info):
     return False
+  if _IWYU_PRAGMA_ASSOCIATED_RE.search(line_info.line):
+    return True
   # First, normalize the includee by getting rid of -inl.h and .h
   # suffixes (for the #include) and the "'s around the #include line.
   canonical_include = re.sub(r'(-inl\.h|\.h|\.H)$',
