@@ -3637,6 +3637,26 @@ The full include-list for barrier_includes.h:
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
+  def testSortingMainCUIncludeViaPragma(self):
+    """Check that we treat (potentially multiple) associated headers as
+    main-cu #includes."""
+    infile = """\
+#include <stdio.h>
+#include "other/dir/bar.h" // IWYU pragma: associated
+#include "other/baz.h" // IWYU pragma: associated
+"""
+    expected_output = """\
+#include "other/baz.h" // IWYU pragma: associated
+#include "other/dir/bar.h" // IWYU pragma: associated
+#include <stdio.h>
+"""
+    self.RegisterFileContents({'me/subdir0/foo.cc': infile})
+    num_files_modified = fix_includes.SortIncludesInFiles(
+        ['me/subdir0/foo.cc'], self.flags)
+    self.assertListEqual(expected_output.strip().split('\n'),
+                         self.actual_after_contents)
+    self.assertEqual(1, num_files_modified)
+
   def testSortingMainCUIncludeWithUpperCaseH(self):
     """Check that we identify when first .H file is a main-cu #include."""
     infile = """\
