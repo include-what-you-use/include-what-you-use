@@ -92,6 +92,8 @@
   { symbol: [ "suseconds_t", private, "<sys/select.h>", public ] },
   { symbol: [ "time_t", private, "<sys/types.h>", public ] },
   { symbol: [ "time_t", private, "<time.h>", public ] },
+  { symbol: [ "timespec", private, "<time.h>", public ] },
+  { symbol: [ "timeval", private, "<sys/time.h>", public ] },
   { symbol: [ "u_char", private, "<sys/types.h>", public ] },
   { symbol: [ "u_char", private, "<rpc/types.h>", public ] },
   { symbol: [ "uid_t", private, "<sys/types.h>", public ] },
