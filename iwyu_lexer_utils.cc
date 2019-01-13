@@ -10,28 +10,19 @@
 #include "iwyu_lexer_utils.h"
 #include "iwyu_globals.h"
 
-#include <cstring>
 #include <string>
-#include <vector>
 
-#include "iwyu_verrs.h"
 #include "port.h"
-#include "llvm/Support/raw_ostream.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
 
-using clang::Lexer;
-using clang::LangOptions;
 using clang::SourceLocation;
 using clang::SourceManager;
 using clang::SourceRange;
 using clang::Token;
 using llvm::StringRef;
 using std::string;
-using std::vector;
 
 namespace include_what_you_use {
 
@@ -99,58 +90,6 @@ string GetTokenText(const Token& token,
                     const CharacterDataGetterInterface& data_getter) {
   const char* text = data_getter.GetCharacterData(token.getLocation());
   return string(text, token.getLength());
-}
-
-// Given the range of an #if or #elif statement, determine the
-// symbols which are arguments to "defined". This allows iwyu to
-// treat these symbols as if #ifdef was used instead.
-vector<Token> FindArgumentsToDefined(
-    SourceRange range,
-    const CharacterDataGetterInterface& data_getter) {
-  const char* text = data_getter.GetCharacterData(range.getBegin());
-  const char* text_end = data_getter.GetCharacterData(range.getEnd());
-
-  // Ugh. The lexer wants the text to be nul-terminated. Make a copy.
-  const unsigned range_length = text_end - text;
-  const string range_str(text, range_length);
-  const char* range_cstr = range_str.c_str();
-
-  VERRS(8) << "Lexing: " << range_str << "\n";
-  Lexer lexer(range.getBegin(), LangOptions(), range_cstr, range_cstr,
-              range_cstr + range_length);
-
-  vector<Token> ret;
-  Token token;
-  enum { kLookingForDefined,
-         kExpectingLeftParenOrDefinedIdentifier,
-         kExpectingDefinedIdentifier } state = kLookingForDefined;
-  while (!lexer.LexFromRawLexer(token)) {
-    VERRS(8) << "Processing token \""
-             << GetTokenText(token, data_getter)
-             << "\" of type " << token.getName()
-             << " in state " << state << "\n";
-    switch (state) {
-      case kLookingForDefined:
-        if (token.getKind() == clang::tok::raw_identifier) {
-          if (GetTokenText(token, data_getter) == "defined") {
-            state = kExpectingLeftParenOrDefinedIdentifier;
-          }
-        }
-        break;
-      case kExpectingLeftParenOrDefinedIdentifier:
-        if (token.getKind() == clang::tok::l_paren) {
-          state = kExpectingDefinedIdentifier;
-          continue;
-        }
-        // Fall through.
-      case kExpectingDefinedIdentifier:
-        CHECK_(token.getKind() == clang::tok::raw_identifier);
-        ret.push_back(token);
-        state = kLookingForDefined;
-        break;
-    }
-  }
-  return ret;
 }
 
 }  // namespace include_what_you_use

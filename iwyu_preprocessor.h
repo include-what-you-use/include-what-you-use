@@ -177,18 +177,17 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Not needed for iwyu:
   // virtual void MacroUndefined(const clang::Token&, const clang::MacroInfo*);
 
-  void If(clang::SourceLocation loc,
-          clang::SourceRange condition_range,
-          ConditionValueKind condition_value) override;
-  void Elif(clang::SourceLocation loc,
-            clang::SourceRange condition_range,
-            ConditionValueKind condition_value,
-            clang::SourceLocation if_loc) override;
   void Ifdef(clang::SourceLocation loc, const clang::Token& id,
              const clang::MacroDefinition& definition) override;
   void Ifndef(clang::SourceLocation loc, const clang::Token& id,
               const clang::MacroDefinition& definition) override;
+  void Defined(const clang::Token& id,
+               const clang::MacroDefinition& definition,
+               clang::SourceRange range) override;
+
   // Not needed for iwyu:
+  // virtual void If();
+  // virtual void Elif();
   // virtual void Else();
   // virtual void Endif();
 
@@ -269,8 +268,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
   // As above, but get the definition location from macros_definition_loc_.
   void FindAndReportMacroUse(const string& name, clang::SourceLocation loc);
-
-  void CheckIfOrElif(clang::SourceRange range);
 
   // Final-processing routines done after all header files have been read.
   void DoFinalMacroChecks();
