@@ -11,7 +11,6 @@
 #define INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
 
 #include <string>                       // for string
-#include <vector>                       // for vector
 
 #include "clang/Basic/SourceLocation.h"
 
@@ -23,7 +22,6 @@ class Token;
 namespace include_what_you_use {
 
 using std::string;
-using std::vector;
 
 // For a particular source line that source_location points to,
 // returns true if the given text occurs on the line.
@@ -69,13 +67,6 @@ clang::SourceLocation GetLocationAfter(
 // If include_loc points to the second INC, we'll return '<stdio.h>'.
 string GetIncludeNameAsWritten(
     clang::SourceLocation include_loc,
-    const CharacterDataGetterInterface& data_getter);
-
-// Given the range of an #if or #elif statement, determine the
-// symbols which are arguments to "defined". This allows iwyu to
-// treat these symbols as if #ifdef was used instead.
-vector<clang::Token> FindArgumentsToDefined(
-    clang::SourceRange range,
     const CharacterDataGetterInterface& data_getter);
 
 // Get the text of a given token.

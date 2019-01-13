@@ -34,7 +34,6 @@ using clang::Token;
 
 namespace iwyu = include_what_you_use;
 using iwyu::CharacterDataGetterInterface;
-using iwyu::FindArgumentsToDefined;
 
 namespace {
 
@@ -66,66 +65,6 @@ class StringCharacterDataGetter : public CharacterDataGetterInterface {
  private:
   string str_;
 };
-
-TEST(LexerTest, ClangLexer) {
-  // Not so much a test as an example of how to use the Lexer.
-  const char text[] = "#if defined(FOO)";
-  Lexer lexer(SourceLocation(), LangOptions(), text, text, text + strlen(text));
-
-  Token token;
-  while (!lexer.LexFromRawLexer(token)) {
-    printf("Token: %s at %u length %u: \"%s\"\n",
-           token.getName(), token.getLocation().getRawEncoding(),
-           token.getLength(),
-           string(text + token.getLocation().getRawEncoding(),
-                  token.getLength()).c_str());
-  }
-}
-
-// Common test code for testing FindArgumentsToDefined. The symbols
-// should be the arguments to defined() in order.
-void TestFindArgumentsToDefinedWithText(const string& text,
-                                        const vector<string>& symbols) {
-  StringCharacterDataGetter data_getter(text);
-  SourceLocation begin_loc = data_getter.BeginningOfString();
-  SourceLocation end_loc =
-      CreateSourceLocationFromOffset(begin_loc, text.size());
-
-  vector<Token> defined_tokens = FindArgumentsToDefined(
-      SourceRange(begin_loc, end_loc), data_getter);
-  EXPECT_EQ(symbols.size(), defined_tokens.size());
-  for (int i = 0; i < symbols.size(); ++i) {
-    const string& symbol = symbols[i];
-    const Token& token = defined_tokens[i];
-    EXPECT_EQ(clang::tok::raw_identifier, token.getKind());
-    SourceLocation expected_loc =
-        CreateSourceLocationFromOffset(begin_loc, text.find(symbol));
-    EXPECT_EQ(expected_loc, token.getLocation());
-    EXPECT_EQ(symbol.size(), token.getLength());
-    EXPECT_EQ(symbol, GetTokenText(token, data_getter));
-  }
-}
-
-TEST(FindArgumentsToDefined, InParentheses) {
-  vector<string> symbols;
-  symbols.push_back("FOO");
-  TestFindArgumentsToDefinedWithText("#if defined(FOO)\n", symbols);
-}
-
-TEST(FindArgumentsToDefined, NoParentheses) {
-  vector<string> symbols;
-  symbols.push_back("FOO");
-  TestFindArgumentsToDefinedWithText("#if defined FOO\n", symbols);
-}
-
-TEST(FindArgumentsToDefined, MultipleArgs) {
-  vector<string> symbols;
-  symbols.push_back("FOO");
-  symbols.push_back("BAR");
-  symbols.push_back("BAZ");
-  TestFindArgumentsToDefinedWithText(
-      "#if defined FOO || defined(BAR) || !defined(BAZ)\n", symbols);
-}
 
 TEST(GetSourceTextUntilEndOfLine, FullLine) {
   const char text[] = "This is the full line.\n";

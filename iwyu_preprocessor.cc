@@ -609,24 +609,6 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
   }
 }
 
-void IwyuPreprocessorInfo::If(SourceLocation loc, SourceRange condition_range,
-                              ConditionValueKind condition_value) {
-  ERRSYM(GetFileEntry(condition_range.getBegin()))
-      << " [ #if         ] "
-      << PrintableSourceRange(condition_range) << "\n";
-  CheckIfOrElif(condition_range);
-}
-
-void IwyuPreprocessorInfo::Elif(SourceLocation loc,
-                                SourceRange condition_range,
-                                ConditionValueKind condition_value,
-                                SourceLocation if_loc) {
-  ERRSYM(GetFileEntry(condition_range.getBegin()))
-      << " [ #elif       ] "
-      << PrintableSourceRange(condition_range) << "\n";
-  CheckIfOrElif(condition_range);
-}
-
 void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
                                  const Token& id,
                                  const MacroDefinition& /*definition*/) {
@@ -641,6 +623,18 @@ void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
                                   const MacroDefinition& /*definition*/) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifndef     ] " << PrintableLoc(id.getLocation())
+      << ": " << GetName(id) << "\n";
+  FindAndReportMacroUse(GetName(id), id.getLocation());
+}
+
+// Clang will give a MacroExpands() callback for all macro-tokens
+// used inside an #if or #elif, *except* macro-tokens used within a
+// 'defined' operator. They produce a Defined() callback.
+void IwyuPreprocessorInfo::Defined(const Token& id,
+                                   const MacroDefinition& /*definition*/,
+                                   SourceRange /*range*/) {
+  ERRSYM(GetFileEntry(id.getLocation()))
+      << "[ #if defined ] " << PrintableLoc(id.getLocation())
       << ": " << GetName(id) << "\n";
   FindAndReportMacroUse(GetName(id), id.getLocation());
 }
@@ -822,20 +816,6 @@ void IwyuPreprocessorInfo::FindAndReportMacroUse(const string& name,
   if (const SourceLocation* dfn_loc
       = FindInMap(&macros_definition_loc_, name)) {
     ReportMacroUse(name, loc, *dfn_loc);
-  }
-}
-
-// Clang will give an OnExpandMacro() callback for all macro-tokens
-// used inside an #if or #elif, *except* macro-tokens used within a
-// 'define': for '#if FOO || defined(BAR)', clang calls
-// OnExpandMacro() for FOO, but not for BAR (since macros within
-// defined() aren't expanded).  We catch BAR-type uses here.
-void IwyuPreprocessorInfo::CheckIfOrElif(SourceRange range) {
-  const vector<Token> defined_args =
-      FindArgumentsToDefined(range, DefaultDataGetter());  // in iwyu_lexer.h
-  for (const Token& token : defined_args) {
-    FindAndReportMacroUse(GetTokenText(token, DefaultDataGetter()),
-                          token.getLocation());
   }
 }
 
