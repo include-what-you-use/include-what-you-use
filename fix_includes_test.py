@@ -2810,7 +2810,7 @@ The full include-list for comments_with_includes:
     self.RegisterFileContents({'comments_with_includes': infile})
     self.ProcessAndTest(iwyu_output)
 
-  def testRemoveDuplicates(self):
+  def testRemoveDuplicateIncludes(self):
     """Tests we uniquify if an #include is in there twice."""
     infile = """\
 // Copyright 2010
@@ -2830,19 +2830,75 @@ The full include-list for comments_with_includes:
 int main() { return 0; }
 """
     iwyu_output = """\
-remove_duplicates should add these lines:
+remove_duplicate_includes should add these lines:
 #include <stdio.h>
 
-remove_duplicates should remove these lines:
+remove_duplicate_includes should remove these lines:
 - #include <notused.h>  // lines 3-3
 
-The full include-list for remove_duplicates:
+The full include-list for remove_duplicate_includes:
 #include <stdio.h>
 #include "used.h"
 #include "used2.h"
 ---
 """
-    self.RegisterFileContents({'remove_duplicates': infile})
+    self.RegisterFileContents({'remove_duplicate_includes': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testRemoveDuplicateForwardDeclarations(self):
+    """Tests we uniquify if an #include is in there twice."""
+    infile = """\
+#include <notused.h>  ///-
+class A;
+template<typename T> // Comment in the middle not a problem
+class B;
+class A; ///-
+template<typename T> ///-
+class B; ///-
+template<typename T> class B; ///-
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+remove_duplicate_forward_declarations should add these lines:
+
+remove_duplicate_forward_declarations should remove these lines:
+- #include <notused.h>  // lines 1-1
+
+The full include-list for remove_duplicate_forward_declarations:
+class A;  // lines 2-2
+template <typename T> class B;  // lines 3-4
+class A;  // lines 5-5
+template <typename T> class B;  // lines 6-7
+template <typename T> class B;  // lines 8-8
+---
+"""
+    self.RegisterFileContents({'remove_duplicate_forward_declarations': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testDontRemoveTemplateLines(self):
+    """Tests we don't accidentally think repeated template lines are dupes."""
+    infile = """\
+#include <notused.h>  ///-
+template<typename T>
+class A;
+template<typename T>
+class B;
+
+void f(A&, B&);
+"""
+    iwyu_output = """\
+dont_remove_template_lines should add these lines:
+
+dont_remove_template_lines should remove these lines:
+- #include <notused.h>  // lines 1-1
+
+The full include-list for dont_remove_template_lines:
+template <typename T> class A;  // lines 2-3
+template <typename T> class B;  // lines 4-5
+---
+"""
+    self.RegisterFileContents({'dont_remove_template_lines': infile})
     self.ProcessAndTest(iwyu_output)
 
   def testNestedNamespaces(self):
