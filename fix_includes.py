@@ -1124,6 +1124,8 @@ def _DeleteDuplicateLines(file_lines, line_ranges):
   particular, it should not cover lines that may have C literal
   strings in them.
 
+  We only delete whole move_spans, not lines within them.
+
   Arguments:
     file_lines: an array of LineInfo objects.
     line_ranges: a list of [start_line, end_line) pairs.
@@ -1131,13 +1133,21 @@ def _DeleteDuplicateLines(file_lines, line_ranges):
   seen_lines = set()
   for line_range in line_ranges:
     for line_number in range(*line_range):
-      if file_lines[line_number].type in (_BLANK_LINE_RE, _COMMENT_LINE_RE):
+      line_info = file_lines[line_number]
+      if line_info.type in (_BLANK_LINE_RE, _COMMENT_LINE_RE):
         continue
-      uncommented_line = _COMMENT_RE.sub('', file_lines[line_number].line)
-      if uncommented_line in seen_lines:
-        file_lines[line_number].deleted = True
-      elif not file_lines[line_number].deleted:
-        seen_lines.add(uncommented_line)
+      if line_number != line_info.move_span[0]:
+        continue
+      span_line_numbers = range(line_info.move_span[0], line_info.move_span[1])
+      line_infos_in_span = [file_lines[i] for i in span_line_numbers]
+      uncommented_lines = [
+          _COMMENT_RE.sub('', inf.line.strip()) for inf in line_infos_in_span]
+      uncommented_span = ' '.join(uncommented_lines)
+      if uncommented_span in seen_lines:
+        for info in line_infos_in_span:
+          info.deleted = True
+      elif not line_info.deleted:
+        seen_lines.add(uncommented_span)
 
 
 def _DeleteExtraneousBlankLines(file_lines, line_range):
