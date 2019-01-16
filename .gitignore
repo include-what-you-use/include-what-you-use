@@ -3,3 +3,6 @@ __pycache__
 
 # Visual Studio Code
 .vscode
+
+.gdb_history
+compile_commands.json
