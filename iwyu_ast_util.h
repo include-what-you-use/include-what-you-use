@@ -428,7 +428,6 @@ const clang::DeclContext* GetDeclContext(const ASTNode* ast_node);
 // --- Printers.
 
 string PrintableLoc(clang::SourceLocation loc);
-string PrintableSourceRange(clang::SourceRange range);
 string PrintableDecl(const clang::Decl* decl, bool terse=true);
 string PrintableStmt(const clang::Stmt* stmt);
 string PrintableType(const clang::Type* type);
