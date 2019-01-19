@@ -424,10 +424,6 @@ string PrintableLoc(SourceLocation loc) {
   }
 }
 
-string PrintableSourceRange(SourceRange range) {
-  return PrintableLoc(range.getBegin()) + " - " + PrintableLoc(range.getEnd());
-}
-
 string PrintableDecl(const Decl* decl, bool terse/*=true*/) {
   // Use the terse flag to limit the level of output to one line.
   clang::PrintingPolicy policy = decl->getASTContext().getPrintingPolicy();
