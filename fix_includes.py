@@ -581,7 +581,12 @@ def _ReadFile(filename, fileinfo):
   try:
     with open(filename, 'rb') as f:
       content = f.read()
-      return content.decode(fileinfo.encoding).splitlines()
+      # Call splitlines with True to keep the original line
+      # endings.  Later in WriteFile, they will be used as-is.
+      # This will reduce spurious changes to the original files.
+      # The lines we add will have the linesep determined by
+      # FileInfo.
+      return content.decode(fileinfo.encoding).splitlines(True)
   except (IOError, OSError) as why:
     print("Skipping '%s': %s" % (filename, why))
   return None
@@ -591,7 +596,8 @@ def _WriteFile(filename, fileinfo, file_lines):
   """Write the given file-lines to the file."""
   try:
     with open(filename, 'wb') as f:
-      content = fileinfo.linesep.join(file_lines) + fileinfo.linesep
+      # file_lines already have line endings, so join with ''.
+      content = ''.join(file_lines)
       content = content.encode(fileinfo.encoding)
       f.write(content)
   except (IOError, OSError) as why:
@@ -2048,7 +2054,7 @@ def _GetSymbolNameFromForwardDeclareLine(line):
   return symbol_name
 
 
-def FixFileLines(iwyu_record, file_lines, flags):
+def FixFileLines(iwyu_record, file_lines, flags, fileinfo):
   """Applies one block of lines from the iwyu output script.
 
   Called once we have read all the lines from the iwyu output script
@@ -2067,6 +2073,7 @@ def FixFileLines(iwyu_record, file_lines, flags):
     flags: commandline flags, as parsed by optparse.  We use
        flags.safe_headers to turn off deleting lines, and use the
        other flags indirectly (via calls to other routines).
+    fileinfo: FileInfo for the current file.
 
   Returns:
     An array of 'fixed' source code lines, after modifications as
@@ -2156,20 +2163,24 @@ def FixFileLines(iwyu_record, file_lines, flags):
       #    'namespace foo { class Bar; }\n' -> 'namespace foo {\nclass Bar;\n}'
       # along with collecting multiple classes in the same namespace.
       new_lines = _NormalizeNamespaceForwardDeclareLines(new_lines)
+
+    # Add line separators to the new lines.
+    new_lines = [nl.rstrip() + fileinfo.linesep for nl in new_lines]
+
     output_lines.extend(new_lines)
     line_number = current_reorder_span[1]               # go to end of span
 
   return [line for line in output_lines if line is not None]
 
 
-def FixOneFile(iwyu_record, file_contents, flags):
+def FixOneFile(iwyu_record, file_contents, flags, fileinfo):
   """Parse a file guided by an iwyu_record and flags and apply IWYU fixes.
   Returns two lists of lines (old, fixed).
   """
   file_lines = ParseOneFile(file_contents, iwyu_record)
   old_lines = [fl.line for fl in file_lines
                if fl is not None and fl.line is not None]
-  fixed_lines = FixFileLines(iwyu_record, file_lines, flags)
+  fixed_lines = FixFileLines(iwyu_record, file_lines, flags, fileinfo)
   return old_lines, fixed_lines
 
 
@@ -2201,7 +2212,7 @@ def FixManyFiles(iwyu_records, flags):
         continue
 
       print(">>> Fixing #includes in '%s'" % iwyu_record.filename)
-      old_lines, fixed_lines = FixOneFile(iwyu_record, file_contents, flags)
+      old_lines, fixed_lines = FixOneFile(iwyu_record, file_contents, flags, fileinfo)
       if old_lines == fixed_lines:
         print("No changes in file %s" % iwyu_record.filename)
         continue
