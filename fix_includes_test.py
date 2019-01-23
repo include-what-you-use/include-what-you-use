@@ -107,10 +107,11 @@ class FixIncludesBase(unittest.TestCase):
     for (filename, contents) in file_contents_map.items():
       before_contents = []
       expected_after_contents = []
-      for line in contents.splitlines():
+      for line in contents.splitlines(True):
         m = remove_re.search(line)
         if m:
-          before_contents.append(line[:m.start()])
+          # The trailing line separator is stripped, so append a '\n'.
+          before_contents.append(line[:m.start()] + '\n')
         elif line.startswith('///+'):
           expected_after_contents.append(line[len('///+'):])
         else:
@@ -3520,7 +3521,7 @@ int main() { return 0; }
 """
     self.RegisterFileContents({'sort': infile})
     num_files_modified = fix_includes.SortIncludesInFiles(['sort'], self.flags)
-    self.assertListEqual(expected_output.strip().split('\n'),
+    self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
@@ -3548,7 +3549,7 @@ int main() { return 0; }
     self.RegisterFileContents({'f1': infile1, 'f2': infile2})
     num_files_modified = fix_includes.SortIncludesInFiles(['f1', 'f2'],
                                                           self.flags)
-    self.assertListEqual(expected_output.strip().split('\n'),
+    self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(2, num_files_modified)
 
@@ -3633,7 +3634,7 @@ The full include-list for barrier_includes.h:
     self.RegisterFileContents({'me/subdir0/foo.cc': infile})
     num_files_modified = fix_includes.SortIncludesInFiles(
         ['me/subdir0/foo.cc'], self.flags)
-    self.assertListEqual(expected_output.strip().split('\n'),
+    self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
@@ -3653,7 +3654,7 @@ The full include-list for barrier_includes.h:
     self.RegisterFileContents({'me/subdir0/foo.cc': infile})
     num_files_modified = fix_includes.SortIncludesInFiles(
         ['me/subdir0/foo.cc'], self.flags)
-    self.assertListEqual(expected_output.strip().split('\n'),
+    self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
@@ -3670,7 +3671,7 @@ The full include-list for barrier_includes.h:
     self.RegisterFileContents({'foo.cc': infile})
     num_files_modified = fix_includes.SortIncludesInFiles(
         ['foo.cc'], self.flags)
-    self.assertListEqual(expected_output.strip().split('\n'),
+    self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
@@ -3689,7 +3690,7 @@ The full include-list for barrier_includes.h:
     self.RegisterFileContents({'me/subdir0/foo.cc': infile})
     num_files_modified = fix_includes.SortIncludesInFiles(
         ['me/subdir0/foo.cc'], self.flags)
-    self.assertListEqual(expected_output.strip().split('\n'),
+    self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
@@ -3741,7 +3742,7 @@ The full include-list for barrier_includes.h:
     self.flags.separate_project_includes = '<tld>'
     num_files_modified = fix_includes.SortIncludesInFiles(['me/subdir0/foo.cc'],
                                                           self.flags)
-    self.assertListEqual(expected_output.strip().split('\n'),
+    self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
@@ -3767,7 +3768,7 @@ The full include-list for barrier_includes.h:
     self.flags.separate_project_includes = 'me/subdir0'
     num_files_modified = fix_includes.SortIncludesInFiles(['me/subdir0/foo.cc'],
                                                           self.flags)
-    self.assertListEqual(expected_output.strip().split('\n'),
+    self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
@@ -4144,7 +4145,7 @@ namespace A { class AC; } // A
     self.flags.reorder = True
     num_files_modified = fix_includes.SortIncludesInFiles(
         ['inclusions_reordered.cc'], self.flags)
-    self.assertListEqual(expected_output.strip().split('\n'),
+    self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
@@ -4194,7 +4195,7 @@ namespace A { class AC; } // A
     self.flags.reorder = False
     num_files_modified = fix_includes.SortIncludesInFiles(
         ['inclusions_not_reordered.cc'], self.flags)
-    self.assertListEqual(expected_output.strip().split('\n'),
+    self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
 
