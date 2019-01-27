@@ -1105,8 +1105,12 @@ void ProcessForwardDeclare(OneUse* use,
     }
   }
 
-  // (A7) If --no_fwd_decls has been passed, recategorize as a full use.
-  if (GlobalFlags().no_fwd_decls) {
+  // (A7) If --no_fwd_decls has been passed, recategorize as a full use unless
+  // the decl is in this file (in which case it must be a self-sufficient decl
+  // being used, so we can just let IWYU do its work).
+  if (!use->ignore_use() &&
+      GlobalFlags().no_fwd_decls &&
+      GetFileEntry(use->decl_loc()) != GetFileEntry(use->use_loc())) {
     use->set_full_use();
   }
 }
