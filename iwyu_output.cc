@@ -346,12 +346,27 @@ string PrintablePtr(const void* ptr) {
 //       `-- TagDecl           (class, struct, union, enum)
 //           `-- RecordDecl    (class, struct, union)
 
+// Determines if a NamedDecl has any parent namespace, which is anonymous.
+bool HasAnonymousNamespace(const NamedDecl* decl) {
+  for (const DeclContext* ctx = decl->getDeclContext();
+       ctx && isa<NamedDecl>(ctx); ctx = ctx->getParent()) {
+    if (const NamespaceDecl* ns = DynCastFrom(ctx)) {
+      if (ns->isAnonymousNamespace()) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 // Given a NamedDecl that presents a (possibly template) record
 // (i.e. class, struct, or union) type declaration, and the print-out
 // of its (possible) template parameters and kind (e.g. "template
 // <typename T> struct"), returns its forward declaration line.
 string PrintForwardDeclare(const NamedDecl* decl,
-                           const string& tpl_params_and_kind) {
+                           const string& tpl_params_and_kind,
+                           bool cxx17ns) {
   // We need to short-circuit the logic for testing.
   if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(decl)) {
     return tpl_params_and_kind + " " + fake->qual_name() + ";";
@@ -362,19 +377,39 @@ string PrintForwardDeclare(const NamedDecl* decl,
 
   std::string fwd_decl = std::string(decl->getName()) + ";";
   bool seen_namespace = false;
+  // Anonymous namespaces are not using the more concise syntax.
+  bool concat_namespaces = cxx17ns && !HasAnonymousNamespace(decl);
   for (const DeclContext* ctx = decl->getDeclContext();
        ctx && isa<NamedDecl>(ctx); ctx = ctx->getParent()) {
     if (const RecordDecl* rec = DynCastFrom(ctx)) {
       fwd_decl = std::string(rec->getName()) + "::" + fwd_decl;
     } else if (const NamespaceDecl* ns = DynCastFrom(ctx)) {
+      bool first = !seen_namespace;
       if (!seen_namespace) {
         seen_namespace = true;
         fwd_decl = tpl_params_and_kind + " " + fwd_decl;
       }
 
-      const std::string ns_name = ns->isAnonymousNamespace() ?
-          "" : (std::string(ns->getName()) + " ");
-      fwd_decl = "namespace " + ns_name + "{ " + fwd_decl + " }";
+      if (concat_namespaces) {
+        std::string ns_name = std::string(ns->getName());
+        std::string prefix = ns_name;
+        std::string suffix;
+        if (first) {
+          first = false;
+          prefix = prefix + " { ";
+        }
+        if (ctx->getParent() && isa<NamedDecl>(ctx->getParent())) {
+          prefix = "::" + prefix;
+        } else {
+          prefix = "namespace " + prefix;
+          suffix = " }";
+        }
+        fwd_decl = prefix + fwd_decl + suffix;
+      } else {
+        std::string ns_name = ns->isAnonymousNamespace() ?
+            std::string() : (std::string(ns->getName()) + " ");
+        fwd_decl = "namespace " + ns_name + "{ " + fwd_decl + " }";
+      }
     } else if (const FunctionDecl* fn = DynCastFrom(ctx)) {
       // A local class (class defined inside a function).
       fwd_decl = std::string(fn->getName()) + "::" + fwd_decl;
@@ -392,7 +427,7 @@ string PrintForwardDeclare(const NamedDecl* decl,
 // Given a RecordDecl, return the line that could be put in source
 // code to forward-declare the record type, e.g. "namespace ns { class Foo; }".
 string MungedForwardDeclareLineForNontemplates(const RecordDecl* decl) {
-  return PrintForwardDeclare(decl, GetKindName(decl));
+  return PrintForwardDeclare(decl, GetKindName(decl), GlobalFlags().cxx17ns);
 }
 
 // Given a TemplateDecl representing a class|struct|union template
@@ -421,7 +456,7 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   // argument is inclusive, so substract one to get past the end-space.
   const string::size_type name = line.rfind(' ', endpos - 1);
   CHECK_(name != string::npos && "Unexpected printable template-type");
-  return PrintForwardDeclare(decl, line.substr(0, name));
+  return PrintForwardDeclare(decl, line.substr(0, name), GlobalFlags().cxx17ns);
 }
 
 string MungedForwardDeclareLine(const NamedDecl* decl) {

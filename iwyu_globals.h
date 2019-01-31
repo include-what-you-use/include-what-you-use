@@ -102,6 +102,7 @@ struct CommandlineFlags {
   bool no_comments;   // Disable 'why' comments. No short option.
   bool no_fwd_decls;  // Disable forward declarations.
   bool quoted_includes_first; // Place quoted includes first in sort order.  
+  bool cxx17ns; // -C: C++17 nested namespace syntax
 };
 
 const CommandlineFlags& GlobalFlags();

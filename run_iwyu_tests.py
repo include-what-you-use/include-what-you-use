@@ -85,6 +85,7 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_includes_remove.cc': ['--prefix_header_includes=remove'],
       'prefix_header_operator_new.cc': ['--prefix_header_includes=remove'],
       'quoted_includes_first.cc': ['--pch_in_code', '--quoted_includes_first'],
+      'cxx17ns.cc': ['--cxx17ns'],
     }
     prefix_headers = [self.Include('prefix_header_includes-d1.h'),
                       self.Include('prefix_header_includes-d2.h'),
@@ -113,6 +114,7 @@ class OneIwyuTest(unittest.TestCase):
       'range_for.cc': ['-std=c++11'],
       'typedef_in_template.cc': ['-std=c++11'],
       'inheriting_ctor.cc': ['-std=c++11'],
+      'cxx17ns.cc': ['-std=c++17'],
     }
     include_map = {
       'alias_template.cc': ['.'],
@@ -193,6 +195,7 @@ class OneIwyuTest(unittest.TestCase):
       'using_aliased_symbol_unused.cc': ['.'],
       'varargs_and_references.cc': ['.'],
       'virtual_tpl_method.cc': ['.'],
+      'cxx17ns.cc': ['.'],
     }
     # Internally, we like it when the paths start with rootdir.
     self._iwyu_flags_map = dict((posixpath.join(self.rootdir, k), v)
