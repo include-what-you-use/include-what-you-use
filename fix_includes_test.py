@@ -384,6 +384,49 @@ The full include-list for empty_namespace:
     self.RegisterFileContents({'empty_namespace': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testCXX17NS(self):
+    """Tests handling of output using the --cxx17ns switch."""
+    infile = """\
+#include "cxx17ns-i1.h"///-
+///+
+///+namespace a::b::c {
+///+struct One;
+///+}  // namespace a::b::c
+///+namespace a::b {
+///+struct One2;
+///+}  // namespace a::b
+///+namespace a {
+///+struct One4;
+///+struct One3;
+///+}  // namespace a
+
+struct Two {
+  Two(a::b::c::One& one);
+  Two(a::b::One2& one);
+  Two(a::One3& one);
+  Two(a::One4& one);
+};
+"""
+    iwyu_output = """\
+cxx17ns.cc should add these lines:
+namespace a { namespace { struct One4; } }
+namespace a { struct One3; }
+namespace a::b { struct One2; }
+namespace a::b::c { struct One; }
+
+cxx17ns.cc should remove these lines:
+- #include "cxx17ns-i1.h"  // lines 1-1
+
+The full include-list for cxx17ns.cc:
+namespace a { namespace { struct One4; } }
+namespace a { struct One3; }
+namespace a::b { struct One2; }
+namespace a::b::c { struct One; }
+---
+"""
+    self.RegisterFileContents({'cxx17ns.cc': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testRemovePartOfEmptyNamespace(self):
     """Tests we remove a namespace if empty, but not enclosing namespaces."""
     infile = """\
