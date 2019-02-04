@@ -5,7 +5,7 @@ addons:
   apt:
     sources:
      - ubuntu-toolchain-r-test
-     - llvm-toolchain-trusty
+     - llvm-toolchain-trusty-7
     packages:
      - ninja-build
      - llvm-dev
