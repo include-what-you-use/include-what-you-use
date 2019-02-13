@@ -11,6 +11,7 @@ addons:
      # TODO: These should really be the snapshots packages, but they are currently
      # broken. Remove the '-9' once they get fixed (see issue #642 for more info)
      - llvm-9-dev
+     - llvm-9-tools
      - libclang-9-dev
      - clang-9
 
