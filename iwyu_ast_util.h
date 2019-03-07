@@ -655,6 +655,10 @@ const clang::NamedDecl* GetNonfriendClassRedecl(const clang::NamedDecl* decl);
 // same, and it's a class (or struct).
 bool DeclsAreInSameClass(const clang::Decl* decl1, const clang::Decl* decl2);
 
+// Returns true if the given decl/name is a builtin function
+bool IsBuiltinFunction(const clang::NamedDecl* decl,
+                       const std::string& symbol_name);
+
 // --- Utilities for Type.
 
 const clang::Type* GetTypeOf(const clang::Expr* expr);

@@ -1188,14 +1188,11 @@ void ProcessFullUse(OneUse* use,
     return;
   }
   // A compiler builtin without a predefined header file (e.g. __builtin_..)
-  if (const clang::IdentifierInfo* iden = use->decl()->getIdentifier()) {
-    if (iden->getBuiltinID() != 0 &&
-        !clang::Builtin::Context::isBuiltinFunc(use->symbol_name().c_str())) {
-      VERRS(6) << "Ignoring use of " << use->symbol_name()
-               << " (" << use->PrintableUseLoc() << "): built-in function\n";
-      use->set_ignore_use();
-      return;
-    }
+  if (IsBuiltinFunction(use->decl(), use->symbol_name()) {
+    VERRS(6) << "Ignoring use of " << use->symbol_name()
+             << " (" << use->PrintableUseLoc() << "): built-in function\n";
+    use->set_ignore_use();
+    return;
   }
   // Special case for operators new/delete: Only treated as built-in if they
   // are the default, non-placement versions.
