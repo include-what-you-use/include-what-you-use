@@ -1111,12 +1111,25 @@ void ProcessForwardDeclare(OneUse* use,
   }
 }
 
+// Returns true if the given symbol has a mapping defined to a file.
+static bool HasMapping(const string& symbol) {
+  return !GlobalIncludePicker().GetCandidateHeadersForSymbol(symbol).empty();
+}
+
 void ProcessFullUse(OneUse* use,
                     const IwyuPreprocessorInfo* preprocessor_info) {
   CHECK_(use->decl() && "Must call ProcessFullUse on a decl");
   CHECK_(use->is_full_use() && "Must not call ProcessFullUse on fwd-decl");
   if (use->ignore_use())   // we're already ignoring it
     return;
+
+  // We normally ignore uses for builtins, but when there is a mapping defined
+  // for the symbol, we should respect that.  So, we need to determine whether
+  // the symbol has any mappings.
+  bool is_builtin_function = IsBuiltinFunction(use->decl(), use->symbol_name());
+
+  bool is_builtin_function_with_mappings =
+      is_builtin_function && HasMapping(use->symbol_name());
 
   // (B1) If the definition is after the use, re-point to a prior decl.
   // If iwyu followed the language precisely, this wouldn't be
@@ -1162,7 +1175,7 @@ void ProcessFullUse(OneUse* use,
   // All this is moot when FunctionDecls are being defined, all their redecls
   // are separately registered as uses so that a definition anchors all its
   // declarations.
-  if (!use->is_function_being_defined()) {
+  if (!use->is_function_being_defined() && !is_builtin_function_with_mappings) {
     set<const NamedDecl*> all_redecls;
     if (isa<RecordDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
       all_redecls.insert(use->decl());  // for classes, just consider the dfn
@@ -1188,7 +1201,7 @@ void ProcessFullUse(OneUse* use,
     return;
   }
   // A compiler builtin without a predefined header file (e.g. __builtin_..)
-  if (IsBuiltinFunction(use->decl(), use->symbol_name()) {
+  if (is_builtin_function && !is_builtin_function_with_mappings) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): built-in function\n";
     use->set_ignore_use();
@@ -1254,7 +1267,8 @@ void ProcessFullUse(OneUse* use,
   // the language requires).
   // TODO(csilvers): remove this when we resolve the bugs with macros/typedefs.
   if (preprocessor_info->FileTransitivelyIncludes(
-          GetFileEntry(use->decl()), GetFileEntry(use->use_loc()))) {
+          GetFileEntry(use->decl()), GetFileEntry(use->use_loc())) &&
+      !is_builtin_function_with_mappings) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): 'backwards' #include\n";
     use->set_ignore_use();
