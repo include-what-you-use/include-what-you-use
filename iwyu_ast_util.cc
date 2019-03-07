@@ -39,6 +39,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 
@@ -1077,6 +1078,15 @@ bool DeclsAreInSameClass(const Decl* decl1, const Decl* decl2) {
   if (decl1->getDeclContext() != decl2->getDeclContext())
     return false;
   return decl1->getDeclContext()->isRecord();
+}
+
+bool IsBuiltinFunction(const clang::NamedDecl* decl,
+                       const std::string& symbol_name) {
+  if (const clang::IdentifierInfo* iden = decl->getIdentifier()) {
+    return iden->getBuiltinID() != 0 &&
+           !clang::Builtin::Context::isBuiltinFunc(symbol_name.c_str());
+  }
+  return false;
 }
 
 // --- Utilities for Type.
