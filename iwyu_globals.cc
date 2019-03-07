@@ -62,6 +62,9 @@ static void PrintHelp(const char* extra_msg) {
          "        to the default of reporting for the input .cc file and its\n"
          "        associated .h files).  This flag may be specified multiple\n"
          "        times to specify multiple glob patterns.\n"
+         "   --keep=<glob>: tells iwyu to always keep these includes.\n"
+         "        This flag may be specified multiple times to specify\n"
+         "        multiple glob patterns.\n"
          "   --mapping_file=<filename>: gives iwyu a mapping file.\n"
          "   --no_default_mappings: do not add iwyu's default mappings.\n"
          "   --pch_in_code: mark the first include in a translation unit as a\n"
@@ -168,6 +171,7 @@ CommandlineFlags::CommandlineFlags()
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
   static const struct option longopts[] = {
     {"check_also", required_argument, nullptr, 'c'},  // can be specified >once
+    {"keep", required_argument, nullptr, 'k'},  // can be specified >once
     {"transitive_includes_only", no_argument, nullptr, 't'},
     {"verbose", required_argument, nullptr, 'v'},
     {"mapping_file", required_argument, nullptr, 'm'},
@@ -185,6 +189,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
   while (true) {
     switch (getopt_long(argc, argv, shortopts, longopts, nullptr)) {
       case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
+      case 'k': AddGlobToKeepIncludes(optarg); break;
       case 't': transitive_includes_only = true; break;
       case 'v': verbose = atoi(optarg); break;
       case 'm': mapping_files.push_back(optarg); break;
@@ -377,6 +382,21 @@ void AddGlobToReportIWYUViolationsFor(const string& glob) {
 bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file) {
   const string filepath = GetFilePath(file);
   for (const string& glob : GlobalFlags().check_also)
+    if (GlobMatchesPath(glob.c_str(), filepath.c_str()))
+      return true;
+  return false;
+}
+
+void AddGlobToKeepIncludes(const string& glob) {
+  CHECK_(commandline_flags && "Call ParseIwyuCommandlineFlags() before this");
+  commandline_flags->keep.insert(NormalizeFilePath(glob));
+}
+
+bool ShouldKeepIncludeFor(const clang::FileEntry* file) {
+  if (GlobalFlags().keep.empty())
+    return false;
+  const string filepath = GetFilePath(file);
+  for (const string& glob : GlobalFlags().keep)
     if (GlobMatchesPath(glob.c_str(), filepath.c_str()))
       return true;
   return false;
