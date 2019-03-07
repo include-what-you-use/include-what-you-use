@@ -87,6 +87,7 @@ struct CommandlineFlags {
   int ParseArgv(int argc, char** argv);   // parses flags from argv
 
   set<string> check_also;  // -c: globs to report iwyu violations for
+  set<string> keep;        // -k: globs to force-keep includes for
   bool transitive_includes_only;   // -t: don't add 'new' #includes to files
   int verbose;             // -v: how much information to emit as we parse
   vector<string> mapping_files; // -m: mapping files
@@ -127,6 +128,11 @@ FullUseCache* ClassMembersFullUseCache();
 // do in the shell).  TODO(csilvers): use a prefix instead? allow '...'?
 void AddGlobToReportIWYUViolationsFor(const string& glob);
 bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file);
+
+// For the commandline option --keep.
+// Similar to AddGlobToReportIWYUViolationsFor.
+void AddGlobToKeepIncludes(const string& glob);
+bool ShouldKeepIncludeFor(const clang::FileEntry* file);
 
 }  // namespace include_what_you_use
 

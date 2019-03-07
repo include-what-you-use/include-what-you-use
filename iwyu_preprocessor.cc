@@ -400,6 +400,11 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     protect_reason = "pragma_keep";
     FileInfoFor(includer)->ReportKnownDesiredFile(includee);
 
+  } else if (ShouldKeepIncludeFor(includee)) {
+    // The command line version of pragma keep.
+    protect_reason = "--keep";
+    FileInfoFor(includer)->ReportKnownDesiredFile(includee);
+
   } else if (LineHasText(includer_loc, "// IWYU pragma: export") ||
              LineHasText(includer_loc, "/* IWYU pragma: export") ||
              HasOpenBeginExports(includer)) {
