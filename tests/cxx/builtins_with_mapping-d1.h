@@ -1,4 +1,4 @@
-//===--- built_ins_with_mapping-d1.h - test input file for iwyu -----------===//
+//===--- builtins_with_mapping-d1.h - test input file for iwyu ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILT_INS_WITH_MAPPING_D1_H_
-#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILT_INS_WITH_MAPPING_D1_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILTINS_WITH_MAPPING_D1_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILTINS_WITH_MAPPING_D1_H_
 
 int i = __builtin_expect(0, 0);
 
-#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILT_INS_WITH_MAPPING_D1_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILTINS_WITH_MAPPING_D1_H_

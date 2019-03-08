@@ -1,4 +1,4 @@
-//===--- built_ins_no_includes.cc - test input file for iwyu --------------===//
+//===--- builtins_no_includes.cc - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,6 +19,6 @@ void foo() {
 
 /**** IWYU_SUMMARY
 
-(tests/cxx/built_ins_no_includes.cc has correct #includes/fwd-decls)
+(tests/cxx/builtins_no_includes.cc has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */
