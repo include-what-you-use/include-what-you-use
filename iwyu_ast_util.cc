@@ -919,7 +919,7 @@ bool IsDefaultNewOrDelete(const FunctionDecl* decl,
                           const string& decl_loc_as_quoted_include) {
   // Clang will report <new> as the location of the default new and
   // delete operators if <new> is included. Otherwise, it reports the
-  // (fake) file "<built_in>".
+  // (fake) file "<built-in>".
   if (decl_loc_as_quoted_include != "<new>" &&
       !IsBuiltinFile(GetFileEntry(decl)))
     return false;
