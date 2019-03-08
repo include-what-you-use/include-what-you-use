@@ -1,4 +1,4 @@
-//===--- built_ins_with_mapping.cc - test input file for iwyu -------------===//
+//===--- builtins_with_mapping.cc - test input file for iwyu --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/cxx/built_ins_with_mapping.h"
-#include "tests/cxx/built_ins_with_mapping-d1.h"
+#include "tests/cxx/builtins_with_mapping.h"
+#include "tests/cxx/builtins_with_mapping-d1.h"
 
 // Normally if we use a builtin function IWYU will ignore uses of it.
 // However, if there is a mapping defined for that builtin then it should be
@@ -25,16 +25,16 @@ int k = __builtin_strlen("");
 
 /**** IWYU_SUMMARY
 
-tests/cxx/built_ins_with_mapping.cc should add these lines:
-#include "tests/cxx/built_ins_with_mapping-d2.h"
-#include "tests/cxx/built_ins_with_mapping-d3.h"
+tests/cxx/builtins_with_mapping.cc should add these lines:
+#include "tests/cxx/builtins_with_mapping-d2.h"
+#include "tests/cxx/builtins_with_mapping-d3.h"
 
-tests/cxx/built_ins_with_mapping.cc should remove these lines:
+tests/cxx/builtins_with_mapping.cc should remove these lines:
 
-The full include-list for tests/cxx/built_ins_with_mapping.cc:
-#include "tests/cxx/built_ins_with_mapping.h"
-#include "tests/cxx/built_ins_with_mapping-d1.h"  // for i
-#include "tests/cxx/built_ins_with_mapping-d2.h"  // for __builtin_expect
-#include "tests/cxx/built_ins_with_mapping-d3.h"  // for __builtin_strlen
+The full include-list for tests/cxx/builtins_with_mapping.cc:
+#include "tests/cxx/builtins_with_mapping.h"
+#include "tests/cxx/builtins_with_mapping-d1.h"  // for i
+#include "tests/cxx/builtins_with_mapping-d2.h"  // for __builtin_expect
+#include "tests/cxx/builtins_with_mapping-d3.h"  // for __builtin_strlen
 
 ***** IWYU_SUMMARY */

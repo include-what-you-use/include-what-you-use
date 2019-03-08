@@ -1,4 +1,4 @@
-//===--- built_ins_new_included.cc - test input file for iwyu -------------===//
+//===--- builtins_new_included.cc - test input file for iwyu --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -21,11 +21,11 @@ void foo() {
 
 /**** IWYU_SUMMARY
 
-tests/cxx/built_ins_new_included.cc should add these lines:
+tests/cxx/builtins_new_included.cc should add these lines:
 
-tests/cxx/built_ins_new_included.cc should remove these lines:
+tests/cxx/builtins_new_included.cc should remove these lines:
 - #include <new>  // lines XX-XX
 
-The full include-list for tests/cxx/built_ins_new_included.cc:
+The full include-list for tests/cxx/builtins_new_included.cc:
 
 ***** IWYU_SUMMARY */

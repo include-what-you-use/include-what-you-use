@@ -1,4 +1,4 @@
-//===--- built_ins_with_mapping.h - test input file for iwyu --------------===//
+//===--- builtins_with_mapping.h - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILT_INS_WITH_MAPPING_H_
-#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILT_INS_WITH_MAPPING_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILTINS_WITH_MAPPING_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILTINS_WITH_MAPPING_H_
 
 // This is to simulate the situation where a builtin exists on some compilers,
 // and not others, so we need a mapping.  However, we need to check that the
@@ -25,10 +25,10 @@ inline void f()
   __builtin_strcmp("", "");
 }
 
-#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILT_INS_WITH_MAPPING_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BUILTINS_WITH_MAPPING_H_
 
 /**** IWYU_SUMMARY
 
-(tests/cxx/built_ins_with_mapping.h has correct #includes/fwd-decls)
+(tests/cxx/builtins_with_mapping.h has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */

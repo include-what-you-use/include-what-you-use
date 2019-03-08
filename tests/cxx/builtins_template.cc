@@ -1,4 +1,4 @@
-//===--- built_ins_template.cc - test input file for iwyu -----------------===//
+//===--- builtins_template.cc - test input file for iwyu ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,6 +17,6 @@ __make_integer_seq<A, int, 5> seq;
 
 /**** IWYU_SUMMARY
 
-(tests/cxx/built_ins_template.cc has correct #includes/fwd-decls)
+(tests/cxx/builtins_template.cc has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */
