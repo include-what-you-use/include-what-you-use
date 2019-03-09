@@ -802,12 +802,6 @@ const clang::CXXDestructorDecl* GetSiblingDestructorFor(
 // Should never return nullptr.
 const clang::FunctionType* GetCalleeFunctionType(clang::CallExpr* expr);
 
-// Figuring out whether the to-type is a reference or not is different
-// depending on whether the cast is explicit or implicit.  (You'd
-// think it would work to just look at expr->getSubExpr()->getType(),
-// but that seems to strip off the reference.)
-bool IsCastToReferenceType(const clang::CastExpr* expr);
-
 // Returns the list of explicit template args for all exprs that support
 // such a concept (declrefexpr, memberexpr), and empty list if none is present.
 clang::TemplateArgumentListInfo GetExplicitTplArgs(const clang::Expr* expr);

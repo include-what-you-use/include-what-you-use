@@ -1399,15 +1399,6 @@ const FunctionType* GetCalleeFunctionType(CallExpr* expr) {
   return callee_type->getAs<FunctionType>();
 }
 
-bool IsCastToReferenceType(const CastExpr* expr) {
-  if (const ExplicitCastExpr* explicit_cast = DynCastFrom(expr)) {
-    return explicit_cast->getTypeAsWritten()->isReferenceType();
-  } else if (const ImplicitCastExpr* implicit_cast = DynCastFrom(expr)) {
-    return implicit_cast->getValueKind() == clang::VK_LValue;
-  }
-  CHECK_UNREACHABLE_("Unexpected type of cast expression");
-}
-
 TemplateArgumentListInfo GetExplicitTplArgs(const Expr* expr) {
   TemplateArgumentListInfo explicit_tpl_args;
   if (const DeclRefExpr* decl_ref = DynCastFrom(expr))
