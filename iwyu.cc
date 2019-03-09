@@ -2011,21 +2011,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const Type* const deref_from_type = RemovePointersAndReferences(from_type);
     const Type* const deref_to_type = RemovePointersAndReferences(to_type);
 
-    // For all those casts that don't result in function calls
-    // (everything except a user-defined cast or a constructor cast),
-    // we only care about the need for full types when casting either
-    // a pointer to a pointer, or any type to a reference.
-    // Unfortunately, when casting to a reference, clang seems to
-    // strip the reference off of to_type, so we need a separate
-    // function call to tell.
-    if (expr->getCastKind() != clang::CK_UserDefinedConversion &&
-        expr->getCastKind() != clang::CK_ConstructorConversion) {
-      if (!((from_type->hasPointerRepresentation() &&   // pointer or reference
-             to_type->hasPointerRepresentation()) ||
-            IsCastToReferenceType(expr)))
-        return true;    // we only care about ptr-to-ptr casts for this check
-    }
-
     bool need_full_deref_from_type = false;
     bool need_full_deref_to_type = false;
     // The list of kinds: http://clang.llvm.org/doxygen/namespaceclang.html
@@ -2047,7 +2032,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                               // the full type.
         break;
 
-      // We shouldn't be seeing any of these kinds.
+      // Ignore non-ptr-to-ptr casts.
       case clang::CK_ArrayToPointerDecay:
       case clang::CK_BooleanToSignedIntegral:
       case clang::CK_FixedPointCast:
@@ -2077,15 +2062,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_PointerToIntegral:
       case clang::CK_ToUnion:
       case clang::CK_ToVoid:
-        // Due to a bug in clang, we sometimes get IntegralToPointer
-        // kinds for a cast that should be a NoOp kind:
-        //    http://llvm.org/bugs/show_bug.cgi?id=8543
-        // It's possible clang mis-categorizes in other cases too.  So
-        // I just log here, rather than asserting and possibly
-        // crashing iwyu.
-        VERRS(3) << "WARNING: Unexpected cast that involves a non-pointer: "
-                 << expr->getCastKindName() << "\n";
         break;
+
       case clang::CK_AnyPointerToBlockPointerCast:
       case clang::CK_ARCConsumeObject:
       case clang::CK_ARCExtendBlockObject:
