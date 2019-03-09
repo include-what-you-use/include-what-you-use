@@ -2009,6 +2009,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const Type* from_type = GetTypeOf(expr->getSubExprAsWritten());
     const Type* to_type = GetTypeOf(expr);
 
+    // If this cast requires a user-defined conversion of the from-type, look up
+    // its return type so we can see through up/down-casts via such conversions.
+    const Type* converted_from_type = nullptr;
+    if (const NamedDecl* conv_decl = expr->getConversionFunction()) {
+      converted_from_type =
+          cast<FunctionDecl>(conv_decl)->getReturnType().getTypePtr();
+    }
+
     std::vector<const Type*> required_full_types;
 
     // The list of kinds: http://clang.llvm.org/doxygen/namespaceclang.html
@@ -2112,7 +2120,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_DerivedToBase:
       case clang::CK_UncheckedDerivedToBase:
       case clang::CK_DerivedToBaseMemberPointer:
+        // Just 'from' type is enough: full type for derived gets base type too.
         required_full_types.push_back(from_type);
+
+        // If this derived-to-base cast had an associated conversion function,
+        // it's a user-defined conversion operator. The from-type in this cast
+        // is not necessarily related to the base type, but the converted
+        // from-type must be, so make sure we require both.
+        if (converted_from_type) {
+          required_full_types.push_back(converted_from_type);
+        }
         break;
       case clang::CK_Dynamic:
         // Usually dynamic casting is a base-to-derived cast, but it is
