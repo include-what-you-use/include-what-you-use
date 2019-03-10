@@ -225,20 +225,4 @@ bool IsSystemIncludeFile(const string& filepath) {
   return ConvertToQuotedInclude(filepath)[0] == '<';
 }
 
-// Returns true if the given file is third-party.  Google-authored
-// code living in third_party/ is not considered third-party.
-bool IsThirdPartyFile(string quoted_path) {
-  if (!StripLeft(&quoted_path, "\"third_party/"))
-    return false;
-
-  // These are Google-authored libraries living in third_party/
-  // because of old licensing constraints.
-  if (StartsWith(quoted_path, "car/") ||
-      StartsWith(quoted_path, "gtest/") ||
-      StartsWith(quoted_path, "gmock/"))
-    return false;
-
-  return true;
-}
-
 }  // namespace include_what_you_use

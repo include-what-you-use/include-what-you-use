@@ -181,10 +181,6 @@ class IncludePicker {
   // seen by iwyu.
   void ExpandRegexes();
 
-  // Figure out mappings to add between third-party files, that we
-  // guess based on the structure and use of third-party code.
-  void AddImplicitThirdPartyMappings();
-
   // Adds an entry to filepath_visibility_map_, with error checking.
   void MarkVisibility(const string& quoted_filepath_pattern,
                       IncludeVisibility visibility);

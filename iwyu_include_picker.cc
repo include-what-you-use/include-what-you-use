@@ -913,14 +913,9 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
   // If we've already calculated this node's transitive closure, we're done.
   const TransitiveStatus status = (*seen_nodes)[key];
   if (status == kCalculating) {   // means there's a cycle in the mapping
-    // third-party code sometimes has #include cycles (*cough* boost
-    // *cough*).  Because we add many implicit third-party mappings,
-    // we may add a cycle without meaning to.  The best we can do is
-    // to ignore the mapping that causes the cycle.  Same with code
-    // in /internal/.  We could CHECK-fail in such a case, but it's
-    // probably better to just keep going.
-    if (StartsWith(key, "\"third_party/") ||
-        key.find("internal/") != string::npos) {
+    // TODO: Reconsider cycle handling; the include_cycle test fails without
+    // this special-casing, but it seems we should handle this more generally.
+    if (key.find("internal/") != string::npos) {
       VERRS(4) << "Ignoring a cyclical mapping involving " << key << "\n";
       return;
     }
@@ -1243,58 +1238,6 @@ void IncludePicker::ExpandRegexes() {
   }
 }
 
-// We treat third-party code specially, since it's difficult to add
-// iwyu pragmas to code we don't own.  Basically, what we do is trust
-// the code authors when it comes to third-party code: if they
-// #include x.h to get symbols from y.h, then assume that's how the
-// third-party authors wanted it.  This boils down to the following
-// rules:
-// 1) If there's already a mapping for third_party/y.h, do not
-//    add any implicit maps for it.
-// 2) if not_third_party/x.{h,cc} #includes third_party/y.h,
-//    assume y.h is supposed to be included directly, and do not
-//    add any implicit maps for it.
-// 3) Otherwise, if third_party/x.h #includes third_party/y.h,
-//    add a mapping from y.h to x.h.  Unless y.h already has
-//    a hard-coded visibility set, make y.h private.  This
-//    means iwyu will never suggest adding y.h.
-void IncludePicker::AddImplicitThirdPartyMappings() {
-  set<string> third_party_headers_with_explicit_mappings;
-  for (const IncludeMap::value_type& item : filepath_include_map_) {
-    if (IsThirdPartyFile(item.first))
-      third_party_headers_with_explicit_mappings.insert(item.first);
-  }
-
-  set<string> headers_included_from_non_third_party;
-  for (const auto& incmap : quoted_includes_to_quoted_includers_) {
-    for (const string& includer : incmap.second) {
-      if (!IsThirdPartyFile(includer)) {
-        headers_included_from_non_third_party.insert(incmap.first);
-        break;
-      }
-    }
-  }
-
-  for (const auto& incmap : quoted_includes_to_quoted_includers_) {
-    const string& includee = incmap.first;
-    if (!IsThirdPartyFile(includee) ||
-        ContainsKey(third_party_headers_with_explicit_mappings, includee) ||
-        ContainsKey(headers_included_from_non_third_party, includee)) {
-      continue;
-    }
-    for (const string& includer : incmap.second) {
-      // From the 'if' statement above, we already know that includee
-      // is not included from non-third-party code.
-      CHECK_(IsThirdPartyFile(includer) && "Why not nixed!");
-      CHECK_(IsThirdPartyFile(includee) && "Why not nixed!");
-      AddMapping(includee, includer);
-      if (GetVisibility(includee) == kUnusedVisibility) {
-        MarkIncludeAsPrivate(includee);
-      }
-    }
-  }
-}
-
 // Handle work that's best done after we've seen all the mappings
 // (including dynamically-added ones) and all the include files.
 // For instance, we can now expand all the regexes we've seen in
@@ -1306,10 +1249,6 @@ void IncludePicker::FinalizeAddedIncludes() {
   // The map keys may be regular expressions.
   // Match those to seen #includes now.
   ExpandRegexes();
-
-  // We treat third-party code specially, since it's difficult to add
-  // iwyu pragmas to code we don't own.
-  AddImplicitThirdPartyMappings();
 
   // If a.h maps to b.h maps to c.h, we'd like an entry from a.h to c.h too.
   MakeMapTransitive(&filepath_include_map_);
