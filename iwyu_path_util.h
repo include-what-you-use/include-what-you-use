@@ -88,10 +88,6 @@ bool IsQuotedInclude(const string& s);
 // file, based on where it lives.
 bool IsSystemIncludeFile(const string& filepath);
 
-// Returns true if the given file is third-party.  Google-authored
-// code living in third_party/ is not considered third-party.
-bool IsThirdPartyFile(string quoted_path);
-
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_

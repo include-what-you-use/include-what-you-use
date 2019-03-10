@@ -880,8 +880,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
     }
   }
   // Ugh, we can have two files with the same name, using
-  // #include-next (e.g. /usr/include/c++/vector and
-  // third_party/gcc3/vector).  Merge them.
+  // #include-next.  Merge them.
   for (const auto& fileinfo : iwyu_file_info_map_) {
     const FileEntry* file = fileinfo.first;
     // See if a round-trip to string and back ends up at a different file.
