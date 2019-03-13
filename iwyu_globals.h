@@ -59,7 +59,8 @@ class OptionsParser {
   const char** clang_argv_;
 };
 
-void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search);
+void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search,
+		 const string &Triple);
 
 // Can be called by tests -- doesn't need a SourceManager or
 // argc/argv.  Note that GlobalSourceManager() and DefaultDataGetter()

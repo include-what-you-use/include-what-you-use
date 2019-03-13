@@ -326,14 +326,16 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
   return NormalizeHeaderSearchPaths(search_path_map);
 }
 
-void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
+void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search,
+		 const string &Triple) {
   CHECK_(sm && "InitGlobals() needs a non-nullptr SourceManager");
   source_manager = sm;
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
   vector<HeaderSearchPath> search_paths =
       ComputeHeaderSearchPaths(header_search);
   SetHeaderSearchPaths(search_paths);
-  include_picker = new IncludePicker(GlobalFlags().no_default_mappings);
+  include_picker = new IncludePicker(GlobalFlags().no_default_mappings,
+				     Triple);
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 

@@ -71,7 +71,7 @@ class IncludePicker {
  public:
   typedef map<string, vector<string>> IncludeMap;  // map_from to <map_to,...>
 
-  explicit IncludePicker(bool no_default_mappings);
+  explicit IncludePicker(bool no_default_mappings, const string &Triple = "");
 
   // ----- Routines to dynamically modify the include-picker
 
@@ -154,6 +154,9 @@ class IncludePicker {
   void AddMappingsFromFile(const string& filename,
                            const vector<string>& search_path);
 
+  // Adds mapping based on Triple
+  bool AddTripleMappings(const string &Triple);
+    
   // Adds all hard-coded default mappings.
   void AddDefaultMappings();
 

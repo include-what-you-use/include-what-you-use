@@ -30,6 +30,7 @@
 #include "port.h"  // for CHECK_
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -865,6 +866,8 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<exception_defines.h>", kPrivate, "<exception>", kPublic },
 };
 
+#include "freebsd_include_map.h"
+
 // Returns true if str is a valid quoted filepath pattern (i.e. either
 // a quoted filepath or "@" followed by a regex for matching a quoted
 // filepath).
@@ -1034,11 +1037,25 @@ string FindFileInSearchPath(const vector<string>& search_path,
 
 }  // anonymous namespace
 
-IncludePicker::IncludePicker(bool no_default_mappings)
+IncludePicker::IncludePicker(bool no_default_mappings, const string &Triple)
     : has_called_finalize_added_include_lines_(false) {
   if (!no_default_mappings) {
-    AddDefaultMappings();
+    if (!AddTripleMappings(Triple))
+      AddDefaultMappings();
   }
+}
+
+bool IncludePicker::AddTripleMappings(const string &S) {
+  bool ret = false;
+  llvm::Triple Triple(S);
+  if (Triple.isOSFreeBSD()) {
+    AddIncludeMappings(freebsd_include_map,
+        IWYU_ARRAYSIZE(freebsd_include_map));
+    // Triple handled, return true.
+    ret = true;
+  }
+
+  return ret;
 }
 
 void IncludePicker::AddDefaultMappings() {
