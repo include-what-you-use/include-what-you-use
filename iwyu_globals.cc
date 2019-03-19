@@ -174,9 +174,9 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"no_default_mappings", no_argument, nullptr, 'n'},
     {"prefix_header_includes", required_argument, nullptr, 'x'},
     {"pch_in_code", no_argument, nullptr, 'h'},
-    {"max_line_length", optional_argument, nullptr, 'l'},
-    {"no_comments", optional_argument, nullptr, 'o'},
-    {"no_fwd_decls", optional_argument, nullptr, 'f'},
+    {"max_line_length", required_argument, nullptr, 'l'},
+    {"no_comments", no_argument, nullptr, 'o'},
+    {"no_fwd_decls", no_argument, nullptr, 'f'},
     {"quoted_includes_first", no_argument, nullptr, 'q' },
     {"cxx17ns", no_argument, nullptr, 'C'},
     {nullptr, 0, nullptr, 0}
