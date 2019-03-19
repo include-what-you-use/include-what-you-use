@@ -85,11 +85,8 @@ struct CommandlineFlags {
   enum PrefixHeaderIncludePolicy { kAdd, kKeep, kRemove };
   CommandlineFlags();                     // sets flags to default values
   int ParseArgv(int argc, char** argv);   // parses flags from argv
-  static const char kUnspecified[];  // for -d, which takes an optional arg
 
   set<string> check_also;  // -c: globs to report iwyu violations for
-  string howtodebug;       // -d: file to print gdb-invoking instruction for
-  string cwd;              // -p: what directory was iwyu invoked from?
   bool transitive_includes_only;   // -t: don't add 'new' #includes to files
   int verbose;             // -v: how much information to emit as we parse
   vector<string> mapping_files; // -m: mapping files
