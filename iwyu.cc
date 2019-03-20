@@ -1391,6 +1391,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     SourceLocation spelling_loc = sm->getSpellingLoc(use_loc);
     SourceLocation expansion_loc = sm->getExpansionLoc(use_loc);
 
+    SourceRange use_range = use_node.GetSourceRange();
+
+    if (use_range.getBegin().isFileID() != use_range.getEnd().isFileID()) {
+      VERRS(4) << "Use of decl '" << PrintableDecl(decl)
+               << "' is partially inside a macro."
+                  " Attributing to expansion location at "
+               << PrintableLoc(expansion_loc) << ".\n";
+      return expansion_loc;
+    }
+
     // If the file defining the macro contains a forward decl, keep it around
     // and treat it as a hint that the expansion loc is responsible for the
     // symbol.

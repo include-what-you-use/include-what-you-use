@@ -197,6 +197,27 @@ SourceLocation ASTNode::GetLocation() const {
   return retval;
 }
 
+clang::SourceRange ASTNode::GetSourceRange() const {
+  switch (kind_) {
+    case kDeclKind:
+      return as_decl_->getSourceRange();
+    case kStmtKind:
+      return as_stmt_->getSourceRange();
+    case kTypelocKind:
+      return as_typeloc_->getSourceRange();
+    case kNNSLocKind:
+      return as_nnsloc_->getSourceRange();
+    case kTemplateArgumentLocKind:
+      return as_template_argloc_->getSourceRange();
+    case kTypeKind:
+    case kNNSKind:
+    case kTemplateNameKind:
+    case kTemplateArgumentKind:
+      return SourceRange();
+  }
+  CHECK_UNREACHABLE_("Unexpected kind of ASTNode");
+}
+
 bool ASTNode::FillLocationIfKnown(SourceLocation* loc) const {
   using include_what_you_use::GetLocation;
   switch (kind_) {

@@ -140,6 +140,8 @@ class ASTNode {
   // current node knows its location, returns an invalid SourceLocation.
   clang::SourceLocation GetLocation() const;
 
+  clang::SourceRange GetSourceRange() const;
+
   // Returns true if this node points to the exact same
   // decl/typeloc/etc as the one you pass in.  For Decl/Stmt/Type, the
   // pointer is canonical (every instance of type X has the same
