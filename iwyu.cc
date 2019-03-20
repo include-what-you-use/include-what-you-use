@@ -151,6 +151,11 @@ using clang::ASTConsumer;
 using clang::ASTContext;
 using clang::ASTFrontendAction;
 using clang::Attr;
+using clang::CallExpr;
+using clang::ClassTemplateDecl;
+using clang::ClassTemplateSpecializationDecl;
+using clang::CompilerInstance;
+using clang::ConstructorUsingShadowDecl;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
 using clang::CXXCtorInitializer;
@@ -160,11 +165,6 @@ using clang::CXXMethodDecl;
 using clang::CXXNewExpr;
 using clang::CXXOperatorCallExpr;
 using clang::CXXRecordDecl;
-using clang::CallExpr;
-using clang::ClassTemplateDecl;
-using clang::ClassTemplateSpecializationDecl;
-using clang::CompilerInstance;
-using clang::ConstructorUsingShadowDecl;
 using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
@@ -179,22 +179,23 @@ using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
 using clang::FunctionType;
 using clang::ImplicitCastExpr;
-using clang::LValueReferenceType;
 using clang::LinkageSpecDecl;
+using clang::LValueReferenceType;
 using clang::MemberExpr;
 using clang::NamedDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::OverloadExpr;
 using clang::ParmVarDecl;
-using clang::PPCallbacks;
 using clang::PointerType;
-using clang::QualType;
+using clang::PPCallbacks;
 using clang::QualifiedTypeLoc;
+using clang::QualType;
 using clang::RecordDecl;
 using clang::RecursiveASTVisitor;
 using clang::ReferenceType;
 using clang::SourceLocation;
+using clang::SourceRange;
 using clang::Stmt;
 using clang::SubstTemplateTypeParmType;
 using clang::TagDecl;
@@ -206,10 +207,10 @@ using clang::TemplateName;
 using clang::TemplateSpecializationType;
 using clang::TranslationUnitDecl;
 using clang::Type;
-using clang::TypeLoc;
 using clang::TypedefDecl;
 using clang::TypedefNameDecl;
 using clang::TypedefType;
+using clang::TypeLoc;
 using clang::UnaryExprOrTypeTraitExpr;
 using clang::UsingDecl;
 using clang::UsingDirectiveDecl;
@@ -1375,8 +1376,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Get the canonical use location for a (location, decl) pair.
   // Decide whether the file expanding the macro or the file defining the macro
   // should be held responsible for a use.
-  SourceLocation GetCanonicalUseLocation(SourceLocation use_loc,
+  SourceLocation GetCanonicalUseLocation(const ASTNode& use_node,
                                          const NamedDecl* decl) {
+    SourceLocation use_loc = use_node.GetLocation();
+
     // If we're not in a macro, just echo the use location.
     if (!use_loc.isMacroID())
       return use_loc;
@@ -1638,7 +1641,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // The comment, if not nullptr, is extra text that is included along with
   // the warning message that iwyu emits. The extra use flags is optional
   // info that can be assigned to the use (see the UF_* constants)
-  virtual void ReportDeclUse(SourceLocation used_loc,
+  virtual void ReportDeclUse(const ASTNode& used_node,
                              const NamedDecl* used_decl,
                              const char* comment = nullptr,
                              UseFlags extra_use_flags = 0) {
@@ -1657,7 +1660,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         ComputeUseFlags(current_ast_node()) | extra_use_flags;
 
     // Canonicalize the use location and report the use.
-    used_loc = GetCanonicalUseLocation(used_loc, target_decl);
+    SourceLocation used_loc = GetCanonicalUseLocation(used_node, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
         used_loc, target_decl, use_flags, comment);
@@ -1703,7 +1706,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           // result in a recursive expansion.  Note we are careful to
           // recurse inside this class, and not go back to subclasses.
           for (const Type* type : underlying_types)
-            IwyuBaseAstVisitor<Derived>::ReportTypeUse(used_loc, type);
+            IwyuBaseAstVisitor<Derived>::ReportTypeUse(used_node, type);
         }
       }
     }
@@ -1711,9 +1714,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   // The comment, if not nullptr, is extra text that is included along
   // with the warning message that iwyu emits.
-  virtual void ReportDeclForwardDeclareUse(SourceLocation used_loc,
+  virtual void ReportDeclForwardDeclareUse(const ASTNode& used_node,
                                            const NamedDecl* used_decl,
                                            const char* comment = nullptr) {
+    SourceLocation used_loc = used_node.GetLocation();
     const NamedDecl* target_decl = used_decl;
 
     // Sometimes a shadow decl comes between us and the 'real' decl.
@@ -1725,7 +1729,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return;
 
     // Canonicalize the use location and report the use.
-    used_loc = GetCanonicalUseLocation(used_loc, target_decl);
+    used_loc = GetCanonicalUseLocation(used_node, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
         used_loc, target_decl, ComputeUseFlags(current_ast_node()),
@@ -1742,17 +1746,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
   }
 
-  void ReportDeclsUse(SourceLocation used_loc,
+  void ReportDeclsUse(const ASTNode& used_node,
                       const set<const NamedDecl*>& decls) {
-    for (const NamedDecl* decl : decls)
-      ReportDeclUse(used_loc, decl);
+    for (const NamedDecl* decl : decls) ReportDeclUse(used_node, decl);
   }
 
   // Called when the given type is fully used at used_loc, regardless
   // of the type being explicitly written in the source code or not.
   // The comment, if not nullptr, is extra text that is included along
   // with the warning message that iwyu emits.
-  virtual void ReportTypeUse(SourceLocation used_loc, const Type* type,
+  virtual void ReportTypeUse(const ASTNode& used_node, const Type* type,
                              const char* comment = nullptr) {
     // TODO(csilvers): figure out if/when calling CanIgnoreType() is correct.
     if (!type)
@@ -1766,21 +1769,20 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       type = RemovePointersAndReferencesAsWritten(type);
       if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
         VERRS(6) << "(For pointer type " << PrintableType(type) << "):\n";
-        IwyuBaseAstVisitor<Derived>::ReportDeclForwardDeclareUse(used_loc, decl,
-                                                                 comment);
+        IwyuBaseAstVisitor<Derived>::ReportDeclForwardDeclareUse(used_node,
+                                                                 decl, comment);
       }
     } else {
       if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
         decl = GetDefinitionAsWritten(decl);
         VERRS(6) << "(For type " << PrintableType(type) << "):\n";
-        IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl, comment);
+        IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_node, decl, comment);
       }
     }
   }
 
-  void ReportTypesUse(SourceLocation used_loc, const set<const Type*>& types) {
-    for (const Type* type : types)
-      ReportTypeUse(used_loc, type);
+  void ReportTypesUse(const ASTNode& used_node, const set<const Type*>& types) {
+    for (const Type* type : types) ReportTypeUse(used_node, type);
   }
 
   //------------------------------------------------------------
@@ -1863,7 +1865,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (decl->getKind() == Decl::Function) {
         FunctionDecl* redecl = decl;
         while ((redecl = redecl->getPreviousDecl()))
-          ReportDeclUse(CurrentLoc(), redecl);
+          ReportDeclUse(*current_ast_node(), redecl);
       }
     } else {
       // Make all our types forward-declarable...
@@ -1890,7 +1892,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
            !IsClassType(return_type));
     if (is_responsible_for_return_type &&
         !type_use_reported_in_visit_function_type) {
-      ReportTypeUse(GetLocation(decl), return_type, "(for fn return type)");
+      const ASTNode ast_node(decl, *GlobalSourceManager());
+      ReportTypeUse(ast_node, return_type, "(for fn return type)");
     }
 
     // ...and non-explicit, one-arg ('autocast') constructor types.
@@ -1920,8 +1923,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // full type for other reasons; that's just double-reporting.
         if (current_ast_node()->in_forward_declare_context() ||
             IsPointerOrReferenceAsWritten(param_type)) {
-          ReportTypeUse(GetLocation(&param_tl), deref_param_type,
-                        "(for autocast)");
+          const ASTNode ast_node(&param_tl, *GlobalSourceManager());
+          ReportTypeUse(ast_node, deref_param_type, "(for autocast)");
         }
       } else {
         VERRS(6) << "WARNING: nullptr TypeSourceInfo for "
@@ -1948,7 +1951,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                << PrintableType(return_type)
                << ".\n";
 
-      ReportTypeUse(CurrentLoc(), return_type);
+      ReportTypeUse(*current_ast_node(), return_type);
     }
 
     return Base::VisitCXXMethodDecl(method_decl);
@@ -1965,7 +1968,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const Type* caught_type = stmt->getCaughtType().getTypePtrOrNull()) {
       // Strip off pointers/references to get to the 'base' type.
       caught_type = RemovePointersAndReferencesAsWritten(caught_type);
-      ReportTypeUse(CurrentLoc(), caught_type);
+      ReportTypeUse(*current_ast_node(), caught_type);
     } else {
       // catch(...): no type to act on here.
     }
@@ -1982,7 +1985,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode()) return true;
 
     if (const Type* type = stmt->getRangeInit()->getType().getTypePtrOrNull()) {
-      ReportTypeUse(CurrentLoc(), RemovePointersAndReferencesAsWritten(type));
+      ReportTypeUse(*current_ast_node(),
+                    RemovePointersAndReferencesAsWritten(type));
 
       // TODO: We should probably find a way to require inclusion of any
       // argument-dependent begin/end declarations.
@@ -2147,7 +2151,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (CanIgnoreType(deref_type))
         continue;
 
-      ReportTypeUse(CurrentLoc(), deref_type);
+      ReportTypeUse(*current_ast_node(), deref_type);
     }
 
     return true;
@@ -2182,7 +2186,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // is responsible for and what we're responsible for.
     // TODO(csilvers): we should be reporting a fwd-decl use for
     // GetTypeOf(expr), not on deref_base_type.
-    ReportTypeUse(CurrentLoc(), deref_base_type);
+    ReportTypeUse(*current_ast_node(), deref_base_type);
     return true;
   }
 
@@ -2194,7 +2198,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const Type* element_type = GetTypeOf(expr);
     if (CanIgnoreType(element_type))
       return true;
-    ReportTypeUse(CurrentLoc(), element_type);
+    ReportTypeUse(*current_ast_node(), element_type);
     return true;
   }
 
@@ -2216,7 +2220,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // itself be a pointer) and report it.
         const Type* deref_type = pointer_type->getPointeeType().getTypePtr();
         if (!CanIgnoreType(deref_type))
-          ReportTypeUse(CurrentLoc(), deref_type);
+          ReportTypeUse(*current_ast_node(), deref_type);
       }
     }
 
@@ -2242,18 +2246,23 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const TypeLoc& arg_tl = expr->getArgumentTypeInfo()->getTypeLoc();
       if (const ReferenceType* reftype = DynCastFrom(arg_tl.getTypePtr())) {
         const Type* dereftype = reftype->getPointeeTypeAsWritten().getTypePtr();
-        if (!CanIgnoreType(reftype) || !CanIgnoreType(dereftype))
-          ReportTypeUse(GetLocation(&arg_tl), dereftype);
+        if (!CanIgnoreType(reftype) || !CanIgnoreType(dereftype)) {
+          const ASTNode ast_node(&arg_tl, *GlobalSourceManager());
+          ReportTypeUse(ast_node, dereftype);
+        }
       } else {
         // No need to report on non-ref types, RecursiveASTVisitor will get 'em.
       }
     } else {
       const Expr* arg_expr = expr->getArgumentExpr();
       const Type* dereftype = arg_expr->getType().getTypePtr();
-      if (!CanIgnoreType(dereftype))
+      if (!CanIgnoreType(dereftype)) {
         // This reports even if the expr ends up not being a reference, but
         // that's ok (if potentially redundant).
-        ReportTypeUse(GetLocation(arg_expr->IgnoreParenImpCasts()), dereftype);
+        const ASTNode ast_node(arg_expr->IgnoreParenImpCasts(),
+                               *GlobalSourceManager());
+        ReportTypeUse(ast_node, dereftype);
+      }
     }
     return true;
   }
@@ -2272,8 +2281,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // (the 'a' in 'a << b' or the 'MACRO' in 'MACRO << b'), rather
       // than our location (which is the '<<').  That way, we properly
       // situate the owner when it's a macro.
-      if (!CanIgnoreType(owner_type))
-        ReportTypeUse(GetLocation(owner_expr), owner_type);
+      if (!CanIgnoreType(owner_type)) {
+        const ASTNode ast_node(owner_expr, *GlobalSourceManager());
+        ReportTypeUse(ast_node, owner_type);
+      }
     }
     return true;
   }
@@ -2293,7 +2304,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     if (delete_type && !IsPointerOrReferenceAsWritten(delete_type))
-      ReportTypeUse(CurrentLoc(), delete_type);
+      ReportTypeUse(*current_ast_node(), delete_type);
 
     return true;
   }
@@ -2318,7 +2329,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         if (args[i]->getValueKind() == clang::VK_LValue) {
           // The types of expressions 'see through' the reference to
           // the underlying type, which is exactly what we want here.
-          ReportTypeUse(CurrentLoc(), GetTypeOf(args[i]));
+          ReportTypeUse(*current_ast_node(), GetTypeOf(args[i]));
         }
       }
     }
@@ -2420,7 +2431,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // actually report the function use if CanIgnoreCurrentASTNode()
       // is *currently* false.
       if (!CanIgnoreCurrentASTNode())
-        ReportDeclUse(CurrentLoc(), arbitrary_fn_decl);
+        ReportDeclUse(*current_ast_node(), arbitrary_fn_decl);
     }
     return true;
   }
@@ -2494,7 +2505,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (IsProcessedOverloadLoc(CurrentLoc()))
       return true;
 
-    ReportDeclUse(CurrentLoc(), callee);
+    ReportDeclUse(*current_ast_node(), callee);
 
     // Usually the function-author is responsible for providing the
     // full type information for the return type of the function, but
@@ -2503,7 +2514,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const Type* return_type = callee->getReturnType().getTypePtr();
     if (ContainsKey(GetCallerResponsibleTypesForFnReturn(callee),
                     return_type)) {
-      ReportTypeUse(CurrentLoc(), return_type);
+      ReportTypeUse(*current_ast_node(), return_type);
     }
 
     return true;
@@ -2548,10 +2559,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // If we are forward-declarable, so are our template arguments.
     if (CanForwardDeclareType(current_ast_node())) {
-      ReportDeclForwardDeclareUse(CurrentLoc(), decl);
+      ReportDeclForwardDeclareUse(*current_ast_node(), decl);
       current_ast_node()->set_in_forward_declare_context(true);
     } else {
-      ReportDeclUse(CurrentLoc(), decl);
+      ReportDeclUse(*current_ast_node(), decl);
     }
 
     return true;
@@ -2565,8 +2576,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // If we're in an nns (e.g. the Foo in Foo::bar), we're never
     // forward-declarable, even if we're part of a pointer type, or in
     // a template argument, or whatever.
-    ASTNode* ast_node = current_ast_node();
-    ast_node->set_in_forward_declare_context(false);
+    current_ast_node()->set_in_forward_declare_context(false);
 
     return true;
   }
@@ -2910,32 +2920,32 @@ class InstantiatedTemplateVisitor
   // provide" the decl, by #including the file that defines the decl
   // (if templates call other templates, we have to find the right
   // template).
-  void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl,
+  void ReportDeclUse(const ASTNode&, const NamedDecl* decl,
                      const char* comment = nullptr,
                      UseFlags extra_use_flags = 0) override {
-    const SourceLocation actual_used_loc = GetLocOfTemplateThatProvides(decl);
-    if (actual_used_loc.isValid()) {
+    if (ASTNode const* actual_used_node =
+            GetAstNodeOfTemplateThatProvides(decl)) {
       // If a template is responsible for this decl, then we don't add
       // it to the cache; the cache is only for decls that the
       // original caller is responsible for.
-      Base::ReportDeclUse(actual_used_loc, decl, comment, extra_use_flags);
+      Base::ReportDeclUse(*actual_used_node, decl, comment);
     } else {
       // Let all the currently active types and decls know about this
       // report, so they can update their cache entries.
       for (CacheStoringScope* storer : cache_storers_)
         storer->NoteReportedDecl(decl);
-      Base::ReportDeclUse(caller_loc(), decl, comment, extra_use_flags);
+      Base::ReportDeclUse(*caller_ast_node_, decl, comment);
     }
   }
 
-  void ReportTypeUse(SourceLocation used_loc, const Type* type,
+  void ReportTypeUse(const ASTNode&, const Type* type,
                      const char* comment = nullptr) override {
     // clang desugars template types, so Foo<MyTypedef>() gets turned
     // into Foo<UnderlyingType>().  Try to convert back.
     type = ResugarType(type);
     for (CacheStoringScope* storer : cache_storers_)
       storer->NoteReportedType(type);
-    Base::ReportTypeUse(caller_loc(), type, comment);
+    Base::ReportTypeUse(*caller_ast_node_, type, comment);
   }
 
   //------------------------------------------------------------
@@ -3061,7 +3071,7 @@ class InstantiatedTemplateVisitor
     // in_forward_declare_context.  I think this will require changing
     // in_forward_declare_context to yes/no/maybe.
     if (current_ast_node()->ParentIsA<NestedNameSpecifier>()) {
-      ReportTypeUse(CurrentLoc(), actual_type);
+      ReportTypeUse(*current_ast_node(), actual_type);
       return Base::VisitSubstTemplateTypeParmType(type);
     }
 
@@ -3090,7 +3100,7 @@ class InstantiatedTemplateVisitor
     if (current_ast_node()->ParentIsA<UnaryExprOrTypeTraitExpr>() &&
         isa<ReferenceType>(actual_type)) {
       const ReferenceType* actual_reftype = cast<ReferenceType>(actual_type);
-      ReportTypeUse(CurrentLoc(),
+      ReportTypeUse(*current_ast_node(),
                     actual_reftype->getPointeeTypeAsWritten().getTypePtr());
       return Base::VisitSubstTemplateTypeParmType(type);
     }
@@ -3108,7 +3118,7 @@ class InstantiatedTemplateVisitor
 
     // We attribute all uses in an instantiated template to the
     // template's caller.
-    ReportTypeUse(caller_loc(), actual_type);
+    ReportTypeUse(*caller_ast_node_, actual_type);
 
     // Also report all previous explicit instantiations (declarations and
     // definitions) as uses of the caller's location.
@@ -3149,7 +3159,8 @@ class InstantiatedTemplateVisitor
         continue;
 
       // Report the specific decl that points to the explicit instantiation
-      Base::ReportDeclUse(caller_loc(), redecl, "(for explicit instantiation)",
+      Base::ReportDeclUse(*caller_ast_node_, redecl,
+                          "(for explicit instantiation)",
                           UF_ExplicitInstantiation);
     }
   }
@@ -3168,7 +3179,7 @@ class InstantiatedTemplateVisitor
     // If the ctor type is a SubstTemplateTypeParmType, get the type-as-written.
     const Type* actual_type = ResugarType(class_type);
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
-    ReportTypeUse(caller_loc(), actual_type);
+    ReportTypeUse(*caller_ast_node_, actual_type);
     return Base::VisitCXXConstructExpr(expr);
   }
 
@@ -3196,28 +3207,28 @@ class InstantiatedTemplateVisitor
   // "foo.h" and has a scoped_ptr<Foo>; we say the templated class
   // provides Foo, even though it's scoped_ptr.h that's actually
   // trying to call Foo::Foo and Foo::~Foo.
-  SourceLocation GetLocOfTemplateThatProvides(const NamedDecl* decl) const {
+  ASTNode const* GetAstNodeOfTemplateThatProvides(const NamedDecl* decl) const {
     if (!decl)
-      return SourceLocation();   // an invalid source-loc
+      return nullptr;
     for (const ASTNode* ast_node = current_ast_node();
          ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
       if (preprocessor_info().PublicHeaderIntendsToProvide(
               GetFileEntry(ast_node->GetLocation()),
               GetFileEntry(decl->getLocation())))
-        return ast_node->GetLocation();
+        return ast_node;
     }
-    return SourceLocation();   // an invalid source-loc
+    return nullptr;
   }
 
   bool IsProvidedByTemplate(const NamedDecl* decl) const {
-    return GetLocOfTemplateThatProvides(decl).isValid();
+    return GetAstNodeOfTemplateThatProvides(decl) != nullptr;
   }
   bool IsProvidedByTemplate(const Type* type) const {
     type = RemoveSubstTemplateTypeParm(type);
     type = RemovePointersAndReferences(type);  // get down to the decl
     if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
       decl = GetDefinitionAsWritten(decl);
-      return GetLocOfTemplateThatProvides(decl).isValid();
+      return GetAstNodeOfTemplateThatProvides(decl) != nullptr;
     }
     return true;   // we always provide non-decl types like int, etc.
   }
@@ -3255,8 +3266,8 @@ class InstantiatedTemplateVisitor
     // report again (but with the new caller_loc this time).
     // Otherwise, for all reporting done in the rest of this scope,
     // store in the cache for this function.
-    if (ReplayUsesFromCache(*FunctionCallsFullUseCache(),
-                            fn_decl, caller_loc()))
+    if (ReplayUsesFromCache(*FunctionCallsFullUseCache(), fn_decl,
+                            *caller_ast_node_))
       return true;
     // Make sure all the types we report in the recursive TraverseDecl
     // calls, below, end up in the cache for fn_decl.
@@ -3363,8 +3374,8 @@ class InstantiatedTemplateVisitor
     // report again (but with the new caller_loc this time).
     // Otherwise, for all reporting done in the rest of this scope,
     // store in the cache for this function.
-    if (ReplayUsesFromCache(*ClassMembersFullUseCache(),
-                            class_decl, caller_loc()))
+    if (ReplayUsesFromCache(*ClassMembersFullUseCache(), class_decl,
+                            *caller_ast_node_))
       return true;
     if (ReplayClassMemberUsesFromPrecomputedList(type))
       return true;
@@ -3408,13 +3419,13 @@ class InstantiatedTemplateVisitor
 
   // Returns true if we replayed uses, false if key isn't in the cache.
   bool ReplayUsesFromCache(const FullUseCache& cache, const NamedDecl* key,
-                           SourceLocation use_loc) {
+                           const ASTNode& use_node) {
     if (!cache.Contains(key, resugar_map_))
       return false;
     VERRS(6) << "(Replaying full-use information from the cache for "
              << key->getQualifiedNameAsString() << ")\n";
-    ReportTypesUse(use_loc, cache.GetFullUseTypes(key, resugar_map_));
-    ReportDeclsUse(use_loc, cache.GetFullUseDecls(key, resugar_map_));
+    ReportTypesUse(use_node, cache.GetFullUseTypes(key, resugar_map_));
+    ReportDeclsUse(use_node, cache.GetFullUseDecls(key, resugar_map_));
     return true;
   }
 
@@ -3469,7 +3480,7 @@ class InstantiatedTemplateVisitor
           resugared_type = item.first;
       }
       if (resugared_type && !resugared_type->isPointerType()) {
-        ReportTypeUse(caller_loc(), resugared_type);
+        ReportTypeUse(*caller_ast_node_, resugared_type);
         // For a templated type, check the template args as well.
         if (const TemplateSpecializationType* spec_type
             = DynCastFrom(resugared_type)) {
@@ -3685,7 +3696,7 @@ class IwyuAstConsumer
 
   bool VisitNamespaceAliasDecl(clang::NamespaceAliasDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
-    ReportDeclUse(CurrentLoc(), decl->getNamespace());
+    ReportDeclUse(*current_ast_node(), decl->getNamespace());
     return Base::VisitNamespaceAliasDecl(decl);
   }
 
@@ -3799,9 +3810,9 @@ class IwyuAstConsumer
     ClassTemplateDecl* specialized_decl = decl->getSpecializedTemplate();
 
     if (IsExplicitInstantiation(decl))
-      ReportDeclUse(CurrentLoc(), specialized_decl);
+      ReportDeclUse(*current_ast_node(), specialized_decl);
     else
-      ReportDeclForwardDeclareUse(CurrentLoc(), specialized_decl);
+      ReportDeclForwardDeclareUse(*current_ast_node(), specialized_decl);
 
     return Base::VisitClassTemplateSpecializationDecl(decl);
   }
@@ -3816,7 +3827,7 @@ class IwyuAstConsumer
   //   ...
   bool VisitUsingDirectiveDecl(clang::UsingDirectiveDecl *decl) {
     if (CanIgnoreCurrentASTNode())  return true;
-    ReportDeclUse(CurrentLoc(), decl->getNominatedNamespaceAsWritten());
+    ReportDeclUse(*current_ast_node(), decl->getNominatedNamespaceAsWritten());
     return Base::VisitUsingDirectiveDecl(decl);
   }
 
@@ -3870,9 +3881,9 @@ class IwyuAstConsumer
     // actual decl will be reported by obtaining it from the UsingShadowDecl
     // once we've tracked the UsingDecl use.
     if (const UsingShadowDecl* found_decl = DynCastFrom(expr->getFoundDecl())) {
-      ReportDeclUse(CurrentLoc(), found_decl);
+      ReportDeclUse(*current_ast_node(), found_decl);
     } else {
-      ReportDeclUse(CurrentLoc(), expr->getDecl());
+      ReportDeclUse(*current_ast_node(), expr->getDecl());
     }
     return Base::VisitDeclRefExpr(expr);
   }
@@ -3909,9 +3920,9 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())  return true;
     // TypedefType::getDecl() returns the place where the typedef is defined.
     if (CanForwardDeclareType(current_ast_node())) {
-      ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
+      ReportDeclForwardDeclareUse(*current_ast_node(), type->getDecl());
     } else {
-      ReportDeclUse(CurrentLoc(), type->getDecl());
+      ReportDeclUse(*current_ast_node(), type->getDecl());
     }
     return Base::VisitTypedefType(type);
   }
@@ -3932,7 +3943,7 @@ class IwyuAstConsumer
         // already short-circuited in CanForwardDeclareType.
         const ASTNode* parent = current_ast_node()->parent();
         if (!IsElaborationNode(parent) || IsQualifiedNameNode(parent))
-          ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
+          ReportDeclForwardDeclareUse(*current_ast_node(), type->getDecl());
       } else {
         // In C, all struct references are elaborated, so we really never need
         // to forward-declare. But there's one case where an elaborated struct
@@ -3943,13 +3954,13 @@ class IwyuAstConsumer
         //      warning: declaration of 'struct mystruct' will not be visible
         //      outside of this function [-Wvisibility]
         if (current_ast_node()->HasAncestorOfType<ParmVarDecl>())
-          ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
+          ReportDeclForwardDeclareUse(*current_ast_node(), type->getDecl());
       }
       return Base::VisitTagType(type);
     }
 
     // OK, seems to be a use that requires the full type.
-    ReportDeclUse(CurrentLoc(), type->getDecl());
+    ReportDeclUse(*current_ast_node(), type->getDecl());
     return Base::VisitTagType(type);
   }
 
@@ -3991,7 +4002,7 @@ class IwyuAstConsumer
     // type info.
     if (IsDefaultTemplateTemplateArg(current_ast_node())) {
       current_ast_node()->set_in_forward_declare_context(false);
-      ReportDeclUse(CurrentLoc(), template_name.getAsTemplateDecl());
+      ReportDeclUse(*current_ast_node(), template_name.getAsTemplateDecl());
     }
     return true;
   }
