@@ -1,0 +1,25 @@
+  # Kludge time: almost all STL types take an allocator, but they
+  # almost always use the default value.  Usually we detect that
+  # and don't try to do IWYU, but sometimes it passes through.
+  # For instance, when adding two strings, we end up calling
+  #    template<_CharT,_Traits,_Alloc> ... operator+(
+  #       basic_string<_CharT,_Traits,_Alloc>, ...)
+  # These look like normal template args to us, so we see they're
+  # used and declare an iwyu dependency, even though we don't need
+  # to #include the traits or alloc type ourselves.  The surest way
+  # to deal with this is to just say that everyone provides
+  # std::allocator.  We can add more here at need.
+[  
+  { symbol: [ "std::allocator", private, "<memory>", public ] },
+  { symbol: [ "std::allocator", private, "<string>", public ] },
+  { symbol: [ "std::allocator", private, "<vector>", public ] },
+  { symbol: [ "std::allocator", private, "<map>", public ] },
+  { symbol: [ "std::allocator", private, "<set>", public ] },
+  # A similar kludge for std::char_traits.  basic_string,
+  # basic_ostream and basic_istream have this as a default template
+  # argument, and sometimes it bleeds through when clang desugars the
+  # string/ostream/istream type.
+  { symbol: [ "std::char_traits", private, "<string>", public ] },
+  { symbol: [ "std::char_traits", private, "<ostream>", public ] },
+  { symbol: [ "std::char_traits", private, "<istream>", public ] }
+]

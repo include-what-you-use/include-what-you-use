@@ -20,14 +20,62 @@ if (NOT IWYU_IN_TREE)
   include(HandleLLVMOptions)
 endif()
 
+set (IWYU_GENMAP_IMPS
+  "${CMAKE_CURRENT_SOURCE_DIR}/gcc.symbols.imp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/gcc.libc.imp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/stl.c.headers.imp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/gcc.stl.headers.imp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/libstdcpp.symbols.imp"
+  )
+
+set (IWYU_GENMAP_INCLUDES
+  "gcc_libc_symbol_map.h"
+  "gcc_libc_include_map.h"
+  "stl_c_headers_include_map.h"
+  "gcc_stl_headers_include_map.h"
+  "libstdcpp_symbol_map.h"
+  )
+
+add_custom_command(
+  OUTPUT ${IWYU_GENMAP_INCLUDES}
+  DEPENDS ${IWYU_GENMAP_IMPS}
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/imp2array.py
+  -i ${CMAKE_CURRENT_SOURCE_DIR}/gcc.symbols.imp
+  -o gcc_libc_symbol_map.h
+  -n libc_symbol_map
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/imp2array.py
+  -i ${CMAKE_CURRENT_SOURCE_DIR}/gcc.libc.imp
+  -o gcc_libc_include_map.h
+  -n libc_include_map
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/imp2array.py
+  -i ${CMAKE_CURRENT_SOURCE_DIR}/stl.c.headers.imp
+  -o stl_c_headers_include_map.h
+  -n stdlib_c_include_map
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/imp2array.py
+  -i ${CMAKE_CURRENT_SOURCE_DIR}/gcc.stl.headers.imp
+  -o gcc_stl_headers_include_map.h
+  -n libstdcpp_include_map
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/imp2array.py
+  -i ${CMAKE_CURRENT_SOURCE_DIR}/libstdcpp.symbols.imp
+  -o libstdcpp_symbol_map.h
+  -n libstdcpp_symbol_map
+  COMMENT "Generating the include maps"
+  )
+
 message(STATUS "IWYU: configuring for LLVM ${LLVM_VERSION}...")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+  
+add_custom_target(genmap
+  DEPENDS ${IWYU_GENMAP_IMPS}
+  )
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(
   ${LLVM_INCLUDE_DIRS}
   ${CLANG_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_BINARY_DIR}
   )
 
 set(LLVM_LINK_COMPONENTS
@@ -39,6 +87,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_executable(include-what-you-use
+  ${IWYU_GENMAP_INCLUDES}
   iwyu.cc
   iwyu_ast_util.cc
   iwyu_cache.cc
@@ -130,3 +179,5 @@ install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
 # Install mapping files
 file(GLOB MAPPING_FILES *.imp)
 install(FILES ${MAPPING_FILES} DESTINATION share/include-what-you-use)
+
+  

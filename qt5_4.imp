@@ -2466,8 +2466,8 @@
     { include: [ "@\"(QtCore/)?qcoreevent\\.h\"", "private", "<QEvent>", "public" ] },
 
 # You'll get these and probably have to ignore them. I'm not sure how to deal with these.
-#include "QtCore/qtypetraits.h"  // for remove_reference<>::type
-#include "QtCore/qsharedpointer_impl.h"            // for swap
-#include "QtCore/qatomic_msvc.h"
+# #include "QtCore/qtypetraits.h"  // for remove_reference<>::type
+# #include "QtCore/qsharedpointer_impl.h"            // for swap
+# #include "QtCore/qatomic_msvc.h"
 
 ]

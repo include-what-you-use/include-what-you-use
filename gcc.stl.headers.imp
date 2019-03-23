@@ -166,6 +166,7 @@
   { include: ["<bits/cpu_defines.h>", private, "<iosfwd>", public ] },
   { include: ["<bits/ctype_base.h>", private, "<locale>", public ] },
   { include: ["<bits/ctype_inline.h>", private, "<locale>", public ] },
+  { include: ["<bits/cxxabi_tweaks.h>", private, "<cxxabi.h>", public ] },
   { include: ["<bits/error_constants.h>", private, "<system_error>", public ] },
   { include: ["<bits/messages_members.h>", private, "<locale>", public ] },
   { include: ["<bits/opt_random.h>", private, "<random>", public ] },
@@ -258,8 +259,7 @@
   { include: ["<bits/c++allocator.h>", private, "<bits/allocator.h>", private ] },
   { include: ["<bits/ctype_base.h>", private, "<bits/locale_facets.h>", private ] },
   { include: ["<bits/ctype_inline.h>", private, "<bits/locale_facets.h>", private ] },
-  { include: ["<bits/messages_members.h>", private,
-    "<bits/locale_facets_nonio.h>", private ] },
+  { include: ["<bits/messages_members.h>", private, "<bits/locale_facets_nonio.h>", private ] },
   { include: ["<bits/stl_move.h>", private, "<bits/stl_algobase.h>", private ] },
   # I don't think we want to be having people move to 'backward/'
   # yet.  (These hold deprecated STL classes that we still use
