@@ -114,7 +114,7 @@ _NAMESPACE_END_RE = re.compile(r'\s*(})|'
                                r'\s*(U_NAMESPACE_END)|'
                                r'\s*(HASH_NAMESPACE_DECLARATION_END)')
 # The group (in parens) holds the unique 'key' identifying this #include.
-_INCLUDE_RE = re.compile(r'\s*#\s*include\s+([<"][^"">]+[>"])')
+_INCLUDE_RE = re.compile(r'\s*#\s*include\s+([<"][^">]+[>"])')
 # We don't need this to actually match forward-declare lines (we get
 # that information from the iwyu input), but we do need an RE here to
 # serve as an index to _LINE_TYPES.  So we use an RE that never matches.
