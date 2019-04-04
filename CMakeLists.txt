@@ -90,6 +90,16 @@ target_link_libraries(include-what-you-use
   clangSema
   clangFrontend
   clangDriver
+
+  # Revision [1] in clang moved PCHContainerOperations from Frontend
+  # to Serialization, but this broke builds that set
+  # -DBUILD_SHARED_LIBS=on.  Revision [2] is a followup that works
+  # around the issue by adding an explicit dependency on Serialization
+  # wherever there was a dependency on Frontend.  Since we depend on
+  # Frontend, we need an explicit dependency on Serialization too.
+  # [1] https://llvm.org/viewvc/llvm-project?view=revision&revision=348907
+  # [2] https://llvm.org/viewvc/llvm-project?view=revision&revision=348915
+  clangSerialization
   )
 
 # Platform dependencies.
