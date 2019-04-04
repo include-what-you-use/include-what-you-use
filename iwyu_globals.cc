@@ -18,6 +18,7 @@
 #include <utility>                      // for make_pair, pair
 
 #include "iwyu_cache.h"
+#include "iwyu_driver.h"
 #include "iwyu_include_picker.h"
 #include "iwyu_getopt.h"
 #include "iwyu_lexer_utils.h"
@@ -32,6 +33,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Version.h"
+#include "clang/Driver/Compilation.h"
 #include "clang/Lex/HeaderSearch.h"
 
 using clang::DirectoryEntry;
@@ -315,7 +317,10 @@ void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
   vector<HeaderSearchPath> search_paths =
       ComputeHeaderSearchPaths(header_search);
   SetHeaderSearchPaths(search_paths);
-  include_picker = new IncludePicker(GlobalFlags().no_default_mappings);
+  include_picker = new IncludePicker(GlobalFlags().no_default_mappings,
+                                     iwyuDriver->getCompilation()->
+                                     getDefaultToolChain(),
+                                     iwyuDriver->getArgs());
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 
@@ -408,7 +413,10 @@ void InitGlobalsAndFlagsForTesting() {
   commandline_flags = new CommandlineFlags;
   source_manager = nullptr;
   data_getter = nullptr;
-  include_picker = new IncludePicker(GlobalFlags().no_default_mappings);
+  include_picker = new IncludePicker(GlobalFlags().no_default_mappings,
+                                     iwyuDriver->getCompilation()->
+                                     getDefaultToolChain(),
+                                     iwyuDriver->getArgs());
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 

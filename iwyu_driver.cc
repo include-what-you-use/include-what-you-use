@@ -37,6 +37,8 @@
 #include "clang/Frontend/FrontendDiagnostic.h"  // IWYU pragma: keep
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 
+#include "iwyu_driver.h"
+
 namespace llvm {
 class LLVMContext;
 }  // namespace llvm
@@ -65,6 +67,7 @@ using llvm::opt::ArgStringList;
 using llvm::raw_svector_ostream;
 using llvm::sys::getDefaultTargetTriple;
 using std::set;
+using std::shared_ptr;
 using std::unique_ptr;
 
 namespace include_what_you_use {
@@ -156,7 +159,31 @@ void ExpandArgv(int argc, const char **argv,
 
 }  // anonymous namespace
 
-CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
+IwyuDriver::IwyuDriver(int argc, const char **argv) :
+  compilation(nullptr), compilerInstance(nullptr) {
+  CreateCompilerInstance(argc, argv);
+}
+
+IwyuDriver::~IwyuDriver() {
+}
+
+std::shared_ptr<clang::CompilerInstance>
+IwyuDriver::getCompilerInstance() {
+  return compilerInstance;
+}
+
+std::shared_ptr<clang::driver::Compilation>
+IwyuDriver::getCompilation() {
+  return compilation;
+}
+
+const llvm::opt::ArgList &
+IwyuDriver::getArgs() {
+  return *Args;
+}
+
+void
+IwyuDriver::CreateCompilerInstance(int argc, const char **argv) {
   std::string path = GetExecutablePath(argv[0]);
   IntrusiveRefCntPtr<DiagnosticOptions> diagnostic_options =
     new DiagnosticOptions;
@@ -166,8 +193,10 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   IntrusiveRefCntPtr<DiagnosticIDs> diagnostic_id(new DiagnosticIDs());
   DiagnosticsEngine diagnostics(diagnostic_id, &*diagnostic_options,
                                 diagnostic_client);
-  Driver driver(path, getDefaultTargetTriple(), diagnostics);
-  driver.setTitle("include what you use");
+  driver = std::shared_ptr<Driver> (new Driver(path, getDefaultTargetTriple(), diagnostics));
+  if (!driver)
+    return;
+  driver->setTitle("include what you use");
 
   // Expand out any response files passed on the command line
   set<std::string> SavedStrings;
@@ -180,9 +209,9 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   // (basically, exactly one input, and the operation mode is hard wired).
   args.push_back("-fsyntax-only");
 
-  unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
+  compilation.reset(driver->BuildCompilation(args));
   if (!compilation)
-    return nullptr;
+    return;
 
   // FIXME: This is copied from ASTUnit.cpp; simplify and eliminate.
 
@@ -194,13 +223,13 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
     raw_svector_ostream out(msg);
     jobs.Print(out, "; ", true);
     diagnostics.Report(clang::diag::err_fe_expected_compiler_job) << out.str();
-    return nullptr;
+    return;
   }
 
   const Command& command = cast<Command>(*jobs.begin());
   if (StringRef(command.getCreator().getName()) != "clang") {
     diagnostics.Report(clang::diag::err_fe_expected_clang_command);
-    return nullptr;
+    return;
   }
 
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
@@ -237,15 +266,37 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
 
   // Create a compiler instance to handle the actual work.
   // The caller will be responsible for freeing this.
-  CompilerInstance* compiler = new CompilerInstance;
-  compiler->setInvocation(invocation);
+  std::shared_ptr<CompilerInstance> tryCompiler =
+    std::shared_ptr<CompilerInstance> (new CompilerInstance());
+  tryCompiler->setInvocation(invocation);
 
   // Create the compilers actual diagnostics engine.
-  compiler->createDiagnostics();
-  if (!compiler->hasDiagnostics())
-    return nullptr;
+  tryCompiler->createDiagnostics();
+  if (!tryCompiler->hasDiagnostics())
+    return;
 
-  return compiler;
+  compilerInstance = tryCompiler;
+
+  // Make a long lived copy the ArgList.
+  Args = std::shared_ptr<llvm::opt::InputArgList>
+    (new llvm::opt::InputArgList());
+  const llvm::opt::InputArgList &A = compilation->getInputArgs();
+  for (auto a : A) {
+    llvm::opt::Arg *b = nullptr;
+    if (0 == a->getNumValues()) {
+      b = new llvm::opt::Arg(a->getOption(), a->getSpelling(), a->getIndex());
+    } else if (1 == a->getNumValues()) {
+      b = new llvm::opt::Arg(a->getOption(), a->getSpelling(), a->getIndex(),
+                             strdup(a->getValue(0)));
+      b->setOwnsValues(true);
+    } else {
+      assert(2 == a->getNumValues());
+      b = new llvm::opt::Arg(a->getOption(), a->getSpelling(), a->getIndex(),
+                             strdup(a->getValue(0)), strdup(a->getValue(1)));
+      b->setOwnsValues(true);
+    }
+    Args->append(b);
+  }
 }
 
 }  // namespace include_what_you_use

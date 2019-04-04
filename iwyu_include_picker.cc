@@ -22,6 +22,8 @@
 #include <utility>                      // for pair, make_pair
 #include <vector>                       // for vector, vector<>::iterator
 
+#include "iwyu_globals.h"
+#include "iwyu_driver.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
 #include "iwyu_stl_util.h"
@@ -30,6 +32,7 @@
 #include "port.h"  // for CHECK_
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -39,6 +42,8 @@
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/Options.h"
 
 using std::find;
 using std::make_pair;
@@ -359,11 +364,49 @@ string FindFileInSearchPath(const vector<string>& search_path,
 
 }  // anonymous namespace
 
-IncludePicker::IncludePicker(bool no_default_mappings)
-    : has_called_finalize_added_include_lines_(false) {
+IncludePicker::IncludePicker(bool no_default_mappings,
+                             const clang::driver::ToolChain &TC,
+                             const llvm::opt::ArgList &Args)
+  : has_called_finalize_added_include_lines_(false) {
+
   if (!no_default_mappings) {
-    AddDefaultMappings();
+    if (!AddToolChainMappings(TC, Args))
+      AddDefaultMappings();
   }
+}
+
+bool IncludePicker::AddToolChainMappings(const clang::driver::ToolChain &TC,
+                                         const llvm::opt::ArgList &Args) {
+  bool TargetHandled = false;
+  bool LibCxxHandled = false;
+  if (!(Args.hasArg(clang::driver::options::OPT_nostdinc) ||
+        Args.hasArg(clang::driver::options::OPT_nostdlibinc))) {
+    // Triple specific libc
+    const llvm::Triple &Triple = TC.getTriple();
+    if (Triple.isOSLinux()) {
+      TargetHandled = true;
+    } else if (Triple.isOSFreeBSD()) {
+      TargetHandled = true;
+    }
+    if (!Args.hasArg(clang::driver::options::OPT_nostdincxx)) {
+      auto Type = TC.GetCXXStdlibType(Args);
+      switch (Type) {
+      case clang::driver::ToolChain::CST_Libcxx:
+        LibCxxHandled = true;
+        break;
+      case clang::driver::ToolChain::CST_Libstdcxx:
+        LibCxxHandled = true;
+        break;
+      }
+    } else {
+      LibCxxHandled = true;
+    }
+  } else {
+    // Set handled to true so the default mapper will not be used.
+    TargetHandled = true;
+    LibCxxHandled = true;
+  }
+  return false; // Hard code false so default mapper is still called.
 }
 
 void IncludePicker::AddDefaultMappings() {
@@ -851,7 +894,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
 
         // Add the path of the file we're currently processing
         // to the search path. Allows refs to be relative to referrer.
-        vector<string> extended_search_path = 
+        vector<string> extended_search_path =
             ExtendMappingFileSearchPath(search_path,
                                         GetParentPath(absolute_path));
 

@@ -14,6 +14,7 @@
 #include <set>                          // for set
 #include <string>                       // for string
 #include <vector>                       // for vector
+#include <memory>
 
 namespace clang {
 class FileEntry;
@@ -36,9 +37,11 @@ static const int EXIT_SUCCESS_OFFSET = 2;
 using std::set;
 using std::string;
 using std::vector;
+using std::unique_ptr;
 
 class FullUseCache;
 class IncludePicker;
+class IwyuDriver;
 class SourceManagerCharacterDataGetter;
 
 // To set up the global state you need to parse options with OptionsParser when
@@ -134,6 +137,8 @@ bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file);
 void AddGlobToKeepIncludes(const string& glob);
 bool ShouldKeepIncludeFor(const clang::FileEntry* file);
 
+// For holding the driver
+extern std::shared_ptr<include_what_you_use::IwyuDriver> iwyuDriver;
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_

@@ -49,18 +49,28 @@
 #include <string>                       // for string
 #include <utility>                      // for pair
 #include <vector>                       // for vector
+#include <memory>
 
 namespace clang {
 class FileEntry;
+ namespace driver {
+   class Compilation;
+   class ToolChain;
+ }
 }  // namespace clang
 
+namespace llvm {
+  namespace opt {
+    class ArgList;
+  }
+}
 namespace include_what_you_use {
 
 using std::map;
 using std::pair;
 using std::set;
+using std::shared_ptr;
 using std::string;
-
 using std::vector;
 
 struct IncludeMapEntry;
@@ -71,7 +81,9 @@ class IncludePicker {
  public:
   typedef map<string, vector<string>> IncludeMap;  // map_from to <map_to,...>
 
-  explicit IncludePicker(bool no_default_mappings);
+  explicit IncludePicker(bool no_default_mappings,
+			 const clang::driver::ToolChain &TC,
+			 const llvm::opt::ArgList &Args);
 
   // ----- Routines to dynamically modify the include-picker
 
@@ -153,6 +165,10 @@ class IncludePicker {
   // search path incrementally.
   void AddMappingsFromFile(const string& filename,
                            const vector<string>& search_path);
+
+  // Adds mapping based on Toolchain and the input Args.
+  bool AddToolChainMappings(const clang::driver::ToolChain &TC,
+                            const llvm::opt::ArgList &Args);
 
   // Adds all hard-coded default mappings.
   void AddDefaultMappings();
