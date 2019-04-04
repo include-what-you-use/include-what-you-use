@@ -104,6 +104,7 @@
 
 #include "iwyu_ast_util.h"
 #include "iwyu_cache.h"
+#include "iwyu_driver.h"
 #include "iwyu_globals.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
@@ -4053,14 +4054,14 @@ class IwyuAction : public ASTFrontendAction {
 
 } // namespace include_what_you_use
 
-#include "iwyu_driver.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
 using include_what_you_use::OptionsParser;
 using include_what_you_use::IwyuAction;
-using include_what_you_use::CreateCompilerInstance;
+
+std::shared_ptr<include_what_you_use::IwyuDriver> include_what_you_use::iwyuDriver;
 
 int main(int argc, char **argv) {
   // Must initialize X86 target to be able to parse Microsoft inline
@@ -4074,12 +4075,15 @@ int main(int argc, char **argv) {
   //   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu --other_iwyu_flag]... CLANG_FLAGS... foo.cc
   OptionsParser options_parser(argc, argv);
 
-  std::unique_ptr<clang::CompilerInstance> compiler(CreateCompilerInstance(
-      options_parser.clang_argc(), options_parser.clang_argv()));
-  if (compiler) {
+  include_what_you_use::iwyuDriver =
+    std::shared_ptr<include_what_you_use::IwyuDriver>
+    (new include_what_you_use::IwyuDriver(options_parser.clang_argc(),
+                                          options_parser.clang_argv()));
+  auto CI = include_what_you_use::iwyuDriver->getCompilerInstance();
+  if (CI != nullptr) {
     // Create and execute the frontend to generate an LLVM bitcode module.
     std::unique_ptr<clang::ASTFrontendAction> action(new IwyuAction);
-    compiler->ExecuteAction(*action);
+    CI->ExecuteAction(*action);
   }
 
   llvm::llvm_shutdown();
