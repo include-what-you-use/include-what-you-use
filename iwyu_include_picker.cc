@@ -1037,8 +1037,9 @@ string FindFileInSearchPath(const vector<string>& search_path,
 
 }  // anonymous namespace
 
-MappedInclude::MappedInclude(const string& q)
+MappedInclude::MappedInclude(const string& q, const string& p)
   : quoted_include(q)
+  , path(p)
 {
   CHECK_(IsQuotedInclude(quoted_include)) <<
     "Must be quoted include, was: " << quoted_include;
@@ -1094,7 +1095,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   // to our map, but harmless.
   const string quoted_includer = ConvertToQuotedInclude(includer_filepath);
   const string quoted_includee = ConvertToQuotedInclude(includee_filepath);
-  MappedInclude mapped_includer(quoted_includer);
+  MappedInclude mapped_includer(quoted_includer, includer_filepath);
 
   quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
   const pair<string, string> key(includer_filepath, includee_filepath);
@@ -1339,7 +1340,7 @@ vector<MappedInclude> IncludePicker::GetCandidateHeadersForFilepath(
       GetPublicValues(filepath_include_map_, quoted_header);
   if (retval.empty()) {
     // the filepath isn't in include_map, so just quote and return it.
-    retval.push_back(MappedInclude(quoted_header));
+    retval.push_back(MappedInclude(quoted_header, filepath));
   }
   return retval;
 }
@@ -1361,7 +1362,8 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
       FindInMap(&friend_to_headers_map_, quoted_includer);
   if (headers_with_includer_as_friend != nullptr &&
       ContainsKey(*headers_with_includer_as_friend, included_filepath)) {
-    mapped_includes.push_back(MappedInclude(quoted_includee));
+    mapped_includes.push_back(
+        MappedInclude(quoted_includee, including_filepath));
   } else {
     mapped_includes =
         GetCandidateHeadersForFilepath(included_filepath, including_filepath);
@@ -1382,15 +1384,14 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
   // ConvertToQuotedInclude because it avoids trouble when the same
   // file is accessible via different include search-paths, or is
   // accessed via a symlink.
-  const string& quoted_include_as_written =
-      MaybeGetIncludeNameAsWritten(including_filepath, included_filepath);
   vector<string> retval;
   for (MappedInclude& mapped_include : mapped_includes) {
-    if (!quoted_include_as_written.empty() &&
-        mapped_include.quoted_include == quoted_includee) {
-      retval.push_back(quoted_include_as_written);
-    } else {
+    const string& quoted_include_as_written =
+      MaybeGetIncludeNameAsWritten(including_filepath, mapped_include.path);
+    if (quoted_include_as_written.empty()) {
       retval.push_back(mapped_include.quoted_include);
+    } else {
+      retval.push_back(quoted_include_as_written);
     }
   }
   return retval;

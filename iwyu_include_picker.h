@@ -67,10 +67,15 @@ struct IncludeMapEntry;
 
 enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
 
+// When a symbol or file is mapped to an include, that include is represented
+// by this struct.  It always has a quoted_include and may also have a path
+// (depending on its origin).
 struct MappedInclude {
-  explicit MappedInclude(const string& quoted_include);
+  explicit MappedInclude(const string& quoted_include,
+                         const string& path = {});
 
   string quoted_include;
+  string path;
 };
 
 class IncludePicker {
@@ -140,6 +145,8 @@ class IncludePicker {
   // not when #included from "qux/quux.h".  In the common case there's
   // no special-casing, and this falls back on
   // GetCandidateHeadersForFilepath().
+  // Furthermore, knowing the including file allows use to convert each
+  // MappedInclude in the result to a simple string (quoted include).
   vector<string> GetCandidateHeadersForFilepathIncludedFrom(
       const string& included_filepath, const string& including_filepath) const;
 

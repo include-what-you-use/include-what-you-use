@@ -410,13 +410,14 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
              LineHasText(includer_loc, "/* IWYU pragma: export") ||
              HasOpenBeginExports(includer)) {
     protect_reason = "pragma_export";
-    const string quoted_includer =
-        ConvertToQuotedInclude(GetFilePath(includer));
-    MutableGlobalIncludePicker()->AddMapping(include_name_as_written,
-                                             MappedInclude(quoted_includer));
+    const string includer_path = GetFilePath(includer);
+    const string quoted_includer = ConvertToQuotedInclude(includer_path);
+    MutableGlobalIncludePicker()->AddMapping(
+        include_name_as_written,
+        MappedInclude(quoted_includer, includer_path));
     ERRSYM(includer) << "Adding pragma-export mapping: "
-                     << include_name_as_written << " -> " << quoted_includer
-                     << "\n";
+                     << include_name_as_written << " -> "
+                     << quoted_includer << "\n";
 
   // We also always keep #includes of .c files: iwyu doesn't touch those.
   // TODO(csilvers): instead of IsHeaderFile, check if the file has
