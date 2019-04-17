@@ -238,11 +238,10 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
   }
 
   if (MatchOneToken(tokens, "private", 1, begin_loc)) {
-    const string quoted_this_file
-        = ConvertToQuotedInclude(GetFilePath(begin_loc));
-    MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_this_file);
-    ERRSYM(this_file_entry) << "Adding private include: "
-                                    << quoted_this_file << "\n";
+    const string path_this_file = GetFilePath(begin_loc);
+    MutableGlobalIncludePicker()->MarkPathAsPrivate(path_this_file);
+    ERRSYM(this_file_entry) << "Adding private path: "
+                            << path_this_file << "\n";
     return;
   }
 

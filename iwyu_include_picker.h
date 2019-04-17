@@ -76,6 +76,8 @@ struct MappedInclude {
 
   string quoted_include;
   string path;
+
+  bool HasAbsoluteQuotedInclude() const;
 };
 
 class IncludePicker {
@@ -85,7 +87,7 @@ class IncludePicker {
   typedef map<string, vector<MappedInclude>> IncludeMap;
 
   // Used to track visibility as specified either in mapping files or via
-  // pragmas.  The keys are quoted includes.  The values are the
+  // pragmas.  The keys are quoted includes or paths.  The values are the
   // visibility of the respective files.
   typedef map<string, IncludeVisibility> VisibilityMap;
 
@@ -108,6 +110,11 @@ class IncludePicker {
   // a "private" include.  If possible, we use the include-picker
   // mappings to map such includes to public (not-private) includes.
   void MarkIncludeAsPrivate(const string& quoted_include);
+
+  // Indicate that the given path should be considered
+  // a "private" include.  If possible, we use the include-picker
+  // mappings to map such includes to public (not-private) includes.
+  void MarkPathAsPrivate(const string& path);
 
   // Add this to say that "any file whose name matches the
   // friend_regex is allowed to include includee_filepath".  The regex
@@ -209,10 +216,10 @@ class IncludePicker {
   // string is not recognized.
   IncludeVisibility ParseVisibility(const string& visibility) const;
 
-  // Return the visibility of a given quoted_include if known, else
+  // Return the visibility of a given mapped include if known, else
   // kUnusedVisibility.
   IncludeVisibility GetVisibility(
-      const string& quoted_include,
+      const MappedInclude&,
       IncludeVisibility default_value = kUnusedVisibility) const;
 
   // For the given key, return the vector of values associated with
@@ -239,8 +246,15 @@ class IncludePicker {
   IncludeMap filepath_include_map_;
 
   // A map of all quoted-includes to whether they're public or private.
-  // Quoted-includes that are not present in this map are assumed public.
+  // Files whose visibility cannot be determined by this map nor the one
+  // below are assumed public.
   VisibilityMap include_visibility_map_;
+
+  // A map of paths to whether they're public or private.
+  // Files whose visibility cannot be determined by this map nor the one
+  // above are assumed public.
+  // The include_visibility_map_ takes priority over this one.
+  VisibilityMap path_visibility_map_;
 
   // All the includes we've seen so far, to help with globbing and
   // other dynamic mapping.  For each file, we list who #includes it.
