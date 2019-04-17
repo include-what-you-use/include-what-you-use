@@ -1045,6 +1045,14 @@ MappedInclude::MappedInclude(const string& q, const string& p)
     "Must be quoted include, was: " << quoted_include;
 }
 
+bool MappedInclude::HasAbsoluteQuotedInclude() const {
+  if (!StartsWith(quoted_include, "\"") || quoted_include.size() < 2) {
+    return false;
+  }
+  string path(quoted_include.begin() + 1, quoted_include.end() - 1);
+  return IsAbsolutePath(path);
+}
+
 IncludePicker::IncludePicker(bool no_default_mappings)
     : has_called_finalize_added_include_lines_(false) {
   if (!no_default_mappings) {
@@ -1192,6 +1200,11 @@ void IncludePicker::MarkIncludeAsPrivate(
   MarkVisibility(&include_visibility_map_, quoted_filepath_pattern, kPrivate);
 }
 
+void IncludePicker::MarkPathAsPrivate(const string& path) {
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  MarkVisibility(&path_visibility_map_, path, kPrivate);
+}
+
 void IncludePicker::AddFriendRegex(const string& includee_filepath,
                                    const string& quoted_friend_regex) {
   friend_to_headers_map_["@" + quoted_friend_regex].insert(includee_filepath);
@@ -1301,8 +1314,7 @@ vector<MappedInclude> IncludePicker::GetPublicValues(
 
   for (const MappedInclude& value : *values) {
     CHECK_(!StartsWith(value.quoted_include, "@"));
-    if (GetOrDefault(include_visibility_map_, value.quoted_include, kPublic)
-        == kPublic)
+    if (GetVisibility(value, kPublic) == kPublic)
       retval.push_back(value);
   }
   return retval;
@@ -1332,14 +1344,20 @@ vector<string> IncludePicker::GetCandidateHeadersForSymbol(
 vector<MappedInclude> IncludePicker::GetCandidateHeadersForFilepath(
     const string& filepath, const string& including_filepath) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
-  const string quoted_header = ConvertToQuotedInclude(
-      filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
+  string quoted_header;
+  if (including_filepath.empty()) {
+    quoted_header = ConvertToQuotedInclude(filepath);
+  } else {
+    quoted_header = ConvertToQuotedInclude(
+        filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
+  }
   vector<MappedInclude> retval =
       GetPublicValues(filepath_include_map_, quoted_header);
+
   // We also need to consider the header itself.  Make that an option if it's
   // public or there's no other option.
   MappedInclude default_header(quoted_header, filepath);
-  if (retval.empty() || GetVisibility(quoted_header, kPublic) == kPublic) {
+  if (retval.empty() || GetVisibility(default_header, kPublic) == kPublic) {
     // Insert at front so it's the preferred option
     retval.insert(retval.begin(), default_header);
   }
@@ -1355,10 +1373,12 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
   // We pass the own files path to ConvertToQuotedInclude so the quoted include
   // for the case that there is no matching `-I` option is just the filename
   // (e.g. "foo.cpp") instead of the absolute file path.
+  const string including_path =
+      MakeAbsolutePath(GetParentPath(including_filepath));
   const string quoted_includer = ConvertToQuotedInclude(
-      including_filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
+      including_filepath, including_path);
   const string quoted_includee = ConvertToQuotedInclude(
-      included_filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
+      included_filepath, including_path);
   const set<string>* headers_with_includer_as_friend =
       FindInMap(&friend_to_headers_map_, quoted_includer);
   if (headers_with_includer_as_friend != nullptr &&
@@ -1369,11 +1389,10 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     mapped_includes =
         GetCandidateHeadersForFilepath(included_filepath, including_filepath);
     if (mapped_includes.size() == 1) {
-      const string& quoted_header = mapped_includes[0].quoted_include;
-      if (GetVisibility(quoted_header) == kPrivate) {
+      if (GetVisibility(mapped_includes[0]) == kPrivate) {
         VERRS(0) << "Warning: "
                  << "No public header found to replace the private header "
-                 << quoted_header << "\n";
+                 << included_filepath << "\n";
       }
     }
   }
@@ -1385,14 +1404,21 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
   // ConvertToQuotedInclude because it avoids trouble when the same
   // file is accessible via different include search-paths, or is
   // accessed via a symlink.
+  // We also try to recalculate any quoted includes using absolute paths,
+  // because they can likely be converted to an include relative to the
+  // current file.
   vector<string> retval;
   for (MappedInclude& mapped_include : mapped_includes) {
     const string& quoted_include_as_written =
       MaybeGetIncludeNameAsWritten(including_filepath, mapped_include.path);
-    if (quoted_include_as_written.empty()) {
-      retval.push_back(mapped_include.quoted_include);
-    } else {
+    if (!quoted_include_as_written.empty()) {
       retval.push_back(quoted_include_as_written);
+    } else if (mapped_include.HasAbsoluteQuotedInclude() &&
+               !mapped_include.path.empty()) {
+      retval.push_back(ConvertToQuotedInclude(mapped_include.path,
+                                              including_path));
+    } else {
+      retval.push_back(mapped_include.quoted_include);
     }
   }
   return retval;
@@ -1416,8 +1442,10 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
 
 bool IncludePicker::IsPublic(const clang::FileEntry* file) const {
   CHECK_(file && "Need existing FileEntry");
-  const string quoted_file = ConvertToQuotedInclude(GetFilePath(file));
-  return (GetVisibility(quoted_file) == kPublic);
+  const string path = GetFilePath(file);
+  const string quoted_file = ConvertToQuotedInclude(path);
+  const MappedInclude include(quoted_file, path);
+  return (GetVisibility(include) == kPublic);
 }
 
 // Parses a YAML/JSON file containing mapping directives of various types.
@@ -1587,9 +1615,13 @@ IncludeVisibility IncludePicker::ParseVisibility(
 }
 
 IncludeVisibility IncludePicker::GetVisibility(
-    const string& quoted_include, IncludeVisibility default_value) const {
-  return GetOrDefault(
-      include_visibility_map_, quoted_include, default_value);
+    const MappedInclude& include, IncludeVisibility default_value) const {
+  const IncludeVisibility* include_visibility =
+    FindInMap(&include_visibility_map_, include.quoted_include);
+  if (include_visibility) {
+    return *include_visibility;
+  }
+  return GetOrDefault(path_visibility_map_, include.path, default_value);
 }
 
 }  // namespace include_what_you_use
