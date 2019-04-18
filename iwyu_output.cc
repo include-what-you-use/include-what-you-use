@@ -295,11 +295,13 @@ void OneUse::SetPublicHeaders() {
   // who we map to.
   CHECK_(suggested_header_.empty() && "Should not need a public header here");
   const IncludePicker& picker = GlobalIncludePicker();   // short alias
+  const string use_path = GetFilePath(use_loc_);
   // If the symbol has a special mapping, use it, otherwise map its file.
-  public_headers_ = picker.GetCandidateHeadersForSymbol(symbol_name_);
+  public_headers_ = picker.GetCandidateHeadersForSymbolUsedFrom(
+      symbol_name_, use_path);
   if (public_headers_.empty())
     public_headers_ = picker.GetCandidateHeadersForFilepathIncludedFrom(
-        decl_filepath_, GetFilePath(use_loc_));
+        decl_filepath_, use_path);
   if (public_headers_.empty())
     public_headers_.push_back(ConvertToQuotedInclude(decl_filepath_));
 }

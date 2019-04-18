@@ -136,7 +136,14 @@ class IncludePicker {
   // important (which is why we return a vector, not a set): all else
   // being equal, the first element of the vector is the "best" (or
   // most standard) header for the symbol.
-  vector<string> GetCandidateHeadersForSymbol(const string& symbol) const;
+  vector<MappedInclude> GetCandidateHeadersForSymbol(
+      const string& symbol) const;
+
+  // As above, but given a specific including header it is possible to convert
+  // mapped includes to quoted include strings (because we can for example know
+  // the correct relative path for ""-style includes).
+  vector<string> GetCandidateHeadersForSymbolUsedFrom(
+      const string& symbol, const string& including_filepath) const;
 
   // Returns the set of all public header files that a given header
   // file -- specified as a full path -- would map to, as a set of
@@ -233,6 +240,11 @@ class IncludePicker {
   // "" if it's not found for some reason.
   string MaybeGetIncludeNameAsWritten(const string& includer_filepath,
                                       const string& includee_filepath) const;
+
+  // Given a collection of MappedIncludes, and a path that might include them,
+  // choose the best quoted include form for each MappedInclude.
+  vector<string> BestQuotedIncludesForIncluder(
+      const vector<MappedInclude>&, const string& including_filepath) const;
 
   // From symbols to includes.
   IncludeMap symbol_include_map_;
