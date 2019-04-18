@@ -1329,16 +1329,48 @@ string IncludePicker::MaybeGetIncludeNameAsWritten(
   return value ? *value : "";
 }
 
-vector<string> IncludePicker::GetCandidateHeadersForSymbol(
-    const string& symbol) const {
-  CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
-  vector<MappedInclude> mapped_includes =
-      GetPublicValues(symbol_include_map_, symbol);
+vector<string> IncludePicker::BestQuotedIncludesForIncluder(
+    const vector<MappedInclude>& includes,
+    const string& including_filepath) const {
+  // Convert each MappedInclude to a quoted include, according to the
+  // following priorities:
+  // 1. If the file is already included, use whatever name it's already
+  //    included via.  This is better to use than ConvertToQuotedInclude
+  //    because it avoids trouble when the same file is accessible via
+  //    different include search-paths, or is accessed via a symlink.
+  // 2. If the quoted include in the MappedInclude object is an absolute path,
+  //    that's unlikely to be what's wanted.  Try to convert it to a relative
+  //    include via ConvertToQuotedInclude.
+  // 3. Otherwise, use the quoted include present in the MappedInclude.
+  const string including_path =
+      MakeAbsolutePath(GetParentPath(including_filepath));
   vector<string> retval;
-  for (const MappedInclude& mapped_include : mapped_includes) {
-    retval.push_back(mapped_include.quoted_include);
+  for (const MappedInclude& mapped_include : includes) {
+    const string& quoted_include_as_written =
+        MaybeGetIncludeNameAsWritten(including_filepath, mapped_include.path);
+    if (!quoted_include_as_written.empty()) {
+      retval.push_back(quoted_include_as_written);
+    } else if (mapped_include.HasAbsoluteQuotedInclude() &&
+               !mapped_include.path.empty()) {
+      retval.push_back(ConvertToQuotedInclude(mapped_include.path,
+                                              including_path));
+    } else {
+      retval.push_back(mapped_include.quoted_include);
+    }
   }
   return retval;
+}
+
+vector<MappedInclude> IncludePicker::GetCandidateHeadersForSymbol(
+    const string& symbol) const {
+  CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
+  return GetPublicValues(symbol_include_map_, symbol);
+}
+
+vector<string> IncludePicker::GetCandidateHeadersForSymbolUsedFrom(
+    const string& symbol, const string& including_filepath) const {
+  return BestQuotedIncludesForIncluder(
+      GetCandidateHeadersForSymbol(symbol), including_filepath);
 }
 
 vector<MappedInclude> IncludePicker::GetCandidateHeadersForFilepath(
@@ -1397,31 +1429,7 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     }
   }
 
-  // Now convert each MappedInclude to a quoted include.  Each contains
-  // a default quoted include but sometimes we can do better.
-  // For each path, the iwyu-preprocessor may have stored the quoted-include
-  // as written in including_filepath.  This is better to use than
-  // ConvertToQuotedInclude because it avoids trouble when the same
-  // file is accessible via different include search-paths, or is
-  // accessed via a symlink.
-  // We also try to recalculate any quoted includes using absolute paths,
-  // because they can likely be converted to an include relative to the
-  // current file.
-  vector<string> retval;
-  for (MappedInclude& mapped_include : mapped_includes) {
-    const string& quoted_include_as_written =
-      MaybeGetIncludeNameAsWritten(including_filepath, mapped_include.path);
-    if (!quoted_include_as_written.empty()) {
-      retval.push_back(quoted_include_as_written);
-    } else if (mapped_include.HasAbsoluteQuotedInclude() &&
-               !mapped_include.path.empty()) {
-      retval.push_back(ConvertToQuotedInclude(mapped_include.path,
-                                              including_path));
-    } else {
-      retval.push_back(mapped_include.quoted_include);
-    }
-  }
-  return retval;
+  return BestQuotedIncludesForIncluder(mapped_includes, including_filepath);
 }
 
 bool IncludePicker::HasMapping(const string& map_from_filepath,
