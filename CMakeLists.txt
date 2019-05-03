@@ -26,6 +26,7 @@ set (IWYU_GENMAP_IMPS
   "${CMAKE_CURRENT_SOURCE_DIR}/stl.c.headers.imp"
   "${CMAKE_CURRENT_SOURCE_DIR}/gcc.stl.headers.imp"
   "${CMAKE_CURRENT_SOURCE_DIR}/libstdcpp.symbols.imp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/freebsd.imp"
   )
 
 set (IWYU_GENMAP_INCLUDES
@@ -34,6 +35,7 @@ set (IWYU_GENMAP_INCLUDES
   "stl_c_headers_include_map.h"
   "gcc_stl_headers_include_map.h"
   "libstdcpp_symbol_map.h"
+  "freebsd_include_map.h"
   )
 
 add_custom_command(
@@ -59,6 +61,10 @@ add_custom_command(
   -i ${CMAKE_CURRENT_SOURCE_DIR}/libstdcpp.symbols.imp
   -o libstdcpp_symbol_map.h
   -n libstdcpp_symbol_map
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/imp2array.py
+  -i ${CMAKE_CURRENT_SOURCE_DIR}/freebsd.imp
+  -o freebsd_include_map.h
+  -n freebsd_include_map
   COMMENT "Generating the include maps"
   )
 

@@ -86,6 +86,8 @@ namespace {
 #include "stl_c_headers_include_map.h"
 #include "gcc_stl_headers_include_map.h"
 #include "libstdcpp_symbol_map.h"
+// System specific mappings.
+#include "freebsd_include_map.h"
 
 // For comparing if maps are equivelent.
 static bool CompareIncludeMaps(const IncludeMapEntry* A,
@@ -384,18 +386,24 @@ bool IncludePicker::AddToolChainMappings(const clang::driver::ToolChain &TC,
     // Triple specific libc
     const llvm::Triple &Triple = TC.getTriple();
     if (Triple.isOSLinux()) {
-      TargetHandled = true;
+      // Add Linux specific handling here.
+      TargetHandled = false;
     } else if (Triple.isOSFreeBSD()) {
+      // FreeBSD /usr/include private to public mappings.
+      AddIncludeMappings(freebsd_include_map,
+			 IWYU_ARRAYSIZE(freebsd_include_map));
       TargetHandled = true;
     }
     if (!Args.hasArg(clang::driver::options::OPT_nostdincxx)) {
       auto Type = TC.GetCXXStdlibType(Args);
       switch (Type) {
       case clang::driver::ToolChain::CST_Libcxx:
-        LibCxxHandled = true;
+	// Add libc++ handling here.
+        LibCxxHandled = false;
         break;
       case clang::driver::ToolChain::CST_Libstdcxx:
-        LibCxxHandled = true;
+	// Add libstdcpp handling here.
+        LibCxxHandled = false;
         break;
       }
     } else {
@@ -406,7 +414,7 @@ bool IncludePicker::AddToolChainMappings(const clang::driver::ToolChain &TC,
     TargetHandled = true;
     LibCxxHandled = true;
   }
-  return false; // Hard code false so default mapper is still called.
+  return TargetHandled;
 }
 
 void IncludePicker::AddDefaultMappings() {
