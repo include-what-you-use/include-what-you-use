@@ -52,14 +52,14 @@ To set up an environment for building:
       iwyu$ mkdir build && cd build
 
       # For IWYU 0.10/Clang 6 and earlier
-      iwyu/build$ cmake -G "Unix Makefiles" -DIWYU_LLVM_ROOT_PATH=/usr/lib/llvm-6.0 ../include-what-you-use
+      iwyu/build$ cmake -G "Unix Makefiles" -DIWYU_LLVM_ROOT_PATH=/usr/lib/llvm-6.0 ../
 
       # For IWYU 0.11/Clang 7 and later
-      iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/usr/lib/llvm-7 ../include-what-you-use
+      iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/usr/lib/llvm-7 ../
 
   or, if you have a local LLVM and Clang build tree, you can specify that as `CMAKE_PREFIX_PATH` for IWYU 0.11 and later:
 
-      iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/llvm-trunk/build ../include-what-you-use
+      iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/llvm-trunk/build ../
 
 * Once CMake has generated a build system, you can invoke it directly from `build`, e.g.
 
