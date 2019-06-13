@@ -136,6 +136,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
 
 namespace clang {
@@ -3708,7 +3709,19 @@ class IwyuAstConsumer
     // though, because that will drag in every overload even if we're
     // only using one.  Instead, we keep track of the using decl and
     // mark it as touched when something actually uses it.
-    preprocessor_info().FileInfoFor(CurrentFileEntry())->AddUsingDecl(decl);
+    IwyuFileInfo* file_info =
+        preprocessor_info().FileInfoFor(CurrentFileEntry());
+    if (file_info) {
+      file_info->AddUsingDecl(decl);
+    } else {
+      // For using declarations in a PCH, the preprocessor won't have any
+      // location information. As far as we know, that's the only time the
+      // file-info will be null, so assert that we have a PCH on the
+      // command-line.
+      const string& pch_include =
+           compiler()->getInvocation().getPreprocessorOpts().ImplicitPCHInclude;
+      CHECK_(!pch_include.empty());
+    }
 
     if (CanIgnoreCurrentASTNode())  return true;
 
