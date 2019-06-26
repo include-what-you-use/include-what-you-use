@@ -1,11 +1,12 @@
 
+dist: xenial
 language: cpp
 
 addons:
   apt:
     sources:
-     - ubuntu-toolchain-r-test
-     - llvm-toolchain-trusty
+     - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main'
+       key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
     packages:
      - ninja-build
      # TODO: These should really be the snapshots packages, but they are currently
@@ -39,7 +40,7 @@ script:
 # Build IWYU
  - mkdir build
  - cd build
- - cmake -GNinja -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=yes -DCMAKE_PREFIX_PATH=$ROOT_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
+ - cmake -GNinja -DCMAKE_PREFIX_PATH=$ROOT_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
  - ninja install
 
 # Test IWYU
