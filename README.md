@@ -22,7 +22,20 @@ Include-what-you-use makes heavy use of Clang internals, and will occasionally b
 
 We also have convenience tags and branches for released versions of Clang (called `clang_<version>`, e.g. `clang_5.0`). To build against a Clang release, check out the corresponding branch in IWYU before configuring the build. More details in the instructions below.
 
-We assume you already have compiled LLVM and Clang libraries on your system, either via packages for your platform or built from source.
+We assume you already have compiled LLVM and Clang libraries on your system, either via packages for your platform or built from source. You can use this mapping table to combine Clang and IWYU versions correctly:
+
+| Clang  | IWYU version | IWYU branch    |
+|--------|--------------|----------------|
+| 3.6    | 0.4          | `clang_3.6`    |
+| 3.7    | 0.5          | `clang_3.7`    |
+| 3.8    | 0.6          | `clang_3.8`    |
+| 3.9    | 0.7          | `clang_3.9`    |
+| 4.0    | 0.8          | `clang_4.0-r2` |
+| 5.0    | 0.9          | `clang_5.0`    |
+| 6      | 0.10         | `clang_6.0`    |
+| 7      | 0.11         | `clang_7.0`    |
+| 8      | 0.12         | `clang_8.0`    |
+| 9      | 0.13         | `master`       |
 
 > NOTE: If you use the Debian/Ubuntu packaging available from <https://apt.llvm.org>, you'll need the following packages installed:
 >
@@ -56,6 +69,8 @@ To set up an environment for building:
 
       # For IWYU 0.11/Clang 7 and later
       iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/usr/lib/llvm-7 ../include-what-you-use
+
+  (substitute the `llvm-6.0` or `llvm-7` suffixes with the actual version compatible with your IWYU branch)
 
   or, if you have a local LLVM and Clang build tree, you can specify that as `CMAKE_PREFIX_PATH` for IWYU 0.11 and later:
 
