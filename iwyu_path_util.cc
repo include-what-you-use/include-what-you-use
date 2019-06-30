@@ -127,7 +127,7 @@ string GetCanonicalName(string file_path) {
 
 string NormalizeFilePath(const string& path) {
   llvm::SmallString<128> normalized(path);
-  llvm::sys::path::remove_dots(normalized);
+  llvm::sys::path::remove_dots(normalized, /*remove_dot_dot=*/true);
 
 #ifdef _WIN32
   // Canonicalize directory separators (forward slashes considered canonical.)
