@@ -140,6 +140,7 @@ class OneIwyuTest(unittest.TestCase):
       'default_template_arg_other_file.cc': ['.'],
       'depopulated_h_file.cc': ['.'],
       'derived_function_tpl_args.cc': ['.'],
+      'dotdot.cc': ['.'],
       'double_include.cc': ['.'],
       'elaborated_struct.c': ['.'],
       'elaborated_type.cc': ['.'],
