@@ -150,7 +150,7 @@ class OneIwyuTest(unittest.TestCase):
       'fwd_decl_class_template.cc': ['.'],
       'fwd_decl_static_member.cc': ['.'],
       'fwd_decl_with_instantiation.cc': ['.'],
-      'header_in_subfolder.cc': ['.'],
+      'header_in_subdir.cc': ['.'],
       'implicit_ctor.cc': ['.'],
       'include_cycle.cc': ['.'],
       'include_with_using.cc': ['.'],

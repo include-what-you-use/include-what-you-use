@@ -14,11 +14,11 @@
 #include <list>
 #include <map>
 #include <memory>
-#include "subfolder/indirect_subfolder.h"
+#include "subdir/indirect_subdir.h"
 #include "quoted_includes_first.h"
 
-std::unique_ptr<IndirectSubfolderClass> CreateIndirectSubfolderClass() {
-  return std::unique_ptr<IndirectSubfolderClass>(new IndirectSubfolderClass);
+std::unique_ptr<IndirectSubDirClass> CreateIndirectSubDirClass() {
+  return std::unique_ptr<IndirectSubDirClass>(new IndirectSubDirClass);
 }
 
 /**** IWYU_SUMMARY
@@ -33,7 +33,7 @@ tests/cxx/quoted_includes_first.cc should remove these lines:
 The full include-list for tests/cxx/quoted_includes_first.cc:
 #include "tests/cxx/pch.h"
 #include "quoted_includes_first.h"
-#include "subfolder/indirect_subfolder.h"  // for IndirectSubfolderClass
+#include "subdir/indirect_subdir.h"  // for IndirectSubDirClass
 #include <memory>  // for unique_ptr
 
 ***** IWYU_SUMMARY */
