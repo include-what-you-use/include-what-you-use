@@ -75,11 +75,6 @@ if (MSVC)
 
   # Enable bigobj support and sane C++ exception semantics.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /EHsc")
-
-  # Put project in solution folder
-  set_target_properties(include-what-you-use
-    PROPERTIES FOLDER "Clang executables"
-    )
 endif()
 
 target_link_libraries(include-what-you-use
