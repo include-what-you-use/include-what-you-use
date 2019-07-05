@@ -14,6 +14,8 @@ __type_pack_element<0, int> tp;
 template <class T, T...> struct A {};
 __make_integer_seq<A, int, 5> seq;
 
+class Foo {};
+__type_pack_element<0, Foo> foo;
 
 /**** IWYU_SUMMARY
 
