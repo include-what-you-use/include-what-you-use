@@ -3710,7 +3710,7 @@ class IwyuAstConsumer
     // mark it as touched when something actually uses it.
     auto file_info = preprocessor_info().FileInfoFor(CurrentFileEntry());
     if (file_info)
-      fileInfo->AddUsingDecl(decl);
+      file_info->AddUsingDecl(decl);
 
     if (CanIgnoreCurrentASTNode())  return true;
 
