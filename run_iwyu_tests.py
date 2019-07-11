@@ -89,7 +89,6 @@ class OneIwyuTest(unittest.TestCase):
       'prefix_header_operator_new.cc': ['--prefix_header_includes=remove'],
       'quoted_includes_first.cc': ['--pch_in_code', '--quoted_includes_first'],
       'cxx17ns.cc': ['--cxx17ns'],
-      'using_in_pch.cc': ['--verbose=0'],
     }
     prefix_headers = [self.Include('prefix_header_includes-d1.h'),
                       self.Include('prefix_header_includes-d2.h'),
@@ -119,7 +118,6 @@ class OneIwyuTest(unittest.TestCase):
       'typedef_in_template.cc': ['-std=c++11'],
       'inheriting_ctor.cc': ['-std=c++11'],
       'cxx17ns.cc': ['-std=c++17'],
-      'using_in_pch.cc': [self.Include('using_pch.h')]
     }
     include_map = {
       'alias_template.cc': ['.'],
