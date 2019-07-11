@@ -1105,13 +1105,29 @@ void ProcessForwardDeclare(OneUse* use,
     }
   }
 
-  // (A7) If --no_fwd_decls has been passed, recategorize as a full use unless
-  // the decl is in this file (in which case it must be a self-sufficient decl
-  // being used, so we can just let IWYU do its work).
-  if (!use->ignore_use() &&
-      GlobalFlags().no_fwd_decls &&
-      GetFileEntry(use->decl_loc()) != GetFileEntry(use->use_loc())) {
-    use->set_full_use();
+  // (A7) If --no_fwd_decls has been passed, and a decl can be found in one of
+  // the headers, suggest that header, and recategorize as a full use. If we can
+  // only find a decl in this file, it must be a self-sufficent decl being used,
+  // so we can just let IWYU do its work, and there is no need to recategorize.
+  if (!use->ignore_use() && GlobalFlags().no_fwd_decls) {
+    bool promote_to_full_use = true;
+    for (const Decl* decl = use->decl(); decl != nullptr;
+         decl = decl->getPreviousDecl()) {
+      if (IsBeforeInSameFile(decl->getLocation(), use->use_loc())) {
+        promote_to_full_use = false;
+      } else if (IsBeforeInTranslationUnit(decl->getLocation(),
+                                           use->use_loc())) {
+        // TODO: Choose a redecl that is already provided by a desired include, so we
+        // don't keep another include that is not necessary.
+        use->reset_decl(cast<NamedDecl>(decl));
+        promote_to_full_use = true;
+        break;
+      }
+    }
+
+    if (promote_to_full_use) {
+      use->set_full_use();
+    }
   }
 }
 

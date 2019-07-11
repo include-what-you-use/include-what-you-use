@@ -29,6 +29,10 @@ IndirectClass* global;
 class LocalFwd;
 void ForwardDeclareUse(const LocalFwd*);
 
+// IWYU must not remove the forward declaration of this class even though its
+// definition can be found in the same file but after the use
+class LocalFwd {};
+
 // A forward-declare that also exists in an included header can be removed.
 // Normally IWYU would optimize for fewer includes, but in --no_fwd_decls mode
 // we optimize for fewer redeclarations instead.
