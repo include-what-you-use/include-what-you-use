@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-##===---------- scrub-logs.py - generate README from Wiki sources ---------===##
+##===---------- scrub-logs.py - debugging tool to make logs diffable ------===##
 #
 #                      The LLVM Compiler Infrastructure
 #
