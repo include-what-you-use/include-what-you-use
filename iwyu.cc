@@ -136,6 +136,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
 
 namespace clang {
@@ -3708,9 +3709,19 @@ class IwyuAstConsumer
     // though, because that will drag in every overload even if we're
     // only using one.  Instead, we keep track of the using decl and
     // mark it as touched when something actually uses it.
-    auto file_info = preprocessor_info().FileInfoFor(CurrentFileEntry());
-    if (file_info)
+    IwyuFileInfo* file_info =
+        preprocessor_info().FileInfoFor(CurrentFileEntry());
+    if (file_info) {
       file_info->AddUsingDecl(decl);
+    } else {
+      // The precomiled header file will not (yet) be found in the
+      // iwyu_file_info_map_. If file_info is nullptr in the absence of a PCH
+      // it suggests a bug that should be investigated.
+      CHECK_(!compiler()
+                  ->getInvocation()
+                  .getPreprocessorOpts()
+                  .ImplicitPCHInclude.empty());
+    }
 
     if (CanIgnoreCurrentASTNode())  return true;
 
