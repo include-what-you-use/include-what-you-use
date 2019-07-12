@@ -3714,13 +3714,13 @@ class IwyuAstConsumer
     if (file_info) {
       file_info->AddUsingDecl(decl);
     } else {
-      // The precomiled header file will not (yet) be found in the
-      // iwyu_file_info_map_. If file_info is nullptr in the absence of a PCH
-      // it suggests a bug that should be investigated.
-      CHECK_(!compiler()
-                  ->getInvocation()
-                  .getPreprocessorOpts()
-                  .ImplicitPCHInclude.empty());
+      // For using declarations in a PCH, the preprocessor won't have any
+      // location information. As far as we know, that's the only time the
+      // file-info will be null, so assert that we have a PCH on the
+      // command-line.
+      const string& pch_include =
+           compiler()->getInvocation().getPreprocessorOpts().ImplicitPCHInclude;
+      CHECK_(!pch_include.empty());
     }
 
     if (CanIgnoreCurrentASTNode())  return true;
