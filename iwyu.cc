@@ -2167,6 +2167,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         = expr->isArrow() ? RemovePointerFromType(base_type) : base_type;
     if (CanIgnoreType(base_type) && CanIgnoreType(deref_base_type))
       return true;
+    deref_base_type = RemoveElaboration(deref_base_type);
     if (const TypedefType* typedef_type = DynCastFrom(deref_base_type)) {
       deref_base_type = DesugarDependentTypedef(typedef_type);
     }

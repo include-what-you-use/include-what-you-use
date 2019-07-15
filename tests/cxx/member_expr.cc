@@ -11,6 +11,8 @@
 
 #include "tests/cxx/member_expr-d1.h"
 #include "tests/cxx/direct.h"
+#include "tests/cxx/member_expr-elaborated.h"
+#include "tests/cxx/struct-with-member.h"
 
 // IWYU: IndirectClass needs a declaration
 int RefFn(const IndirectClass& ic) {
@@ -31,6 +33,16 @@ int PtrFn(const IndirectClass* ic) {
 void StaticFn() {
   // IWYU: IndirectClass is...*indirect.h
   IndirectClass::StaticMethod();
+}
+
+struct StructWithMember;
+
+// Typedef<T>::type is T
+Typedef<StructWithMember>::type FnReturningElaboratedType();
+
+void ThroughElaboratedType() {
+  // Full-use of StructWithMember
+  void* unused = FnReturningElaboratedType().member;
 }
 
 // IWYU: IndirectClass needs a declaration
@@ -63,9 +75,12 @@ tests/cxx/member_expr.cc should add these lines:
 
 tests/cxx/member_expr.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
+- struct StructWithMember;  // lines XX-XX
 
 The full include-list for tests/cxx/member_expr.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/member_expr-d1.h"  // for CALL_METHOD, IC, IC_CALL_METHOD
+#include "tests/cxx/member_expr-elaborated.h"  // for Typedef, Typedef<>::type
+#include "tests/cxx/struct-with-member.h"  // for StructWithMember
 
 ***** IWYU_SUMMARY */
