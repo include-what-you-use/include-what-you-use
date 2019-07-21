@@ -4,6 +4,8 @@
 
 We welcome patches and rely on your contributions to make IWYU smarter.
 
+Coding and testing guidelines are available in the [IWYU Coding Style](docs/IWYUStyle.md) guide.
+
 Use GitHub's [pull request system](https://github.com/include-what-you-use/include-what-you-use/pulls) to submit change requests to the `include-what-you-use/include-what-you-use` repo.
 
 It's usually a good idea to run ideas by the [IWYU mailing list](http://groups.google.com/group/include-what-you-use) to get general agreement on directions before you start hacking.
