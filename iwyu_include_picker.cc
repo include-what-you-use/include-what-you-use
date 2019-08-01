@@ -875,20 +875,22 @@ bool IsQuotedFilepathPattern(const string& str) {
 // Given a vector of nodes, augment each node with its children, as
 // defined by m: nodes[i] is replaced by nodes[i] + m[nodes[i]],
 // ignoring duplicates.  The input vector is modified in place.
-void ExpandOnce(const IncludePicker::IncludeMap& m, vector<string>* nodes) {
-  vector<string> nodes_and_children;
+void ExpandOnce(const IncludePicker::IncludeMap& m,
+                vector<MappedInclude>* nodes) {
+  vector<MappedInclude> nodes_and_children;
   set<string> seen_nodes_and_children;
-  for (const string& node : *nodes) {
+  for (const MappedInclude& node : *nodes) {
     // First insert the node itself, then all its kids.
-    if (!ContainsKey(seen_nodes_and_children, node)) {
+    if (!ContainsKey(seen_nodes_and_children, node.quoted_include)) {
       nodes_and_children.push_back(node);
-      seen_nodes_and_children.insert(node);
+      seen_nodes_and_children.insert(node.quoted_include);
     }
-    if (const vector<string>* children = FindInMap(&m, node)) {
-      for (const string& child : *children) {
-        if (!ContainsKey(seen_nodes_and_children, child)) {
+    if (const vector<MappedInclude>* children =
+        FindInMap(&m, node.quoted_include)) {
+      for (const MappedInclude& child : *children) {
+        if (!ContainsKey(seen_nodes_and_children, child.quoted_include)) {
           nodes_and_children.push_back(child);
-          seen_nodes_and_children.insert(child);
+          seen_nodes_and_children.insert(child.quoted_include);
         }
       }
     }
@@ -938,9 +940,10 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
 
   // Keep track of node->second as we update it, to avoid duplicates.
   (*seen_nodes)[key] = kCalculating;
-  for (const string& child : node->second) {
-    node_stack->push_back(child);
-    MakeNodeTransitive(filename_map, seen_nodes, node_stack, child);
+  for (const MappedInclude& child : node->second) {
+    node_stack->push_back(child.quoted_include);
+    MakeNodeTransitive(filename_map, seen_nodes, node_stack,
+                       child.quoted_include);
     node_stack->pop_back();
   }
   (*seen_nodes)[key] = kDone;
@@ -1034,6 +1037,13 @@ string FindFileInSearchPath(const vector<string>& search_path,
 
 }  // anonymous namespace
 
+MappedInclude::MappedInclude(const string& q)
+  : quoted_include(q)
+{
+  CHECK_(IsQuotedInclude(quoted_include)) <<
+    "Must be quoted include, was: " << quoted_include;
+}
+
 IncludePicker::IncludePicker(bool no_default_mappings)
     : has_called_finalize_added_include_lines_(false) {
   if (!no_default_mappings) {
@@ -1084,6 +1094,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   // to our map, but harmless.
   const string quoted_includer = ConvertToQuotedInclude(includer_filepath);
   const string quoted_includee = ConvertToQuotedInclude(includee_filepath);
+  MappedInclude mapped_includer(quoted_includer);
 
   quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
   const pair<string, string> key(includer_filepath, includee_filepath);
@@ -1106,7 +1117,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
     // the closing quote as part of the .*.
     AddFriendRegex(includee_filepath,
                    quoted_includee.substr(0, internal_pos) + ".*");
-    AddMapping(quoted_includee, quoted_includer);
+    AddMapping(quoted_includee, mapped_includer);
   }
 
   // Automatically mark <asm-FOO/bar.h> as private, and map to <asm/bar.h>.
@@ -1115,45 +1126,46 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
     string public_header = quoted_includee;
     StripPast(&public_header, "/");   // read past "asm-whatever/"
     public_header = "<asm/" + public_header;   // now it's <asm/something.h>
-    AddMapping(quoted_includee, public_header);
+    AddMapping(quoted_includee, MappedInclude(public_header));
   }
 }
 
-void IncludePicker::AddMapping(const string& map_from, const string& map_to) {
-  VERRS(8) << "Adding mapping from " << map_from << " to " << map_to << "\n";
+void IncludePicker::AddMapping(const string& map_from,
+                               const MappedInclude& map_to) {
+  VERRS(8) << "Adding mapping from " << map_from << " to "
+           << map_to.quoted_include << "\n";
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
   CHECK_(IsQuotedFilepathPattern(map_from)
          && "All map keys must be quoted filepaths or @ followed by regex");
-  CHECK_(IsQuotedInclude(map_to) && "All map values must be quoted includes");
   filepath_include_map_[map_from].push_back(map_to);
 }
 
 void IncludePicker::AddIncludeMapping(const string& map_from,
                                       IncludeVisibility from_visibility,
-                                      const string& map_to,
+                                      const MappedInclude& map_to,
                                       IncludeVisibility to_visibility) {
   AddMapping(map_from, map_to);
   MarkVisibility(map_from, from_visibility);
-  MarkVisibility(map_to, to_visibility);
+  MarkVisibility(map_to.quoted_include, to_visibility);
 }
 
 void IncludePicker::AddSymbolMapping(const string& map_from,
-                                     const string& map_to,
+                                     const MappedInclude& map_to,
                                      IncludeVisibility to_visibility) {
-  CHECK_(IsQuotedInclude(map_to) && "Map values must be quoted includes");
   symbol_include_map_[map_from].push_back(map_to);
 
   // Symbol-names are always marked as private (or GetPublicValues()
   // will self-map them, below).
   MarkVisibility(map_from, kPrivate);
-  MarkVisibility(map_to, to_visibility);
+  MarkVisibility(map_to.quoted_include, to_visibility);
 }
 
 void IncludePicker::AddIncludeMappings(const IncludeMapEntry* entries,
                                        size_t count) {
   for (size_t i = 0; i < count; ++i) {
     const IncludeMapEntry& e = entries[i];
-    AddIncludeMapping(e.map_from, e.from_visibility, e.map_to, e.to_visibility);
+    AddIncludeMapping(e.map_from, e.from_visibility, MappedInclude(e.map_to),
+                      e.to_visibility);
   }
 }
 
@@ -1161,7 +1173,7 @@ void IncludePicker::AddSymbolMappings(const IncludeMapEntry* entries,
                                       size_t count) {
   for (size_t i = 0; i < count; ++i) {
     const IncludeMapEntry& e = entries[i];
-    AddSymbolMapping(e.map_from, e.map_to, e.to_visibility);
+    AddSymbolMapping(e.map_from, MappedInclude(e.map_to), e.to_visibility);
   }
 }
 
@@ -1199,6 +1211,17 @@ vector<string> ExtractKeysMarkedAsRegexes(const MapType& m) {
   return regex_keys;
 }
 
+bool ContainsQuotedInclude(
+    const vector<MappedInclude>& mapped_includes,
+    const string& quoted_include) {
+  for (const MappedInclude& mapped : mapped_includes) {
+    if (mapped.quoted_include == quoted_include) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // anonymous namespace
 
 // Expands the regex keys in filepath_include_map_ and
@@ -1220,10 +1243,10 @@ void IncludePicker::ExpandRegexes() {
   for (const auto& incmap : quoted_includes_to_quoted_includers_) {
     const string& hdr = incmap.first;
     for (const string& regex_key : filepath_include_map_regex_keys) {
-      const vector<string>& map_to = filepath_include_map_[regex_key];
+      const vector<MappedInclude>& map_to = filepath_include_map_[regex_key];
       // Enclose the regex in ^(...)$ for full match.
       llvm::Regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
-      if (regex.match(hdr, nullptr) && !ContainsValue(map_to, hdr)) {
+      if (regex.match(hdr, nullptr) && !ContainsQuotedInclude(map_to, hdr)) {
         Extend(&filepath_include_map_[hdr], filepath_include_map_[regex_key]);
         MarkVisibility(hdr, filepath_visibility_map_[regex_key]);
       }
@@ -1267,19 +1290,20 @@ void IncludePicker::FinalizeAddedIncludes() {
 // before returning the vector.  *Also*, if the key is public in
 // the map, we insert the key as the first of the returned values,
 // this is an implicit "self-map."
-vector<string> IncludePicker::GetPublicValues(
+vector<MappedInclude> IncludePicker::GetPublicValues(
     const IncludePicker::IncludeMap& m, const string& key) const {
   CHECK_(!StartsWith(key, "@"));
-  vector<string> retval;
-  const vector<string>* values = FindInMap(&m, key);
+  vector<MappedInclude> retval;
+  const vector<MappedInclude>* values = FindInMap(&m, key);
   if (!values || values->empty())
     return retval;
 
   if (GetOrDefault(filepath_visibility_map_, key, kPublic) == kPublic)
-    retval.push_back(key);                // we can map to ourself!
-  for (const string& value : *values) {
-    CHECK_(!StartsWith(value, "@"));
-    if (GetOrDefault(filepath_visibility_map_, value, kPublic) == kPublic)
+    retval.push_back(MappedInclude(key)); // we can map to ourself!
+  for (const MappedInclude& value : *values) {
+    CHECK_(!StartsWith(value.quoted_include, "@"));
+    if (GetOrDefault(filepath_visibility_map_, value.quoted_include, kPublic)
+        == kPublic)
       retval.push_back(value);
   }
   return retval;
@@ -1297,18 +1321,25 @@ string IncludePicker::MaybeGetIncludeNameAsWritten(
 vector<string> IncludePicker::GetCandidateHeadersForSymbol(
     const string& symbol) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
-  return GetPublicValues(symbol_include_map_, symbol);
+  vector<MappedInclude> mapped_includes =
+      GetPublicValues(symbol_include_map_, symbol);
+  vector<string> retval;
+  for (const MappedInclude& mapped_include : mapped_includes) {
+    retval.push_back(mapped_include.quoted_include);
+  }
+  return retval;
 }
 
-vector<string> IncludePicker::GetCandidateHeadersForFilepath(
+vector<MappedInclude> IncludePicker::GetCandidateHeadersForFilepath(
     const string& filepath, const string& including_filepath) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
   const string quoted_header = ConvertToQuotedInclude(
       filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
-  vector<string> retval = GetPublicValues(filepath_include_map_, quoted_header);
+  vector<MappedInclude> retval =
+      GetPublicValues(filepath_include_map_, quoted_header);
   if (retval.empty()) {
     // the filepath isn't in include_map, so just quote and return it.
-    retval.push_back(quoted_header);
+    retval.push_back(MappedInclude(quoted_header));
   }
   return retval;
 }
@@ -1318,7 +1349,7 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepath(
 // GetCandidateHeadersForFilepath.
 vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     const string& included_filepath, const string& including_filepath) const {
-  vector<string> retval;
+  vector<MappedInclude> mapped_includes;
   // We pass the own files path to ConvertToQuotedInclude so the quoted include
   // for the case that there is no matching `-I` option is just the filename
   // (e.g. "foo.cpp") instead of the absolute file path.
@@ -1330,12 +1361,12 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
       FindInMap(&friend_to_headers_map_, quoted_includer);
   if (headers_with_includer_as_friend != nullptr &&
       ContainsKey(*headers_with_includer_as_friend, included_filepath)) {
-    retval.push_back(quoted_includee);
+    mapped_includes.push_back(MappedInclude(quoted_includee));
   } else {
-    retval =
+    mapped_includes =
         GetCandidateHeadersForFilepath(included_filepath, including_filepath);
-    if (retval.size() == 1) {
-      const string& quoted_header = retval[0];
+    if (mapped_includes.size() == 1) {
+      const string& quoted_header = mapped_includes[0].quoted_include;
       if (GetVisibility(quoted_header) == kPrivate) {
         VERRS(0) << "Warning: "
                  << "No public header found to replace the private header "
@@ -1344,20 +1375,23 @@ vector<string> IncludePicker::GetCandidateHeadersForFilepathIncludedFrom(
     }
   }
 
-  // We'll have called ConvertToQuotedInclude on members of retval,
-  // but sometimes we can do better -- if included_filepath is in
-  // retval, the iwyu-preprocessor may have stored the quoted-include
+  // Now convert each MappedInclude to a quoted include.  Each contains
+  // a default quoted include but sometimes we can do better.
+  // For each path, the iwyu-preprocessor may have stored the quoted-include
   // as written in including_filepath.  This is better to use than
   // ConvertToQuotedInclude because it avoids trouble when the same
   // file is accessible via different include search-paths, or is
   // accessed via a symlink.
-  const string& quoted_include_as_written
-      = MaybeGetIncludeNameAsWritten(including_filepath, included_filepath);
-  if (!quoted_include_as_written.empty()) {
-    vector<string>::iterator it = std::find(retval.begin(), retval.end(),
-                                            quoted_includee);
-    if (it != retval.end())
-      *it = quoted_include_as_written;
+  const string& quoted_include_as_written =
+      MaybeGetIncludeNameAsWritten(including_filepath, included_filepath);
+  vector<string> retval;
+  for (MappedInclude& mapped_include : mapped_includes) {
+    if (!quoted_include_as_written.empty() &&
+        mapped_include.quoted_include == quoted_includee) {
+      retval.push_back(quoted_include_as_written);
+    } else {
+      retval.push_back(mapped_include.quoted_include);
+    }
   }
   return retval;
 }
@@ -1368,12 +1402,11 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
   const string quoted_from = ConvertToQuotedInclude(map_from_filepath);
   const string quoted_to = ConvertToQuotedInclude(map_to_filepath);
   // We can't use GetCandidateHeadersForFilepath since includer might be private
-  const vector<string>* all_mappers = FindInMap(&filepath_include_map_,
-                                                quoted_from);
+  const vector<MappedInclude>* all_mappers =
+      FindInMap(&filepath_include_map_, quoted_from);
   if (all_mappers) {
-    for (const string& mapper : *all_mappers) {
-      if (mapper == quoted_to)
-        return true;
+    if (ContainsQuotedInclude(*all_mappers, quoted_to)) {
+      return true;
     }
   }
   return quoted_to == quoted_from;   // indentity mapping, why not?
@@ -1470,7 +1503,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
           return;
         }
 
-        AddSymbolMapping(mapping[0], mapping[2], to_visibility);
+        AddSymbolMapping(mapping[0], MappedInclude(mapping[2]), to_visibility);
       } else if (directive == "include") {
         // Include mapping.
         vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
@@ -1513,7 +1546,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
 
         AddIncludeMapping(mapping[0],
             from_visibility,
-            mapping[2],
+            MappedInclude(mapping[2]),
             to_visibility);
       } else if (directive == "ref") {
         // Mapping ref.

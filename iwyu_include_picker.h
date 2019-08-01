@@ -67,9 +67,17 @@ struct IncludeMapEntry;
 
 enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
 
+struct MappedInclude {
+  explicit MappedInclude(const string& quoted_include);
+
+  string quoted_include;
+};
+
 class IncludePicker {
  public:
-  typedef map<string, vector<string>> IncludeMap;  // map_from to <map_to,...>
+  // The keys are either symbol names or quoted includes, and the values are
+  // lists of candidate public headers to include for symbol or quoted include.
+  typedef map<string, vector<MappedInclude>> IncludeMap;
 
   explicit IncludePicker(bool no_default_mappings);
 
@@ -83,8 +91,8 @@ class IncludePicker {
                         const string& quoted_include_as_written);
 
   // Add this to say "map_to re-exports everything in file map_from".
-  // Both map_to and map_from should be quoted includes.
-  void AddMapping(const string& map_from, const string& map_to);
+  // map_from should be a quoted include.
+  void AddMapping(const string& map_from, const MappedInclude& map_to);
 
   // Indicate that the given quoted include should be considered
   // a "private" include.  If possible, we use the include-picker
@@ -115,13 +123,13 @@ class IncludePicker {
 
   // Returns the set of all public header files that a given header
   // file -- specified as a full path -- would map to, as a set of
-  // quoted includes such as '<stdio.h>'.  If the include-picker has
+  // MappedIncludes.  If the include-picker has
   // no mapping information for this file, the return vector has just
   // the input file (now include-quoted).  Ordering is important
   // (which is why we return a vector, not a set): all else being
   // equal, the first element of the vector is the "best" (or most
   // standard) header for the input header.
-  vector<string> GetCandidateHeadersForFilepath(
+  vector<MappedInclude> GetCandidateHeadersForFilepath(
       const string& filepath, const string& including_filepath = "") const;
 
   // This allows for special-casing of GetCandidateHeadersForFilepath
@@ -161,13 +169,13 @@ class IncludePicker {
   // from a private to a public quoted include.
   void AddIncludeMapping(
       const string& map_from, IncludeVisibility from_visibility, 
-      const string& map_to, IncludeVisibility to_visibility);
+      const MappedInclude& map_to, IncludeVisibility to_visibility);
 
   // Adds a mapping from a a symbol to a quoted include. We use this to 
   // maintain mappings of documented types, e.g.
   //  For std::map<>, include <map>.
   void AddSymbolMapping(
-      const string& map_from, const string& map_to,
+      const string& map_from, const MappedInclude& map_to,
       IncludeVisibility to_visibility);
 
   // Adds mappings from sized arrays of IncludeMapEntry.
@@ -196,7 +204,8 @@ class IncludePicker {
   // For the given key, return the vector of values associated with
   // that key, or an empty vector if the key does not exist in the
   // map, filtering out private files.
-  vector<string> GetPublicValues(const IncludeMap& m, const string& key) const;
+  vector<MappedInclude> GetPublicValues(const IncludeMap& m,
+                                        const string& key) const;
 
   // Given an includer-pathname and includee-pathname, return the
   // quoted-include of the includee, as written in the includer, or

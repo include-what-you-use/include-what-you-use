@@ -229,7 +229,8 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
 
     const string quoted_this_file
         = ConvertToQuotedInclude(GetFilePath(begin_loc));
-    MutableGlobalIncludePicker()->AddMapping(quoted_this_file, suggested);
+    MutableGlobalIncludePicker()->AddMapping(quoted_this_file,
+                                             MappedInclude(suggested));
     MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_this_file);
     ERRSYM(this_file_entry) << "Adding private pragma-mapping: "
                             << quoted_this_file << " -> "
@@ -344,8 +345,8 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     for (string& public_include : public_includes) {
       StripWhiteSpace(&public_include);
       const string quoted_header_name = "<" + public_include + ">";
-      MutableGlobalIncludePicker()->AddMapping(quoted_private_include,
-                                               quoted_header_name);
+      MutableGlobalIncludePicker()->AddMapping(
+          quoted_private_include, MappedInclude(quoted_header_name));
       MutableGlobalIncludePicker()->MarkIncludeAsPrivate(
           quoted_private_include);
       ERRSYM(GetFileEntry(current_loc)) << "Adding @headername mapping: "
@@ -413,7 +414,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     const string quoted_includer =
         ConvertToQuotedInclude(GetFilePath(includer));
     MutableGlobalIncludePicker()->AddMapping(include_name_as_written,
-                                             quoted_includer);
+                                             MappedInclude(quoted_includer));
     ERRSYM(includer) << "Adding pragma-export mapping: "
                      << include_name_as_written << " -> " << quoted_includer
                      << "\n";
@@ -848,12 +849,13 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   map<const FileEntry*, set<const FileEntry*>> private_headers_behind;
   for (const auto& fileinfo : iwyu_file_info_map_) {
     const FileEntry* header = fileinfo.first;
-    const vector<string> public_headers_for_header =
+    const vector<MappedInclude> public_headers_for_header =
         GlobalIncludePicker().GetCandidateHeadersForFilepath(
             GetFilePath(header));
-    for (const string& pub : public_headers_for_header) {
-      if (const FileEntry* public_file
-          = GetOrDefault(include_to_fileentry_map_, pub, nullptr)) {
+    for (const MappedInclude& pub : public_headers_for_header) {
+      if (const FileEntry* public_file =
+          GetOrDefault(include_to_fileentry_map_, pub.quoted_include,
+                       nullptr)) {
         CHECK_(ContainsKey(iwyu_file_info_map_, public_file));
         if (public_file != header)  // no credit for mapping to yourself :-)
           private_headers_behind[public_file].insert(header);
