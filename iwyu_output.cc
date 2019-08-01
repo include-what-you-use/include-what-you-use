@@ -1257,13 +1257,14 @@ void ProcessFullUse(OneUse* use,
     // mapping to choose, and it's important we use the one that iwyu
     // will pick later).  TODO(csilvers): figure out that case too.
     const IncludePicker& picker = GlobalIncludePicker();
-    const vector<string>& method_dfn_files =
+    const vector<MappedInclude>& method_dfn_files =
         picker.GetCandidateHeadersForFilepath(GetFilePath(decl_file_entry));
-    const vector<string>& parent_dfn_files =
+    const vector<MappedInclude>& parent_dfn_files =
         picker.GetCandidateHeadersForFilepath(GetFilePath(parent_file_entry));
     bool same_file;
     if (method_dfn_files.size() == 1 && parent_dfn_files.size() == 1) {
-      same_file = (method_dfn_files[0] == parent_dfn_files[0]);
+      same_file = (method_dfn_files[0].quoted_include ==
+          parent_dfn_files[0].quoted_include);
     } else {
       // Fall back on just checking the filenames: can't figure out public.
       same_file = (decl_file_entry == parent_file_entry);
@@ -2082,7 +2083,8 @@ void IwyuFileInfo::HandlePreprocessingDone() {
         ERRSYM(file_) << "Mark " << quoted_file_
                       << " as public header for " << private_include
                       << " because used macro is defined by includer.\n";
-        MutableGlobalIncludePicker()->AddMapping(private_include, quoted_file_);
+        MutableGlobalIncludePicker()->AddMapping(private_include,
+                                                 MappedInclude(quoted_file_));
         MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
       }
     }
