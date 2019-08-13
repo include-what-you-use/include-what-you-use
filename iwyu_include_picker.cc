@@ -1067,17 +1067,17 @@ void IncludePicker::AddDefaultMappings() {
       IWYU_ARRAYSIZE(stdlib_cpp_public_headers));
 }
 
-void IncludePicker::MarkVisibility(const string& quoted_filepath_pattern,
+void IncludePicker::MarkVisibility(VisibilityMap* map,
+                                   const string& key,
                                    IncludeVisibility visibility) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   // insert() leaves any old value alone, and only inserts if the key is new.
-  filepath_visibility_map_.insert(
-      make_pair(quoted_filepath_pattern, visibility));
-  CHECK_(filepath_visibility_map_[quoted_filepath_pattern] == visibility)
+  map->insert(make_pair(key, visibility));
+  CHECK_((*map)[key] == visibility)
       << " Same file seen with two different visibilities: "
-      << quoted_filepath_pattern
-      << " Old vis: " << filepath_visibility_map_[quoted_filepath_pattern]
+      << key
+      << " Old vis: " << (*map)[key]
       << " New vis: " << visibility;
 }
 
@@ -1146,8 +1146,9 @@ void IncludePicker::AddIncludeMapping(const string& map_from,
                                       const MappedInclude& map_to,
                                       IncludeVisibility to_visibility) {
   AddMapping(map_from, map_to);
-  MarkVisibility(map_from, from_visibility);
-  MarkVisibility(map_to.quoted_include, to_visibility);
+  MarkVisibility(&include_visibility_map_, map_from, from_visibility);
+  MarkVisibility(&include_visibility_map_, map_to.quoted_include,
+                 to_visibility);
 }
 
 void IncludePicker::AddSymbolMapping(const string& map_from,
@@ -1157,8 +1158,9 @@ void IncludePicker::AddSymbolMapping(const string& map_from,
 
   // Symbol-names are always marked as private (or GetPublicValues()
   // will self-map them, below).
-  MarkVisibility(map_from, kPrivate);
-  MarkVisibility(map_to.quoted_include, to_visibility);
+  MarkVisibility(&include_visibility_map_, map_from, kPrivate);
+  MarkVisibility(&include_visibility_map_, map_to.quoted_include,
+                 to_visibility);
 }
 
 void IncludePicker::AddIncludeMappings(const IncludeMapEntry* entries,
@@ -1181,7 +1183,7 @@ void IncludePicker::AddSymbolMappings(const IncludeMapEntry* entries,
 void IncludePicker::AddPublicIncludes(const char** includes, size_t count) {
   for (size_t i = 0; i < count; ++i) {
     const char* include = includes[i];
-    MarkVisibility(include, kPublic);
+    MarkVisibility(&include_visibility_map_, include, kPublic);
   }
 }
 
@@ -1190,7 +1192,7 @@ void IncludePicker::MarkIncludeAsPrivate(
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
   CHECK_(IsQuotedFilepathPattern(quoted_filepath_pattern)
          && "MIAP takes a quoted filepath pattern");
-  MarkVisibility(quoted_filepath_pattern, kPrivate);
+  MarkVisibility(&include_visibility_map_, quoted_filepath_pattern, kPrivate);
 }
 
 void IncludePicker::AddFriendRegex(const string& includee_filepath,
@@ -1249,7 +1251,8 @@ void IncludePicker::ExpandRegexes() {
       llvm::Regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
       if (regex.match(hdr, nullptr) && !ContainsQuotedInclude(map_to, hdr)) {
         Extend(&filepath_include_map_[hdr], filepath_include_map_[regex_key]);
-        MarkVisibility(hdr, filepath_visibility_map_[regex_key]);
+        MarkVisibility(&include_visibility_map_, hdr,
+                       include_visibility_map_[regex_key]);
       }
     }
     for (const string& regex_key : friend_to_headers_map_regex_keys) {
@@ -1299,11 +1302,11 @@ vector<MappedInclude> IncludePicker::GetPublicValues(
   if (!values || values->empty())
     return retval;
 
-  if (GetOrDefault(filepath_visibility_map_, key, kPublic) == kPublic)
+  if (GetOrDefault(include_visibility_map_, key, kPublic) == kPublic)
     retval.push_back(MappedInclude(key)); // we can map to ourself!
   for (const MappedInclude& value : *values) {
     CHECK_(!StartsWith(value.quoted_include, "@"));
-    if (GetOrDefault(filepath_visibility_map_, value.quoted_include, kPublic)
+    if (GetOrDefault(include_visibility_map_, value.quoted_include, kPublic)
         == kPublic)
       retval.push_back(value);
   }
@@ -1588,7 +1591,7 @@ IncludeVisibility IncludePicker::ParseVisibility(
 IncludeVisibility IncludePicker::GetVisibility(
     const string& quoted_include) const {
   return GetOrDefault(
-      filepath_visibility_map_, quoted_include, kUnusedVisibility);
+      include_visibility_map_, quoted_include, kUnusedVisibility);
 }
 
 }  // namespace include_what_you_use

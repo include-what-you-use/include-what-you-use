@@ -84,6 +84,11 @@ class IncludePicker {
   // lists of candidate public headers to include for symbol or quoted include.
   typedef map<string, vector<MappedInclude>> IncludeMap;
 
+  // Used to track visibility as specified either in mapping files or via
+  // pragmas.  The keys are quoted includes.  The values are the
+  // visibility of the respective files.
+  typedef map<string, IncludeVisibility> VisibilityMap;
+
   explicit IncludePicker(bool no_default_mappings);
 
   // ----- Routines to dynamically modify the include-picker
@@ -101,7 +106,7 @@ class IncludePicker {
 
   // Indicate that the given quoted include should be considered
   // a "private" include.  If possible, we use the include-picker
-  // mappings to map such includes to public (not-private) includs.
+  // mappings to map such includes to public (not-private) includes.
   void MarkIncludeAsPrivate(const string& quoted_include);
 
   // Add this to say that "any file whose name matches the
@@ -196,8 +201,8 @@ class IncludePicker {
   // seen by iwyu.
   void ExpandRegexes();
 
-  // Adds an entry to filepath_visibility_map_, with error checking.
-  void MarkVisibility(const string& quoted_filepath_pattern,
+  // Adds an entry to the given VisibilityMap, with error checking.
+  void MarkVisibility(VisibilityMap* map, const string& key,
                       IncludeVisibility visibility);
 
   // Parse visibility from a string. Returns kUnusedVisibility if
@@ -233,7 +238,7 @@ class IncludePicker {
 
   // A map of all quoted-includes to whether they're public or private.
   // Quoted-includes that are not present in this map are assumed public.
-  map<string, IncludeVisibility> filepath_visibility_map_;
+  VisibilityMap include_visibility_map_;
 
   // All the includes we've seen so far, to help with globbing and
   // other dynamic mapping.  For each file, we list who #includes it.
