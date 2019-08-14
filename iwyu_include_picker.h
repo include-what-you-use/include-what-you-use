@@ -211,7 +211,9 @@ class IncludePicker {
 
   // Return the visibility of a given quoted_include if known, else
   // kUnusedVisibility.
-  IncludeVisibility GetVisibility(const string& quoted_include) const;
+  IncludeVisibility GetVisibility(
+      const string& quoted_include,
+      IncludeVisibility default_value = kUnusedVisibility) const;
 
   // For the given key, return the vector of values associated with
   // that key, or an empty vector if the key does not exist in the
