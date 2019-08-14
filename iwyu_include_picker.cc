@@ -1156,9 +1156,6 @@ void IncludePicker::AddSymbolMapping(const string& map_from,
                                      IncludeVisibility to_visibility) {
   symbol_include_map_[map_from].push_back(map_to);
 
-  // Symbol-names are always marked as private (or GetPublicValues()
-  // will self-map them, below).
-  MarkVisibility(&include_visibility_map_, map_from, kPrivate);
   MarkVisibility(&include_visibility_map_, map_to.quoted_include,
                  to_visibility);
 }
@@ -1302,8 +1299,6 @@ vector<MappedInclude> IncludePicker::GetPublicValues(
   if (!values || values->empty())
     return retval;
 
-  if (GetOrDefault(include_visibility_map_, key, kPublic) == kPublic)
-    retval.push_back(MappedInclude(key)); // we can map to ourself!
   for (const MappedInclude& value : *values) {
     CHECK_(!StartsWith(value.quoted_include, "@"));
     if (GetOrDefault(include_visibility_map_, value.quoted_include, kPublic)
@@ -1341,9 +1336,12 @@ vector<MappedInclude> IncludePicker::GetCandidateHeadersForFilepath(
       filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
   vector<MappedInclude> retval =
       GetPublicValues(filepath_include_map_, quoted_header);
-  if (retval.empty()) {
-    // the filepath isn't in include_map, so just quote and return it.
-    retval.push_back(MappedInclude(quoted_header, filepath));
+  // We also need to consider the header itself.  Make that an option if it's
+  // public or there's no other option.
+  MappedInclude default_header(quoted_header, filepath);
+  if (retval.empty() || GetVisibility(quoted_header, kPublic) == kPublic) {
+    // Insert at front so it's the preferred option
+    retval.insert(retval.begin(), default_header);
   }
   return retval;
 }
@@ -1589,9 +1587,9 @@ IncludeVisibility IncludePicker::ParseVisibility(
 }
 
 IncludeVisibility IncludePicker::GetVisibility(
-    const string& quoted_include) const {
+    const string& quoted_include, IncludeVisibility default_value) const {
   return GetOrDefault(
-      include_visibility_map_, quoted_include, kUnusedVisibility);
+      include_visibility_map_, quoted_include, default_value);
 }
 
 }  // namespace include_what_you_use
