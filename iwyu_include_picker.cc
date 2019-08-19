@@ -1376,18 +1376,19 @@ vector<string> IncludePicker::GetCandidateHeadersForSymbolUsedFrom(
 vector<MappedInclude> IncludePicker::GetCandidateHeadersForFilepath(
     const string& filepath, const string& including_filepath) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
+  string absolute_quoted_header = ConvertToQuotedInclude(filepath);
+  vector<MappedInclude> retval =
+      GetPublicValues(filepath_include_map_, absolute_quoted_header);
+
+  // We also need to consider the header itself.  Make that an option if it's
+  // public or there's no other option.
   string quoted_header;
   if (including_filepath.empty()) {
-    quoted_header = ConvertToQuotedInclude(filepath);
+    quoted_header = absolute_quoted_header;
   } else {
     quoted_header = ConvertToQuotedInclude(
         filepath, MakeAbsolutePath(GetParentPath(including_filepath)));
   }
-  vector<MappedInclude> retval =
-      GetPublicValues(filepath_include_map_, quoted_header);
-
-  // We also need to consider the header itself.  Make that an option if it's
-  // public or there's no other option.
   MappedInclude default_header(quoted_header, filepath);
   if (retval.empty() || GetVisibility(default_header, kPublic) == kPublic) {
     // Insert at front so it's the preferred option
