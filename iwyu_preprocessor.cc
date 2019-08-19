@@ -411,12 +411,21 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     protect_reason = "pragma_export";
     const string includer_path = GetFilePath(includer);
     const string quoted_includer = ConvertToQuotedInclude(includer_path);
-    MutableGlobalIncludePicker()->AddMapping(
-        include_name_as_written,
-        MappedInclude(quoted_includer, includer_path));
+    MappedInclude map_to(quoted_includer, includer_path);
+    MutableGlobalIncludePicker()->AddMapping(include_name_as_written, map_to);
     ERRSYM(includer) << "Adding pragma-export mapping: "
                      << include_name_as_written << " -> "
-                     << quoted_includer << "\n";
+                     << map_to.quoted_include << "\n";
+    // Relative includes can be problematic as map keys, because they are
+    // context-dependent.  Convert it to a context-free quoted include
+    // (which may contain the full path to the file), and add that too.
+    string map_from = ConvertToQuotedInclude(GetFilePath(includee));
+    if (map_from != include_name_as_written) {
+      MutableGlobalIncludePicker()->AddMapping(map_from, map_to);
+      ERRSYM(includer) << "Adding pragma-export mapping: "
+                       << map_from << " -> " << map_to.quoted_include
+                       << "\n";
+    }
 
   // We also always keep #includes of .c files: iwyu doesn't touch those.
   // TODO(csilvers): instead of IsHeaderFile, check if the file has
