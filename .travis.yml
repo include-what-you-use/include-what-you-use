@@ -29,16 +29,17 @@ before_install:
  - BIN_PATH=`llvm-config-$VERSION --bindir`
 
  # TODO: Remove this as soon as humanly possible.
- # Patch Clang CMake config to remove 'clang_shared' target which is
- # currently broken in the Debian packaging.
- - sudo sed -i -e 's/clang-refactor clang_shared clangApplyReplacements/clang-refactor clangApplyReplacements/' $ROOT_PATH/lib/cmake/clang/ClangTargets.cmake
- - sudo sed -i -e '/clang_shared/d' $ROOT_PATH/lib/cmake/clang/ClangTargets.cmake
- - sudo sed -i -e '/IMPORTED_SONAME_RELWITHDEBINFO.*libclang_shared\.so/,+1 d' $ROOT_PATH/lib/cmake/clang/ClangTargets-relwithdebinfo.cmake
- - sudo sed -i -e '/clang_shared/d' $ROOT_PATH/lib/cmake/clang/ClangTargets-relwithdebinfo.cmake
+ # Patch Clang and LLVM CMake config to remove 'clang-cpp' and 'lit-cpuid'
+ # targets, which are currently broken in the Debian packaging.
  - sudo sed -i -e 's/clang-refactor clang-cpp clangApplyReplacements/clang-refactor clangApplyReplacements/' $ROOT_PATH/lib/cmake/clang/ClangTargets.cmake
  - sudo sed -i -e '/clang-cpp/d' $ROOT_PATH/lib/cmake/clang/ClangTargets.cmake
  - sudo sed -i -e '/IMPORTED_SONAME_RELWITHDEBINFO.*libclang-cpp\.so/,+1 d' $ROOT_PATH/lib/cmake/clang/ClangTargets-relwithdebinfo.cmake
  - sudo sed -i -e '/clang-cpp/d' $ROOT_PATH/lib/cmake/clang/ClangTargets-relwithdebinfo.cmake
+ - sudo sed -E -i -e 's/([A-Za-z0-9_-]+) lit-cpuid ([A-Za-z0-9_-]+)/\1 \2/' $ROOT_PATH/lib/cmake/llvm/LLVMExports.cmake
+ - sudo sed -i -e '/lit-cpuid/d' $ROOT_PATH/lib/cmake/llvm/LLVMExports.cmake
+ - sudo sed -i -e '/IMPORTED_LOCATION_RELWITHDEBINFO.*lit-cpuid/,+1 d' $ROOT_PATH/lib/cmake/llvm/LLVMExports-relwithdebinfo.cmake
+ - sudo sed -i -e '/lit-cpuid/d' $ROOT_PATH/lib/cmake/llvm/LLVMExports-relwithdebinfo.cmake
+ - sudo sed -E -i -e 's/([A-Za-z0-9_-]+);lit-cpuid;([A-Za-z0-9_-]+)/\1;\2/' $ROOT_PATH/lib/cmake/llvm/LLVMConfig.cmake
 
 script:
 # Build IWYU
