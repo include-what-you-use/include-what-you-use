@@ -204,7 +204,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   void FileChanged(clang::SourceLocation loc, FileChangeReason reason,
                    clang::SrcMgr::CharacteristicKind file_type,
                    clang::FileID exiting_from_id) override;
-  void FileSkipped(const clang::FileEntry& file, const clang::Token &filename,
+  void FileSkipped(const clang::FileEntryRef& file, const clang::Token &filename,
                    clang::SrcMgr::CharacteristicKind file_type) override;
   // FileChanged is actually a multi-plexer for 4 different callbacks.
   void FileChanged_EnterFile(clang::SourceLocation file_beginning);
