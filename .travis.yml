@@ -11,10 +11,10 @@ addons:
      - ninja-build
      # TODO: These should really be the snapshots packages, but they are currently
      # broken. Remove the '-9' once they get fixed (see issue #642 for more info)
-     - llvm-9-dev
-     - llvm-9-tools
-     - libclang-9-dev
-     - clang-9
+     - llvm-10-dev
+     - llvm-10-tools
+     - libclang-10-dev
+     - clang-10
 
 before_install:
  # Install a supported cmake version (>= 3.4.3)
