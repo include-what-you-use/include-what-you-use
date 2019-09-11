@@ -452,10 +452,20 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   line = Split(line, " :", 2)[0];
   // Get rid of the template body, if any (true if no superclasses).
   line = Split(line, " {", 2)[0];
+
+  // Remove "final" specifier which isn't needed for forward
+  // declarations.
+  const char kFinalSpecifier[] = " final ";
+  string::size_type final_pos = line.find(kFinalSpecifier);
+  if (final_pos != string::npos) {
+    line.replace(final_pos, sizeof(kFinalSpecifier), " ");
+  }
+
   // The template name is now the last word on the line.  Replace it
   // by its fully-qualified form.
   const string::size_type name = line.rfind(' ');
   CHECK_(name != string::npos && "Unexpected printable template-type");
+
   return PrintForwardDeclare(decl, line.substr(0, name), GlobalFlags().cxx17ns);
 }
 
