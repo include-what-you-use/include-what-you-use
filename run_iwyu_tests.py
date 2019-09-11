@@ -151,6 +151,7 @@ class OneIwyuTest(unittest.TestCase):
       'forward_declare_in_macro.cc': ['.'],
       'fullinfo_for_templates.cc': ['.'],
       'fwd_decl_class_template.cc': ['.'],
+      'fwd_decl_final.cc': ['.'],
       'fwd_decl_static_member.cc': ['.'],
       'fwd_decl_with_instantiation.cc': ['.'],
       'header_in_subdir.cc': ['.'],
