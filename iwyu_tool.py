@@ -295,19 +295,10 @@ class Invocation(object):
         return Process.start(self)
 
 
-def parse_compilation_db(compilation_db_path):
-    """ Parse JSON compilation database and return a canonicalized form. """
-    if os.path.isdir(compilation_db_path):
-        compilation_db_path = os.path.join(compilation_db_path,
-                                           'compile_commands.json')
-
-    # Read compilation db from disk.
-    compilation_db_path = os.path.realpath(compilation_db_path)
-    with open(compilation_db_path, 'r') as fileobj:
-        compilation_db = json.load(fileobj)
-
-    # Expand symlinks.
+def fixup_compilation_db(compilation_db):
+    """ Canonicalize paths in JSON compilation database. """
     for entry in compilation_db:
+        # Expand relative paths and symlinks
         entry['file'] = os.path.realpath(entry['file'])
 
     return compilation_db
@@ -366,11 +357,19 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
     """ Entry point. """
 
     try:
-        compilation_db = parse_compilation_db(compilation_db_path)
+        if os.path.isdir(compilation_db_path):
+            compilation_db_path = os.path.join(compilation_db_path,
+                                               'compile_commands.json')
+
+        # Read compilation db from disk.
+        compilation_db_path = os.path.realpath(compilation_db_path)
+        with open(compilation_db_path, 'r') as fileobj:
+            compilation_db = json.load(fileobj)
     except IOError as why:
         print('Failed to parse JSON compilation database: %s' % why)
         return 1
 
+    compilation_db = fixup_compilation_db(compilation_db)
     compilation_db = slice_compilation_db(compilation_db, source_files)
 
     # Transform compilation db entries into a list of IWYU invocations.
