@@ -448,15 +448,13 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   raw_string_ostream ostream(line);
   decl->print(ostream);   // calls DeclPrinter
   line = ostream.str();
-  string::size_type endpos = line.length();
   // Get rid of the superclasses, if any (this will nix the body too).
   line = Split(line, " :", 2)[0];
   // Get rid of the template body, if any (true if no superclasses).
   line = Split(line, " {", 2)[0];
   // The template name is now the last word on the line.  Replace it
-  // by its fully-qualified form.  Apparently rfind's endpos
-  // argument is inclusive, so substract one to get past the end-space.
-  const string::size_type name = line.rfind(' ', endpos - 1);
+  // by its fully-qualified form.
+  const string::size_type name = line.rfind(' ');
   CHECK_(name != string::npos && "Unexpected printable template-type");
   return PrintForwardDeclare(decl, line.substr(0, name), GlobalFlags().cxx17ns);
 }
