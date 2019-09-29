@@ -8,6 +8,7 @@
 # License. See LICENSE.TXT for details.
 #
 ##===----------------------------------------------------------------------===##
+import os
 import sys
 import time
 import random
@@ -270,6 +271,26 @@ class BootstrapTests(unittest.TestCase):
         iwyu_tool._bootstrap(argv)
         self.assertEqual(['arg1', '--', 'another_arg1'],
                          self.main.call_args['extra_args'])
+
+
+class CompilationDBTests(unittest.TestCase):
+    def setUp(self):
+        self.cwd = os.path.realpath(os.getcwd())
+
+    def test_fixup_compilation_db(self):
+        """ Compilation database path canonicalization. """
+        compilation_db = [
+            {
+                "directory": "/home/user/llvm/build/test",
+                "file": "Test.cpp"
+            }
+        ]
+
+        canonical = iwyu_tool.fixup_compilation_db(compilation_db)
+
+        # Check that file path is made absolute.
+        entry = canonical[0]
+        self.assertEqual(os.path.join(self.cwd, 'Test.cpp'), entry['file'])
 
 
 if __name__ == '__main__':
