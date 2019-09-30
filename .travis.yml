@@ -32,13 +32,8 @@ before_install:
  - ROOT_PATH=`llvm-config-$VERSION --prefix`
  - BIN_PATH=`llvm-config-$VERSION --bindir`
 
- # TODO: Remove this as soon as humanly possible.
- # Patch Clang and LLVM CMake config to remove 'clang-cpp' and 'lit-cpuid'
- # targets, which are currently broken in the Debian packaging.
- - sudo sed -i -e 's/clang-refactor clang-cpp clangApplyReplacements/clang-refactor clangApplyReplacements/' $ROOT_PATH/lib/cmake/clang/ClangTargets.cmake
- - sudo sed -i -e '/clang-cpp/d' $ROOT_PATH/lib/cmake/clang/ClangTargets.cmake
- - sudo sed -i -e '/IMPORTED_SONAME_RELWITHDEBINFO.*libclang-cpp\.so/,+1 d' $ROOT_PATH/lib/cmake/clang/ClangTargets-relwithdebinfo.cmake
- - sudo sed -i -e '/clang-cpp/d' $ROOT_PATH/lib/cmake/clang/ClangTargets-relwithdebinfo.cmake
+ # TODO: Remove these hacky fixups
+ - (cd $ROOT_PATH/lib && sudo ln -rsf libclang-cpp.so.1 libclang-cpp-$VERSION.so.1)
 
 script:
 # Build IWYU
