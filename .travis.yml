@@ -16,6 +16,9 @@ addons:
      - llvm-10-tools
      - libclang-10-dev
      - clang-10
+     # TODO: This is required for lit-cpuid, which is exported from
+     # LLVMConfig.cmake, but shipped with LLDB.
+     - lldb-10
 
 before_install:
  # Install a supported cmake version (>= 3.4.3)
@@ -36,11 +39,6 @@ before_install:
  - sudo sed -i -e '/clang-cpp/d' $ROOT_PATH/lib/cmake/clang/ClangTargets.cmake
  - sudo sed -i -e '/IMPORTED_SONAME_RELWITHDEBINFO.*libclang-cpp\.so/,+1 d' $ROOT_PATH/lib/cmake/clang/ClangTargets-relwithdebinfo.cmake
  - sudo sed -i -e '/clang-cpp/d' $ROOT_PATH/lib/cmake/clang/ClangTargets-relwithdebinfo.cmake
- - sudo sed -E -i -e 's/([A-Za-z0-9_-]+) lit-cpuid ([A-Za-z0-9_-]+)/\1 \2/' $ROOT_PATH/lib/cmake/llvm/LLVMExports.cmake
- - sudo sed -i -e '/lit-cpuid/d' $ROOT_PATH/lib/cmake/llvm/LLVMExports.cmake
- - sudo sed -i -e '/IMPORTED_LOCATION_RELWITHDEBINFO.*lit-cpuid/,+1 d' $ROOT_PATH/lib/cmake/llvm/LLVMExports-relwithdebinfo.cmake
- - sudo sed -i -e '/lit-cpuid/d' $ROOT_PATH/lib/cmake/llvm/LLVMExports-relwithdebinfo.cmake
- - sudo sed -E -i -e 's/([A-Za-z0-9_-]+);lit-cpuid;([A-Za-z0-9_-]+)/\1;\2/' $ROOT_PATH/lib/cmake/llvm/LLVMConfig.cmake
 
 script:
 # Build IWYU
