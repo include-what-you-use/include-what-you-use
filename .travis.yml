@@ -10,7 +10,8 @@ addons:
     packages:
      - ninja-build
      # TODO: These should really be the snapshots packages, but they are currently
-     # broken. Remove the '-9' once they get fixed (see issue #642 for more info)
+     # broken. Remove the version suffix once they get fixed (see issue #642 for
+     # more info)
      - llvm-10-dev
      - llvm-10-tools
      - libclang-10-dev
