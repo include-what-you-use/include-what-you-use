@@ -6,3 +6,5 @@ __pycache__
 
 .gdb_history
 compile_commands.json
+
+/build
