@@ -125,3 +125,17 @@ install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
 # Install mapping files
 file(GLOB MAPPING_FILES *.imp)
 install(FILES ${MAPPING_FILES} DESTINATION share/include-what-you-use)
+
+find_package(PythonInterp)
+if(PYTHONINTERP_FOUND)
+  enable_testing()
+  add_test(NAME iwyu_tests
+    COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py -- $<TARGET_FILE:include-what-you-use>
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  add_test(NAME fix_includes_test
+    COMMAND ${PYTHON_EXECUTABLE} fix_includes_test.py
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  add_test(NAME iwyu_tool_test
+    COMMAND ${PYTHON_EXECUTABLE} iwyu_tool_test.py
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
