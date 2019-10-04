@@ -281,7 +281,6 @@ class CompilationDBTests(unittest.TestCase):
         """ Compilation database path canonicalization. """
         compilation_db = [
             {
-                "directory": "/home/user/llvm/build/test",
                 "file": "Test.cpp"
             }
         ]
@@ -291,6 +290,21 @@ class CompilationDBTests(unittest.TestCase):
         # Check that file path is made absolute.
         entry = canonical[0]
         self.assertEqual(os.path.join(self.cwd, 'Test.cpp'), entry['file'])
+
+    def test_fixup_from_entry_dir(self):
+        """ Compilation database abs path is based on an entry's directory. """
+        compilation_db = [
+            {
+                "directory": "/home/user/foobar",
+                "file": "Test.cpp"
+            }
+        ]
+
+        canonical = iwyu_tool.fixup_compilation_db(compilation_db)
+
+        # Check that the file path is relative to the directory entry, not to the current directory.
+        entry = canonical[0]
+        self.assertEqual('/home/user/foobar/Test.cpp', entry['file'])
 
 
 if __name__ == '__main__':

@@ -298,6 +298,10 @@ class Invocation(object):
 def fixup_compilation_db(compilation_db):
     """ Canonicalize paths in JSON compilation database. """
     for entry in compilation_db:
+        # Convert relative paths to absolute ones if possible, based on the entry's directory.
+        if 'directory' in entry and not os.path.isabs(entry['file']):
+            entry['file'] = os.path.join(entry['directory'], entry['file'])
+
         # Expand relative paths and symlinks
         entry['file'] = os.path.realpath(entry['file'])
 
