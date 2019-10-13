@@ -12,7 +12,7 @@ It's usually a good idea to run ideas by the [IWYU mailing list](http://groups.g
 
 ## Running the Tests ##
 
-If fixing a bug in clang, please add a test to the test suite!  You can create a file called `whatever.cc` (_not_ .cpp), and, if necessary, `whatever.h`, and `whatever-<extension>.h`.  You may be able to get away without adding any `.h` files, and just including `direct.h` -- see, for instance, `tests/remove_fwd_decl_when_including.cc`.
+If fixing a bug in IWYU, please add a test to the test suite!  You can create a file called `whatever.cc` (_not_ .cpp), and, if necessary, `whatever.h`, and `whatever-<extension>.h`.  You may be able to get away without adding any `.h` files, and just including `direct.h` -- see, for instance, `tests/remove_fwd_decl_when_including.cc`.
 
 To run the IWYU tests, run
 
