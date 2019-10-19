@@ -315,6 +315,11 @@ void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
   vector<HeaderSearchPath> search_paths =
       ComputeHeaderSearchPaths(header_search);
   SetHeaderSearchPaths(search_paths);
+
+  const clang::FileID main_file_id = source_manager->getMainFileID();
+  const clang::FileEntry* entry = source_manager->getFileEntryForID(main_file_id);
+  SetMainFile(entry->getName().str());
+
   include_picker = new IncludePicker(GlobalFlags().no_default_mappings);
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;

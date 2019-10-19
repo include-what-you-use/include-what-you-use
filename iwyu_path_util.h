@@ -31,6 +31,9 @@ struct HeaderSearchPath {
   Type path_type;
 };
 
+// Main source file for which IWYU is executed.
+void SetMainFile(const std::string& file_path);
+
 // The directories to look for #includes in, including from -I, -isystem, etc.
 void SetHeaderSearchPaths(const vector<HeaderSearchPath>& search_paths);
 const vector<HeaderSearchPath>& HeaderSearchPaths();

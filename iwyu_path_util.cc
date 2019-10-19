@@ -27,6 +27,7 @@ namespace include_what_you_use {
 namespace {
 
 vector<HeaderSearchPath>* header_search_paths;
+std::string main_file_path;
 
 // Please keep this in sync with _SOURCE_EXTENSIONS in fix_includes.py.
 const char* source_extensions[] = {
@@ -43,7 +44,28 @@ const char* source_extensions[] = {
   ".cp"
 };
 
+std::string DropExtension(const string& path) {
+  const size_t extension_dot_position = path.rfind('.');
+  if (extension_dot_position != string::npos) {
+    return path.substr(0, extension_dot_position);
+  } else {
+    return path;
+  }
+}
+
+bool IsHeaderForMainFile(const string& file_path) {
+  if (IsHeaderFile(main_file_path) || !IsHeaderFile(file_path)) {
+    return false;
+  }
+
+  return DropExtension(main_file_path) == DropExtension(file_path);
+}
+
 }  // anonymous namespace
+
+void SetMainFile(const std::string& file_path) {
+  main_file_path = file_path;
+}
 
 void SetHeaderSearchPaths(const vector<HeaderSearchPath>& search_paths) {
   if (header_search_paths != nullptr) {
@@ -184,6 +206,14 @@ string ConvertToQuotedInclude(const string& filepath,
 
   if (filepath == "<built-in>")
     return filepath;
+
+  // We want to use shorter includes for headers paired with cpp file.
+  // important/module/main.cpp:
+  // #include "main.hpp"
+  // #include "important/module/other.hpp"
+  if (IsHeaderForMainFile(filepath)) {
+    return "\"" + Basename(filepath) + "\"";
+  }
 
   // Get path into same format as header search paths: Absolute and normalized.
   string path = NormalizeFilePath(MakeAbsolutePath(filepath));

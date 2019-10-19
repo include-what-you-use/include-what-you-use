@@ -1,0 +1,10 @@
+[
+  {
+    "include": [
+      "\"tests/cxx/paired_header_and_cpp.h\"",
+      "private",
+      "<PairedHeaderAndCpp/paired_header_and_cpp.h>",
+      "public"
+    ]
+  }
+]
