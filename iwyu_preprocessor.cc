@@ -34,7 +34,7 @@
 #include "clang/Lex/MacroInfo.h"
 
 using clang::FileEntry;
-using clang::FileEntryRef;
+// using clang::FileEntryRef;
 using clang::FileID;
 using clang::MacroDefinition;
 using clang::MacroDirective;
@@ -695,7 +695,7 @@ void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
 // Called when we see an #include, but decide we don't need to
 // actually read it because it's already been #included (and is
 // protected by a header guard).
-void IwyuPreprocessorInfo::FileSkipped(const FileEntryRef& file,
+void IwyuPreprocessorInfo::FileSkipped(const FileEntry& file,
                                        const Token &filename,
                                        SrcMgr::CharacteristicKind file_type) {
   CHECK_(include_filename_loc_.isValid() &&
@@ -706,11 +706,11 @@ void IwyuPreprocessorInfo::FileSkipped(const FileEntryRef& file,
       GetInstantiationLoc(filename.getLocation());
   ERRSYM(GetFileEntry(include_loc))
       << "[ (#include)  ] " << include_name_as_written
-      << " (" << GetFilePath(&file.getFileEntry()) << ")\n";
+      << " (" << GetFilePath(&file) << ")\n";
 
-  AddDirectInclude(include_loc, &file.getFileEntry(), include_name_as_written);
-  if (ShouldReportIWYUViolationsFor(&file.getFileEntry())) {
-    files_to_report_iwyu_violations_for_.insert(&file.getFileEntry());
+  AddDirectInclude(include_loc, &file, include_name_as_written);
+  if (ShouldReportIWYUViolationsFor(&file)) {
+    files_to_report_iwyu_violations_for_.insert(&file);
   }
 }
 
