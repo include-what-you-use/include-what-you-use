@@ -18,7 +18,9 @@ While we work to get IWYU quality up, we will be stinting new features, and will
 
 ### How to Build ###
 
-Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. Usually such discrepancies are detected by build bot and fixed promptly. The master branch follows Clang trunk.
+Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. Usually such discrepancies are detected by build bot and fixed promptly.
+
+**The IWYU master branch follows Clang trunk**.
 
 We also have convenience tags and branches for released versions of Clang (called `clang_<version>`, e.g. `clang_5.0`). To build against a Clang release, check out the corresponding branch in IWYU before configuring the build. More details in the instructions below.
 
@@ -35,7 +37,7 @@ We assume you already have compiled LLVM and Clang libraries on your system, eit
 | 6      | 0.10         | `clang_6.0`    |
 | 7      | 0.11         | `clang_7.0`    |
 | 8      | 0.12         | `clang_8.0`    |
-| 9      | 0.13         | `master`       |
+| ...    | ...          | ...            |
 
 > NOTE: If you use the Debian/Ubuntu packaging available from <https://apt.llvm.org>, you'll need the following packages installed:
 >
