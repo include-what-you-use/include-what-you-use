@@ -55,10 +55,10 @@ add_llvm_executable(include-what-you-use
   )
 
 if (IWYU_IN_TREE)
-  # Add a dependency on clang-headers to ensure the builtin headers are
+  # Add a dependency on clang-resource-headers to ensure the builtin headers are
   # available when IWYU is executed from the build dir.
-  # The clang-headers target is only available in in-tree builds.
-  add_dependencies(include-what-you-use clang-headers)
+  # The clang-resource-headers target is only available in in-tree builds.
+  add_dependencies(include-what-you-use clang-resource-headers)
 endif()
 
 if (MINGW)
