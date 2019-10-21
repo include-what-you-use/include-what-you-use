@@ -5,20 +5,13 @@ language: cpp
 addons:
   apt:
     sources:
-     - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main'
+     - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main'
        key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
     packages:
      - ninja-build
-     # TODO: These should really be the snapshots packages, but they are currently
-     # broken. Remove the version suffix once they get fixed (see issue #642 for
-     # more info)
-     - llvm-10-dev
-     - llvm-10-tools
-     - libclang-10-dev
-     - clang-10
-     # TODO: This is required for lit-cpuid, which is exported from
-     # LLVMConfig.cmake, but shipped with LLDB.
-     - lldb-10
+     - llvm-9-dev
+     - libclang-9-dev
+     - clang-9
 
 before_install:
  # Install a supported cmake version (>= 3.4.3)
