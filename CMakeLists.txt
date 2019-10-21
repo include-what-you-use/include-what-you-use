@@ -54,12 +54,35 @@ add_llvm_executable(include-what-you-use
   iwyu_verrs.cc
   )
 
-if (IWYU_IN_TREE)
-  # Add a dependency on clang-headers to ensure the builtin headers are
-  # available when IWYU is executed from the build dir.
-  # The clang-headers target is only available in in-tree builds.
-  add_dependencies(include-what-you-use clang-headers)
+# Synthesize a clang-resource-headers target for out-of-tree builds (in-tree
+# already has it available by default)
+if (NOT IWYU_IN_TREE)
+  # Use only major.minor.patch for the resource directory structure; some
+  # platforms include suffix in LLVM_VERSION.
+  set(llvm_ver ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
+  set(clang_headers_src ${CMAKE_PREFIX_PATH}/lib/clang/${llvm_ver}/include)
+  set(clang_headers_dst ${CMAKE_BINARY_DIR}/lib/clang/${llvm_ver}/include)
+
+  file(GLOB_RECURSE in_files RELATIVE ${clang_headers_src} ${clang_headers_src}/*)
+
+  set(out_files)
+  foreach (file ${in_files})
+    set(src ${clang_headers_src}/${file})
+    set(dst ${clang_headers_dst}/${file})
+
+    add_custom_command(OUTPUT ${dst}
+      DEPENDS ${src}
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+      COMMENT "Copying clang's ${file}...")
+    list(APPEND out_files ${dst})
+  endforeach()
+
+  add_custom_target(clang-resource-headers ALL DEPENDS ${out_files})
 endif()
+
+# Add a dependency on clang-resource-headers to ensure the builtin headers are
+# available when IWYU is executed from the build dir.
+add_dependencies(include-what-you-use clang-resource-headers)
 
 if (MINGW)
   # Work around 'too many sections' error with MINGW/GCC
