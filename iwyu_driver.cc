@@ -205,8 +205,11 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
 
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
   const ArgStringList &cc_arguments = command.getArguments();
+  const char** args_start = const_cast<const char**>(cc_arguments.data());
+  const char** args_end = args_start + cc_arguments.size();
   std::shared_ptr<CompilerInvocation> invocation(new CompilerInvocation);
-  CompilerInvocation::CreateFromArgs(*invocation, cc_arguments, diagnostics);
+  CompilerInvocation::CreateFromArgs(*invocation,
+                                     args_start, args_end, diagnostics);
   invocation->getFrontendOpts().DisableFree = false;
 
   // Use libc++ headers bundled with Xcode.app on macOS.
