@@ -37,11 +37,9 @@ script:
  - mkdir build
  - cd build
  - cmake -GNinja -DCMAKE_PREFIX_PATH=$ROOT_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
- - ninja install
-
- - ./bin/include-what-you-use -v -resource-dir -### -xc++ /dev/null || true
-
- - find /usr -name "stddef.h"
 
 # Test IWYU
  - CTEST_OUTPUT_ON_FAILURE=1 ninja test
+
+# Test install
+ - ninja install
