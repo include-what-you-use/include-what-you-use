@@ -293,9 +293,11 @@ class CompilationDBTests(unittest.TestCase):
 
     def test_fixup_from_entry_dir(self):
         """ Compilation database abs path is based on an entry's directory. """
+
+        # Use a root dir from uuidgen so we don't risk hitting a real path.
         compilation_db = [
             {
-                "directory": "/home/user/foobar",
+                "directory": "/c057f113f69311e990bf54a05050d914/foobar",
                 "file": "Test.cpp"
             }
         ]
@@ -305,7 +307,8 @@ class CompilationDBTests(unittest.TestCase):
         # Check that the file path is relative to the directory entry,
         # not to the current directory.
         entry = canonical[0]
-        self.assertEqual('/home/user/foobar/Test.cpp', entry['file'])
+        self.assertEqual('/c057f113f69311e990bf54a05050d914/foobar/Test.cpp',
+                         entry['file'])
 
 
 if __name__ == '__main__':
