@@ -302,7 +302,8 @@ class CompilationDBTests(unittest.TestCase):
 
         canonical = iwyu_tool.fixup_compilation_db(compilation_db)
 
-        # Check that the file path is relative to the directory entry, not to the current directory.
+        # Check that the file path is relative to the directory entry,
+        # not to the current directory.
         entry = canonical[0]
         self.assertEqual('/home/user/foobar/Test.cpp', entry['file'])
 
