@@ -147,12 +147,13 @@ endif()
 add_definitions(-DIWYU_GIT_REV="${IWYU_GIT_REV}")
 
 # Install programs
-install(TARGETS include-what-you-use RUNTIME DESTINATION bin)
-install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION bin)
+include(GNUInstallDirs)
+install(TARGETS include-what-you-use RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # Install mapping files
 file(GLOB MAPPING_FILES *.imp)
-install(FILES ${MAPPING_FILES} DESTINATION share/include-what-you-use)
+install(FILES ${MAPPING_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/include-what-you-use)
 
 find_package(PythonInterp)
 if(PYTHONINTERP_FOUND)
