@@ -100,25 +100,30 @@ if (MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /EHsc")
 endif()
 
-target_link_libraries(include-what-you-use
-  PRIVATE
-  clangBasic
-  clangLex
-  clangAST
-  clangSema
-  clangFrontend
-  clangDriver
+# If only clang-cpp is available, we take that.
+if (TARGET clang-cpp AND NOT TARGET clangBasic)
+  target_link_libraries(include-what-you-use PRIVATE clang-cpp)
+else()
+  target_link_libraries(include-what-you-use
+    PRIVATE
+    clangBasic
+    clangLex
+    clangAST
+    clangSema
+    clangFrontend
+    clangDriver
 
-  # Revision [1] in clang moved PCHContainerOperations from Frontend
-  # to Serialization, but this broke builds that set
-  # -DBUILD_SHARED_LIBS=on.  Revision [2] is a followup that works
-  # around the issue by adding an explicit dependency on Serialization
-  # wherever there was a dependency on Frontend.  Since we depend on
-  # Frontend, we need an explicit dependency on Serialization too.
-  # [1] https://llvm.org/viewvc/llvm-project?view=revision&revision=348907
-  # [2] https://llvm.org/viewvc/llvm-project?view=revision&revision=348915
-  clangSerialization
-  )
+    # Revision [1] in clang moved PCHContainerOperations from Frontend
+    # to Serialization, but this broke builds that set
+    # -DBUILD_SHARED_LIBS=on.  Revision [2] is a followup that works
+    # around the issue by adding an explicit dependency on Serialization
+    # wherever there was a dependency on Frontend.  Since we depend on
+    # Frontend, we need an explicit dependency on Serialization too.
+    # [1] https://llvm.org/viewvc/llvm-project?view=revision&revision=348907
+    # [2] https://llvm.org/viewvc/llvm-project?view=revision&revision=348915
+    clangSerialization
+    )
+endif()
 
 # Platform dependencies.
 if (WIN32)
