@@ -155,6 +155,11 @@ install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION ${CMAKE_INSTALL_BINDIR
 file(GLOB MAPPING_FILES *.imp)
 install(FILES ${MAPPING_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/include-what-you-use)
 
+# Install man page on Unix-like systems
+if (UNIX)
+  install(FILES include-what-you-use.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+endif()
+
 find_package(PythonInterp)
 if(PYTHONINTERP_FOUND)
   enable_testing()
