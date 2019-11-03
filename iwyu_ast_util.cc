@@ -954,7 +954,7 @@ bool IsExplicitInstantiation(const clang::Decl* decl) {
 }
 
 bool IsForwardDecl(const NamedDecl* decl) {
-  if (const auto* record_decl = dyn_cast<CXXRecordDecl>(decl)) {
+  if (const auto* record_decl = dyn_cast<RecordDecl>(decl)) {
 
     return (!record_decl->getName().empty() &&
             !record_decl->isCompleteDefinition() &&

@@ -21,6 +21,11 @@ typedef struct TypedeffedStruct TypedeffedStruct;  // No diagnostic expected.
 // that an explicit forward declaration would be better.
 int UseStruct(struct Struct* s);
 
+// If an existing forward-declaration is available, make sure we don't suggest
+// adding it twice (see issue #682).
+struct ForwardDeclared;
+void UseForwardDeclared(struct ForwardDeclared*);
+
 /**** IWYU_SUMMARY
 
 tests/c/elaborated_struct.c should add these lines:
@@ -30,6 +35,7 @@ tests/c/elaborated_struct.c should remove these lines:
 - #include "tests/c/elaborated_struct-d1.h"  // lines XX-XX
 
 The full include-list for tests/c/elaborated_struct.c:
+struct ForwardDeclared;  // lines XX-XX
 struct Struct;
 
 ***** IWYU_SUMMARY */
