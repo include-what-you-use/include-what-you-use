@@ -1800,6 +1800,17 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  bool VisitEnumDecl(clang::EnumDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    clang::QualType integer_type = decl->getIntegerType();
+    if (const clang::Type* type = integer_type.getTypePtrOrNull()) {
+      ReportTypeUse(CurrentLoc(), type);
+    }
+    return Base::VisitEnumDecl(decl);
+  }
+
   // If you say 'typedef Foo Bar', C++ says you just need to
   // forward-declare Foo.  But iwyu would rather you fully define Foo,
   // so all users of Bar don't have to.  We make two exceptions:
