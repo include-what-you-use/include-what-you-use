@@ -348,20 +348,6 @@ string PrintablePtr(const void* ptr) {
 //       `-- TagDecl           (class, struct, union, enum)
 //           `-- RecordDecl    (class, struct, union)
 
-// Determines if a NamedDecl has any parent namespace, which is anonymous.
-bool HasAnonymousNamespace(const NamedDecl* decl) {
-  for (const DeclContext* ctx = decl->getDeclContext();
-       ctx && isa<NamedDecl>(ctx); ctx = ctx->getParent()) {
-    if (const NamespaceDecl* ns = DynCastFrom(ctx)) {
-      if (ns->isAnonymousNamespace()) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
 // Given a NamedDecl that presents a (possibly template) record
 // (i.e. class, struct, or union) type declaration, and the print-out
 // of its (possible) template parameters and kind (e.g. "template
@@ -380,7 +366,7 @@ string PrintForwardDeclare(const NamedDecl* decl,
   std::string fwd_decl = std::string(decl->getName()) + ";";
   bool seen_namespace = false;
   // Anonymous namespaces are not using the more concise syntax.
-  bool concat_namespaces = cxx17ns && !HasAnonymousNamespace(decl);
+  bool concat_namespaces = cxx17ns && !decl->isInAnonymousNamespace();
   for (const DeclContext* ctx = decl->getDeclContext();
        ctx && isa<NamedDecl>(ctx); ctx = ctx->getParent()) {
     if (const RecordDecl* rec = DynCastFrom(ctx)) {
