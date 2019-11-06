@@ -158,6 +158,7 @@ class OneIwyuTest(unittest.TestCase):
       'implicit_ctor.cc': ['.'],
       'include_cycle.cc': ['.'],
       'include_with_using.cc': ['.'],
+      'inline_namespace.cc': ['.'],
       'internal/internal_files.cc': ['.'],
       'iwyu_stricter_than_cpp.cc': ['.'],
       'keep_includes.c': ['.'],

@@ -716,6 +716,10 @@ static void LogIncludeMapping(const string& reason, const OneUse& use) {
 namespace internal {
 
 bool DeclCanBeForwardDeclared(const Decl* decl) {
+  // Nothing inside an inline namespace can be forward-declared.
+  if (IsInInlineNamespace(decl))
+    return false;
+
   // Class templates can always be forward-declared.
   if (isa<ClassTemplateDecl>(decl))
     return true;

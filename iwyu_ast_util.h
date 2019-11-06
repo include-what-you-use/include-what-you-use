@@ -597,6 +597,9 @@ bool IsFriendDecl(const clang::Decl* decl);
 // or definition.
 bool IsExplicitInstantiation(const clang::Decl* decl);
 
+// Returns true if this decl is nested inside an inline namespace.
+bool IsInInlineNamespace(const clang::Decl* decl);
+
 // Returns true if a named decl looks like a forward-declaration of a
 // class (rather than a definition, a friend declaration, or an 'in
 // place' declaration like 'struct Foo' in 'void MyFunc(struct Foo*);'

@@ -953,6 +953,16 @@ bool IsExplicitInstantiation(const clang::Decl* decl) {
          kind == clang::TSK_ExplicitInstantiationDefinition;
 }
 
+bool IsInInlineNamespace(const Decl* decl) {
+  const DeclContext* dc = decl->getDeclContext();
+  for (; dc; dc = dc->getParent()) {
+    if (dc->isInlineNamespace())
+      return true;
+  }
+
+  return false;
+}
+
 bool IsForwardDecl(const NamedDecl* decl) {
   if (const auto* record_decl = dyn_cast<RecordDecl>(decl)) {
 
