@@ -1,0 +1,13 @@
+//===--- keep_moc.moc - test input file for iwyu --------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+// This file intentionally left blank.
+
+// We use this "mock" .moc to make sure IWYU never suggests removing includes of
+// .moc files.

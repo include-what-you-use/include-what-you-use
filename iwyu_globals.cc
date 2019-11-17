@@ -166,6 +166,8 @@ CommandlineFlags::CommandlineFlags()
       no_fwd_decls(false),
       quoted_includes_first(false),
       cxx17ns(false) {
+  // Always keep Qt .moc includes; its moc compiler does its own IWYU analysis.
+  keep.emplace("*.moc");
 }
 
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
