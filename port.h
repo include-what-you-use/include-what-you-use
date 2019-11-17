@@ -82,7 +82,7 @@ inline bool GlobMatchesPath(const char *glob, const char *path) {
 #include <fnmatch.h>
 
 inline bool GlobMatchesPath(const char *glob, const char *path) {
-  return fnmatch(glob, path, FNM_PATHNAME) == 0;
+  return fnmatch(glob, path, 0) == 0;
 }
 
 #endif  // #if defined(_WIN32)
