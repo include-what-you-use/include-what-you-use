@@ -54,6 +54,7 @@ using clang::SourceRange;
 using clang::TemplateDecl;
 using clang::UsingDecl;
 using llvm::cast;
+using llvm::dyn_cast;
 using llvm::errs;
 using llvm::isa;
 using llvm::raw_string_ostream;
