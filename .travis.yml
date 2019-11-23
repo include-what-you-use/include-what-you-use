@@ -34,6 +34,7 @@ before_install:
 
  # TODO: Remove these hacky fixups
  - (cd $ROOT_PATH/lib && sudo ln -rsf libclang-cpp.so.1 libclang-cpp-$VERSION.so.1)
+ - sudo touch $ROOT_PATH/lib/libExampleIRTransforms.a
 
 script:
 # Build IWYU
