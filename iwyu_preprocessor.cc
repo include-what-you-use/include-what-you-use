@@ -532,6 +532,16 @@ void IwyuPreprocessorInfo::AddDirectInclude(
         ->AddAssociatedHeader(GetFromFileInfoMap(includee));
     VERRS(4) << "Marked " << GetFilePath(includee)
              << " as associated header of " << GetFilePath(includer) << ".\n";
+
+    // All associated headers need to be included in IWYU analysis.
+    // We can only get here if IWYU is invoked with an absolute source path and
+    // its associated header is included by two different path names (e.g.
+    // "rel/path/assoc.h" and "assoc.h") in different files.
+    //
+    // TODO: This line cannot be covered with our current test framework;
+    // don't forget to add a test case if we build something better in the
+    // future.
+    AddGlobToReportIWYUViolationsFor(GetFilePath(includee));
   }
 
   // Besides marking headers as "associated header" with heuristics, the user

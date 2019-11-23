@@ -127,6 +127,7 @@ class OneIwyuTest(unittest.TestCase):
       'array.cc': ['.'],
       'associated_h_file_heuristic.cc': ['.'],
       'associated_include.cc': ['.'],
+      'associated_skipped.cc': ['.'],
       'backwards_includes.cc': ['.'],
       'badinc.cc': ['.'],
       'badinc-extradef.cc': ['.'],
