@@ -532,6 +532,8 @@ void IwyuPreprocessorInfo::AddDirectInclude(
         ->AddAssociatedHeader(GetFromFileInfoMap(includee));
     VERRS(4) << "Marked " << GetFilePath(includee)
              << " as associated header of " << GetFilePath(includer) << ".\n";
+
+    AddGlobToReportIWYUViolationsFor(GetFilePath(includee));
   }
 
   // Besides marking headers as "associated header" with heuristics, the user
