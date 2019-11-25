@@ -2235,6 +2235,29 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  bool VisitTypeTraitExpr(clang::TypeTraitExpr* expr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    // We assume that all type traits with >= 2 arguments require
+    // full type information even for pointer types. For example,
+    // this is the case for `__is_convertible_to` trait.
+    if (expr == nullptr || expr->getNumArgs() < 2)
+      return true;
+
+    for (const clang::TypeSourceInfo* arg : expr->getArgs()) {
+      clang::QualType qual_type = arg->getType();
+      const Type* type = qual_type.getTypePtr();
+      const Type* deref_type = RemovePointersAndReferencesAsWritten(type);
+
+      if (!CanIgnoreType(deref_type)) {
+        ReportTypeUse(CurrentLoc(), deref_type);
+      }
+    }
+
+    return true;
+  }
+
   // Mark that we need the full type info for the thing we're taking
   // sizeof of.  Sometimes this is double-counting: for
   // sizeof(some_type), RecursiveASTVisitor will visit some_type and
