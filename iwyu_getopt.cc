@@ -5,10 +5,10 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
+//===----------------------------------------------------------------------===//
+
 // This code is used with permission from Kim Gräsman. The original is
 // maintained with tests at: https://github.com/kimgr/getopt_port
-//
-//===----------------------------------------------------------------------===//
 
 #include "iwyu_getopt.h"
 
