@@ -1,4 +1,4 @@
-//===--- pch_inc_code.cc - test input file for iwyu -----------------------===//
+//===--- pch_in_code.cc - test input file for iwyu ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

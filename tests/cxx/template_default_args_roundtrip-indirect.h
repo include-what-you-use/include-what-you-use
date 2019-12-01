@@ -1,4 +1,4 @@
-//=== template_default_args_roundtrip-indirect.h - test input file for iwyu ==//
+//===--- template_default_args_roundtrip-indirect.h - test input ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

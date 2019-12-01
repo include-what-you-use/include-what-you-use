@@ -1,4 +1,4 @@
-// explicit_instantiation2-template_short_direct.h - test input file for iwyu //
+//===--- explicit_instantiation2-template_short_direct.h - test input -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_EXPLICIT_INSTANTIATION2_TEMPLATE_SHORT_DIRECT_H_
 #define INCLUDE_WHAT_YOU_USE_TESTS_CXX_EXPLICIT_INSTANTIATION2_TEMPLATE_SHORT_DIRECT_H_
 

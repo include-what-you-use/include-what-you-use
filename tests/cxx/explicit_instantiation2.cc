@@ -1,4 +1,4 @@
-//===------- explicit_instantiation2.cc - test input file for iwyu --------===//
+//===--- explicit_instantiation2.cc - test input file for iwyu ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

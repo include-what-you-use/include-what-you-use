@@ -1,4 +1,4 @@
-//===--- elaborated_type_union.h - test input file for iwyu----------------===//
+//===--- elaborated_type_union.h - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
