@@ -1,4 +1,4 @@
-//===--- relative_exported_mapped_include-i1.h - test input file for iwyu ===//
+//===--- relative_exported_mapped_include-i1.h - test input file ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

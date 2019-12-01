@@ -1,4 +1,4 @@
-//===--- fwd_decl_of_nested_class_defined_later.cc - test input file for iwyu ---===//
+//===--- fwd_decl_of_nested_class_defined_later.cc - test input file ------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

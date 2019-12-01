@@ -1,4 +1,4 @@
-//===- explicit_instantiation-template_direct.h - test input file for iwyu ===//
+//===--- explicit_instantiation-template_direct.h - test input ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
