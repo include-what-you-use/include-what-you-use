@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+
+##===--- iwyu_tool.py -----------------------------------------------------===##
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+##===----------------------------------------------------------------------===##
+
 """ Driver to consume a Clang compilation database and invoke IWYU.
 
 Example usage with CMake:

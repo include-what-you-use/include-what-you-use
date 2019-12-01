@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-##===--- iwyu_test_util.py - include-what-you-use test framework -----------===##
+##===--- iwyu_test_util.py - include-what-you-use test framework ----------===##
 #
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 #
-##===-----------------------------------------------------------------------===##
+##===----------------------------------------------------------------------===##
 
 """Utilities for writing tests for IWYU.
 

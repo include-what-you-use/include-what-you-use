@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-##===---------- scrub-logs.py - generate README from Wiki sources ---------===##
+##===--- scrub-logs.py - generate README from Wiki sources ----------------===##
 #
-#                      The LLVM Compiler Infrastructure
+#                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
