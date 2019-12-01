@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 
+##===--- generate_qt_mappings.py ------------------------------------------===##
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+##===----------------------------------------------------------------------===##
+
 """
 This script generates the Qt mapping file according to given Qt include
 directory

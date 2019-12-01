@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-##===-------------- iwyu_tool_test.py - test for iwyu_tool.py -------------===##
+##===--- iwyu_tool_test.py - test for iwyu_tool.py ------------------------===##
 #
 #                     The LLVM Compiler Infrastructure
 #
