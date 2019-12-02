@@ -16,9 +16,6 @@ addons:
      - llvm-10-tools
      - libclang-10-dev
      - clang-10
-     # TODO: This is required for lit-cpuid, which is exported from
-     # LLVMConfig.cmake, but shipped with LLDB.
-     - lldb-10
 
 before_install:
  # Install a supported cmake version (>= 3.4.3)
