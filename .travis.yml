@@ -45,3 +45,7 @@ script:
 
 # Test install
  - ninja install
+
+# Check license headers
+ - cd ../
+ - git ls-tree --full-tree --name-only -r HEAD | xargs ./iwyu-check-license-header.py
