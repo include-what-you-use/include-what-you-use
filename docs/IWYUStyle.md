@@ -62,6 +62,8 @@ Every source file must have a license header on the form:
 
 (With the corresponding comment prefix/suffix for other languages.)
 
+There is a utility script, `iwyu-check-license-header.py` that can be used to
+automatically add a license header with the right filename to a new source file.
 
 ## C++ ##
 
