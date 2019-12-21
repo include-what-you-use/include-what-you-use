@@ -1389,14 +1389,10 @@ void CalculateIwyuForForwardDeclareUse(
 
   // If this record is defined in one of the desired_includes, mark that
   // fact.  Also if it's defined in one of the actual_includes.
-  const NamedDecl* dfn = GetDefinitionForClass(use->decl());
-  // If we are, ourselves, a template specialization, then the definition
-  // we use is not the definition of the specialization (that's us), but
-  // the definition of the template we're specializing.
-  if (spec_decl && dfn == spec_decl)
-    dfn = GetDefinitionForClass(spec_decl->getSpecializedTemplate());
   bool dfn_is_in_desired_includes = false;
   bool dfn_is_in_actual_includes = false;
+
+  const NamedDecl* dfn = GetDefinitionForClass(use->decl());
   if (dfn) {
     vector<string> headers
       = GlobalIncludePicker().GetCandidateHeadersForFilepathIncludedFrom(
