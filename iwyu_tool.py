@@ -300,7 +300,7 @@ class Invocation(object):
     def start(self, verbose):
         """ Run invocation and collect output. """
         if verbose:
-            print('# %s' % self)
+            print('# %s' % self, file=sys.stderr)
 
         return Process.start(self)
 
@@ -329,12 +329,13 @@ def slice_compilation_db(compilation_db, selection):
     new_db = []
     for path in selection:
         if not os.path.exists(path):
-            print('WARNING: \'%s\' not found on disk.' % path)
+            print('warning: \'%s\' not found on disk.' % path, file=sys.stderr)
             continue
 
         found = [e for e in compilation_db if is_subpath_of(e['file'], path)]
         if not found:
-            print('WARNING: \'%s\' not found in compilation database.' % path)
+            print('warning: \'%s\' not found in compilation database.' % path,
+                  file=sys.stderr)
             continue
 
         new_db.extend(found)
@@ -380,7 +381,8 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
         with open(compilation_db_path, 'r') as fileobj:
             compilation_db = json.load(fileobj)
     except IOError as why:
-        print('Failed to parse JSON compilation database: %s' % why)
+        print('error: failed to parse compilation database: %s' % why,
+              file=sys.stderr)
         return 1
 
     compilation_db = fixup_compilation_db(compilation_db)
