@@ -19,15 +19,26 @@ template<> struct TplStruct<int> { };
 // the definition.
 template<> struct TplStruct<float>;
 
+// Full-using a specialization requires definition of the specialization to be
+// included. Not the base template.
+
+// IWYU: Template needs a declaration
+int f(Template<int>& t) {
+  // IWYU: Template is...*specialization_needs_decl-i1.h
+  return t.x;
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/specialization_needs_decl.cc should add these lines:
+#include "tests/cxx/specialization_needs_decl-i1.h"
 template <typename T> struct TplStruct;
 
 tests/cxx/specialization_needs_decl.cc should remove these lines:
 - #include "tests/cxx/specialization_needs_decl-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/specialization_needs_decl.cc:
+#include "tests/cxx/specialization_needs_decl-i1.h"  // for Template
 template <typename T> struct TplStruct;
 
 ***** IWYU_SUMMARY */

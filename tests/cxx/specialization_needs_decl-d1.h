@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/cxx/specialization_needs_decl-i1.h"
+
 template <typename T> struct TplStruct { };
 
 template <> struct TplStruct<float> { };
