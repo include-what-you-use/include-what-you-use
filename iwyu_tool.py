@@ -371,6 +371,11 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
          extra_args):
     """ Entry point. """
 
+    if not IWYU_EXECUTABLE:
+        print('error: include-what-you-use executable not found',
+              file=sys.stderr)
+        return 1
+
     try:
         if os.path.isdir(compilation_db_path):
             compilation_db_path = os.path.join(compilation_db_path,
