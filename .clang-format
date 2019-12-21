@@ -1,3 +1,7 @@
 BasedOnStyle: Google
 AllowShortBlocksOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+SortIncludes: false
