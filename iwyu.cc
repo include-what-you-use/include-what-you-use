@@ -205,6 +205,7 @@ using clang::TemplateArgumentList;
 using clang::TemplateArgumentLoc;
 using clang::TemplateName;
 using clang::TemplateSpecializationType;
+using clang::TemplateSpecializationTypeLoc;
 using clang::TranslationUnitDecl;
 using clang::Type;
 using clang::TypeLoc;
@@ -2574,8 +2575,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return Base::VisitType(type);
   }
 
-  bool VisitTemplateSpecializationType(
-      clang::TemplateSpecializationType* type) {
+  bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
     if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
       return true;
 
@@ -3008,7 +3008,7 @@ class InstantiatedTemplateVisitor
   }
 
   bool TraverseTemplateSpecializationTypeHelper(
-      const clang::TemplateSpecializationType* type) {
+      const TemplateSpecializationType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
 
     // Skip the template traversal if this occurrence of the template name is
@@ -3034,14 +3034,13 @@ class InstantiatedTemplateVisitor
     return TraverseDataAndTypeMembersOfClassHelper(type);
   }
 
-  bool TraverseTemplateSpecializationType(
-      clang::TemplateSpecializationType* type) {
+  bool TraverseTemplateSpecializationType(TemplateSpecializationType* type) {
     if (!Base::TraverseTemplateSpecializationType(type))  return false;
     return TraverseTemplateSpecializationTypeHelper(type);
   }
 
   bool TraverseTemplateSpecializationTypeLoc(
-      clang::TemplateSpecializationTypeLoc typeloc) {
+      TemplateSpecializationTypeLoc typeloc) {
     if (!Base::TraverseTemplateSpecializationTypeLoc(typeloc))  return false;
     return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
   }
@@ -4007,8 +4006,7 @@ class IwyuAstConsumer
   // Like for CXXConstructExpr, etc., we sometimes need to instantiate
   // a class when looking at TemplateSpecializationType -- for instance,
   // when we need to access a class typedef: MyClass<A>::value_type.
-  bool VisitTemplateSpecializationType(
-      clang::TemplateSpecializationType* type) {
+  bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
 
     // If we're not in a forward-declare context, use of a template
