@@ -16,7 +16,6 @@
 // not hash_map: it's not as portable and needs hash<string>.
 #include <map>                          // for map, map<>::mapped_type, etc
 #include <memory>
-#include <ostream>
 #include <string>                       // for string, basic_string, etc
 #include <system_error>                 // for error_code
 #include <utility>                      // for pair, make_pair
