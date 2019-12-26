@@ -37,7 +37,6 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
-#include "llvm/Support/raw_ostream.h"
 #include "clang/Basic/FileManager.h"
 
 using std::find;
@@ -50,7 +49,6 @@ using std::vector;
 
 using llvm::MemoryBuffer;
 using llvm::SourceMgr;
-using llvm::errs;
 using llvm::yaml::KeyValueNode;
 using llvm::yaml::MappingNode;
 using llvm::yaml::Node;
@@ -1477,8 +1475,8 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
   llvm::ErrorOr<unique_ptr<MemoryBuffer>> bufferOrError =
       MemoryBuffer::getFile(absolute_path);
   if (std::error_code error = bufferOrError.getError()) {
-    errs() << "Cannot open mapping file '" << absolute_path << "': "
-           << error.message() << ".\n";
+    VERRS(0) << "Cannot open mapping file '" << absolute_path
+             << "': " << error.message() << ".\n";
     return;
   }
 
