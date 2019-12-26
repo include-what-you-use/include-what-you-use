@@ -19,8 +19,8 @@
 #include <set>                          // for set
 #include <utility>                      // for pair
 
+#include "iwyu_port.h"  // for CHECK_
 #include "iwyu_stl_util.h"
-#include "port.h"  // for CHECK_
 
 namespace clang {
 class NamedDecl;

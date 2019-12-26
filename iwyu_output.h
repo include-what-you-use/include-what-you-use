@@ -21,9 +21,9 @@
 #include <string>                       // for string, operator<
 #include <vector>                       // for vector
 
+#include "iwyu_port.h"  // for CHECK_
 #include "iwyu_stl_util.h"
 #include "iwyu_use_flags.h"
-#include "port.h"  // for CHECK_
 #include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
 

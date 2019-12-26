@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "port.h"
+#include "iwyu_port.h"
 
 namespace include_what_you_use {
 

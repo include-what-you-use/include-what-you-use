@@ -9,10 +9,10 @@
 
 #include "iwyu_lexer_utils.h"
 #include "iwyu_globals.h"
+#include "iwyu_port.h"  // for CHECK_
 
 #include <string>
 
-#include "port.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Token.h"

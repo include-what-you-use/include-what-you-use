@@ -109,15 +109,15 @@
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
-#include "iwyu_use_flags.h"
+#include "iwyu_port.h"  // for CHECK_
 // This is needed for
 // preprocessor_info().PublicHeaderIntendsToProvide().  Somehow IWYU
 // removes it mistakenly.
 #include "iwyu_preprocessor.h"  // IWYU pragma: keep
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
+#include "iwyu_use_flags.h"
 #include "iwyu_verrs.h"
-#include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/ASTConsumer.h"

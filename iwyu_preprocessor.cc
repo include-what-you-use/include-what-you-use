@@ -23,10 +23,10 @@
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
+#include "iwyu_port.h"  // for CHECK_
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
-#include "port.h"  // for CHECK_
 // TODO(wan): remove this once the IWYU bug is fixed.
 // IWYU pragma: no_include "foo/bar/baz.h"
 #include "llvm/Support/raw_ostream.h"

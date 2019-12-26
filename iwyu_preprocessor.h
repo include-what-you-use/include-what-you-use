@@ -66,7 +66,7 @@
 #include <vector>                       // for vector
 
 #include "iwyu_output.h"
-#include "port.h"
+#include "iwyu_port.h"  // for CHECK_
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"

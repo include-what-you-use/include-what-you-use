@@ -16,8 +16,8 @@
 #include <set>                          // for set
 #include <string>                       // for string
 
+#include "iwyu_port.h"  // for CHECK_
 #include "iwyu_use_flags.h"
-#include "port.h"  // for CHECK_
 #include "llvm/Support/Casting.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/NestedNameSpecifier.h"

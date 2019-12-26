@@ -23,11 +23,11 @@
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
+#include "iwyu_port.h"  // for CHECK_, etc
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "iwyu_version.h"
-#include "port.h"  // for CHECK_, etc
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/FileManager.h"
