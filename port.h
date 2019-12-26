@@ -12,8 +12,8 @@
 #define INCLUDE_WHAT_YOU_USE_PORT_H_
 
 #include <cstdlib>   // for abort
-#include <iostream>
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
 
 // Count of statically allocated array.
 #define IWYU_ARRAYSIZE(arr) sizeof(arr) / sizeof(*arr)
@@ -27,7 +27,7 @@ class FatalMessageEmitter {
     stream() << file << ":" << line << ": Assertion failed: " << message;
   }
   LLVM_ATTRIBUTE_NORETURN ~FatalMessageEmitter() {
-    stream() << std::endl;
+    stream() << "\n";
     ::abort();
 #ifdef LLVM_BUILTIN_UNREACHABLE
     // Windows systems and possibly others don't declare abort() to be noreturn,
@@ -35,7 +35,7 @@ class FatalMessageEmitter {
     LLVM_BUILTIN_UNREACHABLE;
 #endif
   }
-  std::ostream& stream() { return std::cerr; }
+  llvm::raw_ostream& stream() { return llvm::errs(); }
 };
 
 // Helper class that allows an ostream to 'appear' as a void expression.
@@ -43,13 +43,13 @@ class OstreamVoidifier {
  public:
   // This has to be an operator with a precedence lower than << but
   // higher than ?:
-  void operator&(std::ostream&) {}
+  void operator&(llvm::raw_ostream&) {}
 };
 
 }  // namespace include_what_you_use
 
 // Usage: CHECK_(condition) << extra << information;
-// The file, line, condition and extra information will be printed to cerr,
+// The file, line, condition and extra information will be printed to stderr,
 // then the program will abort.
 #define CHECK_(x)  (x) ? (void)0 : \
   ::include_what_you_use::OstreamVoidifier() & \
