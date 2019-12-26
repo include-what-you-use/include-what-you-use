@@ -763,8 +763,8 @@ bool DeclIsVisibleToUseInSameFile(const Decl* decl, const OneUse& use) {
   // method.
   return (IsBeforeInSameFile(decl, use.use_loc()) ||
           GetLocation(decl) == use.use_loc() ||
-          (DeclsAreInSameClass(decl, use.decl()) && !decl->isOutOfLine()
-           && use.in_cxx_method_body()));
+          (DeclsAreInSameClass(decl, use.decl()) && !decl->isOutOfLine() &&
+           (use.flags() & UF_InCxxMethodBody)));
 }
 
 // This makes a best-effort attempt to find the smallest set of
@@ -1209,7 +1209,7 @@ void ProcessFullUse(OneUse* use,
   // All this is moot when FunctionDecls are being defined, all their redecls
   // are separately registered as uses so that a definition anchors all its
   // declarations.
-  if (!use->is_function_being_defined() && !is_builtin_function_with_mappings) {
+  if (!(use->flags() & UF_FunctionDfn) && !is_builtin_function_with_mappings) {
     set<const NamedDecl*> all_redecls;
     if (isa<RecordDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
       all_redecls.insert(use->decl());  // for classes, just consider the dfn
