@@ -2618,7 +2618,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     if (!IsDefaultTemplateTemplateArg(ast_node)) {
       ast_node->set_in_forward_declare_context(true);
-      return;
     }
   }
 
