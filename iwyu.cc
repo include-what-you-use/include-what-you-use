@@ -2600,9 +2600,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // If we're in an nns (e.g. the Foo in Foo::bar), we're never
     // forward-declarable, even if we're part of a pointer type, or in
     // a template argument, or whatever.
-    ASTNode* ast_node = current_ast_node();
-    ast_node->set_in_forward_declare_context(false);
-
+    current_ast_node()->set_in_forward_declare_context(false);
     return true;
   }
 
