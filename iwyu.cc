@@ -2559,23 +2559,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // declarations are forward-declarable.  This is true, *except*
     // for the exception (throw) types.  We clean that up here.
     // TODO(csilvers): figure out how to do these two steps in one place.
+    ASTNode* ast_node = current_ast_node();
     const FunctionProtoType* fn_type = nullptr;
-    if (!fn_type) {
-      fn_type = current_ast_node()->template GetParentAs<FunctionProtoType>();
+    if (const auto* fn_decl = ast_node->GetAncestorOfType<FunctionDecl>()) {
+      fn_type = dyn_cast<FunctionProtoType>(GetTypeOf(fn_decl));
     }
-    if (!fn_type) {
-      if (const FunctionDecl* fn_decl
-          = current_ast_node()->template GetParentAs<FunctionDecl>())
-        fn_type = dyn_cast<FunctionProtoType>(GetTypeOf(fn_decl));
-    }
+
     if (fn_type) {
-      for (FunctionProtoType::exception_iterator it =
-               fn_type->exception_begin();
-           it != fn_type->exception_end(); ++it)
-        if (it->getTypePtr() == type) {  // *we're* an exception decl
-          current_ast_node()->set_in_forward_declare_context(false);
+      for (const QualType& e : fn_type->exceptions()) {
+        if (e.getTypePtr() == type) {  // *we're* an exception decl
+          ast_node->set_in_forward_declare_context(false);
           break;
         }
+      }
     }
 
     return Base::VisitType(type);
