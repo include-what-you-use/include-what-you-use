@@ -1,4 +1,4 @@
-//===--- port.h - OS/cpu specific stuff for include-what-you-use ----------===//
+//===--- iwyu_port.h - OS/cpu specific stuff for include-what-you-use -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
