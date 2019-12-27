@@ -5,3 +5,4 @@ AllowShortFunctionsOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 SortIncludes: false
+SortUsingDeclarations: false
