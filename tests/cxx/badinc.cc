@@ -1861,10 +1861,6 @@ int main() {
   I1_TemplateFunction<I1_Class*>(i1_class_ptr);
   // Try again, but with a typedef
   Cc_typedef cc_typedef;
-  // TODO(csilvers): figure out the template arg here is really a
-  //    typedef (tricky because we need to call the I1_Class ctor),
-  //    and don't add it to tpl-types-of-interest.
-  // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I1_TemplateFunction is...*badinc-i1.h
   I1_TemplateFunction(cc_typedef);
   // IWYU: I1_TemplateFunction is...*badinc-i1.h

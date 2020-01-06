@@ -752,17 +752,38 @@ GetTplTypeResugarMapForFunctionExplicitTplArgs(
 // possible. This was originally designed for use with function argument
 // expressions, and so might not work in a more general context.
 static const Type* GetSugaredTypeOf(const Expr* expr) {
-  // First, try to find an ImplicitCastExpr under the expr, and let that provide
-  // the type. This has a higher probability of yielding a sugared type.
-  for (const Stmt* child_expr : expr->children()) {
-    if (const auto* cast_expr = dyn_cast<ImplicitCastExpr>(child_expr)) {
-      return cast_expr->getType().getTypePtr();
+  // Search the expression subtree for better sugar; stop as soon as a type
+  // different from expr's type is found.
+  struct Visitor : public RecursiveASTVisitor<Visitor> {
+    Visitor(QualType origtype) : sugared(origtype.getLocalUnqualifiedType()) {
     }
-  }
 
-  // If we didn't find a type via ImplicitCastExpr, just return the type of the
-  // expr itself.
-  return GetTypeOf(expr);
+    bool VisitDeclRefExpr(DeclRefExpr* e) {
+      return !CollectSugar(e);
+    }
+
+    bool VisitImplicitCastExpr(ImplicitCastExpr* e) {
+      return !CollectSugar(e->getSubExpr());
+    }
+
+    bool CollectSugar(const Expr* e) {
+      QualType exprtype = e->getType().getLocalUnqualifiedType();
+      if (!exprtype.isNull() && exprtype != sugared) {
+        sugared = exprtype;
+        return true;
+      }
+
+      return false;
+    }
+
+    QualType sugared;
+  };
+
+  // Default to the expr's type.
+  Visitor v(expr->getType());
+  v.TraverseStmt(const_cast<Expr*>(expr));
+
+  return v.sugared.getTypePtr();
 }
 
 map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
