@@ -117,10 +117,18 @@ def build_imp_lines(symbols_map, includes_map):
     return lines
 
 
+def add_mapping_rules(header, symbols_map, includes_map):
+    """ Add symbol and include mappings for a Qt module. """
+    symbols_map += [(header.classname, header.classname)]
+    for include in header.get_private_headers():
+        includes_map += [(header.modulename, include, header.classname)]
+
+
 def main(qt_include_dir, output_file):
     """ Entry point. """
     symbols_map = []
     includes_map = []
+    deferred_headers = []
 
     # Add manual overrides.
     symbols_map += [("qDebug", "QtGlobal")]
@@ -137,9 +145,13 @@ def main(qt_include_dir, output_file):
         if header.classname == "QInternal":
             continue
 
-        symbols_map += [(header.classname, header.classname)]
-        for include in header.get_private_headers():
-            includes_map += [(header.modulename, include, header.classname)]
+        if header.classname == header.modulename:
+            deferred_headers.append(header)
+        else:
+            add_mapping_rules(header, symbols_map, includes_map)
+
+    for header in deferred_headers:
+        add_mapping_rules(header, symbols_map, includes_map)
 
     # Transform to .imp-style format and write to output file.
     lines = build_imp_lines(symbols_map, includes_map)
