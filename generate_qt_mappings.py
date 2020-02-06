@@ -27,6 +27,50 @@ import re
 import sys
 
 
+def get_qobject_symbols():
+    symbols = (
+        "QObjectList",
+        "qFindChildren",
+        "qobject_cast",
+        "QT_NO_NARROWING_CONVERSIONS_IN_CONNECT",
+        "Q_CLASSINFO",
+        "Q_DISABLE_COPY",
+        "Q_DISABLE_COPY_MOVE",
+        "Q_DISABLE_MOVE",
+        "Q_EMIT",
+        "Q_ENUM",
+        "Q_ENUM_NS",
+        "Q_FLAG",
+        "Q_FLAG_NS",
+        "Q_GADGET",
+        "Q_INTERFACES",
+        "Q_INVOKABLE",
+        "Q_NAMESPACE",
+        "Q_NAMESPACE_EXPORT",
+        "Q_OBJECT",
+        "Q_PROPERTY",
+        "Q_REVISION",
+        "Q_SET_OBJECT_NAME",
+        "Q_SIGNAL",
+        "Q_SIGNALS",
+        "Q_SLOT",
+        "Q_SLOTS",
+
+        "emit",
+        "slots",
+        "signals",
+
+        "SIGNAL",
+        "SLOT"
+    )
+
+    symbols_map = []
+    for symbol in symbols:
+        symbols_map += [ ( symbol, "QObject" ) ]
+
+    return symbols_map
+
+
 def header_to_class_and_module_name(header):
     class_name = os.path.basename(header)
     module_name = os.path.basename(os.path.dirname(header))
@@ -51,6 +95,9 @@ def main(qt_include_dir, output_file):
     symbols_map = []
     includes_map = []
     defered_headers = []
+
+
+    symbols_map += get_qobject_symbols()
 
 
     headers = glob.glob(os.path.join(args.qt_include_dir, '**/*[!.h]'))
