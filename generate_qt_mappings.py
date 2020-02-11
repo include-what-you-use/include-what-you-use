@@ -90,6 +90,7 @@ def main(qt_include_dir, output_file):
 
     # Add manual overrides.
     symbols_map += [("qDebug", "QtGlobal")]
+    includes_map += [("QtCore", "qnamespace", "Qt")]
 
     # Collect mapping information from Qt directory tree.
     headers = glob.glob(os.path.join(qt_include_dir, '**/*[!.h]'))
@@ -98,6 +99,8 @@ def main(qt_include_dir, output_file):
             continue
 
         header = QtHeader(header)
+        if header.classname == "QInternal":
+            continue
 
         symbols_map += [(header.classname, header.classname)]
         for include in header.get_private_headers():
