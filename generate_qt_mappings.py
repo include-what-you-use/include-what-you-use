@@ -88,6 +88,9 @@ def main(qt_include_dir, output_file):
     symbols_map = []
     includes_map = []
 
+    # Add manual overrides.
+    symbols_map += [("qDebug", "QtGlobal")]
+
     # Collect mapping information from Qt directory tree.
     headers = glob.glob(os.path.join(qt_include_dir, '**/*[!.h]'))
     for header in headers:
