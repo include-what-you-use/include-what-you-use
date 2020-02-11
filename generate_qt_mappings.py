@@ -98,6 +98,8 @@ def main(qt_include_dir, output_file):
 
 
     symbols_map += get_qobject_symbols()
+    symbols_map += [("qDebug", "QtGlobal")]
+
 
 
     headers = glob.glob(os.path.join(args.qt_include_dir, '**/*[!.h]'))
