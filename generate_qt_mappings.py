@@ -110,7 +110,9 @@ def main(qt_include_dir, output_file):
             continue
 
         class_name, module_name = header_to_class_and_module_name(header)
-        if class_name == module_name:
+        if class_name == "QInternal":
+            continue
+        elif class_name == module_name:
             defered_headers.append( header )
         else:
             create_mapping_rules(header, class_name, module_name, symbols_map, includes_map)
