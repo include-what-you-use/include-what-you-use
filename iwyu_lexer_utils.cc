@@ -70,7 +70,7 @@ SourceLocation GetLocationAfter(
 string GetIncludeNameAsWritten(
     SourceLocation include_loc,
     const CharacterDataGetterInterface& data_getter) {
-  const string data = GetSourceTextUntilEndOfLine(include_loc, data_getter);
+  const string data = GetSourceTextUntilEndOfLine(include_loc, data_getter).str();
   if (data.empty())
     return data;
   string::size_type endpos = string::npos;
