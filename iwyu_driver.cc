@@ -79,7 +79,7 @@ std::string GetExecutablePath(const char *Argv0) {
 }
 
 const char *SaveStringInSet(std::set<std::string> &SavedStrings, StringRef S) {
-  return SavedStrings.insert(S).first->c_str();
+  return SavedStrings.insert(S.str()).first->c_str();
 }
 
 void ExpandArgsFromBuf(const char *Arg,

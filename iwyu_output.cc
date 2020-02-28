@@ -168,7 +168,7 @@ string GetKindName(const clang::TagDecl* tag_decl) {
   if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
     return fake->kind_name();
   }
-  return tag_decl->getKindName();
+  return tag_decl->getKindName().str();
 }
 
 string GetQualifiedNameAsString(const clang::NamedDecl* named_decl) {

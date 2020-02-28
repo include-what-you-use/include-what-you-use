@@ -134,7 +134,7 @@ string NormalizeFilePath(const string& path) {
   std::replace(normalized.begin(), normalized.end(), '\\', '/');
 #endif
 
-  return normalized.str();
+  return normalized.str().str();
 }
 
 string NormalizeDirPath(const string& path) {
@@ -154,14 +154,14 @@ string MakeAbsolutePath(const string& path) {
   std::error_code error = llvm::sys::fs::make_absolute(absolute_path);
   CHECK_(!error);
 
-  return absolute_path.str();
+  return absolute_path.str().str();
 }
 
 string MakeAbsolutePath(const string& base_path, const string& relative_path) {
   llvm::SmallString<128> absolute_path(base_path);
   llvm::sys::path::append(absolute_path, relative_path);
 
-  return absolute_path.str();
+  return absolute_path.str().str();
 }
 
 string GetParentPath(const string& path) {

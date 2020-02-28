@@ -313,7 +313,7 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
       break;
     }
     const string filename = GetSourceTextUntilEndOfLine(current_loc,
-                                                        DefaultDataGetter());
+                                                        DefaultDataGetter()).str();
     // Use "" or <> based on where the file lives.
     string quoted_private_include;
     if (IsSystemIncludeFile(GetFilePath(current_loc)))
@@ -332,7 +332,7 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     }
 
     string after_text = GetSourceTextUntilEndOfLine(current_loc,
-                                                    DefaultDataGetter());
+                                                    DefaultDataGetter()).str();
     const string::size_type close_brace_pos = after_text.find('}');
     if (close_brace_pos == string::npos) {
       Warn(current_loc, "@headername directive missing a closing brace");
