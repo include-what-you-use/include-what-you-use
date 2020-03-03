@@ -26,17 +26,17 @@ before_install:
  - VERSION=`ls -t /usr/lib/ | grep '^llvm-' | head -n 1 | sed -E 's/llvm-(.+)/\1/'`
 
  # Absolute paths to LLVM's root and bin directory
- - ROOT_PATH=`llvm-config-$VERSION --prefix`
+ - PREFIX_PATH=`llvm-config-$VERSION --prefix`
  - BIN_PATH=`llvm-config-$VERSION --bindir`
 
  # TODO: Remove these hacky fixups
- - (cd $ROOT_PATH/lib && sudo ln -rsf libclang-cpp.so.1 libclang-cpp-$VERSION.so.1)
+ - (cd $PREFIX_PATH/lib && sudo ln -rsf libclang-cpp.so.1 libclang-cpp-$VERSION.so.1)
 
 script:
 # Build IWYU
  - mkdir build
  - cd build
- - cmake -GNinja -DCMAKE_PREFIX_PATH=$ROOT_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
+ - cmake -GNinja -DCMAKE_PREFIX_PATH=$PREFIX_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
  - ninja
 
 # Test IWYU
