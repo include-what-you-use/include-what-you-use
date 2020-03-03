@@ -10,6 +10,10 @@ endif()
 
 if (NOT IWYU_IN_TREE)
   cmake_policy(SET CMP0048 NEW)
+  if (POLICY CMP0077)
+    cmake_policy(SET CMP0077 NEW)
+  endif()
+
   project(include-what-you-use)
 
   find_package(LLVM CONFIG REQUIRED)
