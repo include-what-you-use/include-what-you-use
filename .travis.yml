@@ -12,10 +12,10 @@ addons:
      # TODO: These should really be the snapshots packages, but they are currently
      # broken. Remove the version suffix once they get fixed (see issue #642 for
      # more info)
-     - llvm-10-dev
-     - llvm-10-tools
-     - libclang-10-dev
-     - clang-10
+     - llvm-11-dev
+     - llvm-11-tools
+     - libclang-11-dev
+     - clang-11
 
 before_install:
  # Install a supported cmake version (>= 3.4.3)
