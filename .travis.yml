@@ -5,7 +5,7 @@ language: cpp
 addons:
   apt:
     sources:
-     - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main'
+     - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main'
        key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
     packages:
      - ninja-build
