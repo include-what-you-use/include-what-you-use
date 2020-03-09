@@ -327,7 +327,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   void set_current_ast_node(ASTNode* an) { current_ast_node_ = an; }
 
   bool TraverseDecl(Decl* decl) {
-    if (current_ast_node_->StackContainsContent(decl))
+    if (current_ast_node_ && current_ast_node_->StackContainsContent(decl))
       return true;               // avoid recursion
     ASTNode node(decl, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
@@ -335,7 +335,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseStmt(Stmt* stmt) {
-    if (current_ast_node_->StackContainsContent(stmt))
+    if (current_ast_node_ && current_ast_node_->StackContainsContent(stmt))
       return true;               // avoid recursion
     ASTNode node(stmt, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
@@ -346,7 +346,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (qualtype.isNull())
       return Base::TraverseType(qualtype);
     const Type* type = qualtype.getTypePtr();
-    if (current_ast_node_->StackContainsContent(type))
+    if (current_ast_node_ && current_ast_node_->StackContainsContent(type))
       return true;               // avoid recursion
     ASTNode node(type, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
@@ -370,7 +370,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (typeloc.getAs<QualifiedTypeLoc>()) {
       typeloc = typeloc.getUnqualifiedLoc();
     }
-    if (current_ast_node_->StackContainsContent(&typeloc))
+    if (current_ast_node_ && current_ast_node_->StackContainsContent(&typeloc))
       return true;               // avoid recursion
     ASTNode node(&typeloc, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
