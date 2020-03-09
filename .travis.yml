@@ -9,13 +9,9 @@ addons:
        key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
     packages:
      - ninja-build
-     # TODO: These should really be the snapshots packages, but they are currently
-     # broken. Remove the version suffix once they get fixed (see issue #642 for
-     # more info)
-     - llvm-11-dev
-     - llvm-11-tools
-     - libclang-11-dev
-     - clang-11
+     - llvm-dev
+     - libclang-dev
+     - clang
 
 before_install:
  # Install a supported cmake version (>= 3.4.3)
