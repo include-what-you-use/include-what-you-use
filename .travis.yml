@@ -29,9 +29,6 @@ before_install:
  - PREFIX_PATH=`llvm-config-$VERSION --prefix`
  - BIN_PATH=`llvm-config-$VERSION --bindir`
 
- # TODO: Remove these hacky fixups
- - (cd $PREFIX_PATH/lib && sudo ln -rsf libclang-cpp.so.1 libclang-cpp-$VERSION.so.1)
-
 script:
 # Build IWYU
  - mkdir build
