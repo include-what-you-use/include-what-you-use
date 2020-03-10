@@ -2945,6 +2945,34 @@ template <typename T> class B;  // lines 4-5
     self.RegisterFileContents({'dont_remove_template_lines': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testDontRemoveSimilarNestedDeclarations(self):
+    """Tests we don't accidentally think repeated nested forward declarations
+    are dupes."""
+    infile = """\
+#include <notused.h>  ///-
+
+class A {
+  class Inner;
+};
+
+class B {
+  class Inner;
+};
+"""
+    iwyu_output = """\
+dont_remove_similar_nested should add these lines:
+
+dont_remove_similar_nested should remove these lines:
+- #include <notused.h>  // lines 1-1
+
+The full include-list for dont_remove_similar_nested:
+class A::Inner;  // lines 4-4
+class B::Inner;  // lines 8-8
+---
+"""
+    self.RegisterFileContents({'dont_remove_similar_nested': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testNestedNamespaces(self):
     infile = """\
 // Copyright 2010
