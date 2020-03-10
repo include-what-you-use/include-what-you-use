@@ -235,6 +235,10 @@ class IWYUOutputRecord(object):
     # report, though, forward-declares inside '#if 0' or similar.)
     self.seen_forward_declare_lines = set()
 
+    # Those spans which pertain to nested forward declarations (i.e. of nested
+    # classes).  This set should be a subset of self.seen_forward_declare_lines.
+    self.nested_forward_declare_lines = set()
+
     # A set of each line in the iwyu 'add' section.
     self.includes_and_forward_declares_to_add = OrderedSet()
 
@@ -261,6 +265,7 @@ class IWYUOutputRecord(object):
     self.lines_to_delete.intersection_update(other.lines_to_delete)
     self.some_include_lines.update(other.some_include_lines)
     self.seen_forward_declare_lines.update(other.seen_forward_declare_lines)
+    self.nested_forward_declare_lines.update(other.nested_forward_declare_lines)
     self.includes_and_forward_declares_to_add.update(
         other.includes_and_forward_declares_to_add)
     self.full_include_lines.update(other.full_include_lines)
@@ -443,8 +448,10 @@ class IWYUOutputParser(object):
         continue
       m = self._LINE_NUMBERS_COMMENT_RE.search(line)
       if m:
-        retval.seen_forward_declare_lines.add((int(m.group(1)),
-                                               int(m.group(2))+1))
+        line_range = (int(m.group(1)), int(m.group(2))+1)
+        retval.seen_forward_declare_lines.add(line_range)
+        if '::' in line:
+            retval.nested_forward_declare_lines.add(line_range)
 
     # IWYUOutputRecord.includes_and_forward_declares_to_add
     for line in self.lines_by_section.get(self._ADD_SECTION_RE, []):
@@ -502,6 +509,10 @@ class LineInfo(object):
     # including the ""s or <>s.  For a forward-declare it's the name
     # of the class/struct.  For other types of lines, this is None.
     self.key = None
+
+    # If this is a forward-declaration of a nested class, then this will be
+    # True.
+    self.is_nested_forward_declaration = False
 
   def __str__(self):
     if self.deleted:
@@ -770,6 +781,13 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
         raise FixIncludesError('iwyu line number %s:%d is past file-end'
                                % (iwyu_record.filename, line_number))
       file_lines[line_number].type = _FORWARD_DECLARE_RE
+
+  for (start_line, end_line) in iwyu_record.nested_forward_declare_lines:
+    for line_number in range(start_line, end_line):
+      if line_number >= len(file_lines):
+        raise FixIncludesError('iwyu line number %s:%d is past file-end'
+                               % (iwyu_record.filename, line_number))
+      file_lines[line_number].is_nested_forward_declaration = True
 
   # While we're at it, let's do a bit more sanity checking on iwyu_record.
   for line_number in iwyu_record.lines_to_delete:
@@ -1281,7 +1299,8 @@ def _ShouldInsertBlankLine(decorated_move_span, next_decorated_move_span,
 
 
 def _GetToplevelReorderSpans(file_lines):
-  """Returns a sorted list of all reorder_spans not inside an #ifdef/namespace.
+  """Returns a sorted list of all reorder_spans not inside an
+  #ifdef/namespace/class.
 
   This routine looks at all the reorder_spans in file_lines, ignores
   reorder spans inside #ifdefs and namespaces -- except for the 'header
@@ -1337,7 +1356,8 @@ def _GetToplevelReorderSpans(file_lines):
   good_reorder_spans = []
   for reorder_span in reorder_spans:
     for line_number in range(*reorder_span):
-      if in_ifdef[line_number] or in_namespace[line_number]:
+      if (in_ifdef[line_number] or in_namespace[line_number] or
+          file_lines[line_number].is_nested_forward_declaration):
         break
     else:   # for/else
       good_reorder_spans.append(reorder_span)    # never in ifdef or namespace
