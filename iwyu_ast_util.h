@@ -744,6 +744,16 @@ const clang::Type* RemovePointersAndReferences(const clang::Type* type);
 // this function returns nullptr.
 const clang::NamedDecl* TypeToDeclAsWritten(const clang::Type* type);
 
+// This is similar to TypeToDeclAsWritten, but in this case we are less
+// interested in how the type was written; we want the Decl which we can
+// explore the contents of, for example to determine which of its template
+// arguments are used in a manner that constitutes a full use.
+//
+// The difference arises particularly for type aliases, where
+// TypeToDeclAsWritten returns the Decl for the alias, whereas
+// TypeToDeclForContent returns the underlying aliased Decl.
+const clang::NamedDecl* TypeToDeclForContent(const clang::Type* type);
+
 // Returns true if it's possible to implicitly convert a value of a
 // different type to 'type' via an implicit constructor.
 bool HasImplicitConversionConstructor(const clang::Type* type);

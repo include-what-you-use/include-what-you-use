@@ -110,6 +110,7 @@ using clang::TemplateSpecializationKind;
 using clang::TemplateSpecializationType;
 using clang::TranslationUnitDecl;
 using clang::Type;
+using clang::TypeAliasTemplateDecl;
 using clang::TypeDecl;
 using clang::TypeLoc;
 using clang::TypedefNameDecl;
@@ -1207,7 +1208,7 @@ const Type* RemovePointersAndReferences(const Type* type) {
   return type;
 }
 
-const NamedDecl* TypeToDeclAsWritten(const Type* type) {
+static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
   // Get past all the 'class' and 'struct' prefixes, and namespaces.
   type = RemoveElaboration(type);
 
@@ -1222,20 +1223,29 @@ const NamedDecl* TypeToDeclAsWritten(const Type* type) {
   // to keep typedefs as typedefs, so we do the record check last.
   // We use getAs<> when we can -- unfortunately, it only exists
   // for a few types so far.
+  const TemplateSpecializationType* template_spec_type = DynCastFrom(type);
+  const TemplateDecl* template_decl =
+      template_spec_type
+          ? template_spec_type->getTemplateName().getAsTemplateDecl()
+          : nullptr;
+
   if (const TypedefType* typedef_type = DynCastFrom(type)) {
     return typedef_type->getDecl();
   } else if (const InjectedClassNameType* icn_type
              = type->getAs<InjectedClassNameType>()) {
     return icn_type->getDecl();
+  } else if (as_written && template_decl &&
+             isa<TypeAliasTemplateDecl>(template_decl)) {
+    // A template type alias
+    return template_decl;
   } else if (const RecordType* record_type
              = type->getAs<RecordType>()) {
     return record_type->getDecl();
   } else if (const TagType* tag_type = DynCastFrom(type)) {
     return tag_type->getDecl();    // probably just enums
-  } else if (const TemplateSpecializationType* template_spec_type
-             = DynCastFrom(type)) {
+  } else if (template_decl) {
     // A non-concrete template class, such as 'Myclass<T>'
-    return template_spec_type->getTemplateName().getAsTemplateDecl();
+    return template_decl;
   } else if (const FunctionType* function_type = DynCastFrom(type)) {
     // TODO(csilvers): is it possible to map from fn type to fn decl?
     (void)function_type;
@@ -1243,6 +1253,14 @@ const NamedDecl* TypeToDeclAsWritten(const Type* type) {
   }  else {
     return nullptr;
   }
+}
+
+const NamedDecl* TypeToDeclAsWritten(const Type* type) {
+  return TypeToDeclImpl(type, /*as_written=*/true);
+}
+
+const NamedDecl* TypeToDeclForContent(const Type* type) {
+  return TypeToDeclImpl(type, /*as_written=*/false);
 }
 
 const Type* RemoveReferenceAsWritten(const Type* type) {
@@ -1281,7 +1299,7 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
     return retval;
 
   // Get the list of template args that apply to the decls.
-  const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
+  const NamedDecl* decl = TypeToDeclForContent(tpl_spec_type);
   const ClassTemplateSpecializationDecl* tpl_decl = DynCastFrom(decl);
   if (!tpl_decl)   // probably because tpl_spec_type is a dependent type
     return retval;
