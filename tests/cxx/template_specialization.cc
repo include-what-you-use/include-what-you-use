@@ -11,6 +11,7 @@
 // it to the right location.
 
 #include "tests/cxx/template_specialization-d1.h"
+#include "tests/cxx/direct.h"
 
 template<typename T> class Foo;
 
@@ -38,18 +39,30 @@ TplTplStruct<> tts;
 TplTplStruct<Foo> tts2;
 
 
+template<typename T>
+struct Specialized;
+
+template<>
+// IWYU: IndirectClass is...*indirect.h
+struct Specialized<int> : IndirectClass {};
+
+
 /**** IWYU_SUMMARY
 
 tests/cxx/template_specialization.cc should add these lines:
+#include "tests/cxx/indirect.h"
 #include "tests/cxx/template_specialization-i1.h"
 #include "tests/cxx/template_specialization-i2.h"
 
 tests/cxx/template_specialization.cc should remove these lines:
+- #include "tests/cxx/direct.h"  // lines XX-XX
 - #include "tests/cxx/template_specialization-d1.h"  // lines XX-XX
 - template <typename T> class Foo;  // lines XX-XX
 
 The full include-list for tests/cxx/template_specialization.cc:
+#include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/template_specialization-i1.h"  // for Foo
 #include "tests/cxx/template_specialization-i2.h"  // for Foo
+template <typename T> struct Specialized;  // lines XX-XX+1
 
 ***** IWYU_SUMMARY */

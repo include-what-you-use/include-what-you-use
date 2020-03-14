@@ -721,6 +721,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     return true;
   }
 
+  bool TraverseClassTemplateSpecializationDecl(
+      clang::ClassTemplateSpecializationDecl* decl) {
+    if (!Base::TraverseClassTemplateSpecializationDecl(decl)) return false;
+    return TraverseCXXRecordDecl(decl);
+  }
+
   //------------------------------------------------------------
   // (5) Add TraverseImplicitDestructorCall and HandleFunctionCall.
 
