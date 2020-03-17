@@ -3120,6 +3120,11 @@ class InstantiatedTemplateVisitor
       if (ast_node->IsA<TypedefNameDecl>()) {
         return;
       }
+      if (ast_node->IsA<TemplateSpecializationType>()) {
+        // If we hit a template specialization node before the typedef then we
+        // probably still need a full-use, so stop looking.
+        break;
+      }
     }
 
     // sizeof(a reference type) is the same as sizeof(underlying type).
