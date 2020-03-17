@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/cxx/direct.h"
 #include "tests/cxx/typedef_in_template-d1.h"
 
 template<class T>
@@ -42,16 +43,35 @@ void Declarations() {
   Container<Class>::alias_type at;
 }
 
+// STL containers are often implemented via a complex web of type aliases and
+// helper classes.  Tracking uses through all these layers can be non-trivial.
+// The following are some reduced examples in roughly increasing order of
+// complexity which can serve as helpful test cases while debugging such
+// issues.  They were inspired by libstdc++'s implementation of
+// std::unordered_map, but don't directly correspond to it.
+
+template <typename T>
+struct UsesAliasedParameter {
+  using TAlias = T;
+  TAlias t;
+};
+
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass needs a declaration
+UsesAliasedParameter<IndirectClass> a;
 
 /**** IWYU_SUMMARY
 
 tests/cxx/typedef_in_template.cc should add these lines:
+#include "tests/cxx/indirect.h"
 #include "tests/cxx/typedef_in_template-i1.h"
 
 tests/cxx/typedef_in_template.cc should remove these lines:
+- #include "tests/cxx/direct.h"  // lines XX-XX
 - #include "tests/cxx/typedef_in_template-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/typedef_in_template.cc:
+#include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/typedef_in_template-i1.h"  // for Class (ptr only), Pair
 
 ***** IWYU_SUMMARY */

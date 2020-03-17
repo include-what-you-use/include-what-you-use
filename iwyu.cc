@@ -3075,19 +3075,11 @@ class InstantiatedTemplateVisitor
     return TraverseSubstTemplateTypeParmTypeHelper(typeloc.getTypePtr());
   }
 
-  // These do the actual work of finding the types to return.  Our
-  // task is made easier since (at least in theory), every time we
-  // instantiate a template type, the instantiation has type
-  // SubstTemplateTypeParmTypeLoc in the AST tree.
-  bool VisitSubstTemplateTypeParmType(clang::SubstTemplateTypeParmType* type) {
-    if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
-      return true;
-
-    // Figure out how this type was actually written.  clang always
-    // canonicalizes SubstTemplateTypeParmType, losing typedef info, etc.
-    const Type* actual_type = ResugarType(type);
-    CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
-
+  // This helper is called on every use of a template argument type in an
+  // instantiated template.  Its goal is to determine whether that use should
+  // constitute a full-use by the template caller, and perform other necessary
+  // bookkeeping.
+  void AnalyzeTemplateTypeParmUse(const Type* type) {
     // TODO(csilvers): whenever we report a type use here, we want to
     // do an iwyu check on this type (to see if sub-types are used).
 
@@ -3098,8 +3090,16 @@ class InstantiatedTemplateVisitor
     // in_forward_declare_context.  I think this will require changing
     // in_forward_declare_context to yes/no/maybe.
     if (current_ast_node()->ParentIsA<NestedNameSpecifier>()) {
-      ReportTypeUse(CurrentLoc(), actual_type);
-      return Base::VisitSubstTemplateTypeParmType(type);
+      ReportTypeUse(CurrentLoc(), type);
+      return;
+    }
+
+    // If the immediate parent node is a typedef, then register the new type as
+    // a new name for the template argument.
+    if (const TypedefNameDecl* typedef_decl =
+            current_ast_node()->GetParentAs<TypedefNameDecl>()) {
+      const Type* typedef_type = typedef_decl->getTypeForDecl();
+      template_argument_aliases_.emplace(typedef_type, type);
     }
 
     // If we're inside a typedef, we don't need our full type info --
@@ -3118,40 +3118,70 @@ class InstantiatedTemplateVisitor
     for (const ASTNode* ast_node = current_ast_node();
          ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
       if (ast_node->IsA<TypedefNameDecl>())
-        return Base::VisitSubstTemplateTypeParmType(type);
+        return;
     }
 
     // sizeof(a reference type) is the same as sizeof(underlying type).
     // We have to handle that specially here, or else we'll say the
     // reference is forward-declarable, below.
     if (current_ast_node()->ParentIsA<UnaryExprOrTypeTraitExpr>() &&
-        isa<ReferenceType>(actual_type)) {
-      const ReferenceType* actual_reftype = cast<ReferenceType>(actual_type);
+        isa<ReferenceType>(type)) {
+      const ReferenceType* actual_reftype = cast<ReferenceType>(type);
       ReportTypeUse(CurrentLoc(),
                     actual_reftype->getPointeeTypeAsWritten().getTypePtr());
-      return Base::VisitSubstTemplateTypeParmType(type);
+      return;
     }
 
     // If we're used in a forward-declare context (MyFunc<T>() { T* t; }),
     // or are ourselves a pointer type (MyFunc<Myclass*>()),
     // we don't need to do anything: we're fine being forward-declared.
     if (current_ast_node()->in_forward_declare_context())
-      return Base::VisitSubstTemplateTypeParmType(type);
+      return;
 
     if (current_ast_node()->ParentIsA<PointerType>() ||
         current_ast_node()->ParentIsA<LValueReferenceType>() ||
-        IsPointerOrReferenceAsWritten(actual_type))
-      return Base::VisitSubstTemplateTypeParmType(type);
+        IsPointerOrReferenceAsWritten(type))
+      return;
 
     // We attribute all uses in an instantiated template to the
     // template's caller.
-    ReportTypeUse(caller_loc(), actual_type);
+    ReportTypeUse(caller_loc(), type);
 
     // Also report all previous explicit instantiations (declarations and
     // definitions) as uses of the caller's location.
-    ReportExplicitInstantiations(actual_type);
+    ReportExplicitInstantiations(type);
+  }
+
+  // Our task is made easier since (at least in theory), every time we
+  // instantiate a template type, the instantiation has type
+  // SubstTemplateTypeParmTypeLoc in the AST tree.
+  bool VisitSubstTemplateTypeParmType(clang::SubstTemplateTypeParmType* type) {
+    if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
+      return true;
+
+    // Figure out how this type was actually written.  clang always
+    // canonicalizes SubstTemplateTypeParmType, losing typedef info, etc.
+    const Type* actual_type = ResugarType(type);
+    CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
+
+    AnalyzeTemplateTypeParmUse(actual_type);
 
     return Base::VisitSubstTemplateTypeParmType(type);
+  }
+
+  bool VisitTypedefType(clang::TypedefType* type) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    // Typedefs of template arguments require special handling to ensure that
+    // we record full-uses of those arguments where appropriate.  Those
+    // typedefs are stored in the template_argument_aliases_ map.
+    if (const Type* template_arg_type =
+            GetOrDefault(template_argument_aliases_, type, nullptr)) {
+      AnalyzeTemplateTypeParmUse(template_arg_type);
+    }
+
+    return Base::VisitTypedefType(type);
   }
 
   bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
@@ -3214,6 +3244,7 @@ class InstantiatedTemplateVisitor
   void Clear() {
     caller_ast_node_ = nullptr;
     resugar_map_.clear();
+    template_argument_aliases_.clear();
     traversed_decls_.clear();
     nodes_to_ignore_.clear();
     cache_storers_.clear();
@@ -3542,6 +3573,12 @@ class InstantiatedTemplateVisitor
   // value, it's a default template parameter, that the
   // template-caller may or may not be responsible for.
   map<const Type*, const Type*> resugar_map_;
+
+  // When we see a full-use of a template argument we need to assign that full
+  // use to the template-caller.  Sometimes those uses are hidden behind
+  // type aliases (typedefs).  This maps those aliases to the underlying
+  // template arguments.
+  map<const Type*, const Type*> template_argument_aliases_;
 
   // Used to avoid recursion in the *Helper() methods.
   set<const Decl*> traversed_decls_;
