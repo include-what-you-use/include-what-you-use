@@ -2681,9 +2681,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     //  return false;
 
     // Read past elaborations like 'class' keyword or namespaces.
-    while (ast_node->ParentIsA<ElaboratedType>()) {
-      ast_node = ast_node->parent();
-    }
+    ast_node = MostElaboratedAncestor(ast_node);
 
     // Now there are two options: either we have a type or we have a declaration
     // involving a type.
@@ -3083,13 +3081,15 @@ class InstantiatedTemplateVisitor
     // TODO(csilvers): whenever we report a type use here, we want to
     // do an iwyu check on this type (to see if sub-types are used).
 
+    const ASTNode* node = MostElaboratedAncestor(current_ast_node());
+
     // If we're a nested-name-specifier class (the Foo in Foo::bar),
     // we need our full type info no matter what the context (even if
     // we're a pointer, or a template arg, or whatever).
     // TODO(csilvers): consider encoding this logic via
     // in_forward_declare_context.  I think this will require changing
     // in_forward_declare_context to yes/no/maybe.
-    if (current_ast_node()->ParentIsA<NestedNameSpecifier>()) {
+    if (node->ParentIsA<NestedNameSpecifier>()) {
       ReportTypeUse(CurrentLoc(), type);
       return;
     }
@@ -3097,7 +3097,7 @@ class InstantiatedTemplateVisitor
     // If the immediate parent node is a typedef, then register the new type as
     // a new name for the template argument.
     if (const TypedefNameDecl* typedef_decl =
-            current_ast_node()->GetParentAs<TypedefNameDecl>()) {
+            node->GetParentAs<TypedefNameDecl>()) {
       const Type* typedef_type = typedef_decl->getTypeForDecl();
       template_argument_aliases_.emplace(typedef_type, type);
     }
@@ -3115,16 +3115,17 @@ class InstantiatedTemplateVisitor
     // to require it as well.  TODO(csilvers): this doesn't really
     // make any sense.  Who figures out we need the full type if
     // you do 'Foo<MyClass>::value_type m;'?
-    for (const ASTNode* ast_node = current_ast_node();
-         ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
-      if (ast_node->IsA<TypedefNameDecl>())
+    for (const ASTNode* ast_node = node; ast_node != caller_ast_node_;
+         ast_node = ast_node->parent()) {
+      if (ast_node->IsA<TypedefNameDecl>()) {
         return;
+      }
     }
 
     // sizeof(a reference type) is the same as sizeof(underlying type).
     // We have to handle that specially here, or else we'll say the
     // reference is forward-declarable, below.
-    if (current_ast_node()->ParentIsA<UnaryExprOrTypeTraitExpr>() &&
+    if (node->ParentIsA<UnaryExprOrTypeTraitExpr>() &&
         isa<ReferenceType>(type)) {
       const ReferenceType* actual_reftype = cast<ReferenceType>(type);
       ReportTypeUse(CurrentLoc(),
@@ -3135,11 +3136,11 @@ class InstantiatedTemplateVisitor
     // If we're used in a forward-declare context (MyFunc<T>() { T* t; }),
     // or are ourselves a pointer type (MyFunc<Myclass*>()),
     // we don't need to do anything: we're fine being forward-declared.
-    if (current_ast_node()->in_forward_declare_context())
+    if (node->in_forward_declare_context())
       return;
 
-    if (current_ast_node()->ParentIsA<PointerType>() ||
-        current_ast_node()->ParentIsA<LValueReferenceType>() ||
+    if (node->ParentIsA<PointerType>() ||
+        node->ParentIsA<LValueReferenceType>() ||
         IsPointerOrReferenceAsWritten(type))
       return;
 

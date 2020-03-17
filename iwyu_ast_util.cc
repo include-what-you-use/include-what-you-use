@@ -233,6 +233,14 @@ bool IsElaborationNode(const ASTNode* ast_node) {
   return elaborated_type && elaborated_type->getKeyword() != clang::ETK_None;
 }
 
+const ASTNode* MostElaboratedAncestor(const ASTNode* ast_node) {
+  // Read past elaborations like 'class' keyword or namespaces.
+  while (ast_node->ParentIsA<ElaboratedType>()) {
+    ast_node = ast_node->parent();
+  }
+  return ast_node;
+}
+
 bool IsQualifiedNameNode(const ASTNode* ast_node) {
   if (ast_node == nullptr)
     return false;
