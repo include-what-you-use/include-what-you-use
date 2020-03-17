@@ -50,6 +50,8 @@ void Declarations() {
 // issues.  They were inspired by libstdc++'s implementation of
 // std::unordered_map, but don't directly correspond to it.
 
+// Verify that a full-use of an alias of a template parameter is treated as a
+// full-use of that parameter.
 template <typename T>
 struct UsesAliasedParameter {
   using TAlias = T;
@@ -59,6 +61,21 @@ struct UsesAliasedParameter {
 // IWYU: IndirectClass is...*indirect.h
 // IWYU: IndirectClass needs a declaration
 UsesAliasedParameter<IndirectClass> a;
+
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass needs a declaration
+UsesAliasedParameter<IndirectClass>::TAlias a2;
+
+// Try a more complex example, through an additional layer of indirection.
+template <typename T>
+struct IndirectlyUsesAliasedParameter {
+  using TAlias = typename UsesAliasedParameter<T>::TAlias;
+  TAlias t;
+};
+
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass needs a declaration
+IndirectlyUsesAliasedParameter<IndirectClass> b;
 
 /**** IWYU_SUMMARY
 
