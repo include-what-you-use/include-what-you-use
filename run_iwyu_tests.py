@@ -200,6 +200,7 @@ class OneIwyuTest(unittest.TestCase):
       'relative_exported_mapped_include.cc': ['tests/cxx/subdir'],
       'remove_fwd_decl_when_including.cc': ['.'],
       'self_include.cc': ['.'],
+      'sizeof_in_template_arg.cc': ['.'],
       'sizeof_reference.cc': ['.'],
       'specialization_needs_decl.cc': ['.'],
       'system_namespaces.cc': ['.'],

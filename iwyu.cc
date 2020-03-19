@@ -2275,6 +2275,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   bool VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
 
+    current_ast_node()->set_in_forward_declare_context(false);
+
     // Calling sizeof on a reference-to-X is the same as calling it on X.
     // If sizeof() takes a type, this is easy to check.  If sizeof()
     // takes an expr, it's hard to tell -- GetTypeOf(expr) 'sees through'
