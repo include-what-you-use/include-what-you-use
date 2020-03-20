@@ -1655,7 +1655,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Sometimes a shadow decl comes between us and the 'real' decl.
     if (const UsingShadowDecl* shadow_decl = DynCastFrom(used_decl))
       target_decl = shadow_decl->getTargetDecl();
-    
+
     // Map private decls like __normal_iterator to their public counterpart.
     target_decl = MapPrivateDeclToPublicDecl(target_decl);
     if (CanIgnoreDecl(target_decl))
@@ -1683,7 +1683,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // instead?  We can call it "Use what you use". :-)
     // TODO(csilvers): check for using statements and namespace aliases too.
     if (const UsingDecl* using_decl
-        = GetUsingDeclarationOf(used_decl, 
+        = GetUsingDeclarationOf(used_decl,
               GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, use_flags, "(for using decl)");
@@ -1742,7 +1742,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // If we're a use that depends on a using declaration, make sure
     // we #include the file with the using declaration.
     if (const UsingDecl* using_decl
-        = GetUsingDeclarationOf(used_decl, 
+        = GetUsingDeclarationOf(used_decl,
               GetDeclContext(current_ast_node()))) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, ComputeUseFlags(current_ast_node()),

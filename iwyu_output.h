@@ -255,7 +255,7 @@ class IwyuFileInfo {
                                UseFlags flags, const char* comment);
 
   // Called whenever a NamedDecl is accessed through a UsingDecl.
-  // ie: using std::swap; swap(a, b); 
+  // ie: using std::swap; swap(a, b);
   void ReportUsingDeclUse(clang::SourceLocation use_loc,
                           const clang::UsingDecl* using_decl,
                           UseFlags flags, const char* comment);

@@ -584,8 +584,8 @@ void IwyuFileInfo::AddUsingDecl(const UsingDecl* using_decl) {
   int start_linenum = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
   int end_linenum = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
   VERRS(6) << "Found using-decl: "
-           << GetFilePath(file_) << ":" 
-           << to_string(start_linenum) << "-" << to_string(end_linenum) << ": " 
+           << GetFilePath(file_) << ":"
+           << to_string(start_linenum) << "-" << to_string(end_linenum) << ": "
            << internal::PrintablePtr(using_decl)
            << internal::GetQualifiedNameAsString(using_decl) << "\n";
 }
@@ -678,7 +678,7 @@ void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
 void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
                                       const UsingDecl* using_decl,
                                       UseFlags flags,
-                                      const char* comment) {  
+                                      const char* comment) {
   // If accessing a symbol through a using decl in the same file that contains
   // the using decl, we must mark the using decl as referenced. At the end of
   // traversing the AST, we check to see if a using decl is unreferenced and

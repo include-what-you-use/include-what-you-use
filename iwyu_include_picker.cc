@@ -1595,7 +1595,7 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
 
         // Add the path of the file we're currently processing
         // to the search path. Allows refs to be relative to referrer.
-        vector<string> extended_search_path = 
+        vector<string> extended_search_path =
             ExtendMappingFileSearchPath(search_path,
                                         GetParentPath(absolute_path));
 
