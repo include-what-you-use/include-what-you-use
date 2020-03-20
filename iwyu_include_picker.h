@@ -194,10 +194,10 @@ class IncludePicker {
   // Adds a mapping from a one header to another, typically
   // from a private to a public quoted include.
   void AddIncludeMapping(
-      const string& map_from, IncludeVisibility from_visibility, 
+      const string& map_from, IncludeVisibility from_visibility,
       const MappedInclude& map_to, IncludeVisibility to_visibility);
 
-  // Adds a mapping from a a symbol to a quoted include. We use this to 
+  // Adds a mapping from a a symbol to a quoted include. We use this to
   // maintain mappings of documented types, e.g.
   //  For std::map<>, include <map>.
   void AddSymbolMapping(

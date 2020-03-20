@@ -596,14 +596,14 @@ bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
 }
 
 // C++ [class.virtual]p8:
-//   If the return type of D::f differs from the return type of B::f, the 
+//   If the return type of D::f differs from the return type of B::f, the
 //   class type in the return type of D::f shall be complete at the point of
 //   declaration of D::f or shall be the class type D.
 bool HasCovariantReturnType(const CXXMethodDecl* method_decl) {
   QualType derived_return_type = method_decl->getReturnType();
 
   for (CXXMethodDecl::method_iterator
-       it = method_decl->begin_overridden_methods(); 
+       it = method_decl->begin_overridden_methods();
        it != method_decl->end_overridden_methods(); ++it) {
     // There are further constraints on covariant return types as such
     // (e.g. parents must be related, derived override must have return type
