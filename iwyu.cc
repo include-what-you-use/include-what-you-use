@@ -1248,13 +1248,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   using Base::PrintableCurrentLoc;
   using Base::current_ast_node;
 
+  enum class IgnoreKind {
+    ForUse,
+    ForExpansion,
+  };
+
   //------------------------------------------------------------
   // Pure virtual methods that a subclass must implement.
 
   // Returns true if we are not interested in iwyu information for the
   // given type, where the type is *not* the current AST node.
   // TODO(csilvers): check we're calling this consistent with its API.
-  virtual bool CanIgnoreType(const Type* type) const = 0;
+  virtual bool CanIgnoreType(const Type* type,
+                             IgnoreKind = IgnoreKind::ForUse) const = 0;
 
   // Returns true if we are not interested in doing an iwyu check on
   // the given decl, where the decl is *not* the current AST node.
@@ -2897,9 +2903,21 @@ class InstantiatedTemplateVisitor
 
   string GetSymbolAnnotation() const override { return " in tpl"; }
 
-  bool CanIgnoreType(const Type* type) const override {
-    if (!IsTypeInteresting(type) || !IsKnownTemplateParam(type))
+  bool CanIgnoreType(const Type* type, IgnoreKind ignore_kind =
+                                           IgnoreKind::ForUse) const override {
+    if (!IsTypeInteresting(type))
       return true;
+
+    switch (ignore_kind) {
+      case IgnoreKind::ForUse:
+        if (!IsKnownTemplateParam(type))
+          return true;
+        break;
+      case IgnoreKind::ForExpansion:
+        if (!InvolvesKnownTemplateParam(type))
+          return true;
+        break;
+    }
 
     // If we're a default template argument, we should ignore the type
     // if the template author intend-to-provide it, but otherwise we
@@ -2917,7 +2935,6 @@ class InstantiatedTemplateVisitor
     return IsDefaultTemplateParameter(type) && IsProvidedByTemplate(type);
   }
 
-
   bool IsTypeInteresting(const Type* type) const {
     // We only care about types that would have been dependent in the
     // uninstantiated template: that is, SubstTemplateTypeParmType types
@@ -2932,6 +2949,11 @@ class InstantiatedTemplateVisitor
     // the template being instantiated, so we can be ignored.
     type = RemoveSubstTemplateTypeParm(type);
     return ContainsKey(resugar_map_, type);
+  }
+
+  bool InvolvesKnownTemplateParam(const Type* type) const {
+    return InvolvesTypeForWhich(
+        type, [&](const Type* type) { return IsKnownTemplateParam(type); });
   }
 
   // We ignore function calls in nodes_to_ignore_, which were already
@@ -3050,7 +3072,8 @@ class InstantiatedTemplateVisitor
 
   bool TraverseSubstTemplateTypeParmTypeHelper(
       const clang::SubstTemplateTypeParmType* type) {
-    if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
+    if (CanIgnoreCurrentASTNode() ||
+        CanIgnoreType(type, IgnoreKind::ForExpansion))
       return true;
 
     const Type* actual_type = ResugarType(type);
@@ -3212,7 +3235,8 @@ class InstantiatedTemplateVisitor
   // instantiate a template type, the instantiation has type
   // SubstTemplateTypeParmTypeLoc in the AST tree.
   bool VisitSubstTemplateTypeParmType(clang::SubstTemplateTypeParmType* type) {
-    if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
+    if (CanIgnoreCurrentASTNode() ||
+        CanIgnoreType(type, IgnoreKind::ForExpansion))
       return true;
 
     AnalyzeTemplateTypeParmUse(type);
@@ -3692,7 +3716,7 @@ class IwyuAstConsumer
   string GetSymbolAnnotation() const override { return ""; }
 
   // We are interested in all types for iwyu checking.
-  bool CanIgnoreType(const Type* type) const override {
+  bool CanIgnoreType(const Type* type, IgnoreKind) const override {
     return type == nullptr;
   }
 

@@ -122,6 +122,7 @@ using llvm::ArrayRef;
 using llvm::PointerUnion;
 using llvm::cast;
 using llvm::dyn_cast;
+using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
 using llvm::raw_string_ostream;
@@ -1155,6 +1156,26 @@ const Type* RemoveSubstTemplateTypeParm(const Type* type) {
     return type;
 }
 
+bool InvolvesTypeForWhich(const Type* type,
+                          std::function<bool(const Type*)> pred) {
+  type = RemoveSubstTemplateTypeParm(type);
+  if (pred(type))
+    return true;
+  const Decl* decl = TypeToDeclAsWritten(type);
+  if (const auto* cts_decl =
+          dyn_cast_or_null<ClassTemplateSpecializationDecl>(decl)) {
+    const TemplateArgumentList& tpl_args = cts_decl->getTemplateArgs();
+    for (const TemplateArgument& tpl_arg : tpl_args.asArray()) {
+      if (const Type* arg_type = GetTemplateArgAsType(tpl_arg)) {
+        if (InvolvesTypeForWhich(arg_type, pred)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 bool IsPointerOrReferenceAsWritten(const Type* type) {
   type = RemoveElaboration(type);
   return isa<PointerType>(type) || isa<LValueReferenceType>(type);
@@ -1282,13 +1303,20 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
   if (!tpl_spec_type)
     return retval;
 
-  // Get the list of template args that apply to the decls.
-  const NamedDecl* decl = TypeToDeclForContent(tpl_spec_type);
-  const ClassTemplateSpecializationDecl* tpl_decl = DynCastFrom(decl);
-  if (!tpl_decl)   // probably because tpl_spec_type is a dependent type
-    return retval;
-  const TemplateArgumentList& tpl_args
-      = tpl_decl->getTemplateInstantiationArgs();
+  // Pull the template arguments out of the specialization type. If this is
+  // a ClassTemplateSpecializationDecl specifically, we want to
+  // get the arguments therefrom to correctly handle default arguments.
+  const TemplateArgument* tpl_args = tpl_spec_type->getArgs();
+  unsigned num_args = tpl_spec_type->getNumArgs();
+
+  const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
+  const auto* cls_tpl_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl);
+  if (cls_tpl_decl) {
+    const TemplateArgumentList& tpl_arg_list =
+        cls_tpl_decl->getTemplateInstantiationArgs();
+    tpl_args = tpl_arg_list.data();
+    num_args = tpl_arg_list.size();
+  }
 
   // TemplateSpecializationType only includes explicitly specified
   // types in its args list, so we start with that.  Note that an
@@ -1304,12 +1332,13 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
     // (the latter are all desugared).  If there's a match, update
     // the mapping.
     for (const Type* type : arg_components) {
-      for (unsigned i = 0; i < tpl_args.size(); ++i) {
+      for (unsigned i = 0; i < num_args; ++i) {
         if (const Type* arg_type = GetTemplateArgAsType(tpl_args[i])) {
           if (GetCanonicalType(type) == arg_type) {
             retval[arg_type] = type;
             VERRS(6) << "Adding a template-class type of interest: "
-                     << PrintableType(type) << "\n";
+                     << PrintableType(arg_type) << " -> " << PrintableType(type)
+                     << "\n";
             explicit_args.insert(i);
           }
         }
@@ -1318,7 +1347,7 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
   }
 
   // Now take a look at the args that were not filled explicitly.
-  for (unsigned i = 0; i < tpl_args.size(); ++i) {
+  for (unsigned i = 0; i < num_args; ++i) {
     if (ContainsKey(explicit_args, i))
       continue;
     if (const Type* arg_type = GetTemplateArgAsType(tpl_args[i])) {

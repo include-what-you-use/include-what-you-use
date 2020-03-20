@@ -699,6 +699,11 @@ bool IsClassType(const clang::Type* type);
 // However, vector<T> is *not* converted to vector<int>.
 const clang::Type* RemoveSubstTemplateTypeParm(const clang::Type* type);
 
+// Returns true if any type involved (recursively examining template
+// arguments) satisfies the given predicate.
+bool InvolvesTypeForWhich(const clang::Type* type,
+                          std::function<bool(const clang::Type*)> pred);
+
 // Returns true if type is a pointer type (pointer or reference,
 // looking through elaborations like 'class Foo*' (vs 'Foo*'),
 // but *not* following typedefs (which is why we can't just use

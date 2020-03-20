@@ -61,11 +61,10 @@ std::bitset<5> bitset;
 // for map<T, SpecializationClass>, we should only consider T.
 
 template<typename T> class TemplatedClass {
-  // TODO(csilvers): IWYU: SpecializationClass is...*precomputed_tpl_args-i1.h
-  // TODO(csilvers): IWYU: std::less is...*precomputed_tpl_args-i1.h
+  // IWYU: SpecializationClass is...*precomputed_tpl_args-i1.h
   // IWYU: SpecializationClass needs a declaration
   std::map<SpecializationClass, T> t1;
-  // TODO(csilvers): IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   // IWYU: IndirectClass needs a declaration
   std::map<T, IndirectClass> t3;
 };
