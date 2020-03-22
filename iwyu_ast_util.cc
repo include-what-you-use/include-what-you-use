@@ -20,7 +20,6 @@
 #include "iwyu_path_util.h"
 #include "iwyu_port.h"  // for CHECK_
 #include "iwyu_stl_util.h"
-#include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Casting.h"
@@ -40,6 +39,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 
@@ -946,18 +946,58 @@ bool IsDefaultNewOrDelete(const FunctionDecl* decl,
       !IsBuiltinFile(GetFileEntry(decl)))
     return false;
 
-  const string decl_name = decl->getNameAsString();
-  if (!StartsWith(decl_name, "operator new") &&
-      !StartsWith(decl_name, "operator delete"))
+  // The following variants of operator new[1] are implicitly defined in every
+  // translation unit and should not require including <new>.
+  //
+  // void* operator new  ( std::size_t count );
+  // void* operator new[]( std::size_t count );
+  // void* operator new  ( std::size_t count, std::align_val_t al ); (since C++17)
+  // void* operator new[]( std::size_t count, std::align_val_t al ); (since C++17)
+  //
+  // Likewise, the following variants of operator delete[2] are implicitly
+  // defined in every translation unit and should not require including <new>.
+  //
+  // void operator delete  ( void* ptr ) throw(); (until C++11)
+  // void operator delete  ( void* ptr ) noexcept; (since C++11)
+  // void operator delete[]( void* ptr ) throw(); (until C++11)
+  // void operator delete[]( void* ptr ) noexcept; (since C++11)
+  // void operator delete  ( void* ptr, std::align_val_t al ) noexcept; (since C++17)
+  // void operator delete[]( void* ptr, std::align_val_t al ) noexcept; (since C++17)
+  // void operator delete  ( void* ptr, std::size_t sz ) noexcept; (since C++14)
+  // void operator delete[]( void* ptr, std::size_t sz ) noexcept; (since C++14)
+  // void operator delete  ( void* ptr, std::size_t sz,
+  //                         std::align_val_t al ) noexcept; (since C++17)
+  // void operator delete[]( void* ptr, std::size_t sz,
+  //                         std::align_val_t al ) noexcept; (since C++17)
+  // void operator delete  ( void* ptr, const std::nothrow_t& tag ) throw(); (until C++11)
+  // void operator delete  ( void* ptr, const std::nothrow_t& tag ) noexcept; (since C++11)
+  // void operator delete[]( void* ptr, const std::nothrow_t& tag ) throw(); (until C++11)
+  // void operator delete[]( void* ptr, const std::nothrow_t& tag ) noexcept; (since C++11)
+  //
+  // FunctionDecl::isReplaceableGlobalAllocationFunction() does a great job of
+  // parsing the variants of operator new/delete and returning true if a
+  // particular variant is "replaceable". It just so happens that all implicitly
+  // defined variants are also replaceable. However, there are four variants of
+  // operator new that are replaceable but not implicitly defined; we must look
+  // for these explicitly and filter them out.
+  //
+  // 1. https://en.cppreference.com/w/cpp/memory/new/operator_new
+  // 2. https://en.cppreference.com/w/cpp/memory/new/operator_delete
+  bool is_nothrow = false;
+  if (!decl->isReplaceableGlobalAllocationFunction(nullptr, &is_nothrow))
     return false;
 
-  // Placement-new/delete has 2 args, second is void*.  The only other
-  // 2-arg overloads of new/delete in <new> take a const nothrow_t&.
-  if (decl->getNumParams() == 2 &&
-      !decl->getParamDecl(1)->getType().isConstQualified())
-    return false;
-
-  return true;
+  // These variants are replaceable but not implicitly defined.
+  //
+  // void* operator new  ( std::size_t count, const std::nothrow_t& tag );
+  // void* operator new[]( std::size_t count, const std::nothrow_t& tag );
+  // void* operator new  ( std::size_t count,
+  //                       std::align_val_t al, const std::nothrow_t& ); (since C++17)
+  // void* operator new[]( std::size_t count,
+  //                       std::align_val_t al, const std::nothrow_t& ); (since C++17)
+  return decl->getDeclName().getCXXOverloadedOperator() == clang::OO_Delete ||
+         decl->getDeclName().getCXXOverloadedOperator() == clang::OO_Array_Delete ||
+         !is_nothrow;
 }
 
 bool IsFriendDecl(const Decl* decl) {

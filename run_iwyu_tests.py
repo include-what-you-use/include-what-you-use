@@ -100,6 +100,8 @@ class OneIwyuTest(unittest.TestCase):
     clang_flags_map = {
       'alias_template.cc': ['-std=c++11'],
       'auto_type_within_template.cc': ['-std=c++11'],
+      'builtins_new_included_cxx14.cc': ['-std=c++14', '-fsized-deallocation'],
+      'builtins_new_included_cxx17.cc': ['-std=c++17'],
       # MSVC targets need to explicitly enable exceptions, so we do it for all.
       'catch.cc': ['-fcxx-exceptions', '-fexceptions'],
       'clmode.cc': ['--driver-mode=cl', '/GF', '/Os', '/W2'],
