@@ -3075,14 +3075,8 @@ class InstantiatedTemplateVisitor
     return TraverseSubstTemplateTypeParmTypeHelper(typeloc.getTypePtr());
   }
 
-  // This helper is called on every use of a template argument type in an
-  // instantiated template.  Its goal is to determine whether that use should
-  // constitute a full-use by the template caller, and perform other necessary
-  // bookkeeping.
-  void AnalyzeTemplateTypeParmUse(const Type* type) {
-    // TODO(csilvers): whenever we report a type use here, we want to
-    // do an iwyu check on this type (to see if sub-types are used).
-
+  // Check whether a use of a template parameter is a full use.
+  bool IsTemplateTypeParmUseFullUse(const Type* type) {
     const ASTNode* node = MostElaboratedAncestor(current_ast_node());
 
     // If we're a nested-name-specifier class (the Foo in Foo::bar),
@@ -3092,16 +3086,7 @@ class InstantiatedTemplateVisitor
     // in_forward_declare_context.  I think this will require changing
     // in_forward_declare_context to yes/no/maybe.
     if (node->ParentIsA<NestedNameSpecifier>()) {
-      ReportTypeUse(CurrentLoc(), type);
-      return;
-    }
-
-    // If the immediate parent node is a typedef, then register the new type as
-    // a new name for the template argument.
-    if (const TypedefNameDecl* typedef_decl =
-            node->GetParentAs<TypedefNameDecl>()) {
-      const Type* typedef_type = typedef_decl->getTypeForDecl();
-      template_argument_aliases_.emplace(typedef_type, type);
+      return true;
     }
 
     // If we're inside a typedef, we don't need our full type info --
@@ -3120,7 +3105,7 @@ class InstantiatedTemplateVisitor
     for (const ASTNode* ast_node = node; ast_node != caller_ast_node_;
          ast_node = ast_node->parent()) {
       if (ast_node->IsA<TypedefNameDecl>()) {
-        return;
+        return false;
       }
       if (ast_node->IsA<TemplateSpecializationType>()) {
         // If we hit a template specialization node before the typedef then we
@@ -3134,22 +3119,70 @@ class InstantiatedTemplateVisitor
     // reference is forward-declarable, below.
     if (node->ParentIsA<UnaryExprOrTypeTraitExpr>() &&
         isa<ReferenceType>(type)) {
-      const ReferenceType* actual_reftype = cast<ReferenceType>(type);
-      ReportTypeUse(CurrentLoc(),
-                    actual_reftype->getPointeeTypeAsWritten().getTypePtr());
-      return;
+      return true;
     }
 
     // If we're used in a forward-declare context (MyFunc<T>() { T* t; }),
     // or are ourselves a pointer type (MyFunc<Myclass*>()),
     // we don't need to do anything: we're fine being forward-declared.
     if (node->in_forward_declare_context())
-      return;
+      return false;
 
     if (node->ParentIsA<PointerType>() ||
         node->ParentIsA<LValueReferenceType>() ||
         IsPointerOrReferenceAsWritten(type))
+      return false;
+
+    return true;
+  }
+
+  // This helper is called on every use of a template argument type in an
+  // instantiated template.  Its goal is to determine whether that use should
+  // constitute a full-use by the template caller, and perform other necessary
+  // bookkeeping.
+  void AnalyzeTemplateTypeParmUse(const Type* type) {
+    const ASTNode* node = MostElaboratedAncestor(current_ast_node());
+
+    // If the immediate parent node is a typedef, then register the new type as
+    // a new name for the template argument.
+    if (const TypedefNameDecl* typedef_decl =
+            node->GetParentAs<TypedefNameDecl>()) {
+      const Type* typedef_type = typedef_decl->getTypeForDecl();
+      VERRS(6) << "Registering " << PrintableType(typedef_type)
+               << " as an alias for " << PrintableType(type)
+               << " in the context of this instantiation\n";
+      template_argument_aliases_.emplace(typedef_type, type);
+    }
+
+    // Figure out how this type was actually written.  clang always
+    // canonicalizes SubstTemplateTypeParmType, losing typedef info, etc.
+    const Type* actual_type = ResugarType(type);
+    CHECK_(actual_type &&
+           "Type passed to AnalyzeTemplateTypeParmUse should be resugar-able");
+
+    VERRS(6) << "AnalyzeTemplateTypeParmUse: type = " << PrintableType(type)
+             << ", actual_type = " << PrintableType(actual_type) << '\n';
+
+    if (!IsTemplateTypeParmUseFullUse(actual_type)) {
+      // Non-full uses will already have been reported when they were used as
+      // template arguments, so nothing to do here.
       return;
+    }
+
+    if (isa<ReferenceType>(actual_type)) {
+      // If the argument type is a reference type, then we actually care about
+      // the referred-to type.
+      const ReferenceType* actual_reftype = cast<ReferenceType>(actual_type);
+      type = actual_reftype->getPointeeTypeAsWritten().getTypePtr();
+    }
+
+    // At this point we know we are looking at a full-use of type.  However,
+    // there are still two cases.  If this is a template param that was written
+    // by the user, then we report a use of it.  However, it might also be a
+    // parameter of some implementation detail template which just happens top
+    // involve the user's template parameter somehow.  In this case, we need to
+    // recursively explore the instantiation of *that* template to see if the
+    // user's type is full-used therein.
 
     // We attribute all uses in an instantiated template to the
     // template's caller.
@@ -3167,12 +3200,7 @@ class InstantiatedTemplateVisitor
     if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
       return true;
 
-    // Figure out how this type was actually written.  clang always
-    // canonicalizes SubstTemplateTypeParmType, losing typedef info, etc.
-    const Type* actual_type = ResugarType(type);
-    CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
-
-    AnalyzeTemplateTypeParmUse(actual_type);
+    AnalyzeTemplateTypeParmUse(type);
 
     return Base::VisitSubstTemplateTypeParmType(type);
   }
