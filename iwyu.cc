@@ -3184,13 +3184,28 @@ class InstantiatedTemplateVisitor
     // recursively explore the instantiation of *that* template to see if the
     // user's type is full-used therein.
 
-    // We attribute all uses in an instantiated template to the
-    // template's caller.
-    ReportTypeUse(caller_loc(), type);
+    if (IsKnownTemplateParam(type)) {
+      // We attribute all uses in an instantiated template to the
+      // template's caller.
+      ReportTypeUse(caller_loc(), type);
 
-    // Also report all previous explicit instantiations (declarations and
-    // definitions) as uses of the caller's location.
-    ReportExplicitInstantiations(type);
+      // Also report all previous explicit instantiations (declarations and
+      // definitions) as uses of the caller's location.
+      ReportExplicitInstantiations(type);
+    } else {
+      const Decl* decl = TypeToDeclAsWritten(type);
+      if (const auto* cts_decl =
+              dyn_cast<ClassTemplateSpecializationDecl>(decl)) {
+        if (ContainsKey(traversed_decls_, decl))
+          return;  // avoid recursion & repetition
+        traversed_decls_.insert(decl);
+
+        VERRS(6)
+            << "Recursively traversing " << PrintableDecl(cts_decl)
+            << " which was full-used and involves a known template param\n";
+        TraverseDecl(const_cast<ClassTemplateSpecializationDecl*>(cts_decl));
+      }
+    }
   }
 
   // Our task is made easier since (at least in theory), every time we
