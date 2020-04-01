@@ -41,9 +41,16 @@ struct FullUseTemplateArgAsVar {
 // Test the used class being nested deeper in the alias
 template <typename T>
 using AliasNested = FullUseTemplateArgAsVar<FullUseTemplateArgAsVar<T>>;
+
 // IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 AliasNested<IndirectClass> aliasNested;
+
+template <typename T>
+using AliasNested2 = FullUseTemplateArgInSizeof<FullUseTemplateArgInSizeof<T>>;
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+AliasNested2<IndirectClass> aliasNested2;
 
 /**** IWYU_SUMMARY
 
