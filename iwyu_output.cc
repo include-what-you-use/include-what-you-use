@@ -1242,10 +1242,14 @@ void ProcessFullUse(OneUse* use,
     return;
   }
   // Special case for operators new/delete: Only treated as built-in if they
-  // are the default, non-placement versions.
+  // are the default, non-placement versions. This is modelled in Clang as
+  // 'replaceable global allocation functions': the helper method returns true
+  // for anything but placement-new. Users of the 'std::nothrow' and
+  // 'std::align_val_t' overloads already need to spell these two symbols, so
+  // <new> will be required for them without us doing any magic for operator new
+  // itself.
   if (const FunctionDecl* fn_decl = DynCastFrom(use->decl())) {
-    const string dfn_file = GetFilePath(fn_decl);
-    if (IsDefaultNewOrDelete(fn_decl, ConvertToQuotedInclude(dfn_file))) {
+    if (fn_decl->isReplaceableGlobalAllocationFunction(nullptr, nullptr)) {
       VERRS(6) << "Ignoring use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "): built-in new/delete\n";
       use->set_ignore_use();

@@ -55,6 +55,22 @@ void ExpressionsUserTypes() {
   delete[] arr;
 }
 
+// Aligned allocation uses operator new(size_t, std::align_val_t) under the
+// hood in C++17, but does not require <new> to be included for it. Pre-C++17,
+// the alignment is silently ignored (or unsupported if the standard library
+// does not support aligned allocation).
+void ImplicitAlignedAllocation() {
+  struct alignas(32) Aligned {
+    float value[8];
+  };
+
+  Aligned* elem = new Aligned;
+  delete elem;
+
+  Aligned* arr = new Aligned[10];
+  delete[] arr;
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/operator_new.cc should add these lines:

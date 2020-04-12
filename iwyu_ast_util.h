@@ -584,12 +584,6 @@ const clang::NamedDecl* GetInstantiatedFromDecl(
 // the original input.
 const clang::NamedDecl* GetDefinitionAsWritten(const clang::NamedDecl* decl);
 
-// True if this decl is for default (not placement-new)
-// new/delete/new[]/delete[] from <new>.  The second argument
-// is the quoted form of the file the decl comes from, e.g. '<new>'.
-bool IsDefaultNewOrDelete(const clang::FunctionDecl* decl,
-                          const string& decl_loc_as_quoted_include);
-
 // Returns true if this decl is part of a friend decl.
 bool IsFriendDecl(const clang::Decl* decl);
 
