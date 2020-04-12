@@ -20,7 +20,6 @@
 #include "iwyu_path_util.h"
 #include "iwyu_port.h"  // for CHECK_
 #include "iwyu_stl_util.h"
-#include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Casting.h"
@@ -935,29 +934,6 @@ const NamedDecl* GetDefinitionAsWritten(const NamedDecl* decl) {
   }
   // Couldn't find a definition, just return the original declaration.
   return decl;
-}
-
-bool IsDefaultNewOrDelete(const FunctionDecl* decl,
-                          const string& decl_loc_as_quoted_include) {
-  // Clang will report <new> as the location of the default new and
-  // delete operators if <new> is included. Otherwise, it reports the
-  // (fake) file "<built-in>".
-  if (decl_loc_as_quoted_include != "<new>" &&
-      !IsBuiltinFile(GetFileEntry(decl)))
-    return false;
-
-  const string decl_name = decl->getNameAsString();
-  if (!StartsWith(decl_name, "operator new") &&
-      !StartsWith(decl_name, "operator delete"))
-    return false;
-
-  // Placement-new/delete has 2 args, second is void*.  The only other
-  // 2-arg overloads of new/delete in <new> take a const nothrow_t&.
-  if (decl->getNumParams() == 2 &&
-      !decl->getParamDecl(1)->getType().isConstQualified())
-    return false;
-
-  return true;
 }
 
 bool IsFriendDecl(const Decl* decl) {
