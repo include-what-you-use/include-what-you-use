@@ -31,6 +31,7 @@ void ExplicitOperators() {
 
 // New- and delete-expressions, unless using placement syntax, only use builtin
 // operators. They're equivalent with the above, but also run ctors/dtors.
+// For placement syntax, see tests/cxx/placement_new.cc
 void ExpressionsBuiltinTypes() {
   char* elem = new char;
   delete elem;
