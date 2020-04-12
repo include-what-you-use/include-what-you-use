@@ -388,19 +388,6 @@ template<typename T> void CallOverloadWithUsingShadowDecl(T t) {
   I1_NamespaceTemplateFn(t);
 }
 
-template<typename T> void CallPlacementNew(T t) {
-  static char buffer[sizeof(t)];
-  // These should all be iwyu violations here, even though we can't be
-  // *sure* some of these are actually placment-new until we get a
-  // specific type for T (at template-instantiation time).
-  // IWYU: operator new is...*<new>
-  new (&t) int;
-  // IWYU: operator new is...*<new>
-  new (buffer) T();
-  // IWYU: operator new is...*<new>
-  new (&t) T();
-}
-
 // This is defining a class declared in badinc-i1.h, but I think it's
 // correct that it's not an IWYU violation to leave out badinc-i1.h.
 class I1_DefinedInCc_Class {
@@ -1178,8 +1165,6 @@ int main() {
   CallOverloadedFunctionDifferentFiles(5.0f);
   // This should not be an IWYU violation either: the iwyu use is in the fn.
   CallOverloadWithUsingShadowDecl(5);
-  // IWYU: I1_Class is...*badinc-i1.h
-  CallPlacementNew(i1_class);
 
   // Calling operator<< when the first argument is a macro.  We should
   // still detect that operator<< is being used here, and not in the
@@ -1554,28 +1539,16 @@ int main() {
   std::list<int>* list_ptr;
   list_ptr = 0;
 
-  // Make sure we only report an iwyu for <new> because of placement-new.
-  // We also need to check the argument to new.
-  int* newed_int = new int;
-  // IWYU: operator new is...*<new>
-  new(newed_int) int(4);
   // IWYU: std::vector is...*<vector>
   // IWYU: I2_Enum is...*badinc-i2.h
   std::vector<I2_Enum>* newed_vector
       // IWYU: std::vector is...*<vector>
       // IWYU: I2_Enum is...*badinc-i2.h
       = new std::vector<I2_Enum>;
-  // IWYU: i1_i1_classptr is...*badinc-i1.h
-  // IWYU: I1_Class is...*badinc-i1.h
-  // IWYU: kI1ConstInt is...*badinc-i1.h
-  // IWYU: operator new is...*<new>
-  new (i1_i1_classptr) I1_Class(kI1ConstInt);
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: kI1ConstInt is...*badinc-i1.h
   I1_Class* newed_i1_class_array = new I1_Class[kI1ConstInt];
-  delete newed_int;
-  delete (((newed_int)));
   // TODO(csilvers): IWYU: I2_Enum is...*badinc-i2.h
   // IWYU: std::vector is...*<vector>
   delete newed_vector;
@@ -1620,24 +1593,6 @@ int main() {
       // IWYU: I2_Class needs a declaration
       // IWYU: I2_Class is...*badinc-i2.h
       = new I1_TemplateClass<I2_Class, I1_Struct>(i1_union);
-  // IWYU: I1_TemplateClass is...*badinc-i1.h
-  // IWYU: I2_Class needs a declaration
-  // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I1_Struct needs a declaration
-  char i1_templateclass_storage[sizeof(I1_TemplateClass<I2_Class, I1_Struct>)];
-  // We need full type info for i1_templateclass because we never
-  // fwd-declare a class with default template parameters.
-  // IWYU: I1_TemplateClass is...*badinc-i1.h
-  // IWYU: I2_Class needs a declaration
-  // IWYU: I1_Struct needs a declaration
-  I1_TemplateClass<I2_Class, I1_Struct>* placement_newed_i1_template_class
-      // IWYU: I1_Struct needs a declaration
-      // IWYU: I1_Struct is...*badinc-i1.h
-      // IWYU: I1_TemplateClass is...*badinc-i1.h
-      // IWYU: I2_Class needs a declaration
-      // IWYU: I2_Class is...*badinc-i2.h
-      // IWYU: operator new is...*<new>
-      = new(i1_templateclass_storage) I1_TemplateClass<I2_Class, I1_Struct>();
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: i1_ns::I1_NamespaceClass is...*badinc-i1.h
@@ -1658,11 +1613,6 @@ int main() {
   // IWYU: I1_Struct is...*badinc-i1.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   delete newed_i1_template_class_ctor;
-  // Make sure we handle it right when we explicitly call the dtor, as well.
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
-  // IWYU: I1_TemplateClass is...*badinc-i1.h
-  // IWYU: I1_Struct is...*badinc-i1.h
-  placement_newed_i1_template_class->~I1_TemplateClass();
   // IWYU: I1_Class is...*badinc-i1.h
   delete i1_class_tpl_ctor;
   // Check that we discover constructor/destructor locations as well.
@@ -1910,7 +1860,6 @@ tests/cxx/badinc.cc should add these lines:
 #include <stdarg.h>
 #include <stddef.h>
 #include <list>
-#include <new>
 #include "tests/cxx/badinc-i1.h"
 class D2_Class;
 class D2_ForwardDeclareClass;
@@ -1943,12 +1892,11 @@ The full include-list for tests/cxx/badinc.cc:
 #include <algorithm>  // for find
 #include <fstream>  // for fstream
 #include <list>  // for list
-#include <new>  // for operator new
 #include <string>  // for basic_string, basic_string<>::iterator, operator+, string
 #include <typeinfo>  // for type_info
 #include "tests/cxx/badinc-d1.h"  // for D11, D1CopyClassFn, D1Function, D1_Class, D1_CopyClass, D1_Enum, D1_I1_Typedef, D1_StructPtr, D1_Subclass, D1_TemplateClass, D1_TemplateStructWithDefaultParam, MACRO_CALLING_I4_FUNCTION
 #include "tests/cxx/badinc-d4.h"  // for D4_ClassForOperator, operator<<
-#include "tests/cxx/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I11, I12, I13, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_Class::NestedStruct, I1_ClassPtr, I1_Enum, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClass<>::I1_TemplateClass_int, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_TypedefOnly_Class<>::i, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_i1_classptr, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns2, i1_ns4, i1_ns5, kI1ConstInt, operator==
+#include "tests/cxx/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I11, I12, I13, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_Class::NestedStruct, I1_ClassPtr, I1_Enum, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClass<>::I1_TemplateClass_int, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_TypedefOnly_Class<>::i, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns2, i1_ns4, i1_ns5, kI1ConstInt, operator==
 #include "tests/cxx/badinc2.c"
 class D2_Class;
 class D2_ForwardDeclareClass;
