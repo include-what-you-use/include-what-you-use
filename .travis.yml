@@ -1,23 +1,20 @@
 
-dist: xenial
+dist: bionic
 language: cpp
 
 addons:
   apt:
     sources:
-     - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main'
+     - sourceline: 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main'
        key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
     packages:
+     - cmake
      - ninja-build
      - llvm-dev
      - libclang-dev
      - clang
 
 before_install:
- # Install a supported cmake version (>= 3.4.3)
- - wget -O cmake.sh https://cmake.org/files/v3.16/cmake-3.16.4-Linux-x86_64.sh
- - sudo sh cmake.sh --skip-license --exclude-subdir --prefix=/usr/local
-
  # Extract the version number from the most-recently installed LLVM
  - VERSION=`ls -t /usr/lib/ | grep '^llvm-' | head -n 1 | sed -E 's/llvm-(.+)/\1/'`
 
