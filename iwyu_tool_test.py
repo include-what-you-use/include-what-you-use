@@ -310,6 +310,19 @@ class CompilationDBTests(unittest.TestCase):
         self.assertEqual('/c057f113f69311e990bf54a05050d914/foobar/Test.cpp',
                          entry['file'])
 
+    def test_unwrap_compile_command(self):
+        """ Wrapping compile commands should be unwrapped. """
+        compilation_db = {
+            'directory': '/home/user/llvm/build',
+            "command": "ccache cc -c test.c"
+        }
+
+        invocation = iwyu_tool.Invocation.from_compile_command(compilation_db, [])
+
+        self.assertEqual(
+            invocation.command,
+            [iwyu_tool.IWYU_EXECUTABLE, '-c', 'test.c'])
+
 
 if __name__ == '__main__':
     unittest.main()

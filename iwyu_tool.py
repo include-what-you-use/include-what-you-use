@@ -267,6 +267,11 @@ class Process(object):
         return cls(process, outfile)
 
 
+KNOWN_COMPILER_WRAPPERS=frozenset([
+    "ccache"
+])
+
+
 class Invocation(object):
     """ Holds arguments of an IWYU invocation. """
     def __init__(self, command, cwd):
@@ -287,6 +292,10 @@ class Invocation(object):
             command = split_command(entry['command'])
         else:
             raise ValueError('Invalid compilation database entry: %s' % entry)
+
+        if command[0] in KNOWN_COMPILER_WRAPPERS:
+            # Remove the compiler wrapper from the command.
+            command = command[1:]
 
         # Rewrite the compile command for IWYU
         compile_command, compile_args = command[0], command[1:]
