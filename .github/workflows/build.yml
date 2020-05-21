@@ -1,0 +1,81 @@
+name: Build
+
+on: [push]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          # - macOS-latest
+
+    steps:
+    # Install Dependencies
+    - name: Ubuntu Dependencies
+      if: startsWith(matrix.os,'ubuntu')
+      run: |
+          sudo apt-get install -y ninja-build
+          sudo apt-get install -y llvm-dev
+          sudo apt-get install -y libclang-dev
+
+    - name: Windows Dependencies
+      if: startsWith(matrix.os,'windows')
+      run: |
+          choco install -y ninja
+          choco install -y llvm
+
+    - name: MacOS Dependencies
+      if: startsWith(matrix.os,'macos')
+      run: |
+          brew install ninja
+
+    - name: Extract the version of Clang
+      run: |
+        echo ::set-env name=VERSION::$( clang --version | sed -n 's/^.*version *\([0-9]*.[0-9]\).*$/\1/p' )
+        echo ::set-env name=VERSION_int::$( clang --version | sed -n 's/^.*version *\([0-9]*\)..*$/\1/p' )
+
+    - name: Absolute paths to LLVM's root and bin directory
+      run: |
+        echo ::set-env name=PREFIX_PATH::$( llvm-config-$VERSION_int --prefix )
+        echo ::set-env name=BIN_PATH::$( llvm-config-$VERSION_int --bindir )
+
+    # Checkout proper Branch
+    - uses: actions/checkout@v2
+      with:
+        ref: clang_${{env.VERSION}}
+
+    - name: Create Build Directory
+      run: mkdir build
+
+    - name: Build IWYU
+      working-directory: ./build
+      run: |
+        cmake -GNinja -DCMAKE_PREFIX_PATH=$PREFIX_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
+        ninja
+
+    - name: Upload the build dir
+      uses: actions/upload-artifact@v2
+      with:
+        path: ./build
+
+    - name: Test IWYU
+      working-directory: ./build
+      run: |
+        CTEST_OUTPUT_ON_FAILURE=1 ninja test
+
+    - name: Test install
+      working-directory: ./build
+      run: |
+        ninja install
+
+    - name: Check license headers
+      run: |
+        git ls-tree --full-tree --name-only -r HEAD | xargs ./iwyu-check-license-header.py
