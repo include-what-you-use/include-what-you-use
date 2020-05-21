@@ -47,6 +47,12 @@ jobs:
         echo ::set-env name=PREFIX_PATH::$( llvm-config-$VERSION_int --prefix )
         echo ::set-env name=BIN_PATH::$( llvm-config-$VERSION_int --bindir )
 
+    - name: Windows - Absolute paths to LLVM's root and bin directory
+      if: startsWith(matrix.os,'windows')
+      run: |
+        echo ::set-env name=PREFIX_PATH::$( which clang | xargs -0 dirname | xargs -0 dirname )
+        echo ::set-env name=BIN_PATH::$( which clang | xargs -0 dirname )
+
     # Checkout proper Branch
     - uses: actions/checkout@v2
       with:
