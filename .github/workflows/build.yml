@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
+          - ubuntu-18.04
           # - windows-latest
           # - macOS-latest
 
@@ -37,11 +37,11 @@ jobs:
       if: startsWith(matrix.os,'ubuntu')
       run: |
           # llvm
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh $VERSION_int
-          sudo apt-get install -y llvm-dev
-          sudo apt-get install -y libclang-dev
+          sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-$VERSION_int main"
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-get install -y clang-$VERSION_int
+          sudo apt-get install -y llvm-$VERSION_int-dev
+          sudo apt-get install -y libclang-$VERSION_int-dev
           # ninja
           sudo apt-get install -y ninja-build
 
