@@ -51,6 +51,10 @@ jobs:
           sudo apt-get install -y libclang-$INSTALL_VERSION-dev
           # ninja
           sudo apt-get install -y ninja-build
+          # ncourses
+          if [ $VERSION_int -le 6 ]; then
+            sudo apt-get install libncurses5-dev libncursesw5-dev
+          fi
 
     - name: Windows Dependencies
       if: startsWith(matrix.os,'windows')
