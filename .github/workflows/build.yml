@@ -8,6 +8,8 @@ defaults:
 
 jobs:
   build:
+    if: "contains(github.event.head_commit.message, '[build]')"
+
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -19,6 +21,11 @@ jobs:
 
         llvm_version:
           - 10.0.0
+          - 9.0.1
+          - 8.0.1
+          - 7.1.0
+          - 6.0.1
+          - 5.0.2
 
     steps:
 
@@ -55,12 +62,6 @@ jobs:
       if: startsWith(matrix.os,'macos')
       run: |
           brew install ninja
-
-    - name: Extract the version of Clang
-      if: startsWith(matrix.os,'windows')
-      run: |
-        echo ::set-env name=VERSION::$( clang --version | sed -n 's/^.*version *\([0-9]*.[0-9]\).*$/\1/p' )
-        echo ::set-env name=VERSION_int::$( clang --version | sed -n 's/^.*version *\([0-9]*\)..*$/\1/p' )
 
     - name: Absolute paths to LLVM's root and bin directory
       run: |
@@ -103,6 +104,15 @@ jobs:
         git ls-tree --full-tree --name-only -r HEAD | xargs ./iwyu-check-license-header.py
 
     - name: Upload the build dir
+      if: always()
       uses: actions/upload-artifact@v2
       with:
         path: ./build
+
+
+  Skip:
+    if: "!contains(github.event.head_commit.message, '[build]')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip build 🚫
+        run: echo skip build
