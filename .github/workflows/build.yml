@@ -23,12 +23,13 @@ jobs:
           - 10.0.0
           - 9.0.1
           - 8.0.1
-          - 7.1.0
+          - 7.0.0 # 7.1.0 branch is missing
           - 6.0.1
           - 5.0.2
 
     steps:
 
+    # Environment variables
     - name: Set version env variables
       run: |
         echo ::set-env name=VERSION::${{ matrix.llvm_version }}
@@ -36,19 +37,24 @@ jobs:
         echo ::set-env name=VERSION_int::$( echo ${{ matrix.llvm_version }} | sed -n 's/\([0-9]*\)..*$/\1/p' )
 
     - name: Find checkout branch
-      run: |
-        echo ::set-env name=CHECKOUT_BRANCH::$( if [ $VERSION_int -ge 10 ]; then echo $VERSION_int; else echo $VERSION_float; fi )
+      run: echo ::set-env name=CHECKOUT_BRANCH::$( if [ $VERSION_int -ge 10 ]; then echo $VERSION_int; else echo $VERSION_float; fi )
+
+    - name: Find install version
+      run: echo ::set-env name=INSTALL_VERSION::$( if [ $VERSION_int -ge 7 ]; then echo $VERSION_int; else echo $VERSION_float; fi )
+
+    - name: Find build directory
+      run: echo ::set-env name=BUILD_DIR::build-$VERSION_float
 
     # Install Dependencies
     - name: Ubuntu Dependencies
       if: startsWith(matrix.os,'ubuntu')
       run: |
           # llvm
-          sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-$VERSION_int main"
+          sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-$INSTALL_VERSION main"
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-get install -y clang-$VERSION_int
-          sudo apt-get install -y llvm-$VERSION_int-dev
-          sudo apt-get install -y libclang-$VERSION_int-dev
+          sudo apt-get install -y clang-$INSTALL_VERSION
+          sudo apt-get install -y llvm-$INSTALL_VERSION-dev
+          sudo apt-get install -y libclang-$INSTALL_VERSION-dev
           # ninja
           sudo apt-get install -y ninja-build
 
@@ -65,8 +71,8 @@ jobs:
 
     - name: Absolute paths to LLVM's root and bin directory
       run: |
-        echo ::set-env name=PREFIX_PATH::$( llvm-config-$VERSION_int --prefix )
-        echo ::set-env name=BIN_PATH::$( llvm-config-$VERSION_int --bindir )
+        echo ::set-env name=PREFIX_PATH::$( llvm-config-$INSTALL_VERSION --prefix )
+        echo ::set-env name=BIN_PATH::$( llvm-config-$INSTALL_VERSION --bindir )
 
     - name: Windows - Absolute paths to LLVM's root and bin directory
       if: startsWith(matrix.os,'windows')
@@ -81,34 +87,33 @@ jobs:
         ref: clang_${{env.CHECKOUT_BRANCH}}
 
     - name: Create Build Directory
-      run: mkdir build
+      run: mkdir $BUILD_DIR
 
     - name: Build IWYU
-      working-directory: ./build
+      working-directory: ./${{env.BUILD_DIR}}
       run: |
         cmake -GNinja -DCMAKE_PREFIX_PATH=$PREFIX_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
         ninja
 
+    - name: Upload the build dir
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{env.BUILD_DIR}}
+        path: ./${{env.BUILD_DIR}}
+
     - name: Test IWYU
-      working-directory: ./build
+      working-directory: ./${{env.BUILD_DIR}}
       run: |
         CTEST_OUTPUT_ON_FAILURE=1 ninja test
 
     - name: Test install
-      working-directory: ./build
+      working-directory: ./${{env.BUILD_DIR}}
       run: |
         ninja install
 
     - name: Check license headers
       run: |
         git ls-tree --full-tree --name-only -r HEAD | xargs ./iwyu-check-license-header.py
-
-    - name: Upload the build dir
-      if: always()
-      uses: actions/upload-artifact@v2
-      with:
-        path: ./build
-
 
   Skip:
     if: "!contains(github.event.head_commit.message, '[build]')"
