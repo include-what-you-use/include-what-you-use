@@ -84,14 +84,12 @@ jobs:
         ref: clang_${{env.CHECKOUT_BRANCH}}
 
     # Build dir
-    - name: Find build directory
-      run: echo ::set-env name=BUILD_DIR::build-$VERSION_float
     - name: Create Build Directory
-      run: mkdir $BUILD_DIR
+      run: mkdir build
 
     # Build
     - name: Build IWYU
-      working-directory: ./${{env.BUILD_DIR}}
+      working-directory: ./build
       run: |
         if [ $VERSION_int -ge 7 ]; then
           cmake -GNinja -DCMAKE_PREFIX_PATH=$PREFIX_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ $EXTRA_FLAGS ../
@@ -103,11 +101,11 @@ jobs:
     - name: Upload the build dir
       uses: actions/upload-artifact@v2
       with:
-        name: ${{env.BUILD_DIR}}
-        path: ./${{env.BUILD_DIR}}
+        name: build_${{env.VERSION_float}}
+        path: ./build
 
     - name: Test IWYU
-      working-directory: ./${{env.BUILD_DIR}}
+      working-directory: ./build
       run: |
         if [ $VERSION_int -ge 9 ]; then
           CTEST_OUTPUT_ON_FAILURE=1 ninja test
@@ -123,7 +121,7 @@ jobs:
         fi
 
     - name: Test install
-      working-directory: ./${{env.BUILD_DIR}}
+      working-directory: ./build
       run: |
         ninja install
 
