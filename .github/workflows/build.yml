@@ -36,14 +36,8 @@ jobs:
         echo ::set-env name=VERSION_float::$( echo ${{ matrix.llvm_version }} | sed -n 's/\([0-9]*.[0-9]\)..*$/\1/p' )
         echo ::set-env name=VERSION_int::$( echo ${{ matrix.llvm_version }} | sed -n 's/\([0-9]*\)..*$/\1/p' )
 
-    - name: Find checkout branch
-      run: echo ::set-env name=CHECKOUT_BRANCH::$( if [ $VERSION_int -ge 10 ]; then echo $VERSION_int; else echo $VERSION_float; fi )
-
     - name: Find install version
       run: echo ::set-env name=INSTALL_VERSION::$( if [ $VERSION_int -ge 7 ]; then echo $VERSION_int; else echo $VERSION_float; fi )
-
-    - name: Find build directory
-      run: echo ::set-env name=BUILD_DIR::build-$VERSION_float
 
     # Install Dependencies
     - name: Ubuntu Dependencies
@@ -69,6 +63,7 @@ jobs:
       run: |
           brew install ninja
 
+    # LLVM Path
     - name: Absolute paths to LLVM's root and bin directory
       run: |
         echo ::set-env name=PREFIX_PATH::$( llvm-config-$INSTALL_VERSION --prefix )
@@ -81,19 +76,29 @@ jobs:
         echo ::set-env name=BIN_PATH::$( which clang | xargs -0 dirname )
 
     # Checkout proper Branch
+    - name: Find checkout branch
+      run: echo ::set-env name=CHECKOUT_BRANCH::$( if [ $VERSION_int -ge 10 ]; then echo $VERSION_int; else echo $VERSION_float; fi )
     - name: checkout branch
       uses: actions/checkout@v2
       with:
         ref: clang_${{env.CHECKOUT_BRANCH}}
 
+    # Build dir
+    - name: Find build directory
+      run: echo ::set-env name=BUILD_DIR::build-$VERSION_float
     - name: Create Build Directory
       run: mkdir $BUILD_DIR
 
+    # Build
     - name: Build IWYU
       working-directory: ./${{env.BUILD_DIR}}
       run: |
-        cmake -GNinja -DCMAKE_PREFIX_PATH=$PREFIX_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
-        ninja
+        if [ $VERSION_int -ge 7 ]; then
+          cmake -GNinja -DCMAKE_PREFIX_PATH=$PREFIX_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ $EXTRA_FLAGS ../
+          ninja
+        elif [ $VERSION_int -ge 5 ]; then
+          cmake -GNinja -DIWYU_LLVM_ROOT_PATH=$PREFIX_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
+        fi
 
     - name: Upload the build dir
       uses: actions/upload-artifact@v2
@@ -104,7 +109,18 @@ jobs:
     - name: Test IWYU
       working-directory: ./${{env.BUILD_DIR}}
       run: |
-        CTEST_OUTPUT_ON_FAILURE=1 ninja test
+        if [ $VERSION_int -ge 9 ]; then
+          CTEST_OUTPUT_ON_FAILURE=1 ninja test
+        elif [ $VERSION_int -ge 7 ]; then
+          cd ..
+          python run_iwyu_tests.py -- build/bin/include-what-you-use
+          python fix_includes_test.py
+          python iwyu_tool_test.py
+        elif [ $VERSION_int -ge 5 ]; then
+          cd ..
+          python run_iwyu_tests.py -- build/bin/include-what-you-use
+          python fix_includes_test.py
+        fi
 
     - name: Test install
       working-directory: ./${{env.BUILD_DIR}}
@@ -113,7 +129,9 @@ jobs:
 
     - name: Check license headers
       run: |
-        git ls-tree --full-tree --name-only -r HEAD | xargs ./iwyu-check-license-header.py
+        if [ $VERSION_int -ge 10 ]; then
+          git ls-tree --full-tree --name-only -r HEAD | xargs ./iwyu-check-license-header.py
+        fi
 
   Skip:
     if: "!contains(github.event.head_commit.message, '[build]')"
