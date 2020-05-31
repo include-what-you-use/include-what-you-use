@@ -1,5 +1,5 @@
 # Instructions for Developers #
-
+ 
 ## Submitting Patches ##
 
 We welcome patches and rely on your contributions to make IWYU smarter.
