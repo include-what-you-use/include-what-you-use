@@ -17,21 +17,39 @@ jobs:
           # - windows-latest
           # - macOS-latest
 
+        llvm_version:
+          - 10.0.0
+
     steps:
+
+    - name: Set version env variables
+      run: |
+        echo ::set-env name=VERSION::${{ matrix.llvm_version }}
+        echo ::set-env name=VERSION_float::$( echo ${{ matrix.llvm_version }} | sed -n 's/\([0-9]*.[0-9]\)..*$/\1/p' )
+        echo ::set-env name=VERSION_int::$( echo ${{ matrix.llvm_version }} | sed -n 's/\([0-9]*\)..*$/\1/p' )
+
+    - name: Find checkout branch
+      run: |
+        echo ::set-env name=CHECKOUT_BRANCH::$( if [ $VERSION_int -ge 10 ]; then echo $VERSION_int; else echo $VERSION_float; fi )
+
     # Install Dependencies
     - name: Ubuntu Dependencies
       if: startsWith(matrix.os,'ubuntu')
       run: |
-          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
-          sudo apt-get install -y ninja-build
+          # llvm
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh $VERSION_int
           sudo apt-get install -y llvm-dev
           sudo apt-get install -y libclang-dev
+          # ninja
+          sudo apt-get install -y ninja-build
 
     - name: Windows Dependencies
       if: startsWith(matrix.os,'windows')
       run: |
           choco install -y ninja
-          choco install -y llvm
+          choco install -y llvm --version=$VERSION
 
     - name: MacOS Dependencies
       if: startsWith(matrix.os,'macos')
@@ -39,6 +57,7 @@ jobs:
           brew install ninja
 
     - name: Extract the version of Clang
+      if: startsWith(matrix.os,'windows')
       run: |
         echo ::set-env name=VERSION::$( clang --version | sed -n 's/^.*version *\([0-9]*.[0-9]\).*$/\1/p' )
         echo ::set-env name=VERSION_int::$( clang --version | sed -n 's/^.*version *\([0-9]*\)..*$/\1/p' )
@@ -55,9 +74,10 @@ jobs:
         echo ::set-env name=BIN_PATH::$( which clang | xargs -0 dirname )
 
     # Checkout proper Branch
-    - uses: actions/checkout@v2
+    - name: checkout branch
+      uses: actions/checkout@v2
       with:
-        ref: clang_${{env.VERSION}}
+        ref: clang_${{env.CHECKOUT_BRANCH}}
 
     - name: Create Build Directory
       run: mkdir build
@@ -81,7 +101,7 @@ jobs:
     - name: Check license headers
       run: |
         git ls-tree --full-tree --name-only -r HEAD | xargs ./iwyu-check-license-header.py
-        
+
     - name: Upload the build dir
       uses: actions/upload-artifact@v2
       with:
