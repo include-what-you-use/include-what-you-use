@@ -14,7 +14,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - windows-latest
+          # - windows-latest
           # - macOS-latest
 
     steps:
@@ -22,6 +22,7 @@ jobs:
     - name: Ubuntu Dependencies
       if: startsWith(matrix.os,'ubuntu')
       run: |
+          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt-get install -y ninja-build
           sudo apt-get install -y llvm-dev
           sudo apt-get install -y libclang-dev
@@ -67,11 +68,6 @@ jobs:
         cmake -GNinja -DCMAKE_PREFIX_PATH=$PREFIX_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
         ninja
 
-    - name: Upload the build dir
-      uses: actions/upload-artifact@v2
-      with:
-        path: ./build
-
     - name: Test IWYU
       working-directory: ./build
       run: |
@@ -85,3 +81,8 @@ jobs:
     - name: Check license headers
       run: |
         git ls-tree --full-tree --name-only -r HEAD | xargs ./iwyu-check-license-header.py
+        
+    - name: Upload the build dir
+      uses: actions/upload-artifact@v2
+      with:
+        path: ./build
