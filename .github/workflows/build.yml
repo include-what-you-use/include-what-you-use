@@ -40,7 +40,7 @@ jobs:
       run: echo ::set-env name=INSTALL_VERSION::$( if [ $VERSION_int -ge 7 ]; then echo $VERSION_int; else echo $VERSION_float; fi )
 
     # Install Dependencies
-    - name: Ubuntu Dependencies
+    - name: Ubuntu dependencies
       if: startsWith(matrix.os,'ubuntu')
       run: |
           # llvm
@@ -56,13 +56,13 @@ jobs:
             sudo apt-get install libncurses5-dev libncursesw5-dev
           fi
 
-    - name: Windows Dependencies
+    - name: Windows dependencies
       if: startsWith(matrix.os,'windows')
       run: |
           choco install -y ninja
           choco install -y llvm --version=$VERSION
 
-    - name: MacOS Dependencies
+    - name: MacOS dependencies
       if: startsWith(matrix.os,'macos')
       run: |
           brew install ninja
@@ -82,13 +82,13 @@ jobs:
     # Checkout proper Branch
     - name: Find checkout branch
       run: echo ::set-env name=CHECKOUT_BRANCH::$( if [ $VERSION_int -ge 10 ]; then echo $VERSION_int; else echo $VERSION_float; fi )
-    - name: checkout branch
+    - name: Checkout branch
       uses: actions/checkout@v2
       with:
         ref: clang_${{env.CHECKOUT_BRANCH}}
 
     # Build dir
-    - name: Create Build Directory
+    - name: Create build directory
       run: mkdir build
 
     # Build
