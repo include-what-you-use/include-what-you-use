@@ -3044,6 +3044,8 @@ class InstantiatedTemplateVisitor
 
   bool TraverseTemplateSpecializationTypeLoc(
       TemplateSpecializationTypeLoc typeloc) {
+    if (!CanIgnoreCurrentASTNode())
+      ReportTypeUse({}, typeloc.getTypePtr());
     if (!Base::TraverseTemplateSpecializationTypeLoc(typeloc))  return false;
     return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
   }
