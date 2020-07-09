@@ -25,6 +25,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDumper.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -46,6 +47,7 @@ namespace clang {
 class FileEntry;
 }  // namespace clang
 
+using clang::ASTDumper;
 using clang::BlockPointerType;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
@@ -450,12 +452,14 @@ string PrintableDecl(const Decl* decl, bool terse/*=true*/) {
 string PrintableStmt(const Stmt* stmt) {
   std::string buffer;
   raw_string_ostream ostream(buffer);
-  stmt->dump(ostream, *GlobalSourceManager());
+  ASTDumper dumper(ostream, /*ShowColors=*/false);
+  dumper.Visit(stmt);
   return ostream.str();
 }
 
 void PrintStmt(const Stmt* stmt) {
-  stmt->dump(*GlobalSourceManager());  // This prints to errs().
+  ASTDumper dumper(llvm::errs(), /*ShowColors=*/false);
+  dumper.Visit(stmt);
 }
 
 string PrintableType(const Type* type) {
