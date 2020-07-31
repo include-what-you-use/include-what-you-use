@@ -549,32 +549,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   //
   //    * CXXDestructorDecl: a destructor call for each non-POD field
   //      in the dtor's class, and each base type of that class.
-  //    * CXXConstructorDecl: a constructor call for each type/base
-  //      of the class that is not explicitly listed in an initializer.
   //    * CXXRecordDecl: a CXXConstructorDecl for each implicit
   //      constructor (zero-arg and copy).  A CXXDestructor decl
   //      if the destructor is implicit.  A CXXOperatorCallDecl if
   //      operator= is explicit.
-
-  bool TraverseCXXConstructorDecl(clang::CXXConstructorDecl* decl) {
-    if (!Base::TraverseCXXConstructorDecl(decl))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
-    // We only care about classes that are actually defined.
-    if (!decl || !decl->isThisDeclarationADefinition())  return true;
-
-    // RAV's TraverseCXXConstructorDecl already handles
-    // explicitly-written initializers, so we just want the rest.
-    for (CXXConstructorDecl::init_const_iterator it = decl->init_begin();
-         it != decl->init_end(); ++it) {
-      const CXXCtorInitializer* init = *it;
-      if (!init->isWritten()) {
-        if (!this->getDerived().TraverseStmt(init->getInit()))
-          return false;
-      }
-    }
-    return true;
-  }
-
   bool TraverseCXXDestructorDecl(clang::CXXDestructorDecl* decl) {
     if (!Base::TraverseCXXDestructorDecl(decl))  return false;
     if (CanIgnoreCurrentASTNode())  return true;
@@ -655,70 +633,15 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     sema.PerformPendingInstantiations();
   }
 
-  // clang doesn't bother to set a TypeSourceInfo for implicit
-  // methods, since, well, they don't have a location.  But
-  // RecursiveASTVisitor crashes without one, so when we lie and say
-  // we're not implicit, we have to lie and give a location as well.
-  // (We give the null location.)  This is a small memory leak.
-  void SetTypeSourceInfoForImplicitMethodIfNeeded(FunctionDecl* decl) {
-    if (decl->getTypeSourceInfo() == nullptr) {
-      ASTContext& ctx = compiler_->getASTContext();
-      decl->setTypeSourceInfo(ctx.getTrivialTypeSourceInfo(decl->getType()));
-    }
-  }
-
-  // RAV.h's TraverseDecl() ignores implicit nodes, so we lie a bit.
-  // TODO(csilvers): figure out a more principled way.
-  bool TraverseImplicitDeclHelper(clang::FunctionDecl* decl) {
-    CHECK_(decl->isImplicit() && "TraverseImplicitDecl is for implicit decls");
-    decl->setImplicit(false);
-    SetTypeSourceInfoForImplicitMethodIfNeeded(decl);
-    bool retval = this->getDerived().TraverseDecl(decl);
-    decl->setImplicit(true);
-    return retval;
-  }
-
   // Handle implicit methods that otherwise wouldn't be seen by RAV.
   bool TraverseCXXRecordDecl(clang::CXXRecordDecl* decl) {
-    if (!Base::TraverseCXXRecordDecl(decl))  return false;
     if (CanIgnoreCurrentASTNode()) return true;
     // We only care about classes that are actually defined.
-    if (!decl || !decl->isThisDeclarationADefinition())  return true;
-
-    InstantiateImplicitMethods(decl);
-
-    // Check to see if there are any implicit constructors.  Can be
-    // several: implicit default constructor, implicit copy constructor.
-    for (CXXRecordDecl::ctor_iterator it = decl->ctor_begin();
-         it != decl->ctor_end(); ++it) {
-      CXXConstructorDecl* ctor = *it;
-      if (ctor->isImplicit() && !ctor->isDeleted()) {
-        if (!TraverseImplicitDeclHelper(ctor))
-          return false;
-      }
+    if (decl && decl->isThisDeclarationADefinition()) {
+      InstantiateImplicitMethods(decl);
     }
 
-    // Check the (single) destructor.
-    bool has_implicit_declared_destructor =
-        (!decl->needsImplicitDestructor() &&
-         !decl->hasUserDeclaredDestructor());
-    if (has_implicit_declared_destructor) {
-      if (!TraverseImplicitDeclHelper(decl->getDestructor()))
-        return false;
-    }
-
-    // Check copy and move assignment operators.
-    for (CXXRecordDecl::method_iterator it = decl->method_begin();
-         it != decl->method_end(); ++it) {
-      bool is_assignment_operator =
-          it->isCopyAssignmentOperator() || it->isMoveAssignmentOperator();
-      if (is_assignment_operator && it->isImplicit()) {
-        if (!TraverseImplicitDeclHelper(*it))
-          return false;
-      }
-    }
-
-    return true;
+    return Base::TraverseCXXRecordDecl(decl);
   }
 
   bool TraverseClassTemplateSpecializationDecl(
@@ -932,6 +855,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     return true;
   }
 
+  /// Return whether this visitor should recurse into implicit
+  /// code, e.g., implicit constructors and destructors.
+  bool shouldVisitImplicitCode() const {
+    return true;
+  }
+
  protected:
   CompilerInstance* compiler() { return compiler_; }
 
@@ -1054,15 +983,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
     CHECK_(seen_nodes_.empty() && "Nodes should be clear before GetNodesBelow");
     NodeSet* node_set = &nodeset_decl_cache_[decl];
     if (node_set->empty()) {
-      if (decl->isImplicit()) {
-        // TODO: For now, it is only working for functions. Check if it could
-        // make sense for other implicit decls too (e.g. BuiltinTemplateDecl)
-        if (FunctionDecl* func = DynCastFrom(decl)) {
-          TraverseImplicitDeclHelper(func);
-        }
-      } else {
-        TraverseDecl(decl);
-      }
+      TraverseDecl(decl);
       swap(*node_set, seen_nodes_);  // move the seen_nodes_ into the cache
     }
     return *node_set;                // returns the cache entry
@@ -3427,15 +3348,9 @@ class InstantiatedTemplateVisitor
       nodes_to_ignore_.AddAll(nodeset_getter.GetNodesBelow(daw));
     }
 
-    // We need to iterate over the function.  We do so even if it's
-    // an implicit function.
-    if (fn_decl->isImplicit()) {
-      if (!TraverseImplicitDeclHelper(const_cast<FunctionDecl*>(fn_decl)))
-        return false;
-    } else {
-      if (!TraverseDecl(const_cast<FunctionDecl*>(fn_decl)))
-        return false;
-    }
+    // We need to iterate over the function.
+    if (!TraverseDecl(const_cast<FunctionDecl*>(fn_decl)))
+      return false;
 
     // If we're a constructor, we also need to construct the entire class,
     // even typedefs that aren't used at construct time. Try compiling
@@ -3878,6 +3793,10 @@ class IwyuAstConsumer
 
   bool VisitTagDecl(clang::TagDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
+
+    // Skip the injected class name.
+    if (decl->isImplicit())
+      return Base::VisitTagDecl(decl);
 
     if (IsForwardDecl(decl)) {
       // If we're a templated class, make sure we add the whole template.
