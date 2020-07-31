@@ -771,8 +771,6 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
         !IsCXXConstructExprInInitializer(current_ast_node()) &&
         !IsCXXConstructExprInNewExpr(current_ast_node());
     if (will_call_implicit_destructor_on_leaving_scope) {
-      // Create the destructor if it hasn't been lazily created yet.
-      InstantiateImplicitMethods(expr->getConstructor()->getParent());
       if (const CXXDestructorDecl* dtor_decl = GetSiblingDestructorFor(expr)) {
         if (!this->getDerived().TraverseImplicitDestructorCall(
                 const_cast<CXXDestructorDecl*>(dtor_decl), GetTypeOf(expr)))
@@ -787,7 +785,6 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())  return true;
 
     // In this case, we *know* we're responsible for destruction as well.
-    InstantiateImplicitMethods(expr->getConstructor()->getParent());
     CXXConstructorDecl* ctor_decl = expr->getConstructor();
     CXXDestructorDecl* dtor_decl =
         const_cast<CXXDestructorDecl*>(GetSiblingDestructorFor(expr));
