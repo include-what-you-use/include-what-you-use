@@ -533,17 +533,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 
   //------------------------------------------------------------
   // (4) Add implicit text.
-
-  // When we see an object that has implicit text that iwyu
-  // wants to look at, we make callbacks as if that text had
-  // been explicitly written.  Here's text we consider:
   //
-  //    * CXXDestructorDecl: a destructor call for each non-POD field
-  //      in the dtor's class, and each base type of that class.
-  //    * CXXRecordDecl: a CXXConstructorDecl for each implicit
-  //      constructor (zero-arg and copy).  A CXXDestructor decl
-  //      if the destructor is implicit.  A CXXOperatorCallDecl if
-  //      operator= is explicit.
+  // This simulates a call to the destructor of every non-POD field and base
+  // class in all classes with destructors, to mark them as used by virtue of
+  // being class members.
   bool TraverseCXXDestructorDecl(clang::CXXDestructorDecl* decl) {
     if (!Base::TraverseCXXDestructorDecl(decl))  return false;
     if (CanIgnoreCurrentASTNode())  return true;
@@ -576,69 +569,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     return true;
   }
 
-  // clang lazily constructs the implicit methods of a C++ class (the
-  // default constructor and destructor, etc) -- it only bothers to
-  // create a CXXMethodDecl if someone actually calls these classes.
-  // But we need to be non-lazy: iwyu depends on analyzing what future
-  // code *may* call in a class, not what current code *does*.  So we
-  // force all the lazy evaluation to happen here.  This will
-  // (possibly) add a bunch of MethodDecls to the AST, as children of
-  // decl.  We're hoping it will always be safe to modify the AST
-  // while it's being traversed!
-  void InstantiateImplicitMethods(CXXRecordDecl* decl) {
-    if (decl->isDependentType())   // only instantiate if class is instantiated
-      return;
-
-    Sema& sema = compiler()->getSema();
-    DeclContext::lookup_result ctors = sema.LookupConstructors(decl);
-    for (NamedDecl* ctor_lookup : ctors) {
-      // Ignore templated or inheriting constructors.
-      if (isa<FunctionTemplateDecl>(ctor_lookup) ||
-          isa<UsingDecl>(ctor_lookup) ||
-          isa<ConstructorUsingShadowDecl>(ctor_lookup))
-        continue;
-      CXXConstructorDecl* ctor = cast<CXXConstructorDecl>(ctor_lookup);
-      if (!ctor->hasBody() && !ctor->isDeleted() && ctor->isImplicit()) {
-        if (sema.getSpecialMember(ctor) == Sema::CXXDefaultConstructor) {
-          sema.DefineImplicitDefaultConstructor(CurrentLoc(), ctor);
-        } else {
-          // TODO(nlewycky): enable this!
-          //sema.DefineImplicitCopyConstructor(CurrentLoc(), ctor);
-        }
-      }
-      // Unreferenced template constructors stay uninstantiated on purpose.
-    }
-
-    if (CXXDestructorDecl* dtor = sema.LookupDestructor(decl)) {
-      if (!dtor->isDeleted()) {
-        if (!dtor->hasBody() && dtor->isImplicit())
-          sema.DefineImplicitDestructor(CurrentLoc(), dtor);
-        if (!dtor->isDefined() && dtor->getTemplateInstantiationPattern())
-          sema.PendingInstantiations.emplace_back(dtor, CurrentLoc());
-      }
-    }
-
-    // TODO(nlewycky): copy assignment operator
-
-    // clang queues up method instantiations.  We need to process them now.
-    sema.PerformPendingInstantiations();
-  }
-
-  // Handle implicit methods that otherwise wouldn't be seen by RAV.
-  bool TraverseCXXRecordDecl(clang::CXXRecordDecl* decl) {
-    if (CanIgnoreCurrentASTNode()) return true;
-    // We only care about classes that are actually defined.
-    if (decl && decl->isThisDeclarationADefinition()) {
-      InstantiateImplicitMethods(decl);
-    }
-
-    return Base::TraverseCXXRecordDecl(decl);
-  }
-
+  // Class template specialization are similar to regular C++ classes,
+  // particularly they need the same custom handling of implicit destructors.
   bool TraverseClassTemplateSpecializationDecl(
       clang::ClassTemplateSpecializationDecl* decl) {
     if (!Base::TraverseClassTemplateSpecializationDecl(decl)) return false;
-    return TraverseCXXRecordDecl(decl);
+    return Base::TraverseCXXRecordDecl(decl);
   }
 
   //------------------------------------------------------------
@@ -3664,6 +3600,14 @@ class IwyuAstConsumer
     // templates.
     ParseFunctionTemplates(tu_decl);
 
+    // Clang lazily constructs the implicit methods of a C++ class (the
+    // default constructor and destructor, etc) -- it only bothers to
+    // create a CXXMethodDecl if someone actually calls these classes.
+    // But we need to be non-lazy: IWYU depends on analyzing what future
+    // code *may* call in a class, not what current code *does*.  So we
+    // force all the lazy evaluation to happen here.
+    InstantiateImplicitMethods(tu_decl);
+
     // Run IWYU analysis.
     TraverseDecl(tu_decl);
 
@@ -3733,6 +3677,80 @@ class IwyuAstConsumer
       clang::LateParsedTemplate* lpt = sema.LateParsedTemplateMap[fd].get();
       sema.LateTemplateParser(sema.OpaqueParser, *lpt);
     }
+  }
+
+  void InstantiateImplicitMethods(TranslationUnitDecl* tu_decl) {
+    // Collect all implicit ctors/dtors that need to be instantiated.
+    struct Visitor : public RecursiveASTVisitor<Visitor> {
+      Visitor(Sema& sema) : sema(sema) {
+      }
+
+      bool VisitCXXRecordDecl(CXXRecordDecl* decl) {
+        if (CanIgnoreLocation(GetLocation(decl)))
+          return true;
+
+        if (!decl->isThisDeclarationADefinition() || decl->isDependentType())
+          return true;
+
+        // Collect all implicit constructors.
+        for (NamedDecl* ctor_lookup : sema.LookupConstructors(decl)) {
+          // Ignore templated or inheriting constructors.
+          if (isa<FunctionTemplateDecl>(ctor_lookup) ||
+              isa<UsingDecl>(ctor_lookup) ||
+              isa<ConstructorUsingShadowDecl>(ctor_lookup)) {
+            continue;
+          }
+
+          auto* ctor = cast<CXXConstructorDecl>(ctor_lookup);
+          if (ctor->isImplicit() && !ctor->isDeleted() && !ctor->hasBody()) {
+            may_need_definition.insert(ctor);
+          }
+        }
+
+        // Collect implicit destructor.
+        if (CXXDestructorDecl* dtor = sema.LookupDestructor(decl)) {
+          // Destructors can either be plain implicitly-generated or
+          // uninstantiated templates. Consider both.
+          if (!dtor->isDeleted() && (dtor->isImplicit() && !dtor->hasBody()) ||
+              (dtor->getTemplateInstantiationPattern() && !dtor->isDefined())) {
+            may_need_definition.insert(dtor);
+          }
+        }
+
+        return true;
+      }
+
+      Sema& sema;
+      std::set<CXXMethodDecl*> may_need_definition;
+    };
+
+    // Run visitor to collect implicit methods.
+    Sema& sema = compiler()->getSema();
+    Visitor v(sema);
+    v.TraverseDecl(tu_decl);
+
+    // For each method collected, let Sema define them.
+    for (CXXMethodDecl* method : v.may_need_definition) {
+      SourceLocation loc = GetLocation(method->getParent());
+
+      if (auto* ctor = dyn_cast<CXXConstructorDecl>(method)) {
+        if (sema.getSpecialMember(ctor) == Sema::CXXDefaultConstructor) {
+          sema.DefineImplicitDefaultConstructor(loc, ctor);
+        } else {
+          // TODO: Consider other ctor kinds?
+        }
+      }
+
+      if (auto* dtor = dyn_cast<CXXDestructorDecl>(method)) {
+        if (!dtor->hasBody() && dtor->isImplicit())
+          sema.DefineImplicitDestructor(loc, dtor);
+        if (!dtor->isDefined() && dtor->getTemplateInstantiationPattern())
+          sema.PendingInstantiations.emplace_back(dtor, loc);
+      }
+    }
+
+    // Clang queues up method instantiations. Process them now.
+    sema.PerformPendingInstantiations();
   }
 
   //------------------------------------------------------------
