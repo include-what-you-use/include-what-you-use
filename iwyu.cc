@@ -89,7 +89,6 @@
 
 #include <algorithm>                    // for swap, find, make_pair
 #include <cstddef>                      // for size_t
-#include <cstdio>                       // for snprintf
 #include <cstdlib>                      // for atoi, exit
 #include <cstring>
 #include <deque>                        // for swap
@@ -231,12 +230,6 @@ using std::swap;
 using std::vector;
 
 namespace {
-
-string IntToString(int i) {
-  char buf[64];   // big enough for any number
-  snprintf(buf, sizeof(buf), "%d", i);
-  return buf;
-}
 
 bool CanIgnoreLocation(SourceLocation loc) {
   // If we're in a macro expansion, we always want to treat this as
@@ -451,7 +444,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // etc.
   string AnnotatedName(const string& name) const {
     return (PrintableCurrentLoc() + ": (" +
-            IntToString(current_ast_node_->depth()) + GetSymbolAnnotation() +
+            std::to_string(current_ast_node_->depth()) + GetSymbolAnnotation() +
             (current_ast_node_->in_forward_declare_context() ?
              ", fwd decl" : "") +
             ") [ " + name + " ] ");
