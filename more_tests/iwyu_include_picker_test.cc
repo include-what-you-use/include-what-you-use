@@ -13,7 +13,6 @@
 #include "iwyu_include_picker.h"
 
 #include <stddef.h>
-#include <stdio.h>
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -36,27 +35,21 @@ namespace include_what_you_use {
 
 namespace {
 
-string IntToString(int i) {
-  char buf[64];   // big enough for any number
-  snprintf(buf, sizeof(buf), "%d", i);
-  return buf;
-}
-
 // Returns a string representing the first element where actual (a vector),
 // and expected (an array) differ, or "" if they're identical.
 template <size_t kCount> string VectorDiff(const string (&expected)[kCount],
                                            const vector<string>& actual) {
   for (int i = 0; i < std::min(kCount, actual.size()); ++i) {
     if (expected[i] != actual[i]) {
-      return ("Differ at #" + IntToString(i) + ": expected=" + expected[i] +
+      return ("Differ at #" + std::to_string(i) + ": expected=" + expected[i] +
               ", actual=" + actual[i]);
     }
   }
   if (kCount < actual.size()) {
-    return ("Differ at #" + IntToString(kCount) +
+    return ("Differ at #" + std::to_string(kCount) +
             ": expected at EOF, actual=" + actual[kCount]);
   } else if (actual.size() < kCount) {
-    return ("Differ at #" + IntToString(kCount) + ": expected=" +
+    return ("Differ at #" + std::to_string(kCount) + ": expected=" +
             expected[actual.size()] + ", actual at EOF");
   } else {
     return "";
