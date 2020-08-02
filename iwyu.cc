@@ -324,6 +324,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;               // avoid recursion
     ASTNode node(decl, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName(string(decl->getDeclKindName()) + "Decl")
+             << PrintablePtr(decl) << PrintableDecl(decl) << "\n";
+    }
+
     return Base::TraverseDecl(decl);
   }
 
@@ -332,6 +338,13 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;               // avoid recursion
     ASTNode node(stmt, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName(stmt->getStmtClassName()) << PrintablePtr(stmt);
+      PrintStmt(stmt);
+      errs() << "\n";
+    }
+
     return Base::TraverseStmt(stmt);
   }
 
@@ -343,6 +356,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;               // avoid recursion
     ASTNode node(type, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName(string(type->getTypeClassName()) + "Type")
+             << PrintablePtr(type) << PrintableType(type) << "\n";
+    }
+
     return Base::TraverseType(qualtype);
   }
 
@@ -367,6 +386,13 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;               // avoid recursion
     ASTNode node(&typeloc, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName(string(typeloc.getTypePtr()->getTypeClassName())
+                              + "TypeLoc")
+             << PrintableTypeLoc(typeloc) << "\n";
+    }
+
     return Base::TraverseTypeLoc(typeloc);
   }
 
@@ -375,6 +401,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
     ASTNode node(nns, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName("NestedNameSpecifier")
+             << PrintablePtr(nns) << PrintableNestedNameSpecifier(nns) << "\n";
+    }
+
     if (!this->getDerived().VisitNestedNameSpecifier(nns))
       return false;
     return Base::TraverseNestedNameSpecifier(nns);
@@ -385,9 +417,15 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
     ASTNode node(&nns_loc, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+
+    NestedNameSpecifier* nns = nns_loc.getNestedNameSpecifier();
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName("NestedNameSpecifierLoc")
+             << PrintablePtr(nns) << PrintableNestedNameSpecifier(nns) << "\n";
+    }
+
     // TODO(csilvers): have VisitNestedNameSpecifierLoc instead.
-    if (!this->getDerived().VisitNestedNameSpecifier(
-            nns_loc.getNestedNameSpecifier()))
+    if (!this->getDerived().VisitNestedNameSpecifier(nns))
       return false;
     return Base::TraverseNestedNameSpecifierLoc(nns_loc);
   }
@@ -395,6 +433,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   bool TraverseTemplateName(TemplateName template_name) {
     ASTNode node(&template_name, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName("TemplateName")
+             << PrintableTemplateName(template_name) << "\n";
+    }
+
     if (!this->getDerived().VisitTemplateName(template_name))
       return false;
     return Base::TraverseTemplateName(template_name);
@@ -403,6 +447,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   bool TraverseTemplateArgument(const TemplateArgument& arg) {
     ASTNode node(&arg, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName("TemplateArgument")
+             << PrintablePtr(&arg) << PrintableTemplateArgument(arg) << "\n";
+    }
+
     if (!this->getDerived().VisitTemplateArgument(arg))
       return false;
     return Base::TraverseTemplateArgument(arg);
@@ -411,6 +461,13 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc& argloc) {
     ASTNode node(&argloc, *GlobalSourceManager());
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName("TemplateArgumentLoc")
+             << PrintablePtr(&argloc) << PrintableTemplateArgumentLoc(argloc)
+             << "\n";
+    }
+
     if (!this->getDerived().VisitTemplateArgumentLoc(argloc))
       return false;
     return Base::TraverseTemplateArgumentLoc(argloc);
@@ -462,74 +519,21 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     return "";
   }
 
-  // The top-level Decl class.  All Decls call this visitor (in
-  // addition to any more-specific visitors that apply for a
-  // particular decl).
-  bool VisitDecl(clang::Decl* decl) {
-    if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName(string(decl->getDeclKindName()) + "Decl")
-             << PrintablePtr(decl) << PrintableDecl(decl) << "\n";
-    }
-    return true;
-  }
-
-  bool VisitStmt(clang::Stmt* stmt) {
-    if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName(stmt->getStmtClassName()) << PrintablePtr(stmt);
-      PrintStmt(stmt);
-      errs() << "\n";
-    }
-    return true;
-  }
-
-  bool VisitType(clang::Type* type) {
-    if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName(string(type->getTypeClassName()) + "Type")
-             << PrintablePtr(type) << PrintableType(type) << "\n";
-    }
-    return true;
-  }
-
-  // Make sure our logging message shows we're in the TypeLoc hierarchy.
-  bool VisitTypeLoc(clang::TypeLoc typeloc) {
-    if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName(string(typeloc.getTypePtr()->getTypeClassName())
-                              + "TypeLoc")
-             << PrintableTypeLoc(typeloc) << "\n";
-    }
-    return true;
-  }
-
+  // Custom Visit methods for nodes not strictly part of the AST, but still
+  // useful to traverse and visit.
   bool VisitNestedNameSpecifier(NestedNameSpecifier* nns) {
-    if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName("NestedNameSpecifier")
-             << PrintablePtr(nns) << PrintableNestedNameSpecifier(nns) << "\n";
-    }
     return true;
   }
 
   bool VisitTemplateName(TemplateName template_name) {
-    if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName("TemplateName")
-             << PrintableTemplateName(template_name) << "\n";
-    }
     return true;
   }
 
   bool VisitTemplateArgument(const TemplateArgument& arg) {
-    if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName("TemplateArgument")
-             << PrintablePtr(&arg) << PrintableTemplateArgument(arg) << "\n";
-    }
     return true;
   }
 
   bool VisitTemplateArgumentLoc(const TemplateArgumentLoc& argloc) {
-    if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName("TemplateArgumentLoc")
-             << PrintablePtr(&argloc) << PrintableTemplateArgumentLoc(argloc)
-             << "\n";
-    }
     return true;
   }
 
