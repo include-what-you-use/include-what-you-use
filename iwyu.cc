@@ -3657,11 +3657,14 @@ class IwyuAstConsumer
     const_cast<IwyuPreprocessorInfo*>(&preprocessor_info())->
         HandlePreprocessingDone();
 
+    TranslationUnitDecl* tu_decl = context.getTranslationUnitDecl();
+
     // We run a separate pass to force parsing of late-parsed function
     // templates.
-    ParseFunctionTemplates(context.getTranslationUnitDecl());
+    ParseFunctionTemplates(tu_decl);
 
-    TraverseDecl(context.getTranslationUnitDecl());
+    // Run IWYU analysis.
+    TraverseDecl(tu_decl);
 
     // Check if any unrecoverable errors have occurred.
     // There is no point in continuing when the AST is in a bad state.
@@ -3706,8 +3709,8 @@ class IwyuAstConsumer
     exit(EXIT_SUCCESS_OFFSET + num_edits);
   }
 
-  void ParseFunctionTemplates(TranslationUnitDecl* decl) {
-    set<FunctionDecl*> late_parsed_decls = GetLateParsedFunctionDecls(decl);
+  void ParseFunctionTemplates(TranslationUnitDecl* tu_decl) {
+    set<FunctionDecl*> late_parsed_decls = GetLateParsedFunctionDecls(tu_decl);
     clang::Sema& sema = compiler()->getSema();
 
     // If we have any late-parsed functions, make sure the
