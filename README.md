@@ -37,7 +37,10 @@ We assume you already have compiled LLVM and Clang libraries on your system, eit
 | 6      | 0.10         | `clang_6.0`    |
 | 7      | 0.11         | `clang_7.0`    |
 | 8      | 0.12         | `clang_8.0`    |
+| 9      | 0.13         | `clang_9.0`    |
+| 10     | 0.14         | `clang_10`     |
 | ...    | ...          | ...            |
+| trunk  | master       | `master`       |
 
 > NOTE: If you use the Debian/Ubuntu packaging available from <https://apt.llvm.org>, you'll need the following packages installed:
 >
