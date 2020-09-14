@@ -110,6 +110,10 @@ def PrintLoadedTestsAndFiles():
   for (cls, test) in EnumerateLoadedTests():
     print('%s.%s:%s' % (cls.__name__, test, cls.test_files[test]))
 
+@GenerateTests(rootdir='tests/objc', pattern='*.m')
+class objc(unittest.TestCase):
+  pass
+
 
 if __name__ == '__main__':
   unittest_args, additional_args = Partition(sys.argv, '--')

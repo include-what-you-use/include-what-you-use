@@ -124,7 +124,7 @@ class File(object):
         _, ext = os.path.splitext(filename)
         if ext == '.py':
             klass = PythonFile
-        elif ext in ('.h', '.c', '.cc'):
+        elif ext in ('.h', '.c', '.cc', '.m'):
             klass = CxxFile
         else:
             return None
