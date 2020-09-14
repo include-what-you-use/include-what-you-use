@@ -502,7 +502,7 @@ bool HasCovariantReturnType(const clang::CXXMethodDecl* method_decl);
 
 // If this decl is a (possibly templatized) class, return the decl
 // that defines the class, if present.  Otherwise return nullptr.
-const clang::RecordDecl* GetDefinitionForClass(const clang::Decl* decl);
+const clang::NamedDecl* GetDefinitionForClass(const clang::Decl* decl);
 
 // Given a class, returns a SourceRange that encompasses the beginning
 // of the class declaration (including template<> prefix, etc) to the

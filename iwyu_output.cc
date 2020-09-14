@@ -31,6 +31,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
@@ -49,6 +50,9 @@ using clang::FunctionDecl;
 using clang::InclusionDirective;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
+using clang::ObjCContainerDecl;
+using clang::ObjCInterfaceDecl;
+using clang::ObjCProtocolDecl;
 using clang::RecordDecl;
 using clang::SourceLocation;
 using clang::SourceRange;
@@ -478,6 +482,10 @@ string MungedForwardDeclareLine(const NamedDecl* decl) {
     return MungedForwardDeclareLineForNontemplates(rec_decl);
   else if (const TemplateDecl* template_decl = DynCastFrom(decl))
     return MungedForwardDeclareLineForTemplates(template_decl);
+  else if (const ObjCInterfaceDecl* objc_decl = DynCastFrom(decl))
+    return "@class " + objc_decl->getNameAsString() + ";";
+  else if (const ObjCProtocolDecl* objc_decl = DynCastFrom(decl))
+    return "@protocol " + objc_decl->getNameAsString() + ";";
   CHECK_UNREACHABLE_("Unexpected decl type for MungedForwardDeclareLine");
 }
 
@@ -586,8 +594,9 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
 void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
                                      bool definitely_keep_fwd_decl) {
   CHECK_(fwd_decl && "forward_declare_decl unexpectedly nullptr");
-  CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<RecordDecl>(fwd_decl))
-         && "Can only forward declare classes and class templates");
+  CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<RecordDecl>(fwd_decl) ||
+          isa<ObjCContainerDecl>(fwd_decl)) &&
+         "Can only forward declare classes and class templates");
   lines_.push_back(OneIncludeOrForwardDeclareLine(fwd_decl));
   lines_.back().set_present();
   if (definitely_keep_fwd_decl)
@@ -747,6 +756,8 @@ bool DeclCanBeForwardDeclared(const Decl* decl, string* reason) {
 
   if (isa<ClassTemplateDecl>(decl)) {
     // Class templates can always be forward-declared.
+  } else if (isa<ObjCContainerDecl>(decl)) {
+    // Objective-C types can always be forward-declared.
   } else if (const auto* record = dyn_cast<RecordDecl>(decl)) {
     // Record decls can be forward-declared unless they denote a lambda
     // expression; these have no type name to forward-declare.
@@ -1064,6 +1075,11 @@ void ProcessForwardDeclare(OneUse* use,
   if (tpl_decl)
     record_decl = tpl_decl->getTemplatedDecl();
 
+  const NamedDecl* class_decl = record_decl;
+  const ObjCContainerDecl* objc_decl = DynCastFrom(use->decl());
+  if (objc_decl)
+    class_decl = objc_decl;
+
   // (A2) If it has default template parameters, recategorize as a full use.
   // Suppress this if there's no definition for this class (so can't full-use).
   if (tpl_decl && HasDefaultTemplateParameters(tpl_decl) &&
@@ -1103,7 +1119,7 @@ void ProcessForwardDeclare(OneUse* use,
   }
 
   // (A5) If using a nested class, discard this use.
-  if (IsNestedClass(record_decl)) {
+  if (record_decl && IsNestedClass(record_decl)) {
     // iwyu will require the full type of the parent class when it
     // recurses on the qualifier (any use of Foo::Bar requires the
     // full type of Foo).  So if we're forward-declared inside Foo,
@@ -1126,13 +1142,25 @@ void ProcessForwardDeclare(OneUse* use,
   // (A6) If a definition exists earlier in this file, discard this use.
   // Note: for the 'earlier' checks, what matters is the *instantiation*
   // location.
-  const set<const NamedDecl*> redecls = GetClassRedecls(record_decl);
+  const set<const NamedDecl*> redecls = GetClassRedecls(class_decl);
   for (const NamedDecl* redecl : redecls) {
-    CHECK_(isa<RecordDecl>(redecl) &&
+    CHECK_((isa<RecordDecl>(redecl) || isa<ObjCInterfaceDecl>(redecl) ||
+            isa<ObjCProtocolDecl>(redecl)) &&
            "GetClassRedecls has redecls of wrong type");
+
+    bool isCompleteDefinition = false;
+    if (const RecordDecl* record_redecl = DynCastFrom(redecl)) {
+      isCompleteDefinition = record_redecl->isCompleteDefinition();
+    } else if (const clang::ObjCInterfaceDecl* objc_redecl =
+                   DynCastFrom(redecl)) {
+      isCompleteDefinition = objc_redecl->isThisDeclarationADefinition();
+    } else if (const clang::ObjCProtocolDecl* objc_redecl =
+                   DynCastFrom(redecl)) {
+      isCompleteDefinition = objc_redecl->isThisDeclarationADefinition();
+    }
+
     const SourceLocation defined_loc = GetLocation(redecl);
-    if (cast<RecordDecl>(redecl)->isCompleteDefinition() &&
-        DeclIsVisibleToUseInSameFile(redecl, *use)) {
+    if (isCompleteDefinition && DeclIsVisibleToUseInSameFile(redecl, *use)) {
       VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name() << " ("
                << use->PrintableUseLoc()
                << "): dfn is present: " << PrintableLoc(defined_loc) << "\n";
@@ -1233,7 +1261,9 @@ void ProcessFullUse(OneUse* use,
   // declarations.
   if (!(use->flags() & UF_FunctionDfn) && !is_builtin_function_with_mappings) {
     set<const NamedDecl*> all_redecls;
-    if (isa<RecordDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
+    if (isa<RecordDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()) ||
+        isa<ObjCInterfaceDecl>(use->decl()) ||
+        isa<ObjCProtocolDecl>(use->decl()))
       all_redecls.insert(use->decl());  // for classes, just consider the dfn
     else
       all_redecls = GetNonclassRedecls(use->decl());
@@ -1404,14 +1434,15 @@ void CalculateIwyuForForwardDeclareUse(
   CHECK_(!use->is_full_use() && "ForwardDeclareUse are not full uses");
 
   const NamedDecl* same_file_decl = nullptr;
-  const RecordDecl* record_decl = DynCastFrom(use->decl());
+  const NamedDecl* class_decl = DynCastFrom(use->decl());
   const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
   const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(use->decl());
   if (spec_decl)
     tpl_decl = spec_decl->getSpecializedTemplate();
   if (tpl_decl)
-    record_decl = tpl_decl->getTemplatedDecl();
-  CHECK_(record_decl && "Non-records should have been handled already");
+    class_decl = tpl_decl->getTemplatedDecl();
+  if (const ObjCContainerDecl* objc_decl = DynCastFrom(use->decl()))
+    class_decl = objc_decl;
 
   // If this record is defined in one of the desired_includes, mark that
   // fact.  Also if it's defined in one of the actual_includes.
@@ -1439,7 +1470,7 @@ void CalculateIwyuForForwardDeclareUse(
 
   // We also want to know if *any* redecl of this record is defined
   // in the same file as the use (and before it).
-  const set<const NamedDecl*>& redecls = GetClassRedecls(record_decl);
+  const set<const NamedDecl*>& redecls = GetClassRedecls(class_decl);
   for (const NamedDecl* redecl : redecls) {
     if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
       same_file_decl = redecl;
@@ -1872,7 +1903,7 @@ void CleanupPrefixHeaderIncludes(
       // At this point it's OK if file_entry is nullptr.  It means we've never
       // seen quoted_include.  And that's why it cannot be prefix header.
     } else {
-      const RecordDecl* dfn = GetDefinitionForClass(line.fwd_decl());
+      const NamedDecl* dfn = GetDefinitionForClass(line.fwd_decl());
       file_entry = GetFileEntry(dfn);
     }
     if (IsRemovablePrefixHeader(file_entry, preprocessor_info)) {
