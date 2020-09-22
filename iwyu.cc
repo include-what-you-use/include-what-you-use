@@ -322,7 +322,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   bool TraverseDecl(Decl* decl) {
     if (current_ast_node_ && current_ast_node_->StackContainsContent(decl))
       return true;               // avoid recursion
-    ASTNode node(decl, *GlobalSourceManager());
+    ASTNode node(decl);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     return Base::TraverseDecl(decl);
   }
@@ -330,7 +330,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   bool TraverseStmt(Stmt* stmt) {
     if (current_ast_node_ && current_ast_node_->StackContainsContent(stmt))
       return true;               // avoid recursion
-    ASTNode node(stmt, *GlobalSourceManager());
+    ASTNode node(stmt);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     return Base::TraverseStmt(stmt);
   }
@@ -341,7 +341,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     const Type* type = qualtype.getTypePtr();
     if (current_ast_node_ && current_ast_node_->StackContainsContent(type))
       return true;               // avoid recursion
-    ASTNode node(type, *GlobalSourceManager());
+    ASTNode node(type);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     return Base::TraverseType(qualtype);
   }
@@ -365,7 +365,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     }
     if (current_ast_node_ && current_ast_node_->StackContainsContent(&typeloc))
       return true;               // avoid recursion
-    ASTNode node(&typeloc, *GlobalSourceManager());
+    ASTNode node(&typeloc);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     return Base::TraverseTypeLoc(typeloc);
   }
@@ -373,7 +373,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   bool TraverseNestedNameSpecifier(NestedNameSpecifier* nns) {
     if (nns == nullptr)
       return true;
-    ASTNode node(nns, *GlobalSourceManager());
+    ASTNode node(nns);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     if (!this->getDerived().VisitNestedNameSpecifier(nns))
       return false;
@@ -383,7 +383,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc nns_loc) {
     if (!nns_loc)   // using NNSLoc::operator bool()
       return true;
-    ASTNode node(&nns_loc, *GlobalSourceManager());
+    ASTNode node(&nns_loc);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     // TODO(csilvers): have VisitNestedNameSpecifierLoc instead.
     if (!this->getDerived().VisitNestedNameSpecifier(
@@ -393,7 +393,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseTemplateName(TemplateName template_name) {
-    ASTNode node(&template_name, *GlobalSourceManager());
+    ASTNode node(&template_name);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     if (!this->getDerived().VisitTemplateName(template_name))
       return false;
@@ -401,7 +401,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseTemplateArgument(const TemplateArgument& arg) {
-    ASTNode node(&arg, *GlobalSourceManager());
+    ASTNode node(&arg);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     if (!this->getDerived().VisitTemplateArgument(arg))
       return false;
@@ -409,7 +409,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc& argloc) {
-    ASTNode node(&argloc, *GlobalSourceManager());
+    ASTNode node(&argloc);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     if (!this->getDerived().VisitTemplateArgumentLoc(argloc))
       return false;
@@ -3967,7 +3967,7 @@ class IwyuAstConsumer
     if (const TemplateSpecializationType* arg_tmpl = DynCastFrom(arg_type)) {
       // Special case: We are instantiating the type in the context of an
       // expression. Need to push the type to the AST stack explicitly.
-      ASTNode node(arg_tmpl, *GlobalSourceManager());
+      ASTNode node(arg_tmpl);
       node.SetParent(current_ast_node());
 
       instantiated_template_visitor_.ScanInstantiatedType(
