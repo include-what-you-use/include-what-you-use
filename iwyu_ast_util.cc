@@ -186,13 +186,12 @@ SourceLocation ASTNode::GetLocation() const {
   // locations are in a different file, then we're uncertain of our
   // own location.  Return an invalid location.
   if (retval.isValid()) {
-    FullSourceLoc full_loc(retval, source_manager_);
+    clang::SourceManager& sm = *GlobalSourceManager();
+    FullSourceLoc full_loc(retval, sm);
     const FileEntry* spelling_file =
-        source_manager_.getFileEntryForID(
-            source_manager_.getFileID(full_loc.getSpellingLoc()));
+        sm.getFileEntryForID(sm.getFileID(full_loc.getSpellingLoc()));
     const FileEntry* instantiation_file =
-        source_manager_.getFileEntryForID(
-            source_manager_.getFileID(full_loc.getExpansionLoc()));
+        sm.getFileEntryForID(sm.getFileID(full_loc.getExpansionLoc()));
     if (spelling_file != instantiation_file)
       return SourceLocation();
   }

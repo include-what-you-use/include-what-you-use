@@ -40,7 +40,6 @@ class ClassTemplateDecl;
 class Expr;
 class FunctionDecl;
 class NamedDecl;
-class SourceManager;
 class TagDecl;
 class TemplateDecl;
 class TemplateName;
@@ -72,37 +71,33 @@ class ASTNode {
  public:
   // In each case, the caller owns the object, and must guarantee it
   // lives for at least as long as the ASTNode object does.
-  ASTNode(const clang::Decl* decl, const clang::SourceManager& sm)
+  ASTNode(const clang::Decl* decl)
       : kind_(kDeclKind), as_decl_(decl),
-        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
-  ASTNode(const clang::Stmt* stmt, const clang::SourceManager& sm)
+        parent_(nullptr), in_fwd_decl_context_(false) { }
+  ASTNode(const clang::Stmt* stmt)
       : kind_(kStmtKind), as_stmt_(stmt),
-        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
-  ASTNode(const clang::Type* type, const clang::SourceManager& sm)
+        parent_(nullptr), in_fwd_decl_context_(false) { }
+  ASTNode(const clang::Type* type)
       : kind_(kTypeKind), as_type_(type),
-        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
-  ASTNode(const clang::TypeLoc* typeloc, const clang::SourceManager& sm)
+        parent_(nullptr), in_fwd_decl_context_(false) { }
+  ASTNode(const clang::TypeLoc* typeloc)
       : kind_(kTypelocKind), as_typeloc_(typeloc),
-        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
-  ASTNode(const clang::NestedNameSpecifier* nns, const clang::SourceManager& sm)
+        parent_(nullptr), in_fwd_decl_context_(false) { }
+  ASTNode(const clang::NestedNameSpecifier* nns)
       : kind_(kNNSKind), as_nns_(nns),
-        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
-  ASTNode(const clang::NestedNameSpecifierLoc* nnsloc,
-          const clang::SourceManager& sm)
+        parent_(nullptr), in_fwd_decl_context_(false) { }
+  ASTNode(const clang::NestedNameSpecifierLoc* nnsloc)
       : kind_(kNNSLocKind), as_nnsloc_(nnsloc),
-        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
-  ASTNode(const clang::TemplateName* template_name,
-          const clang::SourceManager& sm)
+        parent_(nullptr), in_fwd_decl_context_(false) { }
+  ASTNode(const clang::TemplateName* template_name)
       : kind_(kTemplateNameKind), as_template_name_(template_name),
-        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
-  ASTNode(const clang::TemplateArgument* template_arg,
-          const clang::SourceManager& sm)
+        parent_(nullptr), in_fwd_decl_context_(false) { }
+  ASTNode(const clang::TemplateArgument* template_arg)
       : kind_(kTemplateArgumentKind), as_template_arg_(template_arg),
-        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
-  ASTNode(const clang::TemplateArgumentLoc* template_argloc,
-          const clang::SourceManager& sm)
+        parent_(nullptr), in_fwd_decl_context_(false) { }
+  ASTNode(const clang::TemplateArgumentLoc* template_argloc)
       : kind_(kTemplateArgumentLocKind), as_template_argloc_(template_argloc),
-        parent_(nullptr), in_fwd_decl_context_(false), source_manager_(sm) { }
+        parent_(nullptr), in_fwd_decl_context_(false) { }
 
   // A 'forward-declare' context means some parent of us can be
   // forward-declared, which means we can be too.  e.g. in
@@ -327,7 +322,6 @@ class ASTNode {
   };
   const ASTNode* parent_;
   bool in_fwd_decl_context_;
-  const clang::SourceManager& source_manager_;
 };
 
 // --- Helper classes for ASTNode.
