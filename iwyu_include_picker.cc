@@ -134,6 +134,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "intptr_t", kPrivate, "<unistd.h>", kPublic },
   { "key_t", kPrivate, "<sys/types.h>", kPublic },
   { "key_t", kPrivate, "<sys/ipc.h>", kPublic },
+  { "max_align_t", kPrivate, "<stddef.h>", kPublic },
   { "mode_t", kPrivate, "<sys/types.h>", kPublic },
   { "mode_t", kPrivate, "<sys/stat.h>", kPublic },
   { "mode_t", kPrivate, "<sys/ipc.h>", kPublic },
@@ -154,6 +155,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "pid_t", kPrivate, "<termios.h>", kPublic },
   { "pid_t", kPrivate, "<time.h>", kPublic },
   { "pid_t", kPrivate, "<utmpx.h>", kPublic },
+  { "ptrdiff_t", kPrivate, "<stddef.h>", kPublic },
   { "sigset_t", kPrivate, "<signal.h>", kPublic },
   { "sigset_t", kPrivate, "<sys/epoll.h>", kPublic },
   { "sigset_t", kPrivate, "<sys/select.h>", kPublic },
@@ -182,6 +184,8 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "uid_t", kPrivate, "<sys/stat.h>", kPublic },
   { "useconds_t", kPrivate, "<sys/types.h>", kPublic },
   { "useconds_t", kPrivate, "<unistd.h>", kPublic },
+  { "wchar_t", kPrivate, "<stddef.h>", kPublic },
+  { "wchar_t", kPrivate, "<stdlib.h>", kPublic },
   // glob.h seems to define size_t if necessary, but it should come from stddef.
   // It is unspecified if the cname headers provide ::size_t.
   // <locale.h> is the one header which defines NULL but not size_t.
