@@ -64,7 +64,7 @@ if (NOT IWYU_IN_TREE)
   # Use only major.minor.patch for the resource directory structure; some
   # platforms include suffix in LLVM_VERSION.
   set(llvm_ver ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
-  set(clang_headers_src "${LLVM_INSTALL_PREFIX}/lib/clang/${llvm_ver}/include")
+  set(clang_headers_src "${LLVM_LIBRARY_DIR}/clang/${llvm_ver}/include")
   set(clang_headers_dst "${CMAKE_BINARY_DIR}/lib/clang/${llvm_ver}/include")
 
   file(GLOB_RECURSE in_files RELATIVE "${clang_headers_src}"
