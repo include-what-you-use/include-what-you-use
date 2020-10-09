@@ -135,7 +135,7 @@ _IWYU_PRAGMA_ASSOCIATED_RE = re.compile(r'IWYU\s*pragma:\s*associated')
 # we fold _C_COMMENT_START_RE and _C_COMMENT_END_RE into _COMMENT_LINE_RE.
 # The _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE is also set on lines when Allman
 # and mixed namespaces are detected but the RE is too easy to match to add
-# under normal circumstances (must always be proceded by Allman/mixed).
+# under normal circumstances (must always be preceded by Allman/mixed).
 _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
                _NAMESPACE_START_RE, _NAMESPACE_START_ALLMAN_RE,
                _NAMESPACE_START_MIXED_RE, _NAMESPACE_END_RE,
