@@ -353,6 +353,7 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/syslog-path.h>", kPrivate, "<sys/syslog.h>", kPrivate },
   { "<bits/syslog.h>", kPrivate, "<sys/syslog.h>", kPrivate },
   { "<bits/termios.h>", kPrivate, "<termios.h>", kPublic },
+  { "<bits/time.h>", kPrivate, "<time.h>", kPublic },
   { "<bits/time.h>", kPrivate, "<sys/time.h>", kPublic },
   { "<bits/timerfd.h>", kPrivate, "<sys/timerfd.h>", kPublic },
   { "<bits/timex.h>", kPrivate, "<sys/timex.h>", kPublic },

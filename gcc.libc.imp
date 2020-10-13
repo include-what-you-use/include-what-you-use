@@ -97,6 +97,7 @@
   { include: [ "<bits/syslog-path.h>", private, "<sys/syslog.h>", private ] },
   { include: [ "<bits/syslog.h>", private, "<sys/syslog.h>", private ] },
   { include: [ "<bits/termios.h>", private, "<termios.h>", public ] },
+  { include: [ "<bits/time.h>", private, "<time.h>", public ] },
   { include: [ "<bits/time.h>", private, "<sys/time.h>", public ] },
   { include: [ "<bits/timerfd.h>", private, "<sys/timerfd.h>", public ] },
   { include: [ "<bits/timex.h>", private, "<sys/timex.h>", public ] },
