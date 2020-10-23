@@ -2,9 +2,14 @@
 #grep -r '^ *# *include' boost/ | grep -e "boost/[^:]*/detail/.*hp*:" -e "boost/[^:]*/impl/.*hp*:" | grep -e "\:.*/detail/" -e "\:.*/impl/" | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", private ] },@' | grep -e \\[\"\<boost/ | sort -u 
 #remove circular dependencies
 #                 boost/fusion/container/set/detail/value_of_data_impl.hpp with itself...
+#                 boost/variant/detail/multivisitors_cpp14_based.hpp with itself...
 #
 #    { include: ["<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_n_steps.hpp>", private ] },
 #    { include: ["<boost/numeric/odeint/integrate/detail/integrate_n_steps.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private ] },
+#    { include: ["<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_const.hpp>", private ] },
+#    { include: ["<boost/numeric/odeint/integrate/detail/integrate_const.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private ] },
+#    { include: ["<boost/numeric/odeint/iterator/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/iterator/integrate/detail/integrate_const.hpp>", private ] },
+#    { include: ["<boost/numeric/odeint/iterator/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/iterator/integrate/detail/integrate_n_steps.hpp>", private ] },
 #
 #    { include: ["<boost/python/detail/type_list.hpp>", private, "<boost/python/detail/type_list_impl.hpp>", private ] },
 #    { include: ["<boost/python/detail/type_list.hpp>", private, "<boost/python/detail/type_list_impl_no_pts.hpp>", private ] },
@@ -4360,10 +4365,6 @@
     { include: ["<boost/numeric/interval/detail/msvc_rounding_control.hpp>", private, "<boost/numeric/interval/detail/x86_rounding_control.hpp>", private ] },
     { include: ["<boost/numeric/interval/detail/test_input.hpp>", private, "<boost/numeric/interval/detail/division.hpp>", private ] },
     { include: ["<boost/numeric/interval/detail/x86gcc_rounding_control.hpp>", private, "<boost/numeric/interval/detail/x86_rounding_control.hpp>", private ] },
-    { include: ["<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_const.hpp>", private ] },
-    { include: ["<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_n_steps.hpp>", private ] },
-    { include: ["<boost/numeric/odeint/integrate/detail/integrate_const.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private ] },
-    { include: ["<boost/numeric/odeint/integrate/detail/integrate_n_steps.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private ] },
     { include: ["<boost/numeric/odeint/iterator/detail/ode_iterator_base.hpp>", private, "<boost/numeric/odeint/iterator/impl/adaptive_iterator_impl.hpp>", private ] },
     { include: ["<boost/numeric/odeint/iterator/detail/ode_iterator_base.hpp>", private, "<boost/numeric/odeint/iterator/impl/const_step_iterator_impl.hpp>", private ] },
     { include: ["<boost/numeric/odeint/iterator/detail/ode_iterator_base.hpp>", private, "<boost/numeric/odeint/iterator/impl/n_step_iterator_impl.hpp>", private ] },
@@ -4372,8 +4373,6 @@
     { include: ["<boost/numeric/odeint/iterator/integrate/detail/functors.hpp>", private, "<boost/numeric/odeint/iterator/integrate/detail/integrate_const.hpp>", private ] },
     { include: ["<boost/numeric/odeint/iterator/integrate/detail/functors.hpp>", private, "<boost/numeric/odeint/iterator/integrate/detail/integrate_n_steps.hpp>", private ] },
     { include: ["<boost/numeric/odeint/iterator/integrate/detail/functors.hpp>", private, "<boost/numeric/odeint/iterator/integrate/detail/integrate_times.hpp>", private ] },
-    { include: ["<boost/numeric/odeint/iterator/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/iterator/integrate/detail/integrate_const.hpp>", private ] },
-    { include: ["<boost/numeric/odeint/iterator/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/iterator/integrate/detail/integrate_n_steps.hpp>", private ] },
     { include: ["<boost/numeric/odeint/iterator/integrate/detail/integrate_const.hpp>", private, "<boost/numeric/odeint/iterator/integrate/detail/integrate_adaptive.hpp>", private ] },
     { include: ["<boost/numeric/odeint/stepper/detail/generic_rk_call_algebra.hpp>", private, "<boost/numeric/odeint/stepper/detail/generic_rk_algorithm.hpp>", private ] },
     { include: ["<boost/numeric/odeint/stepper/detail/generic_rk_operations.hpp>", private, "<boost/numeric/odeint/stepper/detail/generic_rk_algorithm.hpp>", private ] },
@@ -4914,10 +4913,6 @@
     { include: ["<boost/python/detail/scope.hpp>", private, "<boost/python/detail/defaults_def.hpp>", private ] },
     { include: ["<boost/python/detail/sfinae.hpp>", private, "<boost/python/detail/enable_if.hpp>", private ] },
     { include: ["<boost/python/detail/signature.hpp>", private, "<boost/python/detail/caller.hpp>", private ] },
-    { include: ["<boost/python/detail/type_list.hpp>", private, "<boost/python/detail/type_list_impl.hpp>", private ] },
-    { include: ["<boost/python/detail/type_list.hpp>", private, "<boost/python/detail/type_list_impl_no_pts.hpp>", private ] },
-    { include: ["<boost/python/detail/type_list_impl.hpp>", private, "<boost/python/detail/type_list.hpp>", private ] },
-    { include: ["<boost/python/detail/type_list_impl_no_pts.hpp>", private, "<boost/python/detail/type_list.hpp>", private ] },
     { include: ["<boost/python/detail/value_is_xxx.hpp>", private, "<boost/python/detail/value_is_shared_ptr.hpp>", private ] },
     { include: ["<boost/python/detail/wrap_python.hpp>", private, "<boost/python/detail/prefix.hpp>", private ] },
     { include: ["<boost/qvm/detail/determinant_impl.hpp>", private, "<boost/qvm/detail/cofactor_impl.hpp>", private ] },
@@ -5287,7 +5282,6 @@
     { include: ["<boost/variant/detail/has_result_type.hpp>", private, "<boost/variant/detail/apply_visitor_delayed.hpp>", private ] },
     { include: ["<boost/variant/detail/has_result_type.hpp>", private, "<boost/variant/detail/apply_visitor_unary.hpp>", private ] },
     { include: ["<boost/variant/detail/move.hpp>", private, "<boost/variant/detail/initializer.hpp>", private ] },
-    { include: ["<boost/variant/detail/multivisitors_cpp14_based.hpp>", private, "<boost/variant/detail/multivisitors_cpp14_based.hpp>", private ] },
     { include: ["<boost/variant/detail/substitute_fwd.hpp>", private, "<boost/variant/detail/substitute.hpp>", private ] },
     { include: ["<boost/variant/detail/substitute.hpp>", private, "<boost/variant/detail/enable_recursive.hpp>", private ] },
     { include: ["<boost/vmd/detail/adjust_tuple_type.hpp>", private, "<boost/vmd/detail/recurse/equal/equal_headers.hpp>", private ] },
