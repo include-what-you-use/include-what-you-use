@@ -2,6 +2,7 @@
 #grep -r '^ *# *include' boost/ | grep -e "boost/[^:]*/detail/.*hp*:" -e "boost/[^:]*/impl/.*hp*:" | grep -e "\:.*/detail/" -e "\:.*/impl/" | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", private ] },@' | grep -e \\[\"\<boost/ | sort -u 
 #remove circular dependencies
 #                 boost/fusion/container/set/detail/value_of_data_impl.hpp with itself...
+#                 boost/variant/detail/multivisitors_cpp14_based.hpp with itself...
 #
 #    { include: ["<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_n_steps.hpp>", private ] },
 #    { include: ["<boost/numeric/odeint/integrate/detail/integrate_n_steps.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private ] },
@@ -5287,7 +5288,6 @@
     { include: ["<boost/variant/detail/has_result_type.hpp>", private, "<boost/variant/detail/apply_visitor_delayed.hpp>", private ] },
     { include: ["<boost/variant/detail/has_result_type.hpp>", private, "<boost/variant/detail/apply_visitor_unary.hpp>", private ] },
     { include: ["<boost/variant/detail/move.hpp>", private, "<boost/variant/detail/initializer.hpp>", private ] },
-    { include: ["<boost/variant/detail/multivisitors_cpp14_based.hpp>", private, "<boost/variant/detail/multivisitors_cpp14_based.hpp>", private ] },
     { include: ["<boost/variant/detail/substitute_fwd.hpp>", private, "<boost/variant/detail/substitute.hpp>", private ] },
     { include: ["<boost/variant/detail/substitute.hpp>", private, "<boost/variant/detail/enable_recursive.hpp>", private ] },
     { include: ["<boost/vmd/detail/adjust_tuple_type.hpp>", private, "<boost/vmd/detail/recurse/equal/equal_headers.hpp>", private ] },
