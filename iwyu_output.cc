@@ -1249,7 +1249,7 @@ void ProcessFullUse(OneUse* use,
   // <new> will be required for them without us doing any magic for operator new
   // itself.
   if (const FunctionDecl* fn_decl = DynCastFrom(use->decl())) {
-    if (fn_decl->isReplaceableGlobalAllocationFunction(nullptr, nullptr)) {
+    if (fn_decl->isReplaceableGlobalAllocationFunction()) {
       VERRS(6) << "Ignoring use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "): built-in new/delete\n";
       use->set_ignore_use();
