@@ -63,8 +63,6 @@ class OstreamVoidifier {
 
 #if defined(_WIN32)
 
-#define snprintf _snprintf
-
 #define NOMINMAX 1 // Prevent Windows headers from redefining min/max.
 #include "Shlwapi.h"  // for PathMatchSpecA
 
