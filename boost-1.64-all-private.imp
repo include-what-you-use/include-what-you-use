@@ -1,20 +1,13 @@
 [
-#grep -r '^ *# *include' boost/ | grep -e "boost/[^:]*/detail/.*hp*:" -e "boost/[^:]*/impl/.*hp*:" | grep -e "\:.*/detail/" -e "\:.*/impl/" | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", private ] },@' | grep -e \\[\"\<boost/ | sort -u 
-#remove circular dependencies
-#                 boost/fusion/container/set/detail/value_of_data_impl.hpp with itself...
-#                 boost/variant/detail/multivisitors_cpp14_based.hpp with itself...
-#
-#    { include: ["<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_n_steps.hpp>", private ] },
-#    { include: ["<boost/numeric/odeint/integrate/detail/integrate_n_steps.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private ] },
-#    { include: ["<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_const.hpp>", private ] },
-#    { include: ["<boost/numeric/odeint/integrate/detail/integrate_const.hpp>", private, "<boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp>", private ] },
-#    { include: ["<boost/numeric/odeint/iterator/integrate/detail/integrate_adaptive.hpp>", private, "<boost/numeric/odeint/iterator/integrate/detail/integrate_const.hpp>", private ] },
-#    { include: ["<boost/numeric/odeint/iterator/integrate/detail/integrate_const.hpp>", private, "<boost/numeric/odeint/iterator/integrate/detail/integrate_adaptive.hpp>", private ] },
-#
-#    { include: ["<boost/python/detail/type_list.hpp>", private, "<boost/python/detail/type_list_impl.hpp>", private ] },
-#    { include: ["<boost/python/detail/type_list.hpp>", private, "<boost/python/detail/type_list_impl_no_pts.hpp>", private ] },
-#    { include: ["<boost/python/detail/type_list_impl.hpp>", private, "<boost/python/detail/type_list.hpp>", private ] },
-#    { include: ["<boost/python/detail/type_list_impl_no_pts.hpp>", private, "<boost/python/detail/type_list.hpp>", private ] },
+# grep -r '^ *# *include' boost/ | grep -e "boost/[^:]*/detail/.*hp*:" -e "boost/[^:]*/impl/.*hp*:" | grep -e "\:.*/detail/" -e "\:.*/impl/" | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", private ] },@' | grep -e \\[\"\<boost/ | sort -u 
+# manually remove circular dependencies
+#  * boost/fusion/container/set/detail/value_of_data_impl.hpp with itself
+#  * boost/variant/detail/multivisitors_cpp14_based.hpp with itself
+#  * boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp with boost/numeric/odeint/integrate/detail/integrate_n_steps.hpp and back
+#  * boost/numeric/odeint/integrate/detail/integrate_adaptive.hpp with boost/numeric/odeint/integrate/detail/integrate_const.hpp and back
+#  * boost/numeric/odeint/iterator/integrate/detail/integrate_adaptive.hpp with boost/numeric/odeint/iterator/integrate/detail/integrate_const.hpp and back
+#  * boost/python/detail/type_list.hpp with boost/python/detail/type_list_impl.hpp and back
+#  * boost/python/detail/type_list.hpp with boost/python/detail/type_list_impl_no_pts.hpp and back
 
     { include: ["<boost/accumulators/numeric/detail/function_n.hpp>", private, "<boost/accumulators/numeric/detail/function2.hpp>", private ] },
     { include: ["<boost/accumulators/numeric/detail/function_n.hpp>", private, "<boost/accumulators/numeric/detail/function3.hpp>", private ] },
