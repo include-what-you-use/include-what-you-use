@@ -26,6 +26,10 @@ endif()
 
 message(STATUS "IWYU: configuring for LLVM ${LLVM_VERSION}...")
 
+# The good default is given by the llvm toolchain installation itself, but still in
+# case both static and shared libraries are available, allow to override that default.
+option(IWYU_LINK_CLANG_DYLIB "Link against the clang dynamic library" ${CLANG_LINK_CLANG_DYLIB})
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_definitions(${LLVM_DEFINITIONS})
@@ -106,7 +110,7 @@ if (MSVC)
 endif()
 
 # If only clang-cpp is available, we take that.
-if (TARGET clang-cpp AND NOT TARGET clangBasic)
+if (IWYU_LINK_CLANG_DYLIB)
   target_link_libraries(include-what-you-use PRIVATE clang-cpp)
 else()
   target_link_libraries(include-what-you-use
