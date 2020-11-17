@@ -56,11 +56,11 @@ def main(qt_include_dir, output_file):
                     module_name, include)
                 + '"private", "<%s>", "public" ] }' % class_name]
 
-    with open(output_file, 'w') as f:
-        print(OUTFILEHDR, file=f)
-        print("[", file=f)
-        print("  %s" % ",\n  ".join(symbols_map + includes_map), file=f)
-        print("]", file=f)
+    with open(output_file, 'w') as outfile:
+        print(OUTFILEHDR, file=outfile)
+        print("[", file=outfile)
+        print("  %s" % ",\n  ".join(symbols_map + includes_map), file=outfile)
+        print("]", file=outfile)
 
     return 0
 
