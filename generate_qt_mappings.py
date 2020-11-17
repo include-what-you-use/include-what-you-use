@@ -59,6 +59,8 @@ def main(qt_include_dir, output_file):
         print("  %s" % ",\n  ".join(symbols_map + includes_map), file=f)
         print("]", file=f)
 
+    return 0
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
