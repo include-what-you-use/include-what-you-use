@@ -35,7 +35,7 @@ def main(qt_include_dir, output_file):
     symbols_map = []
     includes_map = []
 
-    headers = glob.glob(os.path.join(args.qt_include_dir, '**/*[!.h]'))
+    headers = glob.glob(os.path.join(qt_include_dir, '**/*[!.h]'))
     for header in headers:
         if os.path.isdir(header):
             continue
@@ -56,7 +56,7 @@ def main(qt_include_dir, output_file):
                     module_name, include)
                 + '"private", "<%s>", "public" ] }' % class_name]
 
-    with open(args.output_file, 'w') as f:
+    with open(output_file, 'w') as f:
         print(OUTFILEHDR, file=f)
         print("[", file=f)
         print("  %s" % ",\n  ".join(symbols_map + includes_map), file=f)
