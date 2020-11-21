@@ -109,7 +109,7 @@ if (MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /EHsc")
 endif()
 
-# If only clang-cpp is available, we take that.
+# Link dynamically or statically depending on user preference.
 if (IWYU_LINK_CLANG_DYLIB)
   target_link_libraries(include-what-you-use PRIVATE clang-cpp)
 else()
