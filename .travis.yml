@@ -5,14 +5,14 @@ language: cpp
 addons:
   apt:
     sources:
-     - sourceline: 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main'
+     - sourceline: 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main'
        key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
     packages:
      - cmake
      - ninja-build
-     - llvm-dev
-     - libclang-dev
-     - clang
+     - llvm-11-dev
+     - libclang-11-dev
+     - clang-11
 
 before_install:
  # Extract the version number from the most-recently installed LLVM
