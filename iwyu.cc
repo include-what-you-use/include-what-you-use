@@ -4136,12 +4136,15 @@ using include_what_you_use::IwyuAction;
 using include_what_you_use::CreateCompilerInstance;
 
 int main(int argc, char **argv) {
-  // Must initialize X86 target to be able to parse Microsoft inline
-  // assembly. We do this unconditionally, because it allows an IWYU
-  // built for non-X86 targets to parse MS inline asm without choking.
-  LLVMInitializeX86TargetInfo();
-  LLVMInitializeX86TargetMC();
-  LLVMInitializeX86AsmParser();
+  // Must initialize the arch target to be able to parse Microsoft inline
+  // assembly.
+#define IWYU_INTERNAL_LLVM_INITIALIZE_ARCH_TARGET_HELPER2(arch, target) LLVMInitialize##arch##target()
+  // This second macro will expand IWYU_ARCH correctly.
+#define IWYU_INTERNAL_LLVM_INITIALIZE_ARCH_TARGET_HELPER1(arch, target) IWYU_INTERNAL_LLVM_INITIALIZE_ARCH_TARGET_HELPER2(arch, target)
+#define IWYU_INTERNAL_LLVM_INITIALIZE_ARCH_TARGET(target) IWYU_INTERNAL_LLVM_INITIALIZE_ARCH_TARGET_HELPER1(IWYU_ARCH, target)
+  IWYU_INTERNAL_LLVM_INITIALIZE_ARCH_TARGET(TargetInfo);
+  IWYU_INTERNAL_LLVM_INITIALIZE_ARCH_TARGET(TargetMC);
+  IWYU_INTERNAL_LLVM_INITIALIZE_ARCH_TARGET(AsmParser);
 
   // The command line should look like
   //   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu --other_iwyu_flag]... CLANG_FLAGS... foo.cc

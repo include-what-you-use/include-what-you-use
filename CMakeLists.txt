@@ -30,6 +30,11 @@ message(STATUS "IWYU: configuring for LLVM ${LLVM_VERSION}...")
 # case both static and shared libraries are available, allow to override that default.
 option(IWYU_LINK_CLANG_DYLIB "Link against the clang dynamic library" ${CLANG_LINK_CLANG_DYLIB})
 
+# Try to guess the architecture as much as possible from the underlying toolchain.
+set(IWYU_ARCH ${LLVM_NATIVE_ARCH} CACHE STRING "The architecture IWYU will run on.")
+
+add_compile_definitions(IWYU_ARCH=${IWYU_ARCH})
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_definitions(${LLVM_DEFINITIONS})
@@ -41,9 +46,9 @@ include_directories(
 set(LLVM_LINK_COMPONENTS
   Option
   Support
-  X86AsmParser
-  X86Desc
-  X86Info
+  ${IWYU_ARCH}AsmParser
+  ${IWYU_ARCH}Desc
+  ${IWYU_ARCH}Info
   )
 
 add_llvm_executable(include-what-you-use
