@@ -27,13 +27,13 @@ script:
  - mkdir build
  - cd build
  - cmake -GNinja -DCMAKE_PREFIX_PATH=$PREFIX_PATH -DCMAKE_C_COMPILER=$BIN_PATH/clang -DCMAKE_CXX_COMPILER=$BIN_PATH/clang++ -DCMAKE_INSTALL_PREFIX=./ ../
- - ninja
+ - cmake --build .
 
 # Test IWYU
- - CTEST_OUTPUT_ON_FAILURE=1 ninja test
+ - CTEST_OUTPUT_ON_FAILURE=1 ctest
 
 # Test install
- - ninja install
+ - cmake --install .
 
 # Check license headers
  - cd ../
