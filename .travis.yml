@@ -16,7 +16,7 @@ addons:
 
 before_install:
  # Extract the version number from the most-recently installed LLVM
- - VERSION=`ls -t /usr/lib/ | grep '^llvm-' | head -n 1 | sed -E 's/llvm-(.+)/\1/'`
+ - VERSION=`find /usr/lib -maxdepth 1 -name llvm-* -printf '%f\n' | sort -V -r | head -n1 | cut -c 6-`
 
  # Absolute paths to LLVM's root and bin directory
  - PREFIX_PATH=`llvm-config-$VERSION --prefix`
