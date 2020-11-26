@@ -277,7 +277,7 @@ static bool SortByDescendingLength(const HeaderSearchPath& left,
 static vector<HeaderSearchPath> NormalizeHeaderSearchPaths(
     const map<string, HeaderSearchPath::Type>& include_dirs_map) {
   vector<HeaderSearchPath> include_dirs;
-  for (const pair<string, HeaderSearchPath::Type>& entry : include_dirs_map) {
+  for (const auto& entry : include_dirs_map) {
     include_dirs.push_back(HeaderSearchPath(entry.first, entry.second));
   }
 
