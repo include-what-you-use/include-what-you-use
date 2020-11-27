@@ -242,6 +242,10 @@ class Process(object):
         """
         return self.proc.poll()
 
+    @property
+    def returncode(self):
+        return self.proc.returncode
+
     def get_output(self):
         """ Return stdout+stderr output of the process.
 
@@ -354,10 +358,14 @@ def slice_compilation_db(compilation_db, selection):
 
 def execute(invocations, verbose, formatter, jobs):
     """ Launch processes described by invocations. """
+    exit_code = 0
     if jobs == 1:
         for invocation in invocations:
-            print(formatter(invocation.start(verbose).get_output()))
-        return
+            proc = invocation.start(verbose)
+            print(formatter(proc.get_output()))
+            if proc.returncode != 2:
+                exit_code = 1
+        return exit_code
 
     pending = []
     while invocations or pending:
@@ -366,6 +374,8 @@ def execute(invocations, verbose, formatter, jobs):
         for proc in complete:
             pending.remove(proc)
             print(formatter(proc.get_output()))
+            if proc.returncode != 2:
+                exit_code = 1
 
         # Schedule new processes if there's room.
         capacity = jobs - len(pending)
@@ -374,6 +384,7 @@ def execute(invocations, verbose, formatter, jobs):
 
         # Yield CPU.
         time.sleep(0.0001)
+    return exit_code
 
 
 def main(compilation_db_path, source_files, verbose, formatter, jobs,
