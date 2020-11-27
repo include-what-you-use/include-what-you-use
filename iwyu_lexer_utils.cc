@@ -19,7 +19,6 @@
 
 using clang::SourceLocation;
 using clang::SourceManager;
-using clang::SourceRange;
 using clang::Token;
 using llvm::StringRef;
 using std::string;
