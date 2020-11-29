@@ -190,12 +190,7 @@ def _GetActualDiagnostics(actual_output):
 
 def _StripCommentFromLine(line):
   """Removes the "// ..." comment at the end of the given line."""
-
-  m = re.match(r'(.*)//', line)
-  if m:
-    return m.group(1).strip() + '\n'
-  else:
-    return line
+  return re.sub(r'\s*//.*$', '', line)
 
 
 def _NormalizeSummaryLineNumbers(line):
