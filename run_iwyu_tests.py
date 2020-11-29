@@ -42,38 +42,6 @@ def Partition(l, delimiter):
 class OneIwyuTest(unittest.TestCase):
   """Superclass for tests.  A subclass per test-file is created at runtime."""
 
-  def CheckAlsoExtension(self, extension):
-    """Return a suitable iwyu flag for checking files with the given extension.
-    """
-    return '--check_also="%s"' % posixpath.join(self.rootdir, '*' + extension)
-
-  def MappingFile(self, filename):
-    """Return a suitable iwyu flag for adding the given mapping file."""
-    return '--mapping_file=%s' % posixpath.join(self.rootdir, filename)
-
-  def Include(self, filename):
-    """Return a -include switch for clang to force include of file."""
-    return '-include %s' % posixpath.join(self.rootdir, filename)
-
-  def setUp(self):
-    # Iwyu flags for specific tests.
-    # Map from filename to flag list. If any test requires special
-    # iwyu flags to run properly, add an entry to the map with
-    # key=cc-filename (relative to self.rootdir), value=list of flags.
-    flags_map = {
-    }
-    clang_flags_map = {
-    }
-    include_map = {
-    }
-    # Internally, we like it when the paths start with rootdir.
-    self._iwyu_flags_map = dict((posixpath.join(self.rootdir, k), v)
-                                for (k,v) in flags_map.items())
-    self._clang_flags_map = dict((posixpath.join(self.rootdir, k), v)
-                                 for (k,v) in clang_flags_map.items())
-    self._include_map = dict((posixpath.join(self.rootdir, k), ['-I ' + include for include in v])
-                                 for (k,v) in include_map.items())
-
   def RunOneTest(self, filename):
     logging.info('Testing iwyu on %s', filename)
     # Split full/path/to/foo.cc into full/path/to/foo and .cc.
@@ -95,11 +63,8 @@ class OneIwyuTest(unittest.TestCase):
     # in the same way here.
     files_to_check = [PosixPath(f) for f in files_to_check]
 
-    iwyu_flags = self._iwyu_flags_map.get(filename, None)
-    clang_flags = self._clang_flags_map.get(filename, [])
-    clang_flags.extend(self._include_map.get(filename, []))
     iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
-                                          iwyu_flags, clang_flags, verbose=True)
+                                          verbose=True)
 
 
 def RegisterFilesForTesting(rootdir, pattern):
@@ -129,7 +94,6 @@ def RegisterFilesForTesting(rootdir, pattern):
                       (OneIwyuTest,),      # superclass
                       # and attrs. f=filename is required for proper scoping
                       {'runTest': lambda self, f=filename: self.RunOneTest(f),
-                       'rootdir': rootdir,
                        'pattern': pattern})
     setattr(module, test_class.__name__, test_class)
 

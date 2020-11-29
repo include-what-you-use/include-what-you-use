@@ -430,7 +430,7 @@ def _GetLaunchArguments(cc_file):
 
 
 def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
-                           iwyu_flags=None, clang_flags=None, verbose=False):
+                           verbose=False):
   """Checks running IWYU on the given .cc file.
 
   Args:
@@ -438,37 +438,24 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
     cc_file: The name of the file to test, relative to the current dir.
     cpp_files_to_check: A list of filenames for the files
               to check the diagnostics on, relative to the current dir.
-    iwyu_flags: Extra command-line flags to pass to iwyu.
-    clang_flags: Extra command-line flags to pass to clang, for example
-              "-std=c++11".
     verbose: Whether to display verbose output.
   """
-  iwyu_flags = iwyu_flags or []  # Make sure iwyu_flags is a list.
-  clang_flags = clang_flags or [] # Make sure this is a list
-  in_file_args = _GetLaunchArguments(cc_file)
-
-  # clang reads iwyu flags after the -Xiwyu clang flag: '-Xiwyu --verbose=6'
-  iwyu_flags = ['-Xiwyu ' + flag for flag in iwyu_flags]
-
   verbosity_flags = []
   env_verbose_level = os.getenv('IWYU_VERBOSE')
   if env_verbose_level:
     verbosity_flags = ['-Xiwyu', '--verbose=' + env_verbose_level]
 
   # TODO(csilvers): verify that has exit-status 0.
-  cmd = '%s %s %s %s %s %s %s' % (
+  cmd = '%s %s %s %s %s' % (
     _ShellQuote(_GetIwyuPath()),
     # Require verbose level 3 so that we can verify the individual diagnostics.
     # We allow the level to be overriden by
     # * IWYU_ARGS comment in a test file;
     # * iwyu_flags;
     # * IWYU_VERBOSE environment variable;
-    # We put the envvar-based flag first, so user flags can override it later.
     '-Xiwyu --verbose=3',
-    in_file_args,
-    ' '.join(iwyu_flags),
+    _GetLaunchArguments(cc_file),
     ' '.join(verbosity_flags),
-    ' '.join(clang_flags),
     cc_file)
   if verbose:
     print('>>> Running %s' % cmd)
