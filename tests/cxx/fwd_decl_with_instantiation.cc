@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests a situation where iwyu got confused between forward-declarations
 // and definitions.  It happened when the .cc file needed a definition of
 // a templated type and the .h only needed a forward-declaration.  The

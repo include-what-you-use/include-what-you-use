@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests our handling of header files in /internal/.  In particular,
 // if the only includers are outside the internal directory, make sure
 // we don't map the internal include to <built-in>.

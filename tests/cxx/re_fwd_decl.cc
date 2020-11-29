@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // If we use a class in a way that only requires a forward-declaration,
 // and the class is defined in some file we directly #include, we don't
 // need the forward-decl here.  But if it's only *declared* in a file

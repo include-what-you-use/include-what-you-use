@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -std=c++11
+
 // This test ensures that we do not add forward-declarations for lambdas.
 // The use of the lambda in add() registers as a use of the generated anonymous
 // functor type. Since it's defined in the same file, IWYU thinks a forward-decl

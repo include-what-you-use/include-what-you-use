@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --cxx17ns -std=c++17 -I .
+
 #include "tests/cxx/cxx17ns-i1.h"
 
 struct Two {

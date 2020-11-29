@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Test that a class template is properly forward declared. i1.h has
 // the following definition:
 // template <typename T> class ClassTemplateI1 {};

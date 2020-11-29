@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -std=c++11 -I .
+
 #include "tests/cxx/direct.h"
 #include "tests/cxx/typedef_in_template-d1.h"
 

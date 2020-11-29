@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 #include "tests/cxx/enum_base-d1.h"
 
 // IWYU: int_t is...*tests/cxx/enum_base-i1.h

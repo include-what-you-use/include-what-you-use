@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Test that when a template is typedef'd that the location of the definition, not
 // any forward declaration, is included.
 

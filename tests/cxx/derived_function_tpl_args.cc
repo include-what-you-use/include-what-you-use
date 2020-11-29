@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests calls to a templated function, especially ones where the
 // calls do not specify the template args explicitly, but instead
 // have them derived from the function arguments (including return

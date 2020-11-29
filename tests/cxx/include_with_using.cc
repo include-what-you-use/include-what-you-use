@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that if we use a symbol from a .h file that the .h file has
 // a 'using' declaration for, we don't consider replacing the use with
 // a forward-declaration.  On the other hand, if we don't depend on

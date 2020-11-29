@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -std=c++11
+
 // Tests that we don't crash when instantiating implicit methods, or rather,
 // that we avoid instantiating implicit methods when they are to be considered
 // deleted.

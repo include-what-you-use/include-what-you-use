@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --pch_in_code -Xiwyu --quoted_includes_first -I .
+
 // Tests that IWYU will respect the --quoted_includes_first option.
 
 #include "tests/cxx/pch.h"  // this is the precompiled header

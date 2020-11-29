@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // When passing a class to a function that takes vararg arguments,
 // compilers seem to require the full type information for the class
 // (though the behavior is technically undefined).  Test that IWYU

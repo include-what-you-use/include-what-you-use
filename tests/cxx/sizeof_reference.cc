@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that sizeof(reference) is treated the same as
 // sizeof(underlying_object), like it's supposed to be.
 

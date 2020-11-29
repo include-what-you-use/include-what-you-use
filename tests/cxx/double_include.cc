@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that when we include a file twice (that doesn't have a header
 // guard), we don't get confused and ask it to delete a copy of all
 // *its* includes, thinking it specifies each include twice.

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that we correctly say that a .h is an 'associated' .h file
 // of a .cc file if it occurs first and shares a basename.
 

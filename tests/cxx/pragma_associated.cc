@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 #include "tests/cxx/pragma_associated-d1.h"  // IWYU pragma: associated
 #include "tests/cxx/pragma_associated-d2.h"  // IWYU pragma: associated
 #include "tests/cxx/pragma_associated.h"  // This still counts as associated.

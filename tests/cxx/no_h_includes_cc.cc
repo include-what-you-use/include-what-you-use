@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*.c" -I .
+
 // Tests that we never suggest that a .h file #include a .cc file,
 // even in cases where one .cc file #includes another one.
 

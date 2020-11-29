@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Test that static data members can be forward declared even if they are not
 // pointers or references.
 

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --mapping_file=tests/cxx/badinc.imp -I .
+
 // This is a unittest for include-what-you-use.
 //
 // NOTE: Historically, all end-to-end testing was done in this file,

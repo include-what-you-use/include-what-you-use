@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -std=c++11 -I .
+
 // Verify correct handling of the C++11 range-for statement.
 // The range-init expression always needs the complete type.
 // The loop variable should behave like any variable use.

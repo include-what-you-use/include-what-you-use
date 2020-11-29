@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-d*.h" \
+//            -Xiwyu --transitive_includes_only \
+//            -I .
+
 // Tests that when we run in --transitive_includes_only mode, we
 // do not suggest that d2.h #include d1.h, even though it needs
 // a symbol from there, because d1.h is not a file that d2.h can

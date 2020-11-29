@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --pch_in_code -Xiwyu --prefix_header_includes=remove -I .
+
 // Test IWYU's handling of precompiled headers explicitly included in code.
 // This is a pattern popularized by MSVC and allowed by GCC, where an include
 // directive is used as a marker to signal that a precompiled header should be

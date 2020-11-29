@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that when we have a typedef where the author disclaims
 // responsibility (so the user has to #include the underlying type),
 // we don't run into problems in a template context where the

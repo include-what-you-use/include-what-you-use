@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-i1.h" -I .
+
 // Tests that IWYU never suggests to remove an include of a Qt .moc file.
 // These files are handled by a separate Qt preprocessor (called 'moc'), and
 // can't be analyzed in the normal C or C++ sense, The moc preprocessor does

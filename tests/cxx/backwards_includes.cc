@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-d*.h" -I .
+
 // This tests a few situations where iwyu sometimes attributes uses
 // incorrectly.  We want to make sure we catch these errors in our
 // sanity-checking phase and don't suggest ridiculous #includes as

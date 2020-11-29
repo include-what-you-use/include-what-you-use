@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-d1.h" -I .
+
 // Tests the '--check_also' flag.
 
 #include "check_also-d1.h"   // part of the --check-also glob

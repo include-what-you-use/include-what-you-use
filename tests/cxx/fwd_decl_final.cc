@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 #include "tests/cxx/fwd_decl_final.h"
 
 void FwdDeclFinal::testFinalTemplate(FinalTemplate<int>* finalTemplate) {

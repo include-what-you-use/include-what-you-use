@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --keep=tests/c/keep_includes*.h -I .
+
 // keep_includes-d1.h is an empty file.
 // Normally it would be removed.
 // In this test we are exercising the --keep command line option.

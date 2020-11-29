@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --mapping_file=tests/cxx/builtins_with_mapping.imp -I .
+
 #include "tests/cxx/builtins_with_mapping.h"
 #include "tests/cxx/builtins_with_mapping-d1.h"
 

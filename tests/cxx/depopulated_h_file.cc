@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // The directly-included file contains only an inclusion of the file
 // defining Foo. IWYU should recommend that inclusion be moved to this file.
 #include "tests/cxx/depopulated_h_file.h"

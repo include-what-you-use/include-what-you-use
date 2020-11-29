@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --prefix_header_includes=remove \
+//            -include tests/cxx/prefix_header_attribution-d1.h -I .
+
 // Tests that when IWYU attributes macros and placement operator new to
 // providing headers, it preserves enough information to detect if providing
 // header is prefix header.

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // For types that can be declared in many places -- functions,
 // typedefs, variables, and the like -- make sure that we accept
 // any declaration as satisfying a use.  In order to minimize
