@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that we handle correctly handle the various types of cast.
 
 #include "tests/cxx/casts-d1.h"

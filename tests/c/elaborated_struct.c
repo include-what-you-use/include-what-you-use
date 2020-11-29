@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 #include "tests/c/elaborated_struct-d1.h"
 
 // C basically never requires an explicit forward declaration, all uses of

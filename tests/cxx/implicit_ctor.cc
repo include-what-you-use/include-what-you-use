@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-d1.h" -I .
+
 // If you define an API that accepts an argument of class type or
 // const reference to a class type with an implicit constructor, you
 // must provide the definition for the class.

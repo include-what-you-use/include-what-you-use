@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --mapping_file=tests/cxx/mapping_to_self.imp -I .
+
 #include "tests/cxx/mapping_to_self.h"
 
 /**** IWYU_SUMMARY

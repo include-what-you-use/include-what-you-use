@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests cases when IWYU should not follow typedef chain and should not suggest
 // to include a file for underlying typedef type.
 

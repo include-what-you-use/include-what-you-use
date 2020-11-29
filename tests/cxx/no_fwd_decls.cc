@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --no_fwd_decls -I .
+
 // Test that passing the --no_fwd_decls switch to IWYU suggests including the
 // corresponding header file even when the use is not a full use.
 //

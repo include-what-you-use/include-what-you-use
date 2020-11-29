@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --no_comments -I .
+
 // Test that passing the --no_comments switch to IWYU suppresses both
 // '// lines NN-NN' and '// for symbol' comments.
 

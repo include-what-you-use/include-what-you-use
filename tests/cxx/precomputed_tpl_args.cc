@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests the precomputed template-arg-use list in iwyu_cache.cc.
 
 #include <vector>

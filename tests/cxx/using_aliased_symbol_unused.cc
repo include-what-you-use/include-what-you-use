@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that when we include a file that contains a using decl, that we are not
 // forced to include that file if the decl is not used.
 

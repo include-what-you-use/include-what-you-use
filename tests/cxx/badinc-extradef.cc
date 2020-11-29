@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // This is to test defining some methods in another translation unit.
 
 #include "tests/cxx/badinc-i2.h"

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -std=c++17 -I .
+
 // Test that use of placement-new requires include of <new> in all the usual
 // scenarios.
 //

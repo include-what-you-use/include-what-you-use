@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that when we instantiate a specialized template, we attribute
 // it to the right location.
 

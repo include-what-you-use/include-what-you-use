@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Normally, C++ only instantiates methods on template classes when
 // the methods are called.  But for virtual methods, they're
 // instantiated when the key method for the template class is

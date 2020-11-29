@@ -7,6 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --prefix_header_includes=remove \
+//            -include tests/cxx/prefix_header_includes-d1.h \
+//            -include tests/cxx/prefix_header_includes-d2.h \
+//            -include tests/cxx/prefix_header_includes-d3.h \
+//            -include tests/cxx/prefix_header_includes-d4.h \
+//            -I .
+
 // Tests --prefix_header_includes option.  All prefix_header_includes_*.cc files
 // are the same to show the difference between --prefix_header_includes values.
 

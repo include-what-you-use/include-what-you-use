@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that if we remove an include from an 'associated' .h file, we
 // add it to the .cc file, but if we keep an include in an
 // 'associated' .h file, we don't try to add it to the .cc file.

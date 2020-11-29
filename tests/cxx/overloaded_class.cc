@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-i1.h" -I .
+
 // Tests the case where a template type is instantiated inside a
 // template function.  If all the possible instantiations come
 // from the same place, we want the template function to be

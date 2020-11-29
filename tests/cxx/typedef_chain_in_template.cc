@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that if template declares a typedef depending on template argument,
 // IWYU follows the typedef chain and uses underlying type that is not a
 // typedef depending on template argument.  Usually such typedefs are template

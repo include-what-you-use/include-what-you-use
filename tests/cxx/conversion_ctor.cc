@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -std=c++11 -I .
+
 // The smallest repro case for issue #89:
 // http://code.google.com/p/include-what-you-use/issues/detail?id=89
 

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Test that elaborated types are handled correctly.
 //
 // An elaborated type is either a type prefixed by type kind, e.g. 'class Foo',

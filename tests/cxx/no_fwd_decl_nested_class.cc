@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that when we use a nested class, and we already have an
 // #include for the outer class, we don't try to forward-declare the
 // nested class anyway.  Usually we got this right, but sometimes

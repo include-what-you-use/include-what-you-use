@@ -7,6 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-autocast.h" \
+//            -Xiwyu --check_also="tests/cxx/*-fnreturn.h" \
+//            -Xiwyu --check_also="tests/cxx/*-typedefs.h" \
+//            -Xiwyu --check_also="tests/cxx/*-d2.h" \
+//            -I .
+
 // There are a few scenarios where iwyu requires a full type but c++
 // doesn't.
 //

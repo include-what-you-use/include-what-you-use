@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // This tests the following behavior: when we need to #include a
 // file to get the full type of Foo (here, Foo == IndirectClass),
 // but a forward-declare will also suffice for another use of Foo,

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --prefix_header_includes=remove
+
 // Tests that IWYU can tell if made-up, not encountered header is prefix header.
 // The main difference between the current test and prefix_header_attribution.cc
 // is that in this test <new> is included neither from source nor from command

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that if include search path is provided, new includes are added with
 // corresponding relative path. Compare with new_header_path_local.cc.
 

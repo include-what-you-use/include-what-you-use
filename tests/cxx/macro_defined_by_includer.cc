@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -std=c++11 -DCOMMAND_LINE_TYPE=double \
+//            -include tests/cxx/macro_defined_by_includer-prefix.h -I .
+
 // Tests a few macro patterns:
 // * internal headers guarded by macro defined in designated header;
 // * x-macros.

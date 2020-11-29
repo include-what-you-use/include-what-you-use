@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -std=c++11 -I .
+
 // Tests alias templates.  Does not test type aliases.
 
 #include "tests/cxx/direct.h"

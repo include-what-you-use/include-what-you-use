@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests the equivalent of doing
 //    hash_set<MyClass> foo;
 // where hash<MyClass> is defined in some .h file.  This should

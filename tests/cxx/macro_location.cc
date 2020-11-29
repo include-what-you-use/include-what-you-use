@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-d2.h" -Wno-sizeof-pointer-div \
+//            -I .
+
 // Tests a few common types of macro uses to make sure we correctly
 // identify what symbols belong to the macro author, and what symbols
 // belong to the macro user.  Also make sure we don't ignore macro

@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu \
+//            --mapping_file=tests/cxx/relative_exported_mapped_include.imp \
+//            -I tests/cxx/subdir
+
 // Ensure that when an include is added which is the public mapping of a
 // symbol, that header can be added as a relative include rather than using a
 // full path.

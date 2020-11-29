@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that when a non-internal file #includes an internal file,
 // that we don't try to map the include back to ourself, and protects
 // against a regression of a bug where we were both including a file

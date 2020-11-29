@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that when a file is referred to in a non-canonical way, iwyu
 // respects that rather than trying to rewrite it.  This matters most
 // when a file can be referred to in two ways because of

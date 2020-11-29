@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-public.h" \
+//            -Xiwyu --mapping_file=tests/cxx/keep_mapping.imp \
+//            -I .
+
 // The real test here is in keep_mapping-public.h.
 
 #include "tests/cxx/keep_mapping-public.h"

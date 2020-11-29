@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: --driver-mode=cl /GF /Os /W2 -I .
+
 // This test will be executed with --driver-mode=cl and some MSVC-shaped
 // flags to ensure we can run IWYU with MSVC-compatible command-line switches.
 

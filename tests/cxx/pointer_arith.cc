@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Pointer arithmetic requires the full type of the pointed-to type, because
 // type size is material to the calculations.
 

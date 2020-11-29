@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 #include "tests/cxx/cvr-derived.h" // for Derived
 #include "tests/cxx/cvr-class.h"   // for Class
 

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that when we forward-declare in a macro, that the line
 // numbers that iwyu emits about where the forward-declare lives in
 // the code, use the macro-instantiation location, never the

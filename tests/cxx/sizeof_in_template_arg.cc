@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 #include "tests/cxx/direct.h"
 
 // This verifies that using sizeof(...) means that the argument of sizeof

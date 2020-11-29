@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -fcxx-exceptions -fexceptions -I .
+
 #include "tests/cxx/catch-exceptions.h"
 
 int main() {
