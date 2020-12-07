@@ -20,7 +20,7 @@ While we work to get IWYU quality up, we will be stinting new features, and will
 
 Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. Usually such discrepancies are detected by build bot and fixed promptly.
 
-**The IWYU master branch follows Clang trunk**.
+**The IWYU master branch follows Clang main branch**.
 
 We also have convenience tags and branches for released versions of Clang (called `clang_<version>`, e.g. `clang_5.0`). To build against a Clang release, check out the corresponding branch in IWYU before configuring the build. More details in the instructions below.
 
@@ -59,7 +59,7 @@ To set up an environment for building:
 
       iwyu$ git clone https://github.com/include-what-you-use/include-what-you-use.git
 
-* Presumably, you'll be building IWYU with a released version of LLVM and Clang, so check out the corresponding branch. For example, if you have Clang 6.0 installed, use the `clang_6.0` branch. IWYU `master` tracks LLVM & Clang trunk:
+* Presumably, you'll be building IWYU with a released version of LLVM and Clang, so check out the corresponding branch. For example, if you have Clang 6.0 installed, use the `clang_6.0` branch. IWYU `master` tracks LLVM & Clang `main`:
 
       iwyu$ cd include-what-you-use
       iwyu/include-what-you-use$ git checkout clang_6.0
@@ -80,7 +80,7 @@ To set up an environment for building:
 
   or, if you have a local LLVM and Clang build tree, you can specify that as `CMAKE_PREFIX_PATH` for IWYU 0.11 and later:
 
-      iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/llvm-trunk/build ../include-what-you-use
+      iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=~/llvm-project/build ../include-what-you-use
 
 * Once CMake has generated a build system, you can invoke it directly from `build`, e.g.
 
