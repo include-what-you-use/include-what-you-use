@@ -184,6 +184,7 @@ class OneIwyuTest(unittest.TestCase):
       'non_transitive_include.cc': ['.'],
       'operator_new.cc': ['.'],
       'overloaded_class.cc': ['.'],
+      'reexport_overridden.cc': ['.'],
       'pch_in_code.cc': ['.'],
       'pointer_arith.cc': ['.'],
       'placement_new.cc': ['.'],
