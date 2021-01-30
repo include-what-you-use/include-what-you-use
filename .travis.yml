@@ -22,6 +22,9 @@ before_install:
  - PREFIX_PATH=`llvm-config-$VERSION --prefix`
  - BIN_PATH=`llvm-config-$VERSION --bindir`
 
+ # Workaround for broken packaging.
+ - sudo touch /usr/lib/llvm-12/lib/libomptarget.so.12
+
 script:
 # Build IWYU
  - mkdir build
