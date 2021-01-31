@@ -126,7 +126,7 @@ FullUseCache* ClassMembersFullUseCache();
 // These files are based on the commandline (--check_also flag plus argv).
 // They are specified as glob file-patterns (which behave just as they
 // do in the shell).  TODO(csilvers): use a prefix instead? allow '...'?
-void AddGlobToReportIWYUViolationsFor(const string& glob);
+void AddGlobToReportIWYUViolationsFor(string glob);
 bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file);
 
 // For the commandline option --keep.

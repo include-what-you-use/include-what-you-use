@@ -376,13 +376,20 @@ FullUseCache* ClassMembersFullUseCache() {
   return class_members_full_use_cache;
 }
 
-void AddGlobToReportIWYUViolationsFor(const string& glob) {
+void AddGlobToReportIWYUViolationsFor(string glob) {
   CHECK_(commandline_flags && "Call ParseIwyuCommandlineFlags() before this");
+  // Make glob absolute unless it starts with a wildcard.
+  if(!glob.empty() && glob[0] != '*' && glob[0] != '?')
+      glob = MakeAbsolutePath(glob);
+  // Store glob normalized so we have a uniform format.
   commandline_flags->check_also.insert(NormalizeFilePath(glob));
 }
 
 bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file) {
-  const string filepath = GetFilePath(file);
+  // Make sure, path is absolute and normalized as globs are stored this way.
+  // This allows absolute and relative --check-also flags to match absolute and
+  // relative files
+  string filepath = NormalizeFilePath(MakeAbsolutePath(GetFilePath(file)));
   for (const string& glob : GlobalFlags().check_also)
     if (GlobMatchesPath(glob.c_str(), filepath.c_str()))
       return true;
