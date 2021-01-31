@@ -301,7 +301,6 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
 void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     SourceLocation file_beginning) {
   SourceLocation current_loc = file_beginning;
-  SourceLocation begin_exports_location;
 
   while (true) {
     // Figure out the canonical name of this file.  We can't use
