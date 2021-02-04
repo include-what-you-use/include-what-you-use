@@ -1,0 +1,4 @@
+framework module Foo {
+	header "Foo.h"
+	export *
+}
