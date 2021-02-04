@@ -18,6 +18,9 @@ before_install:
  # Extract the version number from the most-recently installed LLVM
  - VERSION=`ls -t /usr/lib/ | grep '^llvm-' | head -n 1 | sed -E 's/llvm-(.+)/\1/'`
 
+ # Workaround missing libomptarget.so.13
+ - sudo apt-get -y install libomp-$VERSION-dev
+
  # Absolute paths to LLVM's root and bin directory
  - PREFIX_PATH=`llvm-config-$VERSION --prefix`
  - BIN_PATH=`llvm-config-$VERSION --bindir`
