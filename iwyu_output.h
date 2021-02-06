@@ -35,7 +35,6 @@ class UsingDecl;
 namespace include_what_you_use {
 
 using std::map;
-using std::pair;
 using std::set;
 using std::string;
 using std::vector;
