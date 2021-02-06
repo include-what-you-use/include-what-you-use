@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-##===--- generate_qt_mappings.py ------------------------------------------===##
+##===--- iwyu-mapgen-qt.py ------------------------------------------------===##
 #
 #                     The LLVM Compiler Infrastructure
 #
