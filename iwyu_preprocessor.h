@@ -82,7 +82,6 @@ class MacroInfo;
 namespace include_what_you_use {
 
 using std::map;
-using std::pair;
 using std::set;
 using std::stack;
 using std::string;
