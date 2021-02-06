@@ -9,17 +9,20 @@
 #
 ##===----------------------------------------------------------------------===##
 
+""" Generates mappings for Qt API headers.
+
+Qt has quite a strong module convention, where there's one public header for
+every module class, e.g.:
+
+- For a module X there's typically...
+- ... a set of classes called QtXy, QtXyz...
+- ... and a corresponding public header for each called QtXy, QtXyz...
+- ... and possibly a set of private headers called qtxy.h, qtxyz.h...
+
+Use these conventions to generate symbol and include mappings for the entire Qt
+tree.
 """
-This script generates the Qt mapping file according to given Qt include
-directory
 
-Example usage :
-
-   $ ./generate_qt_mappings.py /usr/include/x86_64-linux-gnu/qt5 qt5_11.imp
-
-"""
-
-from __future__ import print_function
 import argparse
 import glob
 import json
@@ -83,8 +86,8 @@ class QtHeader(object):
         return self._private_headers
 
 
-def build_imp_lines(symbols_map, includes_map):
-    """ Generate a big string containing the mappings in .imp format.
+def generate_imp_lines(symbols_map, includes_map):
+    """ Generate json-formatted strings in .imp format.
 
     This should ideally return a jsonable structure instead, and use json.dump
     to write it to the output file directly. But there doesn't seem to be a
@@ -93,14 +96,13 @@ def build_imp_lines(symbols_map, includes_map):
 
     Cheat, and use json.dumps for escaping and build a string instead.
     """
-    root = []
-
-    def jsonline(mapping):
-        return "  " + json.dumps(mapping)
+    def jsonline(mapping, indent):
+        return (indent * " ") + json.dumps(mapping)
 
     for symbol, header in symbols_map:
         map_to = "<" + header + ">"
-        root.append(jsonline({"symbol": [symbol, "private", map_to, "public"]}))
+        yield jsonline({"symbol": [symbol, "private", map_to, "public"]},
+                       indent=2)
 
     for module, include, header in includes_map:
         # Use regex map-from to match both quoted and angled includes and
@@ -108,13 +110,8 @@ def build_imp_lines(symbols_map, includes_map):
         # "qnamespace.h").
         map_from = r'@["<](%s/)?%s\.h[">]' % (module, include)
         map_to = "<" + header + ">"
-        root.append(jsonline({"include": [map_from, "private",
-                                          map_to, "public"]}))
-
-    lines = "[\n"
-    lines += ",\n".join(root)
-    lines += "\n]\n"
-    return lines
+        yield jsonline({"include": [map_from, "private", map_to, "public"]},
+                       indent=2)
 
 
 def add_mapping_rules(header, symbols_map, includes_map):
@@ -124,7 +121,7 @@ def add_mapping_rules(header, symbols_map, includes_map):
         includes_map += [(header.modulename, include, header.classname)]
 
 
-def main(qt_include_dir, output_file):
+def main(qtroot):
     """ Entry point. """
     symbols_map = []
     includes_map = []
@@ -136,7 +133,7 @@ def main(qt_include_dir, output_file):
     includes_map += [("QtCore", "qnamespace", "Qt")]
 
     # Collect mapping information from Qt directory tree.
-    headers = glob.glob(os.path.join(qt_include_dir, '**/*[!.h]'))
+    headers = glob.glob(os.path.join(qtroot, '**/*[!.h]'))
     for header in headers:
         if os.path.isdir(header):
             continue
@@ -153,18 +150,17 @@ def main(qt_include_dir, output_file):
     for header in deferred_headers:
         add_mapping_rules(header, symbols_map, includes_map)
 
-    # Transform to .imp-style format and write to output file.
-    lines = build_imp_lines(symbols_map, includes_map)
-    with open(output_file, 'w') as outfile:
-        print(OUTFILEHDR, file=outfile)
-        print(lines, file=outfile)
-
+    # Print mappings
+    print(OUTFILEHDR)
+    print("[")
+    print(",\n".join(generate_imp_lines(symbols_map, includes_map)))
+    print("]")
     return 0
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("qt_include_dir", help="Qt include directoy")
-    parser.add_argument("output_file", help="Generated output mapping file")
+    parser.add_argument("qtroot",
+                        help="Qt include root (e.g. /usr/include/.../qt5)")
     args = parser.parse_args()
-    sys.exit(main(args.qt_include_dir, args.output_file))
+    sys.exit(main(args.qtroot))
