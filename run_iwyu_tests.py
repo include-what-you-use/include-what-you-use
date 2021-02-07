@@ -87,8 +87,6 @@ def GenerateTests(rootdir, pattern):
       while hasattr(cls, test_name):   # already have a class with that name
         test_name += '2'               # just append a suffix :-)
 
-      logging.info('Registering %s.%s to test %s', cls.__name__, test_name,
-                   filename)
       setattr(cls, test_name, _GetTestBody(filename))
 
     return cls
