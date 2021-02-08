@@ -177,9 +177,23 @@ endif()
 find_package(PythonInterp)
 if(PYTHONINTERP_FOUND)
   enable_testing()
-  add_test(NAME iwyu_tests
-    COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py -- $<TARGET_FILE:include-what-you-use>
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+  function(ADD_IWYU_TEST NAME FILE)
+    add_test(NAME ${NAME}
+      COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py --run-test-file=${FILE} -- $<TARGET_FILE:include-what-you-use>
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  endfunction()
+
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py --list-test-files
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE TEST_NAMES_AND_FILES)
+  string(REPLACE "\n" ";" TEST_NAMES_LIST ${TEST_NAMES_AND_FILES})
+  foreach (TEST_NAME_AND_FILE IN ITEMS ${TEST_NAMES_LIST})
+    string(REPLACE ":" ";" TEST_NAME_AND_FILE ${TEST_NAME_AND_FILE})
+    ADD_IWYU_TEST(${TEST_NAME_AND_FILE})
+  endforeach()
+
   add_test(NAME fix_includes_test
     COMMAND ${PYTHON_EXECUTABLE} fix_includes_test.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
