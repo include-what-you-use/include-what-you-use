@@ -1,7 +1,9 @@
 # GCC STL headers
 [
+  # Note: make sure to sync this setting with iwyu_include_picker.cc
+
   # Headers explicitly annotated with `@headername`
-  # ( cd /usr/include/c++/8 && grep -r headername | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { include: ["<$1>", private, "<$2>", public ] },@' | sort -u )
+  # ( cd /usr/include/c++/10 && grep -r headername | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { include: ["<$1>", private, "<$2>", public ] },@' | sort -u )
   { include: ["<backward/auto_ptr.h>", private, "<memory>", public ] },
   { include: ["<backward/backward_warning.h>", private, "<iosfwd>", public ] },
   { include: ["<backward/binders.h>", private, "<functional>", public ] },
@@ -17,6 +19,7 @@
   { include: ["<bits/basic_string.tcc>", private, "<string>", public ] },
   { include: ["<bits/boost_concept_check.h>", private, "<iterator>", public ] },
   { include: ["<bits/c++0x_warning.h>", private, "<iosfwd>", public ] },
+  { include: ["<bits/charconv.h>", private, "<charconv>", public ] },
   { include: ["<bits/char_traits.h>", private, "<string>", public ] },
   { include: ["<bits/codecvt.h>", private, "<locale>", public ] },
   { include: ["<bits/concept_check.h>", private, "<iterator>", public ] },
@@ -38,9 +41,11 @@
   { include: ["<bits/gslice.h>", private, "<valarray>", public ] },
   { include: ["<bits/hash_bytes.h>", private, "<functional>", public ] },
   { include: ["<bits/indirect_array.h>", private, "<valarray>", public ] },
+  { include: ["<bits/int_limits.h>", private, "<limits>", public ] },
   { include: ["<bits/invoke.h>", private, "<functional>", public ] },
   { include: ["<bits/ios_base.h>", private, "<ios>", public ] },
   { include: ["<bits/istream.tcc>", private, "<istream>", public ] },
+  { include: ["<bits/iterator_concepts.h>", private, "<iterator>", public ] },
   { include: ["<bits/list.tcc>", private, "<list>", public ] },
   { include: ["<bits/locale_classes.h>", private, "<locale>", public ] },
   { include: ["<bits/locale_classes.tcc>", private, "<locale>", public ] },
@@ -64,6 +69,10 @@
   { include: ["<bits/random.h>", private, "<random>", public ] },
   { include: ["<bits/random.tcc>", private, "<random>", public ] },
   { include: ["<bits/range_access.h>", private, "<iterator>", public ] },
+  { include: ["<bits/range_cmp.h>", private, "<functional>", public ] },
+  { include: ["<bits/ranges_algobase.h>", private, "<algorithm>", public ] },
+  { include: ["<bits/ranges_algo.h>", private, "<algorithm>", public ] },
+  { include: ["<bits/ranges_uninitialized.h>", private, "<memory>", public ] },
   { include: ["<bits/refwrap.h>", private, "<functional>", public ] },
   { include: ["<bits/regex_automaton.h>", private, "<regex>", public ] },
   { include: ["<bits/regex_automaton.tcc>", private, "<regex>", public ] },
@@ -115,6 +124,7 @@
   { include: ["<bits/stringfwd.h>", private, "<string>", public ] },
   { include: ["<bits/string_view.tcc>", private, "<string_view>", public ] },
   { include: ["<bits/uniform_int_dist.h>", private, "<random>", public ] },
+  { include: ["<bits/unique_lock.h>", private, "<mutex>", public ] },
   { include: ["<bits/unique_ptr.h>", private, "<memory>", public ] },
   { include: ["<bits/unordered_map.h>", private, "<unordered_map>", public ] },
   { include: ["<bits/unordered_set.h>", private, "<unordered_set>", public ] },
@@ -128,6 +138,7 @@
   { include: ["<experimental/bits/fs_fwd.h>", private, "<experimental/filesystem>", public ] },
   { include: ["<experimental/bits/fs_ops.h>", private, "<experimental/filesystem>", public ] },
   { include: ["<experimental/bits/fs_path.h>", private, "<experimental/filesystem>", public ] },
+  { include: ["<experimental/bits/net.h>", private, "<experimental/net>", public ] },
   { include: ["<experimental/bits/shared_ptr.h>", private, "<experimental/memory>", public ] },
   { include: ["<experimental/bits/string_view.tcc>", private, "<experimental/string_view>", public ] },
   { include: ["<ext/cast.h>", private, "<ext/pointer.h>", public ] },
@@ -157,15 +168,17 @@
   { include: ["<tr1/unordered_map.h>", private, "<tr1/unordered_map>", public ] },
   { include: ["<tr1/unordered_set.h>", private, "<tr1/unordered_set>", public ] },
   { include: ["<tr2/dynamic_bitset.tcc>", private, "<tr2/dynamic_bitset>", public ] },
-  # ( cd /usr/include/x86_64-linux-gnu/c++/8 && grep -r headername | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { include: ["<$1>", private, "<$2>", public ] },@' | sort -u )
+  # ( cd /usr/include/x86_64-linux-gnu/c++/10 && grep -r headername | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { include: ["<$1>", private, "<$2>", public ] },@' | sort -u )
   { include: ["<bits/basic_file.h>", private, "<ios>", public ] },
   { include: ["<bits/c++allocator.h>", private, "<memory>", public ] },
   { include: ["<bits/c++config.h>", private, "<iosfwd>", public ] },
+  { include: ["<bits/c++config.h>", private, "<version>", public ] },
   { include: ["<bits/c++io.h>", private, "<ios>", public ] },
   { include: ["<bits/c++locale.h>", private, "<locale>", public ] },
   { include: ["<bits/cpu_defines.h>", private, "<iosfwd>", public ] },
   { include: ["<bits/ctype_base.h>", private, "<locale>", public ] },
   { include: ["<bits/ctype_inline.h>", private, "<locale>", public ] },
+  { include: ["<bits/cxxabi_tweaks.h>", private, "<cxxabi.h>", public ] },
   { include: ["<bits/error_constants.h>", private, "<system_error>", public ] },
   { include: ["<bits/messages_members.h>", private, "<locale>", public ] },
   { include: ["<bits/opt_random.h>", private, "<random>", public ] },
@@ -300,4 +313,12 @@
   # The location of exception_defines.h varies by GCC version.  It should
   # never be included directly.
   { include: ["<exception_defines.h>", private, "<exception>", public ] },
+
+  # post libstdc++-10 stuff which is not automatically caught by commands above
+  { include: ["<bits/exception.h>", private, "<exception>", public ] },
+  { include: ["<pstl/execution_defs.h>", private, "<execution>", public ] },
+  { include: ["<pstl/glue_algorithm_impl.h>", private, "<execution>", public ] },
+  { include: ["<pstl/glue_execution_defs.h>", private, "<execution>", public ] },
+  { include: ["<pstl/parallel_backend_tbb.h>", private, "<execution>", public ] },
+  { include: ["<tbb/tbb_stddef.h>", private, "<execution>", public ] },
 ]

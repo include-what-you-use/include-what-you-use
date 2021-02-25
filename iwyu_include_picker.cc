@@ -473,9 +473,10 @@ const IncludeMapEntry stdlib_c_include_map[] = {
   // mapping.)  Here is how I identified the files to map:
   // $ for i in /usr/include/c++/4.4/c* ; do ls /usr/include/`basename $i | cut -b2-`.h /usr/lib/gcc/*/4.4/include/`basename $i | cut -b2-`.h 2>/dev/null ; done
   //
-  // These headers are defined in C++14 [headers]p3.  You can get them with
-  // $ sed -n '/begin{floattable}.*{tab:cpp.c.headers}/,/end{floattable}/p' lib-intro.tex | grep tcode | perl -nle 'm/tcode{<c(.*)>}/ && print qq@  { "<$1.h>", kPublic, "<c$1>", kPublic },@' | sort
-  // on https://github.com/cplusplus/draft/blob/master/source/lib-intro.tex
+  // These headers are defined in [headers.cpp.c].
+  // https://github.com/cplusplus/draft/blob/c+%2B20/source/lib-intro.tex
+  //
+  // $ curl -s -N https://raw.githubusercontent.com/cplusplus/draft/c%2B%2B20/source/lib-intro.tex | sed -n '/begin{multicolfloattable}.*{headers.cpp.c}/,/end{multicolfloattable}/p' lib-intro.tex | grep tcode | perl -nle 'm/tcode{<c(.*)>}/ && print qq@  { "<$1.h>", kPublic, "<c$1>", kPublic },@' | sort
   { "<assert.h>", kPublic, "<cassert>", kPublic },
   { "<complex.h>", kPublic, "<ccomplex>", kPublic },
   { "<ctype.h>", kPublic, "<cctype>", kPublic },
@@ -505,19 +506,30 @@ const IncludeMapEntry stdlib_c_include_map[] = {
 };
 
 const char* stdlib_cpp_public_headers[] = {
-  // These headers are defined in C++14 [headers]p2.  You can get them with
-  // $ sed -n '/begin{floattable}.*{tab:cpp.library.headers}/,/end{floattable}/p' lib-intro.tex | grep tcode | perl -nle 'm/tcode{(.*)}/ && print qq@  "$1",@' | sort
-  // on https://github.com/cplusplus/draft/blob/master/source/lib-intro.tex
+  // These headers are defined in [headers.cpp].
+  // https://github.com/cplusplus/draft/blob/c+%2B20/source/lib-intro.tex
+  //
+  // $ curl -s -N https://raw.githubusercontent.com/cplusplus/draft/c%2B%2B20/source/lib-intro.tex | sed -n '/begin{multicolfloattable}.*{headers.cpp}/,/end{multicolfloattable}/p' lib-intro.tex | grep tcode | perl -nle 'm/tcode{(.*)}/ && print qq@  "$1",@' | sort
   "<algorithm>",
+  "<any>",
   "<array>",
   "<atomic>",
+  "<barrier>",
+  "<bit>",
   "<bitset>",
+  "<charconv>",
   "<chrono>",
   "<codecvt>",
+  "<compare>",
   "<complex>",
+  "<concepts>",
   "<condition_variable>",
+  "<coroutine>",
   "<deque>",
   "<exception>",
+  "<execution>",
+  "<filesystem>",
+  "<format>",
   "<forward_list>",
   "<fstream>",
   "<functional>",
@@ -529,43 +541,60 @@ const char* stdlib_cpp_public_headers[] = {
   "<iostream>",
   "<istream>",
   "<iterator>",
+  "<latch>",
   "<limits>",
   "<list>",
   "<locale>",
   "<map>",
   "<memory>",
+  "<memory_resource>",
   "<mutex>",
   "<new>",
+  "<numbers>",
   "<numeric>",
+  "<optional>",
   "<ostream>",
   "<queue>",
   "<random>",
+  "<ranges>",
   "<ratio>",
   "<regex>",
   "<scoped_allocator>",
+  "<semaphore>",
   "<set>",
+  "<shared_mutex>",
+  "<source_location>",
+  "<span>",
   "<sstream>",
   "<stack>",
   "<stdexcept>",
+  "<stop_token>",
   "<streambuf>",
   "<string>",
+  "<string_view>",
   "<strstream>",
+  "<syncstream>",
   "<system_error>",
   "<thread>",
   "<tuple>",
-  "<type_traits>",
   "<typeindex>",
   "<typeinfo>",
+  "<type_traits>",
   "<unordered_map>",
   "<unordered_set>",
   "<utility>",
   "<valarray>",
+  "<variant>",
   "<vector>",
+  "<version>",
 };
 
 // Private -> public include mappings for GNU libstdc++
+//
+// Note: make sure to sync this setting with gcc.stl.headers.imp
+//
 const IncludeMapEntry libstdcpp_include_map[] = {
-  // cd /usr/include/c++/8 && grep -r headername | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { "<$1>", kPrivate, "<$2>", kPublic },@' | sort -u
+  // cd /usr/include/c++/10 && grep -r headername | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { "<$1>", kPrivate, "<$2>", kPublic },@' | sort -u
   { "<backward/auto_ptr.h>", kPrivate, "<memory>", kPublic },
   { "<backward/backward_warning.h>", kPrivate, "<iosfwd>", kPublic },
   { "<backward/binders.h>", kPrivate, "<functional>", kPublic },
@@ -581,6 +610,7 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<bits/basic_string.tcc>", kPrivate, "<string>", kPublic },
   { "<bits/boost_concept_check.h>", kPrivate, "<iterator>", kPublic },
   { "<bits/c++0x_warning.h>", kPrivate, "<iosfwd>", kPublic },
+  { "<bits/charconv.h>", kPrivate, "<charconv>", kPublic },
   { "<bits/char_traits.h>", kPrivate, "<string>", kPublic },
   { "<bits/codecvt.h>", kPrivate, "<locale>", kPublic },
   { "<bits/concept_check.h>", kPrivate, "<iterator>", kPublic },
@@ -602,9 +632,11 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<bits/gslice.h>", kPrivate, "<valarray>", kPublic },
   { "<bits/hash_bytes.h>", kPrivate, "<functional>", kPublic },
   { "<bits/indirect_array.h>", kPrivate, "<valarray>", kPublic },
+  { "<bits/int_limits.h>", kPrivate, "<limits>", kPublic },
   { "<bits/invoke.h>", kPrivate, "<functional>", kPublic },
   { "<bits/ios_base.h>", kPrivate, "<ios>", kPublic },
   { "<bits/istream.tcc>", kPrivate, "<istream>", kPublic },
+  { "<bits/iterator_concepts.h>", kPrivate, "<iterator>", kPublic },
   { "<bits/list.tcc>", kPrivate, "<list>", kPublic },
   { "<bits/locale_classes.h>", kPrivate, "<locale>", kPublic },
   { "<bits/locale_classes.tcc>", kPrivate, "<locale>", kPublic },
@@ -628,6 +660,10 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<bits/random.h>", kPrivate, "<random>", kPublic },
   { "<bits/random.tcc>", kPrivate, "<random>", kPublic },
   { "<bits/range_access.h>", kPrivate, "<iterator>", kPublic },
+  { "<bits/range_cmp.h>", kPrivate, "<functional>", kPublic },
+  { "<bits/ranges_algobase.h>", kPrivate, "<algorithm>", kPublic },
+  { "<bits/ranges_algo.h>", kPrivate, "<algorithm>", kPublic },
+  { "<bits/ranges_uninitialized.h>", kPrivate, "<memory>", kPublic },
   { "<bits/refwrap.h>", kPrivate, "<functional>", kPublic },
   { "<bits/regex_automaton.h>", kPrivate, "<regex>", kPublic },
   { "<bits/regex_automaton.tcc>", kPrivate, "<regex>", kPublic },
@@ -679,6 +715,7 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<bits/stringfwd.h>", kPrivate, "<string>", kPublic },
   { "<bits/string_view.tcc>", kPrivate, "<string_view>", kPublic },
   { "<bits/uniform_int_dist.h>", kPrivate, "<random>", kPublic },
+  { "<bits/unique_lock.h>", kPrivate, "<mutex>", kPublic },
   { "<bits/unique_ptr.h>", kPrivate, "<memory>", kPublic },
   { "<bits/unordered_map.h>", kPrivate, "<unordered_map>", kPublic },
   { "<bits/unordered_set.h>", kPrivate, "<unordered_set>", kPublic },
@@ -692,6 +729,7 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<experimental/bits/fs_fwd.h>", kPrivate, "<experimental/filesystem>", kPublic },
   { "<experimental/bits/fs_ops.h>", kPrivate, "<experimental/filesystem>", kPublic },
   { "<experimental/bits/fs_path.h>", kPrivate, "<experimental/filesystem>", kPublic },
+  { "<experimental/bits/net.h>", kPrivate, "<experimental/net>", kPublic },
   { "<experimental/bits/shared_ptr.h>", kPrivate, "<experimental/memory>", kPublic },
   { "<experimental/bits/string_view.tcc>", kPrivate, "<experimental/string_view>", kPublic },
   { "<ext/cast.h>", kPrivate, "<ext/pointer.h>", kPublic },
@@ -721,10 +759,11 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<tr1/unordered_map.h>", kPrivate, "<tr1/unordered_map>", kPublic },
   { "<tr1/unordered_set.h>", kPrivate, "<tr1/unordered_set>", kPublic },
   { "<tr2/dynamic_bitset.tcc>", kPrivate, "<tr2/dynamic_bitset>", kPublic },
-  // cd /usr/include/x86_64-linux-gnu/c++/8 && grep -r headername | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { "<$1>", kPrivate, "<$2>", kPublic },@' | sort -u
+  // cd /usr/include/x86_64-linux-gnu/c++/10 && grep -r headername | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { "<$1>", kPrivate, "<$2>", kPublic },@' | sort -u
   { "<bits/basic_file.h>", kPrivate, "<ios>", kPublic },
   { "<bits/c++allocator.h>", kPrivate, "<memory>", kPublic },
   { "<bits/c++config.h>", kPrivate, "<iosfwd>", kPublic },
+  { "<bits/c++config.h>", kPrivate, "<version>", kPublic },
   { "<bits/c++io.h>", kPrivate, "<ios>", kPublic },
   { "<bits/c++locale.h>", kPrivate, "<locale>", kPublic },
   { "<bits/cpu_defines.h>", kPrivate, "<iosfwd>", kPublic },
@@ -865,6 +904,14 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   // The location of exception_defines.h varies by GCC version.  It should
   // never be included directly.
   { "<exception_defines.h>", kPrivate, "<exception>", kPublic },
+
+  // post libstdc++-10 stuff which is not automatically caught by commands above
+  { "<bits/exception.h>", kPrivate, "<exception>", kPublic },
+  { "<pstl/execution_defs.h>", kPrivate, "<execution>", kPublic },
+  { "<pstl/glue_algorithm_impl.h>", kPrivate, "<execution>", kPublic },
+  { "<pstl/glue_execution_defs.h>", kPrivate, "<execution>", kPublic },
+  { "<pstl/parallel_backend_tbb.h>", kPrivate, "<execution>", kPublic },
+  { "<tbb/tbb_stddef.h>", kPrivate, "<execution>", kPublic },
 };
 
 // Returns true if str is a valid quoted filepath pattern (i.e. either
