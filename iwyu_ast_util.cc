@@ -426,10 +426,7 @@ string PrintableLoc(SourceLocation loc) {
   if (loc.isInvalid()) {
     return "Invalid location";
   } else {
-    std::string buffer;  // llvm wants regular string, not our versa-string
-    raw_string_ostream ostream(buffer);
-    loc.print(ostream, *GlobalSourceManager());
-    return NormalizeFilePath(ostream.str());
+    return NormalizeFilePath(loc.printToString(*GlobalSourceManager()));
   }
 }
 
