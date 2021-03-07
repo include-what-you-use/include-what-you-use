@@ -169,5 +169,13 @@
   # string/ostream/istream type.
   { symbol: [ "std::char_traits", private, "<string>", public ] },
   { symbol: [ "std::char_traits", private, "<ostream>", public ] },
-  { symbol: [ "std::char_traits", private, "<istream>", public ] }
+  { symbol: [ "std::char_traits", private, "<istream>", public ] },
+
+  { symbol: [ "std::size_t", private, "<cstddef>", public ] },
+  { symbol: [ "std::size_t", private, "<cstdio>", public ] },
+  { symbol: [ "std::size_t", private, "<cstdlib>", public ] },
+  { symbol: [ "std::size_t", private, "<cstring>", public ] },
+  { symbol: [ "std::size_t", private, "<ctime>", public ] },
+  { symbol: [ "std::size_t", private, "<cuchar>", public ] },
+  { symbol: [ "std::size_t", private, "<cwchar>", public ] }
 ]
