@@ -16,6 +16,8 @@
 #include <map>                          // for _Rb_tree_const_iterator, etc
 #include <utility>                      // for pair, make_pair, operator>
 #include <vector>                       // for vector, vector<>::iterator, etc
+#include <fstream>                      // for basic_ostream
+#include <ios>                          // for ofstream, operator|, ios
 
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
@@ -2165,6 +2167,12 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
       lines_, &diff_output);
   errs() << diff_output;
 
+  if (GlobalFlags().output_to_file) {
+    std::ofstream outputfile;
+    outputfile.open(GlobalFlags().output, std::ios::out | std::ios::app);
+    outputfile << diff_output;
+    outputfile.close();
+  }
   return num_edits;
 }
 

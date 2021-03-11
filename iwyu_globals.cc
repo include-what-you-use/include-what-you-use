@@ -16,6 +16,7 @@
 #include <set>                          // for set
 #include <string>                       // for string, operator<, etc
 #include <utility>                      // for make_pair, pair
+#include <fstream>                      // for ofstream, basic_ostream<>::__...
 
 #include "iwyu_cache.h"
 #include "iwyu_include_picker.h"
@@ -54,53 +55,55 @@ static int ParseIwyuCommandlineFlags(int argc, char** argv);
 static int ParseInterceptedCommandlineFlags(int argc, char** argv);
 
 static void PrintHelp(const char* extra_msg) {
-  printf("USAGE: include-what-you-use [-Xiwyu --iwyu_opt]... <clang opts>"
-         " <source file>\n"
-         "Here are the <iwyu_opts> you can specify (e.g. -Xiwyu --verbose=3):\n"
-         "   --check_also=<glob>: tells iwyu to print iwyu-violation info\n"
-         "        for all files matching the given glob pattern (in addition\n"
-         "        to the default of reporting for the input .cc file and its\n"
-         "        associated .h files).  This flag may be specified multiple\n"
-         "        times to specify multiple glob patterns.\n"
-         "   --keep=<glob>: tells iwyu to always keep these includes.\n"
-         "        This flag may be specified multiple times to specify\n"
-         "        multiple glob patterns.\n"
-         "   --mapping_file=<filename>: gives iwyu a mapping file.\n"
-         "   --no_default_mappings: do not add iwyu's default mappings.\n"
-         "   --pch_in_code: mark the first include in a translation unit as a\n"
-         "        precompiled header.  Use --pch_in_code to prevent IWYU from\n"
-         "        removing necessary PCH includes.  Though Clang forces PCHs\n"
-         "        to be listed as prefix headers, the PCH-in-code pattern can\n"
-         "        be used with GCC and is standard practice on MSVC\n"
-         "        (e.g. stdafx.h).\n"
-         "   --prefix_header_includes=<value>: tells iwyu what to do with\n"
-         "        in-source includes and forward declarations involving\n"
-         "        prefix headers.  Prefix header is a file included via\n"
-         "        command-line option -include.  If prefix header makes\n"
-         "        include or forward declaration obsolete, presence of such\n"
-         "        include can be controlled with the following values\n"
-         "          add:    new lines are added\n"
-         "          keep:   new lines aren't added, existing are kept intact\n"
-         "          remove: new lines aren't added, existing are removed\n"
-         "        Default value is 'add'.\n"
-         "   --transitive_includes_only: do not suggest that a file add\n"
-         "        foo.h unless foo.h is already visible in the file's\n"
-         "        transitive includes.\n"
-         "   --max_line_length: maximum line length for includes.\n"
-         "        Note that this only affects comments and alignment thereof,\n"
-         "        the maximum line length can still be exceeded with long\n"
-         "        file names (default: 80).\n"
-         "   --no_comments: do not add 'why' comments.\n"
-         "   --no_fwd_decls: do not use forward declarations.\n"
-         "   --verbose=<level>: the higher the level, the more output.\n"
-         "   --quoted_includes_first: when sorting includes, place quoted\n"
-         "        ones first.\n"
-         "   --cxx17ns: suggests the more concise syntax introduced in C++17\n"
-         "\n"
-         "In addition to IWYU-specific options you can specify the following\n"
-         "options without -Xiwyu prefix:\n"
-         "   --help: prints this help and exits.\n"
-         "   --version: prints version and exits.\n");
+  printf(
+      "USAGE: include-what-you-use [-Xiwyu --iwyu_opt]... <clang opts>"
+      " <source file>\n"
+      "Here are the <iwyu_opts> you can specify (e.g. -Xiwyu --verbose=3):\n"
+      "   --check_also=<glob>: tells iwyu to print iwyu-violation info\n"
+      "        for all files matching the given glob pattern (in addition\n"
+      "        to the default of reporting for the input .cc file and its\n"
+      "        associated .h files).  This flag may be specified multiple\n"
+      "        times to specify multiple glob patterns.\n"
+      "   --keep=<glob>: tells iwyu to always keep these includes.\n"
+      "        This flag may be specified multiple times to specify\n"
+      "        multiple glob patterns.\n"
+      "   --mapping_file=<filename>: gives iwyu a mapping file.\n"
+      "   --no_default_mappings: do not add iwyu's default mappings.\n"
+      "   --pch_in_code: mark the first include in a translation unit as a\n"
+      "        precompiled header.  Use --pch_in_code to prevent IWYU from\n"
+      "        removing necessary PCH includes.  Though Clang forces PCHs\n"
+      "        to be listed as prefix headers, the PCH-in-code pattern can\n"
+      "        be used with GCC and is standard practice on MSVC\n"
+      "        (e.g. stdafx.h).\n"
+      "   --prefix_header_includes=<value>: tells iwyu what to do with\n"
+      "        in-source includes and forward declarations involving\n"
+      "        prefix headers.  Prefix header is a file included via\n"
+      "        command-line option -include.  If prefix header makes\n"
+      "        include or forward declaration obsolete, presence of such\n"
+      "        include can be controlled with the following values\n"
+      "          add:    new lines are added\n"
+      "          keep:   new lines aren't added, existing are kept intact\n"
+      "          remove: new lines aren't added, existing are removed\n"
+      "        Default value is 'add'.\n"
+      "   --transitive_includes_only: do not suggest that a file add\n"
+      "        foo.h unless foo.h is already visible in the file's\n"
+      "        transitive includes.\n"
+      "   --max_line_length: maximum line length for includes.\n"
+      "        Note that this only affects comments and alignment thereof,\n"
+      "        the maximum line length can still be exceeded with long\n"
+      "        file names (default: 80).\n"
+      "   --no_comments: do not add 'why' comments.\n"
+      "   --no_fwd_decls: do not use forward declarations.\n"
+      "   --verbose=<level>: the higher the level, the more output.\n"
+      "   --quoted_includes_first: when sorting includes, place quoted\n"
+      "        ones first.\n"
+      "   --cxx17ns: suggests the more concise syntax introduced in C++17\n"
+      "   --output=<filename>: tells iwyu to output report to file\n"
+      "\n"
+      "In addition to IWYU-specific options you can specify the following\n"
+      "options without -Xiwyu prefix:\n"
+      "   --help: prints this help and exits.\n"
+      "   --version: prints version and exits.\n");
   if (extra_msg)
     printf("\n%s\n\n", extra_msg);
 }
@@ -165,28 +168,30 @@ CommandlineFlags::CommandlineFlags()
       no_comments(false),
       no_fwd_decls(false),
       quoted_includes_first(false),
-      cxx17ns(false) {
+      cxx17ns(false),
+      output_to_file(false) {
   // Always keep Qt .moc includes; its moc compiler does its own IWYU analysis.
   keep.emplace("*.moc");
 }
 
 int CommandlineFlags::ParseArgv(int argc, char** argv) {
   static const struct option longopts[] = {
-    {"check_also", required_argument, nullptr, 'c'},  // can be specified >once
-    {"keep", required_argument, nullptr, 'k'},  // can be specified >once
-    {"transitive_includes_only", no_argument, nullptr, 't'},
-    {"verbose", required_argument, nullptr, 'v'},
-    {"mapping_file", required_argument, nullptr, 'm'},
-    {"no_default_mappings", no_argument, nullptr, 'n'},
-    {"prefix_header_includes", required_argument, nullptr, 'x'},
-    {"pch_in_code", no_argument, nullptr, 'h'},
-    {"max_line_length", required_argument, nullptr, 'l'},
-    {"no_comments", no_argument, nullptr, 'o'},
-    {"no_fwd_decls", no_argument, nullptr, 'f'},
-    {"quoted_includes_first", no_argument, nullptr, 'q' },
-    {"cxx17ns", no_argument, nullptr, 'C'},
-    {nullptr, 0, nullptr, 0}
-  };
+      {"check_also", required_argument, nullptr,
+       'c'},                                      // can be specified >once
+      {"keep", required_argument, nullptr, 'k'},  // can be specified >once
+      {"transitive_includes_only", no_argument, nullptr, 't'},
+      {"verbose", required_argument, nullptr, 'v'},
+      {"mapping_file", required_argument, nullptr, 'm'},
+      {"no_default_mappings", no_argument, nullptr, 'n'},
+      {"prefix_header_includes", required_argument, nullptr, 'x'},
+      {"pch_in_code", no_argument, nullptr, 'h'},
+      {"max_line_length", required_argument, nullptr, 'l'},
+      {"no_comments", no_argument, nullptr, 'o'},
+      {"no_fwd_decls", no_argument, nullptr, 'f'},
+      {"quoted_includes_first", no_argument, nullptr, 'q'},
+      {"cxx17ns", no_argument, nullptr, 'C'},
+      {"output", required_argument, nullptr, 'O'},
+      {nullptr, 0, nullptr, 0}};
   static const char shortopts[] = "v:c:m:n";
   while (true) {
     switch (getopt_long(argc, argv, shortopts, longopts, nullptr)) {
@@ -216,7 +221,12 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         CHECK_((max_line_length >= 0) && "Max line length must be positive");
         break;
       case 'q': quoted_includes_first = true; break;
-      case 'C': cxx17ns = true; break;
+      case 'C':
+        cxx17ns = true;
+        break;
+      case 'O':
+        AddOutputFilename(optarg);
+        break;
       case -1: return optind;   // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");
@@ -374,6 +384,19 @@ FullUseCache* FunctionCallsFullUseCache() {
 
 FullUseCache* ClassMembersFullUseCache() {
   return class_members_full_use_cache;
+}
+
+void AddOutputFilename(const string& filename) {
+  CHECK_(commandline_flags && "Call ParseIwyuCommandlineFlags() before this");
+  bool ok = static_cast<bool>(std::ofstream(filename).put('a'));  // create file
+  if (!ok) {
+    PrintHelp("FATAL ERROR: can't create output report file.");
+    exit(EXIT_INVALIDARGS);
+  } else {
+    commandline_flags->output_to_file = true;
+    commandline_flags->output = filename;
+    std::remove(commandline_flags->output.c_str());
+  }
 }
 
 void AddGlobToReportIWYUViolationsFor(const string& glob) {

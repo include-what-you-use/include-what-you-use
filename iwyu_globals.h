@@ -100,7 +100,9 @@ struct CommandlineFlags {
   bool no_comments;   // Disable 'why' comments. No short option.
   bool no_fwd_decls;  // Disable forward declarations.
   bool quoted_includes_first; // Place quoted includes first in sort order.
-  bool cxx17ns; // -C: C++17 nested namespace syntax
+  bool cxx17ns;               // -C: C++17 nested namespace syntax
+  string output;              // -o: output report to file
+  bool output_to_file;
 };
 
 const CommandlineFlags& GlobalFlags();
@@ -122,6 +124,9 @@ const SourceManagerCharacterDataGetter& DefaultDataGetter();
 // caller_loc.
 FullUseCache* FunctionCallsFullUseCache();
 FullUseCache* ClassMembersFullUseCache();
+
+// For the commandline option --output <filename>
+void AddOutputFilename(const string& filename);
 
 // These files are based on the commandline (--check_also flag plus argv).
 // They are specified as glob file-patterns (which behave just as they
