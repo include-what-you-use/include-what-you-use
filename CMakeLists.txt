@@ -93,6 +93,11 @@ add_llvm_executable(include-what-you-use
 # available when IWYU is executed from the build dir.
 add_dependencies(include-what-you-use clang-resource-headers)
 
+# LLVM requires C++14, so follow suit.
+set_property(TARGET include-what-you-use PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET include-what-you-use PROPERTY CXX_STANDARD 14)
+set_property(TARGET include-what-you-use PROPERTY CXX_EXTENSIONS OFF)
+
 if (MINGW)
   # Work around 'too many sections' error with MINGW/GCC
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
