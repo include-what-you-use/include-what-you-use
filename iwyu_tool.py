@@ -356,7 +356,7 @@ def slice_compilation_db(compilation_db, selection):
     return new_db
 
 
-def execute(invocations, verbose, formatter, jobs):
+def execute(invocations, verbose, formatter, jobs, max_load_average=0):
     """ Launch processes described by invocations. """
     exit_code = 0
     if jobs == 1:
@@ -379,6 +379,18 @@ def execute(invocations, verbose, formatter, jobs):
 
         # Schedule new processes if there's room.
         capacity = jobs - len(pending)
+
+        if max_load_average > 0:
+            one_min_load_average, _, _ = os.getloadavg()
+            load_capacity = max_load_average - one_min_load_average
+            if load_capacity < 0:
+                load_capacity = 0
+            if load_capacity < capacity:
+                capacity = int(load_capacity)
+                if not capacity and not pending:
+                    # Ensure there is at least one job running.
+                    capacity = 1
+
         pending.extend(i.start(verbose) for i in invocations[:capacity])
         invocations = invocations[capacity:]
 
@@ -388,7 +400,7 @@ def execute(invocations, verbose, formatter, jobs):
 
 
 def main(compilation_db_path, source_files, verbose, formatter, jobs,
-         extra_args):
+         max_load_average, extra_args):
     """ Entry point. """
 
     if not IWYU_EXECUTABLE:
@@ -418,7 +430,7 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
         Invocation.from_compile_command(e, extra_args) for e in compilation_db
     ]
 
-    return execute(invocations, verbose, formatter, jobs)
+    return execute(invocations, verbose, formatter, jobs, max_load_average)
 
 
 def _bootstrap(sys_argv):
@@ -459,6 +471,8 @@ def _bootstrap(sys_argv):
                         help='Output format (default: %s)' % DEFAULT_FORMAT)
     parser.add_argument('-j', '--jobs', type=int, default=1,
                         help='Number of concurrent subprocesses')
+    parser.add_argument('-l', '--load', type=int, default=0,
+                        help='Do not start new jobs if the 1min load average is greater than the provided value')
     parser.add_argument('-p', metavar='<build-path>', required=True,
                         help='Compilation database path', dest='dbpath')
     parser.add_argument('source', nargs='*',
@@ -477,7 +491,7 @@ def _bootstrap(sys_argv):
     args = parser.parse_args(argv)
 
     return main(args.dbpath, args.source, args.verbose,
-                FORMATTERS[args.output_format], args.jobs, extra_args)
+                FORMATTERS[args.output_format], args.jobs, args.load, extra_args)
 
 
 if __name__ == '__main__':
