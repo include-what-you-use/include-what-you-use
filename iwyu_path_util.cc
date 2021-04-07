@@ -129,12 +129,7 @@ string NormalizeFilePath(const string& path) {
   llvm::SmallString<128> normalized(path);
   llvm::sys::path::remove_dots(normalized, /*remove_dot_dot=*/true);
 
-#ifdef _WIN32
-  // Canonicalize directory separators (forward slashes considered canonical.)
-  std::replace(normalized.begin(), normalized.end(), '\\', '/');
-#endif
-
-  return normalized.str().str();
+  return llvm::sys::path::convert_to_slash(normalized.str());
 }
 
 string NormalizeDirPath(const string& path) {
