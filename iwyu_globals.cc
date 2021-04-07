@@ -383,9 +383,11 @@ void AddGlobToReportIWYUViolationsFor(const string& glob) {
 
 bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file) {
   const string filepath = GetFilePath(file);
-  for (const string& glob : GlobalFlags().check_also)
-    if (GlobMatchesPath(glob.c_str(), filepath.c_str()))
+  for (const string& glob : GlobalFlags().check_also) {
+    std::string cmp_filepath = IsAbsolutePath(glob) ? MakeAbsolutePath(filepath) : filepath;
+    if (GlobMatchesPath(glob.c_str(), cmp_filepath.c_str()))
       return true;
+  }
   return false;
 }
 
