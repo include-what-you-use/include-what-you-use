@@ -1,6 +1,6 @@
 # Include What You Use #
 
-[![Build Status](https://travis-ci.org/include-what-you-use/include-what-you-use.svg?branch=master)](https://travis-ci.org/include-what-you-use/include-what-you-use)
+[![IWYU CI](https://github.com/include-what-you-use/include-what-you-use/actions/workflows/ci.yml/badge.svg)](https://github.com/include-what-you-use/include-what-you-use/actions/workflows/ci.yml)
 
 For more in-depth documentation, see [docs](docs).
 
