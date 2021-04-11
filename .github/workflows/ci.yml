@@ -1,0 +1,60 @@
+name: IWYU CI
+
+on:
+  - push
+  - pull_request
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Install prerequisites
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main"
+          sudo apt update
+          sudo apt install -y ninja-build
+          # Remove any base dist LLVM/Clang installations
+          sudo apt remove -y "libclang-dev*"
+          sudo apt remove -y "clang*"
+          sudo apt remove -y "llvm*"
+          # Reinstall snapshot versions
+          sudo apt install -y llvm-dev
+          sudo apt install -y libclang-dev
+          sudo apt install -y clang
+
+      - name: Check out default branch
+        uses: actions/checkout@v2
+
+      - name: Build include-what-you-use
+        run: |
+          mkdir build
+          cd ./build
+          cmake -G Ninja \
+                -DCMAKE_C_COMPILER=clang \
+                -DCMAKE_CXX_COMPILER=clang++ \
+                -DCMAKE_INSTALL_PREFIX=./ \
+                ../
+          ninja
+
+      - name: Test include-what-you-use
+        run: |
+          cd ./build
+          CTEST_OUTPUT_ON_FAILURE=1 ctest
+
+      - name: Test install
+        run: |
+          cd ./build
+          cmake --install .
+
+      - name: Check license headers
+        run: |
+          git ls-tree --full-tree --name-only -r HEAD | \
+              xargs ./iwyu-check-license-header.py
