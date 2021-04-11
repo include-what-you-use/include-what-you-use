@@ -1,0 +1,36 @@
+name: IWYU CI
+
+on:
+  - push
+  - pull_request
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Install prerequisites
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main"
+          sudo apt update
+          sudo apt install -y llvm-dev
+          sudo apt install -y libclang-dev
+          sudo apt install -y clang
+          sudo apt install -y ninja-build
+
+      - name: Check out default branch
+        uses: actions/checkout@v2
+
+      - name: Build include-what-you-use
+        run: |
+          mkdir build
+          cd ./build
+          cmake -G "Ninja" -DCMAKE_C_COMPILER=clang ../
+          ninja
