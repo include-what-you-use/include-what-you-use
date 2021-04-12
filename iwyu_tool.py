@@ -471,7 +471,7 @@ def _bootstrap(sys_argv):
                         help='Output format (default: %s)' % DEFAULT_FORMAT)
     parser.add_argument('-j', '--jobs', type=int, default=1,
                         help='Number of concurrent subprocesses')
-    parser.add_argument('-l', '--load', type=int, default=0,
+    parser.add_argument('-l', '--load', type=float, default=0,
                         help='Do not start new jobs if the 1min load average is greater than the provided value')
     parser.add_argument('-p', metavar='<build-path>', required=True,
                         help='Compilation database path', dest='dbpath')
