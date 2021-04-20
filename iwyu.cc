@@ -3691,8 +3691,12 @@ class IwyuAstConsumer
     num_edits += preprocessor_info().FileInfoFor(main_file)
         ->CalculateAndReportIwyuViolations();
 
-    // We need to force the compile to fail so we can re-run.
-    exit(EXIT_SUCCESS_OFFSET + num_edits);
+    // We need to force the compile to fail so we can re-run,
+    // unless --exit_code is specified
+    if (GlobalFlags().exit_code && num_edits == 0)
+      exit(EXIT_SUCCESSFULLY);
+    else
+      exit(EXIT_SUCCESS_OFFSET + num_edits);
   }
 
   void ParseFunctionTemplates(TranslationUnitDecl* decl) {
@@ -4162,5 +4166,7 @@ int main(int argc, char **argv) {
   // We always return a failure exit code, to indicate we didn't
   // successfully compile (produce a .o for) the source files we were
   // given.
+  // Note: If --exit_code was passed, we want to exit with code 0
+  // if there are no edits. That's handled in HandleTranslationUnit.
   return 1;
 }

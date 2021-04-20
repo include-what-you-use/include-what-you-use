@@ -30,6 +30,8 @@ namespace include_what_you_use {
 // Of course, this means that IWYU always fails (i.e. never returns 0.)
 // This is intentional, so it can be used with make -k without ever being
 // considered up-to-date.
+// However, if --exit_code is passed, we return 0 if there are no edits.
+static const int EXIT_SUCCESSFULLY = 0;
 static const int EXIT_INVALIDARGS = 1;
 static const int EXIT_SUCCESS_OFFSET = 2;
 
@@ -101,6 +103,7 @@ struct CommandlineFlags {
   bool no_fwd_decls;  // Disable forward declarations.
   bool quoted_includes_first; // Place quoted includes first in sort order.
   bool cxx17ns; // -C: C++17 nested namespace syntax
+  bool exit_code;
 };
 
 const CommandlineFlags& GlobalFlags();

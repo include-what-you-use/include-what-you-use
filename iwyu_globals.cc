@@ -96,6 +96,7 @@ static void PrintHelp(const char* extra_msg) {
          "   --quoted_includes_first: when sorting includes, place quoted\n"
          "        ones first.\n"
          "   --cxx17ns: suggests the more concise syntax introduced in C++17\n"
+         "   --exit_code: Return 0 if no issues were found\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
          "options without -Xiwyu prefix:\n"
@@ -165,7 +166,8 @@ CommandlineFlags::CommandlineFlags()
       no_comments(false),
       no_fwd_decls(false),
       quoted_includes_first(false),
-      cxx17ns(false) {
+      cxx17ns(false),
+      exit_code(false) {
   // Always keep Qt .moc includes; its moc compiler does its own IWYU analysis.
   keep.emplace("*.moc");
 }
@@ -185,6 +187,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"no_fwd_decls", no_argument, nullptr, 'f'},
     {"quoted_includes_first", no_argument, nullptr, 'q' },
     {"cxx17ns", no_argument, nullptr, 'C'},
+    {"exit_code", no_argument, nullptr, 'e'},
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "v:c:m:n";
@@ -217,6 +220,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         break;
       case 'q': quoted_includes_first = true; break;
       case 'C': cxx17ns = true; break;
+      case 'e': exit_code = true; break;
       case -1: return optind;   // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");
