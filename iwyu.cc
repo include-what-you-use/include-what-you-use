@@ -3695,8 +3695,10 @@ class IwyuAstConsumer
     // unless --exit_code is specified
     if (GlobalFlags().exit_code && num_edits == 0)
       exit(EXIT_SUCCESSFULLY);
-    else
+    else if (EXIT_SUCCESS_OFFSET + num_edits <= EXIT_MAX)
       exit(EXIT_SUCCESS_OFFSET + num_edits);
+    else
+      exit(EXIT_MAX);
   }
 
   void ParseFunctionTemplates(TranslationUnitDecl* decl) {
