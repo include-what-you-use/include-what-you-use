@@ -20,6 +20,7 @@
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
+#include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
 #include "iwyu_preprocessor.h"  // IWYU pragma: keep
@@ -2210,10 +2211,147 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // we *do* need to add it.
   set<string> associated_desired_includes = AssociatedDesiredIncludes();
 
+  auto includes = GlobalIncludeMap().includes_[file_];
+  auto modules = GlobalIncludeMap().modules_[file_];
+
+  VERRS(6) << "Registered Imports:\n";
+  for (auto const& it : includes) {
+    VERRS(6)
+      << " "
+      << it.first->getName()
+      << "\n";
+
+    for (auto const& loc : it.second) {
+      VERRS(6)
+        << "  "
+        << PrintableLoc(loc)
+        << "\n";
+    }
+  }
+
+  VERRS(6) << "Registered Modules:\n";
+  for (auto const& it : modules) {
+    VERRS(6)
+      << " "
+      << it.first->getFullModuleName()
+      << "\n";
+
+    for (auto const& loc : it.second) {
+      VERRS(6)
+        << "  "
+        << PrintableLoc(loc)
+        << "\n";
+    }
+  }
+
+  clang::SourceManager& sm = *GlobalSourceManager();
+
+
+  std::set<const clang::Module*> used_modules;
+  std::set<clang::FileID> used_includes;
+
   CalculateIwyuViolations(&symbol_uses_);
   EmitWarningMessages(symbol_uses_);
   internal::CalculateDesiredIncludesAndForwardDeclares(
       symbol_uses_, associated_desired_includes, kept_includes_,  &lines_);
+
+  for (auto const& use : symbol_uses_) {
+    VERRS(6) << "symbol: " << use.symbol_name();
+    VERRS(6) << " " << use.PrintableUseLoc();
+    if (!use.is_full_use()) {
+      VERRS(6) << "fwd use, skipping\n";
+      continue;
+    }
+    const clang::NamedDecl* decl = use.decl();
+    if (decl) {
+      VERRS(6) << " @ ";
+      const clang::Module* module = decl->getOwningModule();
+      if (module) {
+        SourceLocation loc = decl->getLocation();
+        VERRS(6) << PrintableLoc(loc) << "\n";
+        VERRS(6) << module->getFullModuleName();
+        used_modules.insert(module);
+      } else {
+        const SourceLocation loc = decl->getLocation();
+        clang::FileID fid = sm.getFileID(loc);
+        const clang::FileEntry* entry = sm.getFileEntryForID(fid);
+        VERRS(6) << "fid: " << fid.getHashValue() << " ";
+        if (entry != file_) {
+          used_includes.insert(fid);
+          VERRS(6) << GetIncludeNameAsWritten(sm.getIncludeLoc(fid), DefaultDataGetter());
+        }
+        VERRS(6) << "\n"
+          << "  "
+          << sm.getFileEntryForID(fid);
+      }
+    }
+    VERRS(6) << "\n";
+  }
+
+  for (auto const fid : used_includes) {
+    const FileEntry* entry = sm.getFileEntryForID(fid);
+    if (entry == file_) continue;
+    SourceLocation loc = sm.getIncludeLoc(fid);
+    auto it = includes.find(entry);
+    if (it == includes.end()) {
+      VERRS(6)
+        << "Need to import "
+        << fid.getHashValue()
+        << " "
+        << GetIncludeNameAsWritten(loc, DefaultDataGetter())
+        << "\n";
+    } else {
+      it->second.erase(loc);
+    }
+  }
+
+  for (auto const& fid : includes) {
+    VERRS(6)
+      << "Need to delete "
+      << fid.first->getName()
+      << "\n";
+    for (auto loc : fid.second) {
+      clang::PresumedLoc ploc = sm.getPresumedLoc(loc, true);
+
+      SourceLocation xloc = sm.getFileLoc(loc);
+      VERRS(6)
+        << " "
+        << GetSourceTextUntilEndOfLine(xloc, DefaultDataGetter())
+        << " @ "
+        << ploc.getFilename()
+        << ":"
+        << ploc.getLine()
+        << " "
+        << "\n";
+    }
+  }
+
+
+  for (auto const module : used_modules) {
+    auto it = modules.find(module);
+    if (it == modules.end()) {
+      VERRS(6) << "Need to import " << module->getFullModuleName() << "\n";
+    }
+  }
+
+  for (auto const& module : modules) {
+    auto it = used_modules.find(module.first);
+    if (it == used_modules.end()) {
+      VERRS(6)
+        << "Need to delete "
+        << module.first->getFullModuleName()
+        << "\n";
+      for (auto loc : module.second) {
+        clang::PresumedLoc ploc = sm.getPresumedLoc(loc, true);
+        VERRS(6)
+          << " "
+          << ploc.getFilename()
+          << ":"
+          << ploc.getLine()
+          << "\n";
+      }
+    }
+  }
 
   // Remove desired inclusions that have been inhibited by pragma
   // "no_include".

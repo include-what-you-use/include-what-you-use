@@ -12,12 +12,16 @@
 #define INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
 
 #include <set>                          // for set
+#include <map>
 #include <string>                       // for string
 #include <vector>                       // for vector
 
 namespace clang {
 class FileEntry;
+class FileID;
 class HeaderSearch;
+class Module;
+class SourceLocation;
 class SourceManager;
 struct PrintingPolicy;
 }  // namespace clang
@@ -34,6 +38,7 @@ static const int EXIT_INVALIDARGS = 1;
 static const int EXIT_SUCCESS_OFFSET = 2;
 
 using std::set;
+using std::map;
 using std::string;
 using std::vector;
 
@@ -102,6 +107,17 @@ struct CommandlineFlags {
   bool quoted_includes_first; // Place quoted includes first in sort order.
   bool cxx17ns; // -C: C++17 nested namespace syntax
 };
+
+struct IncludeMap {
+  map<const clang::FileEntry*, map<const clang::FileEntry*, set<clang::SourceLocation>>> includes_;
+  map<const clang::FileEntry*, map<const clang::Module*, set<clang::SourceLocation>>> modules_;
+
+ public:
+  void include(const clang::SourceLocation loc, const clang::FileEntry* entry);
+  void module(const clang::SourceLocation loc, const clang::Module* module);
+};
+
+IncludeMap& GlobalIncludeMap();
 
 const CommandlineFlags& GlobalFlags();
 // Used by tests as an easy way to simulate calling with different --flags.
