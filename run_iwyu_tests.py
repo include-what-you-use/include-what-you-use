@@ -39,34 +39,31 @@ def Partition(l, delimiter):
   return l[:delim_index], l[delim_index+1:]
 
 
+def TestIwyuOnRelevantFiles(filename):
+  logging.info('Testing iwyu on %s', filename)
+  # Split full/path/to/foo.cc into full/path/to/foo and .cc.
+  (all_but_extension, extension) = os.path.splitext(filename)
+  (dirname, basename) = os.path.split(all_but_extension)
+  # Generate diagnostics on all foo-* files (well, not other
+  # foo-*.cc files, which is not kosher but is legal), in addition
+  # to foo.h (if present) and foo.cc.
+  all_files = (glob.glob('%s-*' % all_but_extension) +
+               glob.glob('%s/*/%s-*' % (dirname, basename)) +
+               glob.glob('%s.h' % all_but_extension) +
+               glob.glob('%s/*/%s.h' % (dirname, basename)))
+  
+  files_to_check = [f for f in all_files if not f.endswith(extension)]
+  files_to_check.append(filename)
+
+  # IWYU emits summaries with canonicalized filepaths, where all the
+  # directory separators are set to '/'. In order for the testsuite to
+  # correctly match up file summaries, we must canonicalize the filepaths
+  # in the same way here.
+  files_to_check = [PosixPath(f) for f in files_to_check]
+  iwyu_test_util.TestIwyuOnRelativeFile(filename, files_to_check, verbose=True)
+
+
 def GenerateTests(rootdir, pattern):
-  def _GetTestBody(filename):
-    def _test(self):
-      logging.info('Testing iwyu on %s', filename)
-
-      # Split full/path/to/foo.cc into full/path/to/foo and .cc.
-      (all_but_extension, _) = os.path.splitext(filename)
-      (dirname, basename) = os.path.split(all_but_extension)
-      # Generate diagnostics on all foo-* files (well, not other
-      # foo-*.cc files, which is not kosher but is legal), in addition
-      # to foo.h (if present) and foo.cc.
-      all_files = (glob.glob('%s-*' % all_but_extension) +
-                   glob.glob('%s/*/%s-*' % (dirname, basename)) +
-                   glob.glob('%s.h' % all_but_extension) +
-                   glob.glob('%s/*/%s.h' % (dirname, basename)))
-      files_to_check = [f for f in all_files if not fnmatch(f, pattern)]
-      files_to_check.append(filename)
-
-      # IWYU emits summaries with canonicalized filepaths, where all the
-      # directory separators are set to '/'. In order for the testsuite to
-      # correctly match up file summaries, we must canonicalize the filepaths
-      # in the same way here.
-      files_to_check = [PosixPath(f) for f in files_to_check]
-
-      iwyu_test_util.TestIwyuOnRelativeFile(filename, files_to_check, verbose=True)
-    return _test
-
-
   def _AddTestFunctions(cls):
     filenames = []
     for (dirpath, _, files) in os.walk(rootdir):
@@ -86,7 +83,7 @@ def GenerateTests(rootdir, pattern):
       while hasattr(cls, test_name):   # already have a class with that name
         test_name += '2'               # just append a suffix :-)
 
-      setattr(cls, test_name, _GetTestBody(filename))
+      setattr(cls, test_name, lambda x, f=filename: TestIwyuOnRelevantFiles(f))
 
     return cls
 
