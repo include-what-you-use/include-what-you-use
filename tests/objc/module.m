@@ -10,15 +10,24 @@
 // IWYU_ARGS: -fmodules -F tests/objc/frameworks -Wno-objc-root-class
 
 #import <Foo/Foo.h>
+#import "module.h"
+@import Foo;
+@import Foo;
+#import <stdio.h>
+#import <stdio.h>
 
-@interface Tsar
+@interface Tsar: Foo
 @end
 
 @implementation Tsar
 @end
 
-/**** IWYU_SUMMARY
+void test() {
+  printf("hello");
+}
+
+/**** iwyu_summary
 
 (tests/objc/module.m has correct #includes/fwd-decls)
 
-***** IWYU_SUMMARY */
+***** iwyu_summary */
