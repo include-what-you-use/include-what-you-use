@@ -67,6 +67,7 @@ def TestIwyuOnRelevantFiles(filename):
 def GenerateTests(rootdir, pattern):
   def _AddTestFunctions(cls):
     filenames = []
+    test_files = {}
     for (dirpath, _, files) in os.walk(rootdir):
       dirpath = PosixPath(dirpath)  # Normalize path separators.
       filenames.extend(posixpath.join(dirpath, f) for f in files
@@ -85,6 +86,9 @@ def GenerateTests(rootdir, pattern):
         test_name += '2'               # just append a suffix :-)
 
       setattr(cls, test_name, lambda x, f=filename: TestIwyuOnRelevantFiles(f))
+      test_files[test_name] = filename
+
+    setattr(cls, 'test_files', test_files)
 
     return cls
 
@@ -100,6 +104,11 @@ def EnumerateLoadedTests():
 def PrintLoadedTests():
   for (cls, test) in EnumerateLoadedTests():
     print('%s.%s' % (cls.__name__, test))
+
+
+def PrintLoadedTestsAndFiles():
+  for (cls, test) in EnumerateLoadedTests():
+    print('%s.%s:%s' % (cls.__name__, test, cls.test_files[test]))
 
 
 @GenerateTests(rootdir='tests/c', pattern='*.c')
@@ -120,9 +129,12 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(add_help=False, usage=argparse.SUPPRESS)
   group = parser.add_mutually_exclusive_group()
   group.add_argument('--list', dest='list_tests', action='store_true')
+  group.add_argument('--list-test-files', action='store_true')
   (runner_args, _) = parser.parse_known_args(unittest_args)
 
   if runner_args.list_tests:
     exit(PrintLoadedTests())
+  elif runner_args.list_test_files:
+    exit(PrintLoadedTestsAndFiles())
 
   unittest.main(argv=unittest_args)
