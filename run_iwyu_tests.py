@@ -111,16 +111,6 @@ def PrintLoadedTestsAndFiles():
     print('%s.%s:%s' % (cls.__name__, test, cls.test_files[test]))
 
 
-@GenerateTests(rootdir='tests/c', pattern='*.c')
-class c(unittest.TestCase):
-  pass
-
-
-@GenerateTests(rootdir='tests/cxx', pattern='*.cc')
-class cxx(unittest.TestCase):
-  pass
-
-
 if __name__ == '__main__':
   unittest_args, additional_args = Partition(sys.argv, '--')
   if additional_args:
@@ -130,7 +120,17 @@ if __name__ == '__main__':
   group = parser.add_mutually_exclusive_group()
   group.add_argument('--list', dest='list_tests', action='store_true')
   group.add_argument('--list-test-files', action='store_true')
+  group.add_argument('--run-test-file')
   (runner_args, _) = parser.parse_known_args(unittest_args)
+
+  if runner_args.run_test_file:
+    exit(TestIwyuOnRelevantFiles(runner_args.run_test_file))
+
+  @GenerateTests(rootdir='tests/c', pattern='*.c')
+  class c(unittest.TestCase): pass
+
+  @GenerateTests(rootdir='tests/cxx', pattern='*.cc')
+  class cxx(unittest.TestCase): pass
 
   if runner_args.list_tests:
     exit(PrintLoadedTests())
