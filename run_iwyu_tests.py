@@ -63,8 +63,7 @@ def GenerateTests(rootdir, pattern):
       # in the same way here.
       files_to_check = [PosixPath(f) for f in files_to_check]
 
-      iwyu_test_util.TestIwyuOnRelativeFile(self, filename, files_to_check,
-                                            verbose=True)
+      iwyu_test_util.TestIwyuOnRelativeFile(filename, files_to_check, verbose=True)
     return _test
 
 

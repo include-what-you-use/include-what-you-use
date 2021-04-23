@@ -429,12 +429,10 @@ def _GetLaunchArguments(cc_file):
   return args
 
 
-def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
-                           verbose=False):
+def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
   """Checks running IWYU on the given .cc file.
 
   Args:
-    test_case: A googletest.TestCase instance.
     cc_file: The name of the file to test, relative to the current dir.
     cpp_files_to_check: A list of filenames for the files
               to check the diagnostics on, relative to the current dir.
@@ -474,4 +472,5 @@ def TestIwyuOnRelativeFile(test_case, cc_file, cpp_files_to_check,
       _GetExpectedSummaries(cpp_files_to_check),
       _GetActualSummaries(output))
 
-  test_case.assertTrue(not failures, ''.join(failures))
+  if failures:
+    raise AssertionError(''.join(failures))
