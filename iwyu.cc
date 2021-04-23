@@ -1998,6 +1998,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_IntegralToFixedPoint:
       case clang::CK_IntegralToFloating:
       case clang::CK_IntegralToPointer:
+      case clang::CK_MatrixCast:
       case clang::CK_MemberPointerToBoolean:
       case clang::CK_NullToMemberPointer:
       case clang::CK_NullToPointer:
