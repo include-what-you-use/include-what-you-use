@@ -47,7 +47,7 @@ jobs:
       - name: Test include-what-you-use
         run: |
           cd ./build
-          CTEST_OUTPUT_ON_FAILURE=1 ctest
+          CTEST_OUTPUT_ON_FAILURE=1 ctest -j 6
 
       - name: Test install
         run: |
