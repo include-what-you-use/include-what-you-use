@@ -236,7 +236,7 @@ class IwyuFileInfo {
   // only for placement operator new in templates (see
   // IwyuBaseAstVisitor::VisitCXXNewExpr).
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
-                           const string& dfn_filepath,
+                           const clang::FileEntry* dfn_file,
                            const string& symbol);
   // TODO(dsturtevant): Can we determine in_cxx_method_body? Do we care?
 

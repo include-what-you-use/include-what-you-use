@@ -631,9 +631,10 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
 }
 
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
-                                       const string& dfn_filepath,
+                                       const FileEntry* dfn_file,
                                        const string& symbol) {
-  symbol_uses_.push_back(OneUse(symbol, nullptr, dfn_filepath, use_loc));
+  symbol_uses_.push_back(OneUse(symbol, dfn_file, 
+                                GetFilePath(dfn_file), use_loc));
   LogSymbolUse("Marked full-info use of symbol", symbol_uses_.back());
 }
 
