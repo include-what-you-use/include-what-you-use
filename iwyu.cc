@@ -588,7 +588,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (decl->isDependentType())   // only instantiate if class is instantiated
       return;
 
-    clang::Sema& sema = compiler_->getSema();
+    clang::Sema& sema = compiler()->getSema();
     DeclContext::lookup_result ctors = sema.LookupConstructors(decl);
     for (NamedDecl* ctor_lookup : ctors) {
       // Ignore templated or inheriting constructors.
