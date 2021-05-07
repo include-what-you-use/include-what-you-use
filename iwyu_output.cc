@@ -302,9 +302,9 @@ void OneUse::SetPublicHeaders() {
       symbol_name_, use_path);
   if (public_headers_.empty())
     public_headers_ = picker.GetCandidateHeadersForFilepathIncludedFrom(
-        decl_filepath_, use_path);
+        decl_filepath(), use_path);
   if (public_headers_.empty())
-    public_headers_.push_back(ConvertToQuotedInclude(decl_filepath_));
+    public_headers_.push_back(ConvertToQuotedInclude(decl_filepath()));
 }
 
 const vector<string>& OneUse::public_headers() {
