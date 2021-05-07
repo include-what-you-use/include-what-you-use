@@ -1155,6 +1155,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   using Base::CurrentFileEntry;
   using Base::PrintableCurrentLoc;
   using Base::current_ast_node;
+  using Base::compiler;
 
   enum class IgnoreKind {
     ForUse,
@@ -2426,9 +2427,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // parse it to '<new>' before using, so any path that does
         // that, and is clearly a c++ path, is fine; its exact
         // contents don't matter that much.
+        using clang::Optional;
+        using clang::DirectoryLookup;
+        using clang::FileEntryRef;
         const FileEntry* use_file = CurrentFileEntry();
-        preprocessor_info().FileInfoFor(use_file)->ReportFullSymbolUse(
-            CurrentLoc(), "<new>", "operator new");
+        const DirectoryLookup* curdir = nullptr;
+        Optional<FileEntryRef> file = compiler()->getPreprocessor().LookupFile(
+            CurrentLoc(), "new", true, nullptr, use_file, curdir, nullptr,
+            nullptr, nullptr, nullptr, nullptr, false);
+        if (file) {
+          preprocessor_info().FileInfoFor(use_file)->ReportFullSymbolUse(
+              CurrentLoc(), *file, "operator new");
+        }
       }
     }
 
