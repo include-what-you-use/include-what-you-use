@@ -1095,11 +1095,14 @@ bool DeclsAreInSameClass(const Decl* decl1, const Decl* decl2) {
   return decl1->getDeclContext()->isRecord();
 }
 
-bool IsBuiltinFunction(const clang::NamedDecl* decl,
-                       const std::string& symbol_name) {
+bool IsBuiltinFunction(const clang::NamedDecl* decl) {
   if (const clang::IdentifierInfo* iden = decl->getIdentifier()) {
-    return iden->getBuiltinID() != 0 &&
-           !clang::Builtin::Context::isBuiltinFunc(symbol_name.c_str());
+    unsigned builtin_id = iden->getBuiltinID();
+    if (builtin_id != 0) {
+      const clang::Builtin::Context& ctx = decl->getASTContext().BuiltinInfo;
+      return !ctx.isPredefinedLibFunction(builtin_id) &&
+             !ctx.isHeaderDependentFunction(builtin_id);
+    }
   }
   return false;
 }

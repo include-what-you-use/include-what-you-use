@@ -1161,7 +1161,7 @@ void ProcessFullUse(OneUse* use,
   // We normally ignore uses for builtins, but when there is a mapping defined
   // for the symbol, we should respect that.  So, we need to determine whether
   // the symbol has any mappings.
-  bool is_builtin_function = IsBuiltinFunction(use->decl(), use->symbol_name());
+  bool is_builtin_function = IsBuiltinFunction(use->decl());
 
   bool is_builtin_function_with_mappings =
       is_builtin_function && HasMapping(use->symbol_name());
