@@ -191,6 +191,7 @@ using clang::QualifiedTypeLoc;
 using clang::RecordDecl;
 using clang::RecursiveASTVisitor;
 using clang::ReferenceType;
+using clang::Sema;
 using clang::SourceLocation;
 using clang::Stmt;
 using clang::SubstTemplateTypeParmType;
@@ -588,7 +589,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (decl->isDependentType())   // only instantiate if class is instantiated
       return;
 
-    clang::Sema& sema = compiler()->getSema();
+    Sema& sema = compiler()->getSema();
     DeclContext::lookup_result ctors = sema.LookupConstructors(decl);
     for (NamedDecl* ctor_lookup : ctors) {
       // Ignore templated or inheriting constructors.
@@ -598,7 +599,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
         continue;
       CXXConstructorDecl* ctor = cast<CXXConstructorDecl>(ctor_lookup);
       if (!ctor->hasBody() && !ctor->isDeleted() && ctor->isImplicit()) {
-        if (sema.getSpecialMember(ctor) == clang::Sema::CXXDefaultConstructor) {
+        if (sema.getSpecialMember(ctor) == Sema::CXXDefaultConstructor) {
           sema.DefineImplicitDefaultConstructor(CurrentLoc(), ctor);
         } else {
           // TODO(nlewycky): enable this!
@@ -3711,7 +3712,7 @@ class IwyuAstConsumer
 
   void ParseFunctionTemplates(TranslationUnitDecl* tu_decl) {
     set<FunctionDecl*> late_parsed_decls = GetLateParsedFunctionDecls(tu_decl);
-    clang::Sema& sema = compiler()->getSema();
+    Sema& sema = compiler()->getSema();
 
     // If we have any late-parsed functions, make sure the
     // -fdelayed-template-parsing flag is on. Otherwise we don't know where
