@@ -3596,9 +3596,18 @@ class IwyuAstConsumer
 
     TranslationUnitDecl* tu_decl = context.getTranslationUnitDecl();
 
+    // Sema::TUScope is reset after parsing, but Sema::getCurScope still points
+    // to the translation unit decl scope. TUScope is required for lookup in
+    // some complex scenarios, so re-wire it before running IWYU AST passes.
+    // Assert their expected state so we notice if these assumptions change.
+    Sema& sema = compiler()->getSema();
+    CHECK_(sema.TUScope == nullptr);
+    CHECK_(sema.getCurScope() != nullptr);
+    sema.TUScope = sema.getCurScope();
+
     // We run a separate pass to force parsing of late-parsed function
     // templates.
-    ParseFunctionTemplates(tu_decl);
+    ParseFunctionTemplates(sema, tu_decl);
 
     // Clang lazily constructs the implicit methods of a C++ class (the
     // default constructor and destructor, etc) -- it only bothers to
@@ -3606,7 +3615,7 @@ class IwyuAstConsumer
     // But we need to be non-lazy: IWYU depends on analyzing what future
     // code *may* call in a class, not what current code *does*.  So we
     // force all the lazy evaluation to happen here.
-    InstantiateImplicitMethods(tu_decl);
+    InstantiateImplicitMethods(sema, tu_decl);
 
     // Run IWYU analysis.
     TraverseDecl(tu_decl);
@@ -3654,9 +3663,8 @@ class IwyuAstConsumer
     exit(EXIT_SUCCESS_OFFSET + num_edits);
   }
 
-  void ParseFunctionTemplates(TranslationUnitDecl* tu_decl) {
+  void ParseFunctionTemplates(Sema& sema, TranslationUnitDecl* tu_decl) {
     set<FunctionDecl*> late_parsed_decls = GetLateParsedFunctionDecls(tu_decl);
-    Sema& sema = compiler()->getSema();
 
     // If we have any late-parsed functions, make sure the
     // -fdelayed-template-parsing flag is on. Otherwise we don't know where
@@ -3679,7 +3687,7 @@ class IwyuAstConsumer
     }
   }
 
-  void InstantiateImplicitMethods(TranslationUnitDecl* tu_decl) {
+  void InstantiateImplicitMethods(Sema& sema, TranslationUnitDecl* tu_decl) {
     // Collect all implicit ctors/dtors that need to be instantiated.
     struct Visitor : public RecursiveASTVisitor<Visitor> {
       Visitor(Sema& sema) : sema(sema) {
@@ -3690,8 +3698,9 @@ class IwyuAstConsumer
           return true;
 
         if (!decl->getDefinition() || decl->isDependentContext() ||
-            decl->isBeingDefined())
+            decl->isBeingDefined()) {
           return true;
+        }
 
         if (CXXConstructorDecl* ctor = sema.LookupDefaultConstructor(decl)) {
           may_need_definition.insert(ctor);
@@ -3707,7 +3716,6 @@ class IwyuAstConsumer
     };
 
     // Run visitor to collect implicit methods.
-    Sema& sema = compiler()->getSema();
     Visitor v(sema);
     v.TraverseDecl(tu_decl);
 
