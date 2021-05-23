@@ -3689,32 +3689,14 @@ class IwyuAstConsumer
         if (CanIgnoreLocation(GetLocation(decl)))
           return true;
 
-        if (!decl->isThisDeclarationADefinition() || decl->isDependentType())
+        if (!decl->getDefinition() || decl->isDependentContext() ||
+            decl->isBeingDefined())
           return true;
 
-        // Collect all implicit constructors.
-        for (NamedDecl* ctor_lookup : sema.LookupConstructors(decl)) {
-          // Ignore templated or inheriting constructors.
-          if (isa<FunctionTemplateDecl>(ctor_lookup) ||
-              isa<UsingDecl>(ctor_lookup) ||
-              isa<ConstructorUsingShadowDecl>(ctor_lookup)) {
-            continue;
-          }
-
-          auto* ctor = cast<CXXConstructorDecl>(ctor_lookup);
-          if (ctor->isImplicit() && !ctor->isDeleted() && !ctor->hasBody()) {
-            may_need_definition.insert(ctor);
-          }
-        }
-
-        // Collect implicit destructor.
-        if (CXXDestructorDecl* dtor = sema.LookupDestructor(decl)) {
-          // Destructors can either be plain implicitly-generated or
-          // uninstantiated templates. Consider both.
-          if (!dtor->isDeleted() && (dtor->isImplicit() && !dtor->hasBody()) ||
-              (dtor->getTemplateInstantiationPattern() && !dtor->isDefined())) {
-            may_need_definition.insert(dtor);
-          }
+        if (CXXConstructorDecl* ctor = sema.LookupDefaultConstructor(decl)) {
+          may_need_definition.insert(ctor);
+        } else if (CXXDestructorDecl* dtor = sema.LookupDestructor(decl)) {
+          may_need_definition.insert(dtor);
         }
 
         return true;
@@ -3731,21 +3713,14 @@ class IwyuAstConsumer
 
     // For each method collected, let Sema define them.
     for (CXXMethodDecl* method : v.may_need_definition) {
+      if (!method->isDefaulted() || method->isDeleted() || method->hasBody())
+        continue;
+
       SourceLocation loc = GetLocation(method->getParent());
-
       if (auto* ctor = dyn_cast<CXXConstructorDecl>(method)) {
-        if (sema.getSpecialMember(ctor) == Sema::CXXDefaultConstructor) {
-          sema.DefineImplicitDefaultConstructor(loc, ctor);
-        } else {
-          // TODO: Consider other ctor kinds?
-        }
-      }
-
-      if (auto* dtor = dyn_cast<CXXDestructorDecl>(method)) {
-        if (!dtor->hasBody() && dtor->isImplicit())
-          sema.DefineImplicitDestructor(loc, dtor);
-        if (!dtor->isDefined() && dtor->getTemplateInstantiationPattern())
-          sema.PendingInstantiations.emplace_back(dtor, loc);
+        sema.DefineImplicitDefaultConstructor(loc, ctor);
+      } else if (auto* dtor = dyn_cast<CXXDestructorDecl>(method)) {
+        sema.DefineImplicitDestructor(loc, dtor);
       }
     }
 
