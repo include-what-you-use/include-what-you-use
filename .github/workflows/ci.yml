@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
 
     env:
-      LLVM_TAG:
+      LLVM_TAG: -12
 
     steps:
       - name: Install prerequisites
