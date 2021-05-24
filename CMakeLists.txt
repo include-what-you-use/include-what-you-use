@@ -110,8 +110,8 @@ if (MSVC)
     -D_HAS_EXCEPTIONS=0
     )
 
-  # Enable bigobj support and sane C++ exception semantics.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /EHsc")
+  # Enable bigobj support
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 endif()
 
 # Link dynamically or statically depending on user preference.
