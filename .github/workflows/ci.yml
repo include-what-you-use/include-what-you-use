@@ -14,21 +14,24 @@ jobs:
     strategy:
       fail-fast: false
 
+    env:
+      LLVM_TAG:
+
     steps:
       - name: Install prerequisites
         run: |
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main"
+          sudo add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic$LLVM_TAG main"
           sudo apt update
           sudo apt install -y ninja-build
           # Remove any base dist LLVM/Clang installations
           sudo apt remove -y "libclang-dev*"
           sudo apt remove -y "clang*"
           sudo apt remove -y "llvm*"
-          # Reinstall snapshot versions
-          sudo apt install -y llvm-dev
-          sudo apt install -y libclang-dev
-          sudo apt install -y clang
+          # Reinstall tagged versions
+          sudo apt install -y llvm-dev$LLVM_TAG
+          sudo apt install -y libclang-dev$LLVM_TAG
+          sudo apt install -y clang$LLVM_TAG
 
       - name: Check out default branch
         uses: actions/checkout@v2
@@ -38,8 +41,8 @@ jobs:
           mkdir build
           cd ./build
           cmake -G Ninja \
-                -DCMAKE_C_COMPILER=clang \
-                -DCMAKE_CXX_COMPILER=clang++ \
+                -DCMAKE_C_COMPILER=clang$LLVM_TAG \
+                -DCMAKE_CXX_COMPILER=clang++$LLVM_TAG \
                 -DCMAKE_INSTALL_PREFIX=./ \
                 ../
           ninja
