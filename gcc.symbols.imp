@@ -53,6 +53,7 @@
   { symbol: [ "gid_t", private, "<unistd.h>", public ] },
   { symbol: [ "id_t", private, "<sys/types.h>", public ] },
   { symbol: [ "id_t", private, "<sys/resource.h>", public ] },
+  { symbol: [ "imaxdiv_t", private, "<inttypes.h>", public ] },
   { symbol: [ "ino64_t", private, "<sys/types.h>", public ] },
   { symbol: [ "ino64_t", private, "<dirent.h>", public ] },
   { symbol: [ "ino_t", private, "<sys/types.h>", public ] },
