@@ -27,6 +27,7 @@
   { symbol: [ "daddr_t", private, "<rpc/types.h>", public ] },
   { symbol: [ "dev_t", private, "<sys/types.h>", public ] },
   { symbol: [ "dev_t", private, "<sys/stat.h>", public ] },
+  { symbol: [ "div_t", private, "<stdlib.h>", public ] },
   { symbol: [ "error_t", private, "<errno.h>", public ] },
   { symbol: [ "error_t", private, "<argp.h>", public ] },
   { symbol: [ "error_t", private, "<argz.h>", public ] },
