@@ -236,16 +236,36 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "useconds_t", kPrivate, "<unistd.h>", kPublic },
   { "wchar_t", kPrivate, "<stddef.h>", kPublic },
   { "wchar_t", kPrivate, "<stdlib.h>", kPublic },
-  // glob.h seems to define size_t if necessary, but it should come from stddef.
   // It is unspecified if the cname headers provide ::size_t.
   // <locale.h> is the one header which defines NULL but not size_t.
   { "size_t", kPrivate, "<stddef.h>", kPublic },  // 'canonical' location for size_t
+  { "size_t", kPrivate, "<aio.h>", kPublic },
+  { "size_t", kPrivate, "<glob.h>", kPublic },
+  { "size_t", kPrivate, "<grp.h>", kPublic },
+  { "size_t", kPrivate, "<iconv.h>", kPublic },
+  { "size_t", kPrivate, "<monetary.h>", kPublic },
+  { "size_t", kPrivate, "<mqueue.h>", kPublic },
+  { "size_t", kPrivate, "<ndbm.h>", kPublic },
+  { "size_t", kPrivate, "<pwd.h>", kPublic },
+  { "size_t", kPrivate, "<regex.h>", kPublic },
+  { "size_t", kPrivate, "<search.h>", kPublic },
+  { "size_t", kPrivate, "<signal.h>", kPublic },
   { "size_t", kPrivate, "<stdio.h>", kPublic },
   { "size_t", kPrivate, "<stdlib.h>", kPublic },
   { "size_t", kPrivate, "<string.h>", kPublic },
+  { "size_t", kPrivate, "<strings.h>", kPublic },
+  { "size_t", kPrivate, "<sys/mman.h>", kPublic },
+  { "size_t", kPrivate, "<sys/msg.h>", kPublic },
+  { "size_t", kPrivate, "<sys/sem.h>", kPublic },
+  { "size_t", kPrivate, "<sys/shm.h>", kPublic },
+  { "size_t", kPrivate, "<sys/socket.h>", kPublic },
+  { "size_t", kPrivate, "<sys/types.h>", kPublic },
+  { "size_t", kPrivate, "<sys/uio.h>", kPublic },
   { "size_t", kPrivate, "<time.h>", kPublic },
   { "size_t", kPrivate, "<uchar.h>", kPublic },
+  { "size_t", kPrivate, "<unistd.h>", kPublic },
   { "size_t", kPrivate, "<wchar.h>", kPublic },
+  { "size_t", kPrivate, "<wordexp.h>", kPublic },
   // Macros that can be defined in more than one file, don't have the
   // same __foo_defined guard that other types do, so the grep above
   // doesn't discover them.  Until I figure out a better way, I just
