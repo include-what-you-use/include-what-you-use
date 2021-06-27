@@ -203,6 +203,8 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "sigevent", kPrivate, "<aio.h>", kPublic },
   { "sigevent", kPrivate, "<mqueue.h>", kPublic },
   { "sigevent", kPrivate, "<time.h>", kPublic },
+  { "siginfo_t", kPrivate, "<signal.h>", kPublic },
+  { "siginfo_t", kPrivate, "<sys/wait.h>", kPublic },
   { "sigset_t", kPrivate, "<signal.h>", kPublic },
   { "sigset_t", kPrivate, "<sys/epoll.h>", kPublic },
   { "sigset_t", kPrivate, "<sys/select.h>", kPublic },
