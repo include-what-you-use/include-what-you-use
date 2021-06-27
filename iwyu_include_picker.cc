@@ -113,6 +113,8 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "fd_set", kPrivate, "<sys/time.h>", kPublic },
   { "fenv_t", kPrivate, "<fenv.h>", kPublic },
   { "fexcept_t", kPrivate, "<fenv.h>", kPublic },
+  { "FILE", kPrivate, "<stdio.h>", kPublic },
+  { "FILE", kPrivate, "<wchar.h>", kPublic },
   { "fsblkcnt_t", kPrivate, "<sys/types.h>", kPublic },
   { "fsblkcnt_t", kPrivate, "<sys/statvfs.h>", kPublic },
   { "fsfilcnt_t", kPrivate, "<sys/types.h>", kPublic },
