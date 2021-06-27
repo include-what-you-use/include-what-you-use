@@ -157,6 +157,8 @@
   { symbol: [ "time_t", private, "<sys/time.h>", public ] },
   { symbol: [ "time_t", private, "<sys/types.h>", public ] },
   { symbol: [ "time_t", private, "<utime.h>", public ] },
+  { symbol: [ "timer_t", private, "<sys/types.h>", public ] },
+  { symbol: [ "timer_t", private, "<time.h>", public ] },
   { symbol: [ "timespec", private, "<time.h>", public ] },
   { symbol: [ "timeval", private, "<sys/time.h>", public ] },
   { symbol: [ "u_char", private, "<sys/types.h>", public ] },
