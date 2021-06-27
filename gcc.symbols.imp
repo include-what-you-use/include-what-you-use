@@ -56,6 +56,8 @@
   { symbol: [ "imaxdiv_t", private, "<inttypes.h>", public ] },
   { symbol: [ "intmax_t", private, "<stdint.h>", public ] },
   { symbol: [ "intmax_t", private, "<inttypes.h>", public ] },
+  { symbol: [ "uintmax_t", private, "<stdint.h>", public ] },
+  { symbol: [ "uintmax_t", private, "<inttypes.h>", public ] },
   { symbol: [ "ino64_t", private, "<sys/types.h>", public ] },
   { symbol: [ "ino64_t", private, "<dirent.h>", public ] },
   { symbol: [ "ino_t", private, "<sys/types.h>", public ] },
