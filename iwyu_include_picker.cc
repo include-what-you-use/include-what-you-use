@@ -161,6 +161,8 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "key_t", kPrivate, "<sys/types.h>", kPublic },
   { "key_t", kPrivate, "<sys/ipc.h>", kPublic },
   { "lconv", kPrivate, "<locale.h>", kPublic },
+  { "ldiv_t", kPrivate, "<stdlib.h>", kPublic },
+  { "lldiv_t", kPrivate, "<stdlib.h>", kPublic },
   { "max_align_t", kPrivate, "<stddef.h>", kPublic },
   { "mode_t", kPrivate, "<sys/types.h>", kPublic },
   { "mode_t", kPrivate, "<sys/stat.h>", kPublic },
