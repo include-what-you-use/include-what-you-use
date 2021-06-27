@@ -206,7 +206,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "siginfo_t", kPrivate, "<signal.h>", kPublic },
   { "siginfo_t", kPrivate, "<sys/wait.h>", kPublic },
   { "sigset_t", kPrivate, "<signal.h>", kPublic },
-  { "sigset_t", kPrivate, "<sys/epoll.h>", kPublic },
+  { "sigset_t", kPrivate, "<spawn.h>", kPublic },
   { "sigset_t", kPrivate, "<sys/select.h>", kPublic },
   { "socklen_t", kPrivate, "<bits/socket.h>", kPrivate },
   { "socklen_t", kPrivate, "<unistd.h>", kPublic },

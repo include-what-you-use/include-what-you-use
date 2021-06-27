@@ -129,7 +129,7 @@
   { symbol: [ "siginfo_t", private, "<signal.h>", public ] },
   { symbol: [ "siginfo_t", private, "<sys/wait.h>", public ] },
   { symbol: [ "sigset_t", private, "<signal.h>", public ] },
-  { symbol: [ "sigset_t", private, "<sys/epoll.h>", public ] },
+  { symbol: [ "sigset_t", private, "<spawn.h>", public ] },
   { symbol: [ "sigset_t", private, "<sys/select.h>", public ] },
   { symbol: [ "socklen_t", private, "<bits/socket.h>", private ] },
   { symbol: [ "socklen_t", private, "<unistd.h>", public ] },
