@@ -46,6 +46,7 @@
   { symbol: [ "gid_t", private, "<sys/types.h>", public ] },
   { symbol: [ "gid_t", private, "<grp.h>", public ] },
   { symbol: [ "gid_t", private, "<pwd.h>", public ] },
+  { symbol: [ "gid_t", private, "<signal.h>", public ] },
   { symbol: [ "gid_t", private, "<stropts.h>", public ] },
   { symbol: [ "gid_t", private, "<sys/ipc.h>", public ] },
   { symbol: [ "gid_t", private, "<sys/stat.h>", public ] },

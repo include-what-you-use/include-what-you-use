@@ -123,6 +123,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "gid_t", kPrivate, "<sys/types.h>", kPublic },
   { "gid_t", kPrivate, "<grp.h>", kPublic },
   { "gid_t", kPrivate, "<pwd.h>", kPublic },
+  { "gid_t", kPrivate, "<signal.h>", kPublic },
   { "gid_t", kPrivate, "<stropts.h>", kPublic },
   { "gid_t", kPrivate, "<sys/ipc.h>", kPublic },
   { "gid_t", kPrivate, "<sys/stat.h>", kPublic },
