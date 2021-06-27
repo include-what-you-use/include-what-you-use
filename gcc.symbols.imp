@@ -81,7 +81,6 @@
   { symbol: [ "intptr_t", private, "<inttypes.h>", public ] },
   { symbol: [ "uintptr_t", private, "<stdint.h>", public ] },
   { symbol: [ "uintptr_t", private, "<inttypes.h>", public ] },
-  { symbol: [ "intptr_t", private, "<unistd.h>", public ] },
   { symbol: [ "key_t", private, "<sys/types.h>", public ] },
   { symbol: [ "key_t", private, "<sys/ipc.h>", public ] },
   { symbol: [ "max_align_t", private, "<stddef.h>", public ] },
