@@ -35,6 +35,7 @@
   { symbol: [ "fd_set", private, "<sys/select.h>", public ] },
   { symbol: [ "fd_set", private, "<sys/time.h>", public ] },
   { symbol: [ "fenv_t", private, "<fenv.h>", public ] },
+  { symbol: [ "fexcept_t", private, "<fenv.h>", public ] },
   { symbol: [ "fsblkcnt_t", private, "<sys/types.h>", public ] },
   { symbol: [ "fsblkcnt_t", private, "<sys/statvfs.h>", public ] },
   { symbol: [ "fsfilcnt_t", private, "<sys/types.h>", public ] },
