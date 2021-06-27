@@ -19,6 +19,7 @@
   { symbol: [ "blksize_t", private, "<sys/stat.h>", public ] },
   { symbol: [ "cc_t", private, "<termios.h>", public ] },
   { symbol: [ "clock_t", private, "<sys/types.h>", public ] },
+  { symbol: [ "clock_t", private, "<sys/time.h>", public ] },
   { symbol: [ "clock_t", private, "<time.h>", public ] },
   { symbol: [ "clockid_t", private, "<sys/types.h>", public ] },
   { symbol: [ "clockid_t", private, "<time.h>", public ] },
