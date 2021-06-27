@@ -83,6 +83,7 @@
   { symbol: [ "uintptr_t", private, "<inttypes.h>", public ] },
   { symbol: [ "key_t", private, "<sys/types.h>", public ] },
   { symbol: [ "key_t", private, "<sys/ipc.h>", public ] },
+  { symbol: [ "lconv", private, "<locale.h>", public ] },
   { symbol: [ "max_align_t", private, "<stddef.h>", public ] },
   { symbol: [ "mode_t", private, "<sys/types.h>", public ] },
   { symbol: [ "mode_t", private, "<sys/stat.h>", public ] },
