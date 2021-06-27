@@ -12,6 +12,7 @@
 # equal.  The visibility on the symbol-name is ignored; by convention
 # we always set it to private.
 [
+  { symbol: [ "aiocb", private, "<aio.h>", public ] },
   { symbol: [ "blkcnt_t", private, "<sys/types.h>", public ] },
   { symbol: [ "blkcnt_t", private, "<sys/stat.h>", public ] },
   { symbol: [ "blksize_t", private, "<sys/types.h>", public ] },
