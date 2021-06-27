@@ -197,6 +197,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "pid_t", kPrivate, "<utmpx.h>", kPublic },
   { "ptrdiff_t", kPrivate, "<stddef.h>", kPublic },
   { "regex_t", kPrivate, "<regex.h>", kPublic },
+  { "regmatch_t", kPrivate, "<regex.h>", kPublic },
   { "sigset_t", kPrivate, "<signal.h>", kPublic },
   { "sigset_t", kPrivate, "<sys/epoll.h>", kPublic },
   { "sigset_t", kPrivate, "<sys/select.h>", kPublic },
