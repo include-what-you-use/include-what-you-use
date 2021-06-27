@@ -104,6 +104,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "daddr_t", kPrivate, "<rpc/types.h>", kPublic },
   { "dev_t", kPrivate, "<sys/types.h>", kPublic },
   { "dev_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "div_t", kPrivate, "<stdlib.h>", kPublic },
   { "error_t", kPrivate, "<errno.h>", kPublic },
   { "error_t", kPrivate, "<argp.h>", kPublic },
   { "error_t", kPrivate, "<argz.h>", kPublic },
