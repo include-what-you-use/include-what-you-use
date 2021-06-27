@@ -18,6 +18,8 @@
   { symbol: [ "blksize_t", private, "<sys/stat.h>", public ] },
   { symbol: [ "clock_t", private, "<sys/types.h>", public ] },
   { symbol: [ "clock_t", private, "<time.h>", public ] },
+  { symbol: [ "clockid_t", private, "<sys/types.h>", public ] },
+  { symbol: [ "clockid_t", private, "<time.h>", public ] },
   { symbol: [ "daddr_t", private, "<sys/types.h>", public ] },
   { symbol: [ "daddr_t", private, "<rpc/types.h>", public ] },
   { symbol: [ "dev_t", private, "<sys/types.h>", public ] },
