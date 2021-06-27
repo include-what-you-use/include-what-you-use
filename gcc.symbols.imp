@@ -126,6 +126,8 @@
   { symbol: [ "sigevent", private, "<aio.h>", public ] },
   { symbol: [ "sigevent", private, "<mqueue.h>", public ] },
   { symbol: [ "sigevent", private, "<time.h>", public ] },
+  { symbol: [ "siginfo_t", private, "<signal.h>", public ] },
+  { symbol: [ "siginfo_t", private, "<sys/wait.h>", public ] },
   { symbol: [ "sigset_t", private, "<signal.h>", public ] },
   { symbol: [ "sigset_t", private, "<sys/epoll.h>", public ] },
   { symbol: [ "sigset_t", private, "<sys/select.h>", public ] },
