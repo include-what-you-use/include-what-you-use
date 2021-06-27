@@ -209,6 +209,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "sigset_t", kPrivate, "<spawn.h>", kPublic },
   { "sigset_t", kPrivate, "<sys/select.h>", kPublic },
   { "sigval", kPrivate, "<signal.h>", kPublic },
+  { "sockaddr", kPrivate, "<sys/socket.h>", kPublic },
   { "socklen_t", kPrivate, "<bits/socket.h>", kPrivate },
   { "socklen_t", kPrivate, "<unistd.h>", kPublic },
   { "socklen_t", kPrivate, "<arpa/inet.h>", kPublic },
