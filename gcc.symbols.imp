@@ -9,8 +9,8 @@
 # equivalents.
 # In each case, I ordered them so <sys/types.h> was first, if it was
 # an option for this type.  That's the preferred #include all else
-# equal.  The visibility on the symbol-name is ignored; by convention
-# we always set it to private.
+# equal.  The same goes for <stdint.h>.  The visibility on the
+# symbol-name is ignored; by convention we always set it to private.
 [
   { symbol: [ "aiocb", private, "<aio.h>", public ] },
   { symbol: [ "blkcnt_t", private, "<sys/types.h>", public ] },
@@ -54,6 +54,8 @@
   { symbol: [ "id_t", private, "<sys/types.h>", public ] },
   { symbol: [ "id_t", private, "<sys/resource.h>", public ] },
   { symbol: [ "imaxdiv_t", private, "<inttypes.h>", public ] },
+  { symbol: [ "intmax_t", private, "<stdint.h>", public ] },
+  { symbol: [ "intmax_t", private, "<inttypes.h>", public ] },
   { symbol: [ "ino64_t", private, "<sys/types.h>", public ] },
   { symbol: [ "ino64_t", private, "<dirent.h>", public ] },
   { symbol: [ "ino_t", private, "<sys/types.h>", public ] },
