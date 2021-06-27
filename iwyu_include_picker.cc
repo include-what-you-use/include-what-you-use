@@ -96,6 +96,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "blksize_t", kPrivate, "<sys/stat.h>", kPublic },
   { "cc_t", kPrivate, "<termios.h>", kPublic },
   { "clock_t", kPrivate, "<sys/types.h>", kPublic },
+  { "clock_t", kPrivate, "<sys/time.h>", kPublic },
   { "clock_t", kPrivate, "<time.h>", kPublic },
   { "clockid_t", kPrivate, "<sys/types.h>", kPublic },
   { "clockid_t", kPrivate, "<time.h>", kPublic },
