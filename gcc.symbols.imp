@@ -132,6 +132,7 @@
   { symbol: [ "sigset_t", private, "<spawn.h>", public ] },
   { symbol: [ "sigset_t", private, "<sys/select.h>", public ] },
   { symbol: [ "sigval", private, "<signal.h>", public ] },
+  { symbol: [ "sockaddr", private, "<sys/socket.h>", public ] },
   { symbol: [ "socklen_t", private, "<bits/socket.h>", private ] },
   { symbol: [ "socklen_t", private, "<unistd.h>", public ] },
   { symbol: [ "socklen_t", private, "<arpa/inet.h>", public ] },
