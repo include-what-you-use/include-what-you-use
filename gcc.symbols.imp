@@ -119,6 +119,7 @@
   { symbol: [ "pid_t", private, "<unistd.h>", public ] },
   { symbol: [ "pid_t", private, "<utmpx.h>", public ] },
   { symbol: [ "ptrdiff_t", private, "<stddef.h>", public ] },
+  { symbol: [ "regex_t", private, "<regex.h>", public ] },
   { symbol: [ "sigset_t", private, "<signal.h>", public ] },
   { symbol: [ "sigset_t", private, "<sys/epoll.h>", public ] },
   { symbol: [ "sigset_t", private, "<sys/select.h>", public ] },
