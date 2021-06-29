@@ -143,7 +143,7 @@ Note that with Microsoft's Visual C++ compiler, IWYU needs the `--driver-mode=cl
 
 #### Using with a compilation database ####
 
-The `iwyu_tool.py` script predates the native CMake support, and works off the [compilation database format](https://clang.llvm.org/docs/JSONCompilationDatabase.html). For example, CMake generates such a database named `compile_commands.json` with the `CMAKE_EXPORT_COMPILE_COMMANDS` option enabled.
+The `iwyu_tool.py` script pre-dates the native CMake support, and works off the [compilation database format](https://clang.llvm.org/docs/JSONCompilationDatabase.html). For example, CMake generates such a database named `compile_commands.json` with the `CMAKE_EXPORT_COMPILE_COMMANDS` option enabled.
 
 The script's command-line syntax is designed to mimic Clang's LibTooling, but they are otherwise unrelated. It can be used like this:
 
