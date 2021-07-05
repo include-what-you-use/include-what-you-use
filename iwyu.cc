@@ -2583,8 +2583,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   void AddShadowDeclarations(const UsingDecl* using_decl) {
     for (const UsingShadowDecl* shadow : using_decl->shadows()) {
-      visitor_state_->using_declarations.insert(
-          make_pair(shadow->getTargetDecl(), shadow->getUsingDecl()));
+      if (const auto* introducer =
+              dyn_cast<UsingDecl>(shadow->getIntroducer())) {
+        visitor_state_->using_declarations.insert(
+            make_pair(shadow->getTargetDecl(), introducer));
+      }
     }
   }
 
@@ -2603,8 +2606,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                          const DeclContext* use_context) {
     // First, if we have a UsingShadowDecl, then we don't need to do anything
     // because we can just directly return the using decl from that.
-    if (const UsingShadowDecl* shadow = DynCastFrom(decl))
-      return shadow->getUsingDecl();
+    if (const auto* shadow = dyn_cast<UsingShadowDecl>(decl)) {
+      return dyn_cast<UsingDecl>(shadow->getIntroducer());
+    }
 
     // But, if we don't have a UsingShadowDecl, then we need to look through
     // all the using-decls of the given decl.  We limit them to ones that are
