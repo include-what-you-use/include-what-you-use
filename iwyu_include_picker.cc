@@ -89,9 +89,9 @@ const IncludeMapEntry libc_symbol_map[] = {
   // an option for this type.  That's the preferred #include all else
   // equal.  The visibility on the symbol-name is ignored; by convention
   // we always set it to kPrivate.
-  { "blksize_t", kPrivate, "<sys/types.h>", kPublic },
-  { "blkcnt_t", kPrivate, "<sys/stat.h>", kPublic },
   { "blkcnt_t", kPrivate, "<sys/types.h>", kPublic },
+  { "blkcnt_t", kPrivate, "<sys/stat.h>", kPublic },
+  { "blksize_t", kPrivate, "<sys/types.h>", kPublic },
   { "blksize_t", kPrivate, "<sys/stat.h>", kPublic },
   { "clock_t", kPrivate, "<sys/types.h>", kPublic },
   { "clock_t", kPrivate, "<time.h>", kPublic },

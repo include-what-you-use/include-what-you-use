@@ -12,9 +12,9 @@
 # equal.  The visibility on the symbol-name is ignored; by convention
 # we always set it to private.
 [
-  { symbol: [ "blksize_t", private, "<sys/types.h>", public ] },
-  { symbol: [ "blkcnt_t", private, "<sys/stat.h>", public ] },
   { symbol: [ "blkcnt_t", private, "<sys/types.h>", public ] },
+  { symbol: [ "blkcnt_t", private, "<sys/stat.h>", public ] },
+  { symbol: [ "blksize_t", private, "<sys/types.h>", public ] },
   { symbol: [ "blksize_t", private, "<sys/stat.h>", public ] },
   { symbol: [ "clock_t", private, "<sys/types.h>", public ] },
   { symbol: [ "clock_t", private, "<time.h>", public ] },
