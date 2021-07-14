@@ -4150,7 +4150,6 @@ class IwyuAction : public ASTFrontendAction {
 
 #include "iwyu_driver.h"
 #include "clang/Frontend/FrontendAction.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
 using include_what_you_use::OptionsParser;
@@ -4158,12 +4157,11 @@ using include_what_you_use::IwyuAction;
 using include_what_you_use::CreateCompilerInstance;
 
 int main(int argc, char **argv) {
-  // Must initialize X86 target to be able to parse Microsoft inline
-  // assembly. We do this unconditionally, because it allows an IWYU
-  // built for non-X86 targets to parse MS inline asm without choking.
-  LLVMInitializeX86TargetInfo();
-  LLVMInitializeX86TargetMC();
-  LLVMInitializeX86AsmParser();
+  // X86 target is required to parse Microsoft inline assembly, so we hope it's
+  // part of all targets. Clang parser will complain otherwise.
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
 
   // The command line should look like
   //   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu --other_iwyu_flag]... CLANG_FLAGS... foo.cc
