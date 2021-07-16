@@ -1260,7 +1260,26 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     for (const NamedDecl* redecl : GetClassRedecls(decl)) {
       if (GetFileEntry(redecl) == macro_def_file && IsForwardDecl(redecl)) {
         fwd_decl = redecl;
+        break;
+      }
+    }
 
+    if (!fwd_decl) {
+      if (const auto* func_decl = dyn_cast<FunctionDecl>(decl)) {
+        if (const FunctionTemplateDecl* ft_decl =
+            func_decl->getPrimaryTemplate()) {
+          VERRS(5) << "No fwd-decl found, looking for function template decl\n";
+          for (const NamedDecl* redecl : ft_decl->redecls()) {
+            if (GetFileEntry(redecl) == macro_def_file) {
+              fwd_decl = redecl;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (fwd_decl) {
         // Make sure we keep that forward-declaration, even if it's probably
         // unused in this file.
         IwyuFileInfo* file_info =
@@ -1268,8 +1287,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         file_info->ReportForwardDeclareUse(
             spelling_loc, fwd_decl,
             ComputeUseFlags(current_ast_node()), nullptr);
-        break;
-      }
     }
 
     // Resolve the best use location based on our current knowledge.
