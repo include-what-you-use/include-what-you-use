@@ -167,6 +167,7 @@ using clang::ConstructorUsingShadowDecl;
 using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
+using clang::DeducedTemplateSpecializationType;
 using clang::EnumType;
 using clang::Expr;
 using clang::FileEntry;
@@ -4073,18 +4074,21 @@ class IwyuAstConsumer
   bool VisitTemplateName(TemplateName template_name) {
     if (CanIgnoreCurrentASTNode())  return true;
     if (!Base::VisitTemplateName(template_name))  return false;
-    // The only time we can see a TemplateName not in the
-    // context of a TemplateSpecializationType is when it's
-    // the default argument of a template template arg:
+    // We can see TemplateName not in the context of aTemplateSpecializationType
+    // when it's either the default argument of a template template arg:
     //    template<template<class T> class A = TplNameWithoutTST> class Foo ...
-    // So that's the only case we need to handle here.
+    // or a deduced template specialization:
+    //    std::pair x(10, 20); // type of x is really std::pair<int, int>
+    // So that's the only cases we need to handle here.
     // TODO(csilvers): check if this is really forward-declarable or
     // not.  You *could* do something like: 'template<template<class
     // T> class A = Foo> class C { A<int>* x; };' and never
     // dereference x, but that's pretty unlikely.  So for now, we just
     // assume these default template template args always need full
     // type info.
-    if (IsDefaultTemplateTemplateArg(current_ast_node())) {
+    const ASTNode* ast_node = current_ast_node();
+    if (ast_node->ParentIsA<DeducedTemplateSpecializationType>() ||
+        IsDefaultTemplateTemplateArg(ast_node)) {
       current_ast_node()->set_in_forward_declare_context(false);
       ReportDeclUse(CurrentLoc(), template_name.getAsTemplateDecl());
     }
