@@ -68,9 +68,9 @@ endif()
 set(LLVM_LINK_COMPONENTS
   Option
   Support
-  X86AsmParser
-  X86Desc
-  X86Info
+  AllTargetsAsmParsers
+  AllTargetsDescs
+  AllTargetsInfos
   )
 
 add_llvm_executable(include-what-you-use
