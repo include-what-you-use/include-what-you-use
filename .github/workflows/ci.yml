@@ -33,6 +33,10 @@ jobs:
           sudo apt install -y libclang$LLVM_TAG-dev
           sudo apt install -y clang$LLVM_TAG
 
+      - name: Broken packaging workaround
+        run: |
+          sudo touch /usr/lib/llvm-14/lib/libclang-14.so.14.0.0
+
       - name: Check out default branch
         uses: actions/checkout@v2
 
