@@ -26,7 +26,7 @@ class FatalMessageEmitter {
   FatalMessageEmitter(const char* file, int line, const char* message) {
     stream() << file << ":" << line << ": Assertion failed: " << message;
   }
-  LLVM_ATTRIBUTE_NORETURN ~FatalMessageEmitter() {
+  [[noreturn]] ~FatalMessageEmitter() {
     stream() << "\n";
     ::abort();
 #ifdef LLVM_BUILTIN_UNREACHABLE
