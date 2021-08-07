@@ -3943,9 +3943,6 @@ class IwyuAstConsumer
   // (that way we'll correctly identify need for hash<> in hash_set).
   // This is a Traverse*() because Visit*() can't call HandleFunctionCall().
   bool TraverseTypedefDecl(clang::TypedefDecl* decl) {
-    // Before we go up the tree, make sure the parents know we don't
-    // forward-declare the underlying type of a typedef decl.
-    current_ast_node()->set_in_forward_declare_context(false);
     if (!Base::TraverseTypedefDecl(decl))
       return false;
     if (CanIgnoreCurrentASTNode())  return true;
