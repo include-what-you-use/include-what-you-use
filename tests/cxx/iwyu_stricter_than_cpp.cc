@@ -10,6 +10,7 @@
 // IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-autocast.h" \
 //            -Xiwyu --check_also="tests/cxx/*-fnreturn.h" \
 //            -Xiwyu --check_also="tests/cxx/*-typedefs.h" \
+//            -Xiwyu --check_also="tests/cxx/*-type_alias.h" \
 //            -Xiwyu --check_also="tests/cxx/*-d2.h" \
 //            -I .
 
@@ -36,6 +37,7 @@
 // when these two conditions are met, and not otherwise.
 
 #include "tests/cxx/iwyu_stricter_than_cpp-typedefs.h"
+#include "tests/cxx/iwyu_stricter_than_cpp-type_alias.h"
 #include "tests/cxx/iwyu_stricter_than_cpp-autocast.h"
 #include "tests/cxx/iwyu_stricter_than_cpp-fnreturn.h"
 // We include this so the second declaration of TwiceDeclaredFunction
@@ -79,6 +81,39 @@ void TestTypedefs() {
 
   // TODO(csilvers): test template types where we need some (but not
   // all) of the template args as well.
+}
+
+using DoubleTypedefAl = DoesEverythingRightAl;
+
+void TestTypeAliases() {
+  DoesNotForwardDeclareAl dnfd(1);
+  DoesNotForwardDeclareProperlyAl dnfdp(2);
+  IncludesAl i(3);
+  DoesNotForwardDeclareAndIncludesAl dnfdai(4);
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  DoesEverythingRightAl dor(5);
+  // Because DoubleTypedefAl resolves to DoesEverythingRightAl, we need the
+  // same things DoesEverythingRightAl does.
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  DoubleTypedefAl dt(6);
+
+  // ...and with templates.
+  TplDoesNotForwardDeclareAl tdnfd(7);
+  TplDoesNotForwardDeclareProperlyAl tdnfdp(8);
+  TplIncludesAl ti(9);
+  TplDoesNotForwardDeclareAndIncludesAl tdnfdai(10);
+  // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  TplDoesEverythingRightAl tdor(11);
+  // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  TplDoesEverythingRightAgainAl tdora(12);
+
+  // But if we're in a forward-declare context, we don't require the
+  // underlying type!
+  DoesEverythingRightAl* dor_ptr = 0;
+  TplDoesEverythingRightAgainAl* tdora_ptr = 0;
+  // ...at least until we dereference the pointer
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  (void) dor_ptr->a;
 }
 
 void TestAutocast() {
@@ -159,6 +194,7 @@ The full include-list for tests/cxx/iwyu_stricter_than_cpp.cc:
 #include "tests/cxx/iwyu_stricter_than_cpp-autocast.h"  // for Fn, TplFn
 #include "tests/cxx/iwyu_stricter_than_cpp-fnreturn.h"  // for DoesEverythingRightFn, DoesNotForwardDeclareAndIncludesFn, DoesNotForwardDeclareFn, DoesNotForwardDeclareProperlyFn, IncludesFn, TplDoesEverythingRightAgainFn, TplDoesEverythingRightFn, TplDoesNotForwardDeclareAndIncludesFn, TplDoesNotForwardDeclareFn, TplDoesNotForwardDeclareProperlyFn, TplIncludesFn
 #include "tests/cxx/iwyu_stricter_than_cpp-i2.h"  // for IndirectStruct2, TplIndirectStruct2
+#include "tests/cxx/iwyu_stricter_than_cpp-type_alias.h"  // for DoesEverythingRightAl, DoesNotForwardDeclareAl, DoesNotForwardDeclareAndIncludesAl, DoesNotForwardDeclareProperlyAl, IncludesAl, TplDoesEverythingRightAgainAl, TplDoesEverythingRightAl, TplDoesNotForwardDeclareAl, TplDoesNotForwardDeclareAndIncludesAl, TplDoesNotForwardDeclareProperlyAl, TplIncludesAl
 #include "tests/cxx/iwyu_stricter_than_cpp-typedefs.h"  // for DoesEverythingRight, DoesNotForwardDeclare, DoesNotForwardDeclareAndIncludes, DoesNotForwardDeclareProperly, Includes, TplDoesEverythingRight, TplDoesEverythingRightAgain, TplDoesNotForwardDeclare, TplDoesNotForwardDeclareAndIncludes, TplDoesNotForwardDeclareProperly, TplIncludes
 struct DirectStruct1;
 struct DirectStruct2;
