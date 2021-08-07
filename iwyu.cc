@@ -1415,12 +1415,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   set<const Type*> GetCallerResponsibleTypesForTypedef(
-      const TypedefDecl* decl) {
+      const TypedefNameDecl* decl) {
     set<const Type*> retval;
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     // If the underlying type is itself a typedef, we recurse.
     if (const TypedefType* underlying_typedef = DynCastFrom(underlying_type)) {
-      if (const TypedefDecl* underlying_typedef_decl
+      if (const TypedefNameDecl* underlying_typedef_decl
           = DynCastFrom(TypeToDeclAsWritten(underlying_typedef))) {
         // TODO(csilvers): if one of the intermediate typedefs
         // #includes the necessary definition of the 'final'
@@ -1565,12 +1565,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // anywhere.  ('autocast' is similar, but is handled in
     // VisitCastExpr; 'fn-return-type' is also similar and is
     // handled in HandleFunctionCall.)
-    if (const TypedefDecl* typedef_decl = DynCastFrom(target_decl)) {
+    if (const TypedefNameDecl* typedef_decl = DynCastFrom(target_decl)) {
       // One exception: if this TypedefType is being used in another
       // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
       // user -- the other typedef -- is never responsible for the
       // underlying type.  Instead, users of that typedef are.
-      if (!current_ast_node()->template ParentIsA<TypedefDecl>()) {
+      if (!current_ast_node()->template ParentIsA<TypedefNameDecl>()) {
         const set<const Type*>& underlying_types
             = GetCallerResponsibleTypesForTypedef(typedef_decl);
         if (!underlying_types.empty()) {
@@ -1712,7 +1712,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // iwyu will demand the full type of pair, but not of its template
   // arguments.  This is handled not here, but below, in
   // VisitSubstTemplateTypeParmType.
-  bool VisitTypedefDecl(clang::TypedefDecl* decl) {
+  bool VisitTypedefNameDecl(clang::TypedefNameDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     const Type* deref_type
@@ -1725,7 +1725,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       current_ast_node()->set_in_forward_declare_context(false);
     }
 
-    return Base::VisitTypedefDecl(decl);
+    return Base::VisitTypedefNameDecl(decl);
   }
 
   // If we're a declared (not defined) function, all our types --
@@ -2547,7 +2547,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // If we're in a typedef, we don't want to forward-declare even if
     // we're a pointer.  ('typedef Foo* Bar; Bar x; x->a' needs full
     // type of Foo.)
-    if (ast_node->ParentIsA<TypedefDecl>())
+    if (ast_node->ParentIsA<TypedefNameDecl>())
       return false;
 
     // If we ourselves are a forward-decl -- that is, we're the type
@@ -3941,10 +3941,9 @@ class IwyuAstConsumer
   // TODO(csilvers): we can probably relax this rule in .cc files.
   // TODO(csilvers): this should really move into IwyuBaseASTVisitor
   // (that way we'll correctly identify need for hash<> in hash_set).
-  // This is a Traverse*() because Visit*() can't call HandleFunctionCall().
-  bool TraverseTypedefDecl(clang::TypedefDecl* decl) {
-    if (!Base::TraverseTypedefDecl(decl))
-      return false;
+  // This is called from Traverse*() because Visit*()
+  // can't call HandleFunctionCall().
+  bool HandleAliasedClassMethods(TypedefNameDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
 
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
@@ -3970,6 +3969,20 @@ class IwyuAstConsumer
     // We don't have to simulate a user instantiating the type, because
     // RecursiveASTVisitor.h will recurse on the typedef'ed type for us.
     return true;
+  }
+
+  bool TraverseTypedefDecl(clang::TypedefDecl* decl) {
+    if (!Base::TraverseTypedefDecl(decl))
+      return false;
+
+    return HandleAliasedClassMethods(decl);
+  }
+
+  bool TraverseTypeAliasDecl(clang::TypeAliasDecl* decl) {
+    if (!Base::TraverseTypeAliasDecl(decl))
+      return false;
+
+    return HandleAliasedClassMethods(decl);
   }
 
   // --- Visitors of types derived from clang::Stmt.
