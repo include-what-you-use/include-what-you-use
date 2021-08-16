@@ -42,6 +42,7 @@ import subprocess
 
 CORRECT_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 SHOULD_ADD_RE = re.compile(r'^(.*?) should add these lines:$')
+ADD_RE = re.compile('^(.*?) +// (.*)$')
 SHOULD_REMOVE_RE = re.compile(r'^(.*?) should remove these lines:$')
 FULL_LIST_RE = re.compile(r'The full include-list for (.*?):$')
 END_RE = re.compile(r'^---$')
@@ -80,14 +81,17 @@ def clang_formatter(output):
         elif state[0] == GENERAL:
             formatted.append(line)
         elif state[0] == ADD:
-            formatted.append('%s:1:1: error: add the following line' % state[1])
-            formatted.append(line)
+            match = ADD_RE.match(line)
+            if match:
+                formatted.append("%s:1:1: error: add '%s' (%s)" %
+                                 (state[1], match.group(1), match.group(2)))
+            else:
+                formatted.append("%s:1:1: error: add '%s'" % (state[1], line))
         elif state[0] == REMOVE:
             match = LINES_RE.match(line)
             line_no = match.group(2) if match else '1'
-            formatted.append('%s:%s:1: error: remove the following line' %
-                             (state[1], line_no))
-            formatted.append(match.group(1))
+            formatted.append("%s:%s:1: error: superfluous '%s'" %
+                             (state[1], line_no, match.group(1)))
 
     return os.linesep.join(formatted)
 
