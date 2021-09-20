@@ -3944,7 +3944,10 @@ class IwyuAstConsumer
   // This is called from Traverse*() because Visit*()
   // can't call HandleFunctionCall().
   bool HandleAliasedClassMethods(TypedefNameDecl* decl) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (current_ast_node()->in_forward_declare_context())
+      return true;
 
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     const Decl* underlying_decl = TypeToDeclAsWritten(underlying_type);
