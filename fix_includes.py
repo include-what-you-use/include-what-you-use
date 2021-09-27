@@ -2309,11 +2309,12 @@ def ProcessIWYUOutput(f, files_to_process, flags, cwd):
   # seen for them.  (We have to wait until we're all done, since a .h
   # file may have a contentful change when #included from one .cc
   # file, but not another, and we need to have merged them above.)
-  for filename in iwyu_output_records:
-    if not iwyu_output_records[filename].HasContentfulChanges():
-      print('(skipping %s: iwyu reports no contentful changes)' % filename)
-      # Mark that we're skipping this file by setting the record to None
-      iwyu_output_records[filename] = None
+  if not flags.update_comments:
+    for filename in iwyu_output_records:
+      if not iwyu_output_records[filename].HasContentfulChanges():
+        print('(skipping %s: iwyu reports no contentful changes)' % filename)
+        # Mark that we're skipping this file by setting the record to None
+        iwyu_output_records[filename] = None
 
   # Now do all the fixing, and return the number of files modified
   contentful_records = [ior for ior in iwyu_output_records.values() if ior]
@@ -2372,6 +2373,12 @@ def main(argv):
   parser.add_option('--comments', action='store_true', default=False,
                     help='Put comments after the #include lines')
   parser.add_option('--nocomments', action='store_false', dest='comments')
+
+  parser.add_option('--update_comments', action='store_true', default=False,
+                    help=('Update #include comments, even if no #include lines'
+                          ' are added or removed'))
+  parser.add_option('--noupdate_comments', action='store_false',
+                    dest='update_comments')
 
   parser.add_option('--safe_headers', action='store_true', default=True,
                     help=('Do not remove unused #includes/fwd-declares from'
@@ -2439,6 +2446,9 @@ def main(argv):
       not flags.separate_project_includes.endswith(os.path.sep) and
       not flags.separate_project_includes.endswith('/')):
     flags.separate_project_includes += os.path.sep
+
+  if flags.update_comments:
+    flags.comments = True
 
   if flags.sort_only:
     if not files_to_modify:

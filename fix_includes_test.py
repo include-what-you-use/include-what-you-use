@@ -34,6 +34,7 @@ class FakeFlags(object):
   def __init__(self):
     self.blank_lines = False
     self.comments = True
+    self.update_comments = False
     self.dry_run = False
     self.ignore_re = None
     self.only_re = None
@@ -1915,6 +1916,54 @@ The full include-list for subdir/include_comments.cc:
 """
     self.RegisterFileContents({'subdir/include_comments.cc': infile})
     self.ProcessAndTest(iwyu_output)
+
+  def testUpdateCommentsFlag(self):
+    """Tests we update comments with --update_comments."""
+    self.flags.update_comments = True
+    infile = """\
+#include "must_keep.h"  // IWYU pragma: keep
+#include "used.h"       // for SomethingElse  ///-
+///+#include "used.h"       // for Used
+
+Used used;
+int main() { return 0; }
+"""
+    iwyu_output = """\
+subdir/include_comments.cc should add these lines:
+
+subdir/include_comments.cc should remove these lines:
+
+The full include-list for subdir/include_comments.cc:
+#include "must_keep.h"
+#include "used.h"       // for Used
+---
+"""
+    self.RegisterFileContents({'subdir/include_comments.cc': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testNoUpdateCommentsFlag(self):
+    """Tests we don't update comments with --noupdate_comments."""
+    self.flags.update_comments = False
+    infile = """\
+#include "must_keep.h"  // IWYU pragma: keep
+#include "used.h"       // for SomethingElse
+
+Used used;
+int main() { return 0; }
+"""
+    iwyu_output = """\
+subdir/include_comments.cc should add these lines:
+
+subdir/include_comments.cc should remove these lines:
+
+The full include-list for subdir/include_comments.cc:
+#include "must_keep.h"
+#include "used.h"       // for Used
+---
+"""
+    self.RegisterFileContents({'subdir/include_comments.cc': infile})
+    self.ProcessAndTest(iwyu_output,
+                        unedited_files=['subdir/include_comments.cc'])
 
   def testFixingTwoFiles(self):
     """Make sure data for one fix doesn't overlap with a second."""
