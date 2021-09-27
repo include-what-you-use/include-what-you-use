@@ -91,6 +91,8 @@ static void PrintHelp(const char* extra_msg) {
          "        the maximum line length can still be exceeded with long\n"
          "        file names (default: 80).\n"
          "   --no_comments: do not add 'why' comments.\n"
+         "   --update_comments: always add 'why' comments, even if no\n"
+         "        #include lines need to be added or removed.\n"
          "   --no_fwd_decls: do not use forward declarations.\n"
          "   --verbose=<level>: the higher the level, the more output.\n"
          "   --quoted_includes_first: when sorting includes, place quoted\n"
@@ -163,6 +165,7 @@ CommandlineFlags::CommandlineFlags()
       prefix_header_include_policy(CommandlineFlags::kAdd),
       pch_in_code(false),
       no_comments(false),
+      update_comments(false),
       no_fwd_decls(false),
       quoted_includes_first(false),
       cxx17ns(false) {
@@ -182,6 +185,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"pch_in_code", no_argument, nullptr, 'h'},
     {"max_line_length", required_argument, nullptr, 'l'},
     {"no_comments", no_argument, nullptr, 'o'},
+    {"update_comments", no_argument, nullptr, 'u'},
     {"no_fwd_decls", no_argument, nullptr, 'f'},
     {"quoted_includes_first", no_argument, nullptr, 'q' },
     {"cxx17ns", no_argument, nullptr, 'C'},
@@ -197,6 +201,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case 'm': mapping_files.push_back(optarg); break;
       case 'n': no_default_mappings = true; break;
       case 'o': no_comments = true; break;
+      case 'u': update_comments = true; break;
       case 'f': no_fwd_decls = true; break;
       case 'x':
         if (strcmp(optarg, "add") == 0) {
