@@ -66,10 +66,12 @@ class OstreamVoidifier {
 #define NOMINMAX 1 // Prevent Windows headers from redefining min/max.
 #include "Shlwapi.h"  // for PathMatchSpecA
 
-// This undef is necessary to prevent conflicts between llvm
+// These undefs are necessary to prevent conflicts between llvm
 // and Windows headers.
 // objbase.h has #define interface struct.
 #undef interface
+// minwindef.h has #define CALLBACK __stdcall
+#undef CALLBACK  
 
 inline bool GlobMatchesPath(const char *glob, const char *path) {
   return PathMatchSpecA(path, glob);
