@@ -211,6 +211,8 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "ssize_t", kPrivate, "<sys/socket.h>", kPublic },
   { "ssize_t", kPrivate, "<sys/uio.h>", kPublic },
   { "ssize_t", kPrivate, "<unistd.h>", kPublic },
+  { "stat", kPrivate, "<sys/stat.h>", kPublic },
+  { "stat", kPrivate, "<ftw.h>", kPublic },
   { "suseconds_t", kPrivate, "<sys/types.h>", kPublic },
   { "suseconds_t", kPrivate, "<sys/select.h>", kPublic },
   { "suseconds_t", kPrivate, "<sys/time.h>", kPublic },

@@ -134,6 +134,8 @@
   { symbol: [ "ssize_t", private, "<sys/socket.h>", public ] },
   { symbol: [ "ssize_t", private, "<sys/uio.h>", public ] },
   { symbol: [ "ssize_t", private, "<unistd.h>", public ] },
+  { symbol: [ "stat", private, "<sys/stat.h>", public ] },
+  { symbol: [ "stat", private, "<ftw.h>", public ] },
   { symbol: [ "suseconds_t", private, "<sys/types.h>", public ] },
   { symbol: [ "suseconds_t", private, "<sys/select.h>", public ] },
   { symbol: [ "suseconds_t", private, "<sys/time.h>", public ] },
