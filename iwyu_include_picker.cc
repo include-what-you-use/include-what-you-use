@@ -132,34 +132,22 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "id_t", kPrivate, "<sys/resource.h>", kPublic },
   { "imaxdiv_t", kPrivate, "<inttypes.h>", kPublic },
   { "intmax_t", kPrivate, "<stdint.h>", kPublic },
-  { "intmax_t", kPrivate, "<inttypes.h>", kPublic },
   { "uintmax_t", kPrivate, "<stdint.h>", kPublic },
-  { "uintmax_t", kPrivate, "<inttypes.h>", kPublic },
   { "ino64_t", kPrivate, "<sys/types.h>", kPublic },
   { "ino64_t", kPrivate, "<dirent.h>", kPublic },
   { "ino_t", kPrivate, "<sys/types.h>", kPublic },
   { "ino_t", kPrivate, "<dirent.h>", kPublic },
   { "ino_t", kPrivate, "<sys/stat.h>", kPublic },
   { "int8_t", kPrivate, "<stdint.h>", kPublic },
-  { "int8_t", kPrivate, "<inttypes.h>", kPublic },
   { "int16_t", kPrivate, "<stdint.h>", kPublic },
-  { "int16_t", kPrivate, "<inttypes.h>", kPublic },
   { "int32_t", kPrivate, "<stdint.h>", kPublic },
-  { "int32_t", kPrivate, "<inttypes.h>", kPublic },
   { "int64_t", kPrivate, "<stdint.h>", kPublic },
-  { "int64_t", kPrivate, "<inttypes.h>", kPublic },
   { "uint8_t", kPrivate, "<stdint.h>", kPublic },
-  { "uint8_t", kPrivate, "<inttypes.h>", kPublic },
   { "uint16_t", kPrivate, "<stdint.h>", kPublic },
-  { "uint16_t", kPrivate, "<inttypes.h>", kPublic },
   { "uint32_t", kPrivate, "<stdint.h>", kPublic },
-  { "uint32_t", kPrivate, "<inttypes.h>", kPublic },
   { "uint64_t", kPrivate, "<stdint.h>", kPublic },
-  { "uint64_t", kPrivate, "<inttypes.h>", kPublic },
   { "intptr_t", kPrivate, "<stdint.h>", kPublic },
-  { "intptr_t", kPrivate, "<inttypes.h>", kPublic },
   { "uintptr_t", kPrivate, "<stdint.h>", kPublic },
-  { "uintptr_t", kPrivate, "<inttypes.h>", kPublic },
   { "key_t", kPrivate, "<sys/types.h>", kPublic },
   { "key_t", kPrivate, "<sys/ipc.h>", kPublic },
   { "lconv", kPrivate, "<locale.h>", kPublic },
@@ -360,8 +348,8 @@ const IncludeMapEntry libstdcpp_symbol_map[] = {
   { "std::size_t", kPrivate, "<cwchar>", kPublic },
 };
 
-// Private -> public include mappings for GNU libc
 const IncludeMapEntry libc_include_map[] = {
+  // Private -> public include mappings for GNU libc
   // ( cd /usr/include && grep '^ *# *include' {sys/,net/,}* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { "<$2>", kPrivate, "<$1>", kPublic },@' | grep bits/ | sort )
   // When I saw more than one mapping for these, I typically picked
   // what I thought was the "best" one.
@@ -565,6 +553,8 @@ const IncludeMapEntry libc_include_map[] = {
   { "<linux/limits.h>", kPrivate, "<limits.h>", kPublic },   // PATH_MAX
   { "<linux/prctl.h>", kPrivate, "<sys/prctl.h>", kPublic },
   { "<sys/ucontext.h>", kPrivate, "<ucontext.h>", kPublic },
+  // Exports guaranteed by the C standard
+  { "<stdint.h>", kPublic, "<inttypes.h>", kPublic },
 };
 
 const IncludeMapEntry stdlib_c_include_map[] = {
