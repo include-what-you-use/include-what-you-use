@@ -203,4 +203,6 @@
   { include: [ "<linux/limits.h>", private, "<limits.h>", public ] },   # PATH_MAX
   { include: [ "<linux/prctl.h>", private, "<sys/prctl.h>", public ] },
   { include: [ "<sys/ucontext.h>", private, "<ucontext.h>", public ] },
+  # Exports guaranteed by the C standard
+  { include: [ "<stdint.h>", public, "<inttypes.h>", public ] },
 ]
