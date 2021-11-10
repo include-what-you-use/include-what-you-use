@@ -437,6 +437,7 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/socket_type.h>", kPrivate, "<sys/socket.h>", kPublic },
   { "<bits/stab.def>", kPrivate, "<stab.h>", kPublic },
   { "<bits/stat.h>", kPrivate, "<sys/stat.h>", kPublic },
+  { "<bits/struct_stat.h>", kPrivate, "<sys/stat.h>", kPublic },
   { "<bits/statfs.h>", kPrivate, "<sys/statfs.h>", kPublic },
   { "<bits/statvfs.h>", kPrivate, "<sys/statvfs.h>", kPublic },
   { "<bits/stdio-ldbl.h>", kPrivate, "<stdio.h>", kPublic },

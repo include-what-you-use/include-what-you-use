@@ -75,6 +75,7 @@
   { include: [ "<bits/socket_type.h>", private, "<sys/socket.h>", public ] },
   { include: [ "<bits/stab.def>", private, "<stab.h>", public ] },
   { include: [ "<bits/stat.h>", private, "<sys/stat.h>", public ] },
+  { include: [ "<bits/struct_stat.h>", private, "<sys/stat.h>", public ] },
   { include: [ "<bits/statfs.h>", private, "<sys/statfs.h>", public ] },
   { include: [ "<bits/statvfs.h>", private, "<sys/statvfs.h>", public ] },
   { include: [ "<bits/stdio-ldbl.h>", private, "<stdio.h>", public ] },
