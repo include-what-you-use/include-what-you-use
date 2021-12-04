@@ -36,6 +36,7 @@ jobs:
       - name: Broken packaging workaround
         run: |
           sudo touch /usr/lib/llvm-14/lib/libclang-14.so.14.0.0
+          sudo touch /usr/lib/llvm-14/bin/llvm-omp-device-info
 
       - name: Check out default branch
         uses: actions/checkout@v2
