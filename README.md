@@ -41,6 +41,7 @@ We assume you already have compiled LLVM and Clang libraries on your system, eit
 | 10    | 0.14         | `clang_10`     |
 | 11    | 0.15         | `clang_11`     |
 | 12    | 0.16         | `clang_12`     |
+| 13    | 0.17         | `clang_13`     |
 | ...   | ...          | ...            |
 | main  |              | `master`       |
 
