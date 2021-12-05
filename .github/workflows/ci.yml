@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
 
     env:
-      LLVM_TAG:
+      LLVM_TAG: -13
 
     steps:
       - name: Install prerequisites
@@ -32,11 +32,6 @@ jobs:
           sudo apt install -y llvm$LLVM_TAG-dev
           sudo apt install -y libclang$LLVM_TAG-dev
           sudo apt install -y clang$LLVM_TAG
-
-      - name: Broken packaging workaround
-        run: |
-          sudo touch /usr/lib/llvm-14/lib/libclang-14.so.14.0.0
-          sudo touch /usr/lib/llvm-14/bin/llvm-omp-device-info
 
       - name: Check out default branch
         uses: actions/checkout@v2
