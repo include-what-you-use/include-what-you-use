@@ -33,7 +33,7 @@ jobs:
           sudo apt install -y libclang$LLVM_TAG-dev
           sudo apt install -y clang$LLVM_TAG
 
-      - name: Broken packaging workaround
+      - name: Work around broken packaging
         run: |
           sudo touch /usr/lib/llvm-14/lib/libclang-14.so.14.0.0
           sudo touch /usr/lib/llvm-14/bin/llvm-omp-device-info
