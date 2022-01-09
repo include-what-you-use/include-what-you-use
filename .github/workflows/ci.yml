@@ -3,6 +3,9 @@ name: IWYU CI
 on:
   - push
   - pull_request
+  - schedule:
+    # Run build of master at 03:38 every day
+    - cron: '38 3 * * *'
 
 defaults:
   run:
