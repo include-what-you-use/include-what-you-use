@@ -4043,6 +4043,20 @@ class IwyuAstConsumer
     return Base::VisitTypedefType(type);
   }
 
+  bool VisitUsingType(clang::UsingType* type) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    // UsingType is similar to TypedefType, so treat it the same.
+    if (CanForwardDeclareType(current_ast_node())) {
+      ReportDeclForwardDeclareUse(CurrentLoc(), type->getFoundDecl());
+    } else {
+      ReportDeclUse(CurrentLoc(), type->getFoundDecl());
+    }
+
+    return Base::VisitUsingType(type);
+  }
+
   // This is a superclass of RecordType and CXXRecordType.
   bool VisitTagType(clang::TagType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
