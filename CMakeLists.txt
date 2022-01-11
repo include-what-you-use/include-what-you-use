@@ -33,14 +33,21 @@ option(IWYU_LINK_CLANG_DYLIB "Link against the clang dynamic library" ${CLANG_LI
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_definitions(${LLVM_DEFINITIONS})
-include_directories(
-  ${LLVM_INCLUDE_DIRS}
-  ${CLANG_INCLUDE_DIRS}
-  )
 
-# Synthesize a clang-resource-headers target for out-of-tree builds (in-tree
-# already has it available by default)
-if (NOT IWYU_IN_TREE)
+if (IWYU_IN_TREE)
+  include_directories(
+    ${LLVM_SOURCE_DIR}/include
+    ${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/include
+    ${LLVM_BINARY_DIR}/include
+    ${LLVM_BINARY_DIR}/tools/clang/include
+    )
+else()
+  include_directories(
+    ${LLVM_INCLUDE_DIRS}
+    ${CLANG_INCLUDE_DIRS}
+    )
+  # Synthesize a clang-resource-headers target for out-of-tree builds (in-tree
+  # already has it available by default)
   # Use only major.minor.patch for the resource directory structure; some
   # platforms include suffix in LLVM_VERSION.
   set(llvm_ver ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
