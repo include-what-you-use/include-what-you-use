@@ -84,6 +84,10 @@ To set up an environment for building:
 
       iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=~/llvm-project/build ../include-what-you-use
 
+ or, If you have LLVM source code and want to compile IWYU while compiling with other LLVM and CLang components, you can integrate IWYW by defining `LLVM_EXTERNAL_PROJECTS`.
+
+      iwyu/build$ cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS=clang -DLLVM_EXTERNAL_PROJECTS=iwyu -DLLVM_EXTERNAL_IWYU_SOURCE_DIR=/path/to/iwyu /path/to/llvm-project/llvm
+
 * Once CMake has generated a build system, you can invoke it directly from `build`, e.g.
 
       iwyu/build$ make
