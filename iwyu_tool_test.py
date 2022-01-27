@@ -64,7 +64,11 @@ class MockInvocation(iwyu_tool.Invocation):
 class MockIwyuToolMain(object):
     """ Replacement for iwyu_tool.main to capture parsed arguments. """
     def __init__(self):
-        self.argspec = inspect.getargspec(iwyu_tool.main).args
+        if hasattr(inspect, 'getfullargspec'):
+            getargspec = inspect.getfullargspec
+        else:
+            getargspec = inspect.getargspec
+        self.argspec = getargspec(iwyu_tool.main).args
         self.real_iwyu_tool_main = iwyu_tool.main
         iwyu_tool.main = self._mock
         self.call_args = {}
