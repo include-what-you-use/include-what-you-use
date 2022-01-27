@@ -212,7 +212,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
           prefix_header_include_policy = CommandlineFlags::kRemove;
         } else {
           PrintHelp("FATAL ERROR: unknown --prefix_header_includes value.");
-          exit(EXIT_INVALIDARGS);
+          exit(EXIT_FAILURE);
         }
         break;
       case 'h': pch_in_code = true; break;
@@ -225,7 +225,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case -1: return optind;   // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");
-        exit(EXIT_INVALIDARGS);
+        exit(EXIT_FAILURE);
         break;
     }
   }
@@ -252,7 +252,7 @@ static int ParseInterceptedCommandlineFlags(int argc, char** argv) {
       case -1: return optind;   // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");
-        exit(EXIT_INVALIDARGS);
+        exit(EXIT_FAILURE);
         break;
     }
   }
