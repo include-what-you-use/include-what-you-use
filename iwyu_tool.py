@@ -367,8 +367,7 @@ def execute(invocations, verbose, formatter, jobs, max_load_average=0):
         for invocation in invocations:
             proc = invocation.start(verbose)
             print(formatter(proc.get_output()))
-            if proc.returncode != 2:
-                exit_code = 1
+            exit_code = max(exit_code, proc.returncode)
         return exit_code
 
     pending = []
@@ -378,8 +377,7 @@ def execute(invocations, verbose, formatter, jobs, max_load_average=0):
         for proc in complete:
             pending.remove(proc)
             print(formatter(proc.get_output()))
-            if proc.returncode != 2:
-                exit_code = 1
+            exit_code = max(exit_code, proc.returncode)
 
         # Schedule new processes if there's room.
         capacity = jobs - len(pending)
