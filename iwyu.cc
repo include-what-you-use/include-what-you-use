@@ -3651,14 +3651,8 @@ class IwyuAstConsumer
 
     // Check if any unrecoverable errors have occurred.
     // There is no point in continuing when the AST is in a bad state.
-    //
-    // EXIT_INVALIDARGS is not a great choice for the return status
-    // because a compile error will not have a strong connection to the
-    // command line arguments, but there are only 2 error codes and
-    // this is the least bad choice.
-    // TODO : Readdress when error codes are reworked.
     if (compiler()->getDiagnostics().hasUnrecoverableErrorOccurred())
-      exit(EXIT_INVALIDARGS);
+      exit(EXIT_FAILURE);
 
     const set<const FileEntry*>* const files_to_report_iwyu_violations_for
         = preprocessor_info().files_to_report_iwyu_violations_for();
@@ -3688,8 +3682,7 @@ class IwyuAstConsumer
     num_edits += preprocessor_info().FileInfoFor(main_file)
         ->CalculateAndReportIwyuViolations();
 
-    // We need to force the compile to fail so we can re-run.
-    exit(EXIT_SUCCESS_OFFSET + num_edits);
+    exit(EXIT_SUCCESS);
   }
 
   void ParseFunctionTemplates(Sema& sema, TranslationUnitDecl* tu_decl) {
@@ -4227,14 +4220,13 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<clang::CompilerInstance> compiler(CreateCompilerInstance(
       options_parser.clang_argc(), options_parser.clang_argv()));
-  if (compiler) {
-    // Create and execute the frontend to generate an LLVM bitcode module.
-    std::unique_ptr<clang::ASTFrontendAction> action(new IwyuAction);
-    compiler->ExecuteAction(*action);
+  if (!compiler) {
+    return EXIT_FAILURE;
   }
 
-  // We always return a failure exit code, to indicate we didn't
-  // successfully compile (produce a .o for) the source files we were
-  // given.
-  return 1;
+  // Create and execute the frontend to generate an LLVM bitcode module.
+  std::unique_ptr<clang::ASTFrontendAction> action(new IwyuAction);
+  compiler->ExecuteAction(*action);
+
+  return EXIT_SUCCESS;
 }
