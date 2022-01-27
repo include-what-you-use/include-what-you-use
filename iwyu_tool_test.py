@@ -149,7 +149,7 @@ class IWYUToolTests(unittest.TestCase):
             invocation.will_block(random.random() / 100)
         self.assertEqual(self._execute(invocations, jobs=100), 1)
 
-    def test_order_synchronous(self):
+    def test_returncode_synchronous(self):
         invocations = [MockInvocation() for _ in range(1)]
         for invocation in invocations:
             invocation.will_returncode(2)
