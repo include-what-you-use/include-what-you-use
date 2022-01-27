@@ -135,35 +135,48 @@ class IWYUToolTests(unittest.TestCase):
 
     def test_returncode(self):
         invocation = MockInvocation()
-        invocation.will_returncode(2)
+        invocation.will_returncode(0)
         self.assertEqual(self._execute([invocation]), 0)
         invocation = MockInvocation()
-        invocation.will_returncode(7)
+        invocation.will_returncode(1)
         self.assertEqual(self._execute([invocation]), 1)
+        invocation = MockInvocation()
+        invocation.will_returncode(2)
+        self.assertEqual(self._execute([invocation]), 2)
 
     def test_returncode_asynchronous(self):
         invocations = [MockInvocation() for _ in range(100)]
         for invocation in invocations:
-            invocation.will_returncode(2)
+            invocation.will_returncode(0)
             invocation.will_block(random.random() / 100)
         self.assertEqual(self._execute(invocations, jobs=100), 0)
+        invocations = [MockInvocation() for _ in range(100)]
+        for invocation in invocations:
+            invocation.will_returncode(2)
+            invocation.will_block(random.random() / 100)
+        self.assertEqual(self._execute(invocations, jobs=100), 2)
         invocations = [MockInvocation() for _ in range(100)]
         for n, invocation in enumerate(invocations):
             invocation.will_returncode(6 if n == 0 else 2)
             invocation.will_block(random.random() / 100)
-        self.assertEqual(self._execute(invocations, jobs=100), 1)
+        self.assertEqual(self._execute(invocations, jobs=100), 6)
 
     def test_returncode_synchronous(self):
         invocations = [MockInvocation() for _ in range(1)]
         for invocation in invocations:
-            invocation.will_returncode(2)
+            invocation.will_returncode(0)
             invocation.will_block(random.random() / 100)
         self.assertEqual(self._execute(invocations, jobs=100), 0)
+        invocations = [MockInvocation() for _ in range(1)]
+        for invocation in invocations:
+            invocation.will_returncode(2)
+            invocation.will_block(random.random() / 100)
+        self.assertEqual(self._execute(invocations, jobs=100), 2)
         invocations = [MockInvocation() for _ in range(1)]
         for n, invocation in enumerate(invocations):
             invocation.will_returncode(6 if n == 0 else 2)
             invocation.will_block(random.random() / 100)
-        self.assertEqual(self._execute(invocations, jobs=100), 1)
+        self.assertEqual(self._execute(invocations, jobs=100), 6)
 
     @unittest.skipIf(sys.platform.startswith('win'), "POSIX only")
     def test_is_subpath_of_posix(self):
