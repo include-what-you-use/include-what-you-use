@@ -82,9 +82,7 @@ All files mentioned in the include-what-you-use script are modified,
 unless filenames are specified on the commandline, in which case only
 those files are modified.
 
-The exit code is the number of files that were modified (or that would
-be modified if --dry_run was specified) unless that number exceeds 100,
-in which case 100 is returned.
+The exit code is non-zero if a critical error occurs, otherwise zero.
 """
 
 _COMMENT_RE = re.compile(r'\s*//.*')
@@ -2453,11 +2451,12 @@ def main(argv):
   if flags.sort_only:
     if not files_to_modify:
       sys.exit('FATAL ERROR: -s flag requires a list of filenames')
-    return SortIncludesInFiles(files_to_modify, flags)
+    SortIncludesInFiles(files_to_modify, flags)
   else:
-    return ProcessIWYUOutput(sys.stdin, files_to_modify, flags, cwd=os.getcwd())
+    ProcessIWYUOutput(sys.stdin, files_to_modify, flags, cwd=os.getcwd())
+
+  return 0
 
 
 if __name__ == '__main__':
-  num_files_fixed = main(sys.argv)
-  sys.exit(min(num_files_fixed, 100))
+  sys.exit(main(sys.argv))
