@@ -2383,12 +2383,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // that, and is clearly a c++ path, is fine; its exact
         // contents don't matter that much.
         using clang::Optional;
-        using clang::DirectoryLookup;
         using clang::FileEntryRef;
         const FileEntry* use_file = CurrentFileEntry();
-        const DirectoryLookup* curdir = nullptr;
         Optional<FileEntryRef> file = compiler()->getPreprocessor().LookupFile(
-            CurrentLoc(), "new", true, nullptr, use_file, curdir, nullptr,
+            CurrentLoc(), "new", true, nullptr, use_file, nullptr, nullptr,
             nullptr, nullptr, nullptr, nullptr, false);
         if (file) {
           preprocessor_info().FileInfoFor(use_file)->ReportFullSymbolUse(
