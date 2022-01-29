@@ -229,7 +229,8 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         break;
     }
   }
-  return optind;  // unreachable
+
+  CHECK_UNREACHABLE_("All switches should be handled above");
 }
 
 // Though option -v prints version too, it isn't intercepted because it also
