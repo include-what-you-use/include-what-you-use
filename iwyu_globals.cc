@@ -98,6 +98,9 @@ static void PrintHelp(const char* extra_msg) {
          "   --quoted_includes_first: when sorting includes, place quoted\n"
          "        ones first.\n"
          "   --cxx17ns: suggests the more concise syntax introduced in C++17\n"
+         "   --error[=N]: exit with N (default: 1) for iwyu violations\n"
+         "   --error_always[=N]: always exit with N (default: 1) (for use\n"
+         "        with 'make -k')\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
          "options without -Xiwyu prefix:\n"
@@ -116,6 +119,22 @@ static void PrintVersion() {
   }
   llvm::outs() << " based on " << clang::getClangFullVersion()
                << "\n";
+}
+
+static bool ParseIntegerOptarg(const char* optarg, int* res) {
+  char* endptr = nullptr;
+  long val = strtol(optarg, &endptr, 10);
+  if (!endptr || endptr == optarg)
+    return false;
+
+  if (*endptr != '\0')
+    return false;
+
+  if (val > INT_MAX || val < INT_MIN)
+    return false;
+
+  *res = (int)val;
+  return true;
 }
 
 OptionsParser::OptionsParser(int argc, char** argv) {
@@ -168,7 +187,9 @@ CommandlineFlags::CommandlineFlags()
       update_comments(false),
       no_fwd_decls(false),
       quoted_includes_first(false),
-      cxx17ns(false) {
+      cxx17ns(false),
+      exit_code_error(EXIT_SUCCESS),
+      exit_code_always(EXIT_SUCCESS) {
   // Always keep Qt .moc includes; its moc compiler does its own IWYU analysis.
   keep.emplace("*.moc");
 }
@@ -189,6 +210,8 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"no_fwd_decls", no_argument, nullptr, 'f'},
     {"quoted_includes_first", no_argument, nullptr, 'q' },
     {"cxx17ns", no_argument, nullptr, 'C'},
+    {"error", optional_argument, nullptr, 'e'},
+    {"error_always", optional_argument, nullptr, 'a'},
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "v:c:m:n";
@@ -222,6 +245,24 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         break;
       case 'q': quoted_includes_first = true; break;
       case 'C': cxx17ns = true; break;
+      case 'e':
+        if (!optarg) {
+          exit_code_error = EXIT_FAILURE;
+        } else if (!ParseIntegerOptarg(optarg, &exit_code_error)) {
+          PrintHelp("FATAL ERROR: --error argument must be valid integer.");
+          exit(EXIT_FAILURE);
+        }
+        break;
+      case 'a':
+        if (!optarg) {
+          exit_code_always = EXIT_FAILURE;
+        } else if (!ParseIntegerOptarg(optarg, &exit_code_always)) {
+          PrintHelp(
+              "FATAL ERROR: --error_always argument must be valid "
+              "integer.");
+          exit(EXIT_FAILURE);
+        }
+        break;
       case -1: return optind;   // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");

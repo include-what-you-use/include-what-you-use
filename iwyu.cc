@@ -3682,7 +3682,16 @@ class IwyuAstConsumer
     num_edits += preprocessor_info().FileInfoFor(main_file)
         ->CalculateAndReportIwyuViolations();
 
-    exit(EXIT_SUCCESS);
+    int exit_code = EXIT_SUCCESS;
+    if (GlobalFlags().exit_code_always) {
+      // If we should always fail, use --error_always value.
+      exit_code = GlobalFlags().exit_code_always;
+    } else if (num_edits > 0) {
+      // If there were IWYU violations, use --error value.
+      exit_code = GlobalFlags().exit_code_error;
+    }
+
+    exit(exit_code);
   }
 
   void ParseFunctionTemplates(Sema& sema, TranslationUnitDecl* tu_decl) {
