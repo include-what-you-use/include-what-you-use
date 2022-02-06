@@ -1345,6 +1345,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (decl == nullptr)   // only class-types are candidates for returning true
       return false;
 
+    // Sometimes a type points back to an implicit decl (e.g. a bultin type),
+    // and we can't do author-intent analysis without location information.
+    // Assume that it's not forward-declarable.
+    if (decl->isImplicit()) {
+      VERRS(5) << "Skipping forward-declare analysis for implicit decl: '"
+               << PrintableDecl(decl) << "'\n";
+      return false;
+    }
+
     // If we're a template specialization, we also accept
     // forward-declarations of the underlying template (vector<T>, not
     // vector<int>).
