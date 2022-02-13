@@ -20,7 +20,6 @@
 namespace include_what_you_use {
 
 using std::map;
-using std::multimap;
 using std::set;
 using std::vector;
 
@@ -86,17 +85,6 @@ template <typename K, typename V>
 V* FindInMap(map<K, V>* a_map, const K& key) {
   const typename map<K, V>::iterator it = a_map->find(key);
   return it == a_map->end() ? nullptr : &it->second;
-}
-
-// Returns all values associated with the given key in the multimap.
-template <typename K, typename V>
-vector<V> FindInMultiMap(const multimap<K, V>& a_multimap, const K& key) {
-  vector<V> retval;
-  for (typename multimap<K, V>::const_iterator it = a_multimap.lower_bound(key),
-           end = a_multimap.upper_bound(key); it != end; ++it) {
-    retval.push_back(it->second);
-  }
-  return retval;
 }
 
 // Removes all elements in source from target.
