@@ -1051,16 +1051,6 @@ struct VisitorState {
   // instantiated calls, we can't store the exprs themselves, but have
   // to store their location.)
   set<SourceLocation> processed_overload_locs;
-
-  // When we see a using declaration, we want to keep track of what
-  // file it's in, because other files may depend on that using
-  // declaration to get the names of their types right.  We want to
-  // make sure we don't replace an #include with a forward-declare
-  // when we might need the #include's using declaration.
-  // The key is the type being 'used', the FileEntry is the file
-  // that has the using decl.  If there are multiple using decls
-  // for a file, we prefer the one that has NamedDecl in it.
-  multimap<const NamedDecl*, const UsingDecl*> using_declarations;
 };
 
 // ----------------------------------------------------------------------
@@ -2606,16 +2596,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return visitor_state_->preprocessor_info;
   }
 
-  void AddShadowDeclarations(const UsingDecl* using_decl) {
-    for (const UsingShadowDecl* shadow : using_decl->shadows()) {
-      if (const auto* introducer =
-              dyn_cast<UsingDecl>(shadow->getIntroducer())) {
-        visitor_state_->using_declarations.insert(
-            make_pair(shadow->getTargetDecl(), introducer));
-      }
-    }
-  }
-
  private:
   template <typename T> friend class IwyuBaseAstVisitor;
 
@@ -2629,30 +2609,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   const UsingDecl* GetUsingDeclarationOf(const NamedDecl* decl,
                                          const DeclContext* use_context) {
-    // First, if we have a UsingShadowDecl, then we don't need to do anything
-    // because we can just directly return the using decl from that.
     if (const auto* shadow = dyn_cast<UsingShadowDecl>(decl)) {
       return dyn_cast<UsingDecl>(shadow->getIntroducer());
     }
 
-    // But, if we don't have a UsingShadowDecl, then we need to look through
-    // all the using-decls of the given decl.  We limit them to ones that are
-    // visible from the decl-context we're currently in (that is, what
-    // namespaces we're in), via the check through 'Encloses'. Of those, we
-    // pick the one that's in the same file as decl, if possible, otherwise we
-    // pick one arbitrarily.
-    const UsingDecl* retval = nullptr;
-    vector<const UsingDecl*> using_decls
-        = FindInMultiMap(visitor_state_->using_declarations, decl);
-    for (const UsingDecl* using_decl : using_decls) {
-      if (!using_decl->getDeclContext()->Encloses(use_context))
-        continue;
-      if (GetFileEntry(decl) == GetFileEntry(using_decl) || // prefer same file
-          retval == nullptr) {  // not in same file, but better than nothing
-        retval = using_decl;
-      }
-    }
-    return retval;
+    return nullptr;
   }
 
   // Do not add any variables here!  If you do, they will not be shared
@@ -3797,14 +3758,6 @@ class IwyuAstConsumer
   }
 
   bool VisitUsingDecl(clang::UsingDecl* decl) {
-    // If somebody in a different file tries to use one of these decls
-    // with the shortened name, then they had better #include us in
-    // order to get our using declaration.  We store the necessary
-    // information here.  Note: we have to store this even if this is
-    // an ast node we would otherwise ignore, since other AST nodes
-    // (which we might not ignore) can depend on it.
-    AddShadowDeclarations(decl);
-
     // The shadow decls hold the declarations for the var/fn/etc we're
     // using.  (There may be more than one if, say, we're using an
     // overloaded function.)  We don't want to add all of them at once
