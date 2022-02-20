@@ -46,11 +46,11 @@ _ACTUAL_SUMMARY_END_RE = re.compile(r'^---$')
 _ACTUAL_REMOVAL_LIST_START_RE = re.compile(r'.* should remove these lines:$')
 _NODIFFS_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 
-# This is an IWYU_ARGS line that specifies launch arguments 
-# for a test in its source file.
-# Example:
+# This is an IWYU_ARGS line that specifies launch arguments for a test in its
+# source file. Example:
 # // IWYU_ARGS: -Xiwyu --mapping_file=... -I .
 _IWYU_TEST_RUN_ARGS_RE = re.compile(r'^//\sIWYU_ARGS:\s(.*)$')
+
 
 def _PortableNext(iterator):
   if hasattr(iterator, 'next'):
