@@ -108,19 +108,23 @@ This weirdness is tracked in [issue 100](https://github.com/include-what-you-use
 
 The original design was built for Make, but a number of alternative run modes have come up over the years.
 
-#### Plugging into Make ####
+#### Running on single source file ####
 
-The easiest way to run IWYU over your codebase is to run
+The simplest way to use IWYU is to run it against a single source file:
 
-      make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use
+      include-what-you-use $CXXFLAGS myfile.cc
 
-or
+where `$CXXFLAGS` are the flags you would normally pass to the compiler.
 
-      make -k CXX=/path/to/llvm/Release/bin/include-what-you-use
+#### Plugging into existing build system ####
 
-(include-what-you-use always exits with an error code, so the build system knows it didn't build a .o file.  Hence the need for `-k`.)
+Typically there is already a build system containing the relevant compiler flags for all source files. Replace your compiler with `include-what-you-use` to generate a large batch of IWYU advice. Depending on your build system/build tools, this can take many forms, but for a simple GNU Make system it might look like this:
 
-Include-what-you-use only analyzes .cc (or .cpp) files built by `make`, along with their corresponding .h files.  If your project has a .h file with no corresponding .cc file, IWYU will ignore it unless you use the `--check_also` switch to add it for analysis together with a .cc file.
+      make -k CXX=include-what-you-use CXXFLAGS="-Xiwyu --error_always"
+
+(The additional `-Xiwyu --error_always` switch makes `include-what-you-use` always exit with an error code, so the build system knows it didn't build a .o file.  Hence the need for `-k`.)
+
+In this mode `include-what-you-use` only analyzes the .cc (or .cpp) files known to your build system, along with their corresponding .h files.  If your project has a .h file with no corresponding .cc file, IWYU will ignore it unless you use the `--check_also` switch to add it for analysis together with a .cc file. It is possible to run IWYU against individual header files, provided the compiler flags are carefully constructed to match all includers.
 
 #### Using with CMake ####
 
@@ -170,7 +174,7 @@ See `iwyu_tool.py --help` for more options.
 
 We also include a tool that automatically fixes up your source files based on the IWYU recommendations.  This is also alpha-quality software!  Here's how to use it (requires python):
 
-      make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use 2> /tmp/iwyu.out
+      make -k CXX=include-what-you-use CXXFLAGS="-Xiwyu --error_always" 2> /tmp/iwyu.out
       python fix_includes.py < /tmp/iwyu.out
 
 If you don't like the way `fix_includes.py` munges your `#include` lines, you can control its behavior via flags. `fix_includes.py --help` will give a full list, but these are some common ones:

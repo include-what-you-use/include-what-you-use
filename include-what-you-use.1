@@ -4,7 +4,7 @@
 .\" This file is distributed under the University of Illinois Open Source
 .\" License. See LICENSE.TXT for details.
 .\"
-.TH INCLUDE-WHAT-YOU-USE 1 "2019-11-02" include-what-you-use "User Commands"
+.TH INCLUDE-WHAT-YOU-USE 1 "2022-02-21" include-what-you-use "User Commands"
 .SH NAME
 include-what-you-use \- analyze includes in C and C++ source files.
 .SH SYNOPSIS
@@ -46,6 +46,18 @@ This flag may be specified multiple times to specify multiple glob patterns.
 .TP
 .B \-\-cxx17ns
 Suggest the more concise syntax for nested namespaces introduced in C++17.
+.TP
+.BI \-\-error [=N]
+Exit with error code
+.IR N
+(defaults to 1 if omitted) if there are \(lqinclude-what-you-use\(rq
+violations.
+.TP
+.BI \-\-error_always [=N]
+Exit with error code
+.IR N
+(defaults to 1 if omitted) whether there are \(lqinclude-what-you-use\(rq
+violations or not (for use with \fBmake(1)\fR).
 .TP
 .BI \-\-keep= glob
 Always keep the includes matched by
@@ -113,10 +125,16 @@ is already visible in the file's transitive includes.
 Set verbosity. At the highest level, this will dump the AST of the source file
 and explain all decisions.
 .SH EXIT STATUS
+By default
 .B include-what-you-use
-always returns with a nonzero status code to make usage with
-.BR make (1)
-feasible.
+exits with zero exit code unless there's a critical error, but
+.B \-\-error
+or
+.B \-\-error_always
+can be used to customize the exit code depending on invoker expectations.
+See
+.IR EXAMPLE\fR.
+
 .SH MAPPING FILES
 Sometimes headers are not meant to be included directly,
 and sometimes headers are guaranteed to include other headers.
@@ -240,18 +258,22 @@ issue tracker
 .UE
 on GitHub.
 .SH EXAMPLE
-The easiest way to run
+It is possible to put
 .B include-what-you-use
-over your codebase is to run
+in place of your compiler to process all source files known to your build system
 .PP
 .RS
 .EX
-make \-k CC=include-what-you-use CXX=include-what-you-use
+make \-k CC=include-what-you-use CFLAGS="-Xiwyu --error_always"
+.EE
+
+.EX
+make \-k CXX=include-what-you-use CXXFLAGS="-Xiwyu --error_always"
 .EE
 .RE
 .PP
-The program always exits with an error code, so the build system knows that it
-didn't build an object file. Hence the need for
+With \fB-Xiwyu --error_always\fR the program always exits with an error code, so
+the build system knows that it didn't build an object file. Hence the need for
 .BR -k .
 It only analyzes source files built by
 .BR make (1)
