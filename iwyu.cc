@@ -4212,6 +4212,8 @@ using include_what_you_use::IwyuAction;
 using include_what_you_use::CreateCompilerInstance;
 
 int main(int argc, char **argv) {
+  llvm::llvm_shutdown_obj scoped_shutdown;
+
   // X86 target is required to parse Microsoft inline assembly, so we hope it's
   // part of all targets. Clang parser will complain otherwise.
   llvm::InitializeAllTargetInfos();
@@ -4229,8 +4231,6 @@ int main(int argc, char **argv) {
     std::unique_ptr<clang::ASTFrontendAction> action(new IwyuAction);
     compiler->ExecuteAction(*action);
   }
-
-  llvm::llvm_shutdown();
 
   // We always return a failure exit code, to indicate we didn't
   // successfully compile (produce a .o for) the source files we were
