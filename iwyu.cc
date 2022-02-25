@@ -4221,7 +4221,8 @@ int main(int argc, char **argv) {
   llvm::InitializeAllAsmParsers();
 
   // The command line should look like
-  //   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu --other_iwyu_flag]... CLANG_FLAGS... foo.cc
+  //   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu --other_iwyu_flag]... \
+  //       CLANG_FLAGS... foo.cc
   OptionsParser options_parser(argc, argv);
 
   std::unique_ptr<clang::CompilerInstance> compiler(CreateCompilerInstance(
