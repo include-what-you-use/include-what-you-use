@@ -32,6 +32,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
@@ -49,11 +50,14 @@ class FileEntry;
 
 using clang::ASTDumper;
 using clang::BlockPointerType;
+using clang::CastExpr;
+using clang::CXXBindTemporaryExpr;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
 using clang::CXXDeleteExpr;
 using clang::CXXDependentScopeMemberExpr;
 using clang::CXXDestructorDecl;
+using clang::CXXMemberCallExpr;
 using clang::CXXMethodDecl;
 using clang::CXXNewExpr;
 using clang::CXXRecordDecl;
@@ -74,12 +78,15 @@ using clang::EnumDecl;
 using clang::Expr;
 using clang::ExprWithCleanups;
 using clang::FileEntry;
+using clang::FullExpr;
 using clang::FullSourceLoc;
 using clang::FunctionDecl;
 using clang::FunctionType;
 using clang::ImplicitCastExpr;
+using clang::IgnoreExprNodes;
 using clang::InjectedClassNameType;
 using clang::LValueReferenceType;
+using clang::MaterializeTemporaryExpr;
 using clang::MemberExpr;
 using clang::MemberPointerType;
 using clang::NamedDecl;
@@ -1473,6 +1480,38 @@ TemplateArgumentListInfo GetExplicitTplArgs(const Expr* expr) {
   else if (const DependentScopeDeclRefExpr* dependent_decl_ref = DynCastFrom(expr))
     dependent_decl_ref->copyTemplateArgumentsInto(explicit_tpl_args);
   return explicit_tpl_args;
+}
+
+// This is lifted from CastExpr::getConversionFunction, and naively simplified
+// to work around bugs with consteval conversion functions.
+const NamedDecl* GetConversionFunction(const CastExpr* expr) {
+  const Expr *subexpr = nullptr;
+  for (const CastExpr *e = expr; e; e = dyn_cast<ImplicitCastExpr>(subexpr)) {
+    // Skip through implicit sema nodes.
+    subexpr = IgnoreExprNodes(e->getSubExpr(), [](Expr* expr) {
+      // FullExpr is ConstantExpr + ExprWithCleanups.
+      if (auto* fe = dyn_cast<FullExpr>(expr))
+        return fe->getSubExpr();
+
+      if (auto* mte = dyn_cast<MaterializeTemporaryExpr>(expr))
+        return mte->getSubExpr();
+
+      if (auto* bte = dyn_cast<CXXBindTemporaryExpr>(expr))
+        return bte->getSubExpr();
+
+      return expr;
+    });
+
+    // Now resolve the conversion function depending on cast kind.
+    if (e->getCastKind() == clang::CK_ConstructorConversion)
+      return cast<CXXConstructExpr>(subexpr)->getConstructor();
+
+    if (e->getCastKind() == clang::CK_UserDefinedConversion) {
+      if (auto *MCE = dyn_cast<CXXMemberCallExpr>(subexpr))
+        return MCE->getMethodDecl();
+    }
+  }
+  return nullptr;
 }
 
 }  // namespace include_what_you_use
