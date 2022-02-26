@@ -1910,7 +1910,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // If this cast requires a user-defined conversion of the from-type, look up
     // its return type so we can see through up/down-casts via such conversions.
     const Type* converted_from_type = nullptr;
-    if (const NamedDecl* conv_decl = expr->getConversionFunction()) {
+    if (const NamedDecl* conv_decl = GetConversionFunction(expr)) {
       converted_from_type =
           cast<FunctionDecl>(conv_decl)->getReturnType().getTypePtr();
     }
