@@ -22,6 +22,18 @@ if (iwyu_standalone_build)
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
   include(AddLLVM)
   include(HandleLLVMOptions)
+
+  set(iwyu_include_dirs
+    ${LLVM_INCLUDE_DIRS}
+    ${CLANG_INCLUDE_DIRS}
+  )
+else()
+  set(iwyu_include_dirs
+    ${LLVM_SOURCE_DIR}/include
+    ${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/include
+    ${LLVM_BINARY_DIR}/include
+    ${LLVM_BINARY_DIR}/tools/clang/include
+  )
 endif()
 
 message(STATUS "IWYU: configuring for LLVM ${LLVM_VERSION}...")
@@ -118,8 +130,7 @@ target_compile_definitions(include-what-you-use PRIVATE
   IWYU_GIT_REV="${iwyu_git_rev}"
 )
 target_include_directories(include-what-you-use PRIVATE
-  ${LLVM_INCLUDE_DIRS}
-  ${CLANG_INCLUDE_DIRS}
+  ${iwyu_include_dirs}
 )
 
 if (MINGW)
