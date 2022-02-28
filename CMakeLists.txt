@@ -36,9 +36,8 @@ option(IWYU_LINK_CLANG_DYLIB
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Synthesize a clang-resource-headers target for out-of-tree builds (in-tree
-# already has it available by default)
-if (NOT IWYU_IN_TREE)
+# Synthesize clang-resource-headers target if necessary.
+if (NOT TARGET clang-resource-headers)
   # Use only major.minor.patch for the resource directory structure; some
   # platforms include suffix in LLVM_VERSION.
   set(llvm_ver
