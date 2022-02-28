@@ -52,11 +52,9 @@ We also have convenience tags and branches for released versions of Clang (calle
 >
 > Packaging for other platforms will likely be subtly different.
 
-### How to build ###
+### How to build standalone ###
 
-We assume you already have compiled LLVM and Clang libraries on your system, either via packages for your platform or built from source.
-
-To set up an environment for building:
+This build mode assumes you already have compiled LLVM and Clang libraries on your system, either via packages for your platform or built from source. To set up an environment for building IWYU:
 
 * Create a directory for IWYU development, e.g. `iwyu`
 
@@ -91,7 +89,16 @@ To set up an environment for building:
 
       iwyu/build$ make
 
-Instructions for building Clang are available at <https://clang.llvm.org/get_started.html>.
+### How to build as part of LLVM ###
+
+Instructions for building LLVM and Clang are available at <https://clang.llvm.org/get_started.html>.
+
+To include IWYU in the LLVM build, use the `LLVM_EXTERNAL_PROJECTS` and `LLVM_EXTERNAL_*_SOURCE_DIR` CMake variables when configuring LLVM:
+
+      llvm-project/build$ cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS=clang -DLLVM_EXTERNAL_PROJECTS=iwyu -DLLVM_EXTERNAL_IWYU_SOURCE_DIR=/path/to/iwyu /path/to/llvm-project/llvm
+      llvm-project/build$ make
+
+This builds all of LLVM, Clang and IWYU in a single tree.
 
 ### How to install ###
 
