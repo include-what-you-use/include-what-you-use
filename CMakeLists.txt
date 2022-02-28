@@ -36,12 +36,6 @@ option(IWYU_LINK_CLANG_DYLIB
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_definitions(${LLVM_DEFINITIONS})
-include_directories(
-  ${LLVM_INCLUDE_DIRS}
-  ${CLANG_INCLUDE_DIRS}
-)
-
 # Synthesize a clang-resource-headers target for out-of-tree builds (in-tree
 # already has it available by default)
 if (NOT IWYU_IN_TREE)
@@ -102,25 +96,34 @@ add_llvm_executable(include-what-you-use
 add_dependencies(include-what-you-use clang-resource-headers)
 
 # LLVM requires C++14, so follow suit.
-set_property(TARGET include-what-you-use PROPERTY CXX_STANDARD_REQUIRED ON)
-set_property(TARGET include-what-you-use PROPERTY CXX_STANDARD 14)
-set_property(TARGET include-what-you-use PROPERTY CXX_EXTENSIONS OFF)
+set_target_properties(include-what-you-use PROPERTIES
+  CXX_STANDARD_REQUIRED ON
+  CXX_STANDARD 14
+  CXX_EXTENSIONS OFF
+)
+
+target_compile_definitions(include-what-you-use PRIVATE ${LLVM_DEFINITIONS})
+target_include_directories(include-what-you-use PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${CLANG_INCLUDE_DIRS}
+)
 
 if (MINGW)
-  # Work around 'too many sections' error with MINGW/GCC.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
+  target_compile_options(include-what-you-use PRIVATE
+    # Work around 'too many sections' error with MINGW/GCC.
+    -Wa,-mbig-obj
+  )
 endif()
 
 if (MSVC)
-  # Disable warnings for IWYU, and disable exceptions in MSVC's STL.
-  add_definitions(
+  target_compile_options(include-what-you-use PRIVATE
     # Suppress ''destructor'' : destructor never returns, potential memory leak.
-    -wd4722
-    -D_HAS_EXCEPTIONS=0
+    /wd4722
+    # Disable exceptions in MSVC STL.
+    /D_HAS_EXCEPTIONS=0
+    # Suppress C1128: number of sections exceeded object file format limit.
+    /bigobj
   )
-
-  # Enable bigobj support
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 endif()
 
 # Link dynamically or statically depending on user preference.
@@ -165,7 +168,9 @@ if (GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
 else()
   message(WARNING "IWYU Git version not found, DO NOT release from this tree!")
 endif()
-add_definitions(-DIWYU_GIT_REV="${iwyu_git_rev}")
+target_compile_definitions(include-what-you-use PRIVATE
+  IWYU_GIT_REV="${iwyu_git_rev}"
+)
 
 # Install programs.
 include(GNUInstallDirs)
