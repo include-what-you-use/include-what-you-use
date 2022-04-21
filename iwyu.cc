@@ -1522,8 +1522,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const NamedDecl* target_decl = used_decl;
 
     // Sometimes a shadow decl comes between us and the 'real' decl.
-    if (const UsingShadowDecl* shadow_decl = DynCastFrom(used_decl))
+    const UsingDecl* using_decl = nullptr;
+    if (const auto* shadow_decl = dyn_cast<UsingShadowDecl>(used_decl)) {
       target_decl = shadow_decl->getTargetDecl();
+      using_decl = dyn_cast<UsingDecl>(shadow_decl->getIntroducer());
+    }
 
     // Map private decls like __normal_iterator to their public counterpart.
     target_decl = MapPrivateDeclToPublicDecl(target_decl);
@@ -1551,9 +1554,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // TODO(csilvers): maybe just insert our own using declaration
     // instead?  We can call it "Use what you use". :-)
     // TODO(csilvers): check for using statements and namespace aliases too.
-    if (const UsingDecl* using_decl
-        = GetUsingDeclarationOf(used_decl,
-              GetDeclContext(current_ast_node()))) {
+    if (using_decl) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, use_flags, "(for using decl)");
     }
@@ -1594,8 +1595,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const NamedDecl* target_decl = used_decl;
 
     // Sometimes a shadow decl comes between us and the 'real' decl.
-    if (const UsingShadowDecl* shadow_decl = DynCastFrom(used_decl))
+    const UsingDecl* using_decl = nullptr;
+    if (const auto* shadow_decl = dyn_cast<UsingShadowDecl>(used_decl)) {
       target_decl = shadow_decl->getTargetDecl();
+      using_decl = dyn_cast<UsingDecl>(shadow_decl->getIntroducer());
+    }
 
     target_decl = MapPrivateDeclToPublicDecl(target_decl);
     if (CanIgnoreDecl(target_decl))
@@ -1610,9 +1614,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // If we're a use that depends on a using declaration, make sure
     // we #include the file with the using declaration.
-    if (const UsingDecl* using_decl
-        = GetUsingDeclarationOf(used_decl,
-              GetDeclContext(current_ast_node()))) {
+    if (using_decl) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, ComputeUseFlags(current_ast_node()),
           "(for using decl)");
@@ -2605,15 +2607,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   void AddProcessedOverloadLoc(SourceLocation loc) {
     visitor_state_->processed_overload_locs.insert(loc);
-  }
-
-  const UsingDecl* GetUsingDeclarationOf(const NamedDecl* decl,
-                                         const DeclContext* use_context) {
-    if (const auto* shadow = dyn_cast<UsingShadowDecl>(decl)) {
-      return dyn_cast<UsingDecl>(shadow->getIntroducer());
-    }
-
-    return nullptr;
   }
 
   // Do not add any variables here!  If you do, they will not be shared
