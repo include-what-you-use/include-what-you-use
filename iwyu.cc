@@ -1533,8 +1533,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreDecl(target_decl))
       return;
 
-    const UseFlags use_flags =
-        ComputeUseFlags(current_ast_node()) | extra_use_flags;
+    UseFlags use_flags = ComputeUseFlags(current_ast_node()) | extra_use_flags;
 
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
@@ -1605,19 +1604,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreDecl(target_decl))
       return;
 
+    UseFlags use_flags = ComputeUseFlags(current_ast_node());
+
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
     preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, target_decl, ComputeUseFlags(current_ast_node()),
-        comment);
+        used_loc, target_decl, use_flags, comment);
 
     // If we're a use that depends on a using declaration, make sure
     // we #include the file with the using declaration.
     if (using_decl) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
-          used_loc, using_decl, ComputeUseFlags(current_ast_node()),
-          "(for using decl)");
+          used_loc, using_decl, use_flags, "(for using decl)");
     }
   }
 
