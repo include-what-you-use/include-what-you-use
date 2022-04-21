@@ -44,6 +44,7 @@ using clang::SourceLocation;
 using clang::SourceRange;
 using clang::Token;
 using llvm::errs;
+using llvm::Optional;
 using llvm::StringRef;
 using std::make_pair;
 using std::string;
@@ -668,7 +669,7 @@ void IwyuPreprocessorInfo::InclusionDirective(
     StringRef filename,
     bool is_angled,
     clang::CharSourceRange filename_range,
-    const FileEntry* file,
+    Optional<FileEntryRef> file,
     StringRef search_path,
     StringRef relative_path,
     const clang::Module* imported,
