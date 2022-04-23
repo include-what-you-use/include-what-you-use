@@ -67,6 +67,18 @@ if (NOT IWYU_IN_TREE)
   add_custom_target(clang-resource-headers ALL DEPENDS ${out_files})
 endif()
 
+# Pick up Git revision so we can report it in version information.
+include(FindGit)
+if (GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE iwyu_git_rev
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+else()
+  message(WARNING "IWYU Git version not found, DO NOT release from this tree!")
+endif()
+
 set(LLVM_LINK_COMPONENTS
   Option
   Support
@@ -102,7 +114,10 @@ set_target_properties(include-what-you-use PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
-target_compile_definitions(include-what-you-use PRIVATE ${LLVM_DEFINITIONS})
+target_compile_definitions(include-what-you-use PRIVATE
+  ${LLVM_DEFINITIONS}
+  IWYU_GIT_REV="${iwyu_git_rev}"
+)
 target_include_directories(include-what-you-use PRIVATE
   ${LLVM_INCLUDE_DIRS}
   ${CLANG_INCLUDE_DIRS}
@@ -156,21 +171,6 @@ if (WIN32)
     shlwapi  # for PathMatchSpecA
   )
 endif()
-
-# Pick up Git revision so we can report it in version information.
-include(FindGit)
-if (GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
-  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE iwyu_git_rev
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-else()
-  message(WARNING "IWYU Git version not found, DO NOT release from this tree!")
-endif()
-target_compile_definitions(include-what-you-use PRIVATE
-  IWYU_GIT_REV="${iwyu_git_rev}"
-)
 
 # Install programs.
 include(GNUInstallDirs)
