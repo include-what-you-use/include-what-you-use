@@ -107,7 +107,7 @@ set_property(TARGET include-what-you-use PROPERTY CXX_STANDARD 14)
 set_property(TARGET include-what-you-use PROPERTY CXX_EXTENSIONS OFF)
 
 if (MINGW)
-  # Work around 'too many sections' error with MINGW/GCC
+  # Work around 'too many sections' error with MINGW/GCC.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj")
 endif()
 
@@ -147,10 +147,10 @@ else()
   )
 endif()
 
-# Platform dependencies.
+# Add platform-specific link dependencies.
 if (WIN32)
   target_link_libraries(include-what-you-use PRIVATE
-    shlwapi  # For PathMatchSpecA
+    shlwapi  # for PathMatchSpecA
   )
 endif()
 
@@ -167,7 +167,7 @@ else()
 endif()
 add_definitions(-DIWYU_GIT_REV="${iwyu_git_rev}")
 
-# Install programs
+# Install programs.
 include(GNUInstallDirs)
 install(TARGETS
   include-what-you-use
@@ -179,14 +179,14 @@ install(PROGRAMS
   DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-# Install mapping files
+# Install mapping files.
 file(GLOB mapping_files *.imp)
 install(FILES
   ${mapping_files}
   DESTINATION ${CMAKE_INSTALL_DATADIR}/include-what-you-use
 )
 
-# Install man page on Unix-like systems
+# Install man page on Unix-like systems.
 if (UNIX)
   install(FILES
     include-what-you-use.1
@@ -196,6 +196,7 @@ endif()
 
 find_package(PythonInterp)
 if (PYTHONINTERP_FOUND)
+  # Map the various IWYU test scripts to CTest tests.
   enable_testing()
 
   function(iwyu_add_test name file)
