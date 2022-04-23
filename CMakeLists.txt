@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.4.3)
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(STATUS "IWYU: out-of-tree configuration")
-  set(IWYU_IN_TREE OFF)
+  set(iwyu_in_tree OFF)
 else()
   message(STATUS "IWYU: in-tree configuration")
-  set(IWYU_IN_TREE ON)
+  set(iwyu_in_tree ON)
 endif()
 
-if (NOT IWYU_IN_TREE)
+if (NOT iwyu_in_tree)
   cmake_policy(SET CMP0048 NEW)
   if (POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
@@ -152,13 +152,13 @@ include(FindGit)
 if (GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
   execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE IWYU_GIT_REV
+    OUTPUT_VARIABLE iwyu_git_rev
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 else()
   message(STATUS "Warning: IWYU Git version info not found, DO NOT release "
                  "from this build tree!")
 endif()
-add_definitions(-DIWYU_GIT_REV="${IWYU_GIT_REV}")
+add_definitions(-DIWYU_GIT_REV="${iwyu_git_rev}")
 
 # Install programs
 include(GNUInstallDirs)
@@ -166,8 +166,8 @@ install(TARGETS include-what-you-use RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # Install mapping files
-file(GLOB MAPPING_FILES *.imp)
-install(FILES ${MAPPING_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/include-what-you-use)
+file(GLOB mapping_files *.imp)
+install(FILES ${mapping_files} DESTINATION ${CMAKE_INSTALL_DATADIR}/include-what-you-use)
 
 # Install man page on Unix-like systems
 if (UNIX)
@@ -178,20 +178,20 @@ find_package(PythonInterp)
 if(PYTHONINTERP_FOUND)
   enable_testing()
 
-  function(ADD_IWYU_TEST NAME FILE)
-    add_test(NAME ${NAME}
-      COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py --run-test-file=${FILE} -- $<TARGET_FILE:include-what-you-use>
+  function(iwyu_add_test name file)
+    add_test(NAME ${name}
+      COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py --run-test-file=${file} -- $<TARGET_FILE:include-what-you-use>
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   endfunction()
 
   execute_process(
     COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py --list-test-files
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE TEST_NAMES_AND_FILES)
-  string(REPLACE "\n" ";" TEST_NAMES_LIST ${TEST_NAMES_AND_FILES})
-  foreach (TEST_NAME_AND_FILE IN ITEMS ${TEST_NAMES_LIST})
-    string(REPLACE ":" ";" TEST_NAME_AND_FILE ${TEST_NAME_AND_FILE})
-    ADD_IWYU_TEST(${TEST_NAME_AND_FILE})
+    OUTPUT_VARIABLE test_names_and_files)
+  string(REPLACE "\n" ";" test_names_list ${test_names_and_files})
+  foreach (test_name_and_file IN ITEMS ${test_names_list})
+    string(REPLACE ":" ";" test_name_and_file ${test_name_and_file})
+    iwyu_add_test(${test_name_and_file})
   endforeach()
 
   add_test(NAME fix_includes_test
