@@ -26,9 +26,13 @@ endif()
 
 message(STATUS "IWYU: configuring for LLVM ${LLVM_VERSION}...")
 
-# The good default is given by the llvm toolchain installation itself, but still in
-# case both static and shared libraries are available, allow to override that default.
-option(IWYU_LINK_CLANG_DYLIB "Link against the clang dynamic library" ${CLANG_LINK_CLANG_DYLIB})
+# The good default is given by the llvm toolchain installation itself, but still
+# in case both static and shared libraries are available, allow to override that
+# default.
+option(IWYU_LINK_CLANG_DYLIB
+  "Link against the clang dynamic library"
+  ${CLANG_LINK_CLANG_DYLIB}
+)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -36,19 +40,22 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(
   ${LLVM_INCLUDE_DIRS}
   ${CLANG_INCLUDE_DIRS}
-  )
+)
 
 # Synthesize a clang-resource-headers target for out-of-tree builds (in-tree
 # already has it available by default)
 if (NOT IWYU_IN_TREE)
   # Use only major.minor.patch for the resource directory structure; some
   # platforms include suffix in LLVM_VERSION.
-  set(llvm_ver ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
+  set(llvm_ver
+    "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}"
+  )
   set(clang_headers_src "${LLVM_LIBRARY_DIR}/clang/${llvm_ver}/include")
   set(clang_headers_dst "${CMAKE_BINARY_DIR}/lib/clang/${llvm_ver}/include")
 
   file(GLOB_RECURSE in_files RELATIVE "${clang_headers_src}"
-    "${clang_headers_src}/*")
+    "${clang_headers_src}/*"
+  )
 
   set(out_files)
   foreach (file ${in_files})
@@ -58,7 +65,8 @@ if (NOT IWYU_IN_TREE)
     add_custom_command(OUTPUT "${dst}"
       DEPENDS "${src}"
       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${src}" "${dst}"
-      COMMENT "Copying clang's ${file}...")
+      COMMENT "Copying clang's ${file}..."
+    )
     list(APPEND out_files "${dst}")
   endforeach()
 
@@ -71,7 +79,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsDescs
   AllTargetsInfos
-  )
+)
 
 add_llvm_executable(include-what-you-use
   iwyu.cc
@@ -87,7 +95,7 @@ add_llvm_executable(include-what-you-use
   iwyu_path_util.cc
   iwyu_preprocessor.cc
   iwyu_verrs.cc
-  )
+)
 
 # Add a dependency on clang-resource-headers to ensure the builtin headers are
 # available when IWYU is executed from the build dir.
@@ -106,9 +114,10 @@ endif()
 if (MSVC)
   # Disable warnings for IWYU, and disable exceptions in MSVC's STL.
   add_definitions(
-    -wd4722 # Suppress ''destructor'' : destructor never returns, potential memory leak
+    # Suppress ''destructor'' : destructor never returns, potential memory leak.
+    -wd4722
     -D_HAS_EXCEPTIONS=0
-    )
+  )
 
   # Enable bigobj support
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
@@ -118,8 +127,7 @@ endif()
 if (IWYU_LINK_CLANG_DYLIB)
   target_link_libraries(include-what-you-use PRIVATE clang-cpp)
 else()
-  target_link_libraries(include-what-you-use
-    PRIVATE
+  target_link_libraries(include-what-you-use PRIVATE
     clangBasic
     clangLex
     clangAST
@@ -136,15 +144,14 @@ else()
     # [1] https://llvm.org/viewvc/llvm-project?view=revision&revision=348907
     # [2] https://llvm.org/viewvc/llvm-project?view=revision&revision=348915
     clangSerialization
-    )
+  )
 endif()
 
 # Platform dependencies.
 if (WIN32)
-  target_link_libraries(include-what-you-use
-    PRIVATE
+  target_link_libraries(include-what-you-use PRIVATE
     shlwapi  # For PathMatchSpecA
-    )
+  )
 endif()
 
 # Pick up Git revision so we can report it in version information.
@@ -153,41 +160,57 @@ if (GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
   execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_VARIABLE iwyu_git_rev
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
 else()
-  message(STATUS "Warning: IWYU Git version info not found, DO NOT release "
-                 "from this build tree!")
+  message(WARNING "IWYU Git version not found, DO NOT release from this tree!")
 endif()
 add_definitions(-DIWYU_GIT_REV="${iwyu_git_rev}")
 
 # Install programs
 include(GNUInstallDirs)
-install(TARGETS include-what-you-use RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(PROGRAMS fix_includes.py iwyu_tool.py DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS
+  include-what-you-use
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(PROGRAMS
+  fix_includes.py
+  iwyu_tool.py
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 
 # Install mapping files
 file(GLOB mapping_files *.imp)
-install(FILES ${mapping_files} DESTINATION ${CMAKE_INSTALL_DATADIR}/include-what-you-use)
+install(FILES
+  ${mapping_files}
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/include-what-you-use
+)
 
 # Install man page on Unix-like systems
 if (UNIX)
-  install(FILES include-what-you-use.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+  install(FILES
+    include-what-you-use.1
+    DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
+  )
 endif()
 
 find_package(PythonInterp)
-if(PYTHONINTERP_FOUND)
+if (PYTHONINTERP_FOUND)
   enable_testing()
 
   function(iwyu_add_test name file)
     add_test(NAME ${name}
-      COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py --run-test-file=${file} -- $<TARGET_FILE:include-what-you-use>
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+      COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py --run-test-file=${file}
+      -- $<TARGET_FILE:include-what-you-use>
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
   endfunction()
 
   execute_process(
     COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py --list-test-files
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE test_names_and_files)
+    OUTPUT_VARIABLE test_names_and_files
+  )
   string(REPLACE "\n" ";" test_names_list ${test_names_and_files})
   foreach (test_name_and_file IN ITEMS ${test_names_list})
     string(REPLACE ":" ";" test_name_and_file ${test_name_and_file})
@@ -196,8 +219,10 @@ if(PYTHONINTERP_FOUND)
 
   add_test(NAME fix_includes_test
     COMMAND ${PYTHON_EXECUTABLE} fix_includes_test.py
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  )
   add_test(NAME iwyu_tool_test
     COMMAND ${PYTHON_EXECUTABLE} iwyu_tool_test.py
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  )
 endif()
