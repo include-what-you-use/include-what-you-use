@@ -1,6 +1,6 @@
-# Instructions for Developers #
+# Instructions for developers #
 
-## Submitting Patches ##
+## Submitting patches ##
 
 We welcome patches and rely on your contributions to make IWYU smarter.
 
@@ -10,7 +10,7 @@ Use GitHub's [pull request system](https://github.com/include-what-you-use/inclu
 
 It's usually a good idea to run ideas by the [IWYU mailing list](http://groups.google.com/group/include-what-you-use) to get general agreement on directions before you start hacking.
 
-## Running the Tests ##
+## Running the tests ##
 
 If fixing a bug in IWYU, please add a test to the test suite!  You can create a file called `whatever.cc` (_not_ .cpp), and, if necessary, `whatever.h`, and `whatever-<extension>.h`.  You may be able to get away without adding any `.h` files, and just including `direct.h` -- see, for instance, `tests/remove_fwd_decl_when_including.cc`.
 
@@ -42,7 +42,7 @@ It's possible to run include-what-you-use in `gdb`, to debug that way. Another u
 
     env IWYU_VERBOSE=7 make -k CXX=/path/to/llvm/Debug+Asserts/bin/include-what-you-use 2>&1 > /tmp/iwyu.verbose
 
-## A Quick Tour of the Codebase ##
+## A quick tour of the codebase ##
 
 The codebase is strewn with TODOs of known problems, and also language constructs that aren't adequately tested yet.  So there's plenty to do!  Here's a brief guide through the codebase:
 

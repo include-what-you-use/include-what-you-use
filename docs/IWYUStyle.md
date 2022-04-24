@@ -1,4 +1,4 @@
-# IWYU Coding Style #
+# IWYU coding style #
 
 IWYU is developed by a small number of loosely knit maintainers, and we rely on
 external contributions to stand a chance to improve the tool.

@@ -4,7 +4,7 @@
 
 For more in-depth documentation, see [docs](docs).
 
-## Instructions for Users ##
+## Instructions for users ##
 
 "Include what you use" means this: for every symbol (type, function, variable, or macro) that you use in `foo.cc` (or `foo.cpp`), either `foo.cc` or `foo.h` should include a .h file that exports the declaration of that symbol. (Similarly, for `foo_test.cc`, either `foo_test.cc` or `foo.h` should do the including.)  Obviously symbols defined in `foo.cc` itself are excluded from this requirement.
 
@@ -16,7 +16,7 @@ This is alpha quality software -- at best (as of July 2018).  It was originally 
 
 While we work to get IWYU quality up, we will be stinting new features, and will prioritize reported bugs along with the many existing, known bugs.  The best chance of getting a problem fixed is to submit a patch that fixes it (along with a test case that verifies the fix)!
 
-### How to Build ###
+### How to build ###
 
 Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. Usually such discrepancies are detected by build bot and fixed promptly.
 
@@ -91,7 +91,7 @@ To set up an environment for building:
 
 Instructions for building Clang are available at <https://clang.llvm.org/get_started.html>.
 
-### How to Install ###
+### How to install ###
 
 If you're building IWYU out-of-tree or installing pre-built binaries, you need to make sure it can find Clang built-in headers (`stdarg.h` and friends.)
 
@@ -105,7 +105,7 @@ So for IWYU to function correctly, you need to copy the Clang `include` director
 
 This weirdness is tracked in [issue 100](https://github.com/include-what-you-use/include-what-you-use/issues/100), hopefully we can make this more transparent over time.
 
-### How to Run ###
+### How to run ###
 
 The original design was built for Make, but a number of alternative run modes have come up over the years.
 
@@ -183,7 +183,7 @@ If you don't like the way `fix_includes.py` munges your `#include` lines, you ca
 * `-b`: Put blank lines between system and Google includes
 * `--nocomments`: Don't add the 'why' comments next to includes
 
-### How to Correct IWYU Mistakes ###
+### How to correct IWYU mistakes ###
 
 * If `fix_includes.py` has removed an `#include` you actually need, add it back in with the comment '`// IWYU pragma: keep`' at the end of the `#include` line.  Note that the comment is case-sensitive.
 * If `fix_includes.py` has added an `#include` you don't need, just take it out.  We hope to come up with a more permanent way of fixing later.

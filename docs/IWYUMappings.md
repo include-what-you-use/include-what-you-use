@@ -1,4 +1,4 @@
-# IWYU Mappings #
+# IWYU mappings #
 
 One of the difficult problems for IWYU is distinguishing between which header contains a symbol definition and which header is the actual documented header to include for that symbol.
 
@@ -12,11 +12,11 @@ However, many mappings are toolchain- and version-dependent. Symbol homes and `#
 
 Any mappings outside of the default set can therefore be specified as external *mapping files*.
 
-## Default Mappings ##
+## Default mappings ##
 
 IWYU's default mappings are hard-coded in `iwyu_include_picker.cc`, and are very GCC-centric. There are both symbol- and include mappings for GNU libstdc++ and libc.
 
-## Mapping Files ##
+## Mapping files ##
 
 The mapping files conventionally use the `.imp` file extension, for "Iwyu MaPping" (terrible, I know). They use a [JSON](http://json.org/) meta-format with the following general form:
 
@@ -42,7 +42,7 @@ IWYU uses LLVM's YAML/JSON parser to interpret the mapping files, and it has som
 
 If the YAML parser is ever made more rigorous, it might be wise not to lean on non-standard behavior, so apart from comment style, try to keep mapping files in line with the JSON spec.
 
-### Include Mappings ###
+### Include mappings ###
 
 The `include` directive specifies a mapping between two include names (relative path, including quotes or angle brackets.)
 
@@ -67,7 +67,7 @@ Include mappings support a special wildcard syntax for the first entry:
 
 The `@` prefix is a signal that the remaining content is a regex, and can be used to re-map a whole subdirectory of private headers to a public facade header.
 
-### Symbol Mappings ###
+### Symbol mappings ###
 
 The `symbol` directive maps from a qualified symbol name to its authoritative header.
 
@@ -86,7 +86,7 @@ The symbol visibility is largely redundant -- it must always be `private`. It is
 
 Unlike `include`, `symbol` directives do not support the `@`-prefixed regex syntax in the first entry. Track the [following bug](https://github.com/include-what-you-use/include-what-you-use/issues/233) for updates.
 
-### Mapping Refs ###
+### Mapping refs ###
 
 The last kind of directive, `ref`, is used to pull in another mapping file, much like the C preprocessor's `#include` directive. Data for this directive is a single string: the filename to include.
 
@@ -97,7 +97,7 @@ For example;
 
 The rationale for the `ref` directive was to make it easier to compose project-specific mappings from a set of library-oriented mapping files. For example, IWYU might ship with mapping files for [Boost](http://www.boost.org), the SCL, various C standard libraries, the Windows API, the [Poco Library](http://pocoproject.org), etc. Depending on what your specific project uses, you could easily create an aggregate mapping file with refs to the relevant mappings.
 
-### Specifying Mapping Files ###
+### Specifying mapping files ###
 
 Mapping files are specified on the command-line using the `--mapping_file` switch:
 
