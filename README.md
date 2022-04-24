@@ -20,7 +20,7 @@ While we work to get IWYU quality up, we will be stinting new features, and will
 
 Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. Usually such discrepancies are detected by build bot and fixed promptly.
 
-**The IWYU master branch follows Clang main branch**.
+NOTE: the IWYU master branch follows Clang main branch.
 
 We also have convenience tags and branches for released versions of Clang (called `clang_<version>`, e.g. `clang_5.0`). To build against a Clang release, check out the corresponding branch in IWYU before configuring the build. More details in the instructions below.
 
