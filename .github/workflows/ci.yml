@@ -64,3 +64,15 @@ jobs:
         run: |
           git ls-tree --full-tree --name-only -r HEAD | \
               xargs ./iwyu-check-license-header.py
+
+      - name: Upload
+        uses: actions/upload-artifact@v1
+        with:
+          path: ./build/bin/
+          name: include-what-you-use
+
+      - name: Create Release
+        if: contains(github.ref, 'tags/v')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh create release ${{github.ref_name}} ./build/bin/include-what-you-use
