@@ -1,0 +1,22 @@
+//===--- iwyu_regex.h - iwyu regex implementation -------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_REGEX_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_REGEX_H_
+
+#include <string>
+
+namespace include_what_you_use {
+
+// Returns true if str matches regular expression pattern.
+bool RegexMatch(const std::string& str, const std::string& pattern);
+
+}  // namespace include_what_you_use
+
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_REGEX_H_
