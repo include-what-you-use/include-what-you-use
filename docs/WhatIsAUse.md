@@ -1,4 +1,4 @@
-# What Is a Use? #
+# What is a use? #
 
 (*Disclaimer:* the information here is accurate as of 12 May 2011, when it was written.  Specifics of IWYU's policy, and even philosophy, may have changed since then.  We'll try to remember to update this file as that happens, but may occasionally forget.  The further we are from May 2011, the more you should take the below with a grain of salt.)
 
@@ -21,7 +21,7 @@ Does `bar.cc` "use" `std::ostream`, such that it should `#include <ostream>`?  Y
 
 But IWYU doesn't (at least, modulo bugs).  This is because of its attempt to analyze "author intent".
 
-## Author Intent ##
+## Author intent ##
 
 If code has `typedef Foo MyTypedef`, and you write `MyTypedef var;`, you are using `MyTypedef`, but are you also using `Foo`?  The answer depends on the _intent_ of the person who wrote the typedef.
 
@@ -46,7 +46,7 @@ Another case where author intent turns up is in function return types.  Consider
 
 If you write `GetSingletonObject()->methodOnFoo()`, are you "using" `Foo::methodOnFoo`, such that you should `#include "foo.h"`?  Or are you supposed to be able to operate on the results of `GetSingletonObject` without needing to include the definition of the returned type?  The answer is: it depends on the author intent.  Sometimes the author is willing to provide the definition of the return type, sometimes it is not.
 
-### Re-Exporting ###
+### Re-exporting ###
 
 When the author of a file is providing a definition of a symbol from somewhere else, we say that the file is "re-exporting" that symbol.  In the first `OutputEmitter` example, we say that `foo.h` is re-exporting `ostream`.  As a result, people who `#include "foo.h"` get a definition of `ostream` along for free, even if they don't directly `#include <ostream>` themselves.  Another way of thinking about it is: if file A re-exports symbol B, we can pretend that A defines B, even if it doesn't.
 
@@ -95,7 +95,7 @@ If IWYU says you intend to re-export the underlying type, then nobody who uses y
 
 IWYU supports this in its analysis.  If you are using `Typedef1` in your code and `#include "foo.h"` anyway, IWYU will suggest you remove it, since you are getting the definition of `Foo` via the typedef.
 
-### Automatic re-export: Function return values ###
+### Automatic re-export: function return values ###
 
 The same rule applies with the return value in a function declaration:
 
@@ -136,7 +136,7 @@ Here is an example of the rule in action:
 
 In this case, IWYU will say that `baz.cc` does not need to `#include "foo.h"`, since `bar.h` re-exports it.
 
-### Automatic re-export: Conversion constructors ###
+### Automatic re-export: conversion constructors ###
 
 Consider the following code:
 
