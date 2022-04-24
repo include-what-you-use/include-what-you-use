@@ -16,15 +16,13 @@ This is alpha quality software -- at best (as of July 2018).  It was originally 
 
 While we work to get IWYU quality up, we will be stinting new features, and will prioritize reported bugs along with the many existing, known bugs.  The best chance of getting a problem fixed is to submit a patch that fixes it (along with a test case that verifies the fix)!
 
-### How to build ###
+### Clang compatibility ###
 
-Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. Usually such discrepancies are detected by build bot and fixed promptly.
+Include-what-you-use makes heavy use of Clang internals, and will occasionally break when Clang is updated. We build IWYU regularly against Clang mainline to detect and fix such compatibility breaks as soon as possible.
 
 NOTE: the IWYU master branch follows Clang main branch.
 
-We also have convenience tags and branches for released versions of Clang (called `clang_<version>`, e.g. `clang_5.0`). To build against a Clang release, check out the corresponding branch in IWYU before configuring the build. More details in the instructions below.
-
-We assume you already have compiled LLVM and Clang libraries on your system, either via packages for your platform or built from source. You can use this mapping table to combine Clang and IWYU versions correctly:
+We also have convenience tags and branches for released versions of Clang (called `clang_<version>`, e.g. `clang_5.0`). To build against a Clang release, check out the corresponding branch in IWYU before configuring the build. You can use this mapping table to combine Clang and IWYU versions correctly:
 
 | Clang | IWYU version | IWYU branch    |
 |-------|--------------|----------------|
@@ -53,6 +51,10 @@ We assume you already have compiled LLVM and Clang libraries on your system, eit
 > * `clang-<version>`
 >
 > Packaging for other platforms will likely be subtly different.
+
+### How to build ###
+
+We assume you already have compiled LLVM and Clang libraries on your system, either via packages for your platform or built from source.
 
 To set up an environment for building:
 
