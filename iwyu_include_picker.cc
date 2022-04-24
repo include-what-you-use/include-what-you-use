@@ -16,7 +16,6 @@
 // not hash_map: it's not as portable and needs hash<string>.
 #include <map>                          // for map, map<>::mapped_type, etc
 #include <memory>
-#include <regex>
 #include <string>                       // for string, basic_string, etc
 #include <system_error>                 // for error_code
 #include <utility>                      // for pair, make_pair
@@ -25,6 +24,7 @@
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
 #include "iwyu_port.h"
+#include "iwyu_regex.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
@@ -1424,17 +1424,16 @@ void IncludePicker::ExpandRegexes() {
     for (const string& regex_key : filepath_include_map_regex_keys) {
       const vector<MappedInclude>& map_to = filepath_include_map_[regex_key];
       // Enclose the regex in ^(...)$ for full match.
-      std::regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
-      if (std::regex_match(hdr, regex) &&
-          !ContainsQuotedInclude(map_to, hdr)) {
+      std::string regex("^(" + regex_key.substr(1) + ")$");
+      if (RegexMatch(hdr, regex) && !ContainsQuotedInclude(map_to, hdr)) {
         Extend(&filepath_include_map_[hdr], filepath_include_map_[regex_key]);
         MarkVisibility(&include_visibility_map_, hdr,
                        include_visibility_map_[regex_key]);
       }
     }
     for (const string& regex_key : friend_to_headers_map_regex_keys) {
-      std::regex regex(std::string("^(" + regex_key.substr(1) + ")$"));
-      if (std::regex_match(hdr, regex)) {
+      std::string regex("^(" + regex_key.substr(1) + ")$");
+      if (RegexMatch(hdr, regex)) {
         InsertAllInto(friend_to_headers_map_[regex_key],
                       &friend_to_headers_map_[hdr]);
       }
