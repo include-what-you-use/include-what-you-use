@@ -35,7 +35,7 @@ class ToBeDeclaredLater2 { };
 // Its nesting provokes something that isn't covered by the rest of the
 // macro_location suite.
 int my_htons(int x) {
-  return htons(x);
+  return iwyu_htons(x);
 }
 
 /**** IWYU_SUMMARY

@@ -9,4 +9,4 @@
 
 #include "tests/cxx/macro_location-byteswap.h"
 
-#define htons(x) bswap(x)
+#define iwyu_htons(x) bswap(x)
