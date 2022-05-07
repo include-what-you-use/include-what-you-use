@@ -1225,6 +1225,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // should be held responsible for a use.
   SourceLocation GetCanonicalUseLocation(SourceLocation use_loc,
                                          const NamedDecl* decl) {
+    CHECK_(decl != nullptr) << ": Need a decl to compute use location";
+
     // If we're not in a macro, just echo the use location.
     if (!use_loc.isMacroID())
       return use_loc;
@@ -2802,6 +2804,8 @@ class InstantiatedTemplateVisitor
   // instance, we're not responsible for a vector's call to
   // allocator::allocator(), because <vector> provides it for us).
   bool CanIgnoreDecl(const Decl* decl) const override {
+    if (!decl)
+      return true;
     return nodes_to_ignore_.Contains(decl);
   }
 
