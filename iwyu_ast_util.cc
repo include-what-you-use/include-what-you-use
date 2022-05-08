@@ -434,6 +434,9 @@ string PrintableLoc(SourceLocation loc) {
 }
 
 string PrintableDecl(const Decl* decl, bool terse/*=true*/) {
+  if (!decl)
+    return "<null decl>";
+
   // Use the terse flag to limit the level of output to one line.
   clang::PrintingPolicy policy = decl->getASTContext().getPrintingPolicy();
   policy.TerseOutput = terse;
@@ -447,6 +450,9 @@ string PrintableDecl(const Decl* decl, bool terse/*=true*/) {
 }
 
 string PrintableStmt(const Stmt* stmt) {
+  if (!stmt)
+    return "<null stmt>";
+
   std::string buffer;
   raw_string_ostream ostream(buffer);
   ASTDumper dumper(ostream, /*ShowColors=*/false);
@@ -455,6 +461,9 @@ string PrintableStmt(const Stmt* stmt) {
 }
 
 string PrintableType(const Type* type) {
+  if (!type)
+    return "<null type>";
+
   return QualType(type, 0).getAsString();
 }
 
@@ -462,8 +471,10 @@ string PrintableTypeLoc(const TypeLoc& typeloc) {
   return PrintableType(typeloc.getTypePtr());
 }
 
-string PrintableNestedNameSpecifier(
-    const NestedNameSpecifier* nns) {
+string PrintableNestedNameSpecifier(const NestedNameSpecifier* nns) {
+  if (!nns)
+    return "<null nns>";
+
   std::string buffer;  // llvm wants regular string, not our versa-string
   raw_string_ostream ostream(buffer);
   nns->print(ostream, DefaultPrintPolicy());
@@ -494,6 +505,9 @@ string PrintableTemplateArgumentLoc(const TemplateArgumentLoc& arg) {
 }
 
 string PrintableASTNode(const ASTNode* node) {
+  if (!node)
+    return "<null ast node>";
+
   std::string buffer;
   raw_string_ostream ostream(buffer);
   DumpASTNode(ostream, node);
