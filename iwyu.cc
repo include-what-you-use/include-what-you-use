@@ -973,7 +973,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
                                       const Type* type) {
     VERRS(7) << GetSymbolAnnotation() << "[implicit dtor] "
              << static_cast<void*>(decl)
-             << (decl ? PrintableDecl(decl) : "nullptr") << "\n";
+             << PrintableDecl(decl) << "\n";
     AddAstNodeAsPointer(decl);
     return Base::TraverseImplicitDestructorCall(decl, type);
   }
@@ -983,7 +983,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
                           const clang::Expr* calling_expr) {
     VERRS(7) << GetSymbolAnnotation() << "[function call] "
              << static_cast<void*>(callee)
-             << (callee ? PrintableDecl(callee) : "nullptr") << "\n";
+             << PrintableDecl(callee) << "\n";
     AddAstNodeAsPointer(callee);
     return Base::HandleFunctionCall(callee, parent_type, calling_expr);
   }
