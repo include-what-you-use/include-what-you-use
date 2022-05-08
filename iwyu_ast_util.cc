@@ -458,11 +458,6 @@ string PrintableStmt(const Stmt* stmt) {
   return ostream.str();
 }
 
-void PrintStmt(const Stmt* stmt) {
-  ASTDumper dumper(llvm::errs(), /*ShowColors=*/false);
-  dumper.Visit(stmt);
-}
-
 string PrintableType(const Type* type) {
   return QualType(type, 0).getAsString();
 }
@@ -509,10 +504,15 @@ string PrintableASTNode(const ASTNode* node) {
   return ostream.str();
 }
 
-// This prints to errs().  It's useful for debugging (e.g. inside gdb).
+// These print to stderr. They're useful for debugging (e.g. inside gdb).
 void PrintASTNode(const ASTNode* node) {
   DumpASTNode(errs(), node);
   errs() << "\n";
+}
+
+void PrintStmt(const Stmt* stmt) {
+  ASTDumper dumper(llvm::errs(), /*ShowColors=*/false);
+  dumper.Visit(stmt);
 }
 
 string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl) {

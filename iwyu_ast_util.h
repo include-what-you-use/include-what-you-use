@@ -436,7 +436,8 @@ string PrintableTemplateName(const clang::TemplateName& tpl_name);
 string PrintableTemplateArgument(const clang::TemplateArgument& arg);
 string PrintableTemplateArgumentLoc(const clang::TemplateArgumentLoc& arg);
 string PrintableASTNode(const ASTNode* node);
-// This prints to errs().  It's useful for debugging (e.g. inside gdb).
+
+// These print to stderr. They're useful for debugging (e.g. inside gdb).
 void PrintASTNode(const ASTNode* node);
 void PrintStmt(const clang::Stmt* stmt);
 
