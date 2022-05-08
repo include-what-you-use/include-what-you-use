@@ -430,11 +430,7 @@ const DeclContext* GetDeclContext(const ASTNode* ast_node) {
 // --- Printers.
 
 string PrintableLoc(SourceLocation loc) {
-  if (loc.isInvalid()) {
-    return "Invalid location";
-  } else {
-    return NormalizeFilePath(loc.printToString(*GlobalSourceManager()));
-  }
+  return NormalizeFilePath(loc.printToString(*GlobalSourceManager()));
 }
 
 string PrintableDecl(const Decl* decl, bool terse/*=true*/) {
