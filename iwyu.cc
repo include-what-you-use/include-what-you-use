@@ -474,9 +474,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 
   bool VisitStmt(clang::Stmt* stmt) {
     if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName(stmt->getStmtClassName()) << PrintablePtr(stmt);
-      PrintStmt(stmt);
-      errs() << "\n";
+      errs() << AnnotatedName(stmt->getStmtClassName()) << PrintablePtr(stmt)
+             << PrintableStmt(stmt) << "\n";
     }
     return true;
   }
@@ -999,9 +998,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   void AddCurrentAstNodeAsPointer() {
     if (ShouldPrint(7)) {
       errs() << GetSymbolAnnotation() << current_ast_node()->GetAs<void>()
-             << " ";
-      PrintASTNode(current_ast_node());
-      errs() << "\n";
+             << " " << PrintableASTNode(current_ast_node()) << "\n";
     }
     AddAstNodeAsPointer(current_ast_node()->GetAs<void>());
   }
