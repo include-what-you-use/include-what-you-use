@@ -72,6 +72,22 @@ typedef_struct ts;
 typedef_struct_with_label tswl;
 typedef_enum te;
 
+// Unnamed struct field should not cause a warning.
+
+#define UNNAMED_STRUCT_FIELD \
+  struct {                   \
+    int x;                   \
+  }
+
+struct UnnamedStructFieldA {
+  UNNAMED_STRUCT_FIELD;
+};
+
+struct UnnamedStructFieldB {
+  struct {
+    int x;
+  };
+};
 
 /**** IWYU_SUMMARY
 

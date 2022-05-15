@@ -727,10 +727,10 @@ bool DeclCanBeForwardDeclared(const Decl* decl, string* reason) {
   if (isa<ClassTemplateDecl>(decl)) {
     // Class templates can always be forward-declared.
   } else if (const auto* record = dyn_cast<RecordDecl>(decl)) {
-    // Record decls can be forward-declared unless they denote a lambda
-    // expression; these have no type name to forward-declare.
-    if (record->isLambda()) {
-      *reason = "is a lambda";
+    // Record decls can be forward-declared unless they don't have
+    // a type name to forward-declare (that includes lambdas).
+    if (!record->getIdentifier()) {
+      *reason = "declaration has no name";
       return false;
     }
   } else {
