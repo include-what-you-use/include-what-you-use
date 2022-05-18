@@ -811,10 +811,6 @@ const clang::FunctionType* GetCalleeFunctionType(clang::CallExpr* expr);
 // such a concept (declrefexpr, memberexpr), and empty list if none is present.
 clang::TemplateArgumentListInfo GetExplicitTplArgs(const clang::Expr* expr);
 
-// Workaround for https://github.com/llvm/llvm-project/issues/53044. Remove this
-// wrapper in favor of Expr::getConversionFunction  when that is fixed upstream.
-const clang::NamedDecl* GetConversionFunction(const clang::CastExpr* expr);
-
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
