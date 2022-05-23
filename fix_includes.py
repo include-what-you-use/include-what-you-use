@@ -104,7 +104,7 @@ _NAMESPACE_START_RE = re.compile(r'\s*(namespace\b[^{]*{\s*)+(//.*)?$|'
                                  r'\s*(HASH_NAMESPACE_DECLARATION_START)')
 # Also detect Allman and mixed style namespaces.  Use a continue regex for
 # validation and to correctly set the line info.
-_NAMESPACE_START_ALLMAN_RE = re.compile(r'\s*(namespace\b[^{]*)+(//.*)?$')
+_NAMESPACE_START_ALLMAN_RE = re.compile(r'\s*(namespace\b[^{=]*)+(//.*)?$')
 _NAMESPACE_START_MIXED_RE = re.compile(
   r'\s*(namespace\b[^{]*{\s*)+(namespace\b[^{]*)+(//.*)?$')
 _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE = re.compile(r'\s*{\s*(//.*)?$')
