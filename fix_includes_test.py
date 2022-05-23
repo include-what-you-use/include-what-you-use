@@ -428,6 +428,39 @@ namespace a::b::c { struct One; }
     self.RegisterFileContents({'cxx17ns.cc': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testNamespaceAlias(self):
+    """Tests we leave namespace aliases alone."""
+    infile = """\
+#include <stdint.h> ///-
+
+namespace outer {
+namespace middle {
+namespace inner {
+
+enum Values {
+  VAL
+};
+
+}  // namespace inner
+}  // namespace middle
+
+// This alias should not be mistaken for an Allman namespace dfn
+namespace inner = middle::inner;
+
+}  // namespace outer
+"""
+    iwyu_output = """\
+namespace_alias.cc should add these lines:
+
+namespace_alias.cc should remove these lines:
+- #include <stdint.h>  // lines 1-1
+
+The full include-list for namespace_alias.cc:
+---
+"""
+    self.RegisterFileContents({'namespace_alias.cc': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testRemovePartOfEmptyNamespace(self):
     """Tests we remove a namespace if empty, but not enclosing namespaces."""
     infile = """\
