@@ -11,12 +11,6 @@
 #ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_IN_TEMPLATE_I1_H_
 #define INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_IN_TEMPLATE_I1_H_
 
-class Class {};
-
-template<class T, class U>
-struct Pair {
-  T first;
-  U second;
-};
+class Class1 {};
 
 #endif // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_IN_TEMPLATE_I1_H_
