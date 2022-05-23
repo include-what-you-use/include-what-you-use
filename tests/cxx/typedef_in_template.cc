@@ -11,45 +11,55 @@
 
 #include "tests/cxx/direct.h"
 #include "tests/cxx/typedef_in_template-d1.h"
+#include "tests/cxx/typedef_in_template-d2.h"
 
-template<class T>
+template<class T1, class T2>
 class Container {
  public:
-  // Should not be an iwyu violation for T
-  typedef T value_type;
+  // Should not be an iwyu violation for T1
+  typedef T1 value_type;
 
-  // C++11 alias declaration, should not be an iwyu violation for T
-  using alias_type = T;
+  // C++11 alias declaration, should not be an iwyu violation for T1
+  using alias_type = T1;
 
-  // IWYU: Pair is...*typedef_in_template-i1.h
-  typedef Pair<T,T> pair_type;
+  // IWYU: Pair is...*typedef_in_template-i2.h
+  typedef Pair<T2,T2> pair_type;
 };
 
 
 void Declarations() {
-  // Just using Container does not need the full type for Class because there
-  // are only aliases made, which do not require full-uses.
+  // Just using Container does not need the full types because there are only
+  // aliases made, which do not require full-uses.
 
-  // TODO: But currently this is counted as a full-use because Class is used
+  // TODO: But currently this is counted as a full-use because Class2 is used
   // inside a template specialization (of Pair) within the definition of
   // Container.
-  // IWYU: Class is...*typedef_in_template-i1.h
-  // IWYU: Class needs a declaration
-  Container<Class> c;
+  // IWYU: Class1 needs a declaration
+  // IWYU: Class2 is...*typedef_in_template-i2.h
+  // IWYU: Class2 needs a declaration
+  Container<Class1, Class2> c;
 
-  // Full-using any of those aliases *should* require a full use of Class.
+  // Full-using any of those aliases *should* require a full use
+  // of corresponding template argument type.
 
-  // IWYU: Class is...*typedef_in_template-i1.h
-  // IWYU: Class needs a declaration
-  Container<Class>::value_type vt;
+  // TODO: full Class2 type info isn't needed here
+  // TODO: IWYU: Class1 is...*typedef_in_template-i1.h
+  // IWYU: Class1 needs a declaration
+  // IWYU: Class2 is...*typedef_in_template-i2.h
+  // IWYU: Class2 needs a declaration
+  Container<Class1, Class2>::value_type vt;
 
-  // IWYU: Class is...*typedef_in_template-i1.h
-  // IWYU: Class needs a declaration
-  Container<Class>::pair_type pt;
+  // IWYU: Class1 needs a declaration
+  // IWYU: Class2 is...*typedef_in_template-i2.h
+  // IWYU: Class2 needs a declaration
+  Container<Class1, Class2>::pair_type pt;
 
-  // IWYU: Class is...*typedef_in_template-i1.h
-  // IWYU: Class needs a declaration
-  Container<Class>::alias_type at;
+  // TODO: full Class2 type info isn't needed here
+  // TODO: IWYU: Class1 is...*typedef_in_template-i1.h
+  // IWYU: Class1 needs a declaration
+  // IWYU: Class2 is...*typedef_in_template-i2.h
+  // IWYU: Class2 needs a declaration
+  Container<Class1, Class2>::alias_type at;
 }
 
 // STL containers are often implemented via a complex web of type aliases and
@@ -100,14 +110,17 @@ NestedUseOfAliasedParameter<IndirectClass> c;
 
 tests/cxx/typedef_in_template.cc should add these lines:
 #include "tests/cxx/indirect.h"
-#include "tests/cxx/typedef_in_template-i1.h"
+#include "tests/cxx/typedef_in_template-i2.h"
+class Class1;
 
 tests/cxx/typedef_in_template.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 - #include "tests/cxx/typedef_in_template-d1.h"  // lines XX-XX
+- #include "tests/cxx/typedef_in_template-d2.h"  // lines XX-XX
 
 The full include-list for tests/cxx/typedef_in_template.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
-#include "tests/cxx/typedef_in_template-i1.h"  // for Class, Pair
+#include "tests/cxx/typedef_in_template-i2.h"  // for Class2, Pair
+class Class1;
 
 ***** IWYU_SUMMARY */
