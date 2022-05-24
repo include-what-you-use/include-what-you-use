@@ -3532,12 +3532,6 @@ class IwyuAstConsumer
     if (CanIgnoreLocation(current_ast_node()->GetLocation()))
       return true;
 
-    // If we're a field of a typedef type, ignore us: our rule is that
-    // the author of the typedef is responsible for everything
-    // involving the typedef.
-    if (IsMemberOfATypedef(current_ast_node()))
-      return true;
-
     // TODO(csilvers): if we're a type, call CanIgnoreType().
 
     return false;
