@@ -380,42 +380,6 @@ const NestedNameSpecifier* GetQualifier(const ASTNode* ast_node) {
   return nns;
 }
 
-bool IsMemberOfATypedef(const ASTNode* ast_node) {
-  // TODO(csilvers): is this ever triggered in practice?
-  if (ast_node->ParentIsA<TypedefType>()) {      // my_typedef.a
-    return true;
-  }
-
-  // If we're one of those objects that exposes its qualifier
-  // (stuff before the ::), use that.
-  const NestedNameSpecifier* nns = GetQualifier(ast_node);
-
-  // If that doesn't work, see if our parent in the tree is an nns
-  // node.  We have to be a bit careful here: 1) If we're a typedef
-  // ourselves, the nns-parent is just us.  We have to go a level up
-  // to see our 'real' qualifier.  2) Often the parent will be an
-  // elaborated type, and we get to the qualifier that way.
-  if (!nns) {
-    nns = ast_node->GetParentAs<NestedNameSpecifier>();
-    if (nns && ast_node->IsA<TypedefType>()) {
-      nns = nns->getPrefix();
-    } else if (!nns) {
-      // nns will be non-nullptr when processing 'a' in MyTypedef::a::b
-      // But typically, such as processing 'a' in MyTypedef::a or 'b' in
-      // MyTypedef::a::b, the parent will be an ElaboratedType.
-      if (const ElaboratedType* elab_type =
-          ast_node->GetParentAs<ElaboratedType>())
-        nns = elab_type->getQualifier();
-    }
-  }
-
-  for (; nns; nns = nns->getPrefix()) {
-    if (nns->getAsType() && isa<TypedefType>(nns->getAsType()))
-      return true;
-  }
-  return false;
-}
-
 const DeclContext* GetDeclContext(const ASTNode* ast_node) {
   for (; ast_node != nullptr; ast_node = ast_node->parent()) {
     if (ast_node->IsA<Decl>())

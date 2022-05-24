@@ -413,11 +413,6 @@ bool IsCXXConstructExprInNewExpr(const ASTNode* ast_node);
 // comes before the ::), return that, else return nullptr.
 const clang::NestedNameSpecifier* GetQualifier(const ASTNode* ast_node);
 
-// Returns true if any parent is a typedef: my_typedef.a, or
-// MyTypedef::a, or MyTypedef::subclass::a, etc.  Note it does
-// *not* return true if the ast_node itself is a typedef.
-bool IsMemberOfATypedef(const ASTNode* ast_node);
-
 // Returns the decl-context of the deepest decl in the ast-chain.
 const clang::DeclContext* GetDeclContext(const ASTNode* ast_node);
 
