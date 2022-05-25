@@ -48,7 +48,7 @@ tests/cxx/typedef_chain_no_follow.cc should remove these lines:
 
 The full include-list for tests/cxx/typedef_chain_no_follow.cc:
 #include "tests/cxx/typedef_chain_no_follow-d1.h"  // for TypedefChainTypedef
-#include "tests/cxx/typedef_chain_no_follow-d2.h"  // for NonContainer1, NonContainer1::value_type
-#include "tests/cxx/typedef_chain_no_follow-d3.h"  // for NonContainer2, NonContainer2::value_type
+#include "tests/cxx/typedef_chain_no_follow-d2.h"  // for NonContainer1
+#include "tests/cxx/typedef_chain_no_follow-d3.h"  // for NonContainer2
 
 ***** IWYU_SUMMARY */

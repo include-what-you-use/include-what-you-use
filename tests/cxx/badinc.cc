@@ -706,10 +706,8 @@ I1_Class::NestedStruct *i1_nestedstruct_ptr;
 // Even adding an explicit 'struct' doesn't make it fwd-declarable.
 // IWYU: I1_Class is...*badinc-i1.h
 struct I1_Class::NestedStruct *i1_nestedstruct_ptr2;
-// IWYU: I1_Class::NestedStruct is...*badinc-i1.h
 // IWYU: I1_Class is...*badinc-i1.h
 I1_Class::NestedStruct i1_nestedstruct;
-// IWYU: I1_Class::NestedStruct is...*badinc-i1.h
 // IWYU: I1_Class is...*badinc-i1.h
 struct I1_Class::NestedStruct i1_nestedstruct2;
 
@@ -792,7 +790,6 @@ I1_TemplateClass<I2_Struct> i1_templateclass_tpl_ctor(i1_class, true);
 // The trick here is that the NNS doesn't have its own location info.
 #define CC_DEFINE_VAR(typ)  typ cc_define_var ## __LINE__
 // IWYU: I1_TemplateClass is...*badinc-i1.h
-// IWYU: I1_TemplateClass<.*>::I1_TemplateClass_int is...*badinc-i1.h
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class needs a declaration
 CC_DEFINE_VAR(I1_TemplateClass<I2_Class>::I1_TemplateClass_int);
@@ -813,7 +810,6 @@ I1_TypedefOnly_Class<I1_Class> i1_typedefonly_class;
 // IWYU: I1_Class needs a declaration
 // IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I1_TypedefOnly_Class is...*badinc-i1.h
-// IWYU: I1_TypedefOnly_Class<.*>::i is...*badinc-i1.h
 I1_TypedefOnly_Class<I1_Class>::i i1_typedefonly_class_int;
 // IWYU: I1_I2_Class_Typedef is...*badinc-i1.h
 int i1_i2_class_typedef_int = I1_I2_Class_Typedef::s;
@@ -1517,10 +1513,8 @@ int main() {
   local_enum_vector.push_back(I21);
   // IWYU: std::vector is...*<vector>
   // IWYU: I2_Enum is...*badinc-i2.h
-  // IWYU: std::vector<.*>::iterator is...*<vector>
   for (std::vector<I2_Enum>::iterator it = local_enum_vector.begin();
        // IWYU: std::vector is...*<vector>
-       // IWYU: std::vector<.*>::iterator is...*<vector>
        it != local_enum_vector.end(); ++it) {
     // IWYU: I2_Enum is...*badinc-i2.h
     // IWYU: std::vector is...*<vector>
@@ -1692,59 +1686,44 @@ int main() {
   // IWYU: std::set is...*<set>
   std::set<int> localset;
   // IWYU: std::set is...*<set>
-  // IWYU: std::set<.*>::iterator is...*<set>
   std::set<int>::iterator it_set = localset.begin();
 
   // Lots of weird stuff can happen with iterators, especially regarding const.
   // IWYU: std::vector is...*<vector>
   std::vector<float> float_vector;
   // IWYU: std::vector is...*<vector>
-  // IWYU: std::vector<.*>::const_iterator is...*<vector>
   std::vector<float>::const_iterator float_it = float_vector.begin();
   // IWYU: std::vector is...*<vector>
-  // IWYU: std::vector<.*>::const_iterator is...*<vector>
   const std::vector<float>::const_iterator float_constit = float_vector.begin();
   // IWYU: std::vector is...*<vector>
   (void)(float_it == float_constit);
   // IWYU: std::vector is...*<vector>
-  // IWYU: std::vector<.*>::const_iterator is...*<vector>
   (void)(float_constit == float_it);
   // IWYU: std::vector is...*<vector>
-  // IWYU: std::vector<.*>::const_iterator is...*<vector>
   std::vector<float>::const_iterator float_forit;
   // IWYU: std::vector is...*<vector>
-  // IWYU: std::vector<.*>::const_iterator is...*<vector>
   for (float_forit = float_vector.begin(); ;) ;
   // IWYU: std::vector is...*<vector>
-  // IWYU: std::vector<.*>::const_iterator is...*<vector>
   for (std::vector<float>::const_iterator it = float_vector.begin(); ;) ;
   // IWYU: std::vector is...*<vector>
-  // IWYU: std::vector<.*>::const_iterator is...*<vector>
   for (const std::vector<float>::const_iterator it = float_vector.begin(); ;) ;
   // We special-case vector<>::iterator.  Make sure it holds for
   // reverse_iterator too.
   // IWYU: std::vector is...*<vector>
-  // IWYU: std::vector<.*>::reverse_iterator is...*<vector>
   for (std::vector<float>::reverse_iterator
            // IWYU: std::vector is...*<vector>
            float_reverse_it = float_vector.rbegin();
        // IWYU: std::vector is...*<vector>
        float_reverse_it != float_vector.rbegin();
        // IWYU: std::vector is...*<vector>
-       // IWYU: std::vector<.*>::reverse_iterator is...*<vector>
        ++float_reverse_it) ;
   // IWYU: std::vector is...*<vector>
-  // IWYU: std::vector<.*>::const_reverse_iterator is...*<vector>
   for (std::vector<float>::const_reverse_iterator
-           // We need const_reverse_iterator here because of the
-           // conversion from reverse_iterator (from rbegin()).
-           // IWYU: std::vector<.*>::const_reverse_iterator is...*<vector>
            // IWYU: std::vector is...*<vector>
            float_const_reverse_it = float_vector.rbegin();
        // IWYU: std::vector is...*<vector>
        float_const_reverse_it != float_vector.rend();
        // IWYU: std::vector is...*<vector>
-       // IWYU: std::vector<.*>::const_reverse_iterator is...*<vector>
        ++float_const_reverse_it) ;
 
   // Also test while and if initializers.
@@ -1894,11 +1873,11 @@ The full include-list for tests/cxx/badinc.cc:
 #include <algorithm>  // for find
 #include <fstream>  // for fstream
 #include <list>  // for list
-#include <string>  // for basic_string, basic_string<>::iterator, operator+, string
+#include <string>  // for basic_string, operator+, string
 #include <typeinfo>  // for type_info
 #include "tests/cxx/badinc-d1.h"  // for D11, D1CopyClassFn, D1Function, D1_Class, D1_CopyClass, D1_Enum, D1_I1_Typedef, D1_StructPtr, D1_Subclass, D1_TemplateClass, D1_TemplateStructWithDefaultParam, MACRO_CALLING_I4_FUNCTION
 #include "tests/cxx/badinc-d4.h"  // for D4_ClassForOperator, operator<<
-#include "tests/cxx/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I11, I12, I13, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_Class::NestedStruct, I1_ClassPtr, I1_Enum, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClass<>::I1_TemplateClass_int, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_TypedefOnly_Class<>::i, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns2, i1_ns4, i1_ns5, kI1ConstInt, operator==
+#include "tests/cxx/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I11, I12, I13, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_ClassPtr, I1_Enum, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns2, i1_ns4, i1_ns5, kI1ConstInt, operator==
 #include "tests/cxx/badinc2.c"
 class D2_Class;
 class D2_ForwardDeclareClass;
