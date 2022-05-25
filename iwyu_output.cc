@@ -1258,11 +1258,11 @@ void ProcessFullUse(OneUse* use,
     }
   }
 
-  // (B4) Discard symbol uses for member functions in the same file as parent.
-  if (const CXXMethodDecl* method_dfn = DynCastFrom(use->decl())) {
+  // (B4) Discard symbol uses for class members in the same file as parent.
+  if (const CXXRecordDecl* parent_decl =
+          DynCastFrom(use->decl()->getDeclContext())) {
     // See if we also recorded a use of the parent.
-    const NamedDecl* parent_dfn
-        = GetDefinitionAsWritten(method_dfn->getParent());
+    const NamedDecl* parent_dfn = GetDefinitionAsWritten(parent_decl);
 
     const FileEntry* decl_file_entry = GetFileEntry(use->decl_loc());
     const FileEntry* parent_file_entry =
@@ -1276,14 +1276,14 @@ void ProcessFullUse(OneUse* use,
     // mapping to choose, and it's important we use the one that iwyu
     // will pick later).  TODO(csilvers): figure out that case too.
     const IncludePicker& picker = GlobalIncludePicker();
-    const vector<MappedInclude>& method_dfn_files =
+    const vector<MappedInclude>& member_dfn_files =
         picker.GetCandidateHeadersForFilepath(GetFilePath(decl_file_entry));
     const vector<MappedInclude>& parent_dfn_files =
         picker.GetCandidateHeadersForFilepath(GetFilePath(parent_file_entry));
     bool same_file;
-    if (method_dfn_files.size() == 1 && parent_dfn_files.size() == 1) {
-      same_file = (method_dfn_files[0].quoted_include ==
-          parent_dfn_files[0].quoted_include);
+    if (member_dfn_files.size() == 1 && parent_dfn_files.size() == 1) {
+      same_file = (member_dfn_files[0].quoted_include ==
+                   parent_dfn_files[0].quoted_include);
     } else {
       // Fall back on just checking the filenames: can't figure out public.
       same_file = (decl_file_entry == parent_file_entry);
