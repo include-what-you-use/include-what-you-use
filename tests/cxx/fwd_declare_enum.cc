@@ -25,6 +25,12 @@ Bar bar;
 
 /**** IWYU_SUMMARY
 
-(tests/cxx/fwd_declare_enum.cc has correct #includes/fwd-decls)
+tests/cxx/fwd_declare_enum.cc should add these lines:
+
+tests/cxx/fwd_declare_enum.cc should remove these lines:
+- enum Bar;  // lines XX-XX
+- enum Foo;  // lines XX-XX
+
+The full include-list for tests/cxx/fwd_declare_enum.cc:
 
 ***** IWYU_SUMMARY */

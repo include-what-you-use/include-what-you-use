@@ -51,6 +51,7 @@ using clang::NamespaceDecl;
 using clang::RecordDecl;
 using clang::SourceLocation;
 using clang::SourceRange;
+using clang::TagDecl;
 using clang::TemplateDecl;
 using clang::UsingDecl;
 using llvm::cast;
@@ -163,7 +164,7 @@ FakeNamedDecl::FakeNamedDecl(const string& kind_name, const string& qual_name,
 // virtual.  Hence we define the following helpers to dispatch the
 // call ourselves.
 
-string GetKindName(const clang::TagDecl* tag_decl) {
+string GetKindName(const TagDecl* tag_decl) {
   const clang::NamedDecl* const named_decl = tag_decl;
   if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
     return fake->kind_name();
@@ -338,7 +339,7 @@ string PrintablePtr(const void* ptr) {
   return "";
 }
 
-// Helpers for printing a forward declaration of a record type or
+// Helpers for printing a forward declaration of a tag type or
 // record type template that can be put in source code.  The hierarchy
 // of the Decl classes used in these helpers looks like:
 //
@@ -349,8 +350,8 @@ string PrintablePtr(const void* ptr) {
 //       `-- TagDecl           (class, struct, union, enum)
 //           `-- RecordDecl    (class, struct, union)
 
-// Given a NamedDecl that presents a (possibly template) record
-// (i.e. class, struct, or union) type declaration, and the print-out
+// Given a NamedDecl that presents a (possibly template) tag
+// (i.e. class, struct, union, or enum) type declaration, and the print-out
 // of its (possible) template parameters and kind (e.g. "template
 // <typename T> struct"), returns its forward declaration line.
 string PrintForwardDeclare(const NamedDecl* decl,
@@ -361,8 +362,8 @@ string PrintForwardDeclare(const NamedDecl* decl,
     return tpl_params_and_kind + " " + fake->qual_name() + ";";
   }
 
-  CHECK_((isa<RecordDecl>(decl) || isa<TemplateDecl>(decl)) &&
-         "IWYU only allows forward declaring (possibly template) record types");
+  CHECK_((isa<TagDecl>(decl) || isa<TemplateDecl>(decl)) &&
+         "IWYU only allows forward declaring (possibly template) tag types");
 
   std::string fwd_decl = std::string(decl->getName()) + ";";
   bool seen_namespace = false;
@@ -413,9 +414,9 @@ string PrintForwardDeclare(const NamedDecl* decl,
   return fwd_decl;
 }
 
-// Given a RecordDecl, return the line that could be put in source
-// code to forward-declare the record type, e.g. "namespace ns { class Foo; }".
-string MungedForwardDeclareLineForNontemplates(const RecordDecl* decl) {
+// Given a TagDecl, return the line that could be put in source
+// code to forward-declare the type, e.g. "namespace ns { class Foo; }".
+string MungedForwardDeclareLineForNontemplates(const TagDecl* decl) {
   return PrintForwardDeclare(decl, GetKindName(decl), GlobalFlags().cxx17ns);
 }
 
@@ -457,8 +458,8 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
 }
 
 string MungedForwardDeclareLine(const NamedDecl* decl) {
-  if (const RecordDecl* rec_decl = DynCastFrom(decl))
-    return MungedForwardDeclareLineForNontemplates(rec_decl);
+  if (const TagDecl* tag_decl = DynCastFrom(decl))
+    return MungedForwardDeclareLineForNontemplates(tag_decl);
   else if (const TemplateDecl* template_decl = DynCastFrom(decl))
     return MungedForwardDeclareLineForTemplates(template_decl);
   CHECK_UNREACHABLE_("Unexpected decl type for MungedForwardDeclareLine");
@@ -564,8 +565,8 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
 void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
                                      bool definitely_keep_fwd_decl) {
   CHECK_(fwd_decl && "forward_declare_decl unexpectedly nullptr");
-  CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<RecordDecl>(fwd_decl))
-         && "Can only forward declare classes and class templates");
+  CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<TagDecl>(fwd_decl)) &&
+         "Can only forward declare tag types and class templates");
   lines_.push_back(OneIncludeOrForwardDeclareLine(fwd_decl));
   lines_.back().set_present();
   if (definitely_keep_fwd_decl)
@@ -726,16 +727,16 @@ bool DeclCanBeForwardDeclared(const Decl* decl, string* reason) {
 
   if (isa<ClassTemplateDecl>(decl)) {
     // Class templates can always be forward-declared.
-  } else if (const auto* record = dyn_cast<RecordDecl>(decl)) {
-    // Record decls can be forward-declared unless they don't have
+  } else if (const auto* tag_decl = dyn_cast<TagDecl>(decl)) {
+    // Tag decls can be forward-declared unless they don't have
     // a type name to forward-declare (that includes lambdas).
-    if (!record->getIdentifier()) {
+    if (!tag_decl->getIdentifier()) {
       *reason = "declaration has no name";
       return false;
     }
   } else {
     // Other decl types are not forward-declarable.
-    *reason = "not a record or class template";
+    *reason = "not a record, enumeration or class template";
     return false;
   }
 
@@ -966,8 +967,8 @@ set<string> CalculateMinimalIncludes(
 //     where iwyu demands a full use but the language allows a
 //     forward-declare.)
 // B2) Discard symbol uses of a symbol defined in the same file it's used.
-//     If the symbol is an enum, typedef, function, or var -- every decl
-//     that is re-declarable except for RecordDecl -- discard if *any*
+//     If the symbol is a typedef, function, or var -- every decl
+//     that is re-declarable except for TagDecl -- discard if *any*
 //     declaration is in the same file as the use.
 // B3) Discard symbol uses for builtin symbols ('__builtin_memcmp') and
 //     for operator new and operator delete (excluding placement new),
@@ -1035,18 +1036,18 @@ void ProcessForwardDeclare(OneUse* use,
     return;
   }
   // This is useful for the subsequent tests -- let's normalize some types.
-  const RecordDecl* record_decl = DynCastFrom(use->decl());
+  const TagDecl* tag_decl = DynCastFrom(use->decl());
   const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
   const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(use->decl());
   if (spec_decl)
     tpl_decl = spec_decl->getSpecializedTemplate();
   if (tpl_decl)
-    record_decl = tpl_decl->getTemplatedDecl();
+    tag_decl = tpl_decl->getTemplatedDecl();
 
   // (A2) If it has default template parameters, recategorize as a full use.
   // Suppress this if there's no definition for this class (so can't full-use).
   if (tpl_decl && HasDefaultTemplateParameters(tpl_decl) &&
-      GetDefinitionForClass(tpl_decl) != nullptr) {
+      GetTagDefinition(tpl_decl) != nullptr) {
     VERRS(6) << "Moving " << use->symbol_name()
              << " from fwd-decl use to full use: has default template param"
              << " (" << use->PrintableUseLoc() << ")\n";
@@ -1082,7 +1083,7 @@ void ProcessForwardDeclare(OneUse* use,
   }
 
   // (A5) If using a nested class, discard this use.
-  if (IsNestedClass(record_decl)) {
+  if (IsNestedClass(tag_decl)) {
     // iwyu will require the full type of the parent class when it
     // recurses on the qualifier (any use of Foo::Bar requires the
     // full type of Foo).  So if we're forward-declared inside Foo,
@@ -1105,12 +1106,11 @@ void ProcessForwardDeclare(OneUse* use,
   // (A6) If a definition exists earlier in this file, discard this use.
   // Note: for the 'earlier' checks, what matters is the *instantiation*
   // location.
-  const set<const NamedDecl*> redecls = GetClassRedecls(record_decl);
+  const set<const NamedDecl*> redecls = GetTagRedecls(tag_decl);
   for (const NamedDecl* redecl : redecls) {
-    CHECK_(isa<RecordDecl>(redecl) &&
-           "GetClassRedecls has redecls of wrong type");
+    CHECK_(isa<TagDecl>(redecl) && "GetTagRedecls has redecls of wrong type");
     const SourceLocation defined_loc = GetLocation(redecl);
-    if (cast<RecordDecl>(redecl)->isCompleteDefinition() &&
+    if (cast<TagDecl>(redecl)->isCompleteDefinition() &&
         DeclIsVisibleToUseInSameFile(redecl, *use)) {
       VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name() << " ("
                << use->PrintableUseLoc()
@@ -1202,7 +1202,7 @@ void ProcessFullUse(OneUse* use,
   // (B2) Discard symbol uses of a symbol defined in the same file it's used.
   // If the symbol can be declared in multiple places, we count it if
   // *any* declaration is in the same file, unless the symbol is a
-  // class.  (Every other kind of redeclarable symbol, such as
+  // class or enum.  (Every other kind of redeclarable symbol, such as
   // functions, have the property that a decl is the same as a
   // definition from iwyu's point of view.)  We don't bother with
   // RedeclarableTemplate<> types (FunctionTemplateDecl), since for
@@ -1212,10 +1212,10 @@ void ProcessFullUse(OneUse* use,
   // declarations.
   if (!(use->flags() & UF_FunctionDfn) && !is_builtin_function_with_mappings) {
     set<const NamedDecl*> all_redecls;
-    if (isa<RecordDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
+    if (isa<TagDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
       all_redecls.insert(use->decl());  // for classes, just consider the dfn
     else
-      all_redecls = GetNonclassRedecls(use->decl());
+      all_redecls = GetNonTagRedecls(use->decl());
     for (const NamedDecl* redecl : all_redecls) {
       if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
         VERRS(6) << "Ignoring use of " << use->symbol_name() << " ("
@@ -1383,21 +1383,21 @@ void CalculateIwyuForForwardDeclareUse(
   CHECK_(!use->is_full_use() && "ForwardDeclareUse are not full uses");
 
   const NamedDecl* same_file_decl = nullptr;
-  const RecordDecl* record_decl = DynCastFrom(use->decl());
+  const TagDecl* tag_decl = DynCastFrom(use->decl());
   const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
   const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(use->decl());
   if (spec_decl)
     tpl_decl = spec_decl->getSpecializedTemplate();
   if (tpl_decl)
-    record_decl = tpl_decl->getTemplatedDecl();
-  CHECK_(record_decl && "Non-records should have been handled already");
+    tag_decl = tpl_decl->getTemplatedDecl();
+  CHECK_(tag_decl && "Non-tag types should have been handled already");
 
-  // If this record is defined in one of the desired_includes, mark that
+  // If this tag type is defined in one of the desired_includes, mark that
   // fact.  Also if it's defined in one of the actual_includes.
   bool dfn_is_in_desired_includes = false;
   bool dfn_is_in_actual_includes = false;
 
-  const NamedDecl* dfn = GetDefinitionForClass(use->decl());
+  const NamedDecl* dfn = GetTagDefinition(use->decl());
   if (dfn) {
     vector<string> headers
       = GlobalIncludePicker().GetCandidateHeadersForFilepathIncludedFrom(
@@ -1416,9 +1416,9 @@ void CalculateIwyuForForwardDeclareUse(
     }
   }
 
-  // We also want to know if *any* redecl of this record is defined
+  // We also want to know if *any* redecl of this type is defined
   // in the same file as the use (and before it).
-  const set<const NamedDecl*>& redecls = GetClassRedecls(record_decl);
+  const set<const NamedDecl*>& redecls = GetTagRedecls(tag_decl);
   for (const NamedDecl* redecl : redecls) {
     if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
       same_file_decl = redecl;
@@ -1841,7 +1841,7 @@ void CleanupPrefixHeaderIncludes(
       // At this point it's OK if file_entry is nullptr.  It means we've never
       // seen quoted_include.  And that's why it cannot be prefix header.
     } else {
-      const RecordDecl* dfn = GetDefinitionForClass(line.fwd_decl());
+      const TagDecl* dfn = GetTagDefinition(line.fwd_decl());
       file_entry = GetFileEntry(dfn);
     }
     if (IsRemovablePrefixHeader(file_entry, preprocessor_info)) {

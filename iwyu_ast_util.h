@@ -390,11 +390,11 @@ bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node);
 // These flags provide context around the use to help later IWYU analysis,
 UseFlags ComputeUseFlags(const ASTNode* ast_node);
 
-// Return true if we're a nested class as written, that is, we're a
-// class decl inside another class decl.  The parent class may be
+// Return true if we're a nested tag type as written, that is, we're a
+// class or enum decl inside another class decl.  The parent class may be
 // templated, but we should not be.  (We could extend the function to
 // handle that case, but there's been no need yet.)
-bool IsNestedClassAsWritten(const ASTNode* ast_node);
+bool IsNestedTagAsWritten(const ASTNode* ast_node);
 
 // Is ast_node the 'D' in the following:
 //    template<template <typename A> class T = D> class C { ... }
@@ -496,9 +496,9 @@ bool HasImplicitConversionCtor(const clang::CXXRecordDecl* cxx_class);
 // compared to its base.
 bool HasCovariantReturnType(const clang::CXXMethodDecl* method_decl);
 
-// If this decl is a (possibly templatized) class, return the decl
+// If this decl is a (possibly templatized) tag decl, return the decl
 // that defines the class, if present.  Otherwise return nullptr.
-const clang::RecordDecl* GetDefinitionForClass(const clang::Decl* decl);
+const clang::TagDecl* GetTagDefinition(const clang::Decl* decl);
 
 // Given a class, returns a SourceRange that encompasses the beginning
 // of the class declaration (including template<> prefix, etc) to the
@@ -596,7 +596,7 @@ bool IsInInlineNamespace(const clang::Decl* decl);
 bool IsForwardDecl(const clang::NamedDecl* decl);
 
 // Returns true if this decl is defined inside another class/struct.
-// Unlike IsNestedClassAsWritten(), which works on an ASTNode, this
+// Unlike IsNestedTagAsWritten(), which works on an ASTNode, this
 // function considers decl to be nested even if it's not syntactically
 // written inside its outer class (that is, 'class Foo::Bar {...}' is
 // considered nested, even though it's not written inside Foo).
@@ -612,20 +612,20 @@ bool HasDefaultTemplateParameters(const clang::TemplateDecl* decl);
 // treats classes different from other redeclarable types, it has
 // its own separate function.  (If that proves to be annoying, we
 // can merge them.)
-set<const clang::NamedDecl*> GetNonclassRedecls(const clang::NamedDecl* decl);
+set<const clang::NamedDecl*> GetNonTagRedecls(const clang::NamedDecl* decl);
 
 // Given a class, returns a set of all declarations of that class
 // (forward-declarations and, if present, the definition).  This
-// accepts both RecordDecls and ClassTemplateDecls -- the return Decls
+// accepts both TagDecls and ClassTemplateDecls -- the return Decls
 // are guaranteed to be of the same type as the input Decl.  Returns
-// the empty set if the input is not a RecordDecl or
-// ClassTemplateDecl.  Otherwise, always returns at least one element
-// (since the input decl is its own redecl).
-set<const clang::NamedDecl*> GetClassRedecls(const clang::NamedDecl* decl);
+// the empty set if the input is not a TagDecl or ClassTemplateDecl.
+// Otherwise, always returns at least one element (since the input
+// decl is its own redecl).
+set<const clang::NamedDecl*> GetTagRedecls(const clang::NamedDecl* decl);
 
 // Returns the redecl of decl that occurs first in the translation
 // unit (that is, is the first one you'd see if you did 'cc -E').
-// Returns nullptr if the input is not a RecordDecl or ClassTemplateDecl.
+// Returns nullptr if the input is not a TagDecl or ClassTemplateDecl.
 const clang::NamedDecl* GetFirstRedecl(const clang::NamedDecl* decl);
 
 // Given a class or class template, returns the declaration of that
@@ -634,7 +634,7 @@ const clang::NamedDecl* GetFirstRedecl(const clang::NamedDecl* decl);
 const clang::ClassTemplateDecl* GetClassRedeclSpecifyingDefaultTplArgs(
     const clang::ClassTemplateDecl* decl);
 
-// Picks one redecl from GetClassRedecls() arbitrarily.
+// Picks one redecl from GetTagRedecls() arbitrarily.
 // This is used to recover from the clang bug that mixes friend decls
 // with 'real' redecls (http://llvm.org/bugs/show_bug.cgi?id=8669);
 // this function returns a 'real' redecl.  If the input decl is a

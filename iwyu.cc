@@ -1246,7 +1246,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
              << "'. Looking for fwd-decl hint...\n";
 
     const NamedDecl* fwd_decl = nullptr;
-    for (const NamedDecl* redecl : GetClassRedecls(decl)) {
+    for (const NamedDecl* redecl : GetTagRedecls(decl)) {
       if (GetFileEntry(redecl) == macro_def_file && IsForwardDecl(redecl)) {
         fwd_decl = redecl;
         break;
@@ -1346,9 +1346,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // If we're a template specialization, we also accept
     // forward-declarations of the underlying template (vector<T>, not
     // vector<int>).
-    set<const NamedDecl*> redecls = GetClassRedecls(decl);
+    set<const NamedDecl*> redecls = GetTagRedecls(decl);
     if (const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(decl)) {
-      InsertAllInto(GetClassRedecls(spec_decl->getSpecializedTemplate()),
+      InsertAllInto(GetTagRedecls(spec_decl->getSpecializedTemplate()),
                     &redecls);
     }
 
@@ -1368,7 +1368,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // semantics we want.  Note if there's no definition anywhere, we
     // say the author does not want the full type (which is a good
     // thing, since there isn't one!)
-    if (const NamedDecl* dfn = GetDefinitionForClass(decl)) {
+    if (const NamedDecl* dfn = GetTagDefinition(decl)) {
       if (IsBeforeInSameFile(dfn, use_loc))
         return false;
       if (preprocessor_info().PublicHeaderIntendsToProvide(
@@ -3819,7 +3819,7 @@ class IwyuAstConsumer
       // enclosing class.  If the nested class is actually defined in
       // the enclosing class, then we're fine; if not, we need to keep
       // the first forward-declaration.
-      } else if (IsNestedClassAsWritten(current_ast_node())) {
+      } else if (IsNestedTagAsWritten(current_ast_node())) {
         if (!decl->getDefinition() || decl->getDefinition()->isOutOfLine()) {
           // TODO(kimgr): Member class redeclarations are illegal, per C++
           // standard DR85, so this check for first redecl can be removed.
