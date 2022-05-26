@@ -304,8 +304,8 @@ UseFlags ComputeUseFlags(const ASTNode* ast_node) {
   return flags;
 }
 
-bool IsNestedClassAsWritten(const ASTNode* ast_node) {
-  return (ast_node->IsA<RecordDecl>() &&
+bool IsNestedTagAsWritten(const ASTNode* ast_node) {
+  return (ast_node->IsA<TagDecl>() &&
           (ast_node->ParentIsA<CXXRecordDecl>() ||
            // For templated nested-classes, a ClassTemplateDecl is interposed.
            (ast_node->ParentIsA<ClassTemplateDecl>() &&
@@ -606,15 +606,15 @@ bool HasCovariantReturnType(const CXXMethodDecl* method_decl) {
   return false;
 }
 
-const RecordDecl* GetDefinitionForClass(const Decl* decl) {
-  const RecordDecl* as_record = DynCastFrom(decl);
+const TagDecl* GetTagDefinition(const Decl* decl) {
+  const TagDecl* as_tag = DynCastFrom(decl);
   const ClassTemplateDecl* as_tpl = DynCastFrom(decl);
   if (as_tpl) {  // Convert the template to its underlying class defn.
-    as_record = DynCastFrom(as_tpl->getTemplatedDecl());
+    as_tag = DynCastFrom(as_tpl->getTemplatedDecl());
   }
-  if (as_record) {
-    if (const RecordDecl* record_dfn = as_record->getDefinition()) {
-      return record_dfn;
+  if (as_tag) {
+    if (const TagDecl* tag_dfn = as_tag->getDefinition()) {
+      return tag_dfn;
     }
     // If we're a templated class that was never instantiated (because
     // we were never "used"), then getDefinition() will return nullptr.
@@ -911,7 +911,7 @@ const NamedDecl* GetDefinitionAsWritten(const NamedDecl* decl) {
       decl = tp_decl;
   }
   // Then, get to definition.
-  if (const NamedDecl* class_dfn = GetDefinitionForClass(decl)) {
+  if (const NamedDecl* class_dfn = GetTagDefinition(decl)) {
     return class_dfn;
   } else if (const FunctionDecl* fn_decl = DynCastFrom(decl)) {
     for (FunctionDecl::redecl_iterator it = fn_decl->redecls_begin();
@@ -950,14 +950,14 @@ bool IsInInlineNamespace(const Decl* decl) {
 }
 
 bool IsForwardDecl(const NamedDecl* decl) {
-  if (const auto* record_decl = dyn_cast<RecordDecl>(decl)) {
-
-    return (!record_decl->getName().empty() &&
-            !record_decl->isCompleteDefinition() &&
-            !record_decl->isEmbeddedInDeclarator() &&
-            !IsFriendDecl(record_decl) &&
-            !IsExplicitInstantiation(record_decl));
-  }
+  if (const auto* tag_decl = dyn_cast<TagDecl>(decl)) {
+    // clang-format off
+    return (!tag_decl->getName().empty() &&
+            !tag_decl->isCompleteDefinition() &&
+            !tag_decl->isEmbeddedInDeclarator() &&
+            !IsFriendDecl(tag_decl) &&
+            !IsExplicitInstantiation(tag_decl));
+  }  // clang-format on
 
   return false;
 }
@@ -986,11 +986,9 @@ template <class T> inline set<const clang::NamedDecl*> GetRedeclsOfRedeclarable(
 // The only way to find out whether a decl can be dyn_cast to a
 // Redeclarable<T> and what T is is to enumerate the possibilities.
 // Hence we hard-code the list.
-set<const clang::NamedDecl*> GetNonclassRedecls(const clang::NamedDecl* decl) {
-  CHECK_(!isa<RecordDecl>(decl) && "For classes, call GetClassRedecls()");
-  CHECK_(!isa<ClassTemplateDecl>(decl) && "For tpls, call GetClassRedecls()");
-  if (const TagDecl* specific_decl = DynCastFrom(decl))
-    return GetRedeclsOfRedeclarable(specific_decl);
+set<const clang::NamedDecl*> GetNonTagRedecls(const clang::NamedDecl* decl) {
+  CHECK_(!isa<TagDecl>(decl) && "For tag types, call GetTagRedecls()");
+  CHECK_(!isa<ClassTemplateDecl>(decl) && "For tpls, call GetTagRedecls()");
   // TODO(wan): go through iwyu to replace TypedefDecl with
   // TypedefNameDecl as needed.
   if (const TypedefNameDecl* specific_decl = DynCastFrom(decl))
@@ -1005,18 +1003,18 @@ set<const clang::NamedDecl*> GetNonclassRedecls(const clang::NamedDecl* decl) {
   return retval;
 }
 
-set<const NamedDecl*> GetClassRedecls(const NamedDecl* decl) {
-  const RecordDecl* record_decl = DynCastFrom(decl);
+set<const NamedDecl*> GetTagRedecls(const NamedDecl* decl) {
+  const TagDecl* tag_decl = DynCastFrom(decl);
   const ClassTemplateDecl* tpl_decl = DynCastFrom(decl);
   if (tpl_decl)
-    record_decl = tpl_decl->getTemplatedDecl();
-  if (!record_decl)
+    tag_decl = tpl_decl->getTemplatedDecl();
+  if (!tag_decl)
     return set<const NamedDecl*>();
 
   set<const NamedDecl*> redecls;
-  for (TagDecl::redecl_iterator it = record_decl->redecls_begin();
-       it != record_decl->redecls_end(); ++it) {
-    const RecordDecl* redecl = cast<RecordDecl>(*it);
+  for (TagDecl::redecl_iterator it = tag_decl->redecls_begin();
+       it != tag_decl->redecls_end(); ++it) {
+    const auto* redecl = cast<TagDecl>(*it);
     // If this decl is a friend decl, don't count it: friend decls
     // don't serve as forward-declarations.  (This should never
     // happen, I think, but it sometimes does due to a clang bug:
@@ -1040,7 +1038,7 @@ set<const NamedDecl*> GetClassRedecls(const NamedDecl* decl) {
 const NamedDecl* GetFirstRedecl(const NamedDecl* decl) {
   const NamedDecl* first_decl = decl;
   FullSourceLoc first_decl_loc(GetLocation(first_decl), *GlobalSourceManager());
-  set<const NamedDecl*> all_redecls = GetClassRedecls(decl);
+  set<const NamedDecl*> all_redecls = GetTagRedecls(decl);
   if (all_redecls.empty())  // input is not a class or class template
     return nullptr;
 
@@ -1063,7 +1061,7 @@ const NamedDecl* GetNonfriendClassRedecl(const NamedDecl* decl) {
   if (!record_decl || !IsFriendDecl(record_decl))
     return decl;
 
-  set<const NamedDecl*> all_redecls = GetClassRedecls(decl);
+  set<const NamedDecl*> all_redecls = GetTagRedecls(decl);
   CHECK_(!all_redecls.empty() && "Uncaught non-class decl");
   return *all_redecls.begin();    // arbitrary choice
 }
