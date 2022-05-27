@@ -1747,7 +1747,11 @@ void CalculateDesiredIncludesAndForwardDeclares(
       auto range = include_map.equal_range(use.suggested_header());
       for (auto it = range.first; it != range.second; ++it) {
         it->second->set_desired();
-        it->second->AddSymbolUse(use.short_symbol_name());
+        if (GlobalFlags().comments_with_namespace) {
+          it->second->AddSymbolUse(use.symbol_name());
+        } else {
+          it->second->AddSymbolUse(use.short_symbol_name());
+        }
       }
     }
   }

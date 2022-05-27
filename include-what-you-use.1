@@ -72,6 +72,24 @@ Maximum line length for includes.
 Note that this only affects the comments and their alignment, the maximum line
 length can still be exceeded with long filenames (default: 80).
 .TP
+.BI \-\-comment_style= verbosity
+Controls the style and verbosity of \(lqwhy\(rq comments at the end of
+suggested includes.
+.IR verbosity
+options are:
+.RS
+.TP
+.B none 
+No \(lqwhy\(rq comments.
+.TP 
+.B short 
+\(lqWhy\(rq comments include symbol names, but no namespaces.
+This is the default.
+.TP 
+.B long  
+\(lqWhy\(rq comments include function/class names with namespaces. 
+.RE
+.TP
 .B \-\-no_comments
 Do not add comments after includes about which symbols the header was required
 for.
