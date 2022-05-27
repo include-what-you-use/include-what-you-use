@@ -90,6 +90,12 @@ static void PrintHelp(const char* extra_msg) {
          "        Note that this only affects comments and alignment thereof,\n"
          "        the maximum line length can still be exceeded with long\n"
          "        file names (default: 80).\n"
+         "   --comment_style=<level> set verbosity of 'why' comments to one\n"
+         "        of the following values:\n"
+         "          none:  do not add 'why' comments\n"
+         "          short: 'why' comments do not include namespaces\n"
+         "          long:  'why' comments include namespaces\n"
+         "        Default value is 'short'.\n"
          "   --no_comments: do not add 'why' comments.\n"
          "   --update_comments: update and insert 'why' comments, even if no\n"
          "        #include lines need to be added or removed.\n"
@@ -185,6 +191,7 @@ CommandlineFlags::CommandlineFlags()
       pch_in_code(false),
       no_comments(false),
       update_comments(false),
+      comments_with_namespace(false),
       no_fwd_decls(false),
       quoted_includes_first(false),
       cxx17ns(false),
@@ -205,6 +212,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"prefix_header_includes", required_argument, nullptr, 'x'},
     {"pch_in_code", no_argument, nullptr, 'h'},
     {"max_line_length", required_argument, nullptr, 'l'},
+    {"comment_style", required_argument, nullptr, 'i'},
     {"no_comments", no_argument, nullptr, 'o'},
     {"update_comments", no_argument, nullptr, 'u'},
     {"no_fwd_decls", no_argument, nullptr, 'f'},
@@ -225,6 +233,18 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case 'n': no_default_mappings = true; break;
       case 'o': no_comments = true; break;
       case 'u': update_comments = true; break;
+      case 'i':
+        if (strcmp(optarg, "none") == 0) {
+          no_comments = true;
+        } else if (strcmp(optarg, "short") == 0) {
+          comments_with_namespace = false;
+        } else if (strcmp(optarg, "long") == 0) {
+          comments_with_namespace = true;
+        } else {
+          PrintHelp("FATAL ERROR: unknown comment style.");
+          exit(EXIT_FAILURE);
+        }
+        break;
       case 'f': no_fwd_decls = true; break;
       case 'x':
         if (strcmp(optarg, "add") == 0) {

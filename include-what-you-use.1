@@ -44,6 +44,24 @@ given glob pattern (in addition to the default of reporting for the input
 source file and associated header files).
 This flag may be specified multiple times to specify multiple glob patterns.
 .TP
+.BI \-\-comment_style= verbosity
+Controls the style and verbosity of \(lqwhy\(rq comments at the end of
+suggested includes. Options for
+.I verbosity
+are:
+.RS
+.TP
+.B none
+No \(lqwhy\(rq comments.
+.TP
+.B short
+\(lqWhy\(rq comments include symbol names, but no namespaces. This is the
+default.
+.TP
+.B long
+\(lqWhy\(rq comments include symbol names with namespaces.
+.RE
+.TP
 .B \-\-cxx17ns
 Suggest the more concise syntax for nested namespaces introduced in C++17.
 .TP

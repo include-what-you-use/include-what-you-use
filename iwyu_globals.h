@@ -90,6 +90,7 @@ struct CommandlineFlags {
   bool pch_in_code;   // Treat the first seen include as a PCH. No short option.
   bool no_comments;   // Disable 'why' comments. No short option.
   bool update_comments; // Force 'why' comments. No short option.
+  bool comments_with_namespace; // Show namespace in 'why' comments.
   bool no_fwd_decls;  // Disable forward declarations.
   bool quoted_includes_first; // Place quoted includes first in sort order.
   bool cxx17ns; // -C: C++17 nested namespace syntax
