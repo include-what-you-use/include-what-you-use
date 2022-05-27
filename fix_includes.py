@@ -2373,8 +2373,8 @@ def main(argv):
   parser.add_option('--nocomments', action='store_false', dest='comments')
 
   parser.add_option('--update_comments', action='store_true', default=False,
-                    help=('Update #include comments, even if no #include lines'
-                          ' are added or removed'))
+                    help=('Replace \'why\' comments with the ones provided by'
+                          ' IWYU'))
   parser.add_option('--noupdate_comments', action='store_false',
                     dest='update_comments')
 

@@ -91,7 +91,7 @@ static void PrintHelp(const char* extra_msg) {
          "        the maximum line length can still be exceeded with long\n"
          "        file names (default: 80).\n"
          "   --no_comments: do not add 'why' comments.\n"
-         "   --update_comments: always add 'why' comments, even if no\n"
+         "   --update_comments: update and insert 'why' comments, even if no\n"
          "        #include lines need to be added or removed.\n"
          "   --no_fwd_decls: do not use forward declarations.\n"
          "   --verbose=<level>: the higher the level, the more output.\n"

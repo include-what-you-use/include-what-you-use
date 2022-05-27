@@ -121,6 +121,10 @@ Do not suggest that a file should add
 .IR foo.h " unless " foo.h
 is already visible in the file's transitive includes.
 .TP
+.BI \-\-update_comments
+Print full include list with comments, even if there are no
+\(lqinclude-what-you-use\(rq violations.
+.TP
 .BI \-\-verbose= level
 Set verbosity. At the highest level, this will dump the AST of the source file
 and explain all decisions.
