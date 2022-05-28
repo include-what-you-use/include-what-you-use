@@ -1346,6 +1346,10 @@ map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForClass(
       GetTplTypeResugarMapForClassNoComponentTypes(type));
 }
 
+bool CanBeOpaqueDeclared(const clang::EnumType* type) {
+  return type->getDecl()->isFixed();
+}
+
 // --- Utilities for Stmt.
 
 bool IsAddressOf(const Expr* expr) {
