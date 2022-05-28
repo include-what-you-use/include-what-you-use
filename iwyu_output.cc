@@ -33,6 +33,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 
 namespace include_what_you_use {
@@ -146,6 +147,15 @@ const FakeNamedDecl* FakeNamedDeclIfItIsOne(const clang::NamedDecl* decl) {
   return GetOrDefault(g_fake_named_decl_map, decl, nullptr);
 }
 
+std::string PrintableUnderlyingType(const EnumDecl* enum_decl) {
+  if (const clang::TypeSourceInfo* type_source_info =
+          enum_decl->getIntegerTypeSourceInfo()) {
+    return " : " + type_source_info->getType().getAsString();
+  }
+
+  return std::string();
+}
+
 }  // anonymous namespace
 
 FakeNamedDecl::FakeNamedDecl(const string& kind_name, const string& qual_name,
@@ -169,6 +179,12 @@ string GetKindName(const TagDecl* tag_decl) {
   if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
     return fake->kind_name();
   }
+
+  if (const auto* enum_decl = dyn_cast<EnumDecl>(tag_decl)) {
+    if (enum_decl->isScoped())
+      return enum_decl->isScopedUsingClassTag() ? "enum class" : "enum struct";
+  }
+
   return tag_decl->getKindName().str();
 }
 
@@ -365,7 +381,12 @@ string PrintForwardDeclare(const NamedDecl* decl,
   CHECK_((isa<TagDecl>(decl) || isa<TemplateDecl>(decl)) &&
          "IWYU only allows forward declaring (possibly template) tag types");
 
-  std::string fwd_decl = std::string(decl->getName()) + ";";
+  std::string fwd_decl = std::string(decl->getName());
+  if (const auto* enum_decl = dyn_cast<EnumDecl>(decl)) {
+    fwd_decl += PrintableUnderlyingType(enum_decl);
+  }
+  fwd_decl += ";";
+
   bool seen_namespace = false;
   // Anonymous namespaces are not using the more concise syntax.
   bool concat_namespaces = cxx17ns && !decl->isInAnonymousNamespace();

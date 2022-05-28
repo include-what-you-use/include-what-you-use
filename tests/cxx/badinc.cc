@@ -1547,7 +1547,7 @@ int main() {
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: kI1ConstInt is...*badinc-i1.h
   I1_Class* newed_i1_class_array = new I1_Class[kI1ConstInt];
-  // TODO(csilvers): IWYU: I2_Enum is...*badinc-i2.h
+  // IWYU: I2_Enum is...*badinc-i2.h
   // IWYU: std::vector is...*<vector>
   delete newed_vector;
   // IWYU: I1_Class is...*badinc-i1.h
