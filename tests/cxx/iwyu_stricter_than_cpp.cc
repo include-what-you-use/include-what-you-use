@@ -79,7 +79,7 @@ void TestTypedefs() {
   TplDoesEverythingRightAgain* tdora_ptr = 0;
   // ...at least until we dereference the pointer
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
-  (void) dor_ptr->a;
+  (void)dor_ptr->a;
 
   // Nested name testing
   IndirectStruct3ProvidingTypedef::IndirectClassProvidingTypedef pp;
@@ -125,7 +125,7 @@ void TestTypeAliases() {
   TplDoesEverythingRightAgainAl* tdora_ptr = 0;
   // ...at least until we dereference the pointer
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
-  (void) dor_ptr->a;
+  (void)dor_ptr->a;
 
   // Nested name testing
   IndirectStruct3ProvidingAl::IndirectClassProvidingAl pp;
@@ -193,7 +193,6 @@ void TestFunctionReturn() {
   // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   const TplIndirectStruct2<float>& tis2b = TplDoesEverythingRightAgainFn();
 }
-
 
 /**** IWYU_SUMMARY
 
