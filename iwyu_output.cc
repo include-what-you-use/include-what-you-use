@@ -20,6 +20,7 @@
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
+#include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
 #include "iwyu_preprocessor.h"  // IWYU pragma: keep
@@ -31,6 +32,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
@@ -46,8 +48,12 @@ using clang::DeclContext;
 using clang::EnumDecl;
 using clang::FileEntry;
 using clang::FunctionDecl;
+using clang::InclusionDirective;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
+using clang::ObjCContainerDecl;
+using clang::ObjCInterfaceDecl;
+using clang::ObjCProtocolDecl;
 using clang::RecordDecl;
 using clang::SourceLocation;
 using clang::SourceRange;
@@ -232,6 +238,22 @@ string GetShortNameAsString(const clang::NamedDecl* named_decl) {
     ostream << "(anonymous)";
 
   return ostream.str();
+}
+
+string GetInclusionKindAsString(InclusionDirective::InclusionKind kind) {
+  CHECK_(kind != InclusionDirective::IncludeMacros);
+  CHECK_(kind != InclusionDirective::IncludeNext);
+  switch (kind) {
+    case InclusionDirective::Include:
+      return "#include";
+    case InclusionDirective::Import:
+      return "#import";
+    case InclusionDirective::IncludeMacros:
+      return "#__include_macros";
+    case InclusionDirective::IncludeNext:
+      return "#include_next";
+  }
+  CHECK_UNREACHABLE_("Potentially uninitialized InclusionKind");
 }
 
 }  // namespace internal
@@ -461,6 +483,10 @@ string MungedForwardDeclareLine(const NamedDecl* decl) {
     return MungedForwardDeclareLineForNontemplates(rec_decl);
   else if (const TemplateDecl* template_decl = DynCastFrom(decl))
     return MungedForwardDeclareLineForTemplates(template_decl);
+  else if (const ObjCInterfaceDecl* objc_decl = DynCastFrom(decl))
+    return "@class " + objc_decl->getNameAsString() + ";";
+  else if (const ObjCProtocolDecl* objc_decl = DynCastFrom(decl))
+    return "@protocol " + objc_decl->getNameAsString() + ";";
   CHECK_UNREACHABLE_("Unexpected decl type for MungedForwardDeclareLine");
 }
 
@@ -484,8 +510,9 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
 }
 
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
-    const FileEntry* included_file, const string& quoted_include, int linenum)
-    : line_("#include " + quoted_include),
+    const FileEntry* included_file, const string& quoted_include, int linenum,
+    InclusionDirective::InclusionKind kind)
+    : line_(internal::GetInclusionKindAsString(kind) + " " + quoted_include),
       start_linenum_(linenum),
       end_linenum_(linenum),
       is_desired_(false),
@@ -507,7 +534,10 @@ void OneIncludeOrForwardDeclareLine::AddSymbolUse(const string& symbol_name) {
 bool OneIncludeOrForwardDeclareLine::IsIncludeLine() const {
   // Since we construct line_, we know it's in canonical form, and
   // can't look like '  #   include   <foo.h>' or some such.
-  return StartsWith(line_, "#include");
+  return StartsWith(line_, internal::GetInclusionKindAsString(
+                               InclusionDirective::Include)) ||
+         StartsWith(line_, internal::GetInclusionKindAsString(
+                               InclusionDirective::Import));
 }
 
 string OneIncludeOrForwardDeclareLine::LineNumberString() const {
@@ -534,9 +564,10 @@ void IwyuFileInfo::AddAssociatedHeader(const IwyuFileInfo* other) {
 }
 
 void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
-                              const string& quoted_includee, int linenumber) {
+                              const string& quoted_includee, int linenumber,
+                              InclusionDirective::InclusionKind kind) {
   OneIncludeOrForwardDeclareLine new_include(includee, quoted_includee,
-                                             linenumber);
+                                             linenumber, kind);
   new_include.set_present();
 
   // It's possible for the same #include to be seen multiple times
@@ -564,8 +595,9 @@ void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
 void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
                                      bool definitely_keep_fwd_decl) {
   CHECK_(fwd_decl && "forward_declare_decl unexpectedly nullptr");
-  CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<RecordDecl>(fwd_decl))
-         && "Can only forward declare classes and class templates");
+  CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<RecordDecl>(fwd_decl) ||
+          isa<ObjCContainerDecl>(fwd_decl)) &&
+         "Can only forward declare classes and class templates");
   lines_.push_back(OneIncludeOrForwardDeclareLine(fwd_decl));
   lines_.back().set_present();
   if (definitely_keep_fwd_decl)
@@ -726,6 +758,8 @@ bool DeclCanBeForwardDeclared(const Decl* decl, string* reason) {
 
   if (isa<ClassTemplateDecl>(decl)) {
     // Class templates can always be forward-declared.
+  } else if (isa<ObjCContainerDecl>(decl)) {
+    // Objective-C types can always be forward-declared.
   } else if (const auto* record = dyn_cast<RecordDecl>(decl)) {
     // Record decls can be forward-declared unless they don't have
     // a type name to forward-declare (that includes lambdas).
@@ -1043,6 +1077,11 @@ void ProcessForwardDeclare(OneUse* use,
   if (tpl_decl)
     record_decl = tpl_decl->getTemplatedDecl();
 
+  const NamedDecl* class_decl = record_decl;
+  const ObjCContainerDecl* objc_decl = DynCastFrom(use->decl());
+  if (objc_decl)
+    class_decl = objc_decl;
+
   // (A2) If it has default template parameters, recategorize as a full use.
   // Suppress this if there's no definition for this class (so can't full-use).
   if (tpl_decl && HasDefaultTemplateParameters(tpl_decl) &&
@@ -1082,7 +1121,7 @@ void ProcessForwardDeclare(OneUse* use,
   }
 
   // (A5) If using a nested class, discard this use.
-  if (IsNestedClass(record_decl)) {
+  if (record_decl && IsNestedClass(record_decl)) {
     // iwyu will require the full type of the parent class when it
     // recurses on the qualifier (any use of Foo::Bar requires the
     // full type of Foo).  So if we're forward-declared inside Foo,
@@ -1105,13 +1144,25 @@ void ProcessForwardDeclare(OneUse* use,
   // (A6) If a definition exists earlier in this file, discard this use.
   // Note: for the 'earlier' checks, what matters is the *instantiation*
   // location.
-  const set<const NamedDecl*> redecls = GetClassRedecls(record_decl);
+  const set<const NamedDecl*> redecls = GetClassRedecls(class_decl);
   for (const NamedDecl* redecl : redecls) {
-    CHECK_(isa<RecordDecl>(redecl) &&
+    CHECK_((isa<RecordDecl>(redecl) || isa<ObjCInterfaceDecl>(redecl) ||
+            isa<ObjCProtocolDecl>(redecl)) &&
            "GetClassRedecls has redecls of wrong type");
+
+    bool isCompleteDefinition = false;
+    if (const RecordDecl* record_redecl = DynCastFrom(redecl)) {
+      isCompleteDefinition = record_redecl->isCompleteDefinition();
+    } else if (const clang::ObjCInterfaceDecl* objc_redecl =
+                   DynCastFrom(redecl)) {
+      isCompleteDefinition = objc_redecl->isThisDeclarationADefinition();
+    } else if (const clang::ObjCProtocolDecl* objc_redecl =
+                   DynCastFrom(redecl)) {
+      isCompleteDefinition = objc_redecl->isThisDeclarationADefinition();
+    }
+
     const SourceLocation defined_loc = GetLocation(redecl);
-    if (cast<RecordDecl>(redecl)->isCompleteDefinition() &&
-        DeclIsVisibleToUseInSameFile(redecl, *use)) {
+    if (isCompleteDefinition && DeclIsVisibleToUseInSameFile(redecl, *use)) {
       VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name() << " ("
                << use->PrintableUseLoc()
                << "): dfn is present: " << PrintableLoc(defined_loc) << "\n";
@@ -1212,7 +1263,9 @@ void ProcessFullUse(OneUse* use,
   // declarations.
   if (!(use->flags() & UF_FunctionDfn) && !is_builtin_function_with_mappings) {
     set<const NamedDecl*> all_redecls;
-    if (isa<RecordDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
+    if (isa<RecordDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()) ||
+        isa<ObjCInterfaceDecl>(use->decl()) ||
+        isa<ObjCProtocolDecl>(use->decl()))
       all_redecls.insert(use->decl());  // for classes, just consider the dfn
     else
       all_redecls = GetNonclassRedecls(use->decl());
@@ -1383,14 +1436,15 @@ void CalculateIwyuForForwardDeclareUse(
   CHECK_(!use->is_full_use() && "ForwardDeclareUse are not full uses");
 
   const NamedDecl* same_file_decl = nullptr;
-  const RecordDecl* record_decl = DynCastFrom(use->decl());
+  const NamedDecl* class_decl = DynCastFrom(use->decl());
   const ClassTemplateDecl* tpl_decl = DynCastFrom(use->decl());
   const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(use->decl());
   if (spec_decl)
     tpl_decl = spec_decl->getSpecializedTemplate();
   if (tpl_decl)
-    record_decl = tpl_decl->getTemplatedDecl();
-  CHECK_(record_decl && "Non-records should have been handled already");
+    class_decl = tpl_decl->getTemplatedDecl();
+  if (const ObjCContainerDecl* objc_decl = DynCastFrom(use->decl()))
+    class_decl = objc_decl;
 
   // If this record is defined in one of the desired_includes, mark that
   // fact.  Also if it's defined in one of the actual_includes.
@@ -1418,7 +1472,7 @@ void CalculateIwyuForForwardDeclareUse(
 
   // We also want to know if *any* redecl of this record is defined
   // in the same file as the use (and before it).
-  const set<const NamedDecl*>& redecls = GetClassRedecls(record_decl);
+  const set<const NamedDecl*>& redecls = GetClassRedecls(class_decl);
   for (const NamedDecl* redecl : redecls) {
     if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
       same_file_decl = redecl;
@@ -1701,8 +1755,22 @@ void CalculateDesiredIncludesAndForwardDeclares(
     if (use.is_full_use()) {
       CHECK_(use.has_suggested_header() && "Full uses should have #includes");
       if (!Contains(*lines, use.suggested_header())) { // must be added
+        const string& header = use.suggested_header();
+        InclusionDirective::InclusionKind inclusion_kind =
+            InclusionDirective::Include;
+        const IncludePicker& picker = GlobalIncludePicker();  // short alias
+        if (picker.HasInclusionKind(header)) {
+          inclusion_kind = picker.GetInclusionKindForInclude(header);
+        } else {
+          // TODO(vsapsai): here I am cutting corners, just use #include instead
+          // of trying to figure out if #import should be used for use->decl().
+          // Try iwyu with actual code and see how often iwyu recommends
+          // #include instead of #import.
+          VERRS(6) << "No inclusion kind for " << header << ". Use #include\n";
+        }
+
         lines->push_back(OneIncludeOrForwardDeclareLine(
-            use.decl_file(), use.suggested_header(), -1));
+            use.decl_file(), use.suggested_header(), -1, inclusion_kind));
       }
     } else if (!use.has_suggested_header()) {
       // Forward-declare uses that are already satisfied by an #include
@@ -1841,7 +1909,7 @@ void CleanupPrefixHeaderIncludes(
       // At this point it's OK if file_entry is nullptr.  It means we've never
       // seen quoted_include.  And that's why it cannot be prefix header.
     } else {
-      const RecordDecl* dfn = GetDefinitionForClass(line.fwd_decl());
+      const NamedDecl* dfn = GetDefinitionForClass(line.fwd_decl());
       file_entry = GetFileEntry(dfn);
     }
     if (IsRemovablePrefixHeader(file_entry, preprocessor_info)) {
@@ -2148,10 +2216,147 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // we *do* need to add it.
   set<string> associated_desired_includes = AssociatedDesiredIncludes();
 
+  auto includes = GlobalIncludeMap().includes_[file_];
+  auto modules = GlobalIncludeMap().modules_[file_];
+
+  VERRS(6) << "Registered Imports:\n";
+  for (auto const& it : includes) {
+    VERRS(6)
+      << " "
+      << it.first->getName()
+      << "\n";
+
+    for (auto const& loc : it.second) {
+      VERRS(6)
+        << "  "
+        << PrintableLoc(loc)
+        << "\n";
+    }
+  }
+
+  VERRS(6) << "Registered Modules:\n";
+  for (auto const& it : modules) {
+    VERRS(6)
+      << " "
+      << it.first->getFullModuleName()
+      << "\n";
+
+    for (auto const& loc : it.second) {
+      VERRS(6)
+        << "  "
+        << PrintableLoc(loc)
+        << "\n";
+    }
+  }
+
+  clang::SourceManager& sm = *GlobalSourceManager();
+
+
+  std::set<const clang::Module*> used_modules;
+  std::set<clang::FileID> used_includes;
+
   CalculateIwyuViolations(&symbol_uses_);
   EmitWarningMessages(symbol_uses_);
   internal::CalculateDesiredIncludesAndForwardDeclares(
       symbol_uses_, associated_desired_includes, kept_includes_,  &lines_);
+
+  for (auto const& use : symbol_uses_) {
+    VERRS(6) << "symbol: " << use.symbol_name();
+    VERRS(6) << " " << use.PrintableUseLoc();
+    if (!use.is_full_use()) {
+      VERRS(6) << "fwd use, skipping\n";
+      continue;
+    }
+    const clang::NamedDecl* decl = use.decl();
+    if (decl) {
+      VERRS(6) << " @ ";
+      const clang::Module* module = decl->getOwningModule();
+      if (module) {
+        SourceLocation loc = decl->getLocation();
+        VERRS(6) << PrintableLoc(loc) << "\n";
+        VERRS(6) << module->getFullModuleName();
+        used_modules.insert(module);
+      } else {
+        const SourceLocation loc = decl->getLocation();
+        clang::FileID fid = sm.getFileID(loc);
+        const clang::FileEntry* entry = sm.getFileEntryForID(fid);
+        VERRS(6) << "fid: " << fid.getHashValue() << " ";
+        if (entry != file_) {
+          used_includes.insert(fid);
+          VERRS(6) << GetIncludeNameAsWritten(sm.getIncludeLoc(fid), DefaultDataGetter());
+        }
+        VERRS(6) << "\n"
+          << "  "
+          << sm.getFileEntryForID(fid);
+      }
+    }
+    VERRS(6) << "\n";
+  }
+
+  for (auto const fid : used_includes) {
+    const FileEntry* entry = sm.getFileEntryForID(fid);
+    if (entry == file_) continue;
+    SourceLocation loc = sm.getIncludeLoc(fid);
+    auto it = includes.find(entry);
+    if (it == includes.end()) {
+      VERRS(6)
+        << "Need to import "
+        << fid.getHashValue()
+        << " "
+        << GetIncludeNameAsWritten(loc, DefaultDataGetter())
+        << "\n";
+    } else {
+      it->second.erase(loc);
+    }
+  }
+
+  for (auto const& fid : includes) {
+    VERRS(6)
+      << "Need to delete "
+      << fid.first->getName()
+      << "\n";
+    for (auto loc : fid.second) {
+      clang::PresumedLoc ploc = sm.getPresumedLoc(loc, true);
+
+      SourceLocation xloc = sm.getFileLoc(loc);
+      VERRS(6)
+        << " "
+        << GetSourceTextUntilEndOfLine(xloc, DefaultDataGetter())
+        << " @ "
+        << ploc.getFilename()
+        << ":"
+        << ploc.getLine()
+        << " "
+        << "\n";
+    }
+  }
+
+
+  for (auto const module : used_modules) {
+    auto it = modules.find(module);
+    if (it == modules.end()) {
+      VERRS(6) << "Need to import " << module->getFullModuleName() << "\n";
+    }
+  }
+
+  for (auto const& module : modules) {
+    auto it = used_modules.find(module.first);
+    if (it == used_modules.end()) {
+      VERRS(6)
+        << "Need to delete "
+        << module.first->getFullModuleName()
+        << "\n";
+      for (auto loc : module.second) {
+        clang::PresumedLoc ploc = sm.getPresumedLoc(loc, true);
+        VERRS(6)
+          << " "
+          << ploc.getFilename()
+          << ":"
+          << ploc.getLine()
+          << "\n";
+      }
+    }
+  }
 
   // Remove desired inclusions that have been inhibited by pragma
   // "no_include".

@@ -71,6 +71,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Token.h"
 
@@ -90,8 +91,11 @@ using std::vector;
 class IwyuPreprocessorInfo : public clang::PPCallbacks,
                              public clang::CommentHandler {
  public:
-  IwyuPreprocessorInfo() : main_file_(nullptr),
-                           empty_file_info_(nullptr, this, "") {}
+  IwyuPreprocessorInfo()
+      : main_file_(nullptr),
+        empty_file_info_(nullptr, this, ""),
+        current_inclusion_kind_(clang::InclusionDirective::Include) {
+  }
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
   void HandlePreprocessingDone();
@@ -201,6 +205,9 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                           const clang::Module* imported,
                           clang::SrcMgr::CharacteristicKind file_type) override;
 
+  void moduleImport(clang::SourceLocation ImportLoc, clang::ModuleIdPath Path,
+                    const clang::Module* Imported) override;
+
   void FileChanged(clang::SourceLocation loc, FileChangeReason reason,
                    clang::SrcMgr::CharacteristicKind file_type,
                    clang::FileID exiting_from_id) override;
@@ -248,7 +255,8 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Called whenever an #include is seen in the preprocessor output.
   void AddDirectInclude(clang::SourceLocation includer_loc,
                         const clang::FileEntry* includee,
-                        const string& include_name_as_written);
+                        const string& include_name_as_written,
+                        clang::InclusionDirective::InclusionKind kind);
 
   // Report a "begin_exports"/"end_exports" pragma pair.
   // begin_line is first line, end_line is just after the last line.
@@ -355,6 +363,13 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // other places because it is unclear which inclusion directive filename
   // location corresponds to.
   clang::SourceLocation include_filename_loc_;
+
+  // Kind of current inclusion statement, e.g. #include, #import. Distinguish
+  // between different inclusion kinds only to report correctly added/removed
+  // lines. Inclusion kind doesn't affect IWYU logic.
+  // Need an instance variable because different callbacks are used to handle
+  // inclusion directive and to handle included file.
+  clang::InclusionDirective::InclusionKind current_inclusion_kind_;
 };
 
 }  // namespace include_what_you_use

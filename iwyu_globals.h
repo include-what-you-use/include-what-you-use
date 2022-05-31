@@ -12,12 +12,16 @@
 #define INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
 
 #include <set>                          // for set
+#include <map>
 #include <string>                       // for string
 #include <vector>                       // for vector
 
 namespace clang {
 class FileEntry;
+class FileID;
 class HeaderSearch;
+class Module;
+class SourceLocation;
 class SourceManager;
 struct PrintingPolicy;
 }  // namespace clang
@@ -25,6 +29,7 @@ struct PrintingPolicy;
 namespace include_what_you_use {
 
 using std::set;
+using std::map;
 using std::string;
 using std::vector;
 
@@ -97,6 +102,17 @@ struct CommandlineFlags {
   int exit_code_error;   // Exit with this code for iwyu violations.
   int exit_code_always;  // Always exit with this exit code.
 };
+
+struct IncludeMap {
+  map<const clang::FileEntry*, map<const clang::FileEntry*, set<clang::SourceLocation>>> includes_;
+  map<const clang::FileEntry*, map<const clang::Module*, set<clang::SourceLocation>>> modules_;
+
+ public:
+  void include(const clang::SourceLocation loc, const clang::FileEntry* entry);
+  void module(const clang::SourceLocation loc, const clang::Module* module);
+};
+
+IncludeMap& GlobalIncludeMap();
 
 const CommandlineFlags& GlobalFlags();
 // Used by tests as an easy way to simulate calling with different --flags.

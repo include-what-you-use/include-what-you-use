@@ -40,7 +40,9 @@ const char* source_extensions[] = {
   ".CPP",
   ".c++",
   ".C++",
-  ".cp"
+  ".cp",
+  ".m",
+  ".mm"
 };
 
 }  // anonymous namespace

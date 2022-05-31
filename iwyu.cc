@@ -183,6 +183,12 @@ using clang::MemberExpr;
 using clang::NamedDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
+using clang::ObjCInterfaceDecl;
+using clang::ObjCInterfaceType;
+using clang::ObjCObjectType;
+using clang::ObjCCategoryDecl;
+using clang::ObjCContainerDecl;
+using clang::ObjCProtocolDecl;
 using clang::OverloadExpr;
 using clang::ParmVarDecl;
 using clang::PPCallbacks;
@@ -1619,9 +1625,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
   }
 
-  void ReportDeclsUse(SourceLocation used_loc,
-                      const set<const NamedDecl*>& decls) {
-    for (const NamedDecl* decl : decls)
+  template <typename T>
+  void ReportDeclsUse(SourceLocation used_loc, const T& decls) {
+    for (const auto* decl : decls)
       ReportDeclUse(used_loc, decl);
   }
 
@@ -1973,8 +1979,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_CPointerToObjCPointerCast:
       case clang::CK_ObjCObjectLValueCast:
       case clang::CK_VectorSplat:
-        CHECK_UNREACHABLE_(
-            "TODO(csilvers): for objc and clang lang extensions");
         break;
 
       // Kinds for reinterpret_cast and const_cast, which need no full types.
@@ -2566,6 +2570,24 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // Read past elaborations like 'class' keyword or namespaces.
     ast_node = MostElaboratedAncestor(ast_node);
+
+    // Usually ObjC class type is ObjCInterfaceType inside ObjCObjectPointerType
+    // But if type contains protocol list, e.g. NSObject<SomeProtocol>*, then
+    // AST looks like
+    // ObjCObjectPointerType
+    //   ObjCObjectType
+    //     ObjCInterfaceType
+    // Additional ObjCObjectType does not make ObjCInterface not forward
+    // declarable, that's why we skip ObjCObjectType.
+    if (ast_node->IsA<ObjCInterfaceType>() &&
+        ast_node->ParentIsA<ObjCObjectType>()) {
+      ast_node = ast_node->parent();
+      const ObjCObjectType* protocol_container =
+          ast_node->GetAs<ObjCObjectType>();
+      CHECK_(!protocol_container->qual_empty() &&
+             "Additional ObjCObjectType should be caused only by non-empty "
+             "protocol list.");
+    }
 
     // Now there are two options: either we have a type or we have a declaration
     // involving a type.
@@ -4060,6 +4082,93 @@ class IwyuAstConsumer
     }
 
     return Base::VisitTemplateSpecializationType(type);
+  }
+
+  bool VisitObjCContainerDecl(clang::ObjCContainerDecl* decl) {
+    if (CanIgnoreCurrentASTNode()) return true;
+
+    if (IsForwardDecl(decl)) {
+      preprocessor_info()
+          .FileInfoFor(CurrentFileEntry())
+          ->AddForwardDeclare(decl, false);
+      return Base::VisitObjCContainerDecl(decl);
+    }
+
+    return Base::VisitObjCContainerDecl(decl);
+  }
+
+  bool VisitObjCInterfaceDecl(clang::ObjCInterfaceDecl* decl) {
+    if (CanIgnoreCurrentASTNode()) return true;
+
+    if (decl->isThisDeclarationADefinition()) {
+      if (const ObjCInterfaceDecl* super_class = decl->getSuperClass())
+        ReportDeclUse(CurrentLoc(), super_class);
+
+      ReportDeclsUse(CurrentLoc(), decl->getReferencedProtocols());
+    }
+
+    return Base::VisitObjCInterfaceDecl(decl);
+  }
+
+  bool VisitObjCObjectPointerType(clang::ObjCObjectPointerType* type) {
+    if (CanIgnoreCurrentASTNode()) return true;
+    const bool full_use = !type->getTypeArgs().empty();
+
+    for (const auto* qual : type->quals()) {
+      ReportDeclForwardDeclareUse(CurrentLoc(), qual);
+    }
+
+    // id<...> does not have an interface
+    if (const ObjCInterfaceDecl* iface = type->getInterfaceDecl()) {
+      if (full_use) {
+        ReportDeclUse(CurrentLoc(), iface);
+      } else {
+        ReportDeclForwardDeclareUse(CurrentLoc(), iface);
+      }
+    }
+
+    return Base::VisitObjCObjectPointerType(type);
+  }
+
+  bool VisitObjCImplDecl(clang::ObjCImplDecl* decl) {
+    if (CanIgnoreCurrentASTNode()) return true;
+    ReportDeclUse(CurrentLoc(), decl->getClassInterface());
+    return Base::VisitObjCImplDecl(decl);
+  }
+
+  bool VisitObjCProtocolDecl(clang::ObjCProtocolDecl* decl) {
+    if (CanIgnoreCurrentASTNode()) return true;
+
+    if (decl->isThisDeclarationADefinition())
+      ReportDeclsUse(CurrentLoc(), decl->getReferencedProtocols());
+
+    return Base::VisitObjCProtocolDecl(decl);
+  }
+
+  bool VisitObjCMessageExpr(clang::ObjCMessageExpr* expr) {
+    if (CanIgnoreCurrentASTNode()) return true;
+    ReportDeclUse(CurrentLoc(), expr->getReceiverInterface());
+    ReportDeclUse(CurrentLoc(), expr->getMethodDecl());
+    return Base::VisitObjCMessageExpr(expr);
+  }
+
+  bool VisitObjCIvarRefExpr(clang::ObjCIvarRefExpr* expr) {
+    if (CanIgnoreCurrentASTNode()) return true;
+    ReportDeclUse(CurrentLoc(), expr->getDecl());
+    return Base::VisitObjCIvarRefExpr(expr);
+  }
+
+  bool VisitObjCCategoryDecl(clang::ObjCCategoryDecl* decl) {
+    if (CanIgnoreCurrentASTNode()) return true;
+    ReportDeclUse(CurrentLoc(), decl->getClassInterface());
+    ReportDeclsUse(CurrentLoc(), decl->getReferencedProtocols());
+    return Base::VisitObjCCategoryDecl(decl);
+  }
+
+  bool VisitObjCCategoryImplDecl(clang::ObjCCategoryImplDecl* decl) {
+    if (CanIgnoreCurrentASTNode()) return true;
+    ReportDeclUse(CurrentLoc(), decl->getCategoryDecl());
+    return Base::VisitObjCCategoryImplDecl(decl);
   }
 
   // --- Visitors defined by BaseASTVisitor (not RecursiveASTVisitor).

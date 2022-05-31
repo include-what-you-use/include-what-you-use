@@ -55,6 +55,7 @@ using llvm::yaml::ScalarNode;
 using llvm::yaml::SequenceNode;
 using llvm::yaml::Stream;
 using llvm::yaml::document_iterator;
+using clang::InclusionDirective;
 
 namespace include_what_you_use {
 
@@ -1252,9 +1253,10 @@ void IncludePicker::MarkVisibility(VisibilityMap* map,
 // 'project/internal/foo.h' to 'project/public/foo_public.h' in google
 // code (Google hides private headers in /internal/, much like glibc
 // hides them in /bits/.)
-void IncludePicker::AddDirectInclude(const string& includer_filepath,
-                                     const string& includee_filepath,
-                                     const string& quoted_include_as_written) {
+void IncludePicker::AddDirectInclude(
+    const string& includer_filepath, const string& includee_filepath,
+    const string& quoted_include_as_written,
+    clang::InclusionDirective::InclusionKind inclusion_kind) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
   // Note: the includer may be a .cc file, which is unnecessary to add
@@ -1266,6 +1268,8 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   quoted_includes_to_quoted_includers_[quoted_includee].insert(quoted_includer);
   const pair<string, string> key(includer_filepath, includee_filepath);
   includer_and_includee_to_include_as_written_[key] = quoted_include_as_written;
+
+  AddInclusionKindForQuotedInclude(quoted_include_as_written, inclusion_kind);
 
   // Mark the clang fake-file "<built-in>" as private, so we never try
   // to map anything to it.
@@ -1790,6 +1794,41 @@ IncludeVisibility IncludePicker::GetVisibility(
     return *include_visibility;
   }
   return GetOrDefault(path_visibility_map_, include.path, default_value);
+}
+
+void IncludePicker::AddInclusionKindForQuotedInclude(
+    const string& quoted_include,
+    clang::InclusionDirective::InclusionKind inclusion_kind) {
+  if (!HasInclusionKind(quoted_include)) {
+    quoted_include_to_inclusion_kind_map_[quoted_include] = inclusion_kind;
+  } else {
+    // Warn if some header is included with different inclusion directives.
+    InclusionDirective::InclusionKind current_inclusion_kind =
+        GetInclusionKindForInclude(quoted_include);
+    if (current_inclusion_kind != inclusion_kind) {
+      // TODO(vsapsai): show inclusion locations for better diagnostic
+      VERRS(3) << "Warning: file " << quoted_include
+               << " is both #included and #imported."
+               << " Correct inclusion directive is unknown, use #import\n";
+      // Use #import because it is safer - #including ObjC file without header
+      // guard is worse than #importing C/C++ file.
+      quoted_include_to_inclusion_kind_map_[quoted_include] =
+          InclusionDirective::Import;
+    }
+  }
+}
+
+bool IncludePicker::HasInclusionKind(const string& quoted_include) const {
+  return ContainsKey(quoted_include_to_inclusion_kind_map_, quoted_include);
+}
+
+InclusionDirective::InclusionKind IncludePicker::GetInclusionKindForInclude(
+    const string& quoted_include) const {
+  CHECK_(HasInclusionKind(quoted_include) &&
+         "Should not call GetInclusionKindForInclude if inclusion kind is "
+         "unknown");
+  return GetOrDefault(quoted_include_to_inclusion_kind_map_, quoted_include,
+                      InclusionDirective::Include);
 }
 
 }  // namespace include_what_you_use
