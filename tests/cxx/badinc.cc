@@ -293,19 +293,17 @@ struct Cc_DeclOrderStruct {
 };
 
 // IWYU: I1_Enum is...*badinc-i1.h
-// IWYU: I11 is...*badinc-i1.h
 template<class T, I1_Enum E = I11> struct Cc_TemplateStruct { };
 // IWYU: I1_Enum is...*badinc-i1.h
 // IWYU: I1_Class needs a declaration
 // IWYU: I1_Class is...*badinc-i1.h
 template<I1_Enum E> struct Cc_TemplateStruct<I1_Class, E> { I1_Class i; };
 // IWYU: I1_Class needs a declaration
-// IWYU: I12 is...*badinc-i1.h
+// IWYU: I1_Enum is...*badinc-i1.h
 template<> struct Cc_TemplateStruct<I1_Class, I12> { I1_Class* i; };
 // TODO(csilvers): I1_Class is technically forward-declarable.
 // IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I1_Enum is...*badinc-i1.h
-// IWYU: I11 is...*badinc-i1.h
 template<class T = I1_Class, I1_Enum E = I11> class Cc_DeclareOnlyTemplateClass;
 
 // I2_Class has a non-explicit constructor (actually, two), so we need
@@ -342,11 +340,11 @@ const I2_Class& Cc_Function(
 // IWYU: I1_Enum is...*badinc-i1.h
 template<class T, I1_Enum E> int Cc_TemplateFunction() { return T().a(); }
 // IWYU: I1_Class needs a declaration
-// IWYU: I12 is...*badinc-i1.h
+// IWYU: I1_Enum is...*badinc-i1.h
 template<> int Cc_TemplateFunction<I1_Class, I12>() { return 3; }
 // IWYU: I1_Class needs a declaration
 // IWYU: I1_Class is...*badinc-i1.h
-// IWYU: I13 is...*badinc-i1.h
+// IWYU: I1_Enum is...*badinc-i1.h
 template<> int Cc_TemplateFunction<I1_Class, I13>() { return I1_Class().a(); }
 // IWYU: I1_Enum is...*badinc-i1.h
 template<class T, I1_Enum E> T Cc_DeclareOnlyTemplateFunction();
@@ -457,7 +455,6 @@ struct Cc_ImplicitDestructorStruct {
 // IWYU: EmptyDestructorClass is...*badinc-i1.h
 EmptyDestructorClass::~EmptyDestructorClass() { }
 // IWYU: I2_Enum is...*badinc-i2.h
-// IWYU: I22 is...*badinc-i2.h
 I2_Enum H_Class::ff_ = I22;
 // IWYU: I2_Enum is...*badinc-i2.h
 int H_Class::f(I2_Enum i2_enum) { return 1; }
@@ -557,13 +554,12 @@ Cc_Subclass cc_subclass;
 MultipleInheritanceSubclass cc_multipleinheritancesubclass;
 // IWYU: I1_Class needs a declaration
 // IWYU: I1_Class is...*badinc-i1.h
-// IWYU: I11 is...*badinc-i1.h
+// IWYU: I1_Enum is...*badinc-i1.h
 int cc_template_function_val = Cc_TemplateFunction<I1_Class, I11>();
 int cc_tricky_template_function_val =
     // IWYU: I1_Class needs a declaration
     // IWYU: kI1ConstInt is...*badinc-i1.h
-    // IWYU: I12 is...*badinc-i1.h
-    // IWYU: I13 is...*badinc-i1.h
+    // IWYU: I1_Enum is...*badinc-i1.h
     Cc_TemplateFunction<I1_Class, kI1ConstInt == 4 ? I12 : I13>();  // is I13
 // IWYU: I1_Class needs a declaration
 // IWYU: I1_Class is...*badinc-i1.h
@@ -592,7 +588,6 @@ H_Class h_class2(2);
 H_StructPtr h_structptr;
 H_TemplateClass<H_Enum> h_templateclass1(H1);
 // IWYU: I1_Enum is...*badinc-i1.h
-// IWYU: I11 is...*badinc-i1.h
 H_TemplateClass<I1_Enum> h_templateclass2(I11);
 // IWYU: I1_Struct needs a declaration
 H_TemplateStruct<I1_Struct> h_template_struct;
@@ -639,7 +634,6 @@ InlH_FunctionPtr inlh_functionptr = InlH_Function();  // badinc-inl.h
 D1_Class d1_class;       // badinc-d1.h
 D1_TemplateClass<D1_Enum> d1_templateclass1(D11);
 // IWYU: I2_Enum is...*badinc-i2.h
-// IWYU: I2_LAST is...*badinc-i2.h
 D1_TemplateClass<I2_Enum> d1_templateclass2(I2_LAST);
 // IWYU: I2_Enum is...*badinc-i2.h
 D1_TemplateClass<I2_Enum> *d1_templateclass2_ptr;
@@ -718,7 +712,6 @@ I1_Base *i1_base_ptr;
 // the I1_TemplateClass<I1_Enum> object, and once in the constructor.
 // IWYU: I1_TemplateClass is...*badinc-i1.h
 // IWYU: I1_Enum is...*badinc-i1.h
-// IWYU: I11 is...*badinc-i1.h
 I1_TemplateClass<I1_Enum> i1_templateclass(I11);
 // IWYU: I1_TemplateClass is...*badinc-i1.h
 I1_TemplateClass<int> i1_templateclass2(10);
@@ -1072,10 +1065,8 @@ int main() {
   Cc_string local_cc_string;
   H_Class local_h_class;
   // IWYU: I2_Enum is...*badinc-i2.h
-  // IWYU: I21 is...*badinc-i2.h
   D1_TemplateClass<I2_Enum> local_d1_template_class(I21);
   // IWYU: I1_Enum is...*badinc-i1.h
-  // IWYU: I11 is...*badinc-i1.h
   I1_Enum local_i1_enum = I11;
   // IWYU: I1_UnnamedStruct is...*badinc-i1.h
   I1_UnnamedStruct local_i1_unnamed_struct = {};
@@ -1102,7 +1093,7 @@ int main() {
   isascii('a');   // declared in <ctype.h> which is #included by badinc.h
   (void)(errno);  // declared in <errno.h> which is #included by badinc.h
   // Test we don't give an iwyu warning for the built-in __builtin_expect
-  // IWYU: I11 is...*badinc-i1.h
+  // IWYU: I1_Enum is...*badinc-i1.h
   if (__builtin_expect(local_i1_enum == I11, false)) (void)local_i1_enum;
 
   // IWYU: i1_int_global is...*badinc-i1.h
@@ -1367,7 +1358,7 @@ int main() {
   (*h_scoped_ptr).a();
   // IWYU: I1_Class is...*badinc-i1.h
   h_scoped_ptr->a();
-  // IWYU: I12 is...*badinc-i1.h
+  // IWYU: I1_Enum is...*badinc-i1.h
   D1Function(I12);
   // TODO(csilvers): should we be warning about I2_Struct?
   // IWYU: I1_Union is...*badinc-i1.h
@@ -1509,7 +1500,6 @@ int main() {
   std::vector<I2_Enum> local_enum_vector;
   // IWYU: I2_Enum is...*badinc-i2.h
   // IWYU: std::vector is...*<vector>
-  // IWYU: I21 is...*badinc-i2.h
   local_enum_vector.push_back(I21);
   // IWYU: std::vector is...*<vector>
   // IWYU: I2_Enum is...*badinc-i2.h
@@ -1764,26 +1754,25 @@ int main() {
 
   // Test templatized functions.
   H_TemplateFunction(1);
-  // IWYU: I11 is...*badinc-i1.h
   // IWYU: I1_Enum is...*badinc-i1.h
   H_TemplateFunction(I11);
-  // IWYU: I11 is...*badinc-i1.h
+  // IWYU: I1_Enum is...*badinc-i1.h
   H_TemplateFunction<int>(I11);
   // IWYU: I1_Class needs a declaration
   H_TemplateFunction<I1_Class*>(&i1_class);
   H_TemplateFunction(&i1_class);
-  // IWYU: I22 is...*badinc-i2.h
+  // IWYU: I2_Enum is...*badinc-i2.h
   // IWYU: I1_Enum is...*badinc-i1.h
   h_templateclass2.static_out_of_line(I22);
-  // IWYU: I22 is...*badinc-i2.h
+  // IWYU: I2_Enum is...*badinc-i2.h
   // IWYU: I1_Enum is...*badinc-i1.h
   h_templateclass2.static_inline(I22);
-  // IWYU: I22 is...*badinc-i2.h
+  // IWYU: I2_Enum is...*badinc-i2.h
   h_templateclass2.h_nested_struct.tplnested(I22);
   // TODO: I1_Enum should be reported here as a full use but isn't,
   // because we are not properly handling the dependent type FOO in
   // the nested struct.
-  // IWYU: I22 is...*badinc-i2.h
+  // IWYU: I2_Enum is...*badinc-i2.h
   h_templateclass2.h_nested_struct.static_tplnested(I22);
   // This should not cause warnings for the i2_class destructor
   h_templateclass2.uses_i2class();
@@ -1813,9 +1802,9 @@ int main() {
   I1_Class::I1_StaticClassTemplateFunction<I1_Struct*>(&i1_struct);
 
   // Test default (compiler-defined) copy constructor/operator=/operator==
-  // IWYU: I11 is...*badinc-i1.h
+  // IWYU: I1_Enum is...*badinc-i1.h
   D1_CopyClass local_d1_copy_class(D1CopyClassFn(I11));
-  // IWYU: I12 is...*badinc-i1.h
+  // IWYU: I1_Enum is...*badinc-i1.h
   local_d1_copy_class = D1CopyClassFn(I12);
   local_d1_copy_class.a();
 
@@ -1875,9 +1864,9 @@ The full include-list for tests/cxx/badinc.cc:
 #include <list>  // for list
 #include <string>  // for basic_string, operator+, string
 #include <typeinfo>  // for type_info
-#include "tests/cxx/badinc-d1.h"  // for D11, D1CopyClassFn, D1Function, D1_Class, D1_CopyClass, D1_Enum, D1_I1_Typedef, D1_StructPtr, D1_Subclass, D1_TemplateClass, D1_TemplateStructWithDefaultParam, MACRO_CALLING_I4_FUNCTION
+#include "tests/cxx/badinc-d1.h"  // for D1CopyClassFn, D1Function, D1_Class, D1_CopyClass, D1_Enum, D1_I1_Typedef, D1_StructPtr, D1_Subclass, D1_TemplateClass, D1_TemplateStructWithDefaultParam, MACRO_CALLING_I4_FUNCTION
 #include "tests/cxx/badinc-d4.h"  // for D4_ClassForOperator, operator<<
-#include "tests/cxx/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I11, I12, I13, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_ClassPtr, I1_Enum, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns2, i1_ns4, i1_ns5, kI1ConstInt, operator==
+#include "tests/cxx/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_ClassPtr, I1_Enum, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns2, i1_ns4, i1_ns5, kI1ConstInt, operator==
 #include "tests/cxx/badinc2.c"
 class D2_Class;
 class D2_ForwardDeclareClass;

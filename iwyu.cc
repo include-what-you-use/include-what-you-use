@@ -168,6 +168,8 @@ using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::DeducedTemplateSpecializationType;
+using clang::EnumConstantDecl;
+using clang::EnumDecl;
 using clang::EnumType;
 using clang::Expr;
 using clang::FileEntry;
@@ -1537,6 +1539,20 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
+
+    // Report EnumName instead of EnumName::Item.
+    // It supports for removing EnumName forward- (opaque-) declarations
+    // from output.
+    if (const auto* enum_constant_decl =
+            dyn_cast<EnumConstantDecl>(target_decl)) {
+      const auto* enum_decl =
+          cast<EnumDecl>(enum_constant_decl->getDeclContext());
+
+      // for unnamed enums, enumerator name is still preferred
+      if (enum_decl->getIdentifier())
+        target_decl = enum_decl;
+    }
+
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
         used_loc, target_decl, use_flags, comment);
 
@@ -1676,7 +1692,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  bool VisitEnumDecl(clang::EnumDecl* decl) {
+  bool VisitEnumDecl(EnumDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
 
