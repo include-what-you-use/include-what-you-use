@@ -126,9 +126,9 @@ class H_Class {
     if (q.empty()) return s.length();
     // IWYU: I2_Enum is...*badinc-i2.h
     switch (static_cast<I2_Enum>(a_)) {
-      // IWYU: I21 is...*badinc-i2.h
+      // IWYU: I2_Enum is...*badinc-i2.h
       case I21: return 21;
-        // IWYU: I22 is...*badinc-i2.h
+        // IWYU: I2_Enum is...*badinc-i2.h
       case I22: return 22;
       default: return errno;
     }
@@ -178,7 +178,6 @@ class H_Class {
   H_Class(const H_Class&);
 };
 // IWYU: I2_Enum is...*badinc-i2.h
-// IWYU: I21 is...*badinc-i2.h
 I2_Enum H_Class::ee_ = I21;
 
 template<typename FOO>
@@ -237,7 +236,6 @@ class H_TemplateClass {
   H_TemplateClass(const H_TemplateClass&);
 };
 // IWYU: I2_Enum is...*badinc-i2.h
-// IWYU: I21 is...*badinc-i2.h
 template<typename FOO> I2_Enum H_TemplateClass<FOO>::h_template_i2_static_ = I21;
 H_TemplateClass<int>* h_templateclass_var;
 
@@ -251,7 +249,6 @@ class H_TemplateTemplateClass {
   // TODO(csilvers): attribute this use here, not at the caller sites.
   // TODO(csilvers): IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
   // IWYU: I2_Enum is...*badinc-i2.h
-  // IWYU: I21 is...*badinc-i2.h
   H_TemplateTemplateClass() : t(T<I2_Enum>(I21)) {}
   // IWYU: I2_Enum is...*badinc-i2.h
   T<I2_Enum> t;
@@ -313,7 +310,7 @@ H_Enum H_Function(H_Class* c) {
 // IWYU: I2_Class needs a declaration
 // IWYU: I2_Enum is...*badinc-i2.h
 I2_Enum H_Function_I(I2_Class*) {
-  // IWYU: I21 is...*badinc-i2.h
+  // IWYU: I2_Enum is...*badinc-i2.h
   return I21;
 }
 
@@ -366,7 +363,6 @@ H_Enum h_h_enum;
 I2_Class h_i2_class;
 H_TemplateClass<D3_Enum> h_d3_template_class(D31);
 // IWYU: I2_Enum is...*badinc-i2.h
-// IWYU: I22 is...*badinc-i2.h
 H_TemplateClass<I2_Enum> h_i2_template_class(I22);
 // TODO(csilvers): this should be attributed to the .h, since it comes
 // via a default template argument.
@@ -400,9 +396,9 @@ The full include-list for tests/cxx/badinc.h:
 #include <set>  // for set
 #include <string>  // for string
 #include <vector>  // for vector
-#include "tests/cxx/badinc-d3.h"  // for D31, D3_Enum
+#include "tests/cxx/badinc-d3.h"  // for D3_Enum
 #include "tests/cxx/badinc-i2-inl.h"  // for I2_Class::I2_Class, I2_Class::InlFileFn, I2_Class::InlFileStaticFn, I2_Class::InlFileTemplateFn, I2_Class::~I2_Class, I2_TemplateClass::I2_TemplateClass<FOO>, I2_TemplateClass::InlFileTemplateClassFn, I2_TemplateClass::~I2_TemplateClass<FOO>
-#include "tests/cxx/badinc-i2.h"  // for I21, I22, I2_Class, I2_Enum, I2_EnumForTypedefs, I2_MACRO, I2_Struct, I2_TemplateClass, I2_Typedef, I2_TypedefOnly_Class (ptr only), TemplateForHClassTplFn (ptr only)
+#include "tests/cxx/badinc-i2.h"  // for I2_Class, I2_Enum, I2_EnumForTypedefs, I2_MACRO, I2_Struct, I2_TemplateClass, I2_Typedef, I2_TypedefOnly_Class (ptr only), TemplateForHClassTplFn (ptr only)
 class Cc_Class;  // lines XX-XX
 // TODO(csilvers): this should change to struct Cc_Struct.
 class Cc_Struct;  // lines XX-XX
