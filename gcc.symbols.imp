@@ -217,6 +217,8 @@
   { symbol: [ "FILE", private, "<stdio.h>", public ] },
   { symbol: [ "MAP_STACK", private, "<sys/mman.h>", public ] },
   { symbol: [ "MAP_STACK", private, "<linux/mman.h>", public ] },
+  { symbol: [ "MAXHOSTNAMELEN", private, "<sys/param.h>", public ] },
+  { symbol: [ "MAXHOSTNAMELEN", private, "<protocols/timed.h>", public ] },
   { symbol: [ "SIGCHLD", private, "<signal.h>", public ] },
   { symbol: [ "SIGCHLD", private, "<linux/signal.h>", public ] },
   { symbol: [ "va_list", private, "<stdarg.h>", public ] },
