@@ -294,6 +294,8 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "EOF", kPrivate, "<stdio.h>", kPublic },
   { "EOF", kPrivate, "<libio.h>", kPublic },
   { "FILE", kPrivate, "<stdio.h>", kPublic },
+  { "MAP_POPULATE", kPrivate, "<sys/mman.h>", kPublic },
+  { "MAP_POPULATE", kPrivate, "<linux/mman.h>", kPublic },
   { "MAP_STACK", kPrivate, "<sys/mman.h>", kPublic },
   { "MAP_STACK", kPrivate, "<linux/mman.h>", kPublic },
   { "MAXHOSTNAMELEN", kPrivate, "<sys/param.h>", kPublic },

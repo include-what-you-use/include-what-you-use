@@ -215,6 +215,8 @@
   { symbol: [ "EOF", private, "<stdio.h>", public ] },
   { symbol: [ "EOF", private, "<libio.h>", public ] },
   { symbol: [ "FILE", private, "<stdio.h>", public ] },
+  { symbol: [ "MAP_POPULATE", private, "<sys/mman.h>", public ] },
+  { symbol: [ "MAP_POPULATE", private, "<linux/mman.h>", public ] },
   { symbol: [ "MAP_STACK", private, "<sys/mman.h>", public ] },
   { symbol: [ "MAP_STACK", private, "<linux/mman.h>", public ] },
   { symbol: [ "MAXHOSTNAMELEN", private, "<sys/param.h>", public ] },
