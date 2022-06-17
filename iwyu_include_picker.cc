@@ -150,6 +150,8 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "uint64_t", kPrivate, "<stdint.h>", kPublic },
   { "intptr_t", kPrivate, "<stdint.h>", kPublic },
   { "uintptr_t", kPrivate, "<stdint.h>", kPublic },
+  { "iovec", kPrivate, "<sys/uio.h>", kPublic },
+  { "iovec", kPrivate, "<sys/socket.h>", kPublic },
   { "key_t", kPrivate, "<sys/types.h>", kPublic },
   { "key_t", kPrivate, "<sys/ipc.h>", kPublic },
   { "lconv", kPrivate, "<locale.h>", kPublic },
