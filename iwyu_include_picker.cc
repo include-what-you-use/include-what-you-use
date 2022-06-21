@@ -302,6 +302,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "MAP_STACK", kPrivate, "<linux/mman.h>", kPublic },
   { "MAXHOSTNAMELEN", kPrivate, "<sys/param.h>", kPublic },
   { "MAXHOSTNAMELEN", kPrivate, "<protocols/timed.h>", kPublic },
+  { "SIGABRT", kPrivate, "<signal.h>", kPublic },
   { "SIGCHLD", kPrivate, "<signal.h>", kPublic },
   { "SIGCHLD", kPrivate, "<linux/signal.h>", kPublic },
   { "va_list", kPrivate, "<stdarg.h>", kPublic },
