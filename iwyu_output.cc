@@ -2004,14 +2004,39 @@ size_t PrintableDiffs(const string& filename,
   // First, check if there are no adds or deletes.  If so, we print a
   // shorter summary line.
   bool no_adds_or_deletes = true;
+
+  set<string> to_add_headers;
+  set<string> to_rm_headers;
+
   for (const auto& key_line : sorted_lines) {
     const OneIncludeOrForwardDeclareLine* line = key_line.second;
-    if ((line->is_desired() && !line->is_present()) || // add
-        (line->is_present() && !line->is_desired())) { // delete
-      no_adds_or_deletes = false;
-      break;
+    if ((line->is_desired() && !line->is_present())) { // add
+      if (line->IsIncludeLine()) {
+        to_add_headers.insert(line->unquoted_include());
+      } else {
+        no_adds_or_deletes = false;
+      }
+    } else if (line->is_present() && !line->is_desired()) { // delete
+      if (line->IsIncludeLine()) {
+        to_rm_headers.insert(line->unquoted_include());
+      } else {
+        no_adds_or_deletes = false;
+      }
     }
   }
+
+  set<string> straddle;
+  for (const auto& ent : to_rm_headers) {
+    if (ContainsKey(to_add_headers, ent)) {
+      straddle.insert(ent);
+    }
+  }
+
+  if (no_adds_or_deletes) {
+    no_adds_or_deletes = (to_add_headers.size() == to_rm_headers.size()) &&
+                         (straddle.size() == to_add_headers.size());
+  }
+
   if (no_adds_or_deletes && !GlobalFlags().update_comments) {
     output = "\n(" + filename + " has correct #includes/fwd-decls)\n";
     return 0;
@@ -2026,6 +2051,9 @@ size_t PrintableDiffs(const string& filename,
     for (const auto& key_line : sorted_lines) {
       const OneIncludeOrForwardDeclareLine* line = key_line.second;
       if (line->is_desired() && !line->is_present()) {
+        if (line->IsIncludeLine() && ContainsKey(straddle, line->unquoted_include())) {
+            continue;
+        }
         output_lines.push_back(
           PrintableIncludeOrForwardDeclareLine(*line, aqi));
         ++num_edits;
@@ -2040,6 +2068,9 @@ size_t PrintableDiffs(const string& filename,
     for (const auto& key_line : sorted_lines) {
       const OneIncludeOrForwardDeclareLine* line = key_line.second;
       if (line->is_present() && !line->is_desired()) {
+        if (line->IsIncludeLine() && ContainsKey(straddle, line->unquoted_include())) {
+            continue;
+        }
         output_lines.push_back(
             PrintableIncludeOrForwardDeclareLine(*line, aqi));
         output_lines.back().add_prefix("- ");

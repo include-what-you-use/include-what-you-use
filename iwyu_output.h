@@ -134,6 +134,12 @@ class OneIncludeOrForwardDeclareLine {
     return quoted_include_;
   }
 
+  string unquoted_include() const {
+    CHECK_(IsIncludeLine() && "Must call unquoted_include() on include lines");
+    CHECK_(!fwd_decl_ && "unquoted_include and fwd_decl are mutually exclusive");
+    return quoted_include_.substr(1, quoted_include_.size() - 2);
+  }
+
   const clang::FileEntry* included_file() const {
     CHECK_(IsIncludeLine() && "Must call included_file() on include lines");
     CHECK_(!fwd_decl_ && "included_file and fwd_decl are mutually exclusive");
