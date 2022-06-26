@@ -2002,19 +2002,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
       // Need the full to-type so we can call its constructor.
       case clang::CK_ConstructorConversion:
-        // 'Autocast' -- calling a one-arg, non-explicit constructor
-        // -- is a special case when it's done for a function call.
-        // iwyu requires the function-writer to provide the #include
-        // for the casted-to type, just so we don't have to require it
-        // here.  *However*, the function-author can override this
-        // iwyu requirement, in which case we're responsible for the
-        // casted-to type.  See IwyuBaseASTVisitor::VisitFunctionDecl.
-        if (!current_ast_node()->template HasAncestorOfType<CallExpr>() ||
-            ContainsKey(
-                GetCallerResponsibleTypesForAutocast(current_ast_node()),
-                RemovePointersAndReferences(to_type))) {
+        // 'Autocast' in function calls is handled in VisitCXXConstructExpr.
+        if (!current_ast_node()->template HasAncestorOfType<CallExpr>())
           required_full_types.push_back(to_type);
-        }
         break;
       // Need the full from-type so we can call its 'operator <totype>()'.
       case clang::CK_UserDefinedConversion:
@@ -2286,6 +2276,25 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())  return true;
     ReportIfReferenceVararg(expr->getArgs(), expr->getNumArgs(),
                             expr->getConstructor());
+
+    // 'Autocast' -- calling a one-arg, non-explicit constructor
+    // -- is a special case when it's done for a function call.
+    // iwyu requires the function-writer to provide the #include
+    // for the casted-to type, just so we don't have to require it
+    // here.  *However*, the function-author can override this
+    // iwyu requirement, in which case we're responsible for the
+    // casted-to type.  See IwyuBaseASTVisitor::VisitFunctionDecl.
+    // Explicitly written CXXTemporaryObjectExpr are ignored here.
+    if (expr->getStmtClass() == Stmt::StmtClass::CXXConstructExprClass) {
+      const Type* type = expr->getType().getTypePtr();
+      if (current_ast_node()->template HasAncestorOfType<CallExpr>() &&
+          ContainsKey(GetCallerResponsibleTypesForAutocast(current_ast_node()),
+                      RemoveReferenceAsWritten(type))) {
+        if (!CanIgnoreType(type))
+          ReportTypeUse(CurrentLoc(), type);
+      }
+    }
+
     return true;
   }
 
