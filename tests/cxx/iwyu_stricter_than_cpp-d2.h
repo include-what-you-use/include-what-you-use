@@ -21,9 +21,7 @@ void CallTwiceDeclaredFunction() {
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   TwiceDeclaredFunction(1);
 
-  // This *should* be exactly the same, but doesn't seem to be:
-  // clang leaves out the constructor-conversion AST node.
-  // TODO(csilvers): IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   TwiceDeclaredRefFunction(1);
 }
 
