@@ -90,6 +90,7 @@ void PlacementNewOfTemplate() {
 
   // Make sure we handle it right when we explicitly call the dtor, as well.
   // IWYU: ClassTemplate is...*placement_new-i1.h
+  // IWYU: IndirectClass is...*indirect.h
   placement_newed_template->~ClassTemplate();
 }
 
