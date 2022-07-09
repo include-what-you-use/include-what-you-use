@@ -1565,17 +1565,17 @@ int main() {
   // IWYU: i1_ns::I1_NamespaceClass is...*badinc-i1.h
   I1_Class* i1_class_tpl_ctor = new I1_Class(&i1_namespace_class, 1);
 
-  // TODO(csilvers): IWYU: I2_Class needs a declaration
+  // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
   // IWYU: I1_Struct is...*badinc-i1.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   delete newed_i1_template_class;
-  // TODO(csilvers): IWYU: I2_Class needs a declaration
+  // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
   // IWYU: I1_Struct is...*badinc-i1.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   delete[] newed_i1_template_class_array;
-  // TODO(csilvers): IWYU: I2_Class needs a declaration
+  // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
   // IWYU: I1_Struct is...*badinc-i1.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
