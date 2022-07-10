@@ -1543,19 +1543,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
 
-    // Report EnumName instead of EnumName::Item.
-    // It supports for removing EnumName forward- (opaque-) declarations
-    // from output.
-    if (const auto* enum_constant_decl =
-            dyn_cast<EnumConstantDecl>(target_decl)) {
-      const auto* enum_decl =
-          cast<EnumDecl>(enum_constant_decl->getDeclContext());
-
-      // for unnamed enums, enumerator name is still preferred
-      if (enum_decl->getIdentifier())
-        target_decl = enum_decl;
-    }
-
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
         used_loc, target_decl, use_flags, comment);
 
@@ -1653,6 +1640,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                              const char* comment = nullptr) {
     // TODO(csilvers): figure out if/when calling CanIgnoreType() is correct.
     if (!type)
+      return;
+
+    // Enum type uses can be ignored. Their size is known (either implicitly
+    // 'int' or from a mandatory transitive inclusion of a non-fixed enum full
+    // declaration, or explicitly using a C++ 11 enum base). Only if an enum
+    // type or its enumerators are explicitly mentioned will they be reported
+    // by IWYU from VisitTagType or VisitDeclRefExpr correspondingly.
+    if (type->getAs<EnumType>())
       return;
 
     // Map private types like __normal_iterator to their public counterpart.
@@ -2434,6 +2429,26 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  bool VisitDeclRefExpr(clang::DeclRefExpr* expr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    // Report EnumName instead of EnumName::Item.
+    // It supports for removing EnumName forward- (opaque-) declarations
+    // from output.
+    if (const auto* enum_constant_decl =
+            dyn_cast<EnumConstantDecl>(expr->getDecl())) {
+      const auto* enum_decl =
+          cast<EnumDecl>(enum_constant_decl->getDeclContext());
+
+      // For unnamed enums, enumerator name is still preferred.
+      if (enum_decl->getIdentifier())
+        ReportDeclUse(CurrentLoc(), enum_decl);
+      else
+        ReportDeclUse(CurrentLoc(), enum_constant_decl);
+    }
+    return true;
+  }
+
   // When we call (or potentially call) a function, do an IWYU check
   // via ReportDeclUse() to make sure the definition of the function
   // is properly #included.
@@ -2990,9 +3005,6 @@ class InstantiatedTemplateVisitor
     if (node->ParentIsA<NestedNameSpecifier>()) {
       return true;
     }
-
-    if (const auto* enum_type = type->getAs<EnumType>())
-      return !CanBeOpaqueDeclared(enum_type);
 
     // If we're inside a typedef, we don't need our full type info --
     // in this case we follow what the C++ language allows and let
@@ -3985,7 +3997,7 @@ class IwyuAstConsumer
     // once we've tracked the UsingDecl use.
     if (const UsingShadowDecl* found_decl = DynCastFrom(expr->getFoundDecl())) {
       ReportDeclUse(CurrentLoc(), found_decl);
-    } else {
+    } else if (!isa<EnumConstantDecl>(expr->getDecl())) {
       ReportDeclUse(CurrentLoc(), expr->getDecl());
     }
     return Base::VisitDeclRefExpr(expr);
