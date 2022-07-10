@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/ArrayRef.h"  // IWYU pragma: keep
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorOr.h"
@@ -174,6 +175,12 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   SmallVector<const char*, 256> args;
 
   ExpandArgv(argc, argv, args, SavedStrings);
+
+  // Drop -save-temps arguments to avoid multiple compilation jobs.
+  llvm::erase_if(args, [](const char *v) {
+    StringRef arg(v);
+    return arg.startswith("-save-temps") || arg.startswith("--save-temps");
+  });
 
   // FIXME: This is a hack to try to force the driver to do something we can
   // recognize. We need to extend the driver library to support this use model
