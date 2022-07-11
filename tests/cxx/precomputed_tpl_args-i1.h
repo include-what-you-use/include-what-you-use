@@ -17,7 +17,7 @@ class SpecializationClass { };
 namespace std {
 template<> class less<SpecializationClass> {
  public:
-  bool operator()(const SpecializationClass&, const SpecializationClass&) {
+  bool operator()(const SpecializationClass&, const SpecializationClass&) const {
     return true;
   }
 };
