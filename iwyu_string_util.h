@@ -119,6 +119,14 @@ inline void StripWhiteSpace(string* str) {
   StripWhiteSpaceRight(str);
 }
 
+inline void ReplaceAll(std::string* str, const std::string& from,
+                       const std::string& to) {
+  for (size_t pos = str->find(from); pos != std::string::npos;
+       pos = str->find(from, pos + to.length())) {
+    str->replace(pos, from.length(), to);
+  }
+}
+
 // This is the same as split() in Python.  If max_segs is 0, there's
 // no limit on the number of the generated segments.
 inline vector<string> Split(
