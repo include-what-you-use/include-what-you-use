@@ -25,5 +25,18 @@ class IndirectClass {
   static int statica;
 };
 
+template <typename T>
+class IndirectTemplate {
+ public:
+  void Method() const {
+  }
+  int a;
+  static void StaticMethod() {
+  }
+
+ private:
+  T t;
+};
+
 
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_INDIRECT_H_
