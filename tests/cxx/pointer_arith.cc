@@ -47,6 +47,47 @@ void PointerArithmetic() {
   p1 += 100;
 }
 
+// IWYU: IndirectTemplate is...*indirect.h
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+IndirectTemplate<IndirectClass> itc1, itc2;
+
+void PointerArithmeticWithTemplates() {
+  // IWYU: IndirectTemplate needs a declaration
+  // IWYU: IndirectClass needs a declaration
+  IndirectTemplate<IndirectClass>* p1 = &itc1;
+  // IWYU: IndirectTemplate needs a declaration
+  // IWYU: IndirectClass needs a declaration
+  IndirectTemplate<IndirectClass>* p2 = &itc2;
+
+  // All the pointer arithmetic below require the full type.
+
+  // Pointer minus pointer
+  // IWYU: IndirectTemplate is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
+  long x = p2 - p1;
+
+  // Pointer minus offset
+  // IWYU: IndirectTemplate is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
+  void* p3 = p1 - 20;
+
+  // Pointer decrement
+  // IWYU: IndirectTemplate is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
+  p1 -= 10;
+
+  // Pointer plus offset
+  // IWYU: IndirectTemplate is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
+  p3 = p1 + 100;
+
+  // Pointer increment
+  // IWYU: IndirectTemplate is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
+  p1 += 100;
+}
+
 // Make sure pointer arithmetic with builtins does not yield IWYU warnings.
 void BuiltinPointerArithmetic() {
   char c = 0;
@@ -71,6 +112,6 @@ tests/cxx/pointer_arith.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/pointer_arith.cc:
-#include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 
 ***** IWYU_SUMMARY */
