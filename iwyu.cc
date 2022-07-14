@@ -1484,6 +1484,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
               GetFileEntry(call_expr), GetFileEntry(*fn_redecl))) {
         continue;
       }
+      if (fn_redecl->isThisDeclarationADefinition() && !IsInHeader(*fn_redecl))
+        continue;
       for (set<const Type*>::iterator it = retval.begin();
            it != retval.end(); ) {
         if (!CodeAuthorWantsJustAForwardDeclare(*it, GetLocation(*fn_redecl))) {
@@ -1767,6 +1769,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         FunctionDecl* redecl = decl;
         while ((redecl = redecl->getPreviousDecl()))
           ReportDeclUse(CurrentLoc(), redecl);
+      }
+      if (!IsInHeader(decl)) {
+        // No point in author-intent analysis of function definitions
+        // in source files.
+        return true;
       }
     } else {
       // Make all our types forward-declarable...

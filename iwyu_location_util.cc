@@ -10,6 +10,7 @@
 #include "iwyu_location_util.h"
 
 #include "iwyu_ast_util.h"
+#include "iwyu_port.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -28,6 +29,7 @@ using clang::CXXMethodDecl;
 using clang::CXXOperatorCallExpr;
 using clang::ClassTemplateSpecializationDecl;
 using clang::ConditionalOperator;
+using clang::FileEntry;
 using clang::FunctionDecl;
 using clang::MemberExpr;
 using clang::SourceLocation;
@@ -168,6 +170,12 @@ SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc) {
 
 bool IsInScratchSpace(SourceLocation loc) {
   return StartsWith(PrintableLoc(GetSpellingLoc(loc)), "<scratch space>");
+}
+
+bool IsInHeader(const clang::Decl* decl) {
+  const FileEntry* containing_file = GetFileEntry(decl);
+  CHECK_(containing_file);
+  return !GlobalSourceManager()->isMainFile(*containing_file);
 }
 
 }  // namespace include_what_you_use

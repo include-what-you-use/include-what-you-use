@@ -228,6 +228,9 @@ inline bool IsBeforeInSameFile(const T& a, const U& b) {
   return IsBeforeInTranslationUnit(a, b);
 }
 
+// Returns true if the given declaration is located in a header file.
+bool IsInHeader(const clang::Decl*);
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_LOCATION_UTIL_H_
