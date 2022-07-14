@@ -22,6 +22,14 @@ int ImplicitCtorFn(IndirectWithImplicitCtor);
 // IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h.*for autocast
 int ImplicitCtorRefFn(const IndirectWithImplicitCtor&);
 
+// Reporting types for "autocast" for header-defined functions still makes sense
+// as opposed to function definitions in source files.
+// IWYU: IndirectWithImplicitCtor needs a declaration
+// IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h.*for autocast
+inline int InlineImplicitCtorRefFn(const IndirectWithImplicitCtor&) {
+  return 1;
+}
+
 // Test parameter type uses that do not require special handling for "autocast".
 int NoAutocastFn(
     // A subtle c++ point: forward-declaring is ok for nonconst, because
