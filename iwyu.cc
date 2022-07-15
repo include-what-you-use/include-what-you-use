@@ -1437,7 +1437,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return underlying_type;
   }
 
-  set<const Type*> GetCallerResponsibleTypesForTypedef(
+  set<const Type*> GetProvidedTypesForTypedef(
       const TypedefNameDecl* decl) const {
     set<const Type*> retval;
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
@@ -1447,22 +1447,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (const auto* underlying_typedef_decl = dyn_cast<TypedefNameDecl>(TypeToDeclAsWritten(underlying_typedef))) {
         // TODO(csilvers): if one of the intermediate typedefs
         // #includes the necessary definition of the 'final'
-        // underlying type, do we want to return the empty set here?
-        return GetCallerResponsibleTypesForTypedef(underlying_typedef_decl);
+        // underlying type, do we want to return it here?
+        return GetProvidedTypesForTypedef(underlying_typedef_decl);
       }
     }
 
-    const Type* deref_type =
-        RemovePointersAndReferencesAsWritten(underlying_type);
-    if (isa<SubstTemplateTypeParmType>(underlying_type) ||
-        CodeAuthorWantsJustAForwardDeclare(deref_type, GetLocation(decl))) {
-      retval.insert(deref_type);
-      // TODO(csilvers): include template type-args if appropriate.
-      // This requires doing an iwyu visit of the instantiated
-      // underlying type and seeing which type-args we require full
-      // use for.  Also have to handle the case where the type-args
-      // are themselves templates.  It will require pretty substantial
-      // iwyu surgery.
+    for (const Type* type :
+         GetComponentsOfTypeWithoutSubstituted(underlying_type)) {
+      if (!CodeAuthorWantsJustAForwardDeclare(type, GetLocation(decl))) {
+        retval.insert(type);
+      }
     }
     return retval;
   }
@@ -1632,67 +1626,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // with the warning message that iwyu emits.
   virtual void ReportTypeUse(SourceLocation used_loc, const Type* type,
                              const char* comment = nullptr) {
-    if (CanIgnoreType(type))
-      return;
-
-    // Enum type uses can be ignored. Their size is known (either implicitly
-    // 'int' or from a mandatory transitive inclusion of a non-fixed enum full
-    // declaration, or explicitly using a C++ 11 enum base). Only if an enum
-    // type or its enumerators are explicitly mentioned will they be reported
-    // by IWYU from VisitTagType or VisitDeclRefExpr correspondingly.
-    if (type->getAs<EnumType>())
-      return;
-
-    // Types in fwd-decl-context should be ignored here and reported from more
-    // specialized places, i.e. when they are explicitly written. But in fact,
-    // this check is redundant because TypeToDeclAsWritten returns nullptr for
-    // pointers and references.
-    if (IsPointerOrReferenceAsWritten(type))
-      return;
-
-    // For typedefs, the user of the type is sometimes the one
-    // responsible for the underlying type.  We check if that is the
-    // case here, since we might be using a typedef type from
-    // anywhere.  ('autocast' is similar, but is handled in
-    // VisitCastExpr; 'fn-return-type' is also similar and is
-    // handled in HandleFunctionCall.)
-    if (const auto* typedef_type = type->getAs<TypedefType>()) {
-      // One exception: if this TypedefType is being used in another
-      // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
-      // user -- the other typedef -- is never responsible for the
-      // underlying type.  Instead, users of that typedef are.
-      const ASTNode* ast_node = MostElaboratedAncestor(current_ast_node());
-      if (!ast_node->ParentIsA<TypedefNameDecl>()) {
-        const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
-        const set<const Type*>& underlying_types =
-            GetCallerResponsibleTypesForTypedef(typedef_decl);
-        if (!underlying_types.empty()) {
-          VERRS(6) << "User, not author, of typedef "
-                   << typedef_decl->getQualifiedNameAsString()
-                   << " owns the underlying type:\n";
-          // If any of the used types are themselves typedefs, this will
-          // result in a recursive expansion.  Note we are careful to
-          // recurse inside this class, and not go back to subclasses.
-          for (const Type* type : underlying_types)
-            IwyuBaseAstVisitor<Derived>::ReportTypeUse(used_loc, type);
-        }
-      }
-      return;
-    }
-
-    // Map private types like __normal_iterator to their public counterpart.
-    type = MapPrivateTypeToPublicType(type);
-    // For the below, we want to be careful to call *our*
-    // ReportDeclUse(), not any of the ones in subclasses.
-    if (const auto* template_spec_type =
-            dyn_cast<TemplateSpecializationType>(Desugar(type))) {
-      this->getDerived().ReportTplSpecComponentTypes(template_spec_type);
-    }
-    if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
-      decl = GetDefinitionAsWritten(decl);
-      VERRS(6) << "(For type " << PrintableType(type) << "):\n";
-      IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl, comment);
-    }
+    ReportTypeUseInternal(used_loc, type, comment,
+                          this->getDerived().GetBlockedTypes());
   }
 
   void ReportTypesUse(SourceLocation used_loc, const set<const Type*>& types) {
@@ -1751,22 +1686,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // itself can be forward-declared, just as in (2).  That is:
   //   template<class T> struct C { typedef pair<T,T> value_type; };
   // iwyu will demand the full type of pair, but not of its template
-  // arguments.  This is handled not here, but below, in
-  // VisitSubstTemplateTypeParmType.
+  // arguments.  This is handled in VisitSubstTemplateTypeParmType.
+  // Typedef underlying type is marked fwd-declarable by default, and the
+  // aforementioned analysis is performed with 'IsProvidedTypeComponent'
+  // function.
   bool VisitTypedefNameDecl(clang::TypedefNameDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
-    const Type* deref_type =
-        RemovePointersAndReferencesAsWritten(underlying_type);
-
-    if (CodeAuthorWantsJustAForwardDeclare(deref_type, GetLocation(decl)) ||
-        isa<SubstTemplateTypeParmType>(underlying_type)) {
-      current_ast_node()->set_in_forward_declare_context(true);
-    } else {
-      current_ast_node()->set_in_forward_declare_context(false);
-    }
-
+    current_ast_node()->set_in_forward_declare_context(true);
     return true;
   }
 
@@ -2571,7 +2498,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const NamedDecl* decl = TypeToDeclAsWritten(type);
 
     // If we are forward-declarable, so are our template arguments.
-    if (CanForwardDeclareType(current_ast_node())) {
+    if (CanForwardDeclareType(current_ast_node()) &&
+        !IsProvidedTypeComponent(current_ast_node())) {
       ReportDeclForwardDeclareUse(CurrentLoc(), decl);
       current_ast_node()->set_in_forward_declare_context(true);
     } else {
@@ -2699,6 +2627,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return visitor_state_->preprocessor_info;
   }
 
+  bool IsProvidedTypeComponent(const ASTNode* node) const {
+    return node->HasAncestorOfType<TypedefNameDecl>() &&
+           !CodeAuthorWantsJustAForwardDeclare(node->GetAs<Type>(),
+                                               node->GetLocation());
+  }
+
  private:
   template <typename T> friend class IwyuBaseAstVisitor;
 
@@ -2718,7 +2652,83 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // void fn(const S<Class>& s) { // Forward declarations are sufficient here.
   //   (void)s.t; // Full 'Class' type is needed due to template instantiation.
   // }
-  void ReportTplSpecComponentTypes(const TemplateSpecializationType*) = delete;
+  void ReportTplSpecComponentTypes(const TemplateSpecializationType*,
+                                   const set<const Type*>& blocked_types) =
+      delete;
+
+  const set<const Type*>& GetBlockedTypes() const = delete;
+
+  void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
+                             const char* comment,
+                             const set<const Type*>& blocked_types) {
+    if (CanIgnoreType(type))
+      return;
+
+    // Enum type uses can be ignored. Their size is known (either implicitly
+    // 'int' or from a mandatory transitive inclusion of a non-fixed enum full
+    // declaration, or explicitly using a C++ 11 enum base). Only if an enum
+    // type or its enumerators are explicitly mentioned will they be reported
+    // by IWYU from VisitTagType or VisitDeclRefExpr correspondingly.
+    if (type->getAs<EnumType>())
+      return;
+
+    // Types in fwd-decl-context should be ignored here and reported from more
+    // specialized places, i.e. when they are explicitly written. But in fact,
+    // this check is redundant because TypeToDeclAsWritten returns nullptr for
+    // pointers and references.
+    if (IsPointerOrReferenceAsWritten(type))
+      return;
+
+    // For typedefs, the user of the type is sometimes the one
+    // responsible for the underlying type.  We check if that is the
+    // case here, since we might be using a typedef type from
+    // anywhere.  ('autocast' is similar, but is handled in
+    // VisitCastExpr; 'fn-return-type' is also similar and is
+    // handled in HandleFunctionCall.)
+    if (const auto* typedef_type = type->getAs<TypedefType>()) {
+      // One exception: if this TypedefType is being used in another
+      // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
+      // user -- the other typedef -- is never responsible for the
+      // underlying type.  Instead, users of that typedef are.
+      const ASTNode* ast_node = MostElaboratedAncestor(current_ast_node());
+      if (!ast_node->ParentIsA<TypedefNameDecl>()) {
+        const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
+        const set<const Type*>& provided_with_typedef =
+            GetProvidedTypesForTypedef(typedef_decl);
+        VERRS(6) << "User, not author, of typedef "
+                 << typedef_decl->getQualifiedNameAsString()
+                 << " owns the underlying type:\n";
+        // If any of the used types are themselves typedefs, this will
+        // result in a recursive expansion.  Note we are careful to
+        // recurse inside this class, and not go back to subclasses.
+        const Type* type = RemovePointersAndReferencesAsWritten(
+            typedef_decl->getUnderlyingType().getTypePtr());
+        IwyuBaseAstVisitor<Derived>::ReportTypeUseInternal(
+            used_loc, type, nullptr, provided_with_typedef);
+      }
+      return;
+    }
+
+    // Map private types like __normal_iterator to their public counterpart.
+    type = MapPrivateTypeToPublicType(type);
+    // For the below, we want to be careful to call *our*
+    // ReportDeclUse(), not any of the ones in subclasses.
+    if (const auto* template_spec_type =
+            dyn_cast<TemplateSpecializationType>(Desugar(type))) {
+      this->getDerived().ReportTplSpecComponentTypes(template_spec_type,
+                                                     blocked_types);
+    }
+    // Don't place 'blocked_types' check before 'ReportTplSpecComponentTypes'
+    // because template may be provided (i. e. blocked) but its arguments may be
+    // not.
+    if (blocked_types.count(GetCanonicalType(type)))
+      return;
+    if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
+      decl = GetDefinitionAsWritten(decl);
+      VERRS(6) << "(For type " << PrintableType(type) << "):\n";
+      IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl, comment);
+    }
+  }
 
   // Do not add any variables here!  If you do, they will not be shared
   // between the normal iwyu ast visitor and the
@@ -2812,10 +2822,12 @@ class InstantiatedTemplateVisitor
   // a template class to get at a field of it, for instance:
   // MyClass<T>::size_type s;
   void ScanInstantiatedType(ASTNode* caller_ast_node,
-                            const map<const Type*, const Type*>& resugar_map) {
+                            const map<const Type*, const Type*>& resugar_map,
+                            const set<const Type*>& blocked_types = {}) {
     Clear();
     caller_ast_node_ = caller_ast_node;
     resugar_map_ = resugar_map;
+    blocked_types_ = blocked_types;
 
     // The caller node *is* the current node, unlike ScanInstantiatedFunction
     // which instead starts in the context of the parent expression and relies
@@ -3306,8 +3318,14 @@ class InstantiatedTemplateVisitor
 
   // --- Handler declared in IwyuBaseASTVisitor.
 
-  void ReportTplSpecComponentTypes(const TemplateSpecializationType* type) {
+  void ReportTplSpecComponentTypes(const TemplateSpecializationType* type,
+                                   const set<const Type*>& /*blocked_types*/) {
+    // TODO(bolshakov): should 'blocked_types' argument be considered here?
     TraverseDataAndTypeMembersOfClassHelper(type);
+  }
+
+  const set<const Type*>& GetBlockedTypes() const {
+    return blocked_types_;
   }
 
  private:
@@ -3638,6 +3656,8 @@ class InstantiatedTemplateVisitor
   // value, it's a default template parameter, that the
   // template-caller may or may not be responsible for.
   map<const Type*, const Type*> resugar_map_;
+
+  set<const Type*> blocked_types_;
 
   // When we see a full-use of a template argument we need to assign that full
   // use to the template-caller.  Sometimes those uses are hidden behind
@@ -4040,6 +4060,16 @@ class IwyuAstConsumer
     return Base::VisitUsingDirectiveDecl(decl);
   }
 
+  bool AllTypesProvided(const Type* typedef_underlying_type,
+                        SourceLocation typedef_decl_loc) const {
+    for (const Type* type :
+         GetComponentsOfTypeWithoutSubstituted(typedef_underlying_type)) {
+      if (CodeAuthorWantsJustAForwardDeclare(type, typedef_decl_loc))
+        return false;
+    }
+    return true;
+  }
+
   // If you say 'typedef Foo Bar', then clients can use Bar however
   // they want without having to worry about #including anything
   // except you.  That puts you on the hook for all the #includes that
@@ -4052,10 +4082,10 @@ class IwyuAstConsumer
   bool HandleAliasedClassMethods(TypedefNameDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    if (current_ast_node()->in_forward_declare_context())
-      return true;
 
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
+    if (!AllTypesProvided(underlying_type, current_ast_node()->GetLocation()))
+      return true;
     const Decl* underlying_decl = TypeToDeclAsWritten(underlying_type);
 
     // We simulate a user calling all the methods in a class.
@@ -4157,7 +4187,8 @@ class IwyuAstConsumer
 
     // If we're forward-declarable, then no complicated checking is
     // needed: just forward-declare.
-    if (CanForwardDeclareType(current_ast_node())) {
+    if (CanForwardDeclareType(current_ast_node()) &&
+        !IsProvidedTypeComponent(current_ast_node())) {
       current_ast_node()->set_in_forward_declare_context(true);
       if (compiler()->getLangOpts().CPlusPlus) {
         // In C++, if we're already elaborated ('class Foo x') but not
@@ -4285,12 +4316,19 @@ class IwyuAstConsumer
 
   // --- Handler declared in IwyuBaseASTVisitor.
 
-  void ReportTplSpecComponentTypes(const TemplateSpecializationType* type) {
+  void ReportTplSpecComponentTypes(const TemplateSpecializationType* type,
+                                   const set<const Type*>& blocked_types) {
     const map<const Type*, const Type*> resugar_map =
         GetTplTypeResugarMapForClass(type);
     ASTNode node(type);
     node.SetParent(current_ast_node());
-    instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map);
+    instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map,
+                                                        blocked_types);
+  }
+
+  const set<const Type*>& GetBlockedTypes() const {
+    static const set<const Type*> empty_set;
+    return empty_set;
   }
 
  private:

@@ -127,14 +127,14 @@ void NestedTemplateArguments() {
   // ProvidingAlias provides TplInI1 but doesn't provide IndirectClass.
   // IWYU: IndirectClass is...*indirect.h
   Outer<decltype(StaticTemplateFieldStruct::aliasedProviding)> oapi;
-  // TODO(bolshakov): IWYU: IndirectClass is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
   (void)oapi.t;
 
   Outer<decltype(StaticTemplateFieldStruct::aliasedProviding)*> oapip;
   (void)oapip.t;
 
   Outer<decltype(StaticTemplateFieldStruct::aliasedProviding)>* opapi;
-  // TODO(bolshakov): IWYU: IndirectClass is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
   (void)opapi->t;
 
   // IWYU: TplInI1 is...*-i1.h
