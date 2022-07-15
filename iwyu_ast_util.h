@@ -702,6 +702,16 @@ const clang::Type* Desugar(const clang::Type* type);
 // 'B' but not 'Tpl1<A, B>'.
 set<const clang::Type*> GetComponentsOfType(const clang::Type* type);
 
+// Returns types for determination of their "provision" status. They are
+// canonicalized because intermediate sugar should be always provided already
+// according to language rules. Substituted template parameter types (and their
+// underlying types) cannot be provided. E. g., given such a template
+// template <class T> struct Tpl1 { typedef Tpl2<T, A> Alias; };
+// the returned set for the type 'Tpl1<B>::Alias' contains 'A' but not 'B'
+// or any sugar for 'B'.
+set<const clang::Type*> GetComponentsOfTypeWithoutSubstituted(
+    const clang::Type*);
+
 // Returns true if the type has any template arguments.
 bool IsTemplatizedType(const clang::Type* type);
 

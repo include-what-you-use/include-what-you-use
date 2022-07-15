@@ -287,7 +287,6 @@ typedef std::set<I2_Enum> H_I2Enum_Set;
 // re-exporting the vector<I2_Class> type, so it must be fully defined.
 // TODO(csilvers): IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
 // IWYU: std::vector is...*<vector>
-// IWYU: I2_Class needs a declaration
 // IWYU: I2_Class is...*badinc-i2.h
 typedef std::vector<I2_Class> H_I2Class_Vector_Unused;
 // IWYU: I2_TemplateClass is...*badinc-i2.h
@@ -297,10 +296,12 @@ typedef std::vector<I2_Class> H_I2Class_Vector_Unused;
 // IWYU: I2_Enum is...*badinc-i2.h
 typedef I2_TemplateClass<I2_Enum> H_TemplateTypedef;
 
-// IWYU: I2_Struct needs a declaration
+// IWYU: I2_Struct is...*badinc-i2.h
 typedef I2_Struct* H_StructPtr;
 
-// IWYU: I2_Class needs a declaration
+// Forward-declaration suggestion may be better here,
+// but the warning can easily be suppressed by means of fwd-declaring.
+// IWYU: I2_Class is...*badinc-i2.h
 typedef int (*H_FunctionPtr)(int, I2_Class*);
 
 H_Enum H_Function(H_Class* c) {
@@ -394,7 +395,7 @@ The full include-list for tests/cxx/badinc.h:
 #include <stdio.h>  // for NULL, printf
 #include <queue>  // for queue
 #include <set>  // for set
-#include <string>  // for string
+#include <string>  // for basic_string, string
 #include <vector>  // for vector
 #include "tests/cxx/badinc-d3.h"  // for D3_Enum
 #include "tests/cxx/badinc-i2-inl.h"  // for I2_Class::I2_Class, I2_Class::InlFileFn, I2_Class::InlFileStaticFn, I2_Class::InlFileTemplateFn, I2_Class::~I2_Class, I2_TemplateClass::I2_TemplateClass<FOO>, I2_TemplateClass::InlFileTemplateClassFn, I2_TemplateClass::~I2_TemplateClass<FOO>

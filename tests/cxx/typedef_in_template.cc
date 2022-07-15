@@ -31,21 +31,15 @@ void Declarations() {
   // Just using Container does not need the full types because there are only
   // aliases made, which do not require full-uses.
 
-  // TODO: But currently this is counted as a full-use because Class2 is used
-  // inside a template specialization (of Pair) within the definition of
-  // Container.
   // IWYU: Class1 needs a declaration
-  // IWYU: Class2 is...*typedef_in_template-i2.h
   // IWYU: Class2 needs a declaration
   Container<Class1, Class2> c;
 
   // Full-using any of those aliases *should* require a full use
   // of corresponding template argument type.
 
-  // TODO: full Class2 type info isn't needed here
   // IWYU: Class1 is...*typedef_in_template-i1.h
   // IWYU: Class1 needs a declaration
-  // IWYU: Class2 is...*typedef_in_template-i2.h
   // IWYU: Class2 needs a declaration
   Container<Class1, Class2>::value_type vt;
 
@@ -54,10 +48,8 @@ void Declarations() {
   // IWYU: Class2 needs a declaration
   Container<Class1, Class2>::pair_type pt;
 
-  // TODO: full Class2 type info isn't needed here
   // IWYU: Class1 is...*typedef_in_template-i1.h
   // IWYU: Class1 needs a declaration
-  // IWYU: Class2 is...*typedef_in_template-i2.h
   // IWYU: Class2 needs a declaration
   Container<Class1, Class2>::alias_type at;
 }
