@@ -43,7 +43,7 @@ void Declarations() {
   // of corresponding template argument type.
 
   // TODO: full Class2 type info isn't needed here
-  // TODO: IWYU: Class1 is...*typedef_in_template-i1.h
+  // IWYU: Class1 is...*typedef_in_template-i1.h
   // IWYU: Class1 needs a declaration
   // IWYU: Class2 is...*typedef_in_template-i2.h
   // IWYU: Class2 needs a declaration
@@ -55,7 +55,7 @@ void Declarations() {
   Container<Class1, Class2>::pair_type pt;
 
   // TODO: full Class2 type info isn't needed here
-  // TODO: IWYU: Class1 is...*typedef_in_template-i1.h
+  // IWYU: Class1 is...*typedef_in_template-i1.h
   // IWYU: Class1 needs a declaration
   // IWYU: Class2 is...*typedef_in_template-i2.h
   // IWYU: Class2 needs a declaration
@@ -110,8 +110,8 @@ NestedUseOfAliasedParameter<IndirectClass> c;
 
 tests/cxx/typedef_in_template.cc should add these lines:
 #include "tests/cxx/indirect.h"
+#include "tests/cxx/typedef_in_template-i1.h"
 #include "tests/cxx/typedef_in_template-i2.h"
-class Class1;
 
 tests/cxx/typedef_in_template.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
@@ -120,7 +120,7 @@ tests/cxx/typedef_in_template.cc should remove these lines:
 
 The full include-list for tests/cxx/typedef_in_template.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/typedef_in_template-i1.h"  // for Class1
 #include "tests/cxx/typedef_in_template-i2.h"  // for Class2, Pair
-class Class1;
 
 ***** IWYU_SUMMARY */
