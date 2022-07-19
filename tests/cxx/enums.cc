@@ -42,6 +42,14 @@ Struct1::IndirectEnum3 ie3;
 // IWYU: UnnamedEnumItem2 is...*enums-i4.h
 auto ie4 = UnnamedEnumItem2;
 
+// No need even for opaque declaration if enumeration or enumerator isn't named
+// explicitly (the underlying type info should already be present in the
+// translation unit, probably through transitive header inclusions). No matter,
+// whether enum has fixed type or not, used in sizeof operator, pointer
+// arithmetic or whatever.
+auto p1 = &ie1 + sizeof(ie1);
+auto p2 = &ie3 + sizeof(ie3);
+
 template <typename T1, typename T2>
 struct Template {
   T1 t1;
