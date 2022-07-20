@@ -2971,12 +2971,9 @@ class InstantiatedTemplateVisitor
                      const char* comment = nullptr,
                      UseFlags extra_use_flags = 0) override {
     const SourceLocation actual_used_loc = GetLocOfTemplateThatProvides(decl);
-    if (actual_used_loc.isValid()) {
-      // If a template is responsible for this decl, then we don't add
-      // it to the cache; the cache is only for decls that the
-      // original caller is responsible for.
-      Base::ReportDeclUse(actual_used_loc, decl, comment, extra_use_flags);
-    } else {
+    // Report use only if template doesn't itself provide the declaration.
+    if (!actual_used_loc.isValid() ||
+        GetFileEntry(actual_used_loc) == GetFileEntry(caller_loc())) {
       // Let all the currently active types and decls know about this
       // report, so they can update their cache entries.
       for (CacheStoringScope* storer : cache_storers_)
