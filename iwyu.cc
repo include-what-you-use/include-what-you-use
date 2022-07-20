@@ -3072,34 +3072,6 @@ class InstantiatedTemplateVisitor
     return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
   }
 
-  bool TraverseSubstTemplateTypeParmTypeHelper(
-      const clang::SubstTemplateTypeParmType* type) {
-    if (CanIgnoreCurrentASTNode() ||
-        CanIgnoreType(type, IgnoreKind::ForExpansion))
-      return true;
-
-    const Type* actual_type = ResugarType(type);
-    CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
-    return TraverseType(QualType(actual_type, 0));
-  }
-
-  // When we see a template argument used inside an instantiated
-  // template, we want to explore the type recursively.  For instance
-  // if we see Inner<Outer<Foo>>(), we want to recurse onto Foo.
-  bool TraverseSubstTemplateTypeParmType(
-      clang::SubstTemplateTypeParmType* type) {
-    if (!Base::TraverseSubstTemplateTypeParmType(type))
-      return false;
-    return TraverseSubstTemplateTypeParmTypeHelper(type);
-  }
-
-  bool TraverseSubstTemplateTypeParmTypeLoc(
-      clang::SubstTemplateTypeParmTypeLoc typeloc) {
-    if (!Base::TraverseSubstTemplateTypeParmTypeLoc(typeloc))
-      return false;
-    return TraverseSubstTemplateTypeParmTypeHelper(typeloc.getTypePtr());
-  }
-
   // Check whether a use of a template parameter is a full use.
   bool IsTemplateTypeParmUseFullUse(const Type* type) {
     const ASTNode* node = MostElaboratedAncestor(current_ast_node());

@@ -19,13 +19,13 @@
 //        definition (2), as it affects the semantics.
 // 2: Explicit instantiation definition.
 // 3: Full use in a template, provided as an explicit parameter.
-// 4: Fwd-decl use in a template, provided as an explicit parameter.
 // 5: Full use in a template, provided as an default parameter.
 // 7: Full use in a template, provided as a template template parameter.
 // 8: Fwd-decl use in a template, provided as a template template parameter.
 //
 // Negative scenarios, where the dependent template specialization is not
 // required, or it does not provide an explicit instantiation:
+// 4: Fwd-decl use in a template, provided as an explicit parameter.
 // 6: Fwd-decl use in a template, provided as a default parameter.
 // 9: Implicit instantiation of Template<int>
 // 10: Specialization of Template<T>
@@ -53,7 +53,6 @@ FullUseArg<
     // IWYU: Template is...*explicit_instantiation-template.h
     t3; // 3
 
-// IWYU: Template is...*template_short.h.*for explicit instantiation
 FwdDeclUseArg<
     // IWYU: Template needs a declaration...*
     Template<short>>
