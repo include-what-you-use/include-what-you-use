@@ -23,6 +23,7 @@
 #include "iwyu_stl_util.h"
 
 namespace clang {
+class LangOptions;
 class NamedDecl;
 class TemplateSpecializationType;
 class Type;
@@ -114,7 +115,8 @@ class FullUseCache {
   // available via GetFullUseType(), which does not have this problem
   // with sugaring.
   static map<const clang::Type*, const clang::Type*> GetPrecomputedResugarMap(
-      const clang::TemplateSpecializationType* tpl_type);
+      const clang::TemplateSpecializationType* tpl_type,
+      const clang::LangOptions&);
 
  private:
   map<Key, Value> cache_;

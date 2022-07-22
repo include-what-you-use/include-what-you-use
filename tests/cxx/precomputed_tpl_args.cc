@@ -11,6 +11,7 @@
 
 // Tests the precomputed template-arg-use list in iwyu_cache.cc.
 
+#include <list>
 #include <vector>
 #include <set>
 #include <map>
@@ -80,6 +81,34 @@ TemplatedClass<IndirectClass> tc_ic;
 // IWYU: SpecializationClass is...*precomputed_tpl_args-i1.h
 TemplatedClass<SpecializationClass> tc_sc;
 
+void Fn() {
+  // Since C++17, full contained type isn't needed for std::vector, std::list,
+  // and std::forward_list instantiations.
+  // IWYU: IndirectClass needs a declaration
+  (void)sizeof(std::vector<IndirectClass>);
+  // IWYU: IndirectClass needs a declaration
+  (void)sizeof(std::list<IndirectClass>);
+
+  // Full type is still needed for the other standard containers.
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::set<IndirectClass>);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::multiset<IndirectClass>);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::map<IndirectClass, int>);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::multimap<IndirectClass, int>);
+
+  // Full type is required for, e.g., destroying sequence containers.
+  // IWYU: IndirectClass needs a declaration
+  std::list<IndirectClass>* l = nullptr;
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  delete l;
+}
 
 /**** IWYU_SUMMARY
 
@@ -90,8 +119,9 @@ tests/cxx/precomputed_tpl_args.cc should remove these lines:
 
 The full include-list for tests/cxx/precomputed_tpl_args.cc:
 #include <bitset>  // for bitset
-#include <map>  // for map
-#include <set>  // for set
+#include <list>  // for list
+#include <map>  // for map, multimap
+#include <set>  // for multiset, set
 #include <vector>  // for vector
 #include "tests/cxx/precomputed_tpl_args-d1.h"  // for D1SpecializationClass, less
 #include "tests/cxx/precomputed_tpl_args-i1.h"  // for IndirectClass, SpecializationClass, less

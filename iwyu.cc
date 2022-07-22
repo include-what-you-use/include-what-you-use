@@ -3573,7 +3573,8 @@ class InstantiatedTemplateVisitor
     // This says how the template-args are used by this hard-coded type
     // (a set<>, or map<>, or ...), to avoid having to recurse into them.
     const map<const Type*, const Type*>& resugar_map_for_precomputed_type =
-        FullUseCache::GetPrecomputedResugarMap(tpl_type);
+        FullUseCache::GetPrecomputedResugarMap(tpl_type,
+                                               compiler()->getLangOpts());
     // But we need to reconcile that with the types-of-interest, as
     // stored in resugar_map_.  To do this, we take only those entries
     // from resugar_map_for_precomputed_type that are also present in
