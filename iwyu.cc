@@ -1703,7 +1703,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const clang::Type* type = integer_type.getTypePtrOrNull()) {
       ReportTypeUse(CurrentLoc(), type);
     }
-    return Base::VisitEnumDecl(decl);
+    return true;
   }
 
   // If you say 'typedef Foo Bar', C++ says you just need to
@@ -1743,7 +1743,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       current_ast_node()->set_in_forward_declare_context(false);
     }
 
-    return Base::VisitTypedefNameDecl(decl);
+    return true;
   }
 
   // If we're a declared (not defined) function, all our types --
@@ -1858,7 +1858,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       ReportTypeUse(CurrentLoc(), return_type);
     }
 
-    return Base::VisitCXXMethodDecl(method_decl);
+    return true;
   }
 
   //------------------------------------------------------------
@@ -1877,7 +1877,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // catch(...): no type to act on here.
     }
 
-    return Base::VisitCXXCatchStmt(stmt);
+    return true;
   }
 
   // The type of the for-range-init expression is fully required, because the
@@ -1895,7 +1895,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // argument-dependent begin/end declarations.
     }
 
-    return Base::VisitCXXForRangeStmt(stmt);
+    return true;
   }
 
   // When casting non-pointers, iwyu will do the right thing
@@ -2490,7 +2490,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
     }
 
-    return Base::VisitType(type);
+    return true;
   }
 
   bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
