@@ -328,6 +328,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "NULL", kPrivate, "<stdlib.h>", kPublic },
   { "NULL", kPrivate, "<string.h>", kPublic },
   { "NULL", kPrivate, "<time.h>", kPublic },
+  { "NULL", kPrivate, "<unistd.h>", kPublic },
   { "NULL", kPrivate, "<wchar.h>", kPublic },
 };
 
