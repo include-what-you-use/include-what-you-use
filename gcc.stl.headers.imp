@@ -128,6 +128,7 @@
   { include: ["<bits/unique_ptr.h>", private, "<memory>", public ] },
   { include: ["<bits/unordered_map.h>", private, "<unordered_map>", public ] },
   { include: ["<bits/unordered_set.h>", private, "<unordered_set>", public ] },
+  { include: ["<bits/utility.h>", private, "<utility>", public ] },
   { include: ["<bits/valarray_after.h>", private, "<valarray>", public ] },
   { include: ["<bits/valarray_array.h>", private, "<valarray>", public ] },
   { include: ["<bits/valarray_array.tcc>", private, "<valarray>", public ] },
