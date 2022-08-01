@@ -460,7 +460,7 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/string3.h>", kPrivate, "<string.h>", kPublic },
   { "<bits/stropts.h>", kPrivate, "<stropts.h>", kPublic },
   { "<bits/sys_errlist.h>", kPrivate, "<stdio.h>", kPublic },
-  { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPrivate },
+  { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPublic },
   { "<bits/sysctl.h>", kPrivate, "<sys/sysctl.h>", kPublic },
   { "<bits/syslog-ldbl.h>", kPrivate, "<sys/syslog.h>", kPrivate },
   { "<bits/syslog-path.h>", kPrivate, "<sys/syslog.h>", kPrivate },
@@ -538,7 +538,6 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/string.h>", kPrivate, "<string.h>", kPublic },
   { "<bits/string2.h>", kPrivate, "<string.h>", kPublic },
   { "<bits/string3.h>", kPrivate, "<string.h>", kPublic },
-  { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPrivate },
   { "<bits/timerfd.h>", kPrivate, "<sys/timerfd.h>", kPublic },
   { "<bits/typesizes.h>", kPrivate, "<sys/types.h>", kPublic },
   // Top-level #includes that just forward to another file:
@@ -549,7 +548,6 @@ const IncludeMapEntry libc_include_map[] = {
   // to decide which of the two files is canonical.  If neither is
   // on the POSIX.1 1998 list, I just choose the top-level one.
   { "<sys/poll.h>", kPrivate, "<poll.h>", kPublic },
-  { "<sys/syscall.h>", kPrivate, "<syscall.h>", kPublic },
   { "<sys/syslog.h>", kPrivate, "<syslog.h>", kPublic },
   { "<sys/ustat.h>", kPrivate, "<ustat.h>", kPublic },
   { "<wait.h>", kPrivate, "<sys/wait.h>", kPublic },
@@ -571,7 +569,7 @@ const IncludeMapEntry libc_include_map[] = {
   { "<asm/errno.h>", kPrivate, "<errno.h>", kPublic },
   { "<asm/errno-base.h>", kPrivate, "<errno.h>", kPublic },
   { "<asm/ptrace-abi.h>", kPrivate, "<asm/ptrace.h>", kPublic },
-  { "<asm/unistd.h>", kPrivate, "<syscall.h>", kPublic },
+  { "<asm/unistd.h>", kPrivate, "<sys/syscall.h>", kPublic },
   { "<linux/limits.h>", kPrivate, "<limits.h>", kPublic },   // PATH_MAX
   { "<linux/prctl.h>", kPrivate, "<sys/prctl.h>", kPublic },
   { "<sys/ucontext.h>", kPrivate, "<ucontext.h>", kPublic },
