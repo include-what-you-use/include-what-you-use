@@ -91,7 +91,7 @@
   { include: [ "<bits/string3.h>", private, "<string.h>", public ] },
   { include: [ "<bits/stropts.h>", private, "<stropts.h>", public ] },
   { include: [ "<bits/sys_errlist.h>", private, "<stdio.h>", public ] },
-  { include: [ "<bits/syscall.h>", private, "<sys/syscall.h>", private ] },
+  { include: [ "<bits/syscall.h>", private, "<sys/syscall.h>", public ] },
   { include: [ "<bits/sysctl.h>", private, "<sys/sysctl.h>", public ] },
   { include: [ "<bits/syslog-ldbl.h>", private, "<sys/syslog.h>", private ] },
   { include: [ "<bits/syslog-path.h>", private, "<sys/syslog.h>", private ] },
@@ -169,7 +169,6 @@
   { include: [ "<bits/string.h>", private, "<string.h>", public ] },
   { include: [ "<bits/string2.h>", private, "<string.h>", public ] },
   { include: [ "<bits/string3.h>", private, "<string.h>", public ] },
-  { include: [ "<bits/syscall.h>", private, "<sys/syscall.h>", private ] },
   { include: [ "<bits/timerfd.h>", private, "<sys/timerfd.h>", public ] },
   { include: [ "<bits/typesizes.h>", private, "<sys/types.h>", public ] },
   # Top-level #includes that just forward to another file:
@@ -180,7 +179,6 @@
   # to decide which of the two files is canonical.  If neither is
   # on the POSIX.1 1998 list, I just choose the top-level one.
   { include: [ "<sys/poll.h>", private, "<poll.h>", public ] },
-  { include: [ "<sys/syscall.h>", private, "<syscall.h>", public ] },
   { include: [ "<sys/syslog.h>", private, "<syslog.h>", public ] },
   { include: [ "<sys/ustat.h>", private, "<ustat.h>", public ] },
   { include: [ "<wait.h>", private, "<sys/wait.h>", public ] },
@@ -202,7 +200,7 @@
   { include: [ "<asm/errno.h>", private, "<errno.h>", public ] },
   { include: [ "<asm/errno-base.h>", private, "<errno.h>", public ] },
   { include: [ "<asm/ptrace-abi.h>", private, "<asm/ptrace.h>", public ] },
-  { include: [ "<asm/unistd.h>", private, "<syscall.h>", public ] },
+  { include: [ "<asm/unistd.h>", private, "<sys/syscall.h>", public ] },
   { include: [ "<linux/limits.h>", private, "<limits.h>", public ] },   # PATH_MAX
   { include: [ "<linux/prctl.h>", private, "<sys/prctl.h>", public ] },
   { include: [ "<sys/ucontext.h>", private, "<ucontext.h>", public ] },
