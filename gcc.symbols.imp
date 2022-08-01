@@ -76,6 +76,8 @@
   { symbol: [ "uintptr_t", private, "<stdint.h>", public ] },
   { symbol: [ "iovec", private, "<sys/uio.h>", public ] },
   { symbol: [ "iovec", private, "<sys/socket.h>", public ] },
+  { symbol: [ "itimerspec", private, "<time.h>", public ] },
+  { symbol: [ "itimerspec", private, "<sys/timerfd.h>", public ] },
   { symbol: [ "key_t", private, "<sys/types.h>", public ] },
   { symbol: [ "key_t", private, "<sys/ipc.h>", public ] },
   { symbol: [ "lconv", private, "<locale.h>", public ] },

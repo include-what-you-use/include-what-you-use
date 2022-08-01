@@ -153,6 +153,8 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "uintptr_t", kPrivate, "<stdint.h>", kPublic },
   { "iovec", kPrivate, "<sys/uio.h>", kPublic },
   { "iovec", kPrivate, "<sys/socket.h>", kPublic },
+  { "itimerspec", kPrivate, "<time.h>", kPublic },
+  { "itimerspec", kPrivate, "<sys/timerfd.h>", kPublic },
   { "key_t", kPrivate, "<sys/types.h>", kPublic },
   { "key_t", kPrivate, "<sys/ipc.h>", kPublic },
   { "lconv", kPrivate, "<locale.h>", kPublic },
