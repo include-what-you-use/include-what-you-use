@@ -408,6 +408,7 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/mathdef.h>", kPrivate, "<math.h>", kPublic },
   { "<bits/mathinline.h>", kPrivate, "<math.h>", kPublic },
   { "<bits/mman.h>", kPrivate, "<sys/mman.h>", kPublic },
+  { "<bits/mman-shared.h>", kPrivate, "<sys/mman.h>", kPublic },
   { "<bits/monetary-ldbl.h>", kPrivate, "<monetary.h>", kPublic },
   { "<bits/mqueue.h>", kPrivate, "<mqueue.h>", kPublic },
   { "<bits/mqueue2.h>", kPrivate, "<mqueue.h>", kPublic },

@@ -39,6 +39,7 @@
   { include: [ "<bits/mathdef.h>", private, "<math.h>", public ] },
   { include: [ "<bits/mathinline.h>", private, "<math.h>", public ] },
   { include: [ "<bits/mman.h>", private, "<sys/mman.h>", public ] },
+  { include: [ "<bits/mman-shared.h>", private, "<sys/mman.h>", public ] },
   { include: [ "<bits/monetary-ldbl.h>", private, "<monetary.h>", public ] },
   { include: [ "<bits/mqueue.h>", private, "<mqueue.h>", public ] },
   { include: [ "<bits/mqueue2.h>", private, "<mqueue.h>", public ] },
