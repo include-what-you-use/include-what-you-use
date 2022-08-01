@@ -475,6 +475,8 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/timerfd.h>", kPrivate, "<sys/timerfd.h>", kPublic },
   { "<bits/timex.h>", kPrivate, "<sys/timex.h>", kPublic },
   { "<bits/types.h>", kPrivate, "<sys/types.h>", kPublic },
+  { "<bits/types/siginfo_t.h>", kPrivate, "<signal.h>", kPublic },
+  { "<bits/types/siginfo_t.h>", kPrivate, "<sys/wait.h>", kPublic },
   { "<bits/uio.h>", kPrivate, "<sys/uio.h>", kPublic },
   { "<bits/unistd.h>", kPrivate, "<unistd.h>", kPublic },
   { "<bits/ustat.h>", kPrivate, "<sys/ustat.h>", kPrivate },

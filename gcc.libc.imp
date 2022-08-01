@@ -106,6 +106,8 @@
   { include: [ "<bits/timerfd.h>", private, "<sys/timerfd.h>", public ] },
   { include: [ "<bits/timex.h>", private, "<sys/timex.h>", public ] },
   { include: [ "<bits/types.h>", private, "<sys/types.h>", public ] },
+  { include: [ "<bits/types/siginfo_t.h>", private, "<signal.h>", public ] },
+  { include: [ "<bits/types/siginfo_t.h>", private, "<sys/wait.h>", public ] },
   { include: [ "<bits/uio.h>", private, "<sys/uio.h>", public ] },
   { include: [ "<bits/unistd.h>", private, "<unistd.h>", public ] },
   { include: [ "<bits/ustat.h>", private, "<sys/ustat.h>", private ] },
