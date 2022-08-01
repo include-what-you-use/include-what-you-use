@@ -91,6 +91,8 @@
   { include: [ "<bits/string2.h>", private, "<string.h>", public ] },
   { include: [ "<bits/string3.h>", private, "<string.h>", public ] },
   { include: [ "<bits/stropts.h>", private, "<stropts.h>", public ] },
+  { include: [ "<bits/struct_stat.h>", private, "<sys/stat.h>", public ] },
+  { include: [ "<bits/struct_stat.h>", private, "<ftw.h>", public ] },
   { include: [ "<bits/sys_errlist.h>", private, "<stdio.h>", public ] },
   { include: [ "<bits/syscall.h>", private, "<sys/syscall.h>", public ] },
   { include: [ "<bits/sysctl.h>", private, "<sys/sysctl.h>", public ] },

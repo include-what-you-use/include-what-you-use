@@ -465,6 +465,8 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/string2.h>", kPrivate, "<string.h>", kPublic },
   { "<bits/string3.h>", kPrivate, "<string.h>", kPublic },
   { "<bits/stropts.h>", kPrivate, "<stropts.h>", kPublic },
+  { "<bits/struct_stat.h>", kPrivate, "<sys/stat.h>", kPublic },
+  { "<bits/struct_stat.h>", kPrivate, "<ftw.h>", kPublic },
   { "<bits/sys_errlist.h>", kPrivate, "<stdio.h>", kPublic },
   { "<bits/syscall.h>", kPrivate, "<sys/syscall.h>", kPublic },
   { "<bits/sysctl.h>", kPrivate, "<sys/sysctl.h>", kPublic },
