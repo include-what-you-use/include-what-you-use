@@ -1421,9 +1421,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     set<const Type*> retval;
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     // If the underlying type is itself a typedef, we recurse.
-    if (const TypedefType* underlying_typedef = DynCastFrom(underlying_type)) {
-      if (const TypedefNameDecl* underlying_typedef_decl
-          = DynCastFrom(TypeToDeclAsWritten(underlying_typedef))) {
+    if (const auto* underlying_typedef =
+            underlying_type->getAs<TypedefType>()) {
+      if (const auto* underlying_typedef_decl = dyn_cast<TypedefNameDecl>(TypeToDeclAsWritten(underlying_typedef))) {
         // TODO(csilvers): if one of the intermediate typedefs
         // #includes the necessary definition of the 'final'
         // underlying type, do we want to return the empty set here?
@@ -2168,7 +2168,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // just use the GetTypeOf().
     if (expr->isArgumentType()) {
       const TypeLoc& arg_tl = expr->getArgumentTypeInfo()->getTypeLoc();
-      if (const ReferenceType* reftype = DynCastFrom(arg_tl.getTypePtr())) {
+      if (const auto* reftype = arg_tl.getTypePtr()->getAs<ReferenceType>()) {
         const Type* dereftype = reftype->getPointeeTypeAsWritten().getTypePtr();
         if (!CanIgnoreType(reftype) || !CanIgnoreType(dereftype))
           ReportTypeUse(GetLocation(&arg_tl), dereftype);
@@ -2562,8 +2562,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // this the canonical place to figure out if we can forward-declare.
   bool CanForwardDeclareType(const ASTNode* ast_node) const {
     CHECK_(ast_node->IsA<Type>());
-    if (const auto* enum_type = ast_node->GetAs<EnumType>())
-      return CanBeOpaqueDeclared(enum_type);
+    if (const auto* type = ast_node->GetAs<Type>()) {
+      if (const auto* enum_type = type->getAs<EnumType>()) {
+        return CanBeOpaqueDeclared(enum_type);
+      }
+    }
     // If we're in a forward-declare context, well then, there you have it.
     if (ast_node->in_forward_declare_context())
       return true;
@@ -2892,10 +2895,10 @@ class InstantiatedTemplateVisitor
     if (CanIgnoreCurrentASTNode())  return true;
     const Type* arg_type = expr->getTypeOfArgument().getTypePtr();
     // Calling sizeof on a reference-to-X is the same as calling it on X.
-    if (const ReferenceType* reftype = DynCastFrom(arg_type)) {
+    if (const auto* reftype = arg_type->getAs<ReferenceType>()) {
       arg_type = reftype->getPointeeTypeAsWritten().getTypePtr();
     }
-    if (const TemplateSpecializationType* type = DynCastFrom(arg_type)) {
+    if (const auto* type = arg_type->getAs<TemplateSpecializationType>()) {
       // Even though sizeof(MyClass<T>) only requires knowing how much
       // storage MyClass<T> takes, the language seems to require that
       // MyClass<T> be fully instantiated, even typedefs.  (Try
@@ -2986,7 +2989,7 @@ class InstantiatedTemplateVisitor
       return true;
     }
 
-    if (const auto* enum_type = dyn_cast<EnumType>(type))
+    if (const auto* enum_type = type->getAs<EnumType>())
       return !CanBeOpaqueDeclared(enum_type);
 
     // If we're inside a typedef, we don't need our full type info --
@@ -3336,7 +3339,7 @@ class InstantiatedTemplateVisitor
       return true;
 
     while (type->isTypeAlias()) {
-      type = DynCastFrom(type->getAliasedType().getTypePtr());
+      type = type->getAliasedType()->getAs<TemplateSpecializationType>();
       if (!type)
         return true;
     }
@@ -3992,14 +3995,14 @@ class IwyuAstConsumer
   bool VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
     if (CanIgnoreCurrentASTNode())  return true;
 
-    const Type* arg_type =
-        RemoveElaboration(expr->getTypeOfArgument().getTypePtr());
+    const Type* arg_type = expr->getTypeOfArgument().getTypePtr();
+
     // Calling sizeof on a reference-to-X is the same as calling it on X.
-    if (const ReferenceType* reftype = DynCastFrom(arg_type)) {
+    if (const auto* reftype = arg_type->getAs<ReferenceType>()) {
       arg_type = reftype->getPointeeTypeAsWritten().getTypePtr();
     }
 
-    if (const TemplateSpecializationType* arg_tmpl = DynCastFrom(arg_type)) {
+    if (const auto* arg_tmpl = arg_type->getAs<TemplateSpecializationType>()) {
       // Special case: We are instantiating the type in the context of an
       // expression. Need to push the type to the AST stack explicitly.
       ASTNode node(arg_tmpl);
