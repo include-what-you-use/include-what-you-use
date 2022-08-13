@@ -1283,10 +1283,10 @@ bool HasImplicitConversionConstructor(const Type* type) {
 map<const clang::Type*, const clang::Type*>
 GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
   map<const Type*, const Type*> retval;
-  type = RemoveElaboration(type);  // get rid of the class keyword
-  const TemplateSpecializationType* tpl_spec_type = DynCastFrom(type);
-  if (!tpl_spec_type)
+  const auto* tpl_spec_type = type->getAs<TemplateSpecializationType>();
+  if (!tpl_spec_type) {
     return retval;
+  }
 
   // Pull the template arguments out of the specialization type. If this is
   // a ClassTemplateSpecializationDecl specifically, we want to
