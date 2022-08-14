@@ -428,7 +428,12 @@ string PrintableType(const Type* type) {
   if (!type)
     return "<null type>";
 
-  return QualType(type, 0).getAsString();
+  string typestr = QualType(type, 0).getAsString();
+  if (GlobalFlags().HasDebugFlag("printtypeclass")) {
+    string typeclass = type->getTypeClassName();
+    typestr = typeclass + "Type:" + typestr;
+  }
+  return typestr;
 }
 
 string PrintableTypeLoc(const TypeLoc& typeloc) {
