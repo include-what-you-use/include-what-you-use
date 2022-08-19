@@ -1503,8 +1503,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   set<const Type*> GetCallerResponsibleTypesForFnReturn(
       const FunctionDecl* decl) {
     set<const Type*> retval;
-    const Type* return_type
-        = RemoveElaboration(decl->getReturnType().getTypePtr());
+    const Type* return_type = Desugar(decl->getReturnType().getTypePtr());
     if (CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl))) {
       retval.insert(return_type);
       // TODO(csilvers): include template type-args if appropriate.
@@ -1783,8 +1782,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     // ...except the return value.
-    const Type* return_type
-        = RemoveElaboration(decl->getReturnType().getTypePtr());
+    const Type* return_type = Desugar(decl->getReturnType().getTypePtr());
     const bool is_responsible_for_return_type
         = (!CanIgnoreType(return_type) &&
            !IsPointerOrReferenceAsWritten(return_type) &&
@@ -3317,7 +3315,7 @@ class InstantiatedTemplateVisitor
     //    class S; int main() { C<S> c; }
     if (isa<CXXConstructorDecl>(fn_decl)) {
       CHECK_(parent_type && "How can a constructor have no parent?");
-      parent_type = RemoveElaboration(parent_type);
+      parent_type = Desugar(parent_type);
       if (!TraverseDataAndTypeMembersOfClassHelper(
               dyn_cast<TemplateSpecializationType>(parent_type)))
         return false;
