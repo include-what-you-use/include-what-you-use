@@ -1151,20 +1151,13 @@ const Type* Desugar(const Type* type) {
   }
 }
 
-const Type* RemoveElaboration(const Type* type) {
-  if (const ElaboratedType* elaborated_type = DynCastFrom(type))
-    return elaborated_type->getNamedType().getTypePtr();
-  else
-    return type;
-}
-
 bool IsTemplatizedType(const Type* type) {
-  return (type && isa<TemplateSpecializationType>(RemoveElaboration(type)));
+  return (type && isa<TemplateSpecializationType>(Desugar(type)));
 }
 
 bool IsClassType(const clang::Type* type) {
-  return (type && (isa<TemplateSpecializationType>(RemoveElaboration(type)) ||
-                   isa<RecordType>(RemoveElaboration(type))));
+  return (type && (isa<TemplateSpecializationType>(Desugar(type)) ||
+                   isa<RecordType>(Desugar(type))));
 }
 
 const Type* RemoveSubstTemplateTypeParm(const Type* type) {
@@ -1195,12 +1188,12 @@ bool InvolvesTypeForWhich(const Type* type,
 }
 
 bool IsPointerOrReferenceAsWritten(const Type* type) {
-  type = RemoveElaboration(type);
+  type = Desugar(type);
   return isa<PointerType>(type) || isa<LValueReferenceType>(type);
 }
 
 const Type* RemovePointersAndReferencesAsWritten(const Type* type) {
-  type = RemoveElaboration(type);
+  type = Desugar(type);
   while (isa<PointerType>(type) ||
          isa<LValueReferenceType>(type)) {
     type = type->getPointeeType().getTypePtr();
@@ -1215,7 +1208,7 @@ const Type* RemovePointerFromType(const Type* type) {
   if (!IsPointerOrReferenceAsWritten(type)) {
     return nullptr;
   }
-  type = RemoveElaboration(type);
+  type = Desugar(type);
   type = type->getPointeeType().getTypePtr();
   return type;
 }
@@ -1233,7 +1226,7 @@ const Type* RemovePointersAndReferences(const Type* type) {
 
 static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
   // Get past all the 'class' and 'struct' prefixes, and namespaces.
-  type = RemoveElaboration(type);
+  type = Desugar(type);
 
   // Read past SubstTemplateTypeParmType (this can happen if a
   // template function returns the tpl-arg type: e.g. for
@@ -1294,7 +1287,7 @@ const Type* RemoveReferenceAsWritten(const Type* type) {
 }
 
 bool HasImplicitConversionConstructor(const Type* type) {
-  type = RemoveElaboration(type);  // get rid of the class keyword
+  type = Desugar(type);
   if (isa<PointerType>(type))
     return false;  // can't implicitly convert to a pointer
   if (isa<LValueReferenceType>(type) &&

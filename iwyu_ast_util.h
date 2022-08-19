@@ -675,14 +675,6 @@ const clang::Type* Desugar(const clang::Type* type);
 // vector<pair<Foo, Bar>> has components pair<Foo,Bar>, Foo, and Bar.
 set<const clang::Type*> GetComponentsOfType(const clang::Type* type);
 
-// The ElaborationType -- which says whether a type is preceded by
-// 'class' or 'struct' ('class Foo'), or whether the type-name has a
-// namespace ('ns::Foo') -- often pops where it's not wanted.  This
-// removes the elaboration if it exists, else it's a noop.  Note that
-// if the type has both kinds of elaborations ('struct ns::Foo'), they
-// will both be removed.
-const clang::Type* RemoveElaboration(const clang::Type* type);
-
 // Returns true if the type has any template arguments.
 bool IsTemplatizedType(const clang::Type* type);
 
