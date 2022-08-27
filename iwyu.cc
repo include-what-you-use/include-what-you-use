@@ -210,6 +210,7 @@ using clang::TemplateSpecializationType;
 using clang::TemplateSpecializationTypeLoc;
 using clang::TranslationUnitDecl;
 using clang::Type;
+using clang::TypeDecl;
 using clang::TypeLoc;
 using clang::TypedefDecl;
 using clang::TypedefNameDecl;
@@ -2569,20 +2570,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // If we're in a forward-declare context, well then, there you have it.
     if (ast_node->in_forward_declare_context())
       return true;
-    // If we're in a typedef, we don't want to forward-declare even if
-    // we're a pointer.  ('typedef Foo* Bar; Bar x; x->a' needs full
-    // type of Foo.)
-    if (ast_node->ParentIsA<TypedefNameDecl>())
-      return false;
-
-    // If we ourselves are a forward-decl -- that is, we're the type
-    // component of a forward-declaration (which would be our parent
-    // AST node) -- then we're forward-declarable by definition.
-    if (const TagDecl* parent
-        = current_ast_node()->template GetParentAs<TagDecl>()) {
-      if (IsForwardDecl(parent))
-        return true;
-    }
 
     // Another place we disregard what the language allows: if we're
     // a dependent type, in theory we can be forward-declared.  But
@@ -2595,16 +2582,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Read past elaborations like 'class' keyword or namespaces.
     ast_node = MostElaboratedAncestor(ast_node);
 
-    // Now there are two options: either we have a type or we have a declaration
-    // involving a type.
+    // Now there are two options: either we are part of a type or we are part of
+    // a declaration involving a type.
     const Type* parent_type = ast_node->GetParentAs<Type>();
     if (parent_type == nullptr) {
-      // Since it's not a type, it must be a decl.
-      // Our target here is record members, all of which derive from ValueDecl.
-      if (const ValueDecl *decl = ast_node->GetParentAs<ValueDecl>()) {
+      // It's not a type; analyze different kinds of declarations.
+      if (const auto *decl = ast_node->GetParentAs<ValueDecl>()) {
         // We can shortcircuit static data member declarations immediately,
         // they can always be forward-declared.
-        if (const VarDecl *var_decl = DynCastFrom(decl)) {
+        if (const auto *var_decl = dyn_cast<VarDecl>(decl)) {
           if (!var_decl->isThisDeclarationADefinition() &&
               var_decl->isStaticDataMember()) {
             return true;
@@ -2612,10 +2598,27 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
 
         parent_type = GetTypeOf(decl);
-      } else if (IsElaboratedTypeSpecifier(ast_node)) {
-        // If it's not a ValueDecl, it must be a type decl. Elaborated types in
-        // type decls are automatically forward-declarable.
-        return true;
+      } else if (const auto *decl = ast_node->GetParentAs<TypeDecl>()) {
+        // Elaborated types in type decls are always forward-declarable
+        // (and usually count as forward declarations themselves).
+        if (IsElaboratedTypeSpecifier(ast_node)) {
+          return true;
+        }
+
+        // If we ourselves are a forward-decl -- that is, we're the type
+        // component of a forward-declaration (which would be our parent
+        // AST node) -- then we're forward-declarable by definition.
+        if (const auto* parent_decl = ast_node->GetParentAs<TagDecl>()) {
+          if (IsForwardDecl(parent_decl))
+            return true;
+        }
+
+        // If we're part of a typedef declaration, we don't want to forward-
+        // declare even if we're a pointer ('typedef Foo* Bar; Bar x; x->a'
+        // needs full type of Foo.)
+        if (ast_node->ParentIsA<TypedefNameDecl>()) {
+          return false;
+        }
       }
     }
 
