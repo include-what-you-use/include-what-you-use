@@ -1118,6 +1118,39 @@ const Type* GetCanonicalType(const Type* type) {
   return canonical_type.getTypePtr();
 }
 
+// Based on Type::getUnqualifiedDesugaredType.
+const Type* Desugar(const Type* type) {
+  // Null types happen sometimes in IWYU.
+  if (!type) {
+    return type;
+  }
+
+  const Type* cur = type;
+
+  while (true) {
+    // Don't desugar types that (potentially) add a name.
+    if (cur->getTypeClass() == Type::Typedef ||
+        cur->getTypeClass() == Type::Using ||
+        cur->getTypeClass() == Type::TemplateSpecialization) {
+      return cur;
+    }
+
+    switch (cur->getTypeClass()) {
+#define ABSTRACT_TYPE(Class, Parent)
+#define TYPE(Class, Parent)                              \
+  case Type::Class: {                                    \
+    const auto* derived = cast<clang::Class##Type>(cur); \
+    if (!derived->isSugared()) {                         \
+      return cur;                                        \
+    }                                                    \
+    cur = derived->desugar().getTypePtr();               \
+    break;                                               \
+  }
+#include "clang/AST/TypeNodes.inc"
+    }
+  }
+}
+
 const Type* RemoveElaboration(const Type* type) {
   if (const ElaboratedType* elaborated_type = DynCastFrom(type))
     return elaborated_type->getNamedType().getTypePtr();
