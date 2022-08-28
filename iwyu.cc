@@ -1466,7 +1466,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (HasImplicitConversionConstructor(param_type)) {
         const Type* deref_param_type =
             RemovePointersAndReferencesAsWritten(param_type);
-        autocast_types.insert(deref_param_type);
+        autocast_types.insert(Desugar(deref_param_type));
       }
     }
 
@@ -2287,7 +2287,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // casted-to type.  See IwyuBaseASTVisitor::VisitFunctionDecl.
     // Explicitly written CXXTemporaryObjectExpr are ignored here.
     if (expr->getStmtClass() == Stmt::StmtClass::CXXConstructExprClass) {
-      const Type* type = expr->getType().getTypePtr();
+      const Type* type = Desugar(expr->getType().getTypePtr());
       if (current_ast_node()->template HasAncestorOfType<CallExpr>() &&
           ContainsKey(GetCallerResponsibleTypesForAutocast(current_ast_node()),
                       RemoveReferenceAsWritten(type))) {
@@ -2452,7 +2452,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // full type information for the return type of the function, but
     // in cases where it's not, we have to take responsibility.
     // TODO(csilvers): check the fn argument types as well.
-    const Type* return_type = callee->getReturnType().getTypePtr();
+    const Type* return_type = Desugar(callee->getReturnType().getTypePtr());
     if (ContainsKey(GetCallerResponsibleTypesForFnReturn(callee),
                     return_type)) {
       ReportTypeUse(CurrentLoc(), return_type);
