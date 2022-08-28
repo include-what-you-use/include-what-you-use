@@ -233,7 +233,7 @@ bool ASTNode::FillLocationIfKnown(SourceLocation* loc) const {
 
 // --- Utilities for ASTNode.
 
-bool IsElaborationNode(const ASTNode* ast_node) {
+bool IsElaboratedTypeSpecifier(const ASTNode* ast_node) {
   if (ast_node == nullptr)
     return false;
   const ElaboratedType* elaborated_type = ast_node->GetAs<ElaboratedType>();
