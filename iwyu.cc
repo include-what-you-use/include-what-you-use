@@ -1586,7 +1586,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
       // user -- the other typedef -- is never responsible for the
       // underlying type.  Instead, users of that typedef are.
-      if (!current_ast_node()->template ParentIsA<TypedefNameDecl>()) {
+      const ASTNode* ast_node = MostElaboratedAncestor(current_ast_node());
+      if (!ast_node->ParentIsA<TypedefNameDecl>()) {
         const set<const Type*>& underlying_types
             = GetCallerResponsibleTypesForTypedef(typedef_decl);
         if (!underlying_types.empty()) {
