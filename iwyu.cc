@@ -4063,7 +4063,7 @@ class IwyuAstConsumer
         // Note that enums are never forward-declarable, so elaborated enums are
         // already short-circuited in CanForwardDeclareType.
         const ASTNode* parent = current_ast_node()->parent();
-        if (!IsElaborationNode(parent) || IsQualifiedNameNode(parent))
+        if (!IsElaboratedTypeSpecifier(parent) || IsQualifiedNameNode(parent))
           ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
       } else {
         // In C, all struct references are elaborated, so we really never need
