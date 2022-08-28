@@ -1336,7 +1336,7 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
     for (const Type* type : arg_components) {
       for (unsigned i = 0; i < num_args; ++i) {
         if (const Type* arg_type = GetTemplateArgAsType(tpl_args[i])) {
-          if (GetCanonicalType(type) == arg_type) {
+          if (GetCanonicalType(type) == GetCanonicalType(arg_type)) {
             retval[arg_type] = type;
             VERRS(6) << "Adding a template-class type of interest: "
                      << PrintableType(arg_type) << " -> " << PrintableType(type)
