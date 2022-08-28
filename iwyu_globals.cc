@@ -107,6 +107,7 @@ static void PrintHelp(const char* extra_msg) {
          "   --error[=N]: exit with N (default: 1) for iwyu violations\n"
          "   --error_always[=N]: always exit with N (default: 1) (for use\n"
          "        with 'make -k')\n"
+         "   --debug=flag[,flag...]: debug flags (undocumented)\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
          "options without -Xiwyu prefix:\n"
@@ -220,9 +221,10 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"cxx17ns", no_argument, nullptr, 'C'},
     {"error", optional_argument, nullptr, 'e'},
     {"error_always", optional_argument, nullptr, 'a'},
+    {"debug", required_argument, nullptr, 'd'},
     {nullptr, 0, nullptr, 0}
   };
-  static const char shortopts[] = "v:c:m:n";
+  static const char shortopts[] = "v:c:m:d:n";
   while (true) {
     switch (getopt_long(argc, argv, shortopts, longopts, nullptr)) {
       case 'c': AddGlobToReportIWYUViolationsFor(optarg); break;
@@ -283,6 +285,17 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
           exit(EXIT_FAILURE);
         }
         break;
+      case 'd': {
+        // Split argument on comma and save in global, ignoring empty elements.
+        vector<string> flags = Split(optarg, ",", 0);
+        dbg_flags.insert(flags.begin(),
+                         std::remove(flags.begin(), flags.end(), string()));
+        // Print all effective flags for traceability.
+        for (const string& f : dbg_flags) {
+          llvm::errs() << "Debug flag enabled: '" << f << "'\n";
+        }
+        break;
+      }
       case -1: return optind;   // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");
@@ -292,6 +305,10 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
   }
 
   CHECK_UNREACHABLE_("All switches should be handled above");
+}
+
+bool CommandlineFlags::HasDebugFlag(const char* flag) const {
+  return dbg_flags.find(string(flag)) != dbg_flags.end();
 }
 
 // Though option -v prints version too, it isn't intercepted because it also
