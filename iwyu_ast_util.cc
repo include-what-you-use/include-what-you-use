@@ -1156,8 +1156,9 @@ bool IsTemplatizedType(const Type* type) {
 }
 
 bool IsClassType(const clang::Type* type) {
-  return (type && (isa<TemplateSpecializationType>(Desugar(type)) ||
-                   isa<RecordType>(Desugar(type))));
+  type = Desugar(type);
+  return (type &&
+          (isa<TemplateSpecializationType>(type) || isa<RecordType>(type)));
 }
 
 bool InvolvesTypeForWhich(const Type* type,
