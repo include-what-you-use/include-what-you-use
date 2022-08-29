@@ -1160,16 +1160,9 @@ bool IsClassType(const clang::Type* type) {
                    isa<RecordType>(Desugar(type))));
 }
 
-const Type* RemoveSubstTemplateTypeParm(const Type* type) {
-  if (const SubstTemplateTypeParmType* subst_type = DynCastFrom(type))
-    return subst_type->getReplacementType().getTypePtr();
-  else
-    return type;
-}
-
 bool InvolvesTypeForWhich(const Type* type,
                           std::function<bool(const Type*)> pred) {
-  type = RemoveSubstTemplateTypeParm(type);
+  type = Desugar(type);
   if (pred(type))
     return true;
   const Decl* decl = TypeToDeclAsWritten(type);
@@ -1231,7 +1224,7 @@ static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
   // Read past SubstTemplateTypeParmType (this can happen if a
   // template function returns the tpl-arg type: e.g. for
   // 'T MyFn<T>() {...}; MyFn<X>.a', the type of MyFn<X> will be a Subst.
-  type = RemoveSubstTemplateTypeParm(type);
+  type = Desugar(type);
 
   CHECK_(!isa<ObjCObjectType>(type) && "IWYU doesn't support Objective-C");
 

@@ -681,12 +681,6 @@ bool IsTemplatizedType(const clang::Type* type);
 // Returns true if the type is a RecordType or a TemplateSpecializationType.
 bool IsClassType(const clang::Type* type);
 
-// Read past SubstTemplateTypeParmType to the underlying type, if type
-// is itself a SubstTemplateTypeParmType.  Thus: T is converted to int
-// if we are parsing a template instantiated with T being int.
-// However, vector<T> is *not* converted to vector<int>.
-const clang::Type* RemoveSubstTemplateTypeParm(const clang::Type* type);
-
 // Returns true if any type involved (recursively examining template
 // arguments) satisfies the given predicate.
 bool InvolvesTypeForWhich(const clang::Type* type,
