@@ -2820,7 +2820,7 @@ class InstantiatedTemplateVisitor
     // Among all subst-type params, we only want those in the resugar-map. If
     // we're not in the resugar-map at all, we're not a type corresponding to
     // the template being instantiated, so we can be ignored.
-    type = RemoveSubstTemplateTypeParm(type);
+    type = Desugar(type);
     return ContainsKey(resugar_map_, type);
   }
 
@@ -3234,7 +3234,7 @@ class InstantiatedTemplateVisitor
     return GetLocOfTemplateThatProvides(decl).isValid();
   }
   bool IsProvidedByTemplate(const Type* type) const {
-    type = RemoveSubstTemplateTypeParm(type);
+    type = Desugar(type);
     type = RemovePointersAndReferences(type);  // get down to the decl
     if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
       decl = GetDefinitionAsWritten(decl);
@@ -3248,7 +3248,7 @@ class InstantiatedTemplateVisitor
   // class was instantiated) or not.  We store this in resugar_map by
   // having the value be nullptr.
   bool IsDefaultTemplateParameter(const Type* type) const {
-    type = RemoveSubstTemplateTypeParm(type);
+    type = Desugar(type);
     return ContainsKeyValue(resugar_map_, type, static_cast<Type*>(nullptr));
   }
 
@@ -3257,7 +3257,7 @@ class InstantiatedTemplateVisitor
   // If we're not in the resugar-map, then we weren't canonicalized,
   // so we can just use the input type unchanged.
   const Type* ResugarType(const Type* type) const {
-    type = RemoveSubstTemplateTypeParm(type);
+    type = Desugar(type);
     // If we're the resugar-map but with a value of nullptr, it means
     // we're a default template arg, which means we don't have anything
     // to resugar to.  So just return the input type.
