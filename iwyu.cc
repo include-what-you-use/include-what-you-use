@@ -233,6 +233,8 @@ using clang::PPCallbacks;
 using clang::ParenType;
 using clang::ParmVarDecl;
 using clang::PointerType;
+using clang::PredefinedExpr;
+using clang::PredefinedIdentKind;
 using clang::Preprocessor;
 using clang::QualType;
 using clang::QualifiedTypeLoc;
@@ -4244,6 +4246,48 @@ class InstantiatedTemplateVisitor
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
     ReportTypeUse(caller_loc(), actual_type, DerefKind::None);
     return Base::VisitCXXConstructExpr(expr);
+  }
+
+  // Strings from some of the predefined variables contain template arguments of
+  // the enclosing function. If an argument is an enum value (NTTP), then the
+  // complete enum type is needed to have its name written in the string instead
+  // of the numeric value.
+  bool VisitPredefinedExpr(PredefinedExpr* expr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    switch (expr->getIdentKind()) {
+      case PredefinedIdentKind::Func:
+      case PredefinedIdentKind::Function:
+      case PredefinedIdentKind::LFunction:
+      case PredefinedIdentKind::FuncDName:
+        // These do not contain template arguments.
+        break;
+      case PredefinedIdentKind::PrettyFunction:
+      case PredefinedIdentKind::FuncSig:
+      case PredefinedIdentKind::LFuncSig:
+        if (const auto* func =
+                current_ast_node()->GetAncestorAs<FunctionDecl>()) {
+          if (const TemplateArgumentList* tpl_args =
+                  func->getTemplateSpecializationArgs()) {
+            for (const auto& arg : tpl_args->asArray()) {
+              if (arg.getKind() != TemplateArgument::Integral)
+                continue;
+              QualType arg_type = arg.getIntegralType();
+              if (const EnumDecl* enum_decl = arg_type->getAsEnumDecl()) {
+                // The complete type for non-fixed enums should be already
+                // present in the translation unit because there is no standard
+                // way to forward-declare them.
+                if (enum_decl->isFixed())
+                  ReportDeclUse(caller_loc(), enum_decl);
+              }
+            }
+          }
+        }
+        break;
+      case PredefinedIdentKind::PrettyFunctionNoVirtual:
+        VERRS(2) << "Unexpected predefined identifier kind\n";
+    }
+    return Base::VisitPredefinedExpr(expr);
   }
 
   bool VisitDeclRefExpr(DeclRefExpr* expr) {

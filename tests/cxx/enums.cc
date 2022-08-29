@@ -81,6 +81,86 @@ struct Struct2 {
 
 enum class Struct2::Nested { A, B, C };
 
+// Some of function-local predefined variables allow to output enum item names.
+// This trick is used in some enum reflection libraries (more about that is
+// here: https://blog.rink.nu/2023/02/12/behind-the-magic-of-magic_enum). Test
+// that IWYU detects such uses correctly and requires complete enum types
+// so that item names are available to a compiler.
+
+template <typename E, E>
+auto GetPrettyFunctionStr1() {
+  return __PRETTY_FUNCTION__;
+}
+
+template <typename E>
+auto CallGetPrettyFunctionStr1() {
+  return GetPrettyFunctionStr1<E, E{}>();
+}
+
+template <auto E>
+auto GetPrettyFunctionStr2() {
+  return __PRETTY_FUNCTION__;
+}
+
+template <typename E1, E1, typename E2, E2>
+auto GetPrettyFunctionStr3() {
+  return __PRETTY_FUNCTION__;
+}
+
+template <typename E>
+auto GetPrettyFunctionStrNoEnumItem() {
+  return __PRETTY_FUNCTION__;
+}
+
+template <typename E, E>
+auto CallGetPrettyFunctionStrNoEnumItem() {
+  return GetPrettyFunctionStrNoEnumItem<E>();
+}
+
+// Just to check that IWYU doesn't crash or something like that.
+template <int>
+auto GetPrettyFunctionNonEnum() {
+  return __PRETTY_FUNCTION__;
+}
+
+template <auto E>
+auto GetFuncStr() {
+  return __func__;
+}
+
+template <auto E>
+auto GetFunctionStr() {
+  return __FUNCTION__;
+}
+
+void Fn() {
+  constexpr IndirectEnum2 ie2 = {};
+  // IWYU: IndirectEnum2 is...*enums-i2.h
+  GetPrettyFunctionStr1<IndirectEnum2, ie2>();
+  // IWYU: IndirectEnum2 is...*enums-i2.h
+  CallGetPrettyFunctionStr1<IndirectEnum2>();
+  // IWYU: IndirectEnum2 is...*enums-i2.h
+  GetPrettyFunctionStr2<ie2>();
+  // IWYU: IndirectEnum2 is...*enums-i2.h
+  // IWYU: IndirectEnum8 needs a declaration
+  // IWYU: IndirectEnum8 is...*enums-i2.h
+  GetPrettyFunctionStr3<IndirectEnum2, ie2, IndirectEnum8, IndirectEnum8{}>();
+  // IWYU: IndirectEnum9 needs a declaration
+  // IWYU: IndirectEnum9 is...*enums-i2.h
+  GetPrettyFunctionStr2<IndirectEnum9{}>();
+  // Because IndirectEnum1 doesn't have a fixed underlying type, it is not
+  // forward-declarable, hence g_ie1 should already provide it.
+  // IWYU: g_ie1 is...*enums-i1.h
+  GetPrettyFunctionStr2<g_ie1>();
+  GetPrettyFunctionStrNoEnumItem<IndirectEnum2>();
+  CallGetPrettyFunctionStrNoEnumItem<IndirectEnum2, IndirectEnum2{}>();
+  GetPrettyFunctionNonEnum<1>();
+
+  // Test other predefined variables.
+  GetFuncStr<ie2>();
+  GetFunctionStr<ie2>();
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/enums.cc should add these lines:
@@ -102,8 +182,8 @@ tests/cxx/enums.cc should remove these lines:
 - enum class IndirectEnum2 : int;  // lines XX-XX
 
 The full include-list for tests/cxx/enums.cc:
-#include "tests/cxx/enums-i1.h"  // for IndirectEnum1
-#include "tests/cxx/enums-i2.h"  // for IndirectEnum2
+#include "tests/cxx/enums-i1.h"  // for IndirectEnum1, g_ie1
+#include "tests/cxx/enums-i2.h"  // for IndirectEnum2, IndirectEnum8, IndirectEnum9
 #include "tests/cxx/enums-i3.h"  // for Struct1
 #include "tests/cxx/enums-i4.h"  // for UnnamedEnumItem2
 enum IndirectEnum6 : long;

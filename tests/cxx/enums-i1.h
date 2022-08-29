@@ -12,4 +12,6 @@
 
 enum IndirectEnum1 { A, B, C };
 
+constexpr IndirectEnum1 g_ie1 = A;
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_ENUMS_I1_H_
