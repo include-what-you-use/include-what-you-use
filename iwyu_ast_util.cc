@@ -1218,12 +1218,9 @@ const Type* RemovePointersAndReferences(const Type* type) {
 }
 
 static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
-  // Get past all the 'class' and 'struct' prefixes, and namespaces.
-  type = Desugar(type);
-
-  // Read past SubstTemplateTypeParmType (this can happen if a
-  // template function returns the tpl-arg type: e.g. for
-  // 'T MyFn<T>() {...}; MyFn<X>.a', the type of MyFn<X> will be a Subst.
+  // Read past SubstTemplateTypeParmType (this can happen if a function
+  // template returns the tpl-arg type: e.g. for 'T MyFn<T>() {...}; MyFn<X>.a',
+  // the type of MyFn<X> will be a substitution) as well as any elaboration.
   type = Desugar(type);
 
   CHECK_(!isa<ObjCObjectType>(type) && "IWYU doesn't support Objective-C");
