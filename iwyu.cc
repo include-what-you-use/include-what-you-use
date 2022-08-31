@@ -1433,7 +1433,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     const Type* deref_type
         = RemovePointersAndReferencesAsWritten(underlying_type);
-    if (isa<SubstTemplateTypeParmType>(deref_type) ||
+    if (isa<SubstTemplateTypeParmType>(underlying_type) ||
         CodeAuthorWantsJustAForwardDeclare(deref_type, GetLocation(decl))) {
       retval.insert(deref_type);
       // TODO(csilvers): include template type-args if appropriate.
