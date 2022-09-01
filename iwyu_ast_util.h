@@ -368,10 +368,10 @@ class CurrentASTNodeUpdater {
 // elaboration is 'class Foo myvar' instead of just 'Foo myvar'.)
 // We avoid 'fake' elaborations that are caused because clang also
 // uses ElaboratedType for namespaces ('ns::Foo myvar').
-bool IsElaborationNode(const ASTNode* ast_node);
+bool IsElaboratedTypeSpecifier(const ASTNode* ast_node);
 
 // Walk up to parents of the given node so long as each parent is an
-// elaboration node (in the sense of IsElaborationNode).
+// elaborated type node.
 // Can expand from a node representing 'X' to e.g. 'struct X' or 'mylib::X'.
 const ASTNode* MostElaboratedAncestor(const ASTNode* ast_node);
 
@@ -663,30 +663,23 @@ const clang::Type* GetTypeOf(const clang::TypeDecl* decl);
 // Template parameters are always reduced to the canonical type.
 const clang::Type* GetCanonicalType(const clang::Type* type);
 
+// Use Desugar to walk down the AST skipping type sugar nodes until a non-sugar
+// node is found, much like Type::getUnqualifiedDesugaredType.
+// IWYU has a slightly more liberal notion of sugar than Clang does:
+// typedefs, using types and template specializations are not considered sugar,
+// because they need to be respected in IWYU analysis.
+const clang::Type* Desugar(const clang::Type* type);
+
 // A 'component' of a type is a type beneath it in the AST tree.
 // So 'Foo*' has component 'Foo', as does 'vector<Foo>', while
 // vector<pair<Foo, Bar>> has components pair<Foo,Bar>, Foo, and Bar.
 set<const clang::Type*> GetComponentsOfType(const clang::Type* type);
-
-// The ElaborationType -- which says whether a type is preceded by
-// 'class' or 'struct' ('class Foo'), or whether the type-name has a
-// namespace ('ns::Foo') -- often pops where it's not wanted.  This
-// removes the elaboration if it exists, else it's a noop.  Note that
-// if the type has both kinds of elaborations ('struct ns::Foo'), they
-// will both be removed.
-const clang::Type* RemoveElaboration(const clang::Type* type);
 
 // Returns true if the type has any template arguments.
 bool IsTemplatizedType(const clang::Type* type);
 
 // Returns true if the type is a RecordType or a TemplateSpecializationType.
 bool IsClassType(const clang::Type* type);
-
-// Read past SubstTemplateTypeParmType to the underlying type, if type
-// is itself a SubstTemplateTypeParmType.  Thus: T is converted to int
-// if we are parsing a template instantiated with T being int.
-// However, vector<T> is *not* converted to vector<int>.
-const clang::Type* RemoveSubstTemplateTypeParm(const clang::Type* type);
 
 // Returns true if any type involved (recursively examining template
 // arguments) satisfies the given predicate.

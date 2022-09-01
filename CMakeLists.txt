@@ -118,10 +118,10 @@ add_llvm_executable(include-what-you-use
 # available when IWYU is executed from the build dir.
 add_dependencies(include-what-you-use clang-resource-headers)
 
-# LLVM requires C++14, so follow suit.
+# LLVM requires C++17, so follow suit.
 set_target_properties(include-what-you-use PROPERTIES
   CXX_STANDARD_REQUIRED ON
-  CXX_STANDARD 14
+  CXX_STANDARD 17
   CXX_EXTENSIONS OFF
 )
 

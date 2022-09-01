@@ -233,7 +233,7 @@ bool ASTNode::FillLocationIfKnown(SourceLocation* loc) const {
 
 // --- Utilities for ASTNode.
 
-bool IsElaborationNode(const ASTNode* ast_node) {
+bool IsElaboratedTypeSpecifier(const ASTNode* ast_node) {
   if (ast_node == nullptr)
     return false;
   const ElaboratedType* elaborated_type = ast_node->GetAs<ElaboratedType>();
@@ -428,7 +428,12 @@ string PrintableType(const Type* type) {
   if (!type)
     return "<null type>";
 
-  return QualType(type, 0).getAsString();
+  string typestr = QualType(type, 0).getAsString();
+  if (GlobalFlags().HasDebugFlag("printtypeclass")) {
+    string typeclass = type->getTypeClassName();
+    typestr = typeclass + "Type:" + typestr;
+  }
+  return typestr;
 }
 
 string PrintableTypeLoc(const TypeLoc& typeloc) {
@@ -1113,32 +1118,52 @@ const Type* GetCanonicalType(const Type* type) {
   return canonical_type.getTypePtr();
 }
 
-const Type* RemoveElaboration(const Type* type) {
-  if (const ElaboratedType* elaborated_type = DynCastFrom(type))
-    return elaborated_type->getNamedType().getTypePtr();
-  else
+// Based on Type::getUnqualifiedDesugaredType.
+const Type* Desugar(const Type* type) {
+  // Null types happen sometimes in IWYU.
+  if (!type) {
     return type;
+  }
+
+  const Type* cur = type;
+
+  while (true) {
+    // Don't desugar types that (potentially) add a name.
+    if (cur->getTypeClass() == Type::Typedef ||
+        cur->getTypeClass() == Type::Using ||
+        cur->getTypeClass() == Type::TemplateSpecialization) {
+      return cur;
+    }
+
+    switch (cur->getTypeClass()) {
+#define ABSTRACT_TYPE(Class, Parent)
+#define TYPE(Class, Parent)                              \
+  case Type::Class: {                                    \
+    const auto* derived = cast<clang::Class##Type>(cur); \
+    if (!derived->isSugared()) {                         \
+      return cur;                                        \
+    }                                                    \
+    cur = derived->desugar().getTypePtr();               \
+    break;                                               \
+  }
+#include "clang/AST/TypeNodes.inc"
+    }
+  }
 }
 
 bool IsTemplatizedType(const Type* type) {
-  return (type && isa<TemplateSpecializationType>(RemoveElaboration(type)));
+  return (type && isa<TemplateSpecializationType>(Desugar(type)));
 }
 
 bool IsClassType(const clang::Type* type) {
-  return (type && (isa<TemplateSpecializationType>(RemoveElaboration(type)) ||
-                   isa<RecordType>(RemoveElaboration(type))));
-}
-
-const Type* RemoveSubstTemplateTypeParm(const Type* type) {
-  if (const SubstTemplateTypeParmType* subst_type = DynCastFrom(type))
-    return subst_type->getReplacementType().getTypePtr();
-  else
-    return type;
+  type = Desugar(type);
+  return (type &&
+          (isa<TemplateSpecializationType>(type) || isa<RecordType>(type)));
 }
 
 bool InvolvesTypeForWhich(const Type* type,
                           std::function<bool(const Type*)> pred) {
-  type = RemoveSubstTemplateTypeParm(type);
+  type = Desugar(type);
   if (pred(type))
     return true;
   const Decl* decl = TypeToDeclAsWritten(type);
@@ -1157,12 +1182,12 @@ bool InvolvesTypeForWhich(const Type* type,
 }
 
 bool IsPointerOrReferenceAsWritten(const Type* type) {
-  type = RemoveElaboration(type);
+  type = Desugar(type);
   return isa<PointerType>(type) || isa<LValueReferenceType>(type);
 }
 
 const Type* RemovePointersAndReferencesAsWritten(const Type* type) {
-  type = RemoveElaboration(type);
+  type = Desugar(type);
   while (isa<PointerType>(type) ||
          isa<LValueReferenceType>(type)) {
     type = type->getPointeeType().getTypePtr();
@@ -1177,7 +1202,7 @@ const Type* RemovePointerFromType(const Type* type) {
   if (!IsPointerOrReferenceAsWritten(type)) {
     return nullptr;
   }
-  type = RemoveElaboration(type);
+  type = Desugar(type);
   type = type->getPointeeType().getTypePtr();
   return type;
 }
@@ -1194,13 +1219,10 @@ const Type* RemovePointersAndReferences(const Type* type) {
 }
 
 static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
-  // Get past all the 'class' and 'struct' prefixes, and namespaces.
-  type = RemoveElaboration(type);
-
-  // Read past SubstTemplateTypeParmType (this can happen if a
-  // template function returns the tpl-arg type: e.g. for
-  // 'T MyFn<T>() {...}; MyFn<X>.a', the type of MyFn<X> will be a Subst.
-  type = RemoveSubstTemplateTypeParm(type);
+  // Read past SubstTemplateTypeParmType (this can happen if a function
+  // template returns the tpl-arg type: e.g. for 'T MyFn<T>() {...}; MyFn<X>.a',
+  // the type of MyFn<X> will be a substitution) as well as any elaboration.
+  type = Desugar(type);
 
   CHECK_(!isa<ObjCObjectType>(type) && "IWYU doesn't support Objective-C");
 
@@ -1256,7 +1278,7 @@ const Type* RemoveReferenceAsWritten(const Type* type) {
 }
 
 bool HasImplicitConversionConstructor(const Type* type) {
-  type = RemoveElaboration(type);  // get rid of the class keyword
+  type = Desugar(type);
   if (isa<PointerType>(type))
     return false;  // can't implicitly convert to a pointer
   if (isa<LValueReferenceType>(type) &&
@@ -1278,10 +1300,10 @@ bool HasImplicitConversionConstructor(const Type* type) {
 map<const clang::Type*, const clang::Type*>
 GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
   map<const Type*, const Type*> retval;
-  type = RemoveElaboration(type);  // get rid of the class keyword
-  const TemplateSpecializationType* tpl_spec_type = DynCastFrom(type);
-  if (!tpl_spec_type)
+  const auto* tpl_spec_type = type->getAs<TemplateSpecializationType>();
+  if (!tpl_spec_type) {
     return retval;
+  }
 
   // Pull the template arguments out of the specialization type. If this is
   // a ClassTemplateSpecializationDecl specifically, we want to
@@ -1314,7 +1336,7 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
     for (const Type* type : arg_components) {
       for (unsigned i = 0; i < num_args; ++i) {
         if (const Type* arg_type = GetTemplateArgAsType(tpl_args[i])) {
-          if (GetCanonicalType(type) == arg_type) {
+          if (GetCanonicalType(type) == GetCanonicalType(arg_type)) {
             retval[arg_type] = type;
             VERRS(6) << "Adding a template-class type of interest: "
                      << PrintableType(arg_type) << " -> " << PrintableType(type)

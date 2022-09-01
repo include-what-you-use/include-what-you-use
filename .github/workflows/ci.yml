@@ -38,8 +38,7 @@ jobs:
 
       - name: Work around broken packaging
         run: |
-          sudo touch /usr/lib/llvm-15/bin/tblgen-lsp-server
-          sudo touch /usr/lib/llvm-15/lib/libMLIRSupportIndentedOstream.a
+          sudo touch /usr/lib/llvm-16/lib/libclang-16.so.1
 
       - name: Check out default branch
         uses: actions/checkout@v2

@@ -249,6 +249,7 @@
   { symbol: [ "NULL", private, "<stdlib.h>", public ] },
   { symbol: [ "NULL", private, "<string.h>", public ] },
   { symbol: [ "NULL", private, "<time.h>", public ] },
+  { symbol: [ "NULL", private, "<unistd.h>", public ] },
   { symbol: [ "NULL", private, "<wchar.h>", public ] },
 
   # Kludge time: almost all STL types take an allocator, but they
