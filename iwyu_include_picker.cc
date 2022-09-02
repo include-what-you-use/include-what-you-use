@@ -1219,8 +1219,10 @@ bool MappedInclude::HasAbsoluteQuotedInclude() const {
   return IsAbsolutePath(path);
 }
 
-IncludePicker::IncludePicker(bool no_default_mappings)
-    : has_called_finalize_added_include_lines_(false) {
+IncludePicker::IncludePicker(bool no_default_mappings,
+                             RegexDialect regex_dialect)
+    : has_called_finalize_added_include_lines_(false),
+      regex_dialect(regex_dialect) {
   if (!no_default_mappings) {
     AddDefaultMappings();
   }
@@ -1425,7 +1427,8 @@ void IncludePicker::ExpandRegexes() {
       const vector<MappedInclude>& map_to = filepath_include_map_[regex_key];
       // Enclose the regex in ^(...)$ for full match.
       std::string regex("^(" + regex_key.substr(1) + ")$");
-      if (RegexMatch(hdr, regex) && !ContainsQuotedInclude(map_to, hdr)) {
+      if (RegexMatch(regex_dialect, hdr, regex) &&
+          !ContainsQuotedInclude(map_to, hdr)) {
         Extend(&filepath_include_map_[hdr], filepath_include_map_[regex_key]);
         MarkVisibility(&include_visibility_map_, hdr,
                        include_visibility_map_[regex_key]);
@@ -1433,7 +1436,7 @@ void IncludePicker::ExpandRegexes() {
     }
     for (const string& regex_key : friend_to_headers_map_regex_keys) {
       std::string regex("^(" + regex_key.substr(1) + ")$");
-      if (RegexMatch(hdr, regex)) {
+      if (RegexMatch(regex_dialect, hdr, regex)) {
         InsertAllInto(friend_to_headers_map_[regex_key],
                       &friend_to_headers_map_[hdr]);
       }

@@ -65,6 +65,7 @@ using std::vector;
 
 struct IncludeMapEntry;
 
+enum class RegexDialect;
 enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
 
 // When a symbol or file is mapped to an include, that include is represented
@@ -91,7 +92,7 @@ class IncludePicker {
   // visibility of the respective files.
   typedef map<string, IncludeVisibility> VisibilityMap;
 
-  explicit IncludePicker(bool no_default_mappings);
+  IncludePicker(bool no_default_mappings, RegexDialect regex_dialect);
 
   // ----- Routines to dynamically modify the include-picker
 
@@ -291,6 +292,9 @@ class IncludePicker {
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;
+
+  // Controls regex dialect to use for mappings.
+  RegexDialect regex_dialect;
 };  // class IncludePicker
 
 }  // namespace include_what_you_use
