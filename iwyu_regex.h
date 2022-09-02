@@ -14,8 +14,14 @@
 
 namespace include_what_you_use {
 
-// Returns true if str matches regular expression pattern.
-bool RegexMatch(const std::string& str, const std::string& pattern);
+enum class RegexDialect { LLVM = 0, ECMAScript = 1 };
+
+// Parse dialect string to enum.
+bool ParseRegexDialect(const char* str, RegexDialect* dialect);
+
+// Returns true if str matches regular expression pattern for the given dialect.
+bool RegexMatch(RegexDialect dialect, const std::string& str,
+                const std::string& pattern);
 
 }  // namespace include_what_you_use
 

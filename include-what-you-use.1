@@ -134,6 +134,20 @@ No new includes are added, existing ones are removed.
 .B \-\-quoted_includes_first
 When sorting includes, place quoted includes first.
 .TP
+.BI \-\-regex= dialect
+Use the specified regex
+.IR dialect
+for matching in IWYU:
+.RS
+.TP
+.B llvm
+Fast and simple extended regular expressions. This is the default.
+.TP
+.B ecmascript
+Slower but more full-featured regular expressions with support for lookaround
+assertions, etc.
+.RE
+.TP
 .B \-\-transitive_includes_only
 Do not suggest that a file should add
 .IR foo.h " unless " foo.h

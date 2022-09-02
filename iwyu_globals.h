@@ -28,6 +28,7 @@ using std::set;
 using std::string;
 using std::vector;
 
+enum class RegexDialect;
 class FullUseCache;
 class IncludePicker;
 class SourceManagerCharacterDataGetter;
@@ -98,6 +99,7 @@ struct CommandlineFlags {
   int exit_code_error;   // Exit with this code for iwyu violations.
   int exit_code_always;  // Always exit with this exit code.
   set<string> dbg_flags; // Debug flags.
+  RegexDialect regex_dialect;  // Dialect for regular expression processing.
 };
 
 const CommandlineFlags& GlobalFlags();
