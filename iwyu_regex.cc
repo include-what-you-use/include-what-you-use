@@ -32,7 +32,9 @@ bool RegexMatch(RegexDialect dialect, const std::string& str,
                 const std::string& pattern) {
   switch (dialect) {
     case RegexDialect::LLVM: {
-      llvm::Regex r(pattern);
+      // llvm::Regex::match has search semantics. Enclose the pattern in ^...$
+      // for start/end anchoring.
+      llvm::Regex r("^" + pattern + "$");
       return r.match(str);
     }
 

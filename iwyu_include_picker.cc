@@ -1437,9 +1437,7 @@ void IncludePicker::ExpandRegexes() {
     const string& hdr = incmap.first;
     for (const string& regex_key : filepath_include_map_regex_keys) {
       const vector<MappedInclude>& map_to = filepath_include_map_[regex_key];
-      // Enclose the regex in ^...$ for full match.
-      std::string regex("^" + regex_key.substr(1) + "$");
-      if (RegexMatch(regex_dialect, hdr, regex) &&
+      if (RegexMatch(regex_dialect, hdr, regex_key.substr(1)) &&
           !ContainsQuotedInclude(map_to, hdr)) {
         Extend(&filepath_include_map_[hdr], filepath_include_map_[regex_key]);
         MarkVisibility(&include_visibility_map_, hdr,
@@ -1447,8 +1445,7 @@ void IncludePicker::ExpandRegexes() {
       }
     }
     for (const string& regex_key : friend_to_headers_map_regex_keys) {
-      std::string regex("^" + regex_key.substr(1) + "$");
-      if (RegexMatch(regex_dialect, hdr, regex)) {
+      if (RegexMatch(regex_dialect, hdr, regex_key.substr(1))) {
         InsertAllInto(friend_to_headers_map_[regex_key],
                       &friend_to_headers_map_[hdr]);
       }
