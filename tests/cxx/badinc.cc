@@ -307,29 +307,10 @@ template<> struct Cc_TemplateStruct<I1_Class, I12> { I1_Class* i; };
 // IWYU: I1_Enum is...*badinc-i1.h
 template<class T = I1_Class, I1_Enum E = I11> class Cc_DeclareOnlyTemplateClass;
 
-// I2_Class has a non-explicit constructor (actually, two), so we need
-// the full type here even though it's a const reference.  I1_Class
-// has no implicit, one-argument constructor, so fwd declaring is ok.
 // IWYU: I2_Class needs a declaration
 const I2_Class& Cc_Function(
-    // IWYU: I1_Class needs a declaration
-    const I1_Class& i1,
-    // IWYU: I2_Class is...*badinc-i2.h.*for autocast
-    // IWYU: I2_Class needs a declaration
-    const I2_Class& i2,
-    // A subtle c++ point: forward-declaring is ok for i2b, because
-    // you can't do implicit conversion to a non-const reference
-    // (implicit conversion involves creating a temporary, which
-    // doesn't bind to non-const references).
-    // IWYU: I2_Class needs a declaration
-    I2_Class& i2_nonconst,
-    // Forward-declaring is ok because we a const reference to a *pointer*.
-    // IWYU: I2_Class needs a declaration
-    I2_Class* const & i2_ptrref,
     // IWYU: I1_Class is...*badinc-i1.h
-    I1_Class i1_nonref,
-    // IWYU: I2_Class is...*badinc-i2.h
-    I2_Class i2_nonref) {
+    I1_Class) {
   // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
   static I2_Class retval;   // something we can safely return a reference to
