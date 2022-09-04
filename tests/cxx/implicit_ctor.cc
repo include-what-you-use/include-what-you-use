@@ -10,13 +10,13 @@
 // IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-d1.h" -I .
 
 // If you define an API that accepts an argument of class type or
-// const reference to a class type with an implicit constructor, you
-// must provide the definition for the class.
+// const reference to a class type with an implicit constructor which takes
+// exactly one argument, you must provide the definition for the class.
 //
-// If you use an API and that use triggers an implicit constructor
+// If you use an API and that use triggers such an implicit constructor
 // call, you are *not* considered to have used that constructor,
 // relying on the previous rule to make the code complete definition
-// available.
+// available. This is so called "autocast".
 //
 // This tests that logic.
 
