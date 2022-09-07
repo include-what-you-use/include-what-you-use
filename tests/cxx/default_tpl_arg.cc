@@ -64,19 +64,22 @@ void Fn() {
   // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg is...*default_tpl_arg-i1.h
   // IWYU: IndirectClass is...*indirect.h
   FnWithNonProvidedDefaultTplArgAndDefaultCallArg();
-  // TODO: should not report here.
-  // IWYU: IndirectClass is...*indirect.h
-  FnWithProvidedDefaultTplArgAndDefaultCallArg();
+  FnWithProvidedDefaultTplArgAndDefaultCallArg1();
 
   // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg is...*default_tpl_arg-i1.h
   FnWithNonProvidedDefaultTplArgAndDefaultCallArg(p);
-  FnWithProvidedDefaultTplArgAndDefaultCallArg(p);
+  FnWithProvidedDefaultTplArgAndDefaultCallArg1(p);
 
   // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg is...*default_tpl_arg-i1.h
   // IWYU: IndirectClass is...*indirect.h
   FnWithNonProvidedDefaultTplArgAndDefaultCallArg(n);
   // IWYU: IndirectClass is...*indirect.h
-  FnWithProvidedDefaultTplArgAndDefaultCallArg(n);
+  FnWithProvidedDefaultTplArgAndDefaultCallArg1(n);
+
+  // Some additional variations of default arguments. Should not report
+  // IndirectClass because it is provided by the templates.
+  FnWithProvidedDefaultTplArgAndDefaultCallArg2();
+  FnWithProvidedDefaultTplArgAndDefaultCallArg3();
 }
 
 /**** IWYU_SUMMARY
@@ -90,7 +93,7 @@ tests/cxx/default_tpl_arg.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/default_tpl_arg.cc:
-#include "tests/cxx/default_tpl_arg-d2.h"  // for FnWithProvidedDefaultTplArg, FnWithProvidedDefaultTplArgAndDefaultCallArg
+#include "tests/cxx/default_tpl_arg-d2.h"  // for FnWithProvidedDefaultTplArg, FnWithProvidedDefaultTplArgAndDefaultCallArg1, FnWithProvidedDefaultTplArgAndDefaultCallArg2, FnWithProvidedDefaultTplArgAndDefaultCallArg3
 #include "tests/cxx/default_tpl_arg-i1.h"  // for FnWithNonProvidedDefaultTplArg, FnWithNonProvidedDefaultTplArgAndDefaultCallArg, NonProvidingAlias, UninstantiatedTpl
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 

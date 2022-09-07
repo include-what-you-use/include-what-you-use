@@ -22,6 +22,16 @@ void FnWithProvidedDefaultTplArg() {
 // 'IndirectClass' type because this header '#include's it directly and hence
 // provides.
 template <typename T = IndirectClass>
-void FnWithProvidedDefaultTplArgAndDefaultCallArg(T* = nullptr) {
+void FnWithProvidedDefaultTplArgAndDefaultCallArg1(T* = nullptr) {
+  T t;
+}
+
+template <typename T = IndirectClass>
+void FnWithProvidedDefaultTplArgAndDefaultCallArg2(T = T{}) {
+  T t;
+}
+
+template <typename T = IndirectClass>
+void FnWithProvidedDefaultTplArgAndDefaultCallArg3(T = {}) {
   T t;
 }
