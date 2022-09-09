@@ -10,6 +10,7 @@
 // IWYU_ARGS: -fcxx-exceptions -fexceptions -I .
 
 #include "tests/cxx/catch-exceptions.h"
+#include "tests/cxx/catch-exceptions-macro.h"
 
 int main() {
   try {
@@ -51,6 +52,14 @@ int main() {
     puts("Unknown exception");
   }
 
+  // IWYU: CatchMacro1 needs a declaration...*
+  // IWYU: CatchMacro1...*catch-macro-1.h
+  CHECK_THROW_1(CatchMacro1);
+
+  // IWYU: CatchMacro2 needs a declaration...*
+  // IWYU: CatchMacro2...*catch-macro-2.h
+  CHECK_THROW_2(CatchMacro2);
+
   return 0;
 }
 
@@ -63,6 +72,8 @@ tests/cxx/catch.cc should add these lines:
 #include "tests/cxx/catch-byvalue.h"
 #include "tests/cxx/catch-elab.h"
 #include "tests/cxx/catch-logex.h"
+#include "tests/cxx/catch-macro-1.h"
+#include "tests/cxx/catch-macro-2.h"
 #include "tests/cxx/catch-thrown.h"
 
 tests/cxx/catch.cc should remove these lines:
@@ -74,7 +85,10 @@ The full include-list for tests/cxx/catch.cc:
 #include "tests/cxx/catch-byref.h"  // for CatchByRef
 #include "tests/cxx/catch-byvalue.h"  // for CatchByValue
 #include "tests/cxx/catch-elab.h"  // for CatchElab
+#include "tests/cxx/catch-exceptions-macro.h"  // for CHECK_THROW_1, CHECK_THROW_2
 #include "tests/cxx/catch-logex.h"  // for LogException
+#include "tests/cxx/catch-macro-1.h"  // for CatchMacro1
+#include "tests/cxx/catch-macro-2.h"  // for CatchMacro2
 #include "tests/cxx/catch-thrown.h"  // for Thrown
 
 ***** IWYU_SUMMARY */
