@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -Xiwyu --mapping_file=tests/cxx/badinc.imp -I .
+// IWYU_ARGS: -Xiwyu --mapping_file=tests/cxx/badinc.imp -std=gnu++98 -I .
 
 // This is a unittest for include-what-you-use.
 //
