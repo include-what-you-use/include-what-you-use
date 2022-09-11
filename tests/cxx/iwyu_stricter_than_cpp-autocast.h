@@ -40,8 +40,10 @@ void Fn(
 
 // --- Now do it all again, with templates!
 
-template <typename T> struct TplDirectStruct1;
-template <typename T> struct TplIndirectStruct2;
+template <typename T>
+struct TplDirectStruct1;
+template <typename T>
+struct TplIndirectStruct2;
 
 void TplFn(
     // IWYU: TplIndirectStruct1 needs a declaration
@@ -56,8 +58,7 @@ void TplFn(
     // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
     // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     const struct TplIndirectStructForwardDeclaredInD1<char>& icfdid1,
-    TplDirectStruct1<char> dc1,
-    struct TplDirectStruct2<char> dc2,
+    TplDirectStruct1<char> dc1, struct TplDirectStruct2<char> dc2,
     TplIndirectStruct2<char> ic2);
 
 // --- The rules do not apply for friend functions declarations.
@@ -69,8 +70,7 @@ struct AutocastStruct {
   friend void ClassFn2(TplIndirectStruct1<char>);
 };
 
-#endif   // IWYU_STRICTER_THAN_CPP_AUTOCAST_H_
-
+#endif  // IWYU_STRICTER_THAN_CPP_AUTOCAST_H_
 
 /**** IWYU_SUMMARY
 
@@ -79,12 +79,12 @@ tests/cxx/iwyu_stricter_than_cpp-autocast.h should add these lines:
 
 tests/cxx/iwyu_stricter_than_cpp-autocast.h should remove these lines:
 - struct DirectStruct1;  // lines XX-XX
-- template <typename T> struct TplDirectStruct1;  // lines XX-XX
+- template <typename T> struct TplDirectStruct1;  // lines XX-XX+1
 
 The full include-list for tests/cxx/iwyu_stricter_than_cpp-autocast.h:
 #include "tests/cxx/iwyu_stricter_than_cpp-d1.h"  // for DirectStruct1, DirectStruct2, TplDirectStruct1, TplDirectStruct2
 #include "tests/cxx/iwyu_stricter_than_cpp-i1.h"  // for IndirectStruct1, IndirectStructForwardDeclaredInD1, TplIndirectStruct1, TplIndirectStructForwardDeclaredInD1
 struct IndirectStruct2;  // lines XX-XX
-template <typename T> struct TplIndirectStruct2;  // lines XX-XX
+template <typename T> struct TplIndirectStruct2;  // lines XX-XX+1
 
 ***** IWYU_SUMMARY */
