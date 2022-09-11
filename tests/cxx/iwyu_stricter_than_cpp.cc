@@ -139,23 +139,30 @@ void TestTypeAliases() {
 }
 
 void TestAutocast() {
-  // We need full type of IndirectStruct2 because the declarer of FnValues and
-  // FnRefs didn't.
+  // We need full type of IndirectStruct2 because the declarer of the following
+  // functions didn't.
   FnValues(1, 2, 3, 4,
            // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
            5);
   FnRefs(1, 2, 3, 4,
          // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
          5);
+  HeaderDefinedFnRefs(1, 2, 3, 4,
+                      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+                      5);
 
-  // We need full type of TplIndirectStruct2 because the declarer of TplFnValues
-  // and TplFnRefs didn't.
+  // We need full type of TplIndirectStruct2 because the declarer
+  // of the following functions didn't.
   TplFnValues(6, 7, 8, 9,
               // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
               10);
   TplFnRefs(6, 7, 8, 9,
             // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
             10);
+  HeaderDefinedTplFnRefs(
+      6, 7, 8, 9,
+      // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      10);
 }
 
 void TestFunctionReturn() {
@@ -227,7 +234,7 @@ tests/cxx/iwyu_stricter_than_cpp.cc should remove these lines:
 
 The full include-list for tests/cxx/iwyu_stricter_than_cpp.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
-#include "tests/cxx/iwyu_stricter_than_cpp-autocast.h"  // for FnRefs, FnValues, TplFnRefs, TplFnValues
+#include "tests/cxx/iwyu_stricter_than_cpp-autocast.h"  // for FnRefs, FnValues, HeaderDefinedFnRefs, HeaderDefinedTplFnRefs, TplFnRefs, TplFnValues
 #include "tests/cxx/iwyu_stricter_than_cpp-d3.h"  // for IndirectStruct3ProvidingAl, IndirectStruct3ProvidingTypedef, IndirectStruct4ProvidingAl, IndirectStruct4ProvidingTypedef
 #include "tests/cxx/iwyu_stricter_than_cpp-fnreturn.h"  // for DoesEverythingRightFn, DoesNotForwardDeclareAndIncludesFn, DoesNotForwardDeclareFn, DoesNotForwardDeclareProperlyFn, IncludesFn, TplDoesEverythingRightAgainFn, TplDoesEverythingRightFn, TplDoesNotForwardDeclareAndIncludesFn, TplDoesNotForwardDeclareFn, TplDoesNotForwardDeclareProperlyFn, TplIncludesFn
 #include "tests/cxx/iwyu_stricter_than_cpp-i2.h"  // for IndirectStruct2, TplIndirectStruct2
