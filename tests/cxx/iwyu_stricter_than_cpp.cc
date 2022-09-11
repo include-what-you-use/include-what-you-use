@@ -139,13 +139,19 @@ void TestTypeAliases() {
 }
 
 void TestAutocast() {
-  // We need full type of is2 because the declarer of Fn didn't
+  // We need full type of IndirectStruct2 because the declarer of FnValues and
+  // FnRefs didn't.
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
-  Fn(1, 2, 3, 4, 5);
+  FnValues(1, 2, 3, 4, 5);
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  FnRefs(1, 2, 3, 4, 5);
 
-  // We need full type of is2 because the declarer of Fn didn't
-  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
-  TplFn(6, 7, 8, 9, 10);
+  // We need full type of TplIndirectStruct2 because the declarer of TplFnValues
+  // and TplFnRefs didn't.
+  // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  TplFnValues(6, 7, 8, 9, 10);
+  // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  TplFnRefs(6, 7, 8, 9, 10);
 }
 
 void TestFunctionReturn() {
@@ -217,7 +223,7 @@ tests/cxx/iwyu_stricter_than_cpp.cc should remove these lines:
 
 The full include-list for tests/cxx/iwyu_stricter_than_cpp.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
-#include "tests/cxx/iwyu_stricter_than_cpp-autocast.h"  // for Fn, TplFn
+#include "tests/cxx/iwyu_stricter_than_cpp-autocast.h"  // for FnRefs, FnValues, TplFnRefs, TplFnValues
 #include "tests/cxx/iwyu_stricter_than_cpp-d3.h"  // for IndirectStruct3ProvidingAl, IndirectStruct3ProvidingTypedef, IndirectStruct4ProvidingAl, IndirectStruct4ProvidingTypedef
 #include "tests/cxx/iwyu_stricter_than_cpp-fnreturn.h"  // for DoesEverythingRightFn, DoesNotForwardDeclareAndIncludesFn, DoesNotForwardDeclareFn, DoesNotForwardDeclareProperlyFn, IncludesFn, TplDoesEverythingRightAgainFn, TplDoesEverythingRightFn, TplDoesNotForwardDeclareAndIncludesFn, TplDoesNotForwardDeclareFn, TplDoesNotForwardDeclareProperlyFn, TplIncludesFn
 #include "tests/cxx/iwyu_stricter_than_cpp-i2.h"  // for IndirectStruct2, TplIndirectStruct2
