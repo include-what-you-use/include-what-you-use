@@ -47,6 +47,16 @@ void FnRefs(
     const DirectStruct3& dc1, const struct DirectStruct4& dc2,
     const IndirectStruct2& ic2);
 
+inline void HeaderDefinedFnRefs(
+    // IWYU: IndirectStruct1 needs a declaration
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    const IndirectStruct1& ic1,
+    // IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    const struct IndirectStructForwardDeclaredInD1& icfdid1,
+    const DirectStruct5& dc1, const struct DirectStruct6& dc2,
+    const IndirectStruct2& ic2) {
+}
+
 // --- Now do it all again, with templates!
 
 template <typename T>
@@ -80,6 +90,17 @@ void TplFnRefs(
     const TplDirectStruct3<char>& dc1, const struct TplDirectStruct4<char>& dc2,
     const TplIndirectStruct2<char>& ic2);
 
+inline void HeaderDefinedTplFnRefs(
+    // IWYU: TplIndirectStruct1 needs a declaration
+    // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    const TplIndirectStruct1<char>& ic1,
+    // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
+    // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    const struct TplIndirectStructForwardDeclaredInD1<char>& icfdid1,
+    const TplDirectStruct5<char>& dc1, const struct TplDirectStruct6<char>& dc2,
+    const TplIndirectStruct2<char>& ic2) {
+}
+
 // --- The rules do not apply for friend functions declarations.
 
 struct AutocastStruct {
@@ -101,7 +122,7 @@ tests/cxx/iwyu_stricter_than_cpp-autocast.h should remove these lines:
 - template <typename T> struct TplDirectStruct1;  // lines XX-XX+1
 
 The full include-list for tests/cxx/iwyu_stricter_than_cpp-autocast.h:
-#include "tests/cxx/iwyu_stricter_than_cpp-d1.h"  // for DirectStruct1, DirectStruct2, DirectStruct3, DirectStruct4, TplDirectStruct1, TplDirectStruct2, TplDirectStruct3, TplDirectStruct4
+#include "tests/cxx/iwyu_stricter_than_cpp-d1.h"  // for DirectStruct1, DirectStruct2, DirectStruct3, DirectStruct4, DirectStruct5, DirectStruct6, TplDirectStruct1, TplDirectStruct2, TplDirectStruct3, TplDirectStruct4, TplDirectStruct5, TplDirectStruct6
 #include "tests/cxx/iwyu_stricter_than_cpp-i1.h"  // for IndirectStruct1, IndirectStructForwardDeclaredInD1, TplIndirectStruct1, TplIndirectStructForwardDeclaredInD1
 struct IndirectStruct2;  // lines XX-XX
 template <typename T> struct TplIndirectStruct2;  // lines XX-XX+1

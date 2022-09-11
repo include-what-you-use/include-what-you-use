@@ -31,6 +31,14 @@ struct DirectStruct4 {
   DirectStruct4(int) {
   }
 };
+struct DirectStruct5 {
+  DirectStruct5(int) {
+  }
+};
+struct DirectStruct6 {
+  DirectStruct6(int) {
+  }
+};
 struct IndirectStructForwardDeclaredInD1;
 
 template <typename T>
@@ -51,6 +59,16 @@ struct TplDirectStruct3 {
 template <typename T>
 struct TplDirectStruct4 {
   TplDirectStruct4(int) {
+  }
+};
+template <typename T>
+struct TplDirectStruct5 {
+  TplDirectStruct5(int) {
+  }
+};
+template <typename T>
+struct TplDirectStruct6 {
+  TplDirectStruct6(int) {
   }
 };
 template <typename T>
