@@ -2682,8 +2682,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // void fn(const S<Class>& s) { // Forward declarations are sufficient here.
   //   (void)s.t; // Full 'Class' type is needed due to template instantiation.
   // }
-  void ReportTplSpecComponentTypes(const TemplateSpecializationType*) {
-  }
+  void ReportTplSpecComponentTypes(const TemplateSpecializationType*) = delete;
 
   // Do not add any variables here!  If you do, they will not be shared
   // between the normal iwyu ast visitor and the
@@ -3234,6 +3233,12 @@ class InstantiatedTemplateVisitor
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
     ReportTypeUse(caller_loc(), actual_type);
     return Base::VisitCXXConstructExpr(expr);
+  }
+
+  // --- Handler declared in IwyuBaseASTVisitor.
+
+  void ReportTplSpecComponentTypes(const TemplateSpecializationType* type) {
+    TraverseDataAndTypeMembersOfClassHelper(type);
   }
 
  private:

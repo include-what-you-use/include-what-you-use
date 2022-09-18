@@ -547,12 +547,35 @@ class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
   }
 
   // --- Methods on RecursiveASTVisitor
+  bool TraverseType(QualType type) {
+    TraverseArgumentsOfSugaredTemplates(type);
+    return Base::TraverseType(type);
+  }
+
+  bool TraverseTypeLoc(TypeLoc type_loc) {
+    TraverseArgumentsOfSugaredTemplates(type_loc.getType());
+    return Base::TraverseTypeLoc(type_loc);
+  }
+
   bool VisitType(Type* type) {
     seen_types_.insert(type);
     return true;
   }
 
  private:
+  // Clang doesn't traverse underlying type for most of the sugar types.
+  // If a TemplateSpecializationType occurs in a sugaring chain, traverse its
+  // arguments explicitly, otherwise they aren't put into resugar_map.
+  void TraverseArgumentsOfSugaredTemplates(QualType type) {
+    if (type.isNull())
+      return;
+
+    if (const auto* template_spec = type->getAs<TemplateSpecializationType>()) {
+      for (const TemplateArgument& arg : template_spec->template_arguments())
+        TraverseTemplateArgument(arg);
+    }
+  }
+
   set<const Type*> seen_types_;
 };
 
