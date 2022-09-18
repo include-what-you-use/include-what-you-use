@@ -80,6 +80,10 @@ void PointerClassArguments() {
 
 template<typename T> struct Outer { T t; };
 template<typename T> struct Inner { T t; };
+struct StaticTemplateFieldStruct {
+  // IWYU: IndirectClass needs a declaration
+  static Inner<IndirectClass> tpl;
+};
 
 void NestedTemplateArguments() {
   // IWYU: IndirectClass needs a declaration
@@ -94,6 +98,23 @@ void NestedTemplateArguments() {
   // IWYU: IndirectClass needs a declaration
   Outer<Inner<IndirectClass> >* opi;
   (void)opi;
+
+  // Test that use of template specialization type template argument is not
+  // hidden by any sugar in the AST.
+
+  // IWYU: IndirectClass is...*indirect.h
+  Outer<decltype(StaticTemplateFieldStruct::tpl)> osi;
+  // Member referencing also requires template instantiation and nested member
+  // full-type-use reporting.
+  // IWYU: IndirectClass is...*indirect.h
+  (void)osi.t;
+
+  Outer<decltype(StaticTemplateFieldStruct::tpl)*> osip;
+  (void)osip.t;
+
+  Outer<decltype(StaticTemplateFieldStruct::tpl)>* opsi;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)opsi->t;
 }
 
 // ---------------------------------------------------------------
