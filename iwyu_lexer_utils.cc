@@ -49,7 +49,7 @@ const char* SourceManagerCharacterDataGetter::GetCharacterData(
 StringRef GetSourceTextUntilEndOfLine(
     SourceLocation start_loc, const CharacterDataGetterInterface& data_getter) {
   const char* data = data_getter.GetCharacterData(start_loc);
-  const char* line_end = strchr(data, '\n');
+  const char* line_end = strpbrk(data, "\r\n");
   if (!line_end)
     return data;
   return StringRef(data, line_end - data);
