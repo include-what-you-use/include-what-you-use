@@ -141,17 +141,21 @@ void TestTypeAliases() {
 void TestAutocast() {
   // We need full type of IndirectStruct2 because the declarer of FnValues and
   // FnRefs didn't.
-  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
-  FnValues(1, 2, 3, 4, 5);
-  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
-  FnRefs(1, 2, 3, 4, 5);
+  FnValues(1, 2, 3, 4,
+           // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+           5);
+  FnRefs(1, 2, 3, 4,
+         // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+         5);
 
   // We need full type of TplIndirectStruct2 because the declarer of TplFnValues
   // and TplFnRefs didn't.
-  // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
-  TplFnValues(6, 7, 8, 9, 10);
-  // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
-  TplFnRefs(6, 7, 8, 9, 10);
+  TplFnValues(6, 7, 8, 9,
+              // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+              10);
+  TplFnRefs(6, 7, 8, 9,
+            // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+            10);
 }
 
 void TestFunctionReturn() {
