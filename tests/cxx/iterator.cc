@@ -26,7 +26,7 @@ std::vector<int>::reverse_iterator vi_rbegin = vi.rbegin();
 std::vector<int>::const_reverse_iterator vi_crbegin = vi.rbegin();
 void VectorFns() {
   // Tricky issue with deduced template args.
-  std::find(vi_begin, vi_begin, 5);
+  (void)std::find(vi_begin, vi_begin, 5);
   // Issues with operator!=, operator bool, etc.
   for (std::vector<int>::iterator it = vi_begin; it != vi_begin; ++it) ;
   for (std::vector<int>::reverse_iterator it = vi_rbegin; it != vi_rbegin; ++it)
@@ -39,7 +39,7 @@ std::list<int>::const_iterator li_cbegin = li.begin();
 std::list<int>::reverse_iterator li_rbegin = li.rbegin();
 std::list<int>::const_reverse_iterator li_crbegin = li.rbegin();
 void ListFns() {
-  std::find(li_begin, li_begin, 5);
+  (void)std::find(li_begin, li_begin, 5);
   for (std::list<int>::iterator it = li_begin; it != li_begin; ++it) ;
   for (std::list<int>::reverse_iterator it = li_rbegin; it != li_rbegin; ++it) ;
 }
