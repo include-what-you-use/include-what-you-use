@@ -23,6 +23,12 @@ bool ParseRegexDialect(const char* str, RegexDialect* dialect);
 bool RegexMatch(RegexDialect dialect, const std::string& str,
                 const std::string& pattern);
 
+// Returns input string with the first match of pattern replaced, for the given
+// regex dialect.
+std::string RegexReplace(RegexDialect dialect, const std::string& str,
+                         const std::string& pattern,
+                         const std::string& replacement);
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_REGEX_H_
