@@ -46,4 +46,26 @@ bool RegexMatch(RegexDialect dialect, const std::string& str,
   CHECK_UNREACHABLE_("Unexpected regex dialect");
 }
 
+std::string RegexReplace(RegexDialect dialect, const std::string& str,
+                         const std::string& pattern,
+                         const std::string& replacement) {
+  switch (dialect) {
+    case RegexDialect::LLVM: {
+      // llvm::Regex::sub  has search semantics. Enclose the pattern in ^...$
+      // for start/end anchoring.
+      llvm::Regex r("^" + pattern + "$");
+      return r.sub(replacement, str);
+    }
+
+    case RegexDialect::ECMAScript: {
+      // std::regex_replace has search semantics. Enclose the pattern in ^...$
+      // for start/end anchoring.
+      std::regex r("^" + pattern + "$", std::regex_constants::ECMAScript);
+      return std::regex_replace(str, r, replacement,
+                                std::regex_constants::format_first_only);
+    }
+  }
+  CHECK_UNREACHABLE_("Unexpected regex dialect");
+}
+
 }  // namespace include_what_you_use

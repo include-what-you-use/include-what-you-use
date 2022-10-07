@@ -1436,10 +1436,14 @@ void IncludePicker::ExpandRegexes() {
   for (const auto& incmap : quoted_includes_to_quoted_includers_) {
     const string& hdr = incmap.first;
     for (const string& regex_key : filepath_include_map_regex_keys) {
+      const string regex = regex_key.substr(1);
       const vector<MappedInclude>& map_to = filepath_include_map_[regex_key];
-      if (RegexMatch(regex_dialect, hdr, regex_key.substr(1)) &&
+      if (RegexMatch(regex_dialect, hdr, regex) &&
           !ContainsQuotedInclude(map_to, hdr)) {
-        Extend(&filepath_include_map_[hdr], filepath_include_map_[regex_key]);
+        for (const MappedInclude& target : map_to) {
+          filepath_include_map_[hdr].push_back(MappedInclude(
+              RegexReplace(regex_dialect, hdr, regex, target.quoted_include)));
+        }
         MarkVisibility(&include_visibility_map_, hdr,
                        include_visibility_map_[regex_key]);
       }
