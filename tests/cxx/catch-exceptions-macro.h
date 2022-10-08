@@ -1,4 +1,4 @@
-//===--- catch-exceptions-macro.h - test input file for iwyu ---------------===//
+//===--- catch-exceptions-macro.h - test input file for iwyu --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
