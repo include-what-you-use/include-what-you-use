@@ -1873,9 +1873,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     if (const VarDecl* exception_decl = stmt->getExceptionDecl()) {
       TypeLoc typeloc = exception_decl->getTypeSourceInfo()->getTypeLoc();
+      const Type* caught_type = typeloc.getType().getTypePtr();
+
       // Strip off pointers/references to get to the 'base' type.
-      const Type* caught_type =
-          RemovePointersAndReferencesAsWritten(typeloc.getType().getTypePtr());
+      caught_type = RemovePointersAndReferencesAsWritten(caught_type);
       ReportTypeUse(typeloc.getBeginLoc(), caught_type);
     } else {
       // catch(...): no type to act on here.
