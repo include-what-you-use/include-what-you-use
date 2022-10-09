@@ -18,6 +18,8 @@
 #include "tests/cxx/catch-byvalue.h"  // for CatchByValye
 #include "tests/cxx/catch-elab.h"     // for CatchElab
 #include "tests/cxx/catch-logex.h"    // for LogException
+#include "tests/cxx/catch-macro-1.h"  // for CatchMacro1
+#include "tests/cxx/catch-macro-2.h"  // for CatchMacro2
 #include "tests/cxx/catch-thrown.h"   // for Thrown
 
 #include <stdio.h>
