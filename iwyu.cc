@@ -1872,11 +1872,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode()) return true;
 
     if (const VarDecl* exception_decl = stmt->getExceptionDecl()) {
-      TypeLoc tl = exception_decl->getTypeSourceInfo()->getTypeLoc();
+      TypeLoc typeloc = exception_decl->getTypeSourceInfo()->getTypeLoc();
       // Strip off pointers/references to get to the 'base' type.
       const Type* caught_type =
-          RemovePointersAndReferencesAsWritten(tl.getType().getTypePtr());
-      ReportTypeUse(tl.getBeginLoc(), caught_type);
+          RemovePointersAndReferencesAsWritten(typeloc.getType().getTypePtr());
+      ReportTypeUse(typeloc.getBeginLoc(), caught_type);
     } else {
       // catch(...): no type to act on here.
     }
