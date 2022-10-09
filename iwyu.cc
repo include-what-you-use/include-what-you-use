@@ -1879,7 +1879,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
       // Strip off pointers/references to get to the pointee type.
       caught_type = RemovePointersAndReferencesAsWritten(caught_type);
-      ReportTypeUse(typeloc.getBeginLoc(), caught_type);
+      ReportTypeUse(GetLocation(&typeloc), caught_type);
     } else {
       // catch(...): no type to act on here.
     }
