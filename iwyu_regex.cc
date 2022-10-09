@@ -27,7 +27,6 @@ bool ParseRegexDialect(const char* str, RegexDialect* dialect) {
   return false;
 }
 
-// Returns true if str matches regular expression pattern for the given dialect.
 bool RegexMatch(RegexDialect dialect, const std::string& str,
                 const std::string& pattern) {
   switch (dialect) {
