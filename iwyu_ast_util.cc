@@ -1308,15 +1308,15 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
   // Pull the template arguments out of the specialization type. If this is
   // a ClassTemplateSpecializationDecl specifically, we want to
   // get the arguments therefrom to correctly handle default arguments.
-  const TemplateArgument* tpl_args = tpl_spec_type->getArgs();
-  unsigned num_args = tpl_spec_type->getNumArgs();
+  llvm::ArrayRef<TemplateArgument> tpl_args = tpl_spec_type->template_arguments();
+  unsigned num_args = tpl_args.size();
 
   const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
   const auto* cls_tpl_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl);
   if (cls_tpl_decl) {
     const TemplateArgumentList& tpl_arg_list =
         cls_tpl_decl->getTemplateInstantiationArgs();
-    tpl_args = tpl_arg_list.data();
+    tpl_args = tpl_arg_list.asArray();
     num_args = tpl_arg_list.size();
   }
 
@@ -1326,9 +1326,9 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
   //   template <typename R, typename A1> struct Foo<R(A1)> { ... }
   set<unsigned> explicit_args;   // indices into tpl_args we've filled
   TypeEnumerator type_enumerator;
-  for (unsigned i = 0; i < tpl_spec_type->getNumArgs(); ++i) {
+  for (unsigned i = 0; i < tpl_spec_type->template_arguments().size(); ++i) {
     set<const Type*> arg_components
-        = type_enumerator.Enumerate(tpl_spec_type->getArg(i));
+        = type_enumerator.Enumerate(tpl_spec_type->template_arguments()[i]);
     // Go through all template types mentioned in the arg-as-written,
     // and compare it against each of the types in the template decl
     // (the latter are all desugared).  If there's a match, update
