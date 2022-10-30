@@ -243,6 +243,11 @@ Used after
 .B #include
 directives or forward declarations it ensures that they won't be removed.
 .TP
+.BR "// IWYU pragma: begin_keep" , " // IWYU pragma: end_keep"
+Has the same effect as the previous pragma comment, but applies to a range of
+.BR #include s
+and forward declarations instead of a single line.
+.TP
 .B // IWYU pragma: export
 Used after an
 .B #include

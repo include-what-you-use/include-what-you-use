@@ -177,6 +177,14 @@ bool IwyuPreprocessorInfo::HasOpenBeginExports(const FileEntry* file) const {
       GetFileEntry(begin_exports_location_stack_.top()) == file;
 }
 
+// Only call this when the given files is the one being processed
+// Only return true if there is an open begin_keep pragma in the current
+// state of the parse of the given file.
+bool IwyuPreprocessorInfo::HasOpenBeginKeep(const FileEntry* file) const {
+  return !begin_keep_location_stack_.empty() &&
+      GetFileEntry(begin_keep_location_stack_.top()) == file;
+}
+
 bool IwyuPreprocessorInfo::HandleComment(Preprocessor& pp,
                                          SourceRange comment_range) {
   HandlePragmaComment(comment_range);
@@ -209,6 +217,20 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
     return;
   }
 
+  if (HasOpenBeginKeep(this_file_entry)) {
+    if (MatchOneToken(tokens, "end_keep", 1, begin_loc)) {
+      ERRSYM(this_file_entry) << "end_keep pragma seen\n";
+      SourceLocation keep_loc_begin = begin_keep_location_stack_.top();
+      begin_keep_location_stack_.pop();
+      SourceRange keep_range(keep_loc_begin, begin_loc);
+      keep_location_ranges_.insert(std::make_pair(this_file_entry, keep_range));
+    } else {
+      // No pragmas allowed within "begin_keep" - "end_keep"
+      Warn(begin_loc, "Expected end_keep pragma");
+    }
+    return;
+  }
+
   if (MatchOneToken(tokens, "begin_exports", 1, begin_loc)) {
     ERRSYM(this_file_entry) << "begin_exports pragma seen\n";
     begin_exports_location_stack_.push(begin_loc);
@@ -217,6 +239,17 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
 
   if (MatchOneToken(tokens, "end_exports", 1, begin_loc)) {
     Warn(begin_loc, "end_exports without a begin_exports");
+    return;
+  }
+
+  if (MatchOneToken(tokens, "begin_keep", 1, begin_loc)) {
+    ERRSYM(this_file_entry) << "begin_keep pragma seen\n";
+    begin_keep_location_stack_.push(begin_loc);
+    return;
+  }
+
+  if (MatchOneToken(tokens, "end_keep", 1, begin_loc)) {
+    Warn(begin_loc, "end_keep without a begin_keep");
     return;
   }
 
@@ -397,7 +430,8 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   // interpreted as a pragma. Maybe do "keep" and "export" pragma handling
   // in HandleComment?
   if (LineHasText(includer_loc, "// IWYU pragma: keep") ||
-      LineHasText(includer_loc, "/* IWYU pragma: keep")) {
+      LineHasText(includer_loc, "/* IWYU pragma: keep") ||
+      HasOpenBeginKeep(includer)) {
     protect_reason = "pragma_keep";
     FileInfoFor(includer)->ReportKnownDesiredFile(includee);
 
@@ -790,6 +824,12 @@ void IwyuPreprocessorInfo::FileChanged_ExitToFile(
          "begin_exports without an end_exports");
     begin_exports_location_stack_.pop();
   }
+  
+  if (HasOpenBeginKeep(exiting_from)) {
+    Warn(begin_keep_location_stack_.top(),
+         "begin_keep without an end_keep");
+    begin_keep_location_stack_.pop();
+  }
 }
 
 void IwyuPreprocessorInfo::FileChanged_RenameFile(SourceLocation new_file) {
@@ -1085,6 +1125,17 @@ bool IwyuPreprocessorInfo::ForwardDeclareIsInhibited(
       FindInMap(&no_forward_declare_map_, file);
   return (inhibited_forward_declares != nullptr) &&
       ContainsKey(*inhibited_forward_declares, normalized_symbol_name);
+}
+
+bool IwyuPreprocessorInfo::ForwardDeclareInKeepRange(SourceLocation loc) const {
+  const FileEntry* file = GetFileEntry(loc);
+  auto keep_ranges = keep_location_ranges_.equal_range(file);
+  for (auto it = keep_ranges.first; it != keep_ranges.second; ++it) {
+    if (it->second.fullyContains(loc)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace include_what_you_use
