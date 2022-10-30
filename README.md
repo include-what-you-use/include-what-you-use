@@ -41,6 +41,7 @@ We also have convenience tags and branches for released versions of Clang (calle
 | 12    | 0.16         | `clang_12`     |
 | 13    | 0.17         | `clang_13`     |
 | 14    | 0.18         | `clang_14`     |
+| 15    | 0.19         | `clang_15`     |
 | ...   | ...          | ...            |
 | main  |              | `master`       |
 
