@@ -15,6 +15,20 @@ This pragma applies to a single `#include` directive or forward declaration. It 
 
 In this case, `std::vector` isn't used, so `<vector>` would normally be discarded, but the pragma instructs IWYU to leave it. Similarly the class `ForwardDeclaration` isn't used but is kept because of the pragma on it.
 
+## IWYU pragma: begin_keep/end_keep ##
+
+This pragma applies to a set of `#include` directives and forward declarations. It declares that the headers and forward declarations in between are to be left alone by IWYU.
+
+    main.cc:
+      // IWYU pragma: begin_keep
+      #include <vector>
+      #include <iostream>
+
+      class MyClass;
+      // IWYU pragma: end_keep
+
+In the provided case nothing within the bounds of `begin_keep` and `end_keep` will be discarded.
+
 ## IWYU pragma: export ##
 
 This pragma applies to a single `#include` directive. It says that the current file is to be considered the provider of any symbol from the included file.

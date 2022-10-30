@@ -3898,7 +3898,8 @@ class IwyuAstConsumer
       } else {
         SourceLocation decl_end_location = decl->getSourceRange().getEnd();
         if (LineHasText(decl_end_location, "// IWYU pragma: keep") ||
-            LineHasText(decl_end_location, "/* IWYU pragma: keep")) {
+            LineHasText(decl_end_location, "/* IWYU pragma: keep") ||
+            preprocessor_info().ForwardDeclareInKeepRange(decl_end_location)) {
           definitely_keep_fwd_decl = true;
         }
       }
