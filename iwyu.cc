@@ -4037,32 +4037,6 @@ class IwyuAstConsumer
     return Base::VisitDeclRefExpr(expr);
   }
 
-  // This Expr is for sizeof(), alignof() and similar.  The compiler
-  // fully instantiates a template class before taking the size of it.
-  // So so do we.
-  bool VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
-
-    const Type* arg_type = expr->getTypeOfArgument().getTypePtr();
-
-    // Calling sizeof on a reference-to-X is the same as calling it on X.
-    if (const auto* reftype = arg_type->getAs<ReferenceType>()) {
-      arg_type = reftype->getPointeeTypeAsWritten().getTypePtr();
-    }
-
-    if (const auto* arg_tmpl = arg_type->getAs<TemplateSpecializationType>()) {
-      // Special case: We are instantiating the type in the context of an
-      // expression. Need to push the type to the AST stack explicitly.
-      ASTNode node(arg_tmpl);
-      node.SetParent(current_ast_node());
-
-      instantiated_template_visitor_.ScanInstantiatedType(
-          &node, GetTplTypeResugarMapForClass(arg_type));
-    }
-
-    return Base::VisitUnaryExprOrTypeTraitExpr(expr);
-  }
-
   bool VisitConceptSpecializationExpr(ConceptSpecializationExpr* expr) {
     if (CanIgnoreCurrentASTNode())
       return true;
