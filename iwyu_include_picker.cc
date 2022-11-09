@@ -1101,11 +1101,17 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
     }
   }
   if (status == kCalculating) {
-    VERRS(0) << "Cycle in include-mapping:\n";
-    for (const string& node : *node_stack)
-      VERRS(0) << "  " << node << " ->\n";
-    VERRS(0) << "  " << key << "\n";
-    CHECK_UNREACHABLE_("Cycle in include-mapping");  // cycle is a fatal error
+
+    if (GlobalFlags().ignore_cycles) {
+      VERRS(0) << "Ignoring a cyclical mapping involving " << key << "\n";
+      return;
+    } else {
+      VERRS(0) << "Cycle in include-mapping:\n";
+      for (const string& node : *node_stack)
+        VERRS(0) << "  " << node << " ->\n";
+      VERRS(0) << "  " << key << "\n";
+      CHECK_UNREACHABLE_("Cycle in include-mapping");  // cycle is a fatal error
+    }
   }
   if (status == kDone)
     return;

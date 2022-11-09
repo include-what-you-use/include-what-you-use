@@ -112,6 +112,7 @@ static void PrintHelp(const char* extra_msg) {
          "   --regex=<dialect>: use specified regex dialect in IWYU:\n"
          "          llvm:       fast and simple (default)\n"
          "          ecmascript: slower, but more feature-complete\n"
+         "   --ignore_cycles: don't assert on cyclic includes\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
          "options without -Xiwyu prefix:\n"
@@ -202,7 +203,8 @@ CommandlineFlags::CommandlineFlags()
       cxx17ns(false),
       exit_code_error(EXIT_SUCCESS),
       exit_code_always(EXIT_SUCCESS),
-      regex_dialect(RegexDialect::LLVM) {
+      regex_dialect(RegexDialect::LLVM),
+      ignore_cycles(false) {
   // Always keep Qt .moc includes; its moc compiler does its own IWYU analysis.
   keep.emplace("*.moc");
 }
@@ -228,6 +230,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"error_always", optional_argument, nullptr, 'a'},
     {"debug", required_argument, nullptr, 'd'},
     {"regex", required_argument, nullptr, 'r'},
+    {"ignore_cycles", no_argument, nullptr, 'y'},
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "v:c:m:d:nr";
@@ -308,6 +311,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
           exit(EXIT_FAILURE);
         }
         break;
+      case 'y': ignore_cycles = true; break;
       case -1: return optind;   // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");

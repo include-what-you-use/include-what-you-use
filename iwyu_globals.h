@@ -100,6 +100,7 @@ struct CommandlineFlags {
   int exit_code_always;  // Always exit with this exit code.
   set<string> dbg_flags; // Debug flags.
   RegexDialect regex_dialect;  // Dialect for regular expression processing.
+  bool ignore_cycles; // -y: don't assert on cyclic includes
 };
 
 const CommandlineFlags& GlobalFlags();
