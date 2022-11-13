@@ -102,6 +102,7 @@ static void PrintHelp(const char* extra_msg) {
          "        #include lines need to be added or removed.\n"
          "   --no_fwd_decls: do not use forward declarations.\n"
          "   --verbose=<level>: the higher the level, the more output.\n"
+         "   --silence_correct: no output for files with the correct includes.\n" 
          "   --quoted_includes_first: when sorting includes, place quoted\n"
          "        ones first.\n"
          "   --cxx17ns: suggests the more concise syntax introduced in C++17\n"
@@ -190,6 +191,7 @@ OptionsParser::~OptionsParser() {
 CommandlineFlags::CommandlineFlags()
     : transitive_includes_only(false),
       verbose(getenv("IWYU_VERBOSE") ? atoi(getenv("IWYU_VERBOSE")) : 1),
+      silence_correct(false),
       no_default_mappings(false),
       max_line_length(80),
       prefix_header_include_policy(CommandlineFlags::kAdd),
@@ -213,6 +215,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"keep", required_argument, nullptr, 'k'},  // can be specified >once
     {"transitive_includes_only", no_argument, nullptr, 't'},
     {"verbose", required_argument, nullptr, 'v'},
+    {"silence_correct", no_argument, nullptr, 's'},
     {"mapping_file", required_argument, nullptr, 'm'},
     {"no_default_mappings", no_argument, nullptr, 'n'},
     {"prefix_header_includes", required_argument, nullptr, 'x'},
@@ -237,6 +240,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
       case 'k': AddGlobToKeepIncludes(optarg); break;
       case 't': transitive_includes_only = true; break;
       case 'v': verbose = atoi(optarg); break;
+      case 's': silence_correct = true; break;
       case 'm': mapping_files.push_back(optarg); break;
       case 'n': no_default_mappings = true; break;
       case 'o': no_comments = true; break;

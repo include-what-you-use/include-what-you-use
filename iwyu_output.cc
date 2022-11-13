@@ -2012,7 +2012,9 @@ size_t PrintableDiffs(const string& filename,
     }
   }
   if (no_adds_or_deletes && !GlobalFlags().update_comments) {
-    output = "\n(" + filename + " has correct #includes/fwd-decls)\n";
+    if(!GlobalFlags().silence_correct) {
+      output = "\n(" + filename + " has correct #includes/fwd-decls)\n";
+    }
     return 0;
   }
 

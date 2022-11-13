@@ -83,6 +83,7 @@ struct CommandlineFlags {
   set<string> keep;        // -k: globs to force-keep includes for
   bool transitive_includes_only;   // -t: don't add 'new' #includes to files
   int verbose;             // -v: how much information to emit as we parse
+  bool silence_correct;    // -s: files with correct includes/fwd decls produce no output.
   vector<string> mapping_files; // -m: mapping files
   bool no_default_mappings;     // -n: no default mappings
   // Truncate output lines to this length. No short option.
