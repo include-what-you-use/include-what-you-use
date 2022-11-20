@@ -27,6 +27,9 @@ DirectEnum2 de2;
 DirectEnum3 de3;
 ns::DirectEnum4 de4;
 DirectEnum5 de5;
+// Test that 'bool' underlying type is represented as 'bool' in opaque
+// declaration and not as '_Bool' clang builtin type.
+DirectEnum6 de6;
 
 // For an unscoped enum without explicitly specified underlying type, full
 // definition is needed.
@@ -76,6 +79,7 @@ tests/cxx/enums.cc should add these lines:
 #include "tests/cxx/enums-i4.h"
 enum class DirectEnum1;
 enum class DirectEnum2 : int;
+enum class DirectEnum6 : bool;
 enum struct DirectEnum3 : unsigned long long;
 namespace ns { enum DirectEnum4 : int; }
 
@@ -91,6 +95,7 @@ The full include-list for tests/cxx/enums.cc:
 enum class DirectEnum1;
 enum class DirectEnum2 : int;
 enum class DirectEnum5 : long;  // lines XX-XX
+enum class DirectEnum6 : bool;
 enum class Struct2::Nested;  // lines XX-XX
 enum struct DirectEnum3 : unsigned long long;
 namespace ns { enum DirectEnum4 : int; }

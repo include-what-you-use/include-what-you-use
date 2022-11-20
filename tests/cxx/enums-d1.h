@@ -23,3 +23,5 @@ enum DirectEnum4 : int { A, B, C };
 }
 
 enum class DirectEnum5 : long { A, B, C };
+
+enum class DirectEnum6 : bool { A, B };
