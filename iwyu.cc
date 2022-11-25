@@ -205,6 +205,7 @@ using clang::TagType;
 using clang::TemplateArgument;
 using clang::TemplateArgumentList;
 using clang::TemplateArgumentLoc;
+using clang::TemplateDecl;
 using clang::TemplateName;
 using clang::TemplateSpecializationType;
 using clang::TemplateSpecializationTypeLoc;
@@ -551,12 +552,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // Collect all the fields (and bases) we destroy, and call the dtor.
     set<const Type*> member_types;
     const CXXRecordDecl* record = decl->getParent();
-    for (clang::RecordDecl::field_iterator it = record->field_begin();
+    for (RecordDecl::field_iterator it = record->field_begin();
          it != record->field_end(); ++it) {
       member_types.insert(it->getType().getTypePtr());
     }
-    for (clang::CXXRecordDecl::base_class_const_iterator
-             it = record->bases_begin(); it != record->bases_end(); ++it) {
+    for (CXXRecordDecl::base_class_const_iterator it = record->bases_begin();
+         it != record->bases_end(); ++it) {
       member_types.insert(it->getType().getTypePtr());
     }
     for (const Type* type : member_types) {
@@ -3395,8 +3396,8 @@ class InstantiatedTemplateVisitor
       // expect it to be another kind of template decl, like a built-in.
       // Also in some rare cases named_decl can be a record decl (e.g. when
       // using the built-in __type_pack_element).
-      CHECK_(llvm::isa<clang::TemplateDecl>(named_decl) ||
-             llvm::isa<clang::RecordDecl>(named_decl))
+      CHECK_(llvm::isa<TemplateDecl>(named_decl) ||
+             llvm::isa<RecordDecl>(named_decl))
           << "TemplateSpecializationType has no decl of type TemplateDecl or "
              "RecordDecl?";
       return true;
