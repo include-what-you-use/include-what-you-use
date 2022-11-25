@@ -4155,7 +4155,15 @@ class IwyuAstConsumer
     if (ast_node->ParentIsA<DeducedTemplateSpecializationType>() ||
         IsDefaultTemplateTemplateArg(ast_node)) {
       current_ast_node()->set_in_forward_declare_context(false);
-      ReportDeclUse(CurrentLoc(), template_name.getAsTemplateDecl());
+      // Not all template name kinds have an associated template decl; notably
+      // dependent names, overloaded template names and ADL-resolved names. Only
+      // report the use if we can find a decl.
+      if (TemplateDecl* template_decl = template_name.getAsTemplateDecl()) {
+        ReportDeclUse(CurrentLoc(), template_decl);
+      } else {
+        // TODO: There should probably be handling of these delayed-resolution
+        // template decls as well, but probably not here.
+      }
     }
     return true;
   }
