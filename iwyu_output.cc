@@ -2120,6 +2120,10 @@ void IwyuFileInfo::HandlePreprocessingDone() {
                       << " as public header for " << private_include
                       << " because latter is already marked as public,"
                       << " though uses macro defined by includer.\n";
+      } else if (file_ == macro_use_includee) {
+        ERRSYM(file_) << "Skip marking " << quoted_file_
+                      << " as public header for " << private_include
+                      << " because they are the same file.\n";
       } else {
         ERRSYM(file_) << "Mark " << quoted_file_
                       << " as public header for " << private_include
