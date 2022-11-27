@@ -2124,6 +2124,9 @@ void IwyuFileInfo::HandlePreprocessingDone() {
         ERRSYM(file_) << "Mark " << quoted_file_
                       << " as public header for " << private_include
                       << " because used macro is defined by includer.\n";
+        VERRS(8) << "Adding dynamic mapping for reverse macro dependency: "
+                 << "(" << GetFilePath(macro_use_includee) << ") -> ("
+                 << GetFilePath(file_) << ")\n";
         MutableGlobalIncludePicker()->AddMapping(
             private_include, MappedInclude(quoted_file_, GetFilePath(file_)));
         MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
