@@ -263,12 +263,11 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
 
     const string quoted_this_file
         = ConvertToQuotedInclude(GetFilePath(begin_loc));
+
+    VERRS(8) << "Adding dynamic mapping for private pragma\n";
     MutableGlobalIncludePicker()->AddMapping(quoted_this_file,
                                              MappedInclude(suggested));
     MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_this_file);
-    ERRSYM(this_file_entry) << "Adding private pragma-mapping: "
-                            << quoted_this_file << " -> "
-                            << suggested << "\n";
     return;
   }
 
@@ -377,13 +376,12 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     for (string& public_include : public_includes) {
       StripWhiteSpace(&public_include);
       const string quoted_header_name = "<" + public_include + ">";
+
+      VERRS(8) << "Adding dynamic mapping for @headername\n";
       MutableGlobalIncludePicker()->AddMapping(
           quoted_private_include, MappedInclude(quoted_header_name));
       MutableGlobalIncludePicker()->MarkIncludeAsPrivate(
           quoted_private_include);
-      ERRSYM(GetFileEntry(current_loc)) << "Adding @headername mapping: "
-                                        << quoted_private_include << "->"
-                                        << quoted_header_name << "\n";
     }
     break;  // No more than one @headername directive allowed.
   }
@@ -447,19 +445,19 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     const string includer_path = GetFilePath(includer);
     const string quoted_includer = ConvertToQuotedInclude(includer_path);
     MappedInclude map_to(quoted_includer, includer_path);
+    VERRS(8) << "Adding dynamic mapping for export pragma: "
+             << "(" << GetFilePath(includee) << ") -> (" << includer_path
+             << ")\n";
     MutableGlobalIncludePicker()->AddMapping(include_name_as_written, map_to);
-    ERRSYM(includer) << "Adding pragma-export mapping: "
-                     << include_name_as_written << " -> "
-                     << map_to.quoted_include << "\n";
     // Relative includes can be problematic as map keys, because they are
     // context-dependent.  Convert it to a context-free quoted include
     // (which may contain the full path to the file), and add that too.
     string map_from = ConvertToQuotedInclude(GetFilePath(includee));
     if (map_from != include_name_as_written) {
+      VERRS(8) << "Adding dynamic mapping for export pragma (relative): "
+               << "(" << GetFilePath(includee) << ") -> (" << includer_path
+               << ")\n";
       MutableGlobalIncludePicker()->AddMapping(map_from, map_to);
-      ERRSYM(includer) << "Adding pragma-export mapping: "
-                       << map_from << " -> " << map_to.quoted_include
-                       << "\n";
     }
 
   // We also always keep #includes of .c files: iwyu doesn't touch those.

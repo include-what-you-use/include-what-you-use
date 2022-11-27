@@ -1306,6 +1306,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
     // the closing quote as part of the .*.
     AddFriendRegex(includee_filepath,
                    quoted_includee.substr(0, internal_pos) + ".*");
+    VERRS(8) << "Adding dynamic mapping for internal/ header\n";
     AddMapping(quoted_includee, mapped_includer);
   }
 
@@ -1315,6 +1316,7 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
     string public_header = quoted_includee;
     StripPast(&public_header, "/");   // read past "asm-whatever/"
     public_header = "<asm/" + public_header;   // now it's <asm/something.h>
+    VERRS(8) << "Adding dynamic mapping for <asm-*> header\n";
     AddMapping(quoted_includee, MappedInclude(public_header));
   }
 }
