@@ -17,9 +17,9 @@
 
 class IndirectClass {
  public:
-  void Method() const { };
+  void Method() const { }
   int a;
-  static void StaticMethod() { };
+  static void StaticMethod() { }
   static int statica;
 };
 
