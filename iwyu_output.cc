@@ -981,7 +981,9 @@ set<string> CalculateMinimalIncludes(
 // A6) If any of the redeclarations of this declaration is in the same
 //     file as the use (and before it), and is actually a definition,
 //     discard the forward-declare use.
-// A7) If --no_fwd_decls has been passed, recategorize as a full use.
+// A7) If any redeclaration is marked with IWYU pragma: export, mark as a
+//     full use of this decl to keep its containing file included.
+// A8) If --no_fwd_decls has been passed, recategorize as a full use.
 
 // Trimming symbol uses (1st pass):
 // B1) If the definition of a full use comes after the use, change the
@@ -1143,7 +1145,20 @@ void ProcessForwardDeclare(OneUse* use,
     }
   }
 
-  // (A7) If --no_fwd_decls has been passed, and a decl can be found in one of
+  // (A7) If any arbitrary redeclaration is marked with IWYU pragma: export,
+  // reset use as a full use of this decl to keep its containing file included.
+  if (!use->is_full_use()) {
+    for (const Decl* redecl : use->decl()->redecls()) {
+      const auto* decl = cast<NamedDecl>(redecl);
+      if (preprocessor_info->ForwardDeclareIsExported(decl)) {
+        use->reset_decl(decl);
+        use->set_full_use();
+        break;
+      }
+    }
+  }
+
+  // (A8) If --no_fwd_decls has been passed, and a decl can be found in one of
   // the headers, suggest that header, and recategorize as a full use. If we can
   // only find a decl in this file, it must be a self-sufficent decl being used,
   // so we can just let IWYU do its work, and there is no need to recategorize.

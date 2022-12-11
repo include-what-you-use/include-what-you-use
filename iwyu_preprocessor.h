@@ -172,6 +172,9 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Return true if the fwd decl is marked with "IWYU pragma: keep".
   bool ForwardDeclareIsMarkedKeep(const clang::NamedDecl* decl) const;
 
+  // Return true if the fwd decl is marked with "IWYU pragma: export".
+  bool ForwardDeclareIsExported(const clang::NamedDecl* decl) const;
+
  protected:
   // Preprocessor event handlers called by Clang.
   void MacroExpands(const clang::Token& macro_use_token,
@@ -364,6 +367,10 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // For processing forward decls. It is a multimap containing the bounds of
   // every keep range.
   multimap<const clang::FileEntry*, clang::SourceRange> keep_location_ranges_;
+
+  // For processing forward decls. It is a multimap containing the bounds of
+  // every export range.
+  multimap<const clang::FileEntry*, clang::SourceRange> export_location_ranges_;
 
   // For processing associated pragma. It is the current open
   // "associated" pragma.

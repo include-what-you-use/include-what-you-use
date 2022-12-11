@@ -3989,6 +3989,8 @@ class IwyuAstConsumer
         }
       } else if (preprocessor_info().ForwardDeclareIsMarkedKeep(decl)) {
         definitely_keep_fwd_decl = true;
+      } else if (preprocessor_info().ForwardDeclareIsExported(decl)) {
+        definitely_keep_fwd_decl = true;
       }
 
       preprocessor_info().FileInfoFor(CurrentFileEntry())->AddForwardDeclare(
