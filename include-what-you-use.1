@@ -251,13 +251,13 @@ and forward declarations instead of a single line.
 .B // IWYU pragma: export
 Used after an
 .B #include
-directive it indicates that the current file is considered to be a provider of
-the included file.
+directive or forward declaration it indicates that the current file is
+considered to be a provider of any symbol from the included file or declaration.
 .TP
 .BR "// IWYU pragma: begin_exports" , " // IWYU pragma: end_exports"
 Has the same effect as the previous pragma comment, but applies to a range of
 .BR #include s
-instead of a single line.
+or forward declarations instead of a single line.
 .TP
 .BR "// IWYU pragma: private" [ ", include \fIheader" ]
 Indicates that the current file is considered private,

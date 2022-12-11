@@ -31,12 +31,14 @@ In the provided case nothing within the bounds of `begin_keep` and `end_keep` wi
 
 ## IWYU pragma: export ##
 
-This pragma applies to a single `#include` directive. It says that the current file is to be considered the provider of any symbol from the included file.
+This pragma applies to a single `#include` directive or forward declaration. It says that the current file is to be considered the provider of any symbol from the included file or declaration.
 
     facade.h:
       #include "detail/constants.h" // IWYU pragma: export
       #include "detail/types.h" // IWYU pragma: export
       #include <vector> // don't export stuff from <vector>
+
+      class Other; // IWYU pragma: export
 
     main.cc:
       #include "facade.h"
@@ -44,18 +46,22 @@ This pragma applies to a single `#include` directive. It says that the current f
       // Assuming Thing comes from detail/types.h and MAX_THINGS from detail/constants.h
       std::vector<Thing> things(MAX_THINGS);
 
-Here, since `detail/constants.h` and `detail/types.h` have both been exported, IWYU is happy with the `facade.h` include for `Thing` and `MAX_THINGS`.
+      // Satisfied with forward-declaration from facade.h
+      void foo(Other* thing);
+
+Here, since `detail/constants.h`, `detail/types.h` and `Other` have all been exported, IWYU is happy with the `facade.h` include for `Thing` and `MAX_THINGS` and does not suggest a local forward declaration for `Other`.
 
 In contrast, since `<vector>` has not been exported from `facade.h`, it will be suggested as an additional include.
 
 ## IWYU pragma: begin_exports/end_exports ##
 
-This pragma applies to a set of `#include` directives. It declares that the including file is to be considered the provider of any symbol from these included files. This is the same as decorating every `#include` directive with `IWYU pragma: export`.
+This pragma applies to a set of `#include` directives or forward declarations. It declares that the including file is to be considered the provider any symbol from contained included files or declarations. This is the same as decorating every line with `IWYU pragma: export`.
 
     facade.h:
       // IWYU pragma: begin_exports
       #include "detail/constants.h"
       #include "detail/types.h"
+      class Other;
       // IWYU pragma: end_exports
 
       #include <vector> // don't export stuff from <vector>

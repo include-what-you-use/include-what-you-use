@@ -209,7 +209,11 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
   if (HasOpenBeginExports(this_file_entry)) {
     if (MatchOneToken(tokens, "end_exports", 1, begin_loc)) {
       ERRSYM(this_file_entry) << "end_exports pragma seen\n";
+      SourceLocation export_loc_begin = begin_exports_location_stack_.top();
       begin_exports_location_stack_.pop();
+      SourceRange export_range(export_loc_begin, begin_loc);
+      export_location_ranges_.insert(
+          std::make_pair(this_file_entry, export_range));
     } else {
       // No pragma allowed within "begin_exports" - "end_exports"
       Warn(begin_loc, "Expected end_exports pragma");
@@ -1141,5 +1145,23 @@ bool IwyuPreprocessorInfo::ForwardDeclareIsMarkedKeep(
   // Is the declaration itself marked with trailing comment?
   return (LineHasText(loc, "// IWYU pragma: keep") ||
           LineHasText(loc, "/* IWYU pragma: keep"));
+}
+
+bool IwyuPreprocessorInfo::ForwardDeclareIsExported(
+    const NamedDecl* decl) const {
+  // Use end-location so that any trailing comments match only on the last line.
+  SourceLocation loc = decl->getEndLoc();
+
+  // Is the decl part of a begin_exports/end_exports block?
+  const FileEntry* file = GetFileEntry(loc);
+  auto export_ranges = export_location_ranges_.equal_range(file);
+  for (auto it = export_ranges.first; it != export_ranges.second; ++it) {
+    if (it->second.fullyContains(loc)) {
+      return true;
+    }
+  }
+  // Is the declaration itself marked with trailing comment?
+  return (LineHasText(loc, "// IWYU pragma: export") ||
+          LineHasText(loc, "/* IWYU pragma: export"));
 }
 }  // namespace include_what_you_use
