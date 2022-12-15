@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 ##===--- run_iwyu_tests.py - include-what-you-use test framework driver ---===##
 #
@@ -52,7 +52,7 @@ def TestIwyuOnRelevantFiles(filename):
                glob.glob('%s/*/%s-*' % (dirname, basename)) +
                glob.glob('%s.h' % all_but_extension) +
                glob.glob('%s/*/%s.h' % (dirname, basename)))
-  
+
   files_to_check = [f for f in all_files if not f.endswith(extension)]
   files_to_check.append(filename)
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 ##===--- iwyu_tool_test.py - test for iwyu_tool.py ------------------------===##
 #
