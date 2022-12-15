@@ -67,17 +67,15 @@ import sys
 from collections import OrderedDict
 
 _EPILOG = """\
-Reads the output from the include-what-you-use
-script on stdin -- run with --v=1 (default) verbose or above -- and,
-unless --sort_only or --dry_run is specified,
-modifies the files mentioned in the output, removing their old
-#include lines and replacing them with the lines given by the
-include_what_you_use script.  It also sorts the #include and
-forward-declare lines.
+Reads the output from include-what-you-use on stdin -- run with --v=1 (default)
+verbosity level or above -- and, unless --sort_only or --dry_run is specified,
+modifies the files mentioned in the output, removing their old #include lines
+and replacing them with the lines given by include-what-you-use.  It also sorts
+the #include and forward-declare lines.
 
-All files mentioned in the include-what-you-use script are modified,
-unless filenames are specified on the commandline, in which case only
-those files are modified.
+All files mentioned in include-what-you-use output are modified, unless
+filenames are specified on the commandline, in which case only those files are
+modified.
 
 The exit code is non-zero if a critical error occurs, otherwise zero.
 """
