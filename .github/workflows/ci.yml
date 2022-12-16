@@ -28,7 +28,7 @@ jobs:
           sudo apt update
           sudo apt install -y ninja-build
           # Remove any base dist LLVM/Clang installations
-          sudo apt remove -y "libclang-dev*"
+          sudo apt remove -y "libclang*"
           sudo apt remove -y "clang*"
           sudo apt remove -y "llvm*"
           # Reinstall tagged versions
