@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 ##===--- iwyu-check-license-header.py - check license headers -------------===##
 #
