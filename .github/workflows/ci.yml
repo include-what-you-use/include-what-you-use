@@ -33,8 +33,8 @@ jobs:
           sudo apt remove -y "llvm*"
           # Reinstall tagged versions
           sudo apt install -y llvm$LLVM_TAG-dev
-          sudo apt -o DPkg::Options::="--force-overwrite" install -y libclang$LLVM_TAG-dev
-          sudo apt -o DPkg::Options::="--force-overwrite" install -y clang$LLVM_TAG
+          sudo apt install -y libclang$LLVM_TAG-dev
+          sudo apt install -y clang$LLVM_TAG
 
       - name: Check out default branch
         uses: actions/checkout@v2
