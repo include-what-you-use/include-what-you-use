@@ -70,7 +70,7 @@ if (NOT TARGET clang-resource-headers)
     add_custom_command(OUTPUT "${dst}"
       DEPENDS "${src}"
       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${src}" "${dst}"
-      COMMENT "Copying clang's ${file}..."
+      COMMENT "Copying ${src}..."
     )
     list(APPEND out_files "${dst}")
   endforeach()
