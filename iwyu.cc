@@ -2421,10 +2421,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // parse it to '<new>' before using, so any path that does
         // that, and is clearly a c++ path, is fine; its exact
         // contents don't matter that much.
-        using clang::Optional;
-        using clang::FileEntryRef;
+        using clang::OptionalFileEntryRef;
         const FileEntry* use_file = CurrentFileEntry();
-        Optional<FileEntryRef> file = compiler()->getPreprocessor().LookupFile(
+        OptionalFileEntryRef file = compiler()->getPreprocessor().LookupFile(
             CurrentLoc(), "new", true, nullptr, use_file, nullptr, nullptr,
             nullptr, nullptr, nullptr, nullptr, false);
         if (file) {
