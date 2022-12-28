@@ -28,6 +28,7 @@
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Lex/MacroInfo.h"
 
@@ -37,6 +38,7 @@ using clang::FileID;
 using clang::MacroDefinition;
 using clang::MacroDirective;
 using clang::MacroInfo;
+using clang::NamedDecl;
 using clang::Preprocessor;
 using clang::SourceLocation;
 using clang::SourceRange;
@@ -1123,7 +1125,12 @@ bool IwyuPreprocessorInfo::ForwardDeclareIsInhibited(
       ContainsKey(*inhibited_forward_declares, normalized_symbol_name);
 }
 
-bool IwyuPreprocessorInfo::ForwardDeclareInKeepRange(SourceLocation loc) const {
+bool IwyuPreprocessorInfo::ForwardDeclareIsMarkedKeep(
+    const NamedDecl* decl) const {
+  // Use end-location so that any trailing comments match only on the last line.
+  SourceLocation loc = decl->getEndLoc();
+
+  // Is the decl part of a begin_keep/end_keep block?
   const FileEntry* file = GetFileEntry(loc);
   auto keep_ranges = keep_location_ranges_.equal_range(file);
   for (auto it = keep_ranges.first; it != keep_ranges.second; ++it) {
@@ -1131,7 +1138,8 @@ bool IwyuPreprocessorInfo::ForwardDeclareInKeepRange(SourceLocation loc) const {
       return true;
     }
   }
-  return false;
+  // Is the declaration itself marked with trailing comment?
+  return (LineHasText(loc, "// IWYU pragma: keep") ||
+          LineHasText(loc, "/* IWYU pragma: keep"));
 }
-
 }  // namespace include_what_you_use

@@ -3987,13 +3987,8 @@ class IwyuAstConsumer
               definitely_keep_fwd_decl = true;
           }
         }
-      } else {
-        SourceLocation decl_end_location = decl->getSourceRange().getEnd();
-        if (LineHasText(decl_end_location, "// IWYU pragma: keep") ||
-            LineHasText(decl_end_location, "/* IWYU pragma: keep") ||
-            preprocessor_info().ForwardDeclareInKeepRange(decl_end_location)) {
-          definitely_keep_fwd_decl = true;
-        }
+      } else if (preprocessor_info().ForwardDeclareIsMarkedKeep(decl)) {
+        definitely_keep_fwd_decl = true;
       }
 
       preprocessor_info().FileInfoFor(CurrentFileEntry())->AddForwardDeclare(

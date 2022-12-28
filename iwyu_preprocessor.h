@@ -79,6 +79,7 @@
 namespace clang {
 class FileEntry;
 class MacroInfo;
+class NamedDecl;
 }  // namespace clang
 
 namespace include_what_you_use {
@@ -168,9 +169,8 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   bool ForwardDeclareIsInhibited(
       const clang::FileEntry* file, const string& qualified_symbol_name) const;
 
-  // Return true if the fwd decl is in the range of a begin_keep -> end_keep
-  // block.
-  bool ForwardDeclareInKeepRange(clang::SourceLocation loc) const;
+  // Return true if the fwd decl is marked with "IWYU pragma: keep".
+  bool ForwardDeclareIsMarkedKeep(const clang::NamedDecl* decl) const;
 
  protected:
   // Preprocessor event handlers called by Clang.
