@@ -1777,7 +1777,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
       if (!IsInHeader(decl)) {
         // No point in author-intent analysis of function definitions
-        // in source files.
+        // in source files or for builtins.
         return true;
       }
     } else {
