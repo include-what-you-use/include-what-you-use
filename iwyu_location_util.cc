@@ -174,7 +174,11 @@ bool IsInScratchSpace(SourceLocation loc) {
 
 bool IsInHeader(const clang::Decl* decl) {
   const FileEntry* containing_file = GetFileEntry(decl);
-  CHECK_(containing_file);
+  if (!containing_file) {
+    // This is a builtin, or something is terribly wrong.
+    // At any rate, we're not in a header.
+    return false;
+  }
   return !GlobalSourceManager()->isMainFile(*containing_file);
 }
 
