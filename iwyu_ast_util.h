@@ -839,6 +839,10 @@ std::string GetKindName(const clang::Stmt* stmt);
 std::string GetKindName(const clang::Type* type);
 std::string GetKindName(const clang::TypeLoc typeloc);
 
+// Returns true if decl is entirely inside a function, which implies it's only
+// visible from said function.
+bool IsDeclaredInsideFunction(const clang::Decl* decl);
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_

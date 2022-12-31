@@ -976,15 +976,18 @@ set<string> CalculateMinimalIncludes(
 // A4) If the file containing the use has a pragma inhibiting the forward
 //     declaration of the symbol, change the use to a full info use in order
 //     to make sure that the compiler can see some declaration of the symbol.
-// A5) If a nested class, discard this use (the parent class declaration
-//     is sufficient).
+// A5) If declaration is nested inside a class or a function, discard this use.
+//     The containing class/function is required to use the nested decl, and
+//     so will force use of the containing header.
 // A6) If any of the redeclarations of this declaration is in the same
 //     file as the use (and before it), and is actually a definition,
 //     discard the forward-declare use.
 // A7) If --no_fwd_decls has been passed, recategorize as a full use.
 
 // Trimming symbol uses (1st pass):
-// B1) TBD
+// B1) If declaration is nested inside a function, discard this use.
+//     The function is required to use the nested decl, and so will force use of
+//     the containing header.
 // B2) If the definition of a full use comes after the use, change the
 //     full use to a forward-declare use that points to a fwd-decl
 //     that comes before the use.  (This is for cases like typedefs
@@ -1106,7 +1109,8 @@ void ProcessForwardDeclare(OneUse* use,
     }
   }
 
-  // (A5) If using a nested class, discard this use.
+  // (A5) If using a nested class or a type declared inside a function, discard
+  // this use.
   if (IsNestedClass(tag_decl)) {
     // iwyu will require the full type of the parent class when it
     // recurses on the qualifier (any use of Foo::Bar requires the
@@ -1125,6 +1129,12 @@ void ProcessForwardDeclare(OneUse* use,
       use->set_ignore_use();
       return;
     }
+  } else if (IsDeclaredInsideFunction(tag_decl)) {
+    VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name() << " ("
+             << use->PrintableUseLoc() << "): declared inside a "
+             << "function\n";
+    use->set_ignore_use();
+    return;
   }
 
   // (A6) If a definition exists earlier in this file, discard this use.
@@ -1181,6 +1191,16 @@ void ProcessFullUse(OneUse* use,
   CHECK_(use->is_full_use() && "Must not call ProcessFullUse on fwd-decl");
   if (use->ignore_use())   // we're already ignoring it
     return;
+
+  // (B1) If declaration is inside a function, it can only be seen via said
+  // function. Discard this use and assume the use of the function provides.
+  if (IsDeclaredInsideFunction(use->decl())) {
+    VERRS(6) << "Ignoring full use of " << use->symbol_name() << " ("
+             << use->PrintableUseLoc() << "): declared inside a "
+             << "function\n";
+    use->set_ignore_use();
+    return;
+  }
 
   // We normally ignore uses for builtins, but when there is a mapping defined
   // for the symbol, we should respect that.  So, we need to determine whether
