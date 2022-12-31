@@ -1507,4 +1507,9 @@ string GetKindName(const TypeLoc typeloc) {
   return string(typeloc.getTypePtr()->getTypeClassName()) + "TypeLoc";
 }
 
+bool IsDeclaredInsideFunction(const Decl* decl) {
+  const DeclContext* decl_ctx = decl->getDeclContext();
+  return isa<FunctionDecl>(decl_ctx);
+}
+
 }  // namespace include_what_you_use
