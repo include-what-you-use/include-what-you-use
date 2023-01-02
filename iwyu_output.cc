@@ -984,32 +984,33 @@ set<string> CalculateMinimalIncludes(
 // A7) If --no_fwd_decls has been passed, recategorize as a full use.
 
 // Trimming symbol uses (1st pass):
-// B1) If the definition of a full use comes after the use, change the
+// B1) TBD
+// B2) If the definition of a full use comes after the use, change the
 //     full use to a forward-declare use that points to a fwd-decl
 //     that comes before the use.  (This is for cases like typedefs
 //     where iwyu demands a full use but the language allows a
 //     forward-declare.)
-// B2) Discard symbol uses of a symbol defined in the same file it's used.
+// B3) Discard symbol uses of a symbol defined in the same file it's used.
 //     If the symbol is a typedef, function, or var -- every decl
 //     that is re-declarable except for TagDecl -- discard if *any*
 //     declaration is in the same file as the use.
-// B3) Discard symbol uses for builtin symbols ('__builtin_memcmp') and
+// B4) Discard symbol uses for builtin symbols ('__builtin_memcmp') and
 //     for operator new and operator delete (excluding placement new),
 //     which are effectively built-in even though they're in <new>.
-// B4) Discard symbol uses for member functions that live in the same
+// B5) Discard symbol uses for member functions that live in the same
 //     file as the class they're part of (the parent check suffices).
-// B5) Sanity check: Discard 'backwards' #includes.  These are
+// B6) Sanity check: Discard 'backwards' #includes.  These are
 //     #includes where we say a.h should #include b.h, but b.h is
 //     already #including a.h.  This happens when iwyu attributes a
 //     use to the wrong file.
-// B6) In --transitive_includes_only mode, discard 'new' #includes.
+// B7) In --transitive_includes_only mode, discard 'new' #includes.
 //     These are #includes where we say a.h should #include b.h, but
 //     a.h does not see b.h in its transitive #includes.  (Note: This
 //     happens before include-picker mapping, so it's still possible to
 //     see 'new' includes via a manual mapping.)
-// B1') Discard macro uses in the same file as the definition (B2 redux).
-// B2') Discard macro uses that form a 'backwards' #include (B5 redux).
-// B3') Discard macro uses from a 'new' #include (B6 redux).
+// B1') Discard macro uses in the same file as the definition (B3 redux).
+// B2') Discard macro uses that form a 'backwards' #include (B6 redux).
+// B3') Discard macro uses from a 'new' #include (B7 redux).
 
 // Determining 'desired' #includes:
 // C1) Get a list of 'effective' direct includes.  For most files, it's
@@ -1189,7 +1190,7 @@ void ProcessFullUse(OneUse* use,
   bool is_builtin_function_with_mappings =
       is_builtin_function && HasMapping(use->symbol_name());
 
-  // (B1) If the definition is after the use, re-point to a prior decl.
+  // (B2) If the definition is after the use, re-point to a prior decl.
   // If iwyu followed the language precisely, this wouldn't be
   // necessary: code wouldn't compile if a full-use didn't have the
   // definition handy yet.  But in fact, iwyu sometimes requires a full
@@ -1222,7 +1223,7 @@ void ProcessFullUse(OneUse* use,
     return;
   }
 
-  // (B2) Discard symbol uses of a symbol defined in the same file it's used.
+  // (B3) Discard symbol uses of a symbol defined in the same file it's used.
   // If the symbol can be declared in multiple places, we count it if
   // *any* declaration is in the same file, unless the symbol is a
   // class or enum.  (Every other kind of redeclarable symbol, such as
@@ -1250,7 +1251,7 @@ void ProcessFullUse(OneUse* use,
     }
   }
 
-  // (B3) Discard symbol uses for builtin symbols, including new/delete and
+  // (B4) Discard symbol uses for builtin symbols, including new/delete and
   // template builtins.
   if (isa<clang::BuiltinTemplateDecl>(use->decl())) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()
@@ -1281,7 +1282,7 @@ void ProcessFullUse(OneUse* use,
     }
   }
 
-  // (B4) Discard symbol uses for class members in the same file as parent.
+  // (B5) Discard symbol uses for class members in the same file as parent.
   if (const CXXRecordDecl* parent_decl =
           DynCastFrom(use->decl()->getDeclContext())) {
     // See if we also recorded a use of the parent.
@@ -1319,7 +1320,7 @@ void ProcessFullUse(OneUse* use,
     }
   }
 
-  // (B5) Discard uses of symbols that form a 'backwards' #include.
+  // (B6) Discard uses of symbols that form a 'backwards' #include.
   // This means that we say a.h is using a symbol in b.h, but b.h
   // already #includes a.h (either directly or indirectly).  Since the
   // include graph should be acyclic, this means that iwyu messed up,
@@ -1338,7 +1339,7 @@ void ProcessFullUse(OneUse* use,
     return;
   }
 
-  // (B6) In --transitive_includes_only mode, discard 'new' #includes.
+  // (B7) In --transitive_includes_only mode, discard 'new' #includes.
   // In practice, if we tell a.h to add an #include that is not in its
   // transitive includes, it's usually (but not always) an iwyu error
   // of some sort.  So we allow a flag to discard such recommendations.
