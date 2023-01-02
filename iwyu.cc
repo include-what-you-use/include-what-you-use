@@ -1698,17 +1698,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  bool VisitEnumDecl(EnumDecl* decl) {
-    if (CanIgnoreCurrentASTNode())
-      return true;
-
-    clang::QualType integer_type = decl->getIntegerType();
-    if (const clang::Type* type = integer_type.getTypePtrOrNull()) {
-      ReportTypeUse(CurrentLoc(), type);
-    }
-    return true;
-  }
-
   // If you say 'typedef Foo Bar', C++ says you just need to
   // forward-declare Foo.  But iwyu would rather you fully define Foo,
   // so all users of Bar don't have to.  We make two exceptions:
@@ -1843,70 +1832,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                  << " (type " << PrintableType(param_type) << ")\n";
       }
     }
-    return true;
-  }
-
-  // Special handling for C++ methods to detect covariant return types.
-  // These are defined as a derived class overriding a method with a different
-  // return type from the base.
-  bool VisitCXXMethodDecl(CXXMethodDecl* method_decl) {
-    if (CanIgnoreCurrentASTNode()) return true;
-
-    if (HasCovariantReturnType(method_decl)) {
-      const Type* return_type = RemovePointersAndReferencesAsWritten(
-          method_decl->getReturnType().getTypePtr());
-
-      VERRS(3) << "Found covariant return type in "
-               << method_decl->getQualifiedNameAsString()
-               << ", needs complete type of "
-               << PrintableType(return_type)
-               << ".\n";
-
-      ReportTypeUse(CurrentLoc(), return_type);
-    }
-
-    return true;
-  }
-
-  //------------------------------------------------------------
-  // Visitors of types derived from clang::Stmt.
-
-  // Catch statements always require the full type to be visible,
-  // no matter if we're catching by value, reference or pointer.
-  bool VisitCXXCatchStmt(clang::CXXCatchStmt* stmt) {
-    if (CanIgnoreCurrentASTNode()) return true;
-
-    if (const VarDecl* exception_decl = stmt->getExceptionDecl()) {
-      // Get the caught type from the decl via associated type source info to
-      // get more precise location info for the type use.
-      TypeLoc typeloc = exception_decl->getTypeSourceInfo()->getTypeLoc();
-      const Type* caught_type = typeloc.getType().getTypePtr();
-
-      // Strip off pointers/references to get to the pointee type.
-      caught_type = RemovePointersAndReferencesAsWritten(caught_type);
-      ReportTypeUse(GetLocation(&typeloc), caught_type);
-    } else {
-      // catch(...): no type to act on here.
-    }
-
-    return true;
-  }
-
-  // The type of the for-range-init expression is fully required, because the
-  // compiler generates method calls to it, e.g. 'for (auto t : ts)' translates
-  // roughly into 'for (auto i = std::begin(ts); i != std::end(ts); ++i)'.
-  // Both the iterator type and the begin/end calls depend on the complete type
-  // of ts, so make sure we include it.
-  bool VisitCXXForRangeStmt(clang::CXXForRangeStmt* stmt) {
-    if (CanIgnoreCurrentASTNode()) return true;
-
-    if (const Type* type = stmt->getRangeInit()->getType().getTypePtrOrNull()) {
-      ReportTypeUse(CurrentLoc(), RemovePointersAndReferencesAsWritten(type));
-
-      // TODO: We should probably find a way to require inclusion of any
-      // argument-dependent begin/end declarations.
-    }
-
     return true;
   }
 
@@ -2110,31 +2035,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreType(element_type))
       return true;
     ReportTypeUse(CurrentLoc(), element_type);
-    return true;
-  }
-
-  // If a binary operator expression results in pointer arithmetic, we need the
-  // full types of all pointers involved.
-  bool VisitBinaryOperator(clang::BinaryOperator* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
-
-    // If it's not +, +=, - or -=, this can't be pointer arithmetic
-    clang::BinaryOperator::Opcode op = expr->getOpcode();
-    if (op != clang::BO_Add && op != clang::BO_Sub &&
-        op != clang::BO_AddAssign && op != clang::BO_SubAssign)
-      return true;
-
-    for (const Stmt* child : expr->children()) {
-      if (const PointerType* pointer_type =
-              dyn_cast<PointerType>(GetTypeOf(cast<Expr>(child)))) {
-        // It's a pointer-typed expression. Get the pointed-to type (which may
-        // itself be a pointer) and report it.
-        const Type* deref_type = pointer_type->getPointeeType().getTypePtr();
-        if (!CanIgnoreType(deref_type))
-          ReportTypeUse(CurrentLoc(), deref_type);
-      }
-    }
-
     return true;
   }
 
@@ -3930,6 +3830,39 @@ class IwyuAstConsumer
     return Base::VisitTagDecl(decl);
   }
 
+  // Special handling for C++ methods to detect covariant return types.
+  // These are defined as a derived class overriding a method with a different
+  // return type from the base.
+  bool VisitCXXMethodDecl(CXXMethodDecl* method_decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    if (HasCovariantReturnType(method_decl)) {
+      const Type* return_type = RemovePointersAndReferencesAsWritten(
+          method_decl->getReturnType().getTypePtr());
+
+      VERRS(3) << "Found covariant return type in "
+               << method_decl->getQualifiedNameAsString()
+               << ", needs complete type of " << PrintableType(return_type)
+               << ".\n";
+
+      ReportTypeUse(CurrentLoc(), return_type);
+    }
+
+    return true;
+  }
+
+  bool VisitEnumDecl(EnumDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    clang::QualType integer_type = decl->getIntegerType();
+    if (const clang::Type* type = integer_type.getTypePtrOrNull()) {
+      ReportTypeUse(CurrentLoc(), type);
+    }
+    return true;
+  }
+
   // If you specialize a template, you need a declaration of the
   // template you're specializing.  That is, for code like this:
   //    template <class T> struct Foo;
@@ -4021,6 +3954,74 @@ class IwyuAstConsumer
   }
 
   // --- Visitors of types derived from clang::Stmt.
+
+  // If a binary operator expression results in pointer arithmetic, we need the
+  // full types of all pointers involved.
+  bool VisitBinaryOperator(clang::BinaryOperator* expr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    // If it's not +, +=, - or -=, this can't be pointer arithmetic
+    clang::BinaryOperator::Opcode op = expr->getOpcode();
+    if (op != clang::BO_Add && op != clang::BO_Sub &&
+        op != clang::BO_AddAssign && op != clang::BO_SubAssign) {
+      return Base::VisitBinaryOperator(expr);
+    }
+
+    for (const Stmt* child : expr->children()) {
+      if (const PointerType* pointer_type =
+              dyn_cast<PointerType>(GetTypeOf(cast<Expr>(child)))) {
+        // It's a pointer-typed expression. Get the pointed-to type (which may
+        // itself be a pointer) and report it.
+        const Type* deref_type = pointer_type->getPointeeType().getTypePtr();
+        if (!CanIgnoreType(deref_type, IgnoreKind::ForUse))
+          ReportTypeUse(CurrentLoc(), deref_type);
+      }
+    }
+
+    return Base::VisitBinaryOperator(expr);
+  }
+
+  // Catch statements always require the full type to be visible,
+  // no matter if we're catching by value, reference or pointer.
+  bool VisitCXXCatchStmt(clang::CXXCatchStmt* stmt) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    if (const VarDecl* exception_decl = stmt->getExceptionDecl()) {
+      // Get the caught type from the decl via associated type source info to
+      // get more precise location info for the type use.
+      TypeLoc typeloc = exception_decl->getTypeSourceInfo()->getTypeLoc();
+      const Type* caught_type = typeloc.getType().getTypePtr();
+
+      // Strip off pointers/references to get to the pointee type.
+      caught_type = RemovePointersAndReferencesAsWritten(caught_type);
+      ReportTypeUse(GetLocation(&typeloc), caught_type);
+    } else {
+      // catch(...): no type to act on here.
+    }
+
+    return true;
+  }
+
+  // The type of the for-range-init expression is fully required, because the
+  // compiler generates method calls to it, e.g. 'for (auto t : ts)' translates
+  // roughly into 'for (auto i = std::begin(ts); i != std::end(ts); ++i)'.
+  // Both the iterator type and the begin/end calls depend on the complete type
+  // of ts, so make sure we include it.
+  bool VisitCXXForRangeStmt(clang::CXXForRangeStmt* stmt) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    if (const Type* type = stmt->getRangeInit()->getType().getTypePtrOrNull()) {
+      ReportTypeUse(CurrentLoc(), RemovePointersAndReferencesAsWritten(type));
+
+      // TODO: We should probably find a way to require inclusion of any
+      // argument-dependent begin/end declarations.
+    }
+
+    return true;
+  }
 
   // Called whenever a variable, function, enum, etc is used.
   bool VisitDeclRefExpr(clang::DeclRefExpr* expr) {
