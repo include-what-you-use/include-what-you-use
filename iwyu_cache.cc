@@ -72,8 +72,8 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
   // The code below doesn't handle template-template args/etc.  None
   // of the types in kFullUseTypes should have those.  Just verify,
   // when we can.
-  if (const ClassTemplateSpecializationDecl* tpl_spec_decl
-      = DynCastFrom(tpl_decl)) {
+  if (const ClassTemplateSpecializationDecl* tpl_spec_decl =
+          DynCastFrom(tpl_decl)) {
     const TemplateArgumentList& all_tpl_args = tpl_spec_decl->getTemplateArgs();
     for (unsigned i = 0; i < all_tpl_args.size(); ++i) {
       CHECK_((all_tpl_args.get(i).getKind() == TemplateArgument::Type)

@@ -261,8 +261,8 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
       return;
     }
 
-    const string quoted_this_file
-        = ConvertToQuotedInclude(GetFilePath(begin_loc));
+    const string quoted_this_file =
+        ConvertToQuotedInclude(GetFilePath(begin_loc));
 
     VERRS(8) << "Adding dynamic mapping for private pragma\n";
     MutableGlobalIncludePicker()->AddMapping(quoted_this_file,
@@ -875,8 +875,8 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
 // As above, but get the definition location from macros_definition_loc_.
 void IwyuPreprocessorInfo::FindAndReportMacroUse(const string& name,
                                                  SourceLocation loc) {
-  if (const SourceLocation* dfn_loc
-      = FindInMap(&macros_definition_loc_, name)) {
+  if (const SourceLocation* dfn_loc =
+          FindInMap(&macros_definition_loc_, name)) {
     ReportMacroUse(name, loc, *dfn_loc);
   }
 }
@@ -887,8 +887,8 @@ void IwyuPreprocessorInfo::FindAndReportMacroUse(const string& name,
 // Adds of includer's includes, direct or indirect, into retval.
 void IwyuPreprocessorInfo::AddAllIncludesAsFileEntries(
     const FileEntry* includer, set<const FileEntry*>* retval) const {
-  set<const FileEntry*> direct_incs
-      = FileInfoOrEmptyFor(includer).direct_includes_as_fileentries();
+  set<const FileEntry*> direct_incs =
+      FileInfoOrEmptyFor(includer).direct_includes_as_fileentries();
   for (const FileEntry* include : direct_incs) {
     if (ContainsKey(*retval, include))  // avoid infinite recursion
       continue;
@@ -933,8 +933,8 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
     if (picker.IsPublic(file)) {
       AddAllIncludesAsFileEntries(file, &intends_to_provide_map_[file]);
     } else {
-      const set<const FileEntry*>& direct_includes
-          = fileinfo.second.direct_includes_as_fileentries();
+      const set<const FileEntry*>& direct_includes =
+          fileinfo.second.direct_includes_as_fileentries();
       for (const FileEntry* inc : direct_includes) {
         intends_to_provide_map_[file].insert(inc);
         if (picker.IsPublic(inc))
@@ -948,8 +948,8 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
     const FileEntry* file = fileinfo.first;
     // See if a round-trip to string and back ends up at a different file.
     const string quoted_include = ConvertToQuotedInclude(GetFilePath(file));
-    const FileEntry* other_file
-        = GetOrDefault(include_to_fileentry_map_, quoted_include, file);
+    const FileEntry* other_file =
+        GetOrDefault(include_to_fileentry_map_, quoted_include, file);
     if (other_file != file) {
       InsertAllInto(intends_to_provide_map_[file],
                     &intends_to_provide_map_[other_file]);
@@ -1071,8 +1071,8 @@ const IwyuFileInfo& IwyuPreprocessorInfo::FileInfoOrEmptyFor(
 
 bool IwyuPreprocessorInfo::PublicHeaderIntendsToProvide(
     const FileEntry* public_header, const FileEntry* other_file) const {
-  if (const set<const FileEntry*>* provides
-      = FindInMap(&intends_to_provide_map_, public_header)) {
+  if (const set<const FileEntry*>* provides =
+          FindInMap(&intends_to_provide_map_, public_header)) {
     return ContainsKey(*provides, other_file);
   }
   return false;
@@ -1080,8 +1080,8 @@ bool IwyuPreprocessorInfo::PublicHeaderIntendsToProvide(
 
 bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
     const FileEntry* includer, const FileEntry* includee) const {
-  if (const set<const FileEntry*>* all_includes
-      = FindInMap(&transitive_include_map_, includer)) {
+  if (const set<const FileEntry*>* all_includes =
+          FindInMap(&transitive_include_map_, includer)) {
     return ContainsKey(*all_includes, includee);
   }
   return false;
@@ -1089,8 +1089,8 @@ bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
 
 bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
     const FileEntry* includer, const string& quoted_includee) const {
-  if (const set<const FileEntry*>* all_includes
-      = FindInMap(&transitive_include_map_, includer)) {
+  if (const set<const FileEntry*>* all_includes =
+          FindInMap(&transitive_include_map_, includer)) {
     for (const FileEntry* include : *all_includes) {
       if (ConvertToQuotedInclude(GetFilePath(include)) == quoted_includee)
         return true;

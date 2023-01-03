@@ -133,18 +133,16 @@ SourceLocation GetLocation(const clang::Stmt* stmt) {
     return call_expr->getOperatorLoc();
   } else if (const MemberExpr* member_expr = DynCastFrom(stmt)) {
     return GetMemberExprLocation(member_expr);
-  } else if (const UnresolvedMemberExpr* member_expr
-             = DynCastFrom(stmt)) {
+  } else if (const UnresolvedMemberExpr* member_expr = DynCastFrom(stmt)) {
     if (member_expr->getOperatorLoc().isValid())
       return member_expr->getOperatorLoc();
-  } else if (const CXXDependentScopeMemberExpr* member_expr
-             = DynCastFrom(stmt)) {
+  } else if (const CXXDependentScopeMemberExpr* member_expr =
+                 DynCastFrom(stmt)) {
     if (member_expr->getOperatorLoc().isValid())
       return member_expr->getOperatorLoc();
   } else if (const BinaryOperator* binary_op = DynCastFrom(stmt)) {
     return binary_op->getOperatorLoc();
-  } else if (const ConditionalOperator* conditional_op =
-             DynCastFrom(stmt)) {
+  } else if (const ConditionalOperator* conditional_op = DynCastFrom(stmt)) {
     return conditional_op->getQuestionLoc();
   } else if (const UnaryOperator* unary_op = DynCastFrom(stmt)) {
     // Drill through unary operators and parentheses, to get at the underlying

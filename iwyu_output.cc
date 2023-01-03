@@ -1425,9 +1425,9 @@ void CalculateIwyuForForwardDeclareUse(
 
   const NamedDecl* dfn = GetTagDefinition(use->decl());
   if (dfn) {
-    vector<string> headers
-      = GlobalIncludePicker().GetCandidateHeadersForFilepathIncludedFrom(
-          GetFilePath(dfn), GetFilePath(use->use_loc()));
+    vector<string> headers =
+        GlobalIncludePicker().GetCandidateHeadersForFilepathIncludedFrom(
+            GetFilePath(dfn), GetFilePath(use->use_loc()));
     for (const string& header : headers) {
       if (ContainsKey(desired_includes, header))
         dfn_is_in_desired_includes = true;
@@ -1491,8 +1491,8 @@ void CalculateIwyuForForwardDeclareUse(
 
   // Be sure to store as a TemplateClassDecl if we're a templated
   // class.
-  if (const ClassTemplateSpecializationDecl* spec_decl
-      = DynCastFrom(use->decl())) {
+  if (const ClassTemplateSpecializationDecl* spec_decl =
+          DynCastFrom(use->decl())) {
     use->reset_decl(spec_decl->getSpecializedTemplate());
   } else if (const CXXRecordDecl* cxx_decl = DynCastFrom(use->decl())) {
     if (cxx_decl->getDescribedClassTemplate())
@@ -1612,8 +1612,8 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // The 'effective' direct includes are defined to be the current
   // includes of associated, plus us.  This is only used to decide
   // when to give iwyu warnings.
-  const set<string> effective_direct_includes
-      = Union(associated_direct_includes, direct_includes());
+  const set<string> effective_direct_includes =
+      Union(associated_direct_includes, direct_includes());
 
   // (C2) + (C3) Find the minimal 'set cover' for all symbol uses.
   const set<string> desired_set_cover = internal::CalculateMinimalIncludes(
