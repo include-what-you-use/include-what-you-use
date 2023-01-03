@@ -43,8 +43,12 @@ class OptionsParser {
   OptionsParser(int argc, char** argv);
   ~OptionsParser();
 
-  int clang_argc() const { return clang_argc_; }
-  const char** clang_argv() const { return clang_argv_; }
+  int clang_argc() const {
+    return clang_argc_;
+  }
+  const char** clang_argv() const {
+    return clang_argv_;
+  }
 
  private:
   int clang_argc_;
