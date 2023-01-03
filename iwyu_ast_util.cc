@@ -350,11 +350,10 @@ const NestedNameSpecifier* GetQualifier(const ASTNode* ast_node) {
   const NestedNameSpecifier* nns = nullptr;
   if (ast_node->IsA<TemplateName>()) {
     const TemplateName* tn = ast_node->GetAs<TemplateName>();
-    if (const DependentTemplateName* dtn
-        = tn->getAsDependentTemplateName())
+    if (const DependentTemplateName* dtn = tn->getAsDependentTemplateName())
       nns = dtn->getQualifier();
-    else if (const QualifiedTemplateName* qtn
-             = tn->getAsQualifiedTemplateName())
+    else if (const QualifiedTemplateName* qtn =
+                 tn->getAsQualifiedTemplateName())
       nns = qtn->getQualifier();
   }
   if (!nns) nns = TryGetQualifier<ElaboratedType>(ast_node);
@@ -729,8 +728,8 @@ static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
   map<const Type*, const Type*> retval;
   if (!decl)   // can be nullptr if the function call is via a function pointer
     return retval;
-  if (const TemplateArgumentList* tpl_list
-      = decl->getTemplateSpecializationArgs()) {
+  if (const TemplateArgumentList* tpl_list =
+          decl->getTemplateSpecializationArgs()) {
     for (unsigned i = start_arg; i < tpl_list->size(); ++i) {
       if (const Type* arg_type = GetTemplateArgAsType(tpl_list->get(i))) {
         retval[GetCanonicalType(arg_type)] = arg_type;
@@ -826,8 +825,8 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     fn_args = call_expr->getArgs();
     num_args = call_expr->getNumArgs();
     const Expr* callee_expr = call_expr->getCallee()->IgnoreParenCasts();
-    const TemplateArgumentListInfo& explicit_tpl_args
-        = GetExplicitTplArgs(callee_expr);
+    const TemplateArgumentListInfo& explicit_tpl_args =
+        GetExplicitTplArgs(callee_expr);
     if (explicit_tpl_args.size() > 0) {
       retval = GetTplTypeResugarMapForFunctionExplicitTplArgs(
           decl, explicit_tpl_args);
@@ -835,8 +834,8 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     }
   } else {
     // If calling_expr has explicit template args, then consider them.
-    const TemplateArgumentListInfo& explicit_tpl_args
-        = GetExplicitTplArgs(calling_expr);
+    const TemplateArgumentListInfo& explicit_tpl_args =
+        GetExplicitTplArgs(calling_expr);
     if (explicit_tpl_args.size() > 0) {
       retval = GetTplTypeResugarMapForFunctionExplicitTplArgs(
           decl, explicit_tpl_args);
@@ -855,8 +854,8 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   //     operator<<(basic_ostream<char, T>& o, int i);
   // If I pass in an ostream as the first argument, then no part
   // of the (sugared) argument types match T, so we ignore it.
-  const map<const Type*, const Type*>& desugared_types
-      = GetTplTypeResugarMapForFunctionNoCallExpr(decl, start_of_implicit_args);
+  const map<const Type*, const Type*>& desugared_types =
+      GetTplTypeResugarMapForFunctionNoCallExpr(decl, start_of_implicit_args);
 
   // TODO(csilvers): SubstTemplateTypeParms are always desugared,
   //                 making this less useful than it should be.
@@ -1254,15 +1253,14 @@ static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
 
   if (const TypedefType* typedef_type = DynCastFrom(type)) {
     return typedef_type->getDecl();
-  } else if (const InjectedClassNameType* icn_type
-             = type->getAs<InjectedClassNameType>()) {
+  } else if (const InjectedClassNameType* icn_type =
+                 type->getAs<InjectedClassNameType>()) {
     return icn_type->getDecl();
   } else if (as_written && template_decl &&
              isa<TypeAliasTemplateDecl>(template_decl)) {
     // A template type alias
     return template_decl;
-  } else if (const RecordType* record_type
-             = type->getAs<RecordType>()) {
+  } else if (const RecordType* record_type = type->getAs<RecordType>()) {
     return record_type->getDecl();
   } else if (const TagType* tag_type = DynCastFrom(type)) {
     return tag_type->getDecl();    // probably just enums
@@ -1273,7 +1271,7 @@ static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
     // TODO(csilvers): is it possible to map from fn type to fn decl?
     (void)function_type;
     return nullptr;
-  }  else {
+  } else {
     return nullptr;
   }
 }
@@ -1343,8 +1341,8 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
   set<unsigned> explicit_args;   // indices into tpl_args we've filled
   TypeEnumerator type_enumerator;
   for (unsigned i = 0; i < tpl_spec_type->template_arguments().size(); ++i) {
-    set<const Type*> arg_components
-        = type_enumerator.Enumerate(tpl_spec_type->template_arguments()[i]);
+    set<const Type*> arg_components =
+        type_enumerator.Enumerate(tpl_spec_type->template_arguments()[i]);
     // Go through all template types mentioned in the arg-as-written,
     // and compare it against each of the types in the template decl
     // (the latter are all desugared).  If there's a match, update
@@ -1470,14 +1468,13 @@ const CXXDestructorDecl* GetSiblingDestructorFor(
 
 const FunctionType* GetCalleeFunctionType(CallExpr* expr) {
   const Type* callee_type = expr->getCallee()->getType().getTypePtr();
-  if (const PointerType* ptr_type
-      = callee_type->getAs<PointerType>()) {
+  if (const PointerType* ptr_type = callee_type->getAs<PointerType>()) {
     callee_type = ptr_type->getPointeeType().getTypePtr();
-  } else if (const BlockPointerType* bptr_type
-             = callee_type->getAs<BlockPointerType>()) {
+  } else if (const BlockPointerType* bptr_type =
+                 callee_type->getAs<BlockPointerType>()) {
     callee_type = bptr_type->getPointeeType().getTypePtr();
-  } else if (const MemberPointerType* mptr_type
-             = callee_type->getAs<MemberPointerType>()) {
+  } else if (const MemberPointerType* mptr_type =
+                 callee_type->getAs<MemberPointerType>()) {
     callee_type = mptr_type->getPointeeType().getTypePtr();
   }
   return callee_type->getAs<FunctionType>();

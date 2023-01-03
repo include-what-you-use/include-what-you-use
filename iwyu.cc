@@ -571,8 +571,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       const NamedDecl* member_decl = TypeToDeclAsWritten(type);
       // We only want those fields that are c++ classes.
       if (const CXXRecordDecl* cxx_field_decl = DynCastFrom(member_decl)) {
-        if (const CXXDestructorDecl* field_dtor
-            = cxx_field_decl->getDestructor()) {
+        if (const CXXDestructorDecl* field_dtor =
+                cxx_field_decl->getDestructor()) {
           if (!this->getDerived().TraverseImplicitDestructorCall(
                   const_cast<CXXDestructorDecl*>(field_dtor), type))
             return false;
@@ -864,8 +864,8 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
     bool Contains(const ASTNode& node) const {
       if (const TypeLoc* tl = node.GetAs<TypeLoc>()) {
         return ContainsValue(typelocs, *tl);
-      } else if (const NestedNameSpecifierLoc* nl
-                 = node.GetAs<NestedNameSpecifierLoc>()) {
+      } else if (const NestedNameSpecifierLoc* nl =
+                     node.GetAs<NestedNameSpecifierLoc>()) {
         return ContainsValue(nnslocs, *nl);
       } else if (const TemplateName* tn = node.GetAs<TemplateName>()) {
         // The best we can do is to compare the associated decl
@@ -881,7 +881,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
         (void)ta;
         return false;
       } else if (const TemplateArgumentLoc* tal =
-                 node.GetAs<TemplateArgumentLoc>()) {
+                     node.GetAs<TemplateArgumentLoc>()) {
         // TODO(csilvers): figure out how to compare template argument-locs
         (void)tal;
         return false;
@@ -1440,10 +1440,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   //
   // for type 'reference' it will return type T with which Foo was instantiated.
   const Type* DesugarDependentTypedef(const TypedefType* typedef_type) {
-    const DeclContext* parent
-        = typedef_type->getDecl()->getLexicalDeclContext();
-    if (const ClassTemplateSpecializationDecl* template_parent
-        = DynCastFrom(parent)) {
+    const DeclContext* parent =
+        typedef_type->getDecl()->getLexicalDeclContext();
+    if (const ClassTemplateSpecializationDecl* template_parent =
+            DynCastFrom(parent)) {
       return DesugarDependentTypedef(typedef_type, template_parent);
     }
     return typedef_type;
@@ -1451,8 +1451,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   const Type* DesugarDependentTypedef(
       const TypedefType* typedef_type, const RecordDecl* parent) {
-    const Type* underlying_type
-        = typedef_type->getDecl()->getUnderlyingType().getTypePtr();
+    const Type* underlying_type =
+        typedef_type->getDecl()->getUnderlyingType().getTypePtr();
     if (const TypedefType* underlying_typedef = DynCastFrom(underlying_type)) {
       if (underlying_typedef->getDecl()->getLexicalDeclContext() == parent) {
         return DesugarDependentTypedef(underlying_typedef, parent);
@@ -1476,8 +1476,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
     }
 
-    const Type* deref_type
-        = RemovePointersAndReferencesAsWritten(underlying_type);
+    const Type* deref_type =
+        RemovePointersAndReferencesAsWritten(underlying_type);
     if (isa<SubstTemplateTypeParmType>(underlying_type) ||
         CodeAuthorWantsJustAForwardDeclare(deref_type, GetLocation(decl))) {
       retval.insert(deref_type);
@@ -1622,8 +1622,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // underlying type.  Instead, users of that typedef are.
       const ASTNode* ast_node = MostElaboratedAncestor(current_ast_node());
       if (!ast_node->ParentIsA<TypedefNameDecl>()) {
-        const set<const Type*>& underlying_types
-            = GetCallerResponsibleTypesForTypedef(typedef_decl);
+        const set<const Type*>& underlying_types =
+            GetCallerResponsibleTypesForTypedef(typedef_decl);
         if (!underlying_types.empty()) {
           VERRS(6) << "User, not author, of typedef "
                    << typedef_decl->getQualifiedNameAsString()
@@ -1782,8 +1782,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
-    const Type* deref_type
-        = RemovePointersAndReferencesAsWritten(underlying_type);
+    const Type* deref_type =
+        RemovePointersAndReferencesAsWritten(underlying_type);
 
     if (CodeAuthorWantsJustAForwardDeclare(deref_type, GetLocation(decl)) ||
         isa<SubstTemplateTypeParmType>(underlying_type)) {
@@ -1839,16 +1839,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // ...except the return value.
     const Type* return_type = Desugar(decl->getReturnType().getTypePtr());
-    const bool is_responsible_for_return_type
-        = (!CanIgnoreType(return_type) &&
-           !IsPointerOrReferenceAsWritten(return_type) &&
-           !CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl)));
+    const bool is_responsible_for_return_type =
+        (!CanIgnoreType(return_type) &&
+         !IsPointerOrReferenceAsWritten(return_type) &&
+         !CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl)));
     // Don't bother to report here, when the language agrees with us
     // we need the full type; that will be reported elsewhere, so
     // reporting here would be double-counting.
-    const bool type_use_reported_in_visit_function_type
-        = (!current_ast_node()->in_forward_declare_context() ||
-           !IsClassType(return_type));
+    const bool type_use_reported_in_visit_function_type =
+        (!current_ast_node()->in_forward_declare_context() ||
+         !IsClassType(return_type));
     if (is_responsible_for_return_type &&
         !type_use_reported_in_visit_function_type) {
       ReportTypeUse(GetLocation(decl), return_type, "(for fn return type)");
@@ -2129,7 +2129,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const Expr* base_expr = expr->getBase()->IgnoreParenImpCasts();
     const Type* base_type = GetTypeOf(base_expr);
     CHECK_(base_type && "Member's base does not have a type?");
-    const Type* deref_base_type      // For myvar->a, base-type will have a *
+    const Type* deref_base_type  // For myvar->a, base-type will have a *
         = expr->isArrow() ? RemovePointerFromType(base_type) : base_type;
     if (CanIgnoreType(base_type) && CanIgnoreType(deref_base_type))
       return true;
@@ -2566,8 +2566,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       fn_type = current_ast_node()->template GetParentAs<FunctionProtoType>();
     }
     if (!fn_type) {
-      if (const FunctionDecl* fn_decl
-          = current_ast_node()->template GetParentAs<FunctionDecl>())
+      if (const FunctionDecl* fn_decl =
+              current_ast_node()->template GetParentAs<FunctionDecl>())
         fn_type = dyn_cast<FunctionProtoType>(GetTypeOf(fn_decl));
     }
     if (fn_type) {
@@ -3410,8 +3410,8 @@ class InstantiatedTemplateVisitor
     // them here.
     AstFlattenerVisitor nodeset_getter(compiler());
     // This gets to the decl for the (uninstantiated) template-as-written:
-    const FunctionDecl* decl_as_written
-        = fn_decl->getTemplateInstantiationPattern();
+    const FunctionDecl* decl_as_written =
+        fn_decl->getTemplateInstantiationPattern();
     if (!decl_as_written) {
       if (fn_decl->isImplicit()) {     // TIP not set up for implicit methods
         // TODO(csilvers): handle implicit template methods
@@ -3609,8 +3609,8 @@ class InstantiatedTemplateVisitor
       if (resugared_type && !resugared_type->isPointerType()) {
         ReportTypeUse(caller_loc(), resugared_type);
         // For a templated type, check the template args as well.
-        if (const TemplateSpecializationType* spec_type
-            = DynCastFrom(resugared_type)) {
+        if (const TemplateSpecializationType* spec_type =
+                DynCastFrom(resugared_type)) {
           TraverseDataAndTypeMembersOfClassHelper(spec_type);
         }
       }
@@ -3757,8 +3757,8 @@ class IwyuAstConsumer
     if (compiler()->getDiagnostics().hasUnrecoverableErrorOccurred())
       exit(EXIT_FAILURE);
 
-    const set<const FileEntry*>* const files_to_report_iwyu_violations_for
-        = preprocessor_info().files_to_report_iwyu_violations_for();
+    const set<const FileEntry*>* const files_to_report_iwyu_violations_for =
+        preprocessor_info().files_to_report_iwyu_violations_for();
 
     // Some analysis, such as UsingDecl resolution, is deferred until the
     // entire AST is visited because it's only at that point that we know if
@@ -4199,8 +4199,8 @@ class IwyuAstConsumer
     // If we're not in a forward-declare context, use of a template
     // specialization requires having the full type information.
     if (!CanForwardDeclareType(current_ast_node())) {
-      const map<const Type*, const Type*> resugar_map
-          = GetTplTypeResugarMapForClass(type);
+      const map<const Type*, const Type*> resugar_map =
+          GetTplTypeResugarMapForClass(type);
 
       instantiated_template_visitor_.ScanInstantiatedType(current_ast_node(),
                                                           resugar_map);
@@ -4262,8 +4262,8 @@ class IwyuAstConsumer
     if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type))
       return true;
 
-    map<const Type*, const Type*> resugar_map
-        = GetTplTypeResugarMapForFunction(callee, calling_expr);
+    map<const Type*, const Type*> resugar_map =
+        GetTplTypeResugarMapForFunction(callee, calling_expr);
 
     if (parent_type) {    // means we're a method of a class
       InsertAllInto(GetTplTypeResugarMapForClass(parent_type), &resugar_map);
@@ -4305,8 +4305,8 @@ class IwyuAction : public ASTFrontendAction {
         std::unique_ptr<PPCallbacks>(preprocessor_consumer));
     compiler.getPreprocessor().addCommentHandler(preprocessor_consumer);
 
-    auto* const visitor_state
-        = new VisitorState(&compiler, *preprocessor_consumer);
+    auto* const visitor_state =
+        new VisitorState(&compiler, *preprocessor_consumer);
     return std::unique_ptr<IwyuAstConsumer>(new IwyuAstConsumer(visitor_state));
   }
 };
