@@ -35,7 +35,9 @@ class FatalMessageEmitter {
     LLVM_BUILTIN_UNREACHABLE;
 #endif
   }
-  llvm::raw_ostream& stream() { return llvm::errs(); }
+  llvm::raw_ostream& stream() {
+    return llvm::errs();
+  }
 };
 
 // Helper class that allows an ostream to 'appear' as a void expression.

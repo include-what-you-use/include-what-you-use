@@ -63,19 +63,45 @@ class OneUse {
          const string& dfn_filepath,
          clang::SourceLocation use_loc);
 
-  const string& symbol_name() const { return symbol_name_; }
-  const string& short_symbol_name() const { return short_symbol_name_; }
-  const clang::NamedDecl* decl() const  { return decl_; }
-  const clang::FileEntry* decl_file() const { return decl_file_; }
-  const string& decl_filepath() const { return decl_filepath_; }
-  clang::SourceLocation use_loc() const { return use_loc_; }
-  clang::SourceLocation decl_loc() const { return decl_loc_; }
-  bool is_full_use() const { return use_kind_ == kFullUse; }
-  UseFlags flags() const { return use_flags_; }
-  const string& comment() const { return comment_; }
-  bool ignore_use() const { return ignore_use_; }
-  bool is_iwyu_violation() const { return is_iwyu_violation_; }
-  bool has_suggested_header() const { return !suggested_header_.empty(); }
+  const string& symbol_name() const {
+    return symbol_name_;
+  }
+  const string& short_symbol_name() const {
+    return short_symbol_name_;
+  }
+  const clang::NamedDecl* decl() const {
+    return decl_;
+  }
+  const clang::FileEntry* decl_file() const {
+    return decl_file_;
+  }
+  const string& decl_filepath() const {
+    return decl_filepath_;
+  }
+  clang::SourceLocation use_loc() const {
+    return use_loc_;
+  }
+  clang::SourceLocation decl_loc() const {
+    return decl_loc_;
+  }
+  bool is_full_use() const {
+    return use_kind_ == kFullUse;
+  }
+  UseFlags flags() const {
+    return use_flags_;
+  }
+  const string& comment() const {
+    return comment_;
+  }
+  bool ignore_use() const {
+    return ignore_use_;
+  }
+  bool is_iwyu_violation() const {
+    return is_iwyu_violation_;
+  }
+  bool has_suggested_header() const {
+    return !suggested_header_.empty();
+  }
 
   const string& suggested_header() const {
     CHECK_(has_suggested_header() && "Must assign suggested_header first");
@@ -121,12 +147,20 @@ class OneIncludeOrForwardDeclareLine {
   OneIncludeOrForwardDeclareLine(const clang::FileEntry* included_file,
                                  const string& quoted_include, int linenum);
 
-  const string& line() const { return line_; }
+  const string& line() const {
+    return line_;
+  }
   bool IsIncludeLine() const;           // vs forward-declare line
   string LineNumberString() const;      // <startline>-<endline>
-  bool is_desired() const { return is_desired_; }
-  bool is_present() const { return is_present_; }
-  const map<string, int>& symbol_counts() const { return symbol_counts_; }
+  bool is_desired() const {
+    return is_desired_;
+  }
+  bool is_present() const {
+    return is_present_;
+  }
+  const map<string, int>& symbol_counts() const {
+    return symbol_counts_;
+  }
 
   string quoted_include() const {
     CHECK_(IsIncludeLine() && "Must call quoted_include() on include lines");
@@ -196,10 +230,14 @@ class IwyuFileInfo {
                const IwyuPreprocessorInfo* preprocessor_info,
                const string& quoted_include_name);
 
-  bool is_prefix_header() const { return is_prefix_header_; }
+  bool is_prefix_header() const {
+    return is_prefix_header_;
+  }
   void set_prefix_header() { is_prefix_header_ = true; }
 
-  bool is_pch_in_code() const { return is_pch_in_code_; }
+  bool is_pch_in_code() const {
+    return is_pch_in_code_;
+  }
   void set_pch_in_code() { is_pch_in_code_ = true; }
 
   // An 'associated' header is a header that this file #includes
@@ -288,7 +326,9 @@ class IwyuFileInfo {
   size_t CalculateAndReportIwyuViolations();
 
  private:
-  const set<string>& direct_includes() const { return direct_includes_; }
+  const set<string>& direct_includes() const {
+    return direct_includes_;
+  }
 
   const set<string>& desired_includes() const {
     CHECK_(desired_includes_have_been_calculated_ &&
@@ -381,10 +421,18 @@ class FakeNamedDecl : public clang::NamedDecl {
   FakeNamedDecl(const string& kind_name, const string& qual_name,
                 const string& decl_filepath, int decl_linenum);
 
-  string kind_name() const { return kind_name_; }
-  string qual_name() const { return qual_name_; }
-  string decl_filepath() const { return decl_filepath_; }
-  int decl_linenum() const { return decl_linenum_; }
+  string kind_name() const {
+    return kind_name_;
+  }
+  string qual_name() const {
+    return qual_name_;
+  }
+  string decl_filepath() const {
+    return decl_filepath_;
+  }
+  int decl_linenum() const {
+    return decl_linenum_;
+  }
 
  private:
   string kind_name_;

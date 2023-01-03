@@ -102,10 +102,14 @@ class ASTNode {
   // A 'forward-declare' context means some parent of us can be
   // forward-declared, which means we can be too.  e.g. in
   // MyClass<Foo>* x, Foo is fwd-declarable because MyClass<Foo> is.
-  bool in_forward_declare_context() const { return in_fwd_decl_context_; }
+  bool in_forward_declare_context() const {
+    return in_fwd_decl_context_;
+  }
   void set_in_forward_declare_context(bool b) { in_fwd_decl_context_ = b; }
 
-  const ASTNode* parent() const { return parent_; }
+  const ASTNode* parent() const {
+    return parent_;
+  }
   void SetParent(const ASTNode* parent) {
     parent_ = parent;
     if (parent)  // We inherit this from parent.
@@ -232,11 +236,13 @@ class ASTNode {
   // the same type hierarchy.  So To must be specified both in the
   // template arg and in the method parameter.
   template<typename To> const To* DynCast(const clang::Decl*) const {
-    if (kind_ != kDeclKind) return nullptr;
+    if (kind_ != kDeclKind)
+      return nullptr;
     return ::llvm::dyn_cast<To>(as_decl_);
   }
   template<typename To> const To* DynCast(const clang::Stmt*) const {
-    if (kind_ != kStmtKind) return nullptr;
+    if (kind_ != kStmtKind)
+      return nullptr;
     return ::llvm::dyn_cast<To>(as_stmt_);
   }
   template<typename To> const To* DynCast(const clang::Type*) const {
@@ -247,11 +253,13 @@ class ASTNode {
     //   if (node.IsA<FooTypeLoc>()) ... else if (node.IsA<FooType>()) ...
     if (kind_ == kTypelocKind)
       return ::llvm::dyn_cast<To>(as_typeloc_->getTypePtr());
-    if (kind_ != kTypeKind) return nullptr;
+    if (kind_ != kTypeKind)
+      return nullptr;
     return ::llvm::dyn_cast<To>(as_type_);
   }
   template<typename To> const To* DynCast(const clang::TypeLoc*) const {
-    if (kind_ != kTypelocKind) return nullptr;
+    if (kind_ != kTypelocKind)
+      return nullptr;
     return ::llvm::dyn_cast<To>(as_typeloc_);
   }
   template<typename To> const To* DynCast(
@@ -260,16 +268,19 @@ class ASTNode {
     // that cares to distinguish, it should check for nnslocs first.
     if (kind_ == kNNSLocKind)
       return as_nnsloc_->getNestedNameSpecifier();
-    if (kind_ != kNNSKind) return nullptr;
+    if (kind_ != kNNSKind)
+      return nullptr;
     return as_nns_;
   }
   template<typename To> const To* DynCast(
       const clang::NestedNameSpecifierLoc*) const {
-    if (kind_ != kNNSLocKind) return nullptr;
+    if (kind_ != kNNSLocKind)
+      return nullptr;
     return as_nnsloc_;
   }
   template<typename To> const To* DynCast(const clang::TemplateName*) const {
-    if (kind_ != kTemplateNameKind) return nullptr;
+    if (kind_ != kTemplateNameKind)
+      return nullptr;
     return as_template_name_;
   }
   template<typename To> const To* DynCast(
@@ -280,26 +291,37 @@ class ASTNode {
     // distinguish, it should check for typelocs first.
     if (kind_ == kTemplateArgumentLocKind)
       return &as_template_argloc_->getArgument();
-    if (kind_ != kTemplateArgumentKind) return nullptr;
+    if (kind_ != kTemplateArgumentKind)
+      return nullptr;
     return as_template_arg_;
   }
   template<typename To> const To* DynCast(
       const clang::TemplateArgumentLoc*) const {
-    if (kind_ != kTemplateArgumentLocKind) return nullptr;
+    if (kind_ != kTemplateArgumentLocKind)
+      return nullptr;
     return as_template_argloc_;
   }
   // We also allow casting to void*
   template<typename Ignored> const void* DynCast(const void*) const {
     switch (kind_) {   // this is just to avoid aliasing violations.
-      case kDeclKind:  return as_decl_;
-      case kStmtKind:  return as_stmt_;
-      case kTypeKind:  return as_type_;
-      case kTypelocKind:  return as_typeloc_;
-      case kNNSKind:  return as_nns_;
-      case kNNSLocKind:  return as_nnsloc_;
-      case kTemplateNameKind:  return as_template_name_;
-      case kTemplateArgumentKind:  return as_template_arg_;
-      case kTemplateArgumentLocKind:  return as_template_argloc_;
+      case kDeclKind:
+        return as_decl_;
+      case kStmtKind:
+        return as_stmt_;
+      case kTypeKind:
+        return as_type_;
+      case kTypelocKind:
+        return as_typeloc_;
+      case kNNSKind:
+        return as_nns_;
+      case kNNSLocKind:
+        return as_nnsloc_;
+      case kTemplateNameKind:
+        return as_template_name_;
+      case kTemplateArgumentKind:
+        return as_template_arg_;
+      case kTemplateArgumentLocKind:
+        return as_template_argloc_;
     }
     CHECK_UNREACHABLE_("Unknown kind");
   }

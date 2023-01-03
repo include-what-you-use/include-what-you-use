@@ -320,8 +320,12 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // (1) Maintain current_ast_node_
 
   // How subclasses can access current_ast_node_;
-  const ASTNode* current_ast_node() const { return current_ast_node_; }
-  ASTNode* current_ast_node() { return current_ast_node_; }
+  const ASTNode* current_ast_node() const {
+    return current_ast_node_;
+  }
+  ASTNode* current_ast_node() {
+    return current_ast_node_;
+  }
   void set_current_ast_node(ASTNode* an) { current_ast_node_ = an; }
 
   bool TraverseDecl(Decl* decl) {
@@ -544,10 +548,13 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // class in all classes with destructors, to mark them as used by virtue of
   // being class members.
   bool TraverseCXXDestructorDecl(clang::CXXDestructorDecl* decl) {
-    if (!Base::TraverseCXXDestructorDecl(decl))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (!Base::TraverseCXXDestructorDecl(decl))
+      return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     // We only care about calls that are actually defined.
-    if (!decl || !decl->isThisDeclarationADefinition())  return true;
+    if (!decl || !decl->isThisDeclarationADefinition())
+      return true;
 
     // Collect all the fields (and bases) we destroy, and call the dtor.
     set<const Type*> member_types;
@@ -579,7 +586,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // particularly they need the same custom handling of implicit destructors.
   bool TraverseClassTemplateSpecializationDecl(
       clang::ClassTemplateSpecializationDecl* decl) {
-    if (!Base::TraverseClassTemplateSpecializationDecl(decl)) return false;
+    if (!Base::TraverseClassTemplateSpecializationDecl(decl))
+      return false;
     return Base::TraverseCXXRecordDecl(decl);
   }
 
@@ -632,7 +640,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   bool HandleFunctionCall(clang::FunctionDecl* callee,
                           const clang::Type* parent_type,
                           const clang::Expr* calling_expr) {
-    if (!callee)  return true;
+    if (!callee)
+      return true;
     if (ShouldPrintSymbolFromCurrentFile()) {
       errs() << AnnotatedName("FunctionCall")
              << PrintablePtr(callee) << PrintableDecl(callee) << "\n";
@@ -642,8 +651,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 
   bool TraverseImplicitDestructorCall(clang::CXXDestructorDecl* decl,
                                       const Type* type_being_destroyed) {
-    if (CanIgnoreCurrentASTNode())  return true;
-    if (!decl)  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (!decl)
+      return true;
     if (ShouldPrintSymbolFromCurrentFile()) {
       errs() << AnnotatedName("Destruction")
              << PrintableType(type_being_destroyed) << "\n";
@@ -654,24 +665,30 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 
 
   bool TraverseCallExpr(clang::CallExpr* expr) {
-    if (!Base::TraverseCallExpr(expr))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (!Base::TraverseCallExpr(expr))
+      return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
                                                  TypeOfParentIfMethod(expr),
                                                  expr);
   }
 
   bool TraverseCXXMemberCallExpr(clang::CXXMemberCallExpr* expr) {
-    if (!Base::TraverseCXXMemberCallExpr(expr))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (!Base::TraverseCXXMemberCallExpr(expr))
+      return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
                                                  TypeOfParentIfMethod(expr),
                                                  expr);
   }
 
   bool TraverseCXXOperatorCallExpr(clang::CXXOperatorCallExpr* expr) {
-    if (!Base::TraverseCXXOperatorCallExpr(expr))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (!Base::TraverseCXXOperatorCallExpr(expr))
+      return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     const Type* parent_type = TypeOfParentIfMethod(expr);
     // If we're a free function -- bool operator==(MyClass a, MyClass b) --
@@ -687,8 +704,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseCXXConstructExpr(clang::CXXConstructExpr* expr) {
-    if (!Base::TraverseCXXConstructExpr(expr))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (!Base::TraverseCXXConstructExpr(expr))
+      return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     if (!this->getDerived().HandleFunctionCall(expr->getConstructor(),
                                                GetTypeOf(expr),
@@ -714,8 +733,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseCXXTemporaryObjectExpr(clang::CXXTemporaryObjectExpr* expr) {
-    if (!Base::TraverseCXXTemporaryObjectExpr(expr))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (!Base::TraverseCXXTemporaryObjectExpr(expr))
+      return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     // In this case, we *know* we're responsible for destruction as well.
     CXXConstructorDecl* ctor_decl = expr->getConstructor();
@@ -727,8 +748,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseCXXNewExpr(clang::CXXNewExpr* expr) {
-    if (!Base::TraverseCXXNewExpr(expr))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (!Base::TraverseCXXNewExpr(expr))
+      return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     const Type* parent_type = expr->getAllocatedType().getTypePtrOrNull();
     // 'new' calls operator new in addition to the ctor of the new-ed type.
@@ -745,9 +768,11 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseCXXDeleteExpr(clang::CXXDeleteExpr* expr) {
-    if (!Base::TraverseCXXDeleteExpr(expr))  return false;
+    if (!Base::TraverseCXXDeleteExpr(expr))
+      return false;
 
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     const Type* parent_type = expr->getDestroyedType().getTypePtrOrNull();
     // We call operator delete in addition to the dtor of the deleted type.
@@ -770,8 +795,10 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // For instance, 'MyFunctionPtr p = &TplFn<MyClass*>;': we need to
   // expand TplFn to see if it needs full type info for MyClass.
   bool TraverseDeclRefExpr(clang::DeclRefExpr* expr) {
-    if (!Base::TraverseDeclRefExpr(expr))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (!Base::TraverseDeclRefExpr(expr))
+      return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     if (FunctionDecl* fn_decl = DynCastFrom(expr->getDecl())) {
       // If fn_decl has a class-name before it -- 'MyClass::method' --
@@ -792,7 +819,9 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
  protected:
-  CompilerInstance* compiler() { return compiler_; }
+  CompilerInstance* compiler() {
+    return compiler_;
+  }
 
  private:
   template <typename T> friend class BaseAstVisitor;
@@ -937,11 +966,20 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   //------------------------------------------------------------
   // Top-level handlers that construct the tree.
 
-  bool VisitDecl(Decl*) { AddCurrentAstNodeAsPointer(); return true; }
+  bool VisitDecl(Decl*) {
+    AddCurrentAstNodeAsPointer();
+    return true;
+  }
 
-  bool VisitStmt(Stmt*) { AddCurrentAstNodeAsPointer(); return true; }
+  bool VisitStmt(Stmt*) {
+    AddCurrentAstNodeAsPointer();
+    return true;
+  }
 
-  bool VisitType(Type*) { AddCurrentAstNodeAsPointer(); return true; }
+  bool VisitType(Type*) {
+    AddCurrentAstNodeAsPointer();
+    return true;
+  }
 
   bool VisitTypeLoc(TypeLoc typeloc) {
     VERRS(7) << GetSymbolAnnotation() << PrintableTypeLoc(typeloc) << "\n";
@@ -1692,13 +1730,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   // Friend declarations only need their types forward-declared.
   bool VisitFriendDecl(clang::FriendDecl* decl) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     current_ast_node()->set_in_forward_declare_context(true);
     return true;
   }
 
   bool VisitFriendTemplateDecl(clang::FriendTemplateDecl* decl) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     current_ast_node()->set_in_forward_declare_context(true);
     return true;
   }
@@ -1739,7 +1779,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // arguments.  This is handled not here, but below, in
   // VisitSubstTemplateTypeParmType.
   bool VisitTypedefNameDecl(clang::TypedefNameDecl* decl) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     const Type* deref_type
         = RemovePointersAndReferencesAsWritten(underlying_type);
@@ -1771,7 +1812,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Both of these iwyu requirements can be overridden by the function
   // author; for details, see CodeAuthorWantsJustAForwardDeclare.
   bool VisitFunctionDecl(clang::FunctionDecl* decl) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     if (decl->isThisDeclarationADefinition()) {
       // For free functions, report use of all previously seen decls.
@@ -1855,7 +1897,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // These are defined as a derived class overriding a method with a different
   // return type from the base.
   bool VisitCXXMethodDecl(CXXMethodDecl* method_decl) {
-    if (CanIgnoreCurrentASTNode()) return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     if (HasCovariantReturnType(method_decl)) {
       const Type* return_type = RemovePointersAndReferencesAsWritten(
@@ -1878,7 +1921,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Catch statements always require the full type to be visible,
   // no matter if we're catching by value, reference or pointer.
   bool VisitCXXCatchStmt(clang::CXXCatchStmt* stmt) {
-    if (CanIgnoreCurrentASTNode()) return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     if (const VarDecl* exception_decl = stmt->getExceptionDecl()) {
       // Get the caught type from the decl via associated type source info to
@@ -1902,7 +1946,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Both the iterator type and the begin/end calls depend on the complete type
   // of ts, so make sure we include it.
   bool VisitCXXForRangeStmt(clang::CXXForRangeStmt* stmt) {
-    if (CanIgnoreCurrentASTNode()) return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     if (const Type* type = stmt->getRangeInit()->getType().getTypePtrOrNull()) {
       ReportTypeUse(CurrentLoc(), RemovePointersAndReferencesAsWritten(type));
@@ -1928,7 +1973,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // for C-style casts (though the language doesn't), to give the
   // compiler a fighting chance of generating correct code.
   bool VisitCastExpr(clang::CastExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     const Type* from_type = GetTypeOf(expr->getSubExprAsWritten());
     const Type* to_type = GetTypeOf(expr);
 
@@ -2077,7 +2123,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // For instance, for code 'Mytype* myvar; myvar->a;', we'll get a
   // MemberExpr callback whose base has the type of myvar.
   bool VisitMemberExpr(clang::MemberExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     const Expr* base_expr = expr->getBase()->IgnoreParenImpCasts();
     const Type* base_type = GetTypeOf(base_expr);
@@ -2108,7 +2155,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // For a[4], report that we need the full type of *a (to get its
   // size; otherwise the compiler can't tell the address of a[4]).
   bool VisitArraySubscriptExpr(clang::ArraySubscriptExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     const Type* element_type = GetTypeOf(expr);
     if (CanIgnoreType(element_type))
@@ -2120,7 +2168,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // If a binary operator expression results in pointer arithmetic, we need the
   // full types of all pointers involved.
   bool VisitBinaryOperator(clang::BinaryOperator* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     // If it's not +, +=, - or -=, this can't be pointer arithmetic
     clang::BinaryOperator::Opcode op = expr->getOpcode();
@@ -2173,7 +2222,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // some_var is defined.  But if the arg is a reference, nobody else
   // will say we need full type info but us.
   bool VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     current_ast_node()->set_in_forward_declare_context(false);
 
@@ -2208,7 +2258,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // -- for iwyu purposes, 'x << 4' is just semantic sugar around
   // x.operator<<(4).
   bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     if (const Expr* owner_expr = GetFirstClassArgument(expr)) {
       const Type* owner_type = GetTypeOf(owner_expr);
@@ -2226,7 +2277,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // language doesn't require it, but bad things happen if it's not:
   // the destructor isn't run).
   bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     const Expr* delete_arg = expr->getArgument()->IgnoreParenImpCasts();
     // We always delete a pointer, so do one dereference to get the
@@ -2283,7 +2335,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // since destructors never have arguments.  NewExpr we treat below,
   // since it requires other checks as well.
   bool VisitCallExpr(clang::CallExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     // Nothing to do if the called function is an old K&R-style function.
     const FunctionType* fn_type = GetCalleeFunctionType(expr);
     if (const FunctionProtoType* fn_proto = DynCastFrom(fn_type))
@@ -2292,7 +2345,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   bool VisitCXXConstructExpr(clang::CXXConstructExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     ReportIfReferenceVararg(expr->getArgs(), expr->getNumArgs(),
                             expr->getConstructor());
 
@@ -2438,7 +2492,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
 
     // We also need to do a varargs check, like for other function calls.
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     // ... only if this NewExpr involves a constructor call.
     const Expr* initializer = expr->getInitializer();
     if (const CXXConstructExpr* cce = DynCastFrom(initializer)) {
@@ -2549,7 +2604,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Visitors defined by BaseAstVisitor.
 
   bool VisitNestedNameSpecifier(NestedNameSpecifier* nns) {
-    if (!Base::VisitNestedNameSpecifier(nns))  return false;
+    if (!Base::VisitNestedNameSpecifier(nns))
+      return false;
     // If we're in an nns (e.g. the Foo in Foo::bar), we're never
     // forward-declarable, even if we're part of a pointer type, or in
     // a template argument, or whatever.
@@ -2575,14 +2631,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   bool VisitTemplateArgument(const TemplateArgument& arg) {
-    if (!Base::VisitTemplateArgument(arg))  return false;
+    if (!Base::VisitTemplateArgument(arg))
+      return false;
     // Template arguments are forward-declarable...usually.
     DetermineForwardDeclareStatusForTemplateArg(current_ast_node());
     return true;
   }
 
   bool VisitTemplateArgumentLoc(const TemplateArgumentLoc& argloc) {
-    if (!Base::VisitTemplateArgumentLoc(argloc))  return false;
+    if (!Base::VisitTemplateArgumentLoc(argloc))
+      return false;
     // Template arguments are forward-declarable...usually.
     DetermineForwardDeclareStatusForTemplateArg(current_ast_node());
     return true;
@@ -2823,7 +2881,9 @@ class InstantiatedTemplateVisitor
     return GlobalFlags().verbose >= 5;
   }
 
-  string GetSymbolAnnotation() const override { return " in tpl"; }
+  string GetSymbolAnnotation() const override {
+    return " in tpl";
+  }
 
   bool CanIgnoreType(const Type* type, IgnoreKind ignore_kind =
                                            IgnoreKind::ForUse) const override {
@@ -2938,8 +2998,10 @@ class InstantiatedTemplateVisitor
   }
 
   bool TraverseUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
-    if (!Base::TraverseUnaryExprOrTypeTraitExpr(expr))  return false;
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (!Base::TraverseUnaryExprOrTypeTraitExpr(expr))
+      return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     const Type* arg_type = expr->getTypeOfArgument().getTypePtr();
     // Calling sizeof on a reference-to-X is the same as calling it on X.
     if (const auto* reftype = arg_type->getAs<ReferenceType>()) {
@@ -2958,7 +3020,8 @@ class InstantiatedTemplateVisitor
 
   bool TraverseTemplateSpecializationTypeHelper(
       const TemplateSpecializationType* type) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     // Skip the template traversal if this occurrence of the template name is
     // just a class qualifier for an out of line method, as opposed to an object
@@ -2984,13 +3047,15 @@ class InstantiatedTemplateVisitor
   }
 
   bool TraverseTemplateSpecializationType(TemplateSpecializationType* type) {
-    if (!Base::TraverseTemplateSpecializationType(type))  return false;
+    if (!Base::TraverseTemplateSpecializationType(type))
+      return false;
     return TraverseTemplateSpecializationTypeHelper(type);
   }
 
   bool TraverseTemplateSpecializationTypeLoc(
       TemplateSpecializationTypeLoc typeloc) {
-    if (!Base::TraverseTemplateSpecializationTypeLoc(typeloc))  return false;
+    if (!Base::TraverseTemplateSpecializationTypeLoc(typeloc))
+      return false;
     return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
   }
 
@@ -3227,9 +3292,11 @@ class InstantiatedTemplateVisitor
   // SubstTemplateTypeParmType's going from Expr to Decl).
   // TODO(csilvers): This should maybe move to HandleFunctionCall.
   bool VisitCXXConstructExpr(clang::CXXConstructExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     const Type* class_type = GetTypeOf(expr);
-    if (CanIgnoreType(class_type))  return true;
+    if (CanIgnoreType(class_type))
+      return true;
 
     // If the ctor type is a SubstTemplateTypeParmType, get the type-as-written.
     const Type* actual_type = ResugarType(class_type);
@@ -3631,7 +3698,9 @@ class IwyuAstConsumer
     return ShouldPrintSymbolFromFile(CurrentFileEntry());
   }
 
-  string GetSymbolAnnotation() const override { return ""; }
+  string GetSymbolAnnotation() const override {
+    return "";
+  }
 
   // We are interested in all types for iwyu checking.
   bool CanIgnoreType(const Type* type, IgnoreKind) const override {
@@ -3825,7 +3894,8 @@ class IwyuAstConsumer
   // --- Visitors of types derived from clang::Decl.
 
   bool VisitNamespaceAliasDecl(clang::NamespaceAliasDecl* decl) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     ReportDeclUse(CurrentLoc(), decl->getNamespace());
     return Base::VisitNamespaceAliasDecl(decl);
   }
@@ -3851,13 +3921,15 @@ class IwyuAstConsumer
       CHECK_(!pch_include.empty());
     }
 
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     return Base::VisitUsingDecl(decl);
   }
 
   bool VisitTagDecl(clang::TagDecl* decl) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     // Skip the injected class name.
     if (decl->isImplicit())
@@ -3945,7 +4017,8 @@ class IwyuAstConsumer
   // declaration.
   bool VisitClassTemplateSpecializationDecl(
       clang::ClassTemplateSpecializationDecl* decl) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     ClassTemplateDecl* specialized_decl = decl->getSpecializedTemplate();
 
     if (IsExplicitInstantiation(decl))
@@ -3965,7 +4038,8 @@ class IwyuAstConsumer
   //   using namespace a;
   //   ...
   bool VisitUsingDirectiveDecl(clang::UsingDirectiveDecl *decl) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     ReportDeclUse(CurrentLoc(), decl->getNominatedNamespaceAsWritten());
     return Base::VisitUsingDirectiveDecl(decl);
   }
@@ -4028,7 +4102,8 @@ class IwyuAstConsumer
 
   // Called whenever a variable, function, enum, etc is used.
   bool VisitDeclRefExpr(clang::DeclRefExpr* expr) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     // Special case for UsingShadowDecl to track UsingDecls correctly. The
     // actual decl will be reported by obtaining it from the UsingShadowDecl
     // once we've tracked the UsingDecl use.
@@ -4051,7 +4126,8 @@ class IwyuAstConsumer
   // --- Visitors of types derived from clang::Type.
 
   bool VisitTypedefType(clang::TypedefType* type) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
     // TypedefType::getDecl() returns the place where the typedef is defined.
     if (CanForwardDeclareType(current_ast_node())) {
       ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
@@ -4077,7 +4153,8 @@ class IwyuAstConsumer
 
   // This is a superclass of RecordType and CXXRecordType.
   bool VisitTagType(clang::TagType* type) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     // If we're forward-declarable, then no complicated checking is
     // needed: just forward-declare.
@@ -4116,7 +4193,8 @@ class IwyuAstConsumer
   // a class when looking at TemplateSpecializationType -- for instance,
   // when we need to access a class typedef: MyClass<A>::value_type.
   bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
-    if (CanIgnoreCurrentASTNode())  return true;
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     // If we're not in a forward-declare context, use of a template
     // specialization requires having the full type information.
@@ -4134,8 +4212,10 @@ class IwyuAstConsumer
   // --- Visitors defined by BaseASTVisitor (not RecursiveASTVisitor).
 
   bool VisitTemplateName(TemplateName template_name) {
-    if (CanIgnoreCurrentASTNode())  return true;
-    if (!Base::VisitTemplateName(template_name))  return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (!Base::VisitTemplateName(template_name))
+      return false;
     // We can see TemplateName outside the context of a
     // TemplateSpecializationType when it's either the default argument of a
     // template template arg:

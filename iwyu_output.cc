@@ -85,8 +85,12 @@ class OutputLine {
                    symbols_.end());
   }
 
-  size_t line_length() const { return line_.size(); }
-  bool needs_alignment() const { return !symbols_.empty(); }
+  size_t line_length() const {
+    return line_.size();
+  }
+  bool needs_alignment() const {
+    return !symbols_.empty();
+  }
   void add_prefix(const string& prefix) { line_ = prefix + line_; }
   string printable_line(size_t min_length, size_t max_length) const;
 

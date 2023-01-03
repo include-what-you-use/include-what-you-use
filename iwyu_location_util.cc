@@ -64,7 +64,8 @@ namespace include_what_you_use {
 //    Note the two issues can both be present, if an implicit method's
 // parent is an implicit instantiation.
 SourceLocation GetLocation(const clang::Decl* decl) {
-  if (decl == nullptr)  return SourceLocation();
+  if (decl == nullptr)
+    return SourceLocation();
 
   if (const CXXMethodDecl* method_decl = DynCastFrom(decl)) {
     if (method_decl->isImplicit())
@@ -120,7 +121,8 @@ static SourceLocation GetMemberExprLocation(const MemberExpr* member_expr) {
 }
 
 SourceLocation GetLocation(const clang::Stmt* stmt) {
-  if (stmt == nullptr)  return SourceLocation();
+  if (stmt == nullptr)
+    return SourceLocation();
   // For some expressions, we take the location to be the 'key' part
   // of the expression, not the beginning.  For instance, the
   // location of 'a << b' is the '<<', not the 'a'.  This is
@@ -154,17 +156,20 @@ SourceLocation GetLocation(const clang::Stmt* stmt) {
 }
 
 SourceLocation GetLocation(const clang::TypeLoc* typeloc) {
-  if (typeloc == nullptr)  return SourceLocation();
+  if (typeloc == nullptr)
+    return SourceLocation();
   return typeloc->getBeginLoc();
 }
 
 SourceLocation GetLocation(const clang::NestedNameSpecifierLoc* nnsloc) {
-  if (nnsloc == nullptr)  return SourceLocation();
+  if (nnsloc == nullptr)
+    return SourceLocation();
   return nnsloc->getBeginLoc();
 }
 
 SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc) {
-  if (argloc == nullptr)  return SourceLocation();
+  if (argloc == nullptr)
+    return SourceLocation();
   return argloc->getLocation();
 }
 

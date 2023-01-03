@@ -308,7 +308,8 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
           exit(EXIT_FAILURE);
         }
         break;
-      case -1: return optind;   // means 'no more input'
+      case -1:
+        return optind;  // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");
         exit(EXIT_FAILURE);
@@ -339,7 +340,8 @@ static int ParseInterceptedCommandlineFlags(int argc, char** argv) {
     switch (getopt_long(argc, argv, shortopts, longopts, nullptr)) {
       case 'h': PrintHelp(""); exit(EXIT_SUCCESS); break;
       case 'v': PrintVersion(); exit(EXIT_SUCCESS); break;
-      case -1: return optind;   // means 'no more input'
+      case -1:
+        return optind;  // means 'no more input'
       default:
         PrintHelp("FATAL ERROR: unknown flag.");
         exit(EXIT_FAILURE);
