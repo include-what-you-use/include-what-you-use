@@ -4,5 +4,6 @@ AllowShortIfStatementsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
+CommentPragmas: '^ IWYU:'
 SortIncludes: false
 SortUsingDeclarations: false
