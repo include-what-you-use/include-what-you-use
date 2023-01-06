@@ -356,7 +356,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // per file in the current inclusion chain..
   stack<clang::SourceLocation> begin_exports_location_stack_;
 
-  // For processing pragmas. It is the current stack of open "begin_keep"s.     
+  // For processing pragmas. It is the current stack of open "begin_keep"s.
   // There should be at most one item in this stack per file in the current
   // inclusion chain.
   stack<clang::SourceLocation> begin_keep_location_stack_;

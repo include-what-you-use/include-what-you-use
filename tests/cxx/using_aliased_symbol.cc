@@ -15,7 +15,7 @@
 
 #include "using_aliased_symbol-alias.h"
 
-void use_symbol() {  
+void use_symbol() {
   // IWYU: ns::symbol is defined in ...*using_aliased_symbol-declare.h", which isn't directly #included.
   ns2::symbol();
 }

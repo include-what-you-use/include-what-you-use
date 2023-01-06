@@ -14,8 +14,7 @@
 
 #include "using_aliased_symbol-alias.h"
 
-void not_use_symbol() {  
-
+void not_use_symbol() {
 }
 
 /**** IWYU_SUMMARY

@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Tests that when we use multiple function overloads through a using decl, 
+// Tests that when we use multiple function overloads through a using decl,
 // that we correctly include all of the necessary files for the overload and
 // don't accidentally remove files greedily.
 
 #include "using_overload-float.h"
 #include "using_overload-int.h"
 
-void use_overload() {  
+void use_overload() {
   int a = 1;
   int b = 2;
   float c = 1.f;

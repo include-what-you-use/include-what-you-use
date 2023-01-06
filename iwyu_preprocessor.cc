@@ -822,7 +822,7 @@ void IwyuPreprocessorInfo::FileChanged_ExitToFile(
          "begin_exports without an end_exports");
     begin_exports_location_stack_.pop();
   }
-  
+
   if (HasOpenBeginKeep(exiting_from)) {
     Warn(begin_keep_location_stack_.top(),
          "begin_keep without an end_keep");

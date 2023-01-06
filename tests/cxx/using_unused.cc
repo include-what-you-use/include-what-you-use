@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Tests that when we import a name via a using statement, IWYU tells us we 
+// Tests that when we import a name via a using statement, IWYU tells us we
 // need to include the original thing we're referencing, despite the fact that
 // it's not actually used.
 
