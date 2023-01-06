@@ -4132,8 +4132,9 @@ class IwyuAstConsumer
   bool VisitTemplateName(TemplateName template_name) {
     if (CanIgnoreCurrentASTNode())  return true;
     if (!Base::VisitTemplateName(template_name))  return false;
-    // We can see TemplateName not in the context of aTemplateSpecializationType
-    // when it's either the default argument of a template template arg:
+    // We can see TemplateName outside the context of a
+    // TemplateSpecializationType when it's either the default argument of a
+    // template template arg:
     //    template<template<class T> class A = TplNameWithoutTST> class Foo ...
     // or a deduced template specialization:
     //    std::pair x(10, 20); // type of x is really std::pair<int, int>
