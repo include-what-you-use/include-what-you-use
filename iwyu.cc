@@ -1604,34 +1604,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, use_flags, "(for using decl)");
     }
-
-    // For typedefs, the user of the type is sometimes the one
-    // responsible for the underlying type.  We check if that is the
-    // case here, since we might be using a typedef type from
-    // anywhere.  ('autocast' is similar, but is handled in
-    // VisitCastExpr; 'fn-return-type' is also similar and is
-    // handled in HandleFunctionCall.)
-    if (const TypedefNameDecl* typedef_decl = DynCastFrom(target_decl)) {
-      // One exception: if this TypedefType is being used in another
-      // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
-      // user -- the other typedef -- is never responsible for the
-      // underlying type.  Instead, users of that typedef are.
-      const ASTNode* ast_node = MostElaboratedAncestor(current_ast_node());
-      if (!ast_node->ParentIsA<TypedefNameDecl>()) {
-        const set<const Type*>& underlying_types =
-            GetCallerResponsibleTypesForTypedef(typedef_decl);
-        if (!underlying_types.empty()) {
-          VERRS(6) << "User, not author, of typedef "
-                   << typedef_decl->getQualifiedNameAsString()
-                   << " owns the underlying type:\n";
-          // If any of the used types are themselves typedefs, this will
-          // result in a recursive expansion.  Note we are careful to
-          // recurse inside this class, and not go back to subclasses.
-          for (const Type* type : underlying_types)
-            IwyuBaseAstVisitor<Derived>::ReportTypeUse(used_loc, type);
-        }
-      }
-    }
   }
 
   // The comment, if not nullptr, is extra text that is included along
@@ -1698,6 +1670,36 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // pointers and references.
     if (IsPointerOrReferenceAsWritten(type))
       return;
+
+    // For typedefs, the user of the type is sometimes the one
+    // responsible for the underlying type.  We check if that is the
+    // case here, since we might be using a typedef type from
+    // anywhere.  ('autocast' is similar, but is handled in
+    // VisitCastExpr; 'fn-return-type' is also similar and is
+    // handled in HandleFunctionCall.)
+    if (const auto* typedef_type = type->getAs<TypedefType>()) {
+      // One exception: if this TypedefType is being used in another
+      // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
+      // user -- the other typedef -- is never responsible for the
+      // underlying type.  Instead, users of that typedef are.
+      const ASTNode* ast_node = MostElaboratedAncestor(current_ast_node());
+      if (!ast_node->ParentIsA<TypedefNameDecl>()) {
+        const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
+        const set<const Type*>& underlying_types =
+            GetCallerResponsibleTypesForTypedef(typedef_decl);
+        if (!underlying_types.empty()) {
+          VERRS(6) << "User, not author, of typedef "
+                   << typedef_decl->getQualifiedNameAsString()
+                   << " owns the underlying type:\n";
+          // If any of the used types are themselves typedefs, this will
+          // result in a recursive expansion.  Note we are careful to
+          // recurse inside this class, and not go back to subclasses.
+          for (const Type* type : underlying_types)
+            IwyuBaseAstVisitor<Derived>::ReportTypeUse(used_loc, type);
+        }
+      }
+      return;
+    }
 
     // Map private types like __normal_iterator to their public counterpart.
     type = MapPrivateTypeToPublicType(type);
@@ -4123,11 +4125,9 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())
       return true;
     // TypedefType::getDecl() returns the place where the typedef is defined.
-    if (CanForwardDeclareType(current_ast_node())) {
-      ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
-    } else {
-      ReportDeclUse(CurrentLoc(), type->getDecl());
-    }
+    ReportDeclUse(CurrentLoc(), type->getDecl());
+    if (!CanForwardDeclareType(current_ast_node()))
+      ReportTypeUse(CurrentLoc(), type);
     return Base::VisitTypedefType(type);
   }
 
@@ -4135,11 +4135,16 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    // UsingType is similar to TypedefType, so treat it the same.
     if (CanForwardDeclareType(current_ast_node())) {
       ReportDeclForwardDeclareUse(CurrentLoc(), type->getFoundDecl());
     } else {
       ReportDeclUse(CurrentLoc(), type->getFoundDecl());
+
+      // If UsingType refers to a typedef, report the underlying type of that
+      // typedef if needed (which is determined in ReportTypeUse).
+      const Type* underlying_type = type->getUnderlyingType().getTypePtr();
+      if (isa<TypedefType>(underlying_type))
+        ReportTypeUse(CurrentLoc(), underlying_type);
     }
 
     return Base::VisitUsingType(type);
