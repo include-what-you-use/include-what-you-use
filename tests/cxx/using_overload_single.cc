@@ -15,7 +15,7 @@
 #include "using_overload-float.h"
 #include "using_overload-int.h"
 
-void use_overload() {  
+void use_overload() {
   int a = 1;
   int b = 2;
   using ns::add;

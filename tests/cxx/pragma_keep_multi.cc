@@ -61,7 +61,7 @@ class FakeClass7;
 
 class AnotherFakeClass;
 
-/**** IWYU_SUMMARY 
+/**** IWYU_SUMMARY
 tests/cxx/pragma_keep_multi.cc should add these lines:
 
 tests/cxx/pragma_keep_multi.cc should remove these lines:
@@ -86,4 +86,3 @@ class FakeClass7;  // lines XX-XX
 class FakeClass;  // lines XX-XX
 
 ***** IWYU_SUMMARY */
-
