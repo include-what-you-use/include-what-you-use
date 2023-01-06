@@ -1111,7 +1111,8 @@ int main() {
   // a() returns a FOO, which in this case is I2_Enum.
   local_d1_template_class.a();
   (void)(local_i1_enum);
-  // IWYU: I1_UnnamedStruct is...*badinc-i1.h
+  // Typedef of unnamed type always provides that type, and it should be
+  // included due to variable declaration.
   (void)(local_i1_unnamed_struct.a);
   local_d1_subclass.a();
   (void)(local_i2_class_ptr);
