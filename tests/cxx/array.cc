@@ -18,7 +18,6 @@ class A {
   IndirectClass *getIndirectClass(int i) {
     // IWYU: IndirectClass is...*indirect.h
     (void)sizeof(b[i]);  // requires full type
-    // IWYU: IndirectClass needs a declaration
     // IWYU: IndirectClass is...*indirect.h
     (void)sizeof(&(b[i]));  // requires full type
     // IWYU: IndirectClass is...*indirect.h
@@ -31,7 +30,6 @@ class A {
     // IWYU: IndirectTemplate is...*indirect.h
     // IWYU: IndirectClass is...*indirect.h
     (void)sizeof(t[i]);  // requires full type
-    // IWYU: IndirectTemplate needs a declaration
     // IWYU: IndirectTemplate is...*indirect.h
     // IWYU: IndirectClass is...*indirect.h
     (void)sizeof(&(t[i]));  // requires full type

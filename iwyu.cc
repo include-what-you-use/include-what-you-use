@@ -1653,27 +1653,25 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (type->getAs<EnumType>())
       return;
 
+    // Types in fwd-decl-context should be ignored here and reported from more
+    // specialized places, i.e. when they are explicitly written. But in fact,
+    // this check is redundant because TypeToDeclAsWritten returns nullptr for
+    // pointers and references.
+    if (IsPointerOrReferenceAsWritten(type))
+      return;
+
     // Map private types like __normal_iterator to their public counterpart.
     type = MapPrivateTypeToPublicType(type);
     // For the below, we want to be careful to call *our*
     // ReportDeclUse(), not any of the ones in subclasses.
-    if (IsPointerOrReferenceAsWritten(type)) {
-      type = RemovePointersAndReferencesAsWritten(type);
-      if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
-        VERRS(6) << "(For pointer type " << PrintableType(type) << "):\n";
-        IwyuBaseAstVisitor<Derived>::ReportDeclForwardDeclareUse(used_loc, decl,
-                                                                 comment);
-      }
-    } else {
-      if (const auto* template_spec_type =
-              dyn_cast<TemplateSpecializationType>(Desugar(type))) {
-        this->getDerived().ReportTplSpecComponentTypes(template_spec_type);
-      }
-      if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
-        decl = GetDefinitionAsWritten(decl);
-        VERRS(6) << "(For type " << PrintableType(type) << "):\n";
-        IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl, comment);
-      }
+    if (const auto* template_spec_type =
+            dyn_cast<TemplateSpecializationType>(Desugar(type))) {
+      this->getDerived().ReportTplSpecComponentTypes(template_spec_type);
+    }
+    if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
+      decl = GetDefinitionAsWritten(decl);
+      VERRS(6) << "(For type " << PrintableType(type) << "):\n";
+      IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl, comment);
     }
   }
 
