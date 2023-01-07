@@ -1237,8 +1237,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (!use_loc.isMacroID())
       return use_loc;
 
-    VERRS(5) << "Trying to determine use location for '"
-             << PrintableDecl(decl) << "'\n";
+    VERRS(5) << "Trying to determine use location for '" << PrintableDecl(decl)
+             << "'\n";
 
     clang::SourceManager* sm = GlobalSourceManager();
     SourceLocation spelling_loc = sm->getSpellingLoc(use_loc);
@@ -1262,7 +1262,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (!fwd_decl) {
       if (const auto* func_decl = dyn_cast<FunctionDecl>(decl)) {
         if (const FunctionTemplateDecl* ft_decl =
-            func_decl->getPrimaryTemplate()) {
+                func_decl->getPrimaryTemplate()) {
           VERRS(5) << "No fwd-decl found, looking for function template decl\n";
           for (const NamedDecl* redecl : ft_decl->redecls()) {
             if (GetFileEntry(redecl) == macro_def_file) {
@@ -1275,13 +1275,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
 
     if (fwd_decl) {
-        // Make sure we keep that forward-declaration, even if it's probably
-        // unused in this file.
-        IwyuFileInfo* file_info =
-            preprocessor_info().FileInfoFor(macro_def_file);
-        file_info->ReportForwardDeclareUse(
-            spelling_loc, fwd_decl,
-            ComputeUseFlags(current_ast_node()), nullptr);
+      // Make sure we keep that forward-declaration, even if it's probably
+      // unused in this file.
+      IwyuFileInfo* file_info = preprocessor_info().FileInfoFor(macro_def_file);
+      file_info->ReportForwardDeclareUse(
+          spelling_loc, fwd_decl, ComputeUseFlags(current_ast_node()), nullptr);
     }
 
     // Resolve the best use location based on our current knowledge.
