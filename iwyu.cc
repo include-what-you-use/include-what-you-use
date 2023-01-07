@@ -476,15 +476,15 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // particular decl).
   bool VisitDecl(clang::Decl* decl) {
     if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName(string(decl->getDeclKindName()) + "Decl")
-             << PrintablePtr(decl) << PrintableDecl(decl) << "\n";
+      errs() << AnnotatedName(GetKindName(decl)) << PrintablePtr(decl)
+             << PrintableDecl(decl) << "\n";
     }
     return true;
   }
 
   bool VisitStmt(clang::Stmt* stmt) {
     if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName(stmt->getStmtClassName()) << PrintablePtr(stmt)
+      errs() << AnnotatedName(GetKindName(stmt)) << PrintablePtr(stmt)
              << PrintableStmt(stmt) << "\n";
     }
     return true;
@@ -492,8 +492,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 
   bool VisitType(clang::Type* type) {
     if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName(string(type->getTypeClassName()) + "Type")
-             << PrintablePtr(type) << PrintableType(type) << "\n";
+      errs() << AnnotatedName(GetKindName(type)) << PrintablePtr(type)
+             << PrintableType(type) << "\n";
     }
     return true;
   }
@@ -501,9 +501,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // Make sure our logging message shows we're in the TypeLoc hierarchy.
   bool VisitTypeLoc(clang::TypeLoc typeloc) {
     if (ShouldPrintSymbolFromCurrentFile()) {
-      errs() << AnnotatedName(string(typeloc.getTypePtr()->getTypeClassName())
-                              + "TypeLoc")
-             << PrintableTypeLoc(typeloc) << "\n";
+      errs() << AnnotatedName(GetKindName(typeloc)) << PrintableTypeLoc(typeloc)
+             << "\n";
     }
     return true;
   }

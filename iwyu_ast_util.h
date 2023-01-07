@@ -833,6 +833,12 @@ const clang::FunctionType* GetCalleeFunctionType(clang::CallExpr* expr);
 // such a concept (declrefexpr, memberexpr), and empty list if none is present.
 clang::TemplateArgumentListInfo GetExplicitTplArgs(const clang::Expr* expr);
 
+// Return the kind- or class-name for various AST node types.
+std::string GetKindName(const clang::Decl* decl);
+std::string GetKindName(const clang::Stmt* stmt);
+std::string GetKindName(const clang::Type* type);
+std::string GetKindName(const clang::TypeLoc typeloc);
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
