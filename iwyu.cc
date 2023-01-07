@@ -1652,8 +1652,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // with the warning message that iwyu emits.
   virtual void ReportTypeUse(SourceLocation used_loc, const Type* type,
                              const char* comment = nullptr) {
-    // TODO(csilvers): figure out if/when calling CanIgnoreType() is correct.
-    if (!type)
+    if (CanIgnoreType(type))
       return;
 
     // Enum type uses can be ignored. Their size is known (either implicitly
@@ -2999,6 +2998,9 @@ class InstantiatedTemplateVisitor
     // clang desugars template types, so Foo<MyTypedef>() gets turned
     // into Foo<UnderlyingType>().  Try to convert back.
     type = ResugarType(type);
+    if (CanIgnoreType(type))
+      return;
+
     for (CacheStoringScope* storer : cache_storers_)
       storer->NoteReportedType(type);
     Base::ReportTypeUse(caller_loc(), type, comment);
