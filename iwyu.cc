@@ -1295,17 +1295,17 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Otherwise, the spelling loc is responsible.
     if (IsInScratchSpace(spelling_loc)) {
       VERRS(5) << "Spelling location is in <scratch space>, presumably as a "
-                  "result of macro arg concatenation.\n";
+               << "result of macro arg concatenation\n";
       use_loc = expansion_loc;
     } else if (fwd_decl != nullptr) {
-      VERRS(5) << "Found a forward-decl in macro definition file.\n";
+      VERRS(5) << "Found a forward-decl in macro definition file\n";
       use_loc = expansion_loc;
     } else {
       use_loc = spelling_loc;
     }
 
     VERRS(4) << "Attributing use of '" << PrintableDecl(decl)
-             << "' to location at " << PrintableLoc(use_loc) << ".\n";
+             << "' to location at " << PrintableLoc(use_loc) << "\n";
 
     return use_loc;
   }
@@ -1858,9 +1858,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
       VERRS(3) << "Found covariant return type in "
                << method_decl->getQualifiedNameAsString()
-               << ", needs complete type of "
-               << PrintableType(return_type)
-               << ".\n";
+               << ", needs complete type of " << PrintableType(return_type)
+               << "\n";
 
       ReportTypeUse(CurrentLoc(), return_type);
     }
