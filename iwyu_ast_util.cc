@@ -133,24 +133,24 @@ namespace {
 
 void DumpASTNode(llvm::raw_ostream& ostream, const ASTNode* node) {
   if (const Decl *decl = node->GetAs<Decl>()) {
-    ostream << "[" << decl->getDeclKindName() << "Decl] "
-            << PrintableDecl(decl);
+    ostream << "[" << GetKindName(decl) << "] " << PrintableDecl(decl);
   } else if (const Stmt *stmt = node->GetAs<Stmt>()) {
-    ostream << "[" << stmt->getStmtClassName() << "] " << PrintableStmt(stmt);
-  } else if (const Type *type = node->GetAs<Type>()) { // +typeloc
-    ostream << "[" << type->getTypeClassName()
-            << (node->IsA<TypeLoc>() ? "TypeLoc" : "Type") << "] "
-            << PrintableType(type);
-  } else if (const NestedNameSpecifier *nns =
+    ostream << "[" << GetKindName(stmt) << "] " << PrintableStmt(stmt);
+  } else if (const TypeLoc* typeloc = node->GetAs<TypeLoc>()) {
+    ostream << "[" << GetKindName(*typeloc) << "] "
+            << PrintableTypeLoc(*typeloc);
+  } else if (const Type* type = node->GetAs<Type>()) {  // +typeloc
+    ostream << "[" << GetKindName(type) << "] " << PrintableType(type);
+  } else if (const NestedNameSpecifier* nns =
                  node->GetAs<NestedNameSpecifier>()) {
     ostream << "[NestedNameSpecifier] " << PrintableNestedNameSpecifier(nns);
-  } else if (const TemplateName *tpl_name = node->GetAs<TemplateName>()) {
+  } else if (const TemplateName* tpl_name = node->GetAs<TemplateName>()) {
     ostream << "[TemplateName] " << PrintableTemplateName(*tpl_name);
-  } else if (const TemplateArgumentLoc *tpl_argloc =
+  } else if (const TemplateArgumentLoc* tpl_argloc =
                  node->GetAs<TemplateArgumentLoc>()) {
     ostream << "[TemplateArgumentLoc] "
             << PrintableTemplateArgumentLoc(*tpl_argloc);
-  } else if (const TemplateArgument *tpl_arg =
+  } else if (const TemplateArgument* tpl_arg =
                  node->GetAs<TemplateArgument>()) {
     ostream << "[TemplateArgument] " << PrintableTemplateArgument(*tpl_arg);
   } else {
@@ -422,8 +422,7 @@ string PrintableType(const Type* type) {
 
   string typestr = QualType(type, 0).getAsString();
   if (GlobalFlags().HasDebugFlag("printtypeclass")) {
-    string typeclass = type->getTypeClassName();
-    typestr = typeclass + "Type:" + typestr;
+    typestr = GetKindName(type) + ":" + typestr;
   }
   return typestr;
 }
@@ -1491,6 +1490,22 @@ TemplateArgumentListInfo GetExplicitTplArgs(const Expr* expr) {
   else if (const DependentScopeDeclRefExpr* dependent_decl_ref = DynCastFrom(expr))
     dependent_decl_ref->copyTemplateArgumentsInto(explicit_tpl_args);
   return explicit_tpl_args;
+}
+
+string GetKindName(const Decl* decl) {
+  return string(decl->getDeclKindName()) + "Decl";
+}
+
+string GetKindName(const Stmt* stmt) {
+  return stmt->getStmtClassName();
+}
+
+string GetKindName(const Type* type) {
+  return string(type->getTypeClassName()) + "Type";
+}
+
+string GetKindName(const TypeLoc typeloc) {
+  return string(typeloc.getTypePtr()->getTypeClassName()) + "TypeLoc";
 }
 
 }  // namespace include_what_you_use
