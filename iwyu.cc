@@ -109,10 +109,7 @@
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"
 #include "iwyu_port.h"  // for CHECK_
-// This is needed for
-// preprocessor_info().PublicHeaderIntendsToProvide().  Somehow IWYU
-// removes it mistakenly.
-#include "iwyu_preprocessor.h"  // IWYU pragma: keep
+#include "iwyu_preprocessor.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_use_flags.h"

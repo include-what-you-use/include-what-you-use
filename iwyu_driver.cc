@@ -19,7 +19,6 @@
 #include <string>
 #include <utility>
 
-#include "llvm/ADT/ArrayRef.h"  // IWYU pragma: keep
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
