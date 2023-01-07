@@ -1248,12 +1248,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // and treat it as a hint that the expansion loc is responsible for the
     // symbol.
     const FileEntry* macro_def_file = GetLocFileEntry(spelling_loc);
-    VERRS(5) << "Macro is defined in file '" << GetFilePath(macro_def_file)
-             << "'. Looking for fwd-decl hint...\n";
+    VERRS(5) << "Macro is defined in '" << GetFilePath(macro_def_file) << "'\n";
 
     const NamedDecl* fwd_decl = nullptr;
     for (const NamedDecl* redecl : GetTagRedecls(decl)) {
       if (GetFileEntry(redecl) == macro_def_file && IsForwardDecl(redecl)) {
+        VERRS(5) << "Found fwd-decl hint at "
+                 << PrintableLoc(GetLocation(redecl)) << "\n";
         fwd_decl = redecl;
         break;
       }
@@ -1266,6 +1267,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           VERRS(5) << "No fwd-decl found, looking for function template decl\n";
           for (const NamedDecl* redecl : ft_decl->redecls()) {
             if (GetFileEntry(redecl) == macro_def_file) {
+              VERRS(5) << "Found function template at "
+                       << PrintableLoc(GetLocation(redecl)) << "\n";
               fwd_decl = redecl;
               break;
             }
@@ -1291,19 +1294,23 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     //    hint that it wants the expansion location to take responsibility.
     //
     // Otherwise, the spelling loc is responsible.
+    const char* side;
     if (IsInScratchSpace(spelling_loc)) {
       VERRS(5) << "Spelling location is in <scratch space>, presumably as a "
                << "result of macro arg concatenation\n";
       use_loc = expansion_loc;
+      side = "expansion";
     } else if (fwd_decl != nullptr) {
-      VERRS(5) << "Found a forward-decl in macro definition file\n";
+      VERRS(5) << "Found a hint decl in macro definition file\n";
       use_loc = expansion_loc;
+      side = "expansion";
     } else {
       use_loc = spelling_loc;
+      side = "spelling";
     }
 
-    VERRS(4) << "Attributing use of '" << PrintableDecl(decl)
-             << "' to location at " << PrintableLoc(use_loc) << "\n";
+    VERRS(4) << "Attributing use of '" << PrintableDecl(decl) << "' to " << side
+             << " location at " << PrintableLoc(use_loc) << "\n";
 
     return use_loc;
   }
