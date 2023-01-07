@@ -18,9 +18,13 @@ class A {
   IndirectClass *getIndirectClass(int i) {
     // IWYU: IndirectClass is...*indirect.h
     (void)sizeof(b[i]);  // requires full type
-    // IWYU: IndirectClass needs a declaration
     // IWYU: IndirectClass is...*indirect.h
     (void)sizeof(&(b[i]));  // requires full type
+
+    // Neither fwd-declaration nor full type is needed for array of pointers
+    // indexing and pointer size taking.
+    (void)sizeof(pp[i]);
+
     // IWYU: IndirectClass is...*indirect.h
     return &(b[i]);
   }
@@ -31,10 +35,14 @@ class A {
     // IWYU: IndirectTemplate is...*indirect.h
     // IWYU: IndirectClass is...*indirect.h
     (void)sizeof(t[i]);  // requires full type
-    // IWYU: IndirectTemplate needs a declaration
     // IWYU: IndirectTemplate is...*indirect.h
     // IWYU: IndirectClass is...*indirect.h
     (void)sizeof(&(t[i]));  // requires full type
+
+    // Neither fwd-declaration nor full type is needed for array of pointers
+    // indexing and pointer size taking.
+    (void)sizeof(ppt[i]);
+
     // IWYU: IndirectTemplate is...*indirect.h
     // IWYU: IndirectClass is...*indirect.h
     return &(t[i]);
@@ -42,9 +50,14 @@ class A {
 
   // IWYU: IndirectClass needs a declaration
   IndirectClass *b;
+  // IWYU: IndirectClass needs a declaration
+  IndirectClass **pp;
   // IWYU: IndirectTemplate needs a declaration
   // IWYU: IndirectClass needs a declaration
   IndirectTemplate<IndirectClass> *t;
+  // IWYU: IndirectTemplate needs a declaration
+  // IWYU: IndirectClass needs a declaration
+  IndirectTemplate<IndirectClass> **ppt;
 };
 
 
