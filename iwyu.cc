@@ -2900,6 +2900,9 @@ class InstantiatedTemplateVisitor
 
   bool CanIgnoreType(const Type* type, IgnoreKind ignore_kind =
                                            IgnoreKind::ForUse) const override {
+    if (!type)
+      return true;
+
     if (!IsTypeInteresting(type))
       return true;
 
