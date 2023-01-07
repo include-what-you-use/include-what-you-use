@@ -11,8 +11,7 @@
 
 #include <algorithm>                    // for sort, find
 #include <cstdio>                       // for snprintf
-// TODO(wan): make sure IWYU doesn't suggest <iterator>.
-#include <iterator>                     // for find
+#include <iterator>                     // for inserter
 #include <map>                          // for _Rb_tree_const_iterator, etc
 #include <utility>                      // for pair, make_pair, operator>
 #include <vector>                       // for vector, vector<>::iterator, etc
