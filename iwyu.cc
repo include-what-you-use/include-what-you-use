@@ -1898,7 +1898,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const Type* return_type = RemovePointersAndReferencesAsWritten(
           method_decl->getReturnType().getTypePtr());
 
-      VERRS(3) << "Found covariant return type in "
+      VERRS(6) << "Found covariant return type in "
                << method_decl->getQualifiedNameAsString()
                << ", needs complete type of " << PrintableType(return_type)
                << "\n";
