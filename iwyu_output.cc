@@ -22,12 +22,10 @@
 #include "iwyu_include_picker.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
-#include "iwyu_preprocessor.h"  // IWYU pragma: keep
+#include "iwyu_preprocessor.h"
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
-// TODO(wan): remove this once the IWYU bug is fixed.
-// IWYU pragma: no_include "foo/bar/baz.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/ASTContext.h"
