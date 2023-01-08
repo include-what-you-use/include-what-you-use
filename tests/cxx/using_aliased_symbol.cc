@@ -13,7 +13,7 @@
 // that we are required to include both the file with the original symbol and
 // the file with the using decl.
 
-#include "using_aliased_symbol-alias.h"
+#include "tests/cxx/using_aliased_symbol-alias.h"
 
 void use_symbol() {
   // IWYU: ns::symbol is defined in ...*using_aliased_symbol-declare.h", which isn't directly #included.
@@ -29,7 +29,7 @@ tests/cxx/using_aliased_symbol.cc should add these lines:
 tests/cxx/using_aliased_symbol.cc should remove these lines:
 
 The full include-list for tests/cxx/using_aliased_symbol.cc:
+#include "tests/cxx/using_aliased_symbol-alias.h"  // for symbol
 #include "tests/cxx/using_aliased_symbol-declare.h"  // for symbol
-#include "using_aliased_symbol-alias.h"  // for symbol
 
 ***** IWYU_SUMMARY */
