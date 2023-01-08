@@ -12,4 +12,3 @@
 namespace ns2 {
 using ns::symbol;
 }
-
