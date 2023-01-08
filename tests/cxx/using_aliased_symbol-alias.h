@@ -11,4 +11,5 @@
 
 namespace ns2 {
 using ns::symbol;
-}
+using ns::Typedef;
+}  // namespace ns2

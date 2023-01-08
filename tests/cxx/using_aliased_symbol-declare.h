@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+class IndirectClass;
+
 namespace ns {
 void symbol();
-}
+typedef IndirectClass Typedef;
+}  // namespace ns
