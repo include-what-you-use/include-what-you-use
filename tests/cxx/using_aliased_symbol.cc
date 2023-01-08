@@ -13,23 +13,35 @@
 // that we are required to include both the file with the original symbol and
 // the file with the using decl.
 
+#include "tests/cxx/direct.h"
 #include "tests/cxx/using_aliased_symbol-alias.h"
 
 void use_symbol() {
   // IWYU: ns::symbol is defined in ...*using_aliased_symbol-declare.h", which isn't directly #included.
   ns2::symbol();
+  // Use of non-providing typedef requires full underlying type info to be
+  // provided by the user. Hence, full IndirectClass info is required here.
+  // IWYU: ns::Typedef is defined in ...*using_aliased_symbol-declare.h", which isn't directly #included.
+  // IWYU: IndirectClass is defined in ...*indirect.h", which isn't directly #included.
+  ns2::Typedef a;
+  // Typedef use in a fwd-decl context doesn't require underlying type info.
+  // IWYU: ns::Typedef is defined in ...*using_aliased_symbol-declare.h", which isn't directly #included.
+  ns2::Typedef* pa;
 }
 
 /**** IWYU_SUMMARY
 
 
 tests/cxx/using_aliased_symbol.cc should add these lines:
+#include "tests/cxx/indirect.h"
 #include "tests/cxx/using_aliased_symbol-declare.h"
 
 tests/cxx/using_aliased_symbol.cc should remove these lines:
+- #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/using_aliased_symbol.cc:
-#include "tests/cxx/using_aliased_symbol-alias.h"  // for symbol
-#include "tests/cxx/using_aliased_symbol-declare.h"  // for symbol
+#include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/using_aliased_symbol-alias.h"  // for Typedef, symbol
+#include "tests/cxx/using_aliased_symbol-declare.h"  // for Typedef, symbol
 
 ***** IWYU_SUMMARY */
