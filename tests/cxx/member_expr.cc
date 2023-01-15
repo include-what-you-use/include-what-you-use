@@ -128,6 +128,15 @@ void MemberExprInside() {
   (*t)->Method();
 }
 
+template <typename T>
+void MemberExprWithDerefInside() {
+  T t;
+  auto& r = *t;
+  // A type after dereferencing t should be in the resugaring map in order
+  // to be reported.
+  r.Method();
+}
+
 class IndirectClass;  // IndirectClassPtr doesn't provide IndirectClass.
 typedef IndirectClass* IndirectClassPtr;
 
@@ -139,6 +148,8 @@ void Fn() {
   // IndirectClass is hidden by a pointer and (at least) two levels of sugar.
   // IWYU: IndirectClass is...*indirect.h
   MemberExprInside<ns::IndirectClassPtr>();
+  // IWYU: IndirectClass is...*indirect.h
+  MemberExprWithDerefInside<IndirectClassPtr>();
 }
 
 /**** IWYU_SUMMARY
