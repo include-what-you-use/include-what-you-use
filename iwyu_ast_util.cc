@@ -165,6 +165,22 @@ TemplateSpecializationKind GetTemplateSpecializationKind(const Decl* decl) {
   return clang::TSK_Undeclared;
 }
 
+// Desugars to a non-alias template specialization type, if present in the sugar
+// chain, or to canonical type.
+static const Type* DesugarAliasTypes(const Type* type) {
+  type = Desugar(type);
+
+  if (const auto* typedef_type = dyn_cast<TypedefType>(type)) {
+    const TypedefNameDecl* decl = typedef_type->getDecl();
+    return DesugarAliasTypes(decl->getUnderlyingType().getTypePtr());
+  }
+  if (const auto* tpl_spec_type = dyn_cast<TemplateSpecializationType>(type)) {
+    if (tpl_spec_type->isTypeAlias())
+      return DesugarAliasTypes(tpl_spec_type->getAliasedType().getTypePtr());
+  }
+  return type;
+}
+
 }  // anonymous namespace
 
 //------------------------------------------------------------
@@ -546,32 +562,33 @@ class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
 
   // --- Methods on RecursiveASTVisitor
   bool TraverseType(QualType type) {
-    TraverseArgumentsOfSugaredTemplates(type);
-    return Base::TraverseType(type);
+    if (type.isNull())
+      return Base::TraverseType(type);
+    return TraverseTypeHelper(type);
   }
 
   bool TraverseTypeLoc(TypeLoc type_loc) {
-    TraverseArgumentsOfSugaredTemplates(type_loc.getType());
-    return Base::TraverseTypeLoc(type_loc);
-  }
-
-  bool VisitType(Type* type) {
-    seen_types_.insert(type);
-    return true;
+    if (!type_loc)
+      return Base::TraverseTypeLoc(type_loc);
+    return TraverseTypeHelper(type_loc.getType());
   }
 
  private:
-  // Clang doesn't traverse underlying type for most of the sugar types.
-  // If a TemplateSpecializationType occurs in a sugaring chain, traverse its
-  // arguments explicitly, otherwise they aren't put into resugar_map.
-  void TraverseArgumentsOfSugaredTemplates(QualType type) {
-    if (type.isNull())
-      return;
+  bool TraverseTypeHelper(QualType qual_type) {
+    CHECK_(!qual_type.isNull());
 
-    if (const auto* template_spec = type->getAs<TemplateSpecializationType>()) {
-      for (const TemplateArgument& arg : template_spec->template_arguments())
-        TraverseTemplateArgument(arg);
-    }
+    const Type* desugared_until_alias_or_tpl = Desugar(qual_type.getTypePtr());
+    seen_types_.insert(desugared_until_alias_or_tpl);
+
+    const Type* desugared = DesugarAliasTypes(desugared_until_alias_or_tpl);
+
+    // Add desugared type components, if any. Don't add two types with the same
+    // canonical type.
+    // TODO(bolshakov): it doesn't always work properly. For example, both A and
+    // TypedefForA would be inserted in seen_types_ for Tpl<A, TypedefForA>,
+    // leading to indeterminate resugar_map construction.
+    // TODO(bolshakov): check whether typedef components are "provided".
+    return Base::TraverseType(QualType(desugared, 0));
   }
 
   set<const Type*> seen_types_;

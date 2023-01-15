@@ -13,6 +13,8 @@
 // function-proto template arguments, for both classes and functions.
 
 #include "tests/cxx/direct.h"
+#include "tests/cxx/template_args-d1.h"
+#include "tests/cxx/template_args-d2.h"
 
 // ---------------------------------------------------------------
 
@@ -83,6 +85,8 @@ template<typename T> struct Inner { T t; };
 struct StaticTemplateFieldStruct {
   // IWYU: IndirectClass needs a declaration
   static Inner<IndirectClass> tpl;
+  static ProvidingAlias<5> aliasedProviding;
+  static NonProvidingAlias<5> aliasedNonProviding;
 };
 
 void NestedTemplateArguments() {
@@ -115,6 +119,37 @@ void NestedTemplateArguments() {
   Outer<decltype(StaticTemplateFieldStruct::tpl)>* opsi;
   // IWYU: IndirectClass is...*indirect.h
   (void)opsi->t;
+
+  // Test obtaining template argument through alias template, typedef and
+  // several other layers of sugar. Underlying type provision status of aliases
+  // should be accounted for.
+
+  // IWYU: IndirectClass is...*indirect.h
+  Outer<decltype(StaticTemplateFieldStruct::aliasedProviding)> oapi;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)oapi.t;
+
+  Outer<decltype(StaticTemplateFieldStruct::aliasedProviding)*> oapip;
+  (void)oapip.t;
+
+  Outer<decltype(StaticTemplateFieldStruct::aliasedProviding)>* opapi;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)opapi->t;
+
+  // IWYU: TplInI1 is...*-i1.h
+  // IWYU: IndirectClass is...*indirect.h
+  Outer<decltype(StaticTemplateFieldStruct::aliasedNonProviding)> oanpi;
+  // IWYU: TplInI1 is...*-i1.h
+  // IWYU: IndirectClass is...*indirect.h
+  (void)oanpi.t;
+
+  Outer<decltype(StaticTemplateFieldStruct::aliasedNonProviding)*> oanpip;
+  (void)oanpip.t;
+
+  Outer<decltype(StaticTemplateFieldStruct::aliasedNonProviding)>* opanpi;
+  // IWYU: TplInI1 is...*-i1.h
+  // IWYU: IndirectClass is...*indirect.h
+  (void)opanpi->t;
 }
 
 // ---------------------------------------------------------------
@@ -175,12 +210,16 @@ void TestResugaringOfTypedefs() {
 
 tests/cxx/template_args.cc should add these lines:
 #include "tests/cxx/indirect.h"
+#include "tests/cxx/template_args-i1.h"
 
 tests/cxx/template_args.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/template_args.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/template_args-d1.h"  // for ProvidingAlias
+#include "tests/cxx/template_args-d2.h"  // for NonProvidingAlias
+#include "tests/cxx/template_args-i1.h"  // for TplInI1
 template <typename F> struct FunctionStruct;  // lines XX-XX
 
 ***** IWYU_SUMMARY */
