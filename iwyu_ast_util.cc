@@ -1144,7 +1144,6 @@ const Type* Desugar(const Type* type) {
   while (true) {
     // Don't desugar types that (potentially) add a name.
     if (cur->getTypeClass() == Type::Typedef ||
-        cur->getTypeClass() == Type::Using ||
         cur->getTypeClass() == Type::TemplateSpecialization) {
       return cur;
     }
