@@ -120,6 +120,27 @@ void ViaMacro(const IndirectTemplate<IndirectClass>& ic) {
   IC_CALL_METHOD;
 }
 
+// Test type use with member expression inside a template.
+
+template <typename T>
+void MemberExprInside() {
+  T* t = nullptr;
+  (*t)->Method();
+}
+
+class IndirectClass;  // IndirectClassPtr doesn't provide IndirectClass.
+typedef IndirectClass* IndirectClassPtr;
+
+namespace ns {
+using ::IndirectClassPtr;
+}
+
+void Fn() {
+  // IndirectClass is hidden by a pointer and (at least) two levels of sugar.
+  // IWYU: IndirectClass is...*indirect.h
+  MemberExprInside<ns::IndirectClassPtr>();
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/member_expr.cc should add these lines:
@@ -127,6 +148,7 @@ tests/cxx/member_expr.cc should add these lines:
 
 tests/cxx/member_expr.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
+- class IndirectClass;  // lines XX-XX
 
 The full include-list for tests/cxx/member_expr.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate

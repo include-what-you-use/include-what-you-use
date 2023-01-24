@@ -103,6 +103,22 @@ SizeofTakingStructTplRef2<IndirectClass> sizeof_taking_struct5;
 // IWYU: IndirectClass needs a declaration
 SizeofTakingStructTplRef2<IndirectClass&> sizeof_taking_struct6;
 
+// The same with some sugar.
+
+// IWYU: IndirectClass is...*indirect.h
+SizeofTakingStruct<decltype(ref)> sizeof_taking_struct7;
+
+// IWYU: IndirectClass is...*indirect.h
+SizeofTakingStructRef<decltype(dummy)> sizeof_taking_struct8;
+
+SizeofTakingStructTpl<decltype(ref)> sizeof_taking_struct9;
+
+SizeofTakingStructTplRef<decltype(dummy)> sizeof_taking_struct10;
+
+// IWYU: IndirectClass is...*indirect.h
+SizeofTakingStructTplRef2<decltype(dummy)> sizeof_taking_struct11;
+
+SizeofTakingStructTplRef2<decltype(ref)> sizeof_taking_struct12;
 
 /**** IWYU_SUMMARY
 

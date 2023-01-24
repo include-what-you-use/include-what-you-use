@@ -43,6 +43,12 @@ void ExpressionsBuiltinTypes() {
 }
 
 // New- and delete-expressions with user-defined types.
+
+template <typename T>
+void TplFnWithDelete(T p) {
+  delete p;
+}
+
 void ExpressionsUserTypes() {
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
@@ -55,6 +61,11 @@ void ExpressionsUserTypes() {
   IndirectClass* arr = new IndirectClass[4];
   // IWYU: IndirectClass is...*indirect.h
   delete[] arr;
+
+  // Hide the pointer type behind "decltype" sugar.
+  decltype(elem) elem2 = nullptr;
+  // IWYU: IndirectClass is...*indirect.h
+  TplFnWithDelete(elem2);
 }
 
 // Aligned allocation uses operator new(size_t, std::align_val_t) under the
