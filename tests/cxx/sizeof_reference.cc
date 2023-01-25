@@ -11,6 +11,10 @@
 
 // Tests that sizeof(reference) is treated the same as
 // sizeof(underlying_object), like it's supposed to be.
+//
+// C++ [expr.sizeof]p2:
+//   When applied to a reference or a reference type,
+//   the result is the size of the referenced type.
 
 #include <stddef.h>
 #include "tests/cxx/direct.h"
@@ -76,11 +80,17 @@ SizeofTakingStruct<IndirectClass&> sizeof_taking_struct1;
 // IWYU: IndirectClass needs a declaration
 SizeofTakingStructRef<IndirectClass> sizeof_taking_struct2;
 
-// Not sure why, but C++ doesn't require full type of IndirectClass here.
+// sizeof(IndirectTemplateStruct<IndirectClass&>) doesn't require IndirectClass
+// full type because IndirectTemplateStruct<IndirectClass&> stores just
+// a pointer, in fact. Hence, its size doesn't depend on IndirectClass size.
+// C++ [expr.sizeof]p2:
+//   When applied to a class, the result is the number of bytes in an object of
+//   that class...
 // IWYU: IndirectClass needs a declaration
 SizeofTakingStructTpl<IndirectClass&> sizeof_taking_struct3;
 
-// Not sure why, but C++ doesn't require full type of IndirectClass here.
+// sizeof(IndirectTemplateStruct<IndirectClass&>) doesn't require IndirectClass
+// full type.
 // IWYU: IndirectClass needs a declaration
 SizeofTakingStructTplRef<IndirectClass> sizeof_taking_struct4;
 
@@ -88,7 +98,8 @@ SizeofTakingStructTplRef<IndirectClass> sizeof_taking_struct4;
 // IWYU: IndirectClass needs a declaration
 SizeofTakingStructTplRef2<IndirectClass> sizeof_taking_struct5;
 
-// Not sure why, but C++ doesn't require full type of IndirectClass here.
+// sizeof(IndirectTemplateStruct<IndirectClass&>) doesn't require IndirectClass
+// full type.
 // IWYU: IndirectClass needs a declaration
 SizeofTakingStructTplRef2<IndirectClass&> sizeof_taking_struct6;
 
