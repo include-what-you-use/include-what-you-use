@@ -44,7 +44,6 @@ using clang::SourceLocation;
 using clang::SourceRange;
 using clang::Token;
 using llvm::errs;
-using llvm::Optional;
 using llvm::StringRef;
 using std::make_pair;
 using std::string;
