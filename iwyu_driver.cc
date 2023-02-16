@@ -21,7 +21,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Host.h"
