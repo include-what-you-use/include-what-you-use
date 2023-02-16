@@ -2549,6 +2549,23 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  // The C++ spec does not allow us to apply typeid to an incomplete type.
+  // Therefore, we must report the type to be included.
+  bool VisitCXXTypeidExpr(clang::CXXTypeidExpr* expr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    QualType type;
+    if (expr->isTypeOperand()) {
+      type = expr->getTypeOperandSourceInfo()->getType();
+    } else {
+      type = expr->getExprOperand()->getType();
+    }
+
+    ReportTypeUse(CurrentLoc(), type.getTypePtr());
+    return true;
+  }
+
   //------------------------------------------------------------
   // Visitors of types derived from clang::Type.
 
