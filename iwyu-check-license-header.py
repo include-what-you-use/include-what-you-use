@@ -66,7 +66,7 @@ def make_license_header(filename, one, two):
         c -= len(filename)
         return '-' * c
 
-    firstline = '%s===--- %s %s===%s' % (two, filename, dashes(), two)
+    firstline = '%s===--- %s %s---===%s' % (two, filename, dashes(), two)
     return [firstline] + make_hdrformat(one, two)
 
 
