@@ -161,9 +161,10 @@ class File(object):
         lines += after
 
         # Write back out
+        content = '\n'.join(lines)
         with open(self.filename, 'wb') as fd:
-            fd.write('\n'.join(lines))
-            fd.write('\n')
+            fd.write(content.encode('utf-8'))
+            fd.write(b'\n')
 
     def check_license_header(self):
         """ Check that the header lines follow convention.
