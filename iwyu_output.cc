@@ -618,7 +618,7 @@ static void LogSymbolUse(const string& prefix, const OneUse& use) {
   string decl_loc;
   string printable_ptr;
   if (use.decl()) {
-    decl_loc = PrintableLoc(GetLocation(use.decl()));
+    decl_loc = PrintableLoc(use.decl_loc());
     printable_ptr = internal::PrintablePtr(use.decl());
   } else {
     decl_loc = use.decl_filepath();
@@ -1279,7 +1279,7 @@ void ProcessFullUse(OneUse* use,
       if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
         VERRS(6) << "Ignoring use of " << use->symbol_name() << " ("
                  << use->PrintableUseLoc() << "): definition is present: "
-                 << PrintableLoc(GetLocation(use->decl())) << "\n";
+                 << PrintableLoc(use->decl_loc()) << "\n";
         use->set_ignore_use();
         return;
       }
