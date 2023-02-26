@@ -2942,7 +2942,7 @@ class InstantiatedTemplateVisitor
     // Among all subst-type params, we only want those in the resugar-map. If
     // we're not in the resugar-map at all, we're not a type corresponding to
     // the template being instantiated, so we can be ignored.
-    type = Desugar(type);
+    type = GetCanonicalType(type);
     return ContainsKey(resugar_map_, type);
   }
 
@@ -2980,6 +2980,15 @@ class InstantiatedTemplateVisitor
         storer->NoteReportedDecl(decl);
       Base::ReportDeclUse(caller_loc(), decl, comment, extra_use_flags);
     }
+  }
+
+  void ReportDeclForwardDeclareUse(SourceLocation, const NamedDecl*,
+                                   const char* /*comment*/ = nullptr) override {
+    // Forward declarations make sense only when a type is explicitly written.
+    // But 'InstantiatedTemplateVisitor' is to traverse implicit template
+    // specializations, actually. (Template definitions and explicit
+    // specializations are handled by 'IwyuAstConsumer'). Because it traverses
+    // implicit stuff, it should not suggest forward declarations.
   }
 
   void ReportTypeUse(SourceLocation used_loc, const Type* type,
@@ -3349,7 +3358,7 @@ class InstantiatedTemplateVisitor
   // class was instantiated) or not.  We store this in resugar_map by
   // having the value be nullptr.
   bool IsDefaultTemplateParameter(const Type* type) const {
-    type = Desugar(type);
+    type = GetCanonicalType(type);
     return ContainsKeyValue(resugar_map_, type, static_cast<Type*>(nullptr));
   }
 
@@ -3358,7 +3367,7 @@ class InstantiatedTemplateVisitor
   // If we're not in the resugar-map, then we weren't canonicalized,
   // so we can just use the input type unchanged.
   const Type* ResugarType(const Type* type) const {
-    type = Desugar(type);
+    type = GetCanonicalType(type);
     // If we're the resugar-map but with a value of nullptr, it means
     // we're a default template arg, which means we don't have anything
     // to resugar to.  So just return the input type.
