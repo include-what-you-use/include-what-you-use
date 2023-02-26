@@ -3203,9 +3203,9 @@ class InstantiatedTemplateVisitor
           return;  // avoid recursion & repetition
         traversed_decls_.insert(decl);
 
-        VERRS(6)
-            << "Recursively traversing " << PrintableDecl(cts_decl)
-            << " which was full-used and involves a known template param\n";
+        VERRS(6) << "Recursively traversing " << PrintableDecl(cts_decl)
+                 << " which was full-used and does not involve a known"
+                 << " template param\n";
         TraverseDecl(const_cast<ClassTemplateSpecializationDecl*>(cts_decl));
       }
     }
