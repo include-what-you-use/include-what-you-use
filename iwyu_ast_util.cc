@@ -1145,6 +1145,8 @@ const Type* GetTypeOf(const TypeDecl* decl) {
 }
 
 const Type* GetCanonicalType(const Type* type) {
+  if (!type)
+    return type;
   QualType canonical_type = type->getCanonicalTypeUnqualified();
   return canonical_type.getTypePtr();
 }
