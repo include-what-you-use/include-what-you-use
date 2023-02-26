@@ -41,8 +41,9 @@ Template<bool> t1a; // 1a
 // IWYU: Template is...*template_bool.h.*for explicit instantiation
 template class Template<bool>;  // 2
 
+// Included explicit instantiation no longer reported here as a local definition
+// is available.
 // IWYU: Template is...*explicit_instantiation-template.h
-// IWYU: Template is...*template_bool.h.*for explicit instantiation
 Template<bool> t1b; // 1b
 
 // IWYU: Template is...*explicit_instantiation-template.h

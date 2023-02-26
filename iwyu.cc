@@ -3257,23 +3257,63 @@ class InstantiatedTemplateVisitor
   void ReportExplicitInstantiations(const Type* type) {
     const auto* decl = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
         TypeToDeclAsWritten(type));
-
     if (decl == nullptr)
+      return;
+
+    if (IsProvidedByTemplate(decl))
       return;
 
     // Go through all previous redecls and filter out those that are not
     // explicit template instantiations or already provided by the template.
+    std::vector<const CXXRecordDecl*> explicit_inst_decls;
     for (const NamedDecl* redecl : decl->redecls()) {
-      if (!IsExplicitInstantiation(redecl) ||
-          !GlobalSourceManager()->isBeforeInTranslationUnit(
-              redecl->getLocation(), caller_loc()) ||
-          IsProvidedByTemplate(decl))
-        continue;
-
-      // Report the specific decl that points to the explicit instantiation
-      Base::ReportDeclUse(caller_loc(), redecl, "(for explicit instantiation)",
-                          UF_ExplicitInstantiation);
+      if (IsExplicitInstantiation(redecl) &&
+          GlobalSourceManager()->isBeforeInTranslationUnit(
+            redecl->getLocation(), caller_loc())) {
+        // Earlier checks imply that this is a CXXRecordDecl.
+        explicit_inst_decls.push_back(cast<CXXRecordDecl>(redecl));
+      }
     }
+
+    if (explicit_inst_decls.empty())
+      return;
+
+    // If there is a redecl in the same file, prefer that.
+    for (const CXXRecordDecl* redecl : explicit_inst_decls) {
+      if (GetFileEntry(redecl->getLocation()) == GetFileEntry(caller_loc())) {
+        VERRS(6) << "Found explicit instantiation declaration or definition in "
+                    "same file\n";
+        Base::ReportDeclUse(caller_loc(), redecl,
+                            "(for explicit instantiation)",
+                            UF_ExplicitInstantiation);
+        return;
+      }
+    }
+
+    // Otherwise, if there is any redecl that is an explicit instantiation
+    // _declaration_, prefer that, because a declaration should be cheaper to
+    // process than a definition. The language guarantees that there is a
+    // definition available somewhere in the program, or the linker will
+    // complain.
+    for (const CXXRecordDecl* redecl : explicit_inst_decls) {
+      if (redecl->getTemplateSpecializationKind() ==
+          clang::TSK_ExplicitInstantiationDeclaration) {
+        VERRS(6) << "Found explicit instantiation declaration\n";
+        Base::ReportDeclUse(caller_loc(), redecl,
+                            "(for explicit instantiation)",
+                            UF_ExplicitInstantiation);
+        return;
+      }
+    }
+
+    // If nothing more specific was found, arbitrarily pick the first one.
+    if (explicit_inst_decls.size() > 1) {
+      VERRS(6) << "Found " << explicit_inst_decls.size() << " "
+               << "explicit instantiation decls; reporting the first one\n";
+    }
+    Base::ReportDeclUse(caller_loc(), explicit_inst_decls[0],
+                        "(for explicit instantiation)",
+                        UF_ExplicitInstantiation);
   }
 
   // If constructing an object, check the type we're constructing.
