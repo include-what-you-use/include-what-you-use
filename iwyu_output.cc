@@ -36,6 +36,7 @@
 
 namespace include_what_you_use {
 
+using clang::BlockDecl;
 using clang::ClassTemplateDecl;
 using clang::ClassTemplateSpecializationDecl;
 using clang::CXXMethodDecl;
@@ -54,6 +55,7 @@ using clang::SourceRange;
 using clang::TagDecl;
 using clang::TemplateDecl;
 using clang::UsingDecl;
+using clang::UsingDirectiveDecl;
 using llvm::cast;
 using llvm::dyn_cast;
 using llvm::errs;
@@ -69,6 +71,36 @@ using std::vector;
 namespace internal {
 
 namespace {
+
+// Map containing the information we need to pick the best header
+// file.
+//
+// The namespace information is stored within the relevant
+// IwyuFileInfo in which the namespace is declared, in the nsinfo map.
+//
+// For this map, the main key is ns->getCanonicalDecl() - which
+// happens to be the first namespace declaration seen.
+//
+// For each namespace we have a secondary map pointing to the per file
+// information stored in IwyuFileInfo. These are the candidate header
+// files for the namespace. The namespace may be declared more than
+// once in each file. We just keep a reference to the first namespace
+// declaration in the file, and a count of all the full declarations
+// and using directives in the namespace.
+//
+// { canonical_namespace_decl :
+//     { fileentry : { first_ns_decl, decl_count, directive_count },
+//       fileentry : { first_ns_decl, decl_count, directive_count },
+//     },
+//   canonical_namespace_decl :
+//     { fileentry : { first_ns_decl, decl_count, directive_count },
+//       fileentry : { first_ns_decl, decl_count, directive_count },
+//     },
+//   etc
+// }
+static map<const clang::NamespaceDecl*,
+           map<const clang::FileEntry*, IwyuNamespaceInfo*>>
+    nsinfoPerFile;
 
 class OutputLine {
  public:
@@ -733,6 +765,17 @@ void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
   ReportFullSymbolUse(use_loc, using_decl, flags, comment);
 }
 
+void IwyuFileInfo::ReportNamespaceDeclUse(SourceLocation use_loc,
+                                          const NamespaceDecl* decl,
+                                          UseFlags flags, const char* comment) {
+  // In order to assign namespace usage to the best file, don't record the
+  // usage immediately. Instead keep the use in a vector and report it
+  // after we've identified the best file to satisfy it.
+  namespace_uses.push_back(
+      std::tuple{use_loc, decl, flags,
+                 comment ? optional(string(comment)) : std::nullopt});
+}
+
 // Given a collection of symbol-uses for symbols defined in various
 // files, figures out the minimal set of #includes needed to get those
 // definitions.  Typically this is a trivial task: if we need the full
@@ -749,6 +792,155 @@ static void LogIncludeMapping(const string& reason, const OneUse& use) {
   VERRS(6) << "Mapped " << use.decl_filepath() << " to "
            << use.suggested_header() << " for " << use.symbol_name()
            << " (" << reason << ")\n";
+}
+
+IwyuNamespaceInfo* IwyuFileInfo::getNamespaceInfo(const NamespaceDecl* ns,
+                                                  const FileEntry* file) {
+  const NamespaceDecl* canonical_ns = ns->getCanonicalDecl();
+
+  // Get the entry from nsinfo, creating it if necessary.
+  auto inserted = nsinfo.emplace(canonical_ns, ns);
+
+  IwyuNamespaceInfo* info = &(inserted.first->second);
+
+  if (inserted.second) {
+    // A new entry was created. Update nsinfoPerFile so we can lookup
+    // the namespace info by namespace.
+
+    // Get the intermediate map, creating it if necessary
+    map<const FileEntry*, IwyuNamespaceInfo*>& m =
+        internal::nsinfoPerFile[canonical_ns];
+
+    // Insert the new entry for this file
+    m[file] = info;
+  }
+
+  return info;
+}
+
+const NamespaceDecl* IwyuFileInfo::GetBestNamespaceDecl(
+    const NamespaceDecl* ns) {
+  string ns_ident = ns->getQualifiedNameAsString();
+  const NamespaceDecl* canonical_ns = ns->getCanonicalDecl();
+  auto m = internal::nsinfoPerFile[canonical_ns];
+
+  const NamespaceDecl* best_decl = nullptr;
+  const NamespaceDecl* decl = nullptr;
+  unsigned num_candidates = 0;
+  unsigned full_decl_count = 0;
+  unsigned best_using_directives = 0;
+
+  for (auto& [fileentry, nsinfo] : m) {
+    decl = nsinfo->GetNamespaceDecl();
+    unsigned num_decls = nsinfo->GetFullDeclCount();
+    unsigned num_using_directives = nsinfo->GetUsingDirectiveCount();
+
+    if (num_decls > 0 || num_using_directives > 0) {
+      if (num_candidates == 0) {
+        full_decl_count = num_decls;
+        best_decl = decl;
+        best_using_directives = num_using_directives;
+      } else {
+        full_decl_count += num_decls;
+        if ((best_using_directives == 0) && (num_using_directives > 0)) {
+          // Prefer a namespace with using directives over one
+          // without - forward declaration namespaces shouldn't have
+          // using directives
+          best_decl = decl;
+          best_using_directives = num_using_directives;
+        } else if ((best_using_directives > 0) && (num_using_directives == 0)) {
+          // stick with the one we have
+        } else {
+          // we have multiple namespaces with using directives
+          // or multiple with just declarations
+          best_decl = nullptr;
+        }
+      }
+      num_candidates++;
+    }
+  }
+
+  if (num_candidates == 1) {
+    int line = GetLineNumber(best_decl->getBeginLoc());
+    VERRS(7) << "Single namespace for " << ns_ident << " "
+             << GetFilePath(best_decl) << " line " << line << " with "
+             << full_decl_count << " full decls\n";
+    return best_decl;
+  } else if (num_candidates == 0) {
+    // No full declarations. Return the input NamespaceDecl
+    int line = GetLineNumber(ns->getBeginLoc());
+    VERRS(7) << "No namespace with a full decl for " << ns_ident << " "
+             << GetFilePath(ns) << " line " << line << "\n";
+    return ns;
+  }
+
+  if (best_using_directives > 0) {
+    int line = GetLineNumber(best_decl->getBeginLoc());
+    VERRS(7) << "Multiple namespace decls for " << ns_ident
+             << ", but only one with using directives "
+             << GetFilePath(best_decl) << " line " << line << "\n";
+    return best_decl;
+  }
+
+  VERRS(7) << "Multiple namespace decls for " << ns_ident << " with "
+           << full_decl_count << " full decls. Ignoring namespace use\n";
+  return nullptr;
+}
+
+void IwyuFileInfo::ReportDeclInNamespaces(const NamedDecl* decl) {
+  // Ignore declarations of sub-namespaces i.e. don't count namespace
+  // declarations themselves as a forward decl or full decl.
+  if (isa<NamespaceDecl>(decl))
+    return;
+
+  bool fwd_decl = IsForwardDecl(decl);
+  bool using_directive = isa<UsingDirectiveDecl>(decl);
+
+  if (fwd_decl && !using_directive)
+    return;
+
+  for (const DeclContext* decl_context = decl->getDeclContext(); decl_context;
+       decl_context = decl_context->getParent()) {
+    // Stop traversing up the context - function arguments, structure
+    // members and variables in block scope don't need to be recorded,
+    // as the function/structure will be.
+    //
+    // TODO: others?
+    if (isa<FunctionDecl, TagDecl, BlockDecl>(decl_context)) {
+      return;
+    }
+
+    if (const auto* ns = dyn_cast<NamespaceDecl>(decl_context)) {
+      // This is the namespace within which the used symbol is declared
+
+      // Get full namespace string...
+      string ns_ident = ns->getQualifiedNameAsString();
+      const FileEntry* declared_in = GetFileEntry(ns);
+
+      // Get or create file_info...
+      IwyuNamespaceInfo* nsinfo = getNamespaceInfo(ns, declared_in);
+
+      if (const auto* using_decl = dyn_cast<UsingDirectiveDecl>(decl)) {
+        VERRS(7) << "Recording using directive in namespace " << ns_ident
+                 << " for " << using_decl->getNominatedNamespace()->getName()
+                 << " in filepath " << GetFilePath(ns) << "\n";
+
+        nsinfo->AddUsingDirective();
+        // Only count using directives in their enclosing namespace.
+        // It shouldn't influence how parent namespaces are used.
+        break;
+      }
+
+      VERRS(7) << "Recording declaration in namespace " << ns_ident << " for "
+               << decl->getName() << " in filepath " << GetFilePath(ns) << "\n";
+
+      if (!fwd_decl) {
+        nsinfo->AddFullDecl();
+        // Count normal declarations in all parent namespaces - so don't
+        // break here.
+      }
+    }
+  }
 }
 
 namespace internal {
@@ -2214,6 +2406,16 @@ void IwyuFileInfo::ResolvePendingAnalysis() {
                                 /* flags */ UF_None,
                                 "(for un-referenced using)");
       }
+    }
+  }
+
+  // For each namespace use, report against the best NamespaceDecl.
+  for (const auto& use : namespace_uses) {
+    const NamespaceDecl* decl = GetBestNamespaceDecl(std::get<1>(use));
+    if (decl != nullptr) {
+      const optional<string>& comment = std::get<3>(use);
+      ReportFullSymbolUse(std::get<0>(use), decl, std::get<2>(use),
+                          comment ? comment->c_str() : nullptr);
     }
   }
 }

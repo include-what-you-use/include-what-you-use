@@ -17,6 +17,7 @@
 #define INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 
 #include <map>                          // for map
+#include <optional>                     // for optional
 #include <set>                          // for set
 #include <string>                       // for string, operator<
 #include <vector>                       // for vector
@@ -36,6 +37,7 @@ class ElaboratedTypeLoc;
 namespace include_what_you_use {
 
 using std::map;
+using std::optional;
 using std::set;
 using std::string;
 using std::vector;
@@ -222,6 +224,35 @@ class OneIncludeOrForwardDeclareLine {
   const clang::NamedDecl* fwd_decl_ = nullptr;
 };
 
+// Class to collect information about declarations within a namespace.
+class IwyuNamespaceInfo {
+  const clang::NamespaceDecl* decl;
+
+  unsigned full_decl_count = 0;
+  unsigned using_directive_count = 0;
+
+ public:
+  IwyuNamespaceInfo(const clang::NamespaceDecl* decl) : decl(decl) {
+  }
+
+  const clang::NamespaceDecl* GetNamespaceDecl() const {
+    return decl;
+  }
+  unsigned GetFullDeclCount() const {
+    return full_decl_count;
+  }
+  unsigned GetUsingDirectiveCount() const {
+    return using_directive_count;
+  }
+
+  void AddFullDecl() {
+    ++full_decl_count;
+  }
+  void AddUsingDirective() {
+    ++using_directive_count;
+  }
+};
+
 // This class holds IWYU information about a single file (FileEntry)
 // -- referred to, in the comments below, as "this file."  The keys to
 // most of these methods are all quoted header paths, which are the
@@ -304,6 +335,13 @@ class IwyuFileInfo {
                           const clang::UsingDecl* using_decl,
                           UseFlags flags, const char* comment);
 
+  // Called whenever a NamespaceDecl is used, generally via a using
+  // directive or an alias (a use via a symbol will force the right
+  // include via that symbol).
+  void ReportNamespaceDeclUse(clang::SourceLocation use_loc,
+                              const clang::NamespaceDecl* decl, UseFlags flags,
+                              const char* comment);
+
   // This is used when we see a // NOLINT comment, for instance.  It says
   // '#include this header file as-is, without any public-header mapping.'
   // Input is the include-line as desired: '<string.h>' or '"ads/foo.h"'.
@@ -319,6 +357,10 @@ class IwyuFileInfo {
   const set<const clang::FileEntry*>& direct_includes_as_fileentries() const {
     return direct_includes_as_fileentries_;
   }
+
+  void ReportDeclInNamespaces(const clang::NamedDecl* decl);
+
+  const clang::NamespaceDecl* GetBestNamespaceDecl(const clang::NamespaceDecl*);
 
   // Called when all macros in the file are processed.
   void HandlePreprocessingDone();
@@ -371,6 +413,9 @@ class IwyuFileInfo {
   // Returns the number of warning messages found.
   int EmitWarningMessages(const vector<OneUse>& uses);
 
+  IwyuNamespaceInfo* getNamespaceInfo(const clang::NamespaceDecl* ns,
+                                      const clang::FileEntry* file);
+
   // The constructor arguments.  file_ is 'this file'.
   const clang::FileEntry* file_;
   const IwyuPreprocessorInfo* preprocessor_info_;
@@ -396,6 +441,16 @@ class IwyuFileInfo {
 
   // Holds all the lines (#include and fwd-declare) that are reported.
   vector<OneIncludeOrForwardDeclareLine> lines_;
+
+  // Store all namespace uses that we find. Report them in
+  // ResolvePendingAnalysis after we find the best header for each
+  // namespace.
+  vector<std::tuple<clang::SourceLocation, const clang::NamespaceDecl*,
+                    UseFlags, optional<string>>>
+      namespace_uses;
+
+  // Information on all the namespaces declared in this file.
+  map<const clang::NamespaceDecl*, IwyuNamespaceInfo> nsinfo;
 
   // Maps all the using-decls that are reported to a bool indicating whether
   // or not a the using decl has been referenced in this file.

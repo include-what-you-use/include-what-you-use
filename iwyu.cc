@@ -183,6 +183,7 @@ using clang::LValueReferenceType;
 using clang::LinkageSpecDecl;
 using clang::MemberExpr;
 using clang::NamedDecl;
+using clang::NamespaceDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::OverloadExpr;
@@ -1700,8 +1701,25 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       ReportTypeUse(used_loc, type);
   }
 
+  void ReportNamespaceDeclUse(SourceLocation used_loc,
+                              const NamespaceDecl* namespace_decl,
+                              const char* comment = nullptr,
+                              UseFlags extra_use_flags = 0) {
+    // Canonicalize the use location and report the use.
+    used_loc = GetCanonicalUseLocation(used_loc, namespace_decl);
+    const FileEntry* used_in = GetFileEntry(used_loc);
+    preprocessor_info().FileInfoFor(used_in)->ReportNamespaceDeclUse(
+        used_loc, namespace_decl, extra_use_flags, comment);
+  }
+
   //------------------------------------------------------------
   // Visitors of types derived from clang::Decl.
+  bool VisitNamedDecl(clang::NamedDecl* decl) {
+    preprocessor_info()
+        .FileInfoFor(CurrentFileEntry())
+        ->ReportDeclInNamespaces(decl);
+    return true;
+  }
 
   // Friend declarations only need their types forward-declared.
   bool VisitFriendDecl(clang::FriendDecl* decl) {
@@ -3889,7 +3907,8 @@ class IwyuAstConsumer
   bool VisitNamespaceAliasDecl(clang::NamespaceAliasDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    ReportDeclUse(CurrentLoc(), decl->getNamespace());
+    ReportNamespaceDeclUse(CurrentLoc(), decl->getNamespace());
+
     return Base::VisitNamespaceAliasDecl(decl);
   }
 
@@ -4030,7 +4049,12 @@ class IwyuAstConsumer
   bool VisitUsingDirectiveDecl(clang::UsingDirectiveDecl *decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    ReportDeclUse(CurrentLoc(), decl->getNominatedNamespaceAsWritten());
+
+    if (const auto* target_ns =
+            dyn_cast<NamespaceDecl>(decl->getNominatedNamespaceAsWritten())) {
+      ReportNamespaceDeclUse(CurrentLoc(), target_ns);
+    }
+
     return Base::VisitUsingDirectiveDecl(decl);
   }
 
