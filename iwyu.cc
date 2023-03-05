@@ -2104,9 +2104,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     //    typedef Foo* FooPtr; ... static_cast<FooPtr>(...) ...
     for (const Type* type : required_full_types) {
       const Type* deref_type = RemovePointersAndReferences(type);
-      if (CanIgnoreType(deref_type))
-        continue;
-
       ReportTypeUse(CurrentLoc(), deref_type);
     }
 
@@ -2153,10 +2150,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    const Type* element_type = GetTypeOf(expr);
-    if (CanIgnoreType(element_type))
-      return true;
-    ReportTypeUse(CurrentLoc(), element_type);
+    ReportTypeUse(CurrentLoc(), GetTypeOf(expr));
     return true;
   }
 
@@ -2178,8 +2172,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // It's a pointer-typed expression. Get the pointed-to type (which may
         // itself be a pointer) and report it.
         const Type* deref_type = pointer_type->getPointeeType().getTypePtr();
-        if (!CanIgnoreType(deref_type))
-          ReportTypeUse(CurrentLoc(), deref_type);
+        ReportTypeUse(CurrentLoc(), deref_type);
       }
     }
 
@@ -2200,10 +2193,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       clang::QualType qual_type = arg->getType();
       const Type* type = qual_type.getTypePtr();
       const Type* deref_type = RemovePointersAndReferencesAsWritten(type);
-
-      if (!CanIgnoreType(deref_type)) {
-        ReportTypeUse(CurrentLoc(), deref_type);
-      }
+      ReportTypeUse(CurrentLoc(), deref_type);
     }
 
     return true;
@@ -2231,18 +2221,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const TypeLoc& arg_tl = expr->getArgumentTypeInfo()->getTypeLoc();
       if (const auto* reftype = arg_tl.getTypePtr()->getAs<ReferenceType>()) {
         const Type* dereftype = reftype->getPointeeTypeAsWritten().getTypePtr();
-        if (!CanIgnoreType(dereftype))
-          ReportTypeUse(GetLocation(&arg_tl), dereftype);
+        ReportTypeUse(GetLocation(&arg_tl), dereftype);
       } else {
         // No need to report on non-ref types, RecursiveASTVisitor will get 'em.
       }
     } else {
       const Expr* arg_expr = expr->getArgumentExpr();
       const Type* dereftype = arg_expr->getType().getTypePtr();
-      if (!CanIgnoreType(dereftype))
-        // This reports even if the expr ends up not being a reference, but
-        // that's ok (if potentially redundant).
-        ReportTypeUse(GetLocation(arg_expr->IgnoreParenImpCasts()), dereftype);
+      // This reports even if the expr ends up not being a reference, but
+      // that's ok (if potentially redundant).
+      ReportTypeUse(GetLocation(arg_expr->IgnoreParenImpCasts()), dereftype);
     }
     return true;
   }
@@ -2262,8 +2250,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // (the 'a' in 'a << b' or the 'MACRO' in 'MACRO << b'), rather
       // than our location (which is the '<<').  That way, we properly
       // situate the owner when it's a macro.
-      if (!CanIgnoreType(owner_type))
-        ReportTypeUse(GetLocation(owner_expr), owner_type);
+      ReportTypeUse(GetLocation(owner_expr), owner_type);
     }
     return true;
   }
@@ -2280,9 +2267,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // actual type being deleted.
     const Type* delete_ptr_type = GetTypeOf(delete_arg);
     const Type* delete_type = RemovePointerFromType(delete_ptr_type);
-    if (CanIgnoreType(delete_type))
-      return true;
-
     if (delete_type && !IsPointerOrReferenceAsWritten(delete_type))
       ReportTypeUse(CurrentLoc(), delete_type);
 
@@ -2358,8 +2342,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (current_ast_node()->template HasAncestorOfType<CallExpr>() &&
           ContainsKey(GetCallerResponsibleTypesForAutocast(current_ast_node()),
                       RemoveReferenceAsWritten(type))) {
-        if (!CanIgnoreType(type))
-          ReportTypeUse(CurrentLoc(), type);
+        ReportTypeUse(CurrentLoc(), type);
       }
     }
 
