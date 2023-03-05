@@ -197,6 +197,7 @@ using clang::Sema;
 using clang::SourceLocation;
 using clang::Stmt;
 using clang::SubstTemplateTypeParmType;
+using clang::SubstTemplateTypeParmTypeLoc;
 using clang::TagDecl;
 using clang::TagType;
 using clang::TemplateArgument;
@@ -4226,6 +4227,19 @@ class IwyuAstConsumer
     }
 
     return Base::VisitTemplateSpecializationType(type);
+  }
+
+  // RecursiveASTVisitor by default traverses the SubstTemplateTypeParmType
+  // replacement type, which means in some cases we'll see substituted types
+  // when instantiating out-of-line template members. Recording and attribution
+  // of template argument uses should be handled by InstantiatedTemplateVisitor,
+  // so short-circuit the traversal here.
+  bool TraverseSubstTemplateTypeParmType(SubstTemplateTypeParmType* type) {
+    return getDerived().WalkUpFromSubstTemplateTypeParmType(type);
+  }
+
+  bool TraverseSubstTemplateTypeParmTypeLoc(SubstTemplateTypeParmTypeLoc loc) {
+    return getDerived().WalkUpFromSubstTemplateTypeParmTypeLoc(loc);
   }
 
   // --- Visitors defined by BaseASTVisitor (not RecursiveASTVisitor).
