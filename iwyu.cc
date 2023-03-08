@@ -1581,7 +1581,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // using-decl.
     // TODO(csilvers): maybe just insert our own using declaration
     // instead?  We can call it "Use what you use". :-)
-    // TODO(csilvers): check for using statements and namespace aliases too.
+    // TODO(csilvers): check for using directives too.
     if (using_decl) {
       preprocessor_info().FileInfoFor(used_in)->ReportUsingDeclUse(
           used_loc, using_decl, use_flags, "(for using decl)");
@@ -2522,6 +2522,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Visitors defined by BaseAstVisitor.
 
   bool VisitNestedNameSpecifier(NestedNameSpecifier* nns) {
+    // If this is a NamespaceAlias, then mark the alias as used,
+    // requiring whichever file(s) declare the alias.
+    if (nns->getKind() == NestedNameSpecifier::NamespaceAlias) {
+      ReportDeclUse(CurrentLoc(), nns->getAsNamespaceAlias());
+    }
+
     if (!Base::VisitNestedNameSpecifier(nns))
       return false;
     // If we're in an nns (e.g. the Foo in Foo::bar), we're never
