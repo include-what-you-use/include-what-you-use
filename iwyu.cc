@@ -948,11 +948,11 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   }
 
   bool ShouldPrintSymbolFromCurrentFile() const override {
-    return false;
+    return ShouldPrint(7);
   }
 
   string GetSymbolAnnotation() const override {
-    return "[Uninstantiated template AST-node] ";
+    return " in uninstantiated tpl";
   }
 
   //------------------------------------------------------------
@@ -974,7 +974,6 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   }
 
   bool VisitTypeLoc(TypeLoc typeloc) {
-    VERRS(7) << GetSymbolAnnotation() << PrintableTypeLoc(typeloc) << "\n";
     seen_nodes_.Add(typeloc);
     return true;
   }
@@ -985,31 +984,22 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   }
 
   bool VisitTemplateName(TemplateName tpl_name) {
-    VERRS(7) << GetSymbolAnnotation()
-             << PrintableTemplateName(tpl_name) << "\n";
     seen_nodes_.Add(tpl_name);
     return true;
   }
 
   bool VisitTemplateArgument(const TemplateArgument& tpl_arg) {
-    VERRS(7) << GetSymbolAnnotation()
-             << PrintableTemplateArgument(tpl_arg) << "\n";
     seen_nodes_.Add(tpl_arg);
     return true;
   }
 
   bool VisitTemplateArgumentLoc(const TemplateArgumentLoc& tpl_argloc) {
-    VERRS(7) << GetSymbolAnnotation()
-             << PrintableTemplateArgumentLoc(tpl_argloc) << "\n";
     seen_nodes_.Add(tpl_argloc);
     return true;
   }
 
   bool TraverseImplicitDestructorCall(clang::CXXDestructorDecl* decl,
                                       const Type* type) {
-    VERRS(7) << GetSymbolAnnotation() << "[implicit dtor] "
-             << static_cast<void*>(decl) << " "
-             << PrintableDecl(decl) << "\n";
     AddAstNodeAsPointer(decl);
     return Base::TraverseImplicitDestructorCall(decl, type);
   }
@@ -1017,9 +1007,6 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   bool HandleFunctionCall(clang::FunctionDecl* callee,
                           const clang::Type* parent_type,
                           const clang::Expr* calling_expr) {
-    VERRS(7) << GetSymbolAnnotation() << "[function call] "
-             << static_cast<void*>(callee) << " "
-             << PrintableDecl(callee) << "\n";
     AddAstNodeAsPointer(callee);
     return Base::HandleFunctionCall(callee, parent_type, calling_expr);
   }
@@ -1032,10 +1019,6 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
   }
 
   void AddCurrentAstNodeAsPointer() {
-    if (ShouldPrint(7)) {
-      errs() << GetSymbolAnnotation() << current_ast_node()->GetAs<void>()
-             << " " << PrintableASTNode(current_ast_node()) << "\n";
-    }
     AddAstNodeAsPointer(current_ast_node()->GetAs<void>());
   }
 
