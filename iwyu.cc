@@ -326,6 +326,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   void set_current_ast_node(ASTNode* an) { current_ast_node_ = an; }
 
   bool TraverseDecl(Decl* decl) {
+    if (!decl)
+      return true;
     if (current_ast_node_ && current_ast_node_->StackContainsContent(decl))
       return true;               // avoid recursion
     ASTNode node(decl);
@@ -334,6 +336,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseStmt(Stmt* stmt) {
+    if (!stmt)
+      return true;
     if (current_ast_node_ && current_ast_node_->StackContainsContent(stmt))
       return true;               // avoid recursion
     ASTNode node(stmt);
@@ -343,7 +347,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 
   bool TraverseType(QualType qualtype) {
     if (qualtype.isNull())
-      return Base::TraverseType(qualtype);
+      return true;
     const Type* type = qualtype.getTypePtr();
     if (current_ast_node_ && current_ast_node_->StackContainsContent(type))
       return true;               // avoid recursion
@@ -369,6 +373,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (typeloc.getAs<QualifiedTypeLoc>()) {
       typeloc = typeloc.getUnqualifiedLoc();
     }
+    if (typeloc.isNull())
+      return true;
     if (current_ast_node_ && current_ast_node_->StackContainsContent(&typeloc))
       return true;               // avoid recursion
     ASTNode node(&typeloc);
@@ -377,7 +383,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseNestedNameSpecifier(NestedNameSpecifier* nns) {
-    if (nns == nullptr)
+    if (!nns)
       return true;
     ASTNode node(nns);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
@@ -387,7 +393,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc nns_loc) {
-    if (!nns_loc)   // using NNSLoc::operator bool()
+    if (!nns_loc)
       return true;
     ASTNode node(&nns_loc);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
@@ -399,6 +405,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseTemplateName(TemplateName template_name) {
+    if (template_name.isNull())
+      return true;
     ASTNode node(&template_name);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     if (!this->getDerived().VisitTemplateName(template_name))
@@ -407,6 +415,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseTemplateArgument(const TemplateArgument& arg) {
+    if (arg.isNull())
+      return true;
     ASTNode node(&arg);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     if (!this->getDerived().VisitTemplateArgument(arg))
