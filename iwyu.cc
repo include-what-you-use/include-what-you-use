@@ -393,13 +393,13 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc nns_loc) {
-    if (!nns_loc)
+    NestedNameSpecifier* nns = nns_loc.getNestedNameSpecifier();
+    if (!nns)
       return true;
     ASTNode node(&nns_loc);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     // TODO(csilvers): have VisitNestedNameSpecifierLoc instead.
-    if (!this->getDerived().VisitNestedNameSpecifier(
-            nns_loc.getNestedNameSpecifier()))
+    if (!this->getDerived().VisitNestedNameSpecifier(nns))
       return false;
     return Base::TraverseNestedNameSpecifierLoc(nns_loc);
   }
