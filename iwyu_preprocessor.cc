@@ -127,7 +127,7 @@ bool MatchOneToken(const vector<string>& tokens,
   if (tokens.size() > num_expected_tokens &&
       !StartsWith(tokens[num_expected_tokens], "//") &&
       !StartsWith(tokens[num_expected_tokens], "*/")) {
-    Warn(loc, "Extra tokens on pragma line");
+    VERRS(4) << PrintableLoc(loc) << ": warning: Extra tokens on pragma line\n";
   }
   return true;
 }
@@ -158,7 +158,7 @@ bool MatchTwoTokens(const vector<string>& tokens,
       !StartsWith(tokens[num_expected_tokens], "//") &&
       !StartsWith(tokens[num_expected_tokens], "*/")) {
     // Accept but warn.
-    Warn(loc, "Extra tokens on pragma line");
+    VERRS(4) << PrintableLoc(loc) << ": warning: Extra tokens on pragma line\n";
   }
   return true;
 }
