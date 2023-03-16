@@ -22,9 +22,9 @@ It runs one test for each `.cc` file in the `tests/` directory.  (We have additi
 
 The output can be a bit hard to read, but if a test fails, the reason why will be listed after the `ERROR:root:Test failed for xxx` line.
 
-You can select individual tests by listing their filename without extension as arguments
+You can select individual tests by listing them as arguments. Test names are derived from the file path and name, e.g. `tests/cxx/array.cc` will be named `cxx.test_array`. You can use `python run_iwyu_tests.py --list` to list all available test names.
 
-    python run_iwyu_tests.py array macro_location
+    python run_iwyu_tests.py cxx.test_array cxx.test_macro_location c.test_enum
 
 If you don't want to modify your `PATH` you can specify which IWYU executable to use for testing
 
