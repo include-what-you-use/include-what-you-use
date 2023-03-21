@@ -416,9 +416,11 @@ static CStdLib DeriveCStdLib(clang::CompilerInstance&) {
   return CStdLib::Glibc;
 }
 
-static CXXStdLib DeriveCXXStdLib(clang::CompilerInstance&) {
+static CXXStdLib DeriveCXXStdLib(clang::CompilerInstance& compiler) {
   if (GlobalFlags().no_default_mappings)
     return CXXStdLib::None;
+  if (compiler.getHeaderSearchOpts().UseLibcxx)
+    return CXXStdLib::Libcxx;
   return CXXStdLib::Libstdcxx;
 }
 

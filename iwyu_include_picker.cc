@@ -1049,6 +1049,56 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<tbb/tbb_stddef.h>", kPrivate, "<execution>", kPublic },
 };
 
+const IncludeMapEntry libcxx_symbol_map[] = {
+    {"std::nullptr_t", kPrivate, "<cstddef>", kPublic},
+
+    // For older MacOS libc++ (13.0.0), on macOS Ventura (13.2.1)
+    {"std::string", kPrivate, "<string>", kPublic},
+};
+
+const IncludeMapEntry libcxx_include_map[] = {
+    {"<__mutex_base>", kPrivate, "<mutex>", kPublic},
+    {"<__tree>", kPrivate, "<set>", kPublic},
+    {"<__tree>", kPrivate, "<map>", kPublic},
+
+    // For the following entries:
+    // cd llvm-project/libcxx/include ; find -type d -name "__*" | sort | sed -e "s#./__\(.*\)#  { \"@<__\1/.*>\", kPrivate, \"<\1>\", kPublic },#"
+    //
+    // tweak tuple_dir entry, and comment out debug_utils, fwd, support
+    {"@<__algorithm/.*>", kPrivate, "<algorithm>", kPublic},
+    {"@<__atomic/.*>", kPrivate, "<atomic>", kPublic},
+    {"@<__algorithm/.*>", kPrivate, "<algorithm>", kPublic},
+    {"@<__bit/.*>", kPrivate, "<bit>", kPublic},
+    {"@<__charconv/.*>", kPrivate, "<charconv>", kPublic},
+    {"@<__chrono/.*>", kPrivate, "<chrono>", kPublic},
+    {"@<__compare/.*>", kPrivate, "<compare>", kPublic},
+    {"@<__concepts/.*>", kPrivate, "<concepts>", kPublic},
+    {"@<__coroutine/.*>", kPrivate, "<coroutine>", kPublic},
+    //{ "@<__debug_utils/.*>", kPrivate, "<debug_utils>", kPublic },
+    {"@<__expected/.*>", kPrivate, "<expected>", kPublic},
+    {"@<__filesystem/.*>", kPrivate, "<filesystem>", kPublic},
+    {"@<__format/.*>", kPrivate, "<format>", kPublic},
+    {"@<__functional/.*>", kPrivate, "<functional>", kPublic},
+    //{ "@<__fwd/.*>", kPrivate, "<fwd>", kPublic },
+    {"@<__ios/.*>", kPrivate, "<ios>", kPublic},
+    {"@<__iterator/.*>", kPrivate, "<iterator>", kPublic},
+    {"@<__memory/.*>", kPrivate, "<memory>", kPublic},
+    {"@<__memory_resource/.*>", kPrivate, "<memory_resource>", kPublic},
+    {"@<__numeric/.*>", kPrivate, "<numeric>", kPublic},
+    {"@<__random/.*>", kPrivate, "<random>", kPublic},
+    {"@<__ranges/.*>", kPrivate, "<ranges>", kPublic},
+    {"@<__string/.*>", kPrivate, "<string>", kPublic},
+    //{ "@<__support/.*>", kPrivate, "<support>", kPublic },
+    {"@<__thread/.*>", kPrivate, "<thread>", kPublic},
+    {"@<__tuple_dir/.*>", kPrivate, "<tuple>", kPublic},
+    {"@<__type_traits/.*>", kPrivate, "<type_traits>", kPublic},
+    {"@<__utility/.*>", kPrivate, "<utility>", kPublic},
+    {"@<__variant/.*>", kPrivate, "<variant>", kPublic},
+
+    // For older MacOS libc++ (13.0.0), on macOS Ventura (13.2.1)
+    {"<__functional_base>", kPrivate, "<functional>", kPublic},
+};
+
 // Returns true if str is a valid quoted filepath pattern (i.e. either
 // a quoted filepath or "@" followed by a regex for matching a quoted
 // filepath).
@@ -1257,6 +1307,9 @@ void IncludePicker::AddDefaultMappings(CStdLib cstdlib,
                       IWYU_ARRAYSIZE(libstdcpp_symbol_map));
     AddIncludeMappings(libstdcpp_include_map,
                        IWYU_ARRAYSIZE(libstdcpp_include_map));
+  } else if (cxxstdlib == CXXStdLib::Libcxx) {
+    AddSymbolMappings(libcxx_symbol_map, IWYU_ARRAYSIZE(libcxx_symbol_map));
+    AddIncludeMappings(libcxx_include_map, IWYU_ARRAYSIZE(libcxx_include_map));
   }
 
   if (cxxstdlib != CXXStdLib::None) {
