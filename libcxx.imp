@@ -2,6 +2,16 @@
 [
   { include: ["<__mutex_base>", private, "<mutex>", public ] },
 
+  { include: ["<__fwd/array.h>", private, "<array>", public ] },
+  { include: ["<__fwd/hash.h>", private, "<functional>", public ] },
+  { include: ["<__fwd/memory_resource.h>", private, "<memory_resource>", public ] },
+  { include: ["<__fwd/pair.h>", private, "<utility>", public ] },
+  { include: ["<__fwd/span.h>", private, "<span>", public ] },
+  { include: ["<__fwd/string.h>", private, "<string>", public ] },
+  { include: ["<__fwd/string_view.h>", private, "<string_view>", public ] },
+  { include: ["<__fwd/subrange.h>", private, "<range>", public ] },
+  { include: ["<__fwd/tuple.h>", private, "<tuple>", public ] },
+
   # For the following entries:
   # cd llvm-project/libcxx/include ; find -type d -name "__*" | sort | sed -e "s#./__\(.*\)#  { include: [\"@<__\1/.*>\", private, \"<\1>\", public ] },#"
   #
@@ -37,9 +47,18 @@
   { include: ["@<__variant/.*>", private, "<variant>", public ] },
 
   { symbol: [ "std::nullptr_t", private, "<cstddef>", public ] },
+  { symbol: [ "std::filebuf", private, "<fstream>", public ] },
+  { symbol: [ "std::fstream", private, "<fstream>", public ] },
+  { symbol: [ "std::ifstream", private, "<fstream>", public ] },
+  { symbol: [ "std::ofstream", private, "<fstream>", public ] },
+  { symbol: [ "std::wfilebuf", private, "<fstream>", public ] },
+  { symbol: [ "std::wfstream", private, "<fstream>", public ] },
+  { symbol: [ "std::wifstream", private, "<fstream>", public ] },
+  { symbol: [ "std::wofstream", private, "<fstream>", public ] },
 
   # For older MacOS libc++ (13.0.0), on macOS Ventura (13.2.1)
   { include: ["<__functional_base>", private, "<functional>", public ] },
 
   { symbol: [ "std::string", private, "<string>", public ] },
+  { symbol: [ "std::wstring", private, "<string>", public ] },
 ]

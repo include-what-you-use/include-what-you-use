@@ -1049,13 +1049,32 @@ const IncludeMapEntry libstdcpp_include_map[] = {
 
 const IncludeMapEntry libcxx_symbol_map[] = {
   { "std::nullptr_t", kPrivate, "<cstddef>", kPublic },
+  { "std::filebuf", kPrivate, "<fstream>", kPublic },
+  { "std::fstream", kPrivate, "<fstream>", kPublic },
+  { "std::ifstream", kPrivate, "<fstream>", kPublic },
+  { "std::ofstream", kPrivate, "<fstream>", kPublic },
+  { "std::wfilebuf", kPrivate, "<fstream>", kPublic },
+  { "std::wfstream", kPrivate, "<fstream>", kPublic },
+  { "std::wifstream", kPrivate, "<fstream>", kPublic },
+  { "std::wofstream", kPrivate, "<fstream>", kPublic },
 
   // For older MacOS libc++ (13.0.0), on macOS Ventura (13.2.1)
   { "std::string", kPrivate, "<string>", kPublic },
+  { "std::wstring", kPrivate, "<string>", kPublic },
 };
 
 const IncludeMapEntry libcxx_include_map[] = {
     {"<__mutex_base>", kPrivate, "<mutex>", kPublic},
+
+    {"<__fwd/array.h>", kPrivate, "<array>", kPublic },
+    {"<__fwd/hash.h>", kPrivate, "<functional>", kPublic },
+    {"<__fwd/memory_resource.h>", kPrivate, "<memory_resource>", kPublic },
+    {"<__fwd/pair.h>", kPrivate, "<utility>", kPublic },
+    {"<__fwd/span.h>", kPrivate, "<span>", kPublic },
+    {"<__fwd/string.h>", kPrivate, "<string>", kPublic },
+    {"<__fwd/string_view.h>", kPrivate, "<string_view>", kPublic },
+    {"<__fwd/subrange.h>", kPrivate, "<range>", kPublic },
+    {"<__fwd/tuple.h>", kPrivate, "<tuple>", kPublic },
 
     // For the following entries:
     // cd llvm-project/libcxx/include ; find -type d -name "__*" | sort | sed -e "s#./__\(.*\)#  { \"@<__\1/.*>\", kPrivate, \"<\1>\", kPublic },#"
