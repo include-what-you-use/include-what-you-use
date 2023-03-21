@@ -591,6 +591,9 @@ const IncludeMapEntry libc_include_map[] = {
   { "<sys/ucontext.h>", kPrivate, "<ucontext.h>", kPublic },
   // Exports guaranteed by the C standard
   { "<stdint.h>", kPublic, "<inttypes.h>", kPublic },
+  // macos
+  { "<sys/errno.h>", kPrivate, "<errno.h>", kPublic },
+  { "<_ctype.h>", kPrivate, "<ctype.h>", kPublic },
 };
 
 const IncludeMapEntry stdlib_c_include_map[] = {
