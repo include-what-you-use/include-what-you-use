@@ -101,6 +101,7 @@ struct CommandlineFlags {
   bool quoted_includes_first; // Place quoted includes first in sort order.
   bool cxx17ns; // -C: C++17 nested namespace syntax
   bool use_libcxx;       // Use libc++ default mappings instead of libstdc++
+  bool canonical_stdlib;  // Use canonical C/C++ mappings
   int exit_code_error;   // Exit with this code for iwyu violations.
   int exit_code_always;  // Always exit with this exit code.
   set<string> dbg_flags; // Debug flags.

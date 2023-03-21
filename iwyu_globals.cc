@@ -112,6 +112,8 @@ static void PrintHelp(const char* extra_msg) {
          "   --regex=<dialect>: use specified regex dialect in IWYU:\n"
          "          llvm:       fast and simple (default)\n"
          "          ecmascript: slower, but more feature-complete\n"
+         "   --canonical_stdlib: use canonical C and C++ standard library mapping\n"
+         "        instead of inbuilt mappings for GNU libc, libstdcpp and libcxx\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
          "options without -Xiwyu prefix:\n"
@@ -201,6 +203,7 @@ CommandlineFlags::CommandlineFlags()
       quoted_includes_first(false),
       cxx17ns(false),
       use_libcxx(false),
+      canonical_stdlib(false),
       exit_code_error(EXIT_SUCCESS),
       exit_code_always(EXIT_SUCCESS),
       regex_dialect(RegexDialect::LLVM) {
@@ -229,6 +232,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"error_always", optional_argument, nullptr, 'a'},
     {"debug", required_argument, nullptr, 'd'},
     {"regex", required_argument, nullptr, 'r'},
+    {"canonical_stdlib", no_argument, nullptr, 's'},
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "v:c:m:d:nr";
@@ -308,6 +312,9 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
           PrintHelp("FATAL ERROR: unsupported regex dialect.");
           exit(EXIT_FAILURE);
         }
+        break;
+      case 's':
+        canonical_stdlib = true;
         break;
       case -1:
         return optind;  // means 'no more input'
@@ -416,9 +423,18 @@ void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
   vector<HeaderSearchPath> search_paths =
       ComputeHeaderSearchPaths(header_search);
   SetHeaderSearchPaths(search_paths);
+  enum LibCImpl cimpl = kGlibc;
+  enum LibCXXImpl cxximpl = GlobalFlags().use_libcxx ? kLibcxx : kLibstdcpp;
+  if (GlobalFlags().no_default_mappings) {
+    cimpl = kNoC;
+    cxximpl = kNoCXX;
+  } else if (GlobalFlags().canonical_stdlib) {
+    cimpl = kCanonicalC;
+    cxximpl = kCanonicalCXX;
+  }
+
   include_picker =
-      new IncludePicker(GlobalFlags().no_default_mappings,
-                        GlobalFlags().regex_dialect, GlobalFlags().use_libcxx);
+      new IncludePicker(GlobalFlags().regex_dialect, cimpl, cxximpl);
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 
@@ -521,9 +537,19 @@ void InitGlobalsAndFlagsForTesting() {
   commandline_flags = new CommandlineFlags;
   source_manager = nullptr;
   data_getter = nullptr;
+  enum LibCImpl cimpl = kGlibc;
+  enum LibCXXImpl cxximpl = GlobalFlags().use_libcxx ? kLibcxx : kLibstdcpp;
+  if (GlobalFlags().no_default_mappings) {
+    cimpl = kNoC;
+    cxximpl = kNoCXX;
+  } else if (GlobalFlags().canonical_stdlib) {
+    cimpl = kCanonicalC;
+    cxximpl = kCanonicalCXX;
+  }
+
   include_picker =
-      new IncludePicker(GlobalFlags().no_default_mappings,
-                        GlobalFlags().regex_dialect, GlobalFlags().use_libcxx);
+      new IncludePicker(GlobalFlags().regex_dialect, cimpl, cxximpl);
+
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 

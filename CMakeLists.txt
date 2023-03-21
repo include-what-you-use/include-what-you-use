@@ -173,6 +173,8 @@ else()
     # [1] https://llvm.org/viewvc/llvm-project?view=revision&revision=348907
     # [2] https://llvm.org/viewvc/llvm-project?view=revision&revision=348915
     clangSerialization
+
+    clangToolingInclusionsStdlib
   )
 endif()
 

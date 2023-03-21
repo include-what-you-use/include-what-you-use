@@ -67,6 +67,8 @@ struct IncludeMapEntry;
 
 enum class RegexDialect;
 enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
+enum LibCImpl { kNoC, kCanonicalC, kGlibc };
+enum LibCXXImpl { kNoCXX, kCanonicalCXX, kLibstdcpp, kLibcxx };
 
 // When a symbol or file is mapped to an include, that include is represented
 // by this struct.  It always has a quoted_include and may also have a path
@@ -92,8 +94,8 @@ class IncludePicker {
   // visibility of the respective files.
   typedef map<string, IncludeVisibility> VisibilityMap;
 
-  IncludePicker(bool no_default_mappings, RegexDialect regex_dialect,
-                bool use_libcxx);
+  IncludePicker(RegexDialect regex_dialect, enum LibCImpl libc_impl,
+                enum LibCXXImpl libcxx_impl);
 
   // ----- Routines to dynamically modify the include-picker
 
@@ -191,7 +193,7 @@ class IncludePicker {
                            const vector<string>& search_path);
 
   // Adds all hard-coded default mappings.
-  void AddDefaultMappings(bool use_libcxx);
+  void AddDefaultMappings(enum LibCImpl libc_impl, enum LibCXXImpl libcxx_impl);
 
   // Adds a mapping from a one header to another, typically
   // from a private to a public quoted include.
