@@ -92,7 +92,8 @@ class IncludePicker {
   // visibility of the respective files.
   typedef map<string, IncludeVisibility> VisibilityMap;
 
-  IncludePicker(bool no_default_mappings, RegexDialect regex_dialect);
+  IncludePicker(bool no_default_mappings, RegexDialect regex_dialect,
+                bool use_libcxx);
 
   // ----- Routines to dynamically modify the include-picker
 
@@ -190,7 +191,7 @@ class IncludePicker {
                            const vector<string>& search_path);
 
   // Adds all hard-coded default mappings.
-  void AddDefaultMappings();
+  void AddDefaultMappings(bool use_libcxx);
 
   // Adds a mapping from a one header to another, typically
   // from a private to a public quoted include.

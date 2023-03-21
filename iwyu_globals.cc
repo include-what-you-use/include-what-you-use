@@ -200,6 +200,7 @@ CommandlineFlags::CommandlineFlags()
       no_fwd_decls(false),
       quoted_includes_first(false),
       cxx17ns(false),
+      use_libcxx(false),
       exit_code_error(EXIT_SUCCESS),
       exit_code_always(EXIT_SUCCESS),
       regex_dialect(RegexDialect::LLVM) {
@@ -415,8 +416,9 @@ void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
   vector<HeaderSearchPath> search_paths =
       ComputeHeaderSearchPaths(header_search);
   SetHeaderSearchPaths(search_paths);
-  include_picker = new IncludePicker(GlobalFlags().no_default_mappings,
-                                     GlobalFlags().regex_dialect);
+  include_picker =
+      new IncludePicker(GlobalFlags().no_default_mappings,
+                        GlobalFlags().regex_dialect, GlobalFlags().use_libcxx);
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 
@@ -441,6 +443,16 @@ const CommandlineFlags& GlobalFlags() {
 CommandlineFlags* MutableGlobalFlagsForTesting() {
   CHECK_(commandline_flags && "Call ParseIwyuCommandlineFlags() before this");
   return commandline_flags;
+}
+
+void SelectCXXStdlibLibcxx() {
+  CHECK_(commandline_flags && "Call ParseIwyuCommandlineFlags() before this");
+  commandline_flags->use_libcxx = true;
+}
+
+void SelectCXXStdlibLibstdcpp() {
+  CHECK_(commandline_flags && "Call ParseIwyuCommandlineFlags() before this");
+  commandline_flags->use_libcxx = false;
 }
 
 clang::SourceManager* GlobalSourceManager() {
@@ -509,8 +521,9 @@ void InitGlobalsAndFlagsForTesting() {
   commandline_flags = new CommandlineFlags;
   source_manager = nullptr;
   data_getter = nullptr;
-  include_picker = new IncludePicker(GlobalFlags().no_default_mappings,
-                                     GlobalFlags().regex_dialect);
+  include_picker =
+      new IncludePicker(GlobalFlags().no_default_mappings,
+                        GlobalFlags().regex_dialect, GlobalFlags().use_libcxx);
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 

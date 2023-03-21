@@ -19,6 +19,7 @@
 #include <string>
 #include <utility>
 
+#include "iwyu_globals.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/ArgList.h"
@@ -32,6 +33,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -202,6 +204,17 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
     diagnostics.Report(clang::diag::err_fe_expected_compiler_job) << out.str();
     return nullptr;
   }
+
+  // Get standard library that has been requested. Get this from the
+  // job Tool's ToolChain. This should already have been parsed, so pass in an
+  // empty arglist.
+  llvm::opt::InputArgList nullargs;
+  auto type =
+      jobs.begin()->getCreator().getToolChain().GetCXXStdlibType(nullargs);
+  if (type == clang::driver::ToolChain::CST_Libcxx)
+    SelectCXXStdlibLibcxx();
+  else
+    SelectCXXStdlibLibstdcpp();
 
   const Command& command = cast<Command>(*jobs.begin());
   if (StringRef(command.getCreator().getName()) != "clang") {

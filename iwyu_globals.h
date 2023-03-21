@@ -100,6 +100,7 @@ struct CommandlineFlags {
   bool no_fwd_decls;  // Disable forward declarations.
   bool quoted_includes_first; // Place quoted includes first in sort order.
   bool cxx17ns; // -C: C++17 nested namespace syntax
+  bool use_libcxx;       // Use libc++ default mappings instead of libstdc++
   int exit_code_error;   // Exit with this code for iwyu violations.
   int exit_code_always;  // Always exit with this exit code.
   set<string> dbg_flags; // Debug flags.
@@ -114,6 +115,9 @@ clang::SourceManager* GlobalSourceManager();
 
 const IncludePicker& GlobalIncludePicker();
 IncludePicker* MutableGlobalIncludePicker();   // only use at great need!
+
+void SelectCXXStdlibLibcxx();
+void SelectCXXStdlibLibstdcpp();
 
 const clang::PrintingPolicy& DefaultPrintPolicy();
 
