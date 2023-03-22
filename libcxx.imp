@@ -1,6 +1,8 @@
 # libc++ headers
 [
   { include: ["<__mutex_base>", private, "<mutex>", public ] },
+  { include: ["<__tree>", private, "<map>", public ] },
+  { include: ["<__tree>", private, "<set>", public ] },
 
   { include: ["<__fwd/array.h>", private, "<array>", public ] },
   { include: ["<__fwd/hash.h>", private, "<functional>", public ] },

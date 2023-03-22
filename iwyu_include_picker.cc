@@ -1065,6 +1065,8 @@ const IncludeMapEntry libcxx_symbol_map[] = {
 
 const IncludeMapEntry libcxx_include_map[] = {
     {"<__mutex_base>", kPrivate, "<mutex>", kPublic},
+    {"<__tree>", kPrivate, "<map>", kPublic },
+    {"<__tree>", kPrivate, "<set>", kPublic },
 
     {"<__fwd/array.h>", kPrivate, "<array>", kPublic },
     {"<__fwd/hash.h>", kPrivate, "<functional>", kPublic },
