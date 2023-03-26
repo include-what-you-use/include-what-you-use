@@ -167,6 +167,7 @@ using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::DeducedTemplateSpecializationType;
+using clang::ElaboratedTypeLoc;
 using clang::EnumConstantDecl;
 using clang::EnumDecl;
 using clang::EnumType;
@@ -4205,6 +4206,15 @@ class IwyuAstConsumer
     }
 
     return Base::VisitTemplateSpecializationType(type);
+  }
+
+  bool VisitElaboratedTypeLoc(ElaboratedTypeLoc type_loc) {
+    if (type_loc.getTypePtr()->getKeyword() != clang::ETK_None) {
+      preprocessor_info()
+          .FileInfoFor(CurrentFileEntry())
+          ->AddElaboratedType(type_loc);
+    }
+    return Base::VisitElaboratedTypeLoc(type_loc);
   }
 
   // --- Visitors defined by BaseASTVisitor (not RecursiveASTVisitor).

@@ -60,6 +60,21 @@ void global_qualified_elab(class ::GlobalClass* c);
 // they must also be forward-declared.
 Elaboration::Template<int, float>* namespace_qualified_template;
 
+// Elaborated types can be treated as forward-declarations, hence no fwd-decl is
+// needed if a declaration is introduced by elaborated type. Implicit
+// declaration introduction occurs at least when there isn't any previous
+// declaration of the type in a translation unit.
+void elaborated_first_elaborated(class FirstElaborated*);
+void bare_first_elaborated(FirstElaborated*);
+class FirstElaborated;
+void previously_introduced(FirstElaborated*);
+
+// But if an elaborated type appears after the first fwd-decl use of the type, a
+// true forward declaration is still needed.
+class FirstForwardDeclared;
+void bare_first_forward_declared(FirstForwardDeclared*);
+void elaborated_first_forward_declared(class FirstForwardDeclared*);
+
 /**** IWYU_SUMMARY
 
 tests/cxx/elaborated_type.cc should add these lines:
@@ -74,11 +89,13 @@ tests/cxx/elaborated_type.cc should remove these lines:
 - #include "tests/cxx/elaborated_type_namespace.h"  // lines XX-XX
 - #include "tests/cxx/elaborated_type_struct.h"  // lines XX-XX
 - #include "tests/cxx/elaborated_type_union.h"  // lines XX-XX
+- class FirstElaborated;  // lines XX-XX
 
 The full include-list for tests/cxx/elaborated_type.cc:
 #include "tests/cxx/elaborated_type_enum1.h"  // for ElaborationEnum1
 #include "tests/cxx/elaborated_type_enum2.h"  // for ElaborationEnum2
 class ElaborationClass;
+class FirstForwardDeclared;  // lines XX-XX
 class GlobalClass;  // lines XX-XX
 namespace Elaboration { class Class; }
 namespace Elaboration { template <typename T, typename U> struct Template; }

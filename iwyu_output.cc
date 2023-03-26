@@ -42,6 +42,7 @@ using clang::CXXMethodDecl;
 using clang::CXXRecordDecl;
 using clang::Decl;
 using clang::DeclContext;
+using clang::ElaboratedTypeLoc;
 using clang::EnumDecl;
 using clang::FileEntry;
 using clang::FunctionDecl;
@@ -502,6 +503,17 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
 }
 
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
+    ElaboratedTypeLoc type_loc)
+    : is_desired_(true),
+      is_present_(true),
+      is_elaborated_type_(true),
+      fwd_decl_(type_loc.getTypePtr()->getOwnedTagDecl()) {
+  const SourceRange decl_lines = type_loc.getLocalSourceRange();
+  start_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
+  end_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
+}
+
+OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
     const FileEntry* included_file, const string& quoted_include, int linenum)
     : line_("#include " + quoted_include),
       start_linenum_(linenum),
@@ -590,6 +602,15 @@ void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
            << GetFilePath(file_) << ":" << lines_.back().LineNumberString()
            << ": " << internal::PrintablePtr(fwd_decl)
            << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
+}
+
+void IwyuFileInfo::AddElaboratedType(ElaboratedTypeLoc type_loc) {
+  if (!type_loc.getTypePtr()->getOwnedTagDecl())
+    return;
+  lines_.push_back(OneIncludeOrForwardDeclareLine(type_loc));
+  VERRS(6) << "Found owning elaborated type: " << GetFilePath(file_) << ":"
+           << lines_.back().LineNumberString() << ": "
+           << PrintableTypeLoc(type_loc) << "\n";
 }
 
 void IwyuFileInfo::AddUsingDecl(const UsingDecl* using_decl) {
@@ -2084,7 +2105,7 @@ size_t PrintableDiffs(const string& filename,
       OutputLine("\nThe full include-list for " + filename + ":"));
     for (const auto& key_line : sorted_lines) {
       const OneIncludeOrForwardDeclareLine* line = key_line.second;
-      if (line->is_desired()) {
+      if (line->is_desired() && !line->is_elaborated_type()) {
         output_lines.push_back(
           PrintableIncludeOrForwardDeclareLine(*line, aqi));
       }
