@@ -175,7 +175,7 @@ or, on Windows systems:
 
       mkdir build && cd build
       cmake -DCMAKE_CXX_COMPILER="%VCINSTALLDIR%/bin/cl.exe" -DCMAKE_C_COMPILER="%VCINSTALLDIR%/VC/bin/cl.exe" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -G Ninja ...
-      python iwyu_tool.py -p .
+      python3 iwyu_tool.py -p .
 
 Unless a source filename is provided, all files in the project will be analyzed.
 
@@ -183,10 +183,10 @@ See `iwyu_tool.py --help` for more options.
 
 #### Applying fixes ####
 
-We also include a tool that automatically fixes up your source files based on the IWYU recommendations.  This is also alpha-quality software!  Here's how to use it (requires python):
+We also include a tool that automatically fixes up your source files based on the IWYU recommendations.  This is also alpha-quality software!  Here's how to use it (requires python3):
 
       make -k CXX=include-what-you-use CXXFLAGS="-Xiwyu --error_always" 2> /tmp/iwyu.out
-      python fix_includes.py < /tmp/iwyu.out
+      python3 fix_includes.py < /tmp/iwyu.out
 
 If you don't like the way `fix_includes.py` munges your `#include` lines, you can control its behavior via flags. `fix_includes.py --help` will give a full list, but these are some common ones:
 
