@@ -24,7 +24,7 @@ Example usage with CMake:
     -DCMAKE_C_COMPILER="%VCINSTALLDIR%/VC/bin/cl.exe" \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     -G Ninja ...
-  $ python iwyu_tool.py -p .
+  $ python3 iwyu_tool.py -p .
 
 See iwyu_tool.py -h for more details on command-line arguments.
 """

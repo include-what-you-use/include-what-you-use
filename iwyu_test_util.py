@@ -10,16 +10,6 @@
 ##===----------------------------------------------------------------------===##
 
 """Utilities for writing tests for IWYU.
-
-This script has been tested with python 2.7, 3.1.3 and 3.2.
-In order to support all of these platforms there are a few unusual constructs:
- * print statements require parentheses
- * standard output must be decoded as utf-8
- * range() must be used in place of xrange()
- * _PortableNext() is used to obtain next iterator value
-
-There is more detail on some of these issues at:
-http://diveintopython3.org/porting-code-to-python-3-with-2to3.html
 """
 
 __author__ = 'wan@google.com (Zhanyong Wan)'
@@ -53,13 +43,6 @@ _NODIFFS_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 # source file. Example:
 # // IWYU_ARGS: -Xiwyu --mapping_file=... -I .
 _IWYU_TEST_RUN_ARGS_RE = re.compile(r'^//\sIWYU_ARGS:\s(.*)$')
-
-
-def _PortableNext(iterator):
-  if hasattr(iterator, 'next'):
-    iterator.next()  # Python 2.4-2.6
-  else:
-    next(iterator)   # Python 3
 
 
 def _Which(program, paths):
@@ -406,7 +389,7 @@ def _CompareExpectedAndActualSummaries(expected_summaries, actual_summaries):
     this_failure = difflib.unified_diff(expected_summaries.get(loc, []),
                                         actual_summaries.get(loc, []))
     try:
-      _PortableNext(this_failure)     # read past the 'what files are this' header
+      next(this_failure)     # read past the 'what files are this' header
       failures.append('\n')
       failures.append('Unexpected summary diffs for %s:\n' % loc)
       failures.extend(this_failure)
