@@ -2667,12 +2667,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
         parent_type = GetTypeOf(decl);
       } else if (const auto *decl = ast_node->GetParentAs<TypeDecl>()) {
-        // Elaborated types in type decls are always forward-declarable
-        // (and usually count as forward declarations themselves).
-        if (IsElaboratedTypeSpecifier(ast_node)) {
-          return true;
-        }
-
         // If we ourselves are a forward-decl -- that is, we're the type
         // component of a forward-declaration (which would be our parent
         // AST node) -- then we're forward-declarable by definition.
