@@ -29,6 +29,9 @@ using DoesNotForwardDeclareProperlyAl = IndirectStructForwardDeclaredInD1;
 struct DirectStruct1;
 using IncludesAl = DirectStruct1;
 
+// Essentially the same; should require corresponding header inclusion here.
+using IncludesElaboratedAl = struct DirectStruct3;
+
 // Requires the full type because it does not obey rules (1) *or* (2)
 using DoesNotForwardDeclareAndIncludesAl = DirectStruct2;
 
@@ -76,7 +79,7 @@ tests/cxx/iwyu_stricter_than_cpp-type_alias.h should remove these lines:
 - template <typename T> struct TplDirectStruct1;  // lines XX-XX
 
 The full include-list for tests/cxx/iwyu_stricter_than_cpp-type_alias.h:
-#include "tests/cxx/iwyu_stricter_than_cpp-d1.h"  // for DirectStruct1, DirectStruct2, TplDirectStruct1, TplDirectStruct2
+#include "tests/cxx/iwyu_stricter_than_cpp-d1.h"  // for DirectStruct1, DirectStruct2, DirectStruct3, TplDirectStruct1, TplDirectStruct2
 #include "tests/cxx/iwyu_stricter_than_cpp-i1.h"  // for IndirectStruct1, IndirectStructForwardDeclaredInD1, TplIndirectStruct1, TplIndirectStructForwardDeclaredInD1
 struct IndirectStruct2;  // lines XX-XX
 struct IndirectStruct3;  // lines XX-XX
