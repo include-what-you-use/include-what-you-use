@@ -374,9 +374,6 @@ const IncludeMapEntry stdlib_cxx_symbol_map[] = {
   { "std::size_t", kPrivate, "<cwchar>", kPublic },
 };
 
-// Symbol -> include mappings for GNU libstdc++
-const IncludeMapEntry libstdcpp_symbol_map[] = {};
-
 const IncludeMapEntry libc_include_map[] = {
   // Private -> public include mappings for GNU libc
   // ( cd /usr/include && grep '^ *# *include' {sys/,net/,}* | perl -nle 'm/^([^:]+).*<([^>]+)>/ && print qq@    { "<$2>", kPrivate, "<$1>", kPublic },@' | grep bits/ | sort )
@@ -1250,8 +1247,6 @@ void IncludePicker::AddDefaultMappings(CStdLib cstdlib,
   }
 
   if (cxxstdlib == CXXStdLib::Libstdcxx) {
-    AddSymbolMappings(libstdcpp_symbol_map,
-                      IWYU_ARRAYSIZE(libstdcpp_symbol_map));
     AddIncludeMappings(libstdcpp_include_map,
                        IWYU_ARRAYSIZE(libstdcpp_include_map));
   }
