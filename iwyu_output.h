@@ -203,17 +203,17 @@ class OneIncludeOrForwardDeclareLine {
   }
 
  private:
-  string line_;                     // '#include XXX' or 'class YYY;'
-  int start_linenum_;
-  int end_linenum_;
-  bool is_desired_;                 // IWYU will recommend this line
-  bool is_present_;                 // line was present before the IWYU run
+  string line_;  // '#include XXX' or 'class YYY;'
+  int start_linenum_ = -1;
+  int end_linenum_ = -1;
+  bool is_desired_ = false;         // IWYU will recommend this line
+  bool is_present_ = false;         // line was present before the IWYU run
   map<string, int> symbol_counts_;  // how many times we referenced each symbol
   // Only either two following members are set for includes
-  string quoted_include_;           // quoted file name we're including
-  const clang::FileEntry* included_file_;  // the file we're including
+  string quoted_include_;  // quoted file name we're including
+  const clang::FileEntry* included_file_ = nullptr;  // the file we're including
   // ...or this member is set for the fwd-decl we're emitting.
-  const clang::NamedDecl* fwd_decl_;
+  const clang::NamedDecl* fwd_decl_ = nullptr;
 };
 
 // This class holds IWYU information about a single file (FileEntry)
