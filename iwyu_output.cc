@@ -492,13 +492,7 @@ string MungedForwardDeclareLine(const NamedDecl* decl) {
 
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
     const NamedDecl* fwd_decl)
-    : line_(internal::MungedForwardDeclareLine(fwd_decl)),
-      start_linenum_(-1),   // set 'for real' below
-      end_linenum_(-1),     // set 'for real' below
-      is_desired_(false),
-      is_present_(false),
-      included_file_(nullptr),
-      fwd_decl_(fwd_decl) {
+    : line_(internal::MungedForwardDeclareLine(fwd_decl)), fwd_decl_(fwd_decl) {
   const SourceRange decl_lines = GetSourceRangeOfClassDecl(fwd_decl);
   // We always want to use the instantiation line numbers: for code like
   //     FORWARD_DECLARE_CLASS(MyClass);
@@ -512,11 +506,8 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
     : line_("#include " + quoted_include),
       start_linenum_(linenum),
       end_linenum_(linenum),
-      is_desired_(false),
-      is_present_(false),
       quoted_include_(quoted_include),
-      included_file_(included_file),
-      fwd_decl_(nullptr) {
+      included_file_(included_file) {
 }
 
 bool OneIncludeOrForwardDeclareLine::HasSymbolUse(const string& symbol_name)
