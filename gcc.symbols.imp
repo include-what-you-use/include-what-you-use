@@ -259,6 +259,9 @@
   { symbol: [ "NULL", private, "<unistd.h>", public ] },
   { symbol: [ "NULL", private, "<wchar.h>", public ] },
 
+  # GCC defines std::declval in <type_traits>, but the canonical location is <utility>
+  { symbol: [ "std::declval", private, "<utility>", public ] },
+
   # Kludge time: almost all STL types take an allocator, but they
   # almost always use the default value.  Usually we detect that
   # and don't try to do IWYU, but sometimes it passes through.
