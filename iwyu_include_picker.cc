@@ -375,7 +375,10 @@ const IncludeMapEntry stdlib_cxx_symbol_map[] = {
 };
 
 // Symbol -> include mappings for GNU libstdc++
-const IncludeMapEntry libstdcpp_symbol_map[] = {};
+const IncludeMapEntry libstdcpp_symbol_map[] = {
+  // GCC defines std::declval in <type_traits>, but the canonical location is <utility>
+  { "std::declval", kPrivate, "<utility>", kPublic },
+};
 
 const IncludeMapEntry libc_include_map[] = {
   // Private -> public include mappings for GNU libc
