@@ -2803,10 +2803,12 @@ class InstantiatedTemplateVisitor
   void ScanInstantiatedFunction(
       const FunctionDecl* fn_decl, const Type* parent_type,
       const ASTNode* caller_ast_node,
-      const map<const Type*, const Type*>& resugar_map) {
+      const map<const Type*, const Type*>& resugar_map,
+      const set<const Type*>& blocked_types) {
     Clear();
     caller_ast_node_ = caller_ast_node;
     resugar_map_ = resugar_map;
+    blocked_types_ = blocked_types;
 
     // Make sure that the caller didn't already put the decl on the ast-stack.
     CHECK_(caller_ast_node->GetAs<Decl>() != fn_decl && "AST node already set");
@@ -2823,7 +2825,7 @@ class InstantiatedTemplateVisitor
   // MyClass<T>::size_type s;
   void ScanInstantiatedType(ASTNode* caller_ast_node,
                             const map<const Type*, const Type*>& resugar_map,
-                            const set<const Type*>& blocked_types = {}) {
+                            const set<const Type*>& blocked_types) {
     Clear();
     caller_ast_node_ = caller_ast_node;
     resugar_map_ = resugar_map;
@@ -4232,8 +4234,9 @@ class IwyuAstConsumer
       const map<const Type*, const Type*> resugar_map =
           GetTplTypeResugarMapForClass(type);
 
-      instantiated_template_visitor_.ScanInstantiatedType(current_ast_node(),
-                                                          resugar_map);
+      instantiated_template_visitor_.ScanInstantiatedType(
+          current_ast_node(), resugar_map,
+          ExtractProvidedTypeComponents(resugar_map));
     }
 
     return Base::VisitTemplateSpecializationType(type);
@@ -4309,8 +4312,8 @@ class IwyuAstConsumer
     }
 
     instantiated_template_visitor_.ScanInstantiatedFunction(
-        callee, parent_type,
-        current_ast_node(), resugar_map);
+        callee, parent_type, current_ast_node(), resugar_map,
+        ExtractProvidedTypeComponents(resugar_map));
     return true;
   }
 
@@ -4322,8 +4325,11 @@ class IwyuAstConsumer
         GetTplTypeResugarMapForClass(type);
     ASTNode node(type);
     node.SetParent(current_ast_node());
+    set<const Type*> merged_blocked =
+        ExtractProvidedTypeComponents(resugar_map);
+    merged_blocked.insert(blocked_types.begin(), blocked_types.end());
     instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map,
-                                                        blocked_types);
+                                                        merged_blocked);
   }
 
   const set<const Type*>& GetBlockedTypes() const {
@@ -4332,6 +4338,22 @@ class IwyuAstConsumer
   }
 
  private:
+  set<const Type*> ExtractProvidedTypeComponents(
+      const map<const Type*, const Type*>& resugar_map) const {
+    set<const Type*> result;
+    for (const auto& canonical_sugared_pair : resugar_map) {
+      const Type* desugared_until_typedef =
+          Desugar(canonical_sugared_pair.second);
+      if (const auto* typedef_type =
+              dyn_cast_or_null<TypedefType>(desugared_until_typedef)) {
+        set<const Type*> provided =
+            GetProvidedTypesForTypedef(typedef_type->getDecl());
+        result.insert(provided.begin(), provided.end());
+      }
+    }
+    return result;
+  }
+
   // Class we call to handle instantiated template functions and classes.
   InstantiatedTemplateVisitor instantiated_template_visitor_;
 };  // class IwyuAstConsumer

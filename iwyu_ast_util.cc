@@ -590,7 +590,6 @@ class SugaredTypeEnumerator
     // TODO(bolshakov): it doesn't always work properly. For example, both A and
     // TypedefForA would be inserted in seen_types_ for Tpl<A, TypedefForA>,
     // leading to indeterminate resugar_map construction.
-    // TODO(bolshakov): check whether typedef components are "provided".
     return Base::TraverseType(QualType(desugared, 0));
   }
 
