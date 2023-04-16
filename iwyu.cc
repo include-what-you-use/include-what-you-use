@@ -1354,7 +1354,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // types (which may have many component-types if it's a templated
   // type) for which the code-author has made this decision.
   bool CodeAuthorWantsJustAForwardDeclare(const Type* type,
-                                          SourceLocation use_loc) {
+                                          SourceLocation use_loc) const {
     const NamedDecl* decl = TypeToDeclAsWritten(type);
     if (decl == nullptr)   // only class-types are candidates for returning true
       return false;
@@ -1438,7 +1438,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   set<const Type*> GetCallerResponsibleTypesForTypedef(
-      const TypedefNameDecl* decl) {
+      const TypedefNameDecl* decl) const {
     set<const Type*> retval;
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     // If the underlying type is itself a typedef, we recurse.
@@ -1470,7 +1470,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // ast_node is the node for the autocast CastExpr.  We use it to get
   // the parent CallExpr to figure out what function is being called.
   set<const Type*> GetCallerResponsibleTypesForAutocast(
-      const ASTNode* ast_node) {
+      const ASTNode* ast_node) const {
     while (ast_node && !ast_node->IsA<CallExpr>())
       ast_node = ast_node->parent();
     CHECK_(ast_node && "Should only check Autocast if under a CallExpr");
@@ -1524,7 +1524,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   set<const Type*> GetCallerResponsibleTypesForFnReturn(
-      const FunctionDecl* decl) {
+      const FunctionDecl* decl) const {
     set<const Type*> retval;
     const Type* return_type = Desugar(decl->getReturnType().getTypePtr());
     if (CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl))) {
