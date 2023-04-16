@@ -33,7 +33,9 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Version.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/Preprocessor.h"
 
 using clang::DirectoryEntry;
 using std::make_pair;
@@ -408,22 +410,30 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
   return NormalizeHeaderSearchPaths(search_path_map);
 }
 
-void InitGlobals(clang::SourceManager* sm, clang::HeaderSearch* header_search) {
-  CHECK_(sm && "InitGlobals() needs a non-nullptr SourceManager");
-  source_manager = sm;
-  data_getter = new SourceManagerCharacterDataGetter(*source_manager);
-  vector<HeaderSearchPath> search_paths =
-      ComputeHeaderSearchPaths(header_search);
-  SetHeaderSearchPaths(search_paths);
-  CStdLib cstdlib = CStdLib::Glibc;
-  CXXStdLib cxxstdlib = CXXStdLib::Libstdcxx;
-  if (GlobalFlags().no_default_mappings) {
-    cstdlib = CStdLib::None;
-    cxxstdlib = CXXStdLib::None;
-  }
+static CStdLib DeriveCStdLib(clang::CompilerInstance&) {
+  if (GlobalFlags().no_default_mappings)
+    return CStdLib::None;
+  return CStdLib::Glibc;
+}
 
-  include_picker =
-      new IncludePicker(GlobalFlags().regex_dialect, cstdlib, cxxstdlib);
+static CXXStdLib DeriveCXXStdLib(clang::CompilerInstance&) {
+  if (GlobalFlags().no_default_mappings)
+    return CXXStdLib::None;
+  return CXXStdLib::Libstdcxx;
+}
+
+void InitGlobals(clang::CompilerInstance& compiler) {
+  source_manager = &compiler.getSourceManager();
+  data_getter = new SourceManagerCharacterDataGetter(*source_manager);
+  vector<HeaderSearchPath> search_paths = ComputeHeaderSearchPaths(
+      &compiler.getPreprocessor().getHeaderSearchInfo());
+  SetHeaderSearchPaths(search_paths);
+
+  RegexDialect regex_dialect = GlobalFlags().regex_dialect;
+  CStdLib cstdlib = DeriveCStdLib(compiler);
+  CXXStdLib cxxstdlib = DeriveCXXStdLib(compiler);
+  include_picker = new IncludePicker(regex_dialect, cstdlib, cxxstdlib);
+
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
 
