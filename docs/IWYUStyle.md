@@ -268,16 +268,18 @@ it easier to rename things without throwing Git's content tracking for a loop.
 
 ### Command-line arguments ###
 
-If a test needs to pass additional command-line args to IWYU, they are coded
-into `run_iwyu_tests.py`. There are three flag mappings:
+If a test needs to pass additional command-line args to IWYU or the Clang
+front-end, they are coded into the test `.cc` file itself using a directive
+comment:
 
-* `flags_map` -- for IWYU flags, e.g. `--no_comments` (automatically prefixed
-  with `-Xiwyu`)
-* `clang_flags_map` -- for Clang flags, e.g. `-std=c++17`
-* `include_map` -- additional header search paths, e.g. `subdir/` (automatically
-  prefixed with `-I`)
+```
+// IWYU_ARGS: -I . \
+              -std=c++20 \
+              -Xiwyu --no_default_mappings
+```
 
-The maps are all keyed by test file basename.
+The args are added to the `include-what-you-use` command as-written after line
+unwrapping, so IWYU flags must be explicitly prefixed with `-Xiwyu`.
 
 
 [1]: https://google.github.io/styleguide/cppguide.html
