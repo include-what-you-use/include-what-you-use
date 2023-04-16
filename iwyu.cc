@@ -4299,8 +4299,7 @@ class IwyuAction : public ASTFrontendAction {
       CompilerInstance& compiler,  // NOLINT
       llvm::StringRef /* dummy */) override {
     // Do this first thing after getting our hands on a CompilerInstance.
-    InitGlobals(&compiler.getSourceManager(),
-                &compiler.getPreprocessor().getHeaderSearchInfo());
+    InitGlobals(compiler);
 
     auto* const preprocessor_consumer = new IwyuPreprocessorInfo();
     compiler.getPreprocessor().addPPCallbacks(
