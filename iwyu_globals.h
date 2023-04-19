@@ -21,6 +21,9 @@ class FileEntry;
 class HeaderSearch;
 class SourceManager;
 struct PrintingPolicy;
+namespace driver {
+class ToolChain;
+}  // namespace driver
 }  // namespace clang
 
 namespace include_what_you_use {
@@ -56,6 +59,7 @@ class OptionsParser {
   const char** clang_argv_;
 };
 
+void ParseToolChain(const clang::driver::ToolChain&);
 void InitGlobals(clang::CompilerInstance& compiler);
 
 // Can be called by tests -- doesn't need a SourceManager or

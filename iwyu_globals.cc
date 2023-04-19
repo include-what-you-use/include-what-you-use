@@ -33,10 +33,12 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Version.h"
+#include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 
+using clang::driver::ToolChain;
 using clang::DirectoryEntry;
 using std::make_pair;
 using std::map;
@@ -47,6 +49,8 @@ namespace include_what_you_use {
 
 static CommandlineFlags* commandline_flags = nullptr;
 static clang::SourceManager* source_manager = nullptr;
+static ToolChain::CXXStdlibType cxx_stdlib_type =
+    ToolChain::CXXStdlibType::CST_Libstdcxx;
 static IncludePicker* include_picker = nullptr;
 static const clang::LangOptions default_lang_options;
 static const clang::PrintingPolicy default_print_policy(default_lang_options);
@@ -419,9 +423,17 @@ static CStdLib DeriveCStdLib(clang::CompilerInstance&) {
 static CXXStdLib DeriveCXXStdLib(clang::CompilerInstance& compiler) {
   if (GlobalFlags().no_default_mappings)
     return CXXStdLib::None;
-  if (compiler.getHeaderSearchOpts().UseLibcxx)
+  if (cxx_stdlib_type == ToolChain::CXXStdlibType::CST_Libcxx)
     return CXXStdLib::Libcxx;
   return CXXStdLib::Libstdcxx;
+}
+
+void ParseToolChain(const clang::driver::ToolChain& tc) {
+  // Get standard library that has been requested. Get this from the
+  // ToolChain. This should already have been parsed, so pass in an
+  // empty arglist.
+  llvm::opt::InputArgList nullargs;
+  cxx_stdlib_type = tc.GetCXXStdlibType(nullargs);
 }
 
 void InitGlobals(clang::CompilerInstance& compiler) {

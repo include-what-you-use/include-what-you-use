@@ -19,6 +19,7 @@
 #include <string>
 #include <utility>
 
+#include "iwyu_globals.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/ArgList.h"
@@ -189,6 +190,8 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
   if (!compilation)
     return nullptr;
+
+  ParseToolChain(compilation->getDefaultToolChain());
 
   // FIXME: This is copied from ASTUnit.cpp; simplify and eliminate.
 
