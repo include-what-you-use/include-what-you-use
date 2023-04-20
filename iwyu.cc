@@ -4204,9 +4204,21 @@ class IwyuAstConsumer
 
   bool VisitElaboratedTypeLoc(ElaboratedTypeLoc type_loc) {
     if (type_loc.getTypePtr()->getKeyword() != clang::ETK_None) {
-      preprocessor_info()
-          .FileInfoFor(CurrentFileEntry())
-          ->AddElaboratedType(type_loc);
+      IwyuFileInfo* fileinfo =
+          preprocessor_info().FileInfoFor(CurrentFileEntry());
+      if (fileinfo) {
+        fileinfo->AddElaboratedType(type_loc);
+      } else {
+        // For declarations in a PCH, the preprocessor won't have any
+        // location information. As far as we know, that's the only time
+        // the file-info will be null, so assert that we have a PCH on
+        // the command-line.
+        const string& pch_include = compiler()
+                                        ->getInvocation()
+                                        .getPreprocessorOpts()
+                                        .ImplicitPCHInclude;
+        CHECK_(!pch_include.empty());
+      }
     }
     return Base::VisitElaboratedTypeLoc(type_loc);
   }
