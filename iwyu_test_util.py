@@ -438,6 +438,9 @@ def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
   env_verbose_level = os.getenv('IWYU_VERBOSE')
   if env_verbose_level:
     cmd += ['-Xiwyu', '--verbose=' + env_verbose_level]
+  env_iwyu_extra_args = os.getenv('IWYU_EXTRA_ARGS')
+  if env_iwyu_extra_args:
+      cmd += shlex.split(env_iwyu_extra_args)
   cmd += [cc_file]
 
   if verbose:
