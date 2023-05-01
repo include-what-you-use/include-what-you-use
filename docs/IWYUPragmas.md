@@ -29,6 +29,19 @@ This pragma applies to a set of `#include` directives and forward declarations. 
 
 In the provided case nothing within the bounds of `begin_keep` and `end_keep` will be discarded.
 
+## IWYU pragma: always_keep ##
+
+This pragma applies to the current header file. It forces IWYU to keep inclusions of this header in other files, even if it is deemed unnecessary.
+
+    foo.h:
+      // IWYU pragma: always_keep
+
+    main.cc:
+      #include "foo.h"
+
+In this case, nothing from `foo.h` is used. So `foo.h` would normally be discarded, but the pragma instructs IWYU to leave it.
+This is useful for headers that provide additional type traits that aren't possible for IWYU to track (e.g. hash functions for a type, to be used by STL containers).
+
 ## IWYU pragma: export ##
 
 This pragma applies to a single `#include` directive or forward declaration. It says that the current file is to be considered the provider of any symbol from the included file or declaration.
@@ -196,11 +209,12 @@ IWYU pragmas have some overlap, so it can sometimes be hard to choose one over t
 * Use `IWYU pragma: private` to tell IWYU that the header in which the pragma is defined is private, and should not be included directly.
 * Use `IWYU pragma: private, include "public.h"` to tell IWYU that the header in which the pragma is defined is private, and `public.h` should always be included instead.
 * Use `IWYU pragma: friend ".*favorites.*"` to override `IWYU pragma: private` selectively, so that a set of files identified by a regex can include the file even if it's private.
+* Use `IWYU pragma: always_keep` to tell IWYU to always keep includes of headers containing this pragma. This is useful for files that declare symbols that are used in non-obvious ways (e.g. extension points for types).
 
 The pragmas come in three different classes;
 
   1. Ones that apply to a single `#include` directive (`keep`, `export`)
-  2. Ones that apply to a file being included (`private`, `friend`)
+  2. Ones that apply to a file being included (`private`, `friend`, `always_keep`)
   3. Ones that apply to a file including other headers (`no_include`, `no_forward_declare`)
 
 Some files are both included and include others, so it can make sense to mix and match.
