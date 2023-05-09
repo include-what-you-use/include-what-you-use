@@ -38,6 +38,10 @@ jobs:
                libclang$LLVM_TAG-dev \
                clang$LLVM_TAG
 
+      - name: Work around broken packaging
+        run: |
+          sudo touch /usr/lib/llvm-17/lib/libomp.so.5
+
       - name: Select checkout ref (PR)
         if: github.event_name == 'pull_request'
         run: |
