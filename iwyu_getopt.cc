@@ -11,6 +11,7 @@
 // maintained with tests at: https://github.com/kimgr/getopt_port
 
 #include "iwyu_getopt.h"
+#include "iwyu_port.h"
 
 #if defined(_MSC_VER)
 
@@ -149,6 +150,7 @@ int getopt_long(int argc, char* const argv[], const char* optstring,
   const struct option* match = NULL;
   int num_matches = 0;
   size_t argument_name_length = 0;
+  size_t options_length = 0;
   const char* current_argument = NULL;
   int retval = -1;
 
@@ -165,11 +167,15 @@ int getopt_long(int argc, char* const argv[], const char* optstring,
   current_argument = argv[optind] + 2;
   argument_name_length = strcspn(current_argument, "=");
   for (; o->name; ++o) {
-    if (strncmp(o->name, current_argument, argument_name_length) == 0) {
+    options_length = strlen(o->name);
+    if (strncmp(o->name, current_argument, options_length) == 0) {
       match = o;
       ++num_matches;
     }
   }
+
+  // If we have more than 1 match, we have ambigious CLI arguments
+  CHECK_(num_matches < 2);
 
   if (num_matches == 1) {
     /* If longindex is not NULL, it points to a variable which is set to the
