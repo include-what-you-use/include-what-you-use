@@ -18,6 +18,7 @@ import difflib
 import operator
 import os
 import re
+import shlex
 import subprocess
 import sys
 
@@ -100,15 +101,8 @@ def _GetIwyuPath():
   return _IWYU_PATH
 
 
-def _ShellQuote(arg):
-  if ' ' in arg:
-    arg = '"' + arg + '"'
-  return arg
-
-
 def _GetCommandOutput(command):
   p = subprocess.Popen(command,
-                       shell=True,
                        stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT)
   stdout, _ = p.communicate()
@@ -422,7 +416,7 @@ def _GetLaunchArguments(cc_file):
       raise SyntaxError('%s:%s syntax error in multiline IWYU_ARGS' % 
           (cc_file, lineno))
 
-  return args
+  return shlex.split(args)
 
 
 def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
@@ -434,24 +428,20 @@ def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
               to check the diagnostics on, relative to the current dir.
     verbose: Whether to display verbose output.
   """
-  verbosity_flags = []
+  cmd = [_GetIwyuPath()]
+  # Require verbose level 3 so that we can verify the individual diagnostics.
+  # We allow the level to be overriden by
+  # * IWYU_ARGS comment in a test file
+  # * IWYU_VERBOSE environment variable
+  cmd += ['-Xiwyu', '--verbose=3']
+  cmd += _GetLaunchArguments(cc_file)
   env_verbose_level = os.getenv('IWYU_VERBOSE')
   if env_verbose_level:
-    verbosity_flags = ['-Xiwyu', '--verbose=' + env_verbose_level]
+    cmd += ['-Xiwyu', '--verbose=' + env_verbose_level]
+  cmd += [cc_file]
 
-  cmd = '%s %s %s %s %s' % (
-    _ShellQuote(_GetIwyuPath()),
-    # Require verbose level 3 so that we can verify the individual diagnostics.
-    # We allow the level to be overriden by
-    # * IWYU_ARGS comment in a test file;
-    # * iwyu_flags;
-    # * IWYU_VERBOSE environment variable;
-    '-Xiwyu --verbose=3',
-    _GetLaunchArguments(cc_file),
-    ' '.join(verbosity_flags),
-    cc_file)
   if verbose:
-    print('>>> Running %s' % cmd)
+    print('>>> Running %s' % shlex.join(cmd))
   exit_code, output = _GetCommandOutput(cmd)
   print(''.join(output))
   sys.stdout.flush()      # don't commingle this output with the failure output
