@@ -118,6 +118,9 @@ static void PrintHelp(const char* extra_msg) {
          "   --regex=<dialect>: use specified regex dialect in IWYU:\n"
          "          llvm:       fast and simple (default)\n"
          "          ecmascript: slower, but more feature-complete\n"
+         "   --experimental=flag[,flag...]: enable experimental features\n"
+         "          clang_mappings: use Clang canonical standard library\n"
+         "                          mappings instead of built-in mappings\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
          "options without -Xiwyu prefix:\n"
@@ -234,6 +237,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"error_always", optional_argument, nullptr, 'a'},
     {"debug", required_argument, nullptr, 'd'},
     {"regex", required_argument, nullptr, 'r'},
+    {"experimental", required_argument, nullptr, 'p'},
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "v:c:m:d:nr";
@@ -314,6 +318,17 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
           exit(EXIT_FAILURE);
         }
         break;
+      case 'p': {
+        // Split argument on comma and save in global, ignoring empty elements.
+        vector<string> flags = Split(optarg, ",", 0);
+        exp_flags.insert(flags.begin(),
+                         std::remove(flags.begin(), flags.end(), string()));
+        // Print all effective flags for traceability.
+        for (const string& f : exp_flags) {
+          llvm::errs() << "Experimental flag enabled: '" << f << "'\n";
+        }
+        break;
+      }
       case -1:
         return optind;  // means 'no more input'
       default:
@@ -328,6 +343,10 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
 
 bool CommandlineFlags::HasDebugFlag(const char* flag) const {
   return dbg_flags.find(string(flag)) != dbg_flags.end();
+}
+
+bool CommandlineFlags::HasExperimentalFlag(const char* flag) const {
+  return exp_flags.find(string(flag)) != exp_flags.end();
 }
 
 // Though option -v prints version too, it isn't intercepted because it also
@@ -417,12 +436,16 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
 static CStdLib DeriveCStdLib(clang::CompilerInstance&) {
   if (GlobalFlags().no_default_mappings)
     return CStdLib::None;
+  if (GlobalFlags().HasExperimentalFlag("clang_mappings"))
+    return CStdLib::ClangSymbols;
   return CStdLib::Glibc;
 }
 
 static CXXStdLib DeriveCXXStdLib(clang::CompilerInstance& compiler) {
   if (GlobalFlags().no_default_mappings)
     return CXXStdLib::None;
+  if (GlobalFlags().HasExperimentalFlag("clang_mappings"))
+    return CXXStdLib::ClangSymbols;
   if (cxx_stdlib_type == ToolChain::CXXStdlibType::CST_Libcxx)
     return CXXStdLib::Libcxx;
   return CXXStdLib::Libstdcxx;
@@ -545,6 +568,9 @@ void InitGlobalsAndFlagsForTesting() {
   if (GlobalFlags().no_default_mappings) {
     cstdlib = CStdLib::None;
     cxxstdlib = CXXStdLib::None;
+  } else if (GlobalFlags().HasExperimentalFlag("clang_mappings")) {
+    cstdlib = CStdLib::ClangSymbols;
+    cxxstdlib = CXXStdLib::ClangSymbols;
   }
 
   include_picker =

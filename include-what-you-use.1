@@ -77,6 +77,18 @@ Exit with error code
 (defaults to 1 if omitted) whether there are \(lqinclude-what-you-use\(rq
 violations or not (for use with \fBmake\fR(1)).
 .TP
+.BI \-\-experimental= flag[,flag...]
+Enable experimental feature. These feature may change or be removed
+without any notice. Current experimental features are:
+.RS
+.TP
+.B clang_mappings
+Use Clang libTooling standard library symbol mappings instead of
+built-in mappings. This potentially replaces the built-in mappings in
+the future, but is currently experimental while the issues are being
+evaluated.
+.RE
+.TP
 .BI \-\-keep= glob
 Always keep the includes matched by
 .IR glob .

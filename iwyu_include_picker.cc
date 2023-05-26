@@ -37,6 +37,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 
 using std::find;
 using std::make_pair;
@@ -1195,9 +1196,23 @@ IncludePicker::IncludePicker(RegexDialect regex_dialect,
 
 void IncludePicker::AddDefaultMappings(CStdLib cstdlib,
                                        CXXStdLib cxxstdlib) {
+  using clang::tooling::stdlib::Header;
+  using clang::tooling::stdlib::Lang;
+  using clang::tooling::stdlib::Symbol;
+
   if (cstdlib == CStdLib::Glibc) {
     AddSymbolMappings(libc_symbol_map, IWYU_ARRAYSIZE(libc_symbol_map));
     AddIncludeMappings(libc_include_map, IWYU_ARRAYSIZE(libc_include_map));
+  } else if (cstdlib == CStdLib::ClangSymbols) {
+    // Get canonical C standard library mappings from clang tooling
+    for (const Symbol& sym : Symbol::all(Lang::C)) {
+      string name = sym.name().str();
+
+      // the canonical header is returned first
+      for (const Header& header : sym.headers()) {
+        AddSymbolMapping(name, MappedInclude(header.name().str()), kPublic);
+      }
+    }
   }
 
   if (cxxstdlib == CXXStdLib::Libstdcxx) {
@@ -1208,6 +1223,16 @@ void IncludePicker::AddDefaultMappings(CStdLib cstdlib,
   } else if (cxxstdlib == CXXStdLib::Libcxx) {
     AddSymbolMappings(libcxx_symbol_map, IWYU_ARRAYSIZE(libcxx_symbol_map));
     AddIncludeMappings(libcxx_include_map, IWYU_ARRAYSIZE(libcxx_include_map));
+  } else if (cxxstdlib == CXXStdLib::ClangSymbols) {
+    // Get canonical C++ standard library mappings from clang tooling
+    for (const Symbol& sym : Symbol::all(Lang::CXX)) {
+      string name = sym.qualifiedName().str();
+
+      // the canonical header is returned first
+      for (const Header& header : sym.headers()) {
+        AddSymbolMapping(name, MappedInclude(header.name().str()), kPublic);
+      }
+    }
   }
 
   if (cxxstdlib != CXXStdLib::None) {
