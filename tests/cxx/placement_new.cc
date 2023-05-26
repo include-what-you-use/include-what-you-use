@@ -135,12 +135,35 @@ void ExplicitAlignedAllocation() {
   delete[] arr;
 }
 
+template <typename T>
+void TaggedNewInTemplate() {
+  // Check that we don't get diagnostics for operator new itself; nothrow and
+  // aligned allocation are not placement new.
+
+  // IWYU: std::nothrow is...*<new>
+  new (std::nothrow) T();
+
+  // IWYU: std::align_val_t is...*<new>
+  new (std::align_val_t(32)) T();
+}
+
+// Call to function with a dependent name does not have a type, so ensure we
+// detect this form where the placement-arg is the return value of a function
+// that depends on a template argument.
+template <typename T>
+void Reconstruct(T& ref) {
+  // IWYU: operator new is...*<new>
+  // IWYU: AddressOf is...*placement_new-i2.h
+  new (AddressOf(ref)) T();
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/placement_new.cc should add these lines:
 #include <new>
 #include "tests/cxx/indirect.h"
 #include "tests/cxx/placement_new-i1.h"
+#include "tests/cxx/placement_new-i2.h"
 
 tests/cxx/placement_new.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
@@ -150,5 +173,6 @@ The full include-list for tests/cxx/placement_new.cc:
 #include <new>  // for align_val_t, nothrow, operator new
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/placement_new-i1.h"  // for ClassTemplate
+#include "tests/cxx/placement_new-i2.h"  // for AddressOf
 
 ***** IWYU_SUMMARY */

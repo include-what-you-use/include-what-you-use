@@ -2417,17 +2417,23 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Like in VisitOverloadExpr(), we update processed_overload_locs
     // regardless of the value of CanIgnoreCurrentASTNode().
 
-    // We say it's placement-new if the (lone) placment-arg is a
-    // pointer.  Unfortunately, often clang will just say it's a
-    // dependent type.  In that case, we can still say it's a pointer
-    // in the (common) case the placement arg looks like '&something'.
-    // (This is possibly wrong for classes that override operator&, but
-    // those classes deserve what they get.)
-    if (!expr->getOperatorNew() &&
-        expr->getNumPlacementArgs() == 1 &&
-        (GetTypeOf(expr->getPlacementArg(0))->isPointerType() ||
-         GetTypeOf(expr->getPlacementArg(0))->isArrayType() ||
-         IsAddressOf(expr->getPlacementArg(0)))) {
+    // We say it's placement-new if it has a single placement-arg, which _might_
+    // be a pointer. In templates clang will just say it's a dependent type (or
+    // dependent name, for function calls), so we use some heuristics to avoid
+    // matching things like 'new (std::nothrow)' and 'new
+    // (std::align_val_t(8))'. The pattern 'new (func())' can cause false
+    // positives if the eventually looked up 'func()' does not return a pointer
+    // type.
+    const Expr* placement_expr = nullptr;
+    if (!expr->getOperatorNew() && expr->getNumPlacementArgs() == 1) {
+      placement_expr = expr->getPlacementArg(0);
+    }
+
+    if (placement_expr &&
+        (GetTypeOf(placement_expr)->isPointerType() ||
+         GetTypeOf(placement_expr)->isArrayType() ||
+         IsAddressOf(placement_expr) ||
+         IsDependentNameCall(placement_expr))) {
       // Treat this like an OverloadExpr.
       AddProcessedOverloadLoc(CurrentLoc());
       VERRS(7) << "Adding to processed_overload_locs (placement-new): "

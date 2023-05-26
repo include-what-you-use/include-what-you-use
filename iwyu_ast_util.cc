@@ -115,6 +115,7 @@ using clang::TypeLoc;
 using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryOperator;
+using clang::UnresolvedLookupExpr;
 using clang::UsingDirectiveDecl;
 using clang::ValueDecl;
 using clang::VarDecl;
@@ -1409,6 +1410,13 @@ bool IsAddressOf(const Expr* expr) {
   if (const UnaryOperator* unary = DynCastFrom(expr->IgnoreParens()))
     return unary->getOpcode() == clang::UO_AddrOf;
   return false;
+}
+
+bool IsDependentNameCall(const Expr* expr) {
+  const CallExpr* call_expr = dyn_cast<CallExpr>(expr);
+  if (!call_expr)
+    return false;
+  return isa<UnresolvedLookupExpr>(call_expr->getCallee());
 }
 
 const Type* TypeOfParentIfMethod(const CallExpr* expr) {
