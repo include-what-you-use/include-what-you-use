@@ -798,6 +798,10 @@ bool CanBeOpaqueDeclared(const clang::EnumType* type);
 // Returns true if the given expr is '&<something>'.
 bool IsAddressOf(const clang::Expr* expr);
 
+// Returns true if the given expr is a call-expression targeting an
+// unresolved/dependent name.
+bool IsDependentNameCall(const clang::Expr* expr);
+
 // If this function call comes from a class method -- either a normal
 // one or a static one -- returns the type of the class.  Otherwise,
 // returns nullptr.  Note that static class methods do *not* have a
