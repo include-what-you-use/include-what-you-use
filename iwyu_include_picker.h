@@ -67,8 +67,8 @@ struct IncludeMapEntry;
 
 enum class RegexDialect;
 enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
-enum class CStdLib { None, Glibc };
-enum class CXXStdLib { None, Libstdcxx, Libcxx };
+enum class CStdLib { None, ClangSymbols, Glibc };
+enum class CXXStdLib { None, ClangSymbols, Libstdcxx, Libcxx };
 
 // When a symbol or file is mapped to an include, that include is represented
 // by this struct.  It always has a quoted_include and may also have a path
