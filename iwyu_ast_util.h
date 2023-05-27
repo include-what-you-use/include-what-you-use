@@ -695,6 +695,11 @@ const clang::Type* Desugar(const clang::Type* type);
 // A 'component' of a type is a type beneath it in the AST tree.
 // So 'Foo*' has component 'Foo', as does 'vector<Foo>', while
 // vector<pair<Foo, Bar>> has components pair<Foo,Bar>, Foo, and Bar.
+// All sugar is thrown away except typedefs, type aliases and template
+// specialization types. Given such a typedef:
+// typedef Tpl1<A, B> Alias;
+// the returned set for something like 'Tpl2<Alias>' contains 'Alias', 'A' and
+// 'B' but not 'Tpl1<A, B>'.
 set<const clang::Type*> GetComponentsOfType(const clang::Type* type);
 
 // Returns true if the type has any template arguments.
