@@ -12,10 +12,13 @@
 
 #if defined(_MSC_VER)
 
-// Hand-rolled implementation of getopt/getopt_long for Visual C++.
-extern const int no_argument;
-extern const int required_argument;
-extern const int optional_argument;
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+#define no_argument 1
+#define required_argument 2
+#define optional_argument 3
 
 extern char* optarg;
 extern int optind, opterr, optopt;
@@ -31,6 +34,10 @@ int getopt(int argc, char* const argv[], const char* optstring);
 
 int getopt_long(int argc, char* const argv[],
   const char* optstring, const struct option* longopts, int* longindex);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #else  // #if defined(_MSC_VER)
 

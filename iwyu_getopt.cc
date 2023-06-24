@@ -17,10 +17,6 @@
 #include <stddef.h>
 #include <string.h>
 
-const int no_argument = 0;
-const int required_argument = 1;
-const int optional_argument = 2;
-
 char* optarg;
 int optopt;
 /* The variable optind [...] shall be initialized to 1 by the system. */
@@ -98,7 +94,7 @@ int getopt(int argc, char* const argv[], const char* optstring) {
         if (optdecl[2] != ':') {
           /* If the option was the last character in the string pointed to by
              an element of argv, then optarg shall contain the next element
-             of argv, and optind shall be incremented by 2.  If the resulting
+             of argv, and optind shall be incremented by 2. If the resulting
              value of optind is greater than argc, this indicates a missing
              option-argument, and getopt() shall return an error indication.
 
@@ -144,11 +140,12 @@ no_more_optchars:
 [1] http://www.kernel.org/doc/man-pages/online/pages/man3/getopt.3.html
 */
 int getopt_long(int argc, char* const argv[], const char* optstring,
-    const struct option* longopts, int* longindex) {
+                const struct option* longopts, int* longindex) {
   const struct option* o = longopts;
   const struct option* match = NULL;
   int num_matches = 0;
   size_t argument_name_length = 0;
+  size_t option_length = 0;
   const char* current_argument = NULL;
   int retval = -1;
 
@@ -165,6 +162,16 @@ int getopt_long(int argc, char* const argv[], const char* optstring,
   current_argument = argv[optind] + 2;
   argument_name_length = strcspn(current_argument, "=");
   for (; o->name; ++o) {
+    /* Check for exact match first. */
+    option_length = strlen(o->name);
+    if (option_length == argument_name_length &&
+        strncmp(o->name, current_argument, option_length) == 0) {
+      match = o;
+      num_matches = 1;
+      break;
+    }
+
+    /* If not exact, count the number of abbreviated matches. */
     if (strncmp(o->name, current_argument, argument_name_length) == 0) {
       match = o;
       ++num_matches;
@@ -192,7 +199,7 @@ int getopt_long(int argc, char* const argv[], const char* optstring,
         ++optarg;
 
       if (match->has_arg == required_argument) {
-        /* Only scan the next argv for required arguments.  Behavior is not
+        /* Only scan the next argv for required arguments. Behavior is not
            specified, but has been observed with Ubuntu and Mac OSX. */
         if (optarg == NULL && ++optind < argc) {
           optarg = argv[optind];
