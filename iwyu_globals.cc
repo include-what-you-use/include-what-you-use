@@ -39,7 +39,7 @@
 #include "clang/Lex/Preprocessor.h"
 
 using clang::driver::ToolChain;
-using clang::DirectoryEntry;
+using clang::OptionalDirectoryEntryRef;
 using std::make_pair;
 using std::map;
 using std::string;
@@ -396,14 +396,14 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
   map<string, HeaderSearchPath::Type> search_path_map;
   for (auto it = header_search->system_dir_begin();
        it != header_search->system_dir_end(); ++it) {
-    if (const DirectoryEntry* entry = it->getDir()) {
+    if (OptionalDirectoryEntryRef entry = it->getDirRef()) {
       const string path = NormalizeDirPath(MakeAbsolutePath(entry->getName().str()));
       search_path_map[path] = HeaderSearchPath::kSystemPath;
     }
   }
   for (auto it = header_search->search_dir_begin();
        it != header_search->search_dir_end(); ++it) {
-    if (const DirectoryEntry* entry = it->getDir()) {
+    if (OptionalDirectoryEntryRef entry = it->getDirRef()) {
       // search_dir_begin()/end() includes both system and user paths.
       // If it's a system path, it's already in the map, so everything
       // new is a user path.  The insert only 'takes' for new entries.
