@@ -286,6 +286,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                                    set<const clang::FileEntry*>* retval) const;
   void PopulateIntendsToProvideMap();
   void PopulateTransitiveIncludeMap();
+  void FinalizeProtectedIncludes();
 
   // Return true if at the current point in the parse of the given file,
   // there is a pending "begin_exports" pragma.
