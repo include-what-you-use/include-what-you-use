@@ -287,6 +287,10 @@ Used in a source file after an
 directive, this marks the header as associated to the source file.
 This is required if source and header filename differ in more than their ending.
 Includes from an associated header are assumed in the source file.
+.TP
+.B // IWYU pragma: always_keep
+Indicates that includes of the current file should never be removed from
+includers.
 .SH FILES
 .I /usr/share/include-what-you-use
 .RS

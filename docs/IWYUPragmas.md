@@ -181,6 +181,21 @@ You can explicitly mark an arbitrary `#include` directive as denoting the associ
 
 You can mark multiple `#include` directives as associated and they will all be considered as such.
 
+## IWYU pragma: always_keep ##
+
+This pragma applies to the current header file. It says that any include of this file will be preserved by all includers.
+
+    header.h:
+      // IWYU pragma: always_keep
+      struct Unused {};
+
+    main.cc:
+      #include "header.h"
+
+Even if no symbols from `header.h` are used in `main.cc`, it will not be suggested for removal.
+
+This is useful for headers that provide additional type traits that aren't possible for IWYU to track (e.g. hash functions for a type, to be used by STL containers).
+
 ## Which pragma should I use? ##
 
 Ideally, IWYU should be smart enough to understand your intentions (and intentions of the authors of libraries you use), so the first answer should always be: none.
@@ -190,6 +205,7 @@ In practice, intentions are not so clear -- it might be ambiguous whether an `#i
 IWYU pragmas have some overlap, so it can sometimes be hard to choose one over the other. Here's a guide based on how I understand them at the moment:
 
 * Use `IWYU pragma: keep` to force IWYU to keep any `#include` directive that would be discarded under its normal policies.
+* Use `IWYU pragma: always_keep` to force IWYU to keep a header in all includers, whether they contribute any used symbols or not.
 * Use `IWYU pragma: export` to tell IWYU that one header serves as the provider for all symbols in another, included header (e.g. facade headers). Use `IWYU pragma: begin_exports/end_exports` for a whole group of included headers.
 * Use `IWYU pragma: no_include` to tell IWYU that the file in which the pragma is defined should never `#include` a specific header (the header may already be included via some other `#include`.)
 * Use `IWYU pragma: no_forward_declare` to tell IWYU that the file in which the pragma is defined should never forward-declare a specific symbol (a forward declaration may already be available via some other `#include`.)
@@ -200,7 +216,7 @@ IWYU pragmas have some overlap, so it can sometimes be hard to choose one over t
 The pragmas come in three different classes;
 
   1. Ones that apply to a single `#include` directive (`keep`, `export`)
-  2. Ones that apply to a file being included (`private`, `friend`)
+  2. Ones that apply to a file being included (`private`, `friend`, `always_keep`)
   3. Ones that apply to a file including other headers (`no_include`, `no_forward_declare`)
 
 Some files are both included and include others, so it can make sense to mix and match.
