@@ -383,6 +383,10 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // other places because it is unclear which inclusion directive filename
   // location corresponds to.
   clang::SourceLocation include_filename_loc_;
+
+  // Keeps track of which files have the "always_keep" pragma, so they can be
+  // marked as such for all includers.
+  std::set<const clang::FileEntry*> always_keep_files_;
 };
 
 }  // namespace include_what_you_use

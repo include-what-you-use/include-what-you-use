@@ -326,6 +326,14 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
     return;
   }
 
+  if (MatchOneToken(tokens, "always_keep", 1, begin_loc)) {
+    always_keep_files_.insert(this_file_entry);
+    ERRSYM(this_file_entry)
+        << "Marking include " << GetFilePath(this_file_entry)
+        << " as always-keep\n";
+    return;
+  }
+
   // "keep" and "export" are handled in MaybeProtectInclude.
   if (!MatchOneToken(tokens, "keep", 1, begin_loc)
       && !MatchOneToken(tokens, "export", 1, begin_loc)) {
@@ -504,6 +512,15 @@ void IwyuPreprocessorInfo::FinalizeProtectedIncludes() {
         ERRSYM(includer_file)
             << "Marked dep: " << includer_path << " needs to keep "
             << includee_path << " (reason: re-exports)\n";
+      } else if (always_keep_files_.count(include) > 0) {
+        // Includee itself contains an "always_keep" pragma that protects it
+        // from removal in all includers.
+        includer.ReportIncludeFileUse(include,
+                                      ConvertToQuotedInclude(includee_path));
+        includer.ReportKnownDesiredFile(include);
+        ERRSYM(includer_file)
+            << "Marked dep: " << includer_path << " needs to keep "
+            << includee_path << " (reason: always_keep pragma)\n";
       }
     }
   }
