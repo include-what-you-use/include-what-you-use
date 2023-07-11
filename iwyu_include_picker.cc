@@ -1092,20 +1092,20 @@ void MakeNodeTransitive(IncludePicker::IncludeMap* filename_map,
                         const string& key) {
   // If we've already calculated this node's transitive closure, we're done.
   const TransitiveStatus status = (*seen_nodes)[key];
-  if (status == kCalculating) {   // means there's a cycle in the mapping
-    // TODO: Reconsider cycle handling; the include_cycle test fails without
-    // this special-casing, but it seems we should handle this more generally.
-    if (key.find("internal/") != string::npos) {
-      VERRS(4) << "Ignoring a cyclical mapping involving " << key << "\n";
-      return;
-    }
-  }
-  if (status == kCalculating) {
-    VERRS(0) << "Cycle in include-mapping:\n";
+  if (status == kCalculating) {  // means there's a cycle in the mapping
+    // Note that cycles in mappings are generally benign, the cycle detection
+    // here is only necessary to protect the recursive algorithm from infinite
+    // regress. We will still expand all reachable nodes in the graph to a
+    // plain sequence representing the transitive closure.
+    // The expanded mappings are only used for simple lookup, never followed
+    // recursively (which could have necessitated preserving cycles and handling
+    // them in that traversal too).
+    // Log cycles at a high verbosity level to aid debugging.
+    VERRS(8) << "Ignored cycle in include mappings: ";
     for (const string& node : *node_stack)
-      VERRS(0) << "  " << node << " ->\n";
-    VERRS(0) << "  " << key << "\n";
-    CHECK_UNREACHABLE_("Cycle in include-mapping");  // cycle is a fatal error
+      VERRS(8) << node << " -> ";
+    VERRS(8) << key << "\n";
+    return;
   }
   if (status == kDone)
     return;
