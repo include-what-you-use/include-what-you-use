@@ -32,7 +32,7 @@
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Tool.h"
+#include "clang/Driver/Types.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -50,8 +50,11 @@ using clang::DiagnosticsEngine;
 using clang::TextDiagnosticPrinter;
 using clang::driver::Command;
 using clang::driver::Compilation;
+using clang::driver::CompileJobAction;
 using clang::driver::Driver;
+using clang::driver::InputInfo;
 using clang::driver::JobList;
+using clang::driver::types::isSrcFile;
 using llvm::ErrorOr;
 using llvm::IntrusiveRefCntPtr;
 using llvm::SmallString;
@@ -155,6 +158,22 @@ void ExpandArgv(int argc, const char **argv,
   }
 }
 
+static const Command* FindCompileJob(const JobList& jobs) {
+  auto is_src_input = [](const InputInfo& input) {
+    return isSrcFile(input.getType());
+  };
+
+  for (const Command& job : jobs) {
+    // Any compile action with all source inputs is viable.
+    if (isa<CompileJobAction>(job.getSource()) &&
+        llvm::all_of(job.getInputInfos(), is_src_input)) {
+      return &job;
+    }
+  }
+
+  return nullptr;
+}
+
 }  // anonymous namespace
 
 CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
@@ -193,12 +212,9 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
 
   ParseToolChain(compilation->getDefaultToolChain());
 
-  // FIXME: This is copied from ASTUnit.cpp; simplify and eliminate.
-
-  // We expect to get back exactly one command job, if we didn't something
-  // failed. Extract that job from the compilation.
   const JobList& jobs = compilation->getJobs();
-  if (jobs.size() != 1 || !isa<Command>(*jobs.begin())) {
+  const Command* command = FindCompileJob(jobs);
+  if (!command) {
     SmallString<256> msg;
     raw_svector_ostream out(msg);
     jobs.Print(out, "; ", true);
@@ -206,14 +222,8 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
     return nullptr;
   }
 
-  const Command& command = cast<Command>(*jobs.begin());
-  if (StringRef(command.getCreator().getName()) != "clang") {
-    diagnostics.Report(clang::diag::err_fe_expected_clang_command);
-    return nullptr;
-  }
+  const ArgStringList& cc_arguments = command->getArguments();
 
-  // Initialize a compiler invocation object from the clang (-cc1) arguments.
-  const ArgStringList &cc_arguments = command.getArguments();
   std::shared_ptr<CompilerInvocation> invocation(new CompilerInvocation);
   CompilerInvocation::CreateFromArgs(*invocation, cc_arguments, diagnostics);
   invocation->getFrontendOpts().DisableFree = false;
