@@ -210,21 +210,21 @@ if (UNIX)
   )
 endif()
 
-find_package(PythonInterp)
-if (PYTHONINTERP_FOUND)
+find_package(Python3 COMPONENTS Interpreter)
+if (Python3_Interpreter_FOUND)
   # Map the various IWYU test scripts to CTest tests.
   enable_testing()
 
   function(iwyu_add_test name file)
     add_test(NAME ${name}
-      COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py --run-test-file=${file}
+      COMMAND ${Python3_EXECUTABLE} run_iwyu_tests.py --run-test-file=${file}
       -- $<TARGET_FILE:include-what-you-use>
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
   endfunction()
 
   execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} run_iwyu_tests.py --list-test-files
+    COMMAND ${Python3_EXECUTABLE} run_iwyu_tests.py --list-test-files
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_VARIABLE test_names_and_files
   )
@@ -235,11 +235,11 @@ if (PYTHONINTERP_FOUND)
   endforeach()
 
   add_test(NAME fix_includes_test
-    COMMAND ${PYTHON_EXECUTABLE} fix_includes_test.py
+    COMMAND ${Python3_EXECUTABLE} fix_includes_test.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   )
   add_test(NAME iwyu_tool_test
-    COMMAND ${PYTHON_EXECUTABLE} iwyu_tool_test.py
+    COMMAND ${Python3_EXECUTABLE} iwyu_tool_test.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   )
 endif()
