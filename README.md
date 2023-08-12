@@ -202,3 +202,33 @@ If you don't like the way `fix_includes.py` munges your `#include` lines, you ca
 * If `fix_includes.py` has suggested a private header file (such as `<bits/stl_vector.h>`) instead of the proper public header file (`<vector>`), you can fix this by inserting a specially crafted comment near top of the private file (assuming you can write to it): '`// IWYU pragma: private, include "the/public/file.h"`'.
 
 Current IWYU pragmas are described in [IWYUPragmas](docs/IWYUPragmas.md).
+
+### Platform tweaks ###
+
+#### libc++ ####
+
+When analyzing C++ code on macOS, IWYU uses probing (implicitly via Clang) to find a libc++ standard library installation.
+
+If there is no installation of libc++ discoverable to Clang's probing, or an alternative libc++ is desired, users can specify relevant paths directly on command-line, e.g.:
+
+    # for Homebrew version of llvm-14
+    include-what-you-use \
+        -nostdinc++ \
+        -isystem /opt/homebrew/opt/llvm\@14/include/c++/v1 \
+        sourcefile.cc
+
+    # for Apple Command Line Tools version of libc++
+    include-what-you-use \
+        -nostdinc++ \
+        -isystem /Library/Developer/CommandLineTools/usr/include/c++/v1 \
+        sourcefile.cc
+
+The mechanics of this technique are described in more detail for Clang here: <https://libcxx.llvm.org//UsingLibcxx.html#using-a-custom-built-libc>.
+
+To find the SDK install root, use:
+
+    xcrun --sdk macosx --show-sdk-path
+
+Append `/usr/include/c++/v1` to that path to get the libc++ root.
+
+The libc++ library helpfully ships with a set of IWYU mappings, see their documentation for details: <https://libcxx.llvm.org/UsingLibcxx.html#include-what-you-use-iwyu>.
