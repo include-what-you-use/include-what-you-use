@@ -337,6 +337,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "NULL", kPrivate, "<time.h>", kPublic },
   { "NULL", kPrivate, "<unistd.h>", kPublic },
   { "NULL", kPrivate, "<wchar.h>", kPublic },
+  { "offsetof", kPrivate, "<stddef.h>", kPublic },
 };
 
 // Common kludges for C++ standard libraries

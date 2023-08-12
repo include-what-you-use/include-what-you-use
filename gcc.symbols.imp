@@ -258,6 +258,7 @@
   { symbol: [ "NULL", private, "<time.h>", public ] },
   { symbol: [ "NULL", private, "<unistd.h>", public ] },
   { symbol: [ "NULL", private, "<wchar.h>", public ] },
+  { symbol: [ "offsetof", private, "<stddef.h>", public ] },
 
   # GCC defines std::declval in <type_traits>, but the canonical location is <utility>
   { symbol: [ "std::declval", private, "<utility>", public ] },
