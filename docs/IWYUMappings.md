@@ -67,6 +67,13 @@ Include mappings support a special wildcard syntax for the first entry:
 
 The `@` prefix is a signal that the remaining content is a regex, and can be used to re-map a whole subdirectory of private headers to a public facade header.
 
+The `include-what-you-use` program has a `--regex` argument to select dialect;
+
+* `llvm`: a basic, fast implementation (default)
+* `ecmascript`: a more capable, slower implementation with support for e.g. negative lookaround
+
+The performance hit of `ecmascript` can be quite significant for large mapping files with many regex patterns, so mind your step.
+
 ### Symbol mappings ###
 
 The `symbol` directive maps from a qualified symbol name to its authoritative header.
