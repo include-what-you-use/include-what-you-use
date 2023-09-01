@@ -40,6 +40,7 @@ class ClassTemplateDecl;
 class Expr;
 class FunctionDecl;
 class NamedDecl;
+class NamespaceDecl;
 class TagDecl;
 class TemplateDecl;
 class TemplateName;
@@ -610,6 +611,8 @@ bool IsExplicitInstantiation(const clang::Decl* decl);
 
 // Returns true if this decl is nested inside an inline namespace.
 bool IsInInlineNamespace(const clang::Decl* decl);
+
+bool IsInNamespace(const clang::NamedDecl*, const clang::NamespaceDecl*);
 
 // Returns true if a named decl looks like a forward-declaration of a
 // class (rather than a definition, a friend declaration, or an 'in

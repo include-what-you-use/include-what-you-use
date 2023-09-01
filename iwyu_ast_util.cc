@@ -1034,6 +1034,18 @@ bool IsInInlineNamespace(const Decl* decl) {
   return false;
 }
 
+bool IsInNamespace(const clang::NamedDecl* decl,
+                   const clang::NamespaceDecl* ns_decl) {
+  const DeclContext* primary_ns_context = ns_decl->getPrimaryContext();
+  for (const DeclContext* dc = decl->getDeclContext(); dc;
+       dc = dc->getParent()) {
+    if (dc->getPrimaryContext() == primary_ns_context)
+      return true;
+  }
+
+  return false;
+}
+
 bool IsForwardDecl(const NamedDecl* decl) {
   if (const auto* tag_decl = dyn_cast<TagDecl>(decl)) {
     // clang-format off

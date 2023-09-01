@@ -1025,6 +1025,9 @@ set<string> CalculateMinimalIncludes(
 //     a.h does not see b.h in its transitive #includes.  (Note: This
 //     happens before include-picker mapping, so it's still possible to
 //     see 'new' includes via a manual mapping.)
+// B8) Discard uses of NamespaceDecls where the file also uses symbols
+//     within that namespace. IWYU for the symbol will also satisfy IWYU
+//     for the containing namespace(s).
 // B1') Discard macro uses in the same file as the definition (B3 redux).
 // B2') Discard macro uses that form a 'backwards' #include (B6 redux).
 // B3') Discard macro uses from a 'new' #include (B7 redux).
@@ -1212,8 +1215,8 @@ static bool HasMapping(const string& symbol) {
   return !GlobalIncludePicker().GetCandidateHeadersForSymbol(symbol).empty();
 }
 
-void ProcessFullUse(OneUse* use,
-                    const IwyuPreprocessorInfo* preprocessor_info) {
+void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
+                    const vector<OneUse>& all_uses) {
   CHECK_(use->decl() && "Must call ProcessFullUse on a decl");
   CHECK_(use->is_full_use() && "Must not call ProcessFullUse on fwd-decl");
   if (use->ignore_use())   // we're already ignoring it
@@ -1396,6 +1399,20 @@ void ProcessFullUse(OneUse* use,
       VERRS(6) << "Ignoring use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "):"
                << " non-transitive #include\n";
+      use->set_ignore_use();
+      return;
+    }
+  }
+
+  // (B8) Discard uses of NamespaceDecls where the file also uses
+  // symbols within that namespace. IWYU for the symbol will also
+  // satisfy IWYU for the containing namespace(s).
+  if (const auto* ns_decl = dyn_cast<NamespaceDecl>(use->decl())) {
+    if (std::any_of(
+            all_uses.begin(), all_uses.end(), [ns_decl](const OneUse& use) {
+              const NamedDecl* decl = use.decl();
+              return decl && (ns_decl != decl) && IsInNamespace(decl, ns_decl);
+            })) {
       use->set_ignore_use();
       return;
     }
@@ -1641,7 +1658,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   }
   for (OneUse& use : *uses) {
     if (use.is_full_use() && use.decl())
-      internal::ProcessFullUse(&use, preprocessor_info_);
+      internal::ProcessFullUse(&use, preprocessor_info_, *uses);
   }
   for (OneUse& use : *uses) {
     if (use.is_full_use() && !use.decl())
