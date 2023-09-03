@@ -42,6 +42,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 
 namespace clang {
 class FileEntry;
@@ -76,6 +77,7 @@ using clang::ExprWithCleanups;
 using clang::FileEntry;
 using clang::FullSourceLoc;
 using clang::FunctionDecl;
+using clang::FunctionTemplateSpecializationInfo;
 using clang::FunctionType;
 using clang::ImplicitCastExpr;
 using clang::InjectedClassNameType;
@@ -1181,6 +1183,16 @@ bool IsBuiltinFunction(const clang::NamedDecl* decl) {
     }
   }
   return false;
+}
+
+bool IsImplicitlyInstantiatedDfn(const clang::FunctionDecl* decl) {
+  const FunctionTemplateSpecializationInfo* tpl_spec_info =
+      decl->getTemplateSpecializationInfo();
+  if (!tpl_spec_info)
+    return false;  // Not a template specialization.
+  return decl->isThisDeclarationADefinition() &&
+         tpl_spec_info->getTemplateSpecializationKind() ==
+             clang::TSK_ImplicitInstantiation;
 }
 
 // --- Utilities for Type.

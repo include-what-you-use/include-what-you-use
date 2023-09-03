@@ -194,6 +194,17 @@ class ASTNode {
 
   // Convenience methods.
 
+  template <typename To>
+  const To* GetAncestorAs() const {
+    // DynCast needs a dummy argument of type To* to help its resolution.
+    const To* dummy = nullptr;
+    for (const ASTNode* node = this; node != nullptr; node = node->parent_) {
+      if (const auto result = node->DynCast<To>(dummy))
+        return result;
+    }
+    return nullptr;
+  }
+
   template<typename To> bool AncestorIsA(int generation) const {
     return GetAncestorAs<To>(generation) != nullptr;
   }
@@ -674,6 +685,10 @@ bool DeclsAreInSameClass(const clang::Decl* decl1, const clang::Decl* decl2);
 
 // Returns true if the given decl/name is a builtin function
 bool IsBuiltinFunction(const clang::NamedDecl* decl);
+
+// Returns true if the function decl is an implicitly instantiated definition
+// (in particular, not just a declaration).
+bool IsImplicitlyInstantiatedDfn(const clang::FunctionDecl*);
 
 // --- Utilities for Type.
 
