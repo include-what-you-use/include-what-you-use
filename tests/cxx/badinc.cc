@@ -189,7 +189,6 @@ typedef I1_Class Cc_typedef_array[kI1ConstInt];
 // definition of I2_Class.
 // IWYU: I1_TemplateClass is...*badinc-i1.h.*#included\.
 // IWYU: I1_TemplateClass is...*badinc-i1.h.*for autocast
-// IWYU: I1_TemplateClass is...*badinc-i1.h.*for fn return type
 // IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
@@ -372,10 +371,9 @@ class I1_DefinedInCc_Class {
   I1_Enum i1_enum;
 };
 
-// For function declarations, we don't need complete type info for
-// arguments.  But we do for the return type unless we explicitly
-// say we don't want to (by providing a forward-declare).
-// IWYU: I1_Class is...*badinc-i1.h.*for fn return type
+// For function declarations in source files, we don't need complete type info
+// for arguments and the return type. The types used should be reported from a
+// call site.
 // IWYU: I1_Class needs a declaration
 // IWYU: I2_Struct needs a declaration
 I1_Class Cc_DeclareOnlyFn(I2_Struct i2_class);

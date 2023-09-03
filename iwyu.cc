@@ -178,7 +178,6 @@ using clang::FriendTemplateDecl;
 using clang::FunctionDecl;
 using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
-using clang::FunctionTemplateSpecializationInfo;
 using clang::FunctionType;
 using clang::LValueReferenceType;
 using clang::LinkageSpecDecl;
@@ -795,13 +794,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
 
     if (FunctionDecl* fn_decl = DynCastFrom(expr->getDecl())) {
-      const FunctionTemplateSpecializationInfo* tpl_spec_info =
-          fn_decl->getTemplateSpecializationInfo();
-      const bool is_def = fn_decl->isThisDeclarationADefinition();
-      if (!tpl_spec_info ||  // I. e. not a template specialization, or...
-          tpl_spec_info->isExplicitInstantiationOrSpecialization() || !is_def) {
+      if (!IsImplicitlyInstantiatedDfn(fn_decl))
         return true;
-      }
       // If fn_decl has a class-name before it -- 'MyClass::method' --
       // it's a method pointer.
       const Type* parent_type = nullptr;
@@ -1518,15 +1512,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return retval;
   }
 
-  set<const Type*> GetCallerResponsibleTypesForFnReturn(
-      const FunctionDecl* decl) const {
-    set<const Type*> retval;
-    const Type* return_type = Desugar(decl->getReturnType().getTypePtr());
-    if (CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl))) {
-      retval.insert(return_type);
-      // TODO(csilvers): include template type-args if appropriate.
-    }
-    return retval;
+  set<const Type*> GetProvidedTypesForFnReturn(const FunctionDecl* decl) const {
+    const Type* return_type = decl->getReturnType().getTypePtr();
+    return GetProvidedTypes(return_type, GetLocation(decl));
   }
 
   //------------------------------------------------------------
@@ -1627,8 +1615,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // with the warning message that iwyu emits.
   virtual void ReportTypeUse(SourceLocation used_loc, const Type* type,
                              const char* comment = nullptr) {
-    ReportTypeUseInternal(used_loc, type, comment,
-                          this->getDerived().GetBlockedTypes());
+    ReportTypeUseInternal(used_loc, type, comment, blocked_types_);
   }
 
   void ReportTypesUse(SourceLocation used_loc, const set<const Type*>& types) {
@@ -1740,22 +1727,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (IsFriendDecl(decl))
       return true;
 
-    // ...except the return value.
-    const Type* return_type = Desugar(decl->getReturnType().getTypePtr());
-    const bool is_responsible_for_return_type =
-        (!CanIgnoreType(return_type) &&
-         !IsPointerOrReferenceAsWritten(return_type) &&
-         !CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl)));
-    // Don't bother to report here, when the language agrees with us
-    // we need the full type; that will be reported elsewhere, so
-    // reporting here would be double-counting.
-    const bool type_use_reported_in_visit_function_type =
-        (!current_ast_node()->in_forward_declare_context() ||
-         !IsClassType(return_type));
-    if (is_responsible_for_return_type &&
-        !type_use_reported_in_visit_function_type) {
-      ReportTypeUse(GetLocation(decl), return_type, "(for fn return type)");
-    }
+    // ...except the return value (handled in CanBeProvidedTypeComponent)
 
     // ...and non-explicit, one-arg ('autocast') constructor types.
     for (FunctionDecl::param_iterator param = decl->param_begin();
@@ -2426,15 +2398,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
 
-    // Usually the function-author is responsible for providing the
-    // full type information for the return type of the function, but
-    // in cases where it's not, we have to take responsibility.
-    // TODO(csilvers): check the fn argument types as well.
-    const Type* return_type = Desugar(callee->getReturnType().getTypePtr());
-    if (ContainsKey(GetCallerResponsibleTypesForFnReturn(callee),
-                    return_type)) {
-      ReportTypeUse(CurrentLoc(), return_type);
-    }
+    if (!IsImplicitlyInstantiatedDfn(callee) && !IsTemplatizedType(parent_type))
+      HandleFnReturnOnCallSite(callee);
 
     // We may have already been checked in a previous
     // VisitOverloadExpr() call.  Don't check again in that case.
@@ -2499,13 +2464,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     const NamedDecl* decl = TypeToDeclAsWritten(type);
 
+    const auto [is_provided, comment] =
+        IsProvidedTypeComponent(current_ast_node());
     // If we are forward-declarable, so are our template arguments.
-    if (CanForwardDeclareType(current_ast_node()) &&
-        !IsProvidedTypeComponent(current_ast_node())) {
+    if (CanForwardDeclareType(current_ast_node()) && !is_provided) {
       ReportDeclForwardDeclareUse(CurrentLoc(), decl);
       current_ast_node()->set_in_forward_declare_context(true);
     } else {
-      ReportDeclUse(CurrentLoc(), decl);
+      ReportDeclUse(CurrentLoc(), decl, comment);
     }
 
     return true;
@@ -2635,11 +2601,43 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return visitor_state_->preprocessor_info;
   }
 
-  bool IsProvidedTypeComponent(const ASTNode* node) const {
-    return node->HasAncestorOfType<TypedefNameDecl>() &&
-           !CodeAuthorWantsJustAForwardDeclare(node->GetAs<Type>(),
-                                               node->GetLocation());
+  pair<bool, const char*> CanBeProvidedTypeComponent(
+      const ASTNode* node) const {
+    if (node->HasAncestorOfType<TypedefNameDecl>())
+      return pair(true, nullptr);
+
+    if (const FunctionDecl* decl = node->GetAncestorAs<FunctionDecl>()) {
+      // No point in author-intent analysis of function definitions
+      // in source files, or for builtins, or for friend declarations.
+      if (!IsInHeader(decl) || IsFriendDecl(decl))
+        return pair(false, nullptr);
+      const Type* return_type = decl->getReturnType().getTypePtr();
+      if (node->StackContainsContent(return_type) &&
+          !decl->isThisDeclarationADefinition() &&
+          !IsPointerOrReferenceAsWritten(return_type)) {
+        return pair(true, "(for fn return type)");
+      }
+    }
+    return pair(false, nullptr);
   }
+
+  // The function is used to determine if the full type info is needed
+  // at a function or type alias declaration side due to author's decision
+  // to provide it.
+  pair<bool, const char*> IsProvidedTypeComponent(const ASTNode* node) const {
+    // A function or type alias author can choose whether to provide a type
+    // or not only when the type can be forward declared.
+    if (!CanForwardDeclareType(node))
+      return pair(false, nullptr);
+    const auto [can_be_provided, comment] = CanBeProvidedTypeComponent(node);
+    if (can_be_provided && !CodeAuthorWantsJustAForwardDeclare(
+                               node->GetAs<Type>(), node->GetLocation())) {
+      return pair(true, comment);
+    }
+    return pair(false, nullptr);
+  }
+
+  set<const Type*> blocked_types_;
 
  private:
   template <typename T> friend class IwyuBaseAstVisitor;
@@ -2663,8 +2661,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   void ReportTplSpecComponentTypes(const TemplateSpecializationType*,
                                    const set<const Type*>& blocked_types) =
       delete;
-
-  const set<const Type*>& GetBlockedTypes() const = delete;
 
   set<const Type*> GetProvidedTypes(const Type* type,
                                     SourceLocation loc) const {
@@ -2746,6 +2742,21 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       VERRS(6) << "(For type " << PrintableType(type) << "):\n";
       IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl, comment);
     }
+  }
+
+  void HandleFnReturnOnCallSite(const FunctionDecl* callee) {
+    // Usually the function-author is responsible for providing the
+    // full type information for the return type of the function, but
+    // in cases where it's not, we have to take responsibility.
+    // TODO(csilvers): check the fn argument types as well.
+    const Type* return_type = callee->getReturnType().getTypePtr();
+    if (IsPointerOrReferenceAsWritten(return_type))
+      return;
+
+    set<const Type*> merged_blocked = GetProvidedTypesForFnReturn(callee);
+    merged_blocked.insert(blocked_types_.begin(), blocked_types_.end());
+    ValueSaver<set<const Type*>> s(&blocked_types_, merged_blocked);
+    ReportTypeUse(CurrentLoc(), return_type);
   }
 
   // Do not add any variables here!  If you do, they will not be shared
@@ -2996,8 +3007,10 @@ class InstantiatedTemplateVisitor
     if (CanIgnoreType(type))
       return;
 
-    for (CacheStoringScope* storer : cache_storers_)
-      storer->NoteReportedType(type);
+    if (!blocked_types_.count(GetCanonicalType(type))) {
+      for (CacheStoringScope* storer : cache_storers_)
+        storer->NoteReportedType(type);
+    }
     Base::ReportTypeUse(caller_loc(), type, comment);
   }
 
@@ -3359,10 +3372,6 @@ class InstantiatedTemplateVisitor
     TraverseDataAndTypeMembersOfClassHelper(type);
   }
 
-  const set<const Type*>& GetBlockedTypes() const {
-    return blocked_types_;
-  }
-
  private:
   // Clears the state of the visitor.
   void Clear() {
@@ -3691,8 +3700,6 @@ class InstantiatedTemplateVisitor
   // value, it's a default template parameter, that the
   // template-caller may or may not be responsible for.
   map<const Type*, const Type*> resugar_map_;
-
-  set<const Type*> blocked_types_;
 
   // When we see a full-use of a template argument we need to assign that full
   // use to the template-caller.  Sometimes those uses are hidden behind
@@ -4220,10 +4227,11 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())
       return true;
 
+    const auto [is_provided, comment] =
+        IsProvidedTypeComponent(current_ast_node());
     // If we're forward-declarable, then no complicated checking is
     // needed: just forward-declare.
-    if (CanForwardDeclareType(current_ast_node()) &&
-        !IsProvidedTypeComponent(current_ast_node())) {
+    if (CanForwardDeclareType(current_ast_node()) && !is_provided) {
       current_ast_node()->set_in_forward_declare_context(true);
       if (compiler()->getLangOpts().CPlusPlus) {
         // In C++, if we're already elaborated ('class Foo x') but not
@@ -4250,7 +4258,7 @@ class IwyuAstConsumer
     }
 
     // OK, seems to be a use that requires the full type.
-    ReportDeclUse(CurrentLoc(), type->getDecl());
+    ReportDeclUse(CurrentLoc(), type->getDecl(), comment);
     return Base::VisitTagType(type);
   }
 
@@ -4363,11 +4371,6 @@ class IwyuAstConsumer
     merged_blocked.insert(blocked_types.begin(), blocked_types.end());
     instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map,
                                                         merged_blocked);
-  }
-
-  const set<const Type*>& GetBlockedTypes() const {
-    static const set<const Type*> empty_set;
-    return empty_set;
   }
 
  private:

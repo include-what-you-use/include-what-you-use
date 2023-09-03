@@ -7,7 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-struct IndirectStruct1 { IndirectStruct1(int) {} };
+struct IndirectStruct1 {
+  IndirectStruct1(int) {
+  }
+  char c;
+};
 struct IndirectStructForwardDeclaredInD1 {
   IndirectStructForwardDeclaredInD1(int) {}
 };
