@@ -2424,12 +2424,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return false;
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
-    // We may have already been checked in a previous
-    // VisitOverloadExpr() call.  Don't check again in that case.
-    if (IsProcessedOverloadLoc(CurrentLoc()))
-      return true;
-
-    ReportDeclUse(CurrentLoc(), callee);
 
     // Usually the function-author is responsible for providing the
     // full type information for the return type of the function, but
@@ -2440,6 +2434,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                     return_type)) {
       ReportTypeUse(CurrentLoc(), return_type);
     }
+
+    // We may have already been checked in a previous
+    // VisitOverloadExpr() call.  Don't check again in that case.
+    if (IsProcessedOverloadLoc(CurrentLoc()))
+      return true;
+
+    ReportDeclUse(CurrentLoc(), callee);
 
     return true;
   }
