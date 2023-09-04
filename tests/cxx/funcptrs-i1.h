@@ -44,10 +44,20 @@ Enum Function(Class*) {
   return E_one;
 }
 
+// Forward declaration means that FunctionReturningRecordType doesn't provide
+// its return type.
+class IndirectClass;
+IndirectClass FunctionReturningRecordType();
+
 template<typename T>
 int FunctionTemplate(Class*) {
   return T(10).Value();
 }
+
+template <typename T>
+IndirectClass FunctionTemplate2();
+
+extern template IndirectClass FunctionTemplate2<int>();
 
 template<typename T>
 class ClassTemplate {

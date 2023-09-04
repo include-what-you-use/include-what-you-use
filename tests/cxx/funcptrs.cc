@@ -19,6 +19,7 @@
 // A 'function' can be a free function, a static member function, a member
 // function, or any template instantiation of the above.
 
+#include "tests/cxx/direct.h"
 #include "tests/cxx/funcptrs-d1.h"
 
 
@@ -79,6 +80,17 @@ void FreeFunctions() {
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: FunctionTemplate is...*funcptrs-i1.h
   &FunctionTemplate<Retval>;
+
+  // Full return type info is needed neither for non-templated function...
+  // IWYU: FunctionReturningRecordType is...*funcptrs-i1.h
+  &FunctionReturningRecordType;
+  // ... nor for function template implicit instantiation without definition...
+  // IWYU: FunctionTemplate2 is...*funcptrs-i1.h
+  &FunctionTemplate2<char>;
+  // ... nor for function template explicit specialization or instantiation
+  // references.
+  // IWYU: FunctionTemplate2 is...*funcptrs-i1.h
+  &FunctionTemplate2<int>;
 }
 
 void ClassMembers() {
@@ -212,9 +224,10 @@ tests/cxx/funcptrs.cc should add these lines:
 #include "tests/cxx/funcptrs-i1.h"
 
 tests/cxx/funcptrs.cc should remove these lines:
+- #include "tests/cxx/direct.h"  // lines XX-XX
 - #include "tests/cxx/funcptrs-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/funcptrs.cc:
-#include "tests/cxx/funcptrs-i1.h"  // for Class, ClassTemplate, Enum, Function, FunctionTemplate, Retval
+#include "tests/cxx/funcptrs-i1.h"  // for Class, ClassTemplate, Enum, Function, FunctionReturningRecordType, FunctionTemplate, FunctionTemplate2, Retval
 
 ***** IWYU_SUMMARY */

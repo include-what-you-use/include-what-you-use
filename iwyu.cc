@@ -178,6 +178,7 @@ using clang::FriendTemplateDecl;
 using clang::FunctionDecl;
 using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
+using clang::FunctionTemplateSpecializationInfo;
 using clang::FunctionType;
 using clang::LValueReferenceType;
 using clang::LinkageSpecDecl;
@@ -794,6 +795,13 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
 
     if (FunctionDecl* fn_decl = DynCastFrom(expr->getDecl())) {
+      const FunctionTemplateSpecializationInfo* tpl_spec_info =
+          fn_decl->getTemplateSpecializationInfo();
+      const bool is_def = fn_decl->isThisDeclarationADefinition();
+      if (!tpl_spec_info ||  // I. e. not a template specialization, or...
+          tpl_spec_info->isExplicitInstantiationOrSpecialization() || !is_def) {
+        return true;
+      }
       // If fn_decl has a class-name before it -- 'MyClass::method' --
       // it's a method pointer.
       const Type* parent_type = nullptr;
