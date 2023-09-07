@@ -200,6 +200,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   // add them in by hand as I discover them.
   { "EOF", kPrivate, "<stdio.h>", kPublic },
   { "FILE", kPrivate, "<stdio.h>", kPublic },
+  { "IBSHIFT", kPrivate, "<asm/termbits.h>", kPublic },
   { "MAP_POPULATE", kPrivate, "<sys/mman.h>", kPublic },
   { "MAP_POPULATE", kPrivate, "<linux/mman.h>", kPublic },
   { "MAP_STACK", kPrivate, "<sys/mman.h>", kPublic },

@@ -121,6 +121,7 @@
   # add them in by hand as I discover them.
   { symbol: [ "EOF", private, "<stdio.h>", public ] },
   { symbol: [ "FILE", private, "<stdio.h>", public ] },
+  { symbol: [ "IBSHIFT", private, "<asm/termbits.h>", public ] },
   { symbol: [ "MAP_POPULATE", private, "<sys/mman.h>", public ] },
   { symbol: [ "MAP_POPULATE", private, "<linux/mman.h>", public ] },
   { symbol: [ "MAP_STACK", private, "<sys/mman.h>", public ] },
