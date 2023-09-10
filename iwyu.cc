@@ -1447,7 +1447,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   set<const Type*> GetProvidedTypesForTypedef(
       const TypedefNameDecl* decl) const {
-    set<const Type*> retval;
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     // If the underlying type is itself a typedef, we recurse.
     if (const auto* underlying_typedef =
@@ -1460,13 +1459,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
     }
 
-    for (const Type* type :
-         GetComponentsOfTypeWithoutSubstituted(underlying_type)) {
-      if (!CodeAuthorWantsJustAForwardDeclare(type, GetLocation(decl))) {
-        retval.insert(type);
-      }
-    }
-    return retval;
+    return GetProvidedTypes(underlying_type, GetLocation(decl));
   }
 
   // ast_node is the node for the autocast CastExpr.  We use it to get
@@ -2666,6 +2659,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       delete;
 
   const set<const Type*>& GetBlockedTypes() const = delete;
+
+  set<const Type*> GetProvidedTypes(const Type* type,
+                                    SourceLocation loc) const {
+    set<const Type*> retval;
+    for (const Type* component : GetComponentsOfTypeWithoutSubstituted(type)) {
+      if (!CodeAuthorWantsJustAForwardDeclare(component, loc))
+        retval.insert(component);
+    }
+    return retval;
+  }
 
   void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
                              const char* comment,
