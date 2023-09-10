@@ -19,8 +19,12 @@
 #include "subdir/indirect_subdir.h"
 #include "quoted_includes_first.h"
 
-std::unique_ptr<IndirectSubDirClass> CreateIndirectSubDirClass() {
-  return std::unique_ptr<IndirectSubDirClass>(new IndirectSubDirClass);
+std::unique_ptr<int> CreateInt() {
+  return std::unique_ptr<int>(new int(20));
+}
+
+static IndirectSubDirClass GetIndirectSubDirClass() {
+  return global;
 }
 
 /**** IWYU_SUMMARY
