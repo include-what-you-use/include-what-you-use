@@ -11,35 +11,29 @@
 
 // Tests that IWYU will respect the --quoted_includes_first option.
 
-#include "tests/cxx/pch.h"  // this is the precompiled header
-#include <iostream>
-#include <list>
-#include <map>
-#include <memory>
-#include "subdir/indirect_subdir.h"
-#include "quoted_includes_first.h"
+#include "tests/cxx/pch.h"          // Precompiled header
+#include <list>                     // Unused C++ header to trigger diagnostics
+#include <exception>                // C++ header
+#include <errno.h>                  // C header
+#include "subdir/indirect_subdir.h" // User header
+#include "quoted_includes_first.h"  // Associated header
 
-std::unique_ptr<int> CreateInt() {
-  return std::unique_ptr<int>(new int(20));
-}
-
-static IndirectSubDirClass GetIndirectSubDirClass() {
-  return global;
-}
+static int global_err = EACCES;
+std::exception global_exception;
+IndirectSubDirClass global_var;
 
 /**** IWYU_SUMMARY
 
 tests/cxx/quoted_includes_first.cc should add these lines:
 
 tests/cxx/quoted_includes_first.cc should remove these lines:
-- #include <iostream>  // lines XX-XX
 - #include <list>  // lines XX-XX
-- #include <map>  // lines XX-XX
 
 The full include-list for tests/cxx/quoted_includes_first.cc:
 #include "tests/cxx/pch.h"
 #include "quoted_includes_first.h"
 #include "subdir/indirect_subdir.h"  // for IndirectSubDirClass
-#include <memory>  // for unique_ptr
+#include <errno.h>  // for EACCES
+#include <exception>  // for exception
 
 ***** IWYU_SUMMARY */
