@@ -3268,8 +3268,7 @@ class InstantiatedTemplateVisitor
     std::vector<const CXXRecordDecl*> explicit_inst_decls;
     for (const NamedDecl* redecl : decl->redecls()) {
       if (IsExplicitInstantiation(redecl) &&
-          GlobalSourceManager()->isBeforeInTranslationUnit(
-            redecl->getLocation(), caller_loc())) {
+          IsBeforeInTranslationUnit(redecl->getLocation(), caller_loc())) {
         // Earlier checks imply that this is a CXXRecordDecl.
         explicit_inst_decls.push_back(cast<CXXRecordDecl>(redecl));
       }
