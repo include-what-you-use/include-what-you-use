@@ -3263,12 +3263,28 @@ class InstantiatedTemplateVisitor
     if (IsProvidedByTemplate(decl))
       return;
 
+    // The caller loc is sometimes invalid due to ambiguity under macros. See
+    // ASTNode::GetLocation() for more details.
+    if (caller_loc().isInvalid()) {
+      VERRS(6) << "Ignoring explicit instantiation of '" << PrintableDecl(decl)
+               << "'; caller loc is invalid\n";
+      return;
+    }
+
     // Go through all previous redecls and filter out those that are not
     // explicit template instantiations or already provided by the template.
     std::vector<const CXXRecordDecl*> explicit_inst_decls;
     for (const NamedDecl* redecl : decl->redecls()) {
-      if (IsExplicitInstantiation(redecl) &&
-          IsBeforeInTranslationUnit(redecl->getLocation(), caller_loc())) {
+      if (!IsExplicitInstantiation(redecl)) {
+        continue;
+      }
+
+      // Must have a valid location to find preceding decls. We have not seen
+      // invalid locations in practice here, so assert.
+      SourceLocation redecl_loc = redecl->getLocation();
+      CHECK_(redecl_loc.isValid());
+
+      if (IsBeforeInTranslationUnit(redecl_loc, caller_loc())) {
         // Earlier checks imply that this is a CXXRecordDecl.
         explicit_inst_decls.push_back(cast<CXXRecordDecl>(redecl));
       }
