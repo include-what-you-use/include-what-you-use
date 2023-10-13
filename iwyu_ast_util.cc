@@ -31,6 +31,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -356,6 +357,19 @@ bool IsCXXConstructExprInNewExpr(const ASTNode* ast_node) {
 
   CHECK_(ast_node->parent() && "Constructor should not be a top-level node!");
   return ast_node->ParentIsA<CXXNewExpr>();
+}
+
+bool IsAutocastExpr(const ASTNode* ast_node) {
+  const auto* expr = ast_node->GetAs<CXXConstructExpr>();
+  if (!expr)
+    return false;
+  // Explicitly written CXXTemporaryObjectExpr aren't 'autocast' expressions.
+  if (expr->getStmtClass() != Stmt::StmtClass::CXXConstructExprClass)
+    return false;
+  // Copy or move constructors are not 'autocast' constructors.
+  if (expr->getConstructor()->isCopyOrMoveConstructor())
+    return false;
+  return ast_node->template HasAncestorOfType<CallExpr>();
 }
 
 template<typename T>

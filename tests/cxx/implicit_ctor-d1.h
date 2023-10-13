@@ -14,17 +14,14 @@
 // reference to it.  This is because the class has an implicit
 // constructor.
 
-// IWYU: IndirectWithImplicitCtor needs a declaration
 // IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h.*for autocast
 int ImplicitCtorFn(IndirectWithImplicitCtor);
 
-// IWYU: IndirectWithImplicitCtor needs a declaration
 // IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h.*for autocast
 int ImplicitCtorRefFn(const IndirectWithImplicitCtor&);
 
 // Reporting types for "autocast" for header-defined functions still makes sense
 // as opposed to function definitions in source files.
-// IWYU: IndirectWithImplicitCtor needs a declaration
 // IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h.*for autocast
 inline int InlineImplicitCtorRefFn(const IndirectWithImplicitCtor&) {
   return 1;
