@@ -263,6 +263,36 @@ void TestAutocast() {
       6, 7, 8, 9,
       // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
       10);
+
+  TplFnValues(
+      // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+      /*only_argument_type_provided=*/1,
+      // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      /*all_forward_declared=*/2,
+      /*all_needed_types_provided=*/3,
+      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      /*only_template_provided=*/4);
+
+  TplFnRefs(
+      // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+      /*only_argument_type_provided=*/1,
+      // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      /*all_forward_declared=*/2,
+      /*all_needed_types_provided=*/3,
+      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      /*only_template_provided=*/4);
+
+  HeaderDefinedTplFnRefs(
+      // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+      /*only_argument_type_provided=*/1,
+      // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      /*all_forward_declared=*/2,
+      /*all_needed_types_provided=*/3,
+      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      /*only_template_provided=*/4);
 }
 
 template <typename Ret, Ret Fn()>

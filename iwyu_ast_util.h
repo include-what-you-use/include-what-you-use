@@ -443,6 +443,10 @@ bool IsCXXConstructExprInInitializer(const ASTNode* ast_node);
 // Returns true if this node is a CXXConstructExpr in CXXNewExpr.
 bool IsCXXConstructExprInNewExpr(const ASTNode* ast_node);
 
+// Determines if the given node represents implicit one-argument constructor
+// call in context of function argument initialization - so called 'autocast'.
+bool IsAutocastExpr(const ASTNode*);
+
 // If ASTNode is of a kind that has a qualifier (something that
 // comes before the ::), return that, else return nullptr.
 const clang::NestedNameSpecifier* GetQualifier(const ASTNode* ast_node);
