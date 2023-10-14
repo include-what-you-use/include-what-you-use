@@ -42,6 +42,7 @@ def Partition(l, delimiter):
 
 def TestIwyuOnRelevantFiles(filename):
   logging.info('Testing iwyu on %s', filename)
+
   # Split full/path/to/foo.cc into full/path/to/foo and .cc.
   (all_but_extension, extension) = os.path.splitext(filename)
   (dirname, basename) = os.path.split(all_but_extension)
@@ -124,7 +125,16 @@ if __name__ == '__main__':
   (runner_args, _) = parser.parse_known_args(unittest_args)
 
   if runner_args.run_test_file:
-    exit(TestIwyuOnRelevantFiles(runner_args.run_test_file))
+    try:
+      r = TestIwyuOnRelevantFiles(runner_args.run_test_file)
+    except unittest.SkipTest as e:
+      # Catch the skip test exception that unittest would normally
+      # handle. Instead set a return code that informs Ctest that the
+      # test is being skipped
+      print(f"Skipped {runner_args.run_test_file}: {e}")
+      exit(99)
+    else:
+      exit(r)
 
   @GenerateTests(rootdir='tests/c', pattern='*.c')
   class c(unittest.TestCase): pass
