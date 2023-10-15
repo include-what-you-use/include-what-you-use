@@ -1600,11 +1600,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   // Called when the given type is fully used at used_loc, regardless
   // of the type being explicitly written in the source code or not.
-  // The comment, if not nullptr, is extra text that is included along
-  // with the warning message that iwyu emits.
-  virtual void ReportTypeUse(SourceLocation used_loc, const Type* type,
-                             const char* comment = nullptr) {
-    ReportTypeUseInternal(used_loc, type, comment, blocked_types_);
+  virtual void ReportTypeUse(SourceLocation used_loc, const Type* type) {
+    ReportTypeUseInternal(used_loc, type, blocked_types_);
   }
 
   void ReportTypesUse(SourceLocation used_loc, const set<const Type*>& types) {
@@ -2610,7 +2607,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
-                             const char* comment,
                              const set<const Type*>& blocked_types) {
     if (CanIgnoreType(type))
       return;
@@ -2655,7 +2651,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         const Type* type = RemovePointersAndReferencesAsWritten(
             typedef_decl->getUnderlyingType().getTypePtr());
         IwyuBaseAstVisitor<Derived>::ReportTypeUseInternal(
-            used_loc, type, nullptr, provided_with_typedef);
+            used_loc, type, provided_with_typedef);
       }
       return;
     }
@@ -2677,7 +2673,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
       decl = GetDefinitionAsWritten(decl);
       VERRS(6) << "(For type " << PrintableType(type) << "):\n";
-      IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl, comment);
+      IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl);
     }
   }
 
@@ -2957,8 +2953,7 @@ class InstantiatedTemplateVisitor
     // implicit stuff, it should not suggest forward declarations.
   }
 
-  void ReportTypeUse(SourceLocation used_loc, const Type* type,
-                     const char* comment = nullptr) override {
+  void ReportTypeUse(SourceLocation used_loc, const Type* type) override {
     // clang desugars template types, so Foo<MyTypedef>() gets turned
     // into Foo<UnderlyingType>().  Try to convert back.
     type = ResugarType(type);
@@ -2969,7 +2964,7 @@ class InstantiatedTemplateVisitor
       for (CacheStoringScope* storer : cache_storers_)
         storer->NoteReportedType(type);
     }
-    Base::ReportTypeUse(caller_loc(), type, comment);
+    Base::ReportTypeUse(caller_loc(), type);
   }
 
   //------------------------------------------------------------
