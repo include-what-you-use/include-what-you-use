@@ -251,6 +251,8 @@ bool CanIgnoreLocation(SourceLocation loc) {
 
 }  // anonymous namespace
 
+enum class DerefKind { None, RemoveRefs, RemoveRefsAndPtr };
+
 // ----------------------------------------------------------------------
 // --- BaseAstVisitor
 // ----------------------------------------------------------------------
@@ -1570,13 +1572,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   // Called when the given type is fully used at used_loc, regardless
   // of the type being explicitly written in the source code or not.
-  virtual void ReportTypeUse(SourceLocation used_loc, const Type* type) {
-    ReportTypeUseInternal(used_loc, type, blocked_types_);
+  virtual void ReportTypeUse(SourceLocation used_loc, const Type* type,
+                             DerefKind deref_kind) {
+    ReportTypeUseInternal(used_loc, type, blocked_types_, deref_kind);
   }
 
   void ReportTypesUse(SourceLocation used_loc, const set<const Type*>& types) {
     for (const Type* type : types)
-      ReportTypeUse(used_loc, type);
+      ReportTypeUse(used_loc, type, DerefKind::None);
   }
 
   //------------------------------------------------------------
@@ -1677,15 +1680,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     if (HasCovariantReturnType(method_decl)) {
-      const Type* return_type = RemovePointersAndReferencesAsWritten(
-          method_decl->getReturnType().getTypePtr());
-
       VERRS(6) << "Found covariant return type in "
                << method_decl->getQualifiedNameAsString()
-               << ", needs complete type of " << PrintableType(return_type)
-               << "\n";
+               << ", needs complete type\n";
 
-      ReportTypeUse(CurrentLoc(), return_type);
+      ReportTypeUse(CurrentLoc(), method_decl->getReturnType().getTypePtr(),
+                    DerefKind::RemoveRefsAndPtr);
     }
 
     return true;
@@ -1707,8 +1707,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const Type* caught_type = typeloc.getType().getTypePtr();
 
       // Strip off pointers/references to get to the pointee type.
-      caught_type = RemovePointersAndReferencesAsWritten(caught_type);
-      ReportTypeUse(GetLocation(&typeloc), caught_type);
+      ReportTypeUse(GetLocation(&typeloc), caught_type,
+                    DerefKind::RemoveRefsAndPtr);
     } else {
       // catch(...): no type to act on here.
     }
@@ -1726,7 +1726,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     if (const Type* type = stmt->getRangeInit()->getType().getTypePtrOrNull()) {
-      ReportTypeUse(CurrentLoc(), RemovePointersAndReferencesAsWritten(type));
+      ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefs);
 
       // TODO: We should probably find a way to require inclusion of any
       // argument-dependent begin/end declarations.
@@ -1881,12 +1881,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         break;
     }
 
-    // TODO(csilvers): test if we correctly say we use FooPtr for
-    //    typedef Foo* FooPtr; ... static_cast<FooPtr>(...) ...
-    for (const Type* type : required_full_types) {
-      const Type* deref_type = RemovePointersAndReferences(type);
-      ReportTypeUse(CurrentLoc(), deref_type);
-    }
+    for (const Type* type : required_full_types)
+      ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefsAndPtr);
 
     return true;
   }
@@ -1902,8 +1898,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const Expr* base_expr = expr->getBase()->IgnoreParenImpCasts();
     const Type* base_type = GetTypeOf(base_expr);
     CHECK_(base_type && "Member's base does not have a type?");
-    const Type* deref_base_type  // For myvar->a, base-type will have a *
-        = expr->isArrow() ? RemovePointerFromType(base_type) : base_type;
     // Technically, we should say the type is being used at the
     // location of base_expr.  That may be a different file than us in
     // cases like MACRO.b().  However, while one can imagine
@@ -1914,9 +1908,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // that's responsible for its type or not, we just assume it is.
     // TODO(csilvers): fix when we can determine what the macro-text
     // is responsible for and what we're responsible for.
-    // TODO(csilvers): we should be reporting a fwd-decl use for
-    // GetTypeOf(expr), not on deref_base_type.
-    ReportTypeUse(CurrentLoc(), deref_base_type);
+    ReportTypeUse(CurrentLoc(), base_type, DerefKind::RemoveRefsAndPtr);
     return true;
   }
 
@@ -1926,7 +1918,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    ReportTypeUse(CurrentLoc(), GetTypeOf(expr));
+    ReportTypeUse(CurrentLoc(), GetTypeOf(expr->getLHS()),
+                  DerefKind::RemoveRefsAndPtr);
     return true;
   }
 
@@ -1943,12 +1936,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     for (const Stmt* child : expr->children()) {
-      if (const PointerType* pointer_type =
-              dyn_cast<PointerType>(GetTypeOf(cast<Expr>(child)))) {
-        // It's a pointer-typed expression. Get the pointed-to type (which may
-        // itself be a pointer) and report it.
-        const Type* deref_type = pointer_type->getPointeeType().getTypePtr();
-        ReportTypeUse(CurrentLoc(), deref_type);
+      const Type* type = GetTypeOf(cast<Expr>(child));
+      if (type->isPointerType()) {
+        // It's a pointer-typed expression.
+        ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefsAndPtr);
       }
     }
 
@@ -1968,8 +1959,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     for (const clang::TypeSourceInfo* arg : expr->getArgs()) {
       clang::QualType qual_type = arg->getType();
       const Type* type = qual_type.getTypePtr();
-      const Type* deref_type = RemovePointersAndReferencesAsWritten(type);
-      ReportTypeUse(CurrentLoc(), deref_type);
+      ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefsAndPtr);
     }
 
     return true;
@@ -1995,9 +1985,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // just use the GetTypeOf().
     if (expr->isArgumentType()) {
       const TypeLoc& arg_tl = expr->getArgumentTypeInfo()->getTypeLoc();
-      if (const auto* reftype = arg_tl.getTypePtr()->getAs<ReferenceType>()) {
-        const Type* dereftype = reftype->getPointeeTypeAsWritten().getTypePtr();
-        ReportTypeUse(GetLocation(&arg_tl), dereftype);
+      const Type* type = arg_tl.getTypePtr();
+      if (type->isReferenceType()) {
+        ReportTypeUse(GetLocation(&arg_tl), type, DerefKind::RemoveRefs);
       } else {
         // No need to report on non-ref types, RecursiveASTVisitor will get 'em.
       }
@@ -2006,7 +1996,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const Type* dereftype = arg_expr->getType().getTypePtr();
       // This reports even if the expr ends up not being a reference, but
       // that's ok (if potentially redundant).
-      ReportTypeUse(GetLocation(arg_expr->IgnoreParenImpCasts()), dereftype);
+      ReportTypeUse(GetLocation(arg_expr->IgnoreParenImpCasts()), dereftype,
+                    DerefKind::RemoveRefs);
     }
     return true;
   }
@@ -2026,7 +2017,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // (the 'a' in 'a << b' or the 'MACRO' in 'MACRO << b'), rather
       // than our location (which is the '<<').  That way, we properly
       // situate the owner when it's a macro.
-      ReportTypeUse(GetLocation(owner_expr), owner_type);
+      ReportTypeUse(GetLocation(owner_expr), owner_type, DerefKind::RemoveRefs);
     }
     return true;
   }
@@ -2042,9 +2033,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // We always delete a pointer, so do one dereference to get the
     // actual type being deleted.
     const Type* delete_ptr_type = GetTypeOf(delete_arg);
-    const Type* delete_type = RemovePointerFromType(delete_ptr_type);
-    if (delete_type && !IsPointerOrReferenceAsWritten(delete_type))
-      ReportTypeUse(CurrentLoc(), delete_type);
+    ReportTypeUse(CurrentLoc(), delete_ptr_type, DerefKind::RemoveRefsAndPtr);
 
     return true;
   }
@@ -2069,7 +2058,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         if (args[i]->getValueKind() == clang::VK_LValue) {
           // The types of expressions 'see through' the reference to
           // the underlying type, which is exactly what we want here.
-          ReportTypeUse(CurrentLoc(), GetTypeOf(args[i]));
+          ReportTypeUse(CurrentLoc(), GetTypeOf(args[i]),
+                        DerefKind::RemoveRefs);
         }
       }
     }
@@ -2305,7 +2295,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       type = expr->getExprOperand()->getType();
     }
 
-    ReportTypeUse(CurrentLoc(), type.getTypePtr());
+    ReportTypeUse(CurrentLoc(), type.getTypePtr(), DerefKind::RemoveRefs);
     return true;
   }
 
@@ -2561,7 +2551,26 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
-                             const set<const Type*>& blocked_types) {
+                             const set<const Type*>& blocked_types,
+                             DerefKind deref_kind) {
+    // It is important not to lose info about type aliases while desugaring
+    // and dereferencing here, because they are handled further.
+    type = Desugar(type);
+    if (deref_kind == DerefKind::RemoveRefs ||
+        deref_kind == DerefKind::RemoveRefsAndPtr) {
+      if (const auto* ref_type = dyn_cast_or_null<ReferenceType>(type))
+        type = ref_type->getPointeeTypeAsWritten().getTypePtr();
+      // Keep deref_kind to remove possible additional references in type alias
+      // chain.
+      // TODO(bolshakov): shouldn't Desugar be called here and below as well?
+    }
+    if (deref_kind == DerefKind::RemoveRefsAndPtr) {
+      if (const auto* ptr_type = dyn_cast_or_null<PointerType>(type)) {
+        type = ptr_type->getPointeeType().getTypePtr();
+        deref_kind = DerefKind::None;
+      }
+    }
+
     if (CanIgnoreType(type))
       return;
 
@@ -2602,10 +2611,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // If any of the used types are themselves typedefs, this will
         // result in a recursive expansion.  Note we are careful to
         // recurse inside this class, and not go back to subclasses.
-        const Type* type = RemovePointersAndReferencesAsWritten(
-            typedef_decl->getUnderlyingType().getTypePtr());
+        const Type* type = typedef_decl->getUnderlyingType().getTypePtr();
         IwyuBaseAstVisitor<Derived>::ReportTypeUseInternal(
-            used_loc, type, provided_with_typedef);
+            used_loc, type, provided_with_typedef, deref_kind);
       }
       return;
     }
@@ -2636,7 +2644,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     set<const Type*> new_blocked_types = additional_blocked_types;
     new_blocked_types.insert(blocked_types_.begin(), blocked_types_.end());
     ValueSaver<set<const Type*>> s(&blocked_types_, new_blocked_types);
-    ReportTypeUse(CurrentLoc(), type);
+    ReportTypeUse(CurrentLoc(), type, DerefKind::None);
   }
 
   void HandleFnReturnOnCallSite(const FunctionDecl* callee) {
@@ -2907,7 +2915,23 @@ class InstantiatedTemplateVisitor
     // implicit stuff, it should not suggest forward declarations.
   }
 
-  void ReportTypeUse(SourceLocation used_loc, const Type* type) override {
+  void ReportTypeUse(SourceLocation used_loc, const Type* type,
+                     DerefKind deref_kind) override {
+    if (!type)
+      return;
+    // Don't bother about type aliases here: only template argument types
+    // can be reported currently from here, but their provided types should be
+    // in 'blocked_types_'.
+    if (deref_kind == DerefKind::RemoveRefs ||
+        deref_kind == DerefKind::RemoveRefsAndPtr) {
+      if (type->isReferenceType())
+        type = type->getPointeeType().getTypePtr();
+    }
+    if (deref_kind == DerefKind::RemoveRefsAndPtr) {
+      if (type->isPointerType()) {
+        type = type->getPointeeType().getTypePtr();
+      }
+    }
     // clang desugars template types, so Foo<MyTypedef>() gets turned
     // into Foo<UnderlyingType>().  Try to convert back.
     type = ResugarType(type);
@@ -2918,7 +2942,7 @@ class InstantiatedTemplateVisitor
       for (CacheStoringScope* storer : cache_storers_)
         storer->NoteReportedType(type);
     }
-    Base::ReportTypeUse(caller_loc(), type);
+    Base::ReportTypeUse(caller_loc(), type, DerefKind::None);
   }
 
   //------------------------------------------------------------
@@ -3110,7 +3134,7 @@ class InstantiatedTemplateVisitor
     if (IsKnownTemplateParam(type)) {
       // We attribute all uses in an instantiated template to the
       // template's caller.
-      ReportTypeUse(caller_loc(), type);
+      ReportTypeUse(caller_loc(), type, DerefKind::None);
 
       // Also report all previous explicit instantiations (declarations and
       // definitions) as uses of the caller's location.
@@ -3267,7 +3291,7 @@ class InstantiatedTemplateVisitor
     // If the ctor type is a SubstTemplateTypeParmType, get the type-as-written.
     const Type* actual_type = ResugarType(class_type);
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
-    ReportTypeUse(caller_loc(), actual_type);
+    ReportTypeUse(caller_loc(), actual_type, DerefKind::None);
     return Base::VisitCXXConstructExpr(expr);
   }
 
@@ -3575,7 +3599,7 @@ class InstantiatedTemplateVisitor
           resugared_type = item.first;
       }
       if (resugared_type && !resugared_type->isPointerType()) {
-        ReportTypeUse(caller_loc(), resugared_type);
+        ReportTypeUse(caller_loc(), resugared_type, DerefKind::None);
         // For a templated type, check the template args as well.
         if (const TemplateSpecializationType* spec_type =
                 DynCastFrom(resugared_type)) {
@@ -4106,7 +4130,7 @@ class IwyuAstConsumer
     // TypedefType::getDecl() returns the place where the typedef is defined.
     ReportDeclUse(CurrentLoc(), type->getDecl());
     if (!CanForwardDeclareType(current_ast_node()))
-      ReportTypeUse(CurrentLoc(), type);
+      ReportTypeUse(CurrentLoc(), type, DerefKind::None);
     return Base::VisitTypedefType(type);
   }
 
@@ -4123,7 +4147,7 @@ class IwyuAstConsumer
       // typedef if needed (which is determined in ReportTypeUse).
       const Type* underlying_type = type->getUnderlyingType().getTypePtr();
       if (isa<TypedefType>(underlying_type))
-        ReportTypeUse(CurrentLoc(), underlying_type);
+        ReportTypeUse(CurrentLoc(), underlying_type, DerefKind::None);
     }
 
     return Base::VisitUsingType(type);
