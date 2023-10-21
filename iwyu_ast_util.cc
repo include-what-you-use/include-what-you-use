@@ -660,6 +660,19 @@ bool IsTemplatizedFunctionDecl(const FunctionDecl* decl) {
 }
 
 bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
+  // Clang leaves ClassTemplateSpecializationDecl empty for uninstantiated
+  // specializations. Hence, replace cxx_class with template definition so that
+  // IWYU can find constructors.
+  if (const auto* tpl_spec =
+          dyn_cast<ClassTemplateSpecializationDecl>(cxx_class)) {
+    if (!tpl_spec->isExplicitSpecialization()) {
+      cxx_class = tpl_spec->getSpecializedTemplate()
+                      ->getCanonicalDecl()
+                      ->getTemplatedDecl();
+    }
+    // TODO(bolshakov): handle partial specializations.
+  }
+
   for (CXXRecordDecl::ctor_iterator ctor = cxx_class->ctor_begin();
        ctor != cxx_class->ctor_end(); ++ctor) {
     if (ctor->isExplicit() || ctor->getNumParams() != 1 ||

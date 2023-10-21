@@ -110,6 +110,19 @@ struct AutocastStruct {
   friend void ClassFn2(TplIndirectStruct1<char>);
 };
 
+// Test that IWYU finds constructors even if they are not instantiated.
+
+// IWYU: NonInstantiated needs a declaration
+// IWYU: NonInstantiated is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+void Fn(NonInstantiated<char>);
+
+// IWYU: NoAutocastForSpec needs a declaration
+void Fn(NoAutocastForSpec<char>);
+
+// TODO: IWYU: AutocastInPartialSpec is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+// IWYU: AutocastInPartialSpec needs a declaration
+void Fn(AutocastInPartialSpec<char*>);
+
 #endif  // IWYU_STRICTER_THAN_CPP_AUTOCAST_H_
 
 /**** IWYU_SUMMARY
@@ -123,7 +136,7 @@ tests/cxx/iwyu_stricter_than_cpp-autocast.h should remove these lines:
 
 The full include-list for tests/cxx/iwyu_stricter_than_cpp-autocast.h:
 #include "tests/cxx/iwyu_stricter_than_cpp-d1.h"  // for DirectStruct1, DirectStruct2, DirectStruct3, DirectStruct4, DirectStruct5, DirectStruct6, TplDirectStruct1, TplDirectStruct2, TplDirectStruct3, TplDirectStruct4, TplDirectStruct5, TplDirectStruct6
-#include "tests/cxx/iwyu_stricter_than_cpp-i1.h"  // for IndirectStruct1, IndirectStructForwardDeclaredInD1, TplIndirectStruct1, TplIndirectStructForwardDeclaredInD1
+#include "tests/cxx/iwyu_stricter_than_cpp-i1.h"  // for AutocastInPartialSpec (ptr only), IndirectStruct1, IndirectStructForwardDeclaredInD1, NoAutocastForSpec (ptr only), NonInstantiated, TplIndirectStruct1, TplIndirectStructForwardDeclaredInD1
 struct IndirectStruct2;  // lines XX-XX
 template <typename T> struct TplIndirectStruct2;  // lines XX-XX+1
 
