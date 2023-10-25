@@ -1654,4 +1654,9 @@ bool IsDeclaredInsideFunction(const Decl* decl) {
   return isa<FunctionDecl>(decl_ctx);
 }
 
+bool IsDeclaredInsideMacro(const clang::Decl* decl) {
+  SourceRange range = decl->getSourceRange();
+  return range.getBegin().isMacroID() || range.getEnd().isMacroID();
+}
+
 }  // namespace include_what_you_use

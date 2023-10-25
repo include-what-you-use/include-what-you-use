@@ -893,6 +893,9 @@ std::string GetKindName(const clang::TypeLoc typeloc);
 // visible from said function.
 bool IsDeclaredInsideFunction(const clang::Decl* decl);
 
+// Returns true if decl is partially inside a macro.
+bool IsDeclaredInsideMacro(const clang::Decl* decl);
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
