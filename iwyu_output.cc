@@ -1894,6 +1894,19 @@ void CalculateDesiredIncludesAndForwardDeclares(
       line.set_desired();
     }
   }
+
+  // Keep all forward-decls fully declared inside a macro. Otherwise IWYU will
+  // suggest to remove the expansion of a macro which might do any number of
+  // other things with side effects.
+  for (OneIncludeOrForwardDeclareLine& line : *lines) {
+    if (!line.is_desired() && !line.IsIncludeLine() &&
+        IsDeclaredInsideMacro(line.fwd_decl())) {
+      VERRS(6) << "Retaining unused forward-declare inside macro: "
+               << GetFilePath(line.fwd_decl()) << ":" << line.LineNumberString()
+               << ": " << line.line() << "\n";
+      line.set_desired();
+    }
+  }
 }
 
 bool IsRemovablePrefixHeader(const FileEntry* file_entry,
