@@ -46,6 +46,10 @@ _NODIFFS_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 # // IWYU_ARGS: -Xiwyu --mapping_file=... -I .
 _IWYU_TEST_RUN_ARGS_RE = re.compile(r'^//\sIWYU_ARGS:\s(.*)$')
 
+# Text matching a condition, either as part of IWYU_REQUIRES,
+# IWYU_UNSUPPORTED or IWYU_XFAIL.
+_IWYU_CONDITION = r'([a-z][a-z0-9_-]*)\(([^)]+)\)'
+
 # This is a line that specifies prerequisites for a test (test will be skipped
 # if they don't all hold). IWYU_REQUIRES specifies a condition that must be true
 # for the test to execute. IWYU_UNSUPPORTED specifies a condition in which the
@@ -53,12 +57,18 @@ _IWYU_TEST_RUN_ARGS_RE = re.compile(r'^//\sIWYU_ARGS:\s(.*)$')
 # IWYU_UNSUPPORTED lines can be specified. Examples:
 # // IWYU_REQUIRES: feature(arg)
 # // IWYU_UNSUPPORTED: feature(arg)
-_IWYU_TEST_PREREQ_RE = re.compile(r'^// IWYU_(REQUIRES|UNSUPPORTED): '
-                                  r'([a-z][a-z0-9_-]*)\(([^)]+)\)$')
+_IWYU_TEST_PREREQ_RE = re.compile(r'^// IWYU_(REQUIRES|UNSUPPORTED): ' +
+                                  _IWYU_CONDITION + r'$')
 
+# This is a line that specifies conditions under which a test is expected to
+# fail.
+# // IWYU_XFAIL: feature(arg)
+_IWYU_TEST_XFAIL_RE = re.compile(r'^// IWYU_XFAIL(?:: ' +
+                                 _IWYU_CONDITION + r')?$')
 
 class Features:
-  """ Implements feature support functions for prerequisites. """
+  """ Implements feature support functions for prerequisites and
+      expected failures. """
 
   # Parses the output of 'include-what-you-use -print-targets'.
   SUPPORTED_TARGET_RE = re.compile(r'^\s+([a-z0-9_-]+)\s* - .*$')
@@ -501,6 +511,39 @@ def _CheckPrerequisites(cc_file):
 
   if failed:
     raise unittest.SkipTest(', '.join(failed))
+
+
+def _ParseExpectedFailures(cc_file):
+  """ Parses expected failure conditions out of cc_file. """
+  conditions = []
+  with open(cc_file) as it:
+    for lineno, line in enumerate(it):
+      m = _IWYU_TEST_XFAIL_RE.match(line)
+      if not m:
+        continue
+
+      feature = m.group(1)
+      value = m.group(2)
+
+      if feature is None:
+        # Bare IWYU_XFAIL, condition is always True
+        condition = lambda: True
+      else:
+        feature_cond = _FEATURES.known.get(feature)
+        if not feature_cond:
+          raise SyntaxError('%s:%s IWYU_XFAIL: unsupported feature: %s' %
+                            (cc_file, lineno, feature))
+
+        condition = lambda arg=value: feature_cond(arg)
+
+      conditions.append(condition)
+    return conditions
+
+
+def IsTestExpectedToFail(cc_file):
+  """ Checks if a test is expected to fail. """
+  xfail_conditions = _ParseExpectedFailures(cc_file)
+  return any(condition() for condition in xfail_conditions)
 
 
 def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):

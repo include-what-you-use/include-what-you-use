@@ -86,6 +86,11 @@ def GenerateTests(rootdir, pattern):
         test_name += '2'               # just append a suffix :-)
 
       setattr(cls, test_name, lambda x, f=filename: TestIwyuOnRelevantFiles(f))
+
+      if iwyu_test_util.IsTestExpectedToFail(filename):
+        test_item = getattr(cls, test_name)
+        unittest.expectedFailure(test_item)
+
       test_files[test_name] = filename
 
     setattr(cls, 'test_files', test_files)
@@ -117,6 +122,7 @@ def RunTestFile(cc_file):
   for failure, 77 if the test was skipped. If the test failed, an
   exception will have been raised (causing a non-zero exit code).
   """
+  xfail = iwyu_test_util.IsTestExpectedToFail(cc_file)
   try:
     TestIwyuOnRelevantFiles(cc_file)
   except unittest.SkipTest as e:
@@ -127,6 +133,15 @@ def RunTestFile(cc_file):
     # https://mesonbuild.com/Unit-tests.html#skipped-tests-and-hard-errors
     print('Skipped %s: %s' % (cc_file, e))
     return 77
+  except AssertionError as e:
+    if xfail:
+      print('%s: Expected failure' % cc_file)
+      return 0
+    raise
+  else:
+    if xfail:
+      print('%s: Unexpected pass' % cc_file)
+      return 1
   return 0
 
 
