@@ -21,6 +21,7 @@ import re
 import shlex
 import subprocess
 import sys
+import unittest
 
 # These are the warning/error lines that iwyu.cc produces when --verbose >= 3
 _EXPECTED_DIAGNOSTICS_RE = re.compile(r'^\s*//\s*IWYU:\s*(.*)$')
@@ -44,6 +45,45 @@ _NODIFFS_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 # source file. Example:
 # // IWYU_ARGS: -Xiwyu --mapping_file=... -I .
 _IWYU_TEST_RUN_ARGS_RE = re.compile(r'^//\sIWYU_ARGS:\s(.*)$')
+
+# This is a line that specifies prerequisites for a test (test will be skipped
+# if they don't all hold). IWYU_REQUIRES specifies a condition that must be true
+# for the test to execute. IWYU_UNSUPPORTED specifies a condition in which the
+# test is invalid, and cannot be executed. Multiple IWYU_REQUIRES and
+# IWYU_UNSUPPORTED lines can be specified. Examples:
+# // IWYU_REQUIRES: feature(arg)
+# // IWYU_UNSUPPORTED: feature(arg)
+_IWYU_TEST_PREREQ_RE = re.compile(r'^// IWYU_(REQUIRES|UNSUPPORTED): '
+                                  r'([a-z][a-z0-9_-]*)\(([^)]+)\)$')
+
+
+class Features:
+  """ Implements feature support functions for prerequisites. """
+
+  # Parses the output of 'include-what-you-use -print-targets'.
+  SUPPORTED_TARGET_RE = re.compile(r'^\s+([a-z0-9_-]+)\s* - .*$')
+
+  def __init__(self):
+    # Maps all known features names to prerequisite predicates.
+    self.known = {
+      'has-target': Features.HasTarget
+    }
+
+  @staticmethod
+  def HasTarget(target):
+    iwyu = _GetIwyuPath()
+    result = subprocess.run([iwyu, '-print-targets'],
+                            capture_output=True,
+                            text=True)
+    supported = []
+    for line in result.stdout.splitlines():
+      m = Features.SUPPORTED_TARGET_RE.match(line)
+      if m:
+        supported.append(m.group(1))
+    return target in supported
+
+
+_FEATURES = Features()
 
 
 def _Which(program, paths):
@@ -419,6 +459,50 @@ def _GetLaunchArguments(cc_file):
   return shlex.split(args)
 
 
+def _ParsePrerequisites(cc_file):
+  """ Parses test prerequisites out of cc_file. """
+  prerequisites = []
+  with open(cc_file) as it:
+    for lineno, line in enumerate(it):
+      m = _IWYU_TEST_PREREQ_RE.match(line)
+      if not m:
+        continue
+
+      directive = m.group(1)
+      feature = m.group(2)
+      value = m.group(3)
+
+      feature_pred = _FEATURES.known.get(feature)
+      if not feature_pred:
+        raise SyntaxError('%s:%s IWYU_%s: unsupported feature: %s' %
+                          (ccfile, lineno, directive, feature))
+
+      if directive == 'REQUIRES':
+        prerequisite = lambda arg=value: feature_pred(arg)
+      elif directive == 'UNSUPPORTED':
+        prerequisite = lambda arg=value: not feature_pred(arg)
+      else:
+        assert False, ('_IWYU_TEST_PREREQ_RE should not have matched: %s' %
+                       directive)
+
+      desc = '%s: %s(%s)' % (directive, feature, value)
+      prerequisites.append((prerequisite, desc))
+    return prerequisites
+
+
+def _CheckPrerequisites(cc_file):
+  """ Raises a SkipTest exception if any prerequisites in cc_file fail. """
+  prerequisites = _ParsePrerequisites(cc_file)
+
+  failed = []
+  for prerequisite, desc in prerequisites:
+    if not prerequisite():
+      failed.append(desc)
+
+  if failed:
+    raise unittest.SkipTest(', '.join(failed))
+
+
 def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
   """Checks running IWYU on the given .cc file.
 
@@ -428,6 +512,9 @@ def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
               to check the diagnostics on, relative to the current dir.
     verbose: Whether to display verbose output.
   """
+  # Parse and check IWYU_{REQUIRES,UNSUPPORTED}
+  _CheckPrerequisites(cc_file)
+
   cmd = [_GetIwyuPath()]
   # Require verbose level 3 so that we can verify the individual diagnostics.
   # We allow the level to be overriden by

@@ -124,7 +124,18 @@ if __name__ == '__main__':
   (runner_args, _) = parser.parse_known_args(unittest_args)
 
   if runner_args.run_test_file:
-    exit(TestIwyuOnRelevantFiles(runner_args.run_test_file))
+    try:
+      r = TestIwyuOnRelevantFiles(runner_args.run_test_file)
+    except unittest.SkipTest as e:
+      # Catch the skip test exception that unittest would normally handle and
+      # set an exit code that informs the test runner that test is being
+      # skipped. It's an almost-convention to use exit code 77, and some build
+      # systems natively report such failures as skipped, see e.g.
+      # https://mesonbuild.com/Unit-tests.html#skipped-tests-and-hard-errors
+      print('Skipped %s: %s' % (runner_args.run_test_file, e))
+      exit(77)
+    else:
+      exit(r)
 
   @GenerateTests(rootdir='tests/c', pattern='*.c')
   class c(unittest.TestCase): pass
