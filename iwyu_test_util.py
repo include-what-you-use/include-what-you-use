@@ -475,7 +475,7 @@ def _ParsePrerequisites(cc_file):
       feature_pred = _FEATURES.known.get(feature)
       if not feature_pred:
         raise SyntaxError('%s:%s IWYU_%s: unsupported feature: %s' %
-                          (ccfile, lineno, directive, feature))
+                          (cc_file, lineno, directive, feature))
 
       if directive == 'REQUIRES':
         prerequisite = lambda arg=value: feature_pred(arg)
