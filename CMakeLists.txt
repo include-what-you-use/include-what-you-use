@@ -223,6 +223,7 @@ if (Python3_Interpreter_FOUND)
       -- $<TARGET_FILE:include-what-you-use>
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
+    set_tests_properties(${name} PROPERTIES SKIP_RETURN_CODE 77)
   endfunction()
 
   execute_process(

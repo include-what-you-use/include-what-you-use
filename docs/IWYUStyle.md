@@ -281,6 +281,23 @@ comment:
 The args are added to the `include-what-you-use` command as-written after line
 unwrapping, so IWYU flags must be explicitly prefixed with `-Xiwyu`.
 
+### Prerequisites ###
+
+If a test has prerequisites, annotate the `.cc` file itself using a
+directive comment:
+
+```
+// IWYU_REQUIRES: feature(value)
+// IWYU_UNSUPPORTED: feature(value)
+```
+
+`IWYU_REQUIRES` states that the following feature test must evaluate true for
+the test to be executed.
+
+`IWYU_UNSUPPORTED` states that the test is only executed when the feature test
+evaluates as false.
+
+If any prerequisite fails the test will be skipped.
 
 [1]: https://google.github.io/styleguide/cppguide.html
 [2]: https://llvm.org/docs/CodingStandards.html
