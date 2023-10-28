@@ -1903,8 +1903,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     CHECK_(base_type && "Member's base does not have a type?");
     const Type* deref_base_type  // For myvar->a, base-type will have a *
         = expr->isArrow() ? RemovePointerFromType(base_type) : base_type;
-    if (CanIgnoreType(deref_base_type))
-      return true;
     // Technically, we should say the type is being used at the
     // location of base_expr.  That may be a different file than us in
     // cases like MACRO.b().  However, while one can imagine
