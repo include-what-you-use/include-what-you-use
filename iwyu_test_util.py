@@ -15,6 +15,7 @@
 __author__ = 'wan@google.com (Zhanyong Wan)'
 
 import difflib
+import functools
 import operator
 import os
 import re
@@ -73,11 +74,53 @@ class Features:
   # Parses the output of 'include-what-you-use -print-targets'.
   SUPPORTED_TARGET_RE = re.compile(r'^\s+([a-z0-9_-]+)\s* - .*$')
 
+  # Parses the output of 'include-what-you-use -dM -E'.
+  PREPROCESSOR_MACRO_RE = re.compile(r'^#define ([A-z_][A-z0-9_]*)')
+
   def __init__(self):
     # Maps all known features names to prerequisite predicates.
     self.known = {
-      'has-target': Features.HasTarget
+      'has-target': Features.HasTarget,
+      'uses-cstdlib': Features.UsesCstdlib,
+      'uses-cxxstdlib': Features.UsesCXXstdlib,
     }
+
+  @staticmethod
+  def _GetPreprocessorMacros(lang, header):
+    iwyu = _GetIwyuPath()
+    src = '#include %s' % header
+
+    cmd = [iwyu, '-dM', '-E', '-x', lang]
+    # Take into account extra arguments specified in IWYU_EXTRA_ARGS -
+    # the user may be trying to test with different includes, standard
+    # libraries or whatever.
+    #
+    # For feature tests we _don't_ take into account test-specific
+    # IWYU_ARGS.
+    #  * the argument could be the thing that breaks things
+    #  * the feature result should not be test specific
+    cmd += _GetExtraArgs()
+    cmd += ['-']
+
+    result = subprocess.run(cmd, capture_output=True, input=src, text=True)
+
+    macros = []
+    for line in result.stdout.splitlines():
+      m = Features.PREPROCESSOR_MACRO_RE.match(line)
+      if m:
+        macros.append(m.group(1))
+
+    return macros
+
+  @staticmethod
+  @functools.cache
+  def _GetCXXPreprocessorMacros():
+    return Features._GetPreprocessorMacros('c++', '<cstdlib>')
+
+  @staticmethod
+  @functools.cache
+  def _GetCPreprocessorMacros():
+    return Features._GetPreprocessorMacros('c', '<stdlib.h>')
 
   @staticmethod
   def HasTarget(target):
@@ -92,6 +135,44 @@ class Features:
         supported.append(m.group(1))
     return target in supported
 
+  @staticmethod
+  def UsesCXXstdlib(lib):
+    id_macros = {
+      'libcxx': ['_LIBCPP_VERSION'],
+      'libstdcxx': ['__GLIBCXX__'],
+      # https://github.com/microsoft/STL/wiki/Macro-_MSVC_STL_UPDATE
+      'msvc': ['_MSVC_STL_UPDATE'],
+    }
+    macros = id_macros.get(lib)
+    if macros is None:
+      raise SyntaxError('Unknown C++ standard library: %s' % lib)
+
+    return all(macro in Features._GetCXXPreprocessorMacros() for macro in macros)
+
+  @staticmethod
+  def UsesCstdlib(lib):
+    id_macros = {
+      'glibc': ['__GLIBC__'],
+      'llvmlibc': ['__LLVM_LIBC__'],
+
+      # On MacOS sys/cdefs.h defines a bunch of macros. Use
+      # __DARWIN_C_LEVEL to identify the MacOS C library.
+      # https://opensource.apple.com/source/xnu/xnu-7195.81.3/bsd/sys/cdefs.h.auto.html
+      'macos': ['__DARWIN_C_LEVEL'],
+
+      # _MSC_VER identifies the Microsoft compiler rather than the
+      # standard library (MSVCRT or UCRT). clang will also define this
+      # for MS targets.
+      'msvcrt': ['_MSC_VER'],
+      'newlib': ['__NEWLIB__'],
+      'uclibc': ['__UCLIBC__'],
+    }
+    macros = id_macros.get(lib)
+    if macros is None:
+      raise SyntaxError('Unknown C standard library: %s' % lib)
+
+    # TODO: This needs refining to ensure it correctly identifies said libraries
+    return all(macro in Features._GetCPreprocessorMacros() for macro in macros)
 
 _FEATURES = Features()
 
@@ -159,6 +240,14 @@ def _GetCommandOutput(command):
   lines = stdout.decode("utf-8").splitlines(True)
   lines = [line.replace(os.linesep, '\n') for line in lines]
   return p.returncode, lines
+
+
+def _GetExtraArgs():
+  """Retrieve IWYU_EXTRA_ARGS from the environment and return as a list"""
+  env_iwyu_extra_args = os.getenv('IWYU_EXTRA_ARGS')
+  if env_iwyu_extra_args:
+    return shlex.split(env_iwyu_extra_args)
+  return []
 
 
 def _GetMatchingLines(regex, file_names):
@@ -568,9 +657,7 @@ def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
   env_verbose_level = os.getenv('IWYU_VERBOSE')
   if env_verbose_level:
     cmd += ['-Xiwyu', '--verbose=' + env_verbose_level]
-  env_iwyu_extra_args = os.getenv('IWYU_EXTRA_ARGS')
-  if env_iwyu_extra_args:
-      cmd += shlex.split(env_iwyu_extra_args)
+  cmd += _GetExtraArgs()
   cmd += [cc_file]
 
   if verbose:
