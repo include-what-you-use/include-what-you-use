@@ -125,7 +125,7 @@ def RunTestFile(cc_file):
     # skipped. It's an almost-convention to use exit code 77, and some build
     # systems natively report such failures as skipped, see e.g.
     # https://mesonbuild.com/Unit-tests.html#skipped-tests-and-hard-errors
-    print('Skipped %s: %s' % (runner_args.run_test_file, e))
+    print('Skipped %s: %s' % (cc_file, e))
     return 77
   return 0
 
