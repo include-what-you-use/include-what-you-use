@@ -125,7 +125,7 @@ if __name__ == '__main__':
 
   if runner_args.run_test_file:
     try:
-      r = TestIwyuOnRelevantFiles(runner_args.run_test_file)
+      TestIwyuOnRelevantFiles(runner_args.run_test_file)
     except unittest.SkipTest as e:
       # Catch the skip test exception that unittest would normally handle and
       # set an exit code that informs the test runner that test is being
@@ -135,7 +135,8 @@ if __name__ == '__main__':
       print('Skipped %s: %s' % (runner_args.run_test_file, e))
       exit(77)
     else:
-      exit(r)
+      # No errors, exit with success
+      exit(0)
 
   @GenerateTests(rootdir='tests/c', pattern='*.c')
   class c(unittest.TestCase): pass
