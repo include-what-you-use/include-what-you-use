@@ -1726,7 +1726,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    if (const Type* type = stmt->getRangeInit()->getType().getTypePtrOrNull()) {
+    if (const Type* type = GetTypeOf(stmt->getRangeInit())) {
       ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefs);
 
       // TODO: We should probably find a way to require inclusion of any
@@ -1993,11 +1993,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // No need to report on non-ref types, RecursiveASTVisitor will get 'em.
       }
     } else {
-      const Expr* arg_expr = expr->getArgumentExpr();
-      const Type* dereftype = arg_expr->getType().getTypePtr();
+      const Expr* arg_expr = expr->getArgumentExpr()->IgnoreParenImpCasts();
       // This reports even if the expr ends up not being a reference, but
       // that's ok (if potentially redundant).
-      ReportTypeUse(GetLocation(arg_expr->IgnoreParenImpCasts()), dereftype,
+      ReportTypeUse(GetLocation(arg_expr), GetTypeOf(arg_expr),
                     DerefKind::RemoveRefs);
     }
     return true;
