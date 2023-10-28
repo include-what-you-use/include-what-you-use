@@ -74,6 +74,7 @@ using clang::DependentTemplateSpecializationType;
 using clang::ElaboratedType;
 using clang::ElaboratedTypeKeyword;
 using clang::EnumDecl;
+using clang::ExplicitCastExpr;
 using clang::Expr;
 using clang::ExprWithCleanups;
 using clang::FileEntry;
@@ -1227,6 +1228,10 @@ bool IsImplicitlyInstantiatedDfn(const clang::FunctionDecl* decl) {
 // --- Utilities for Type.
 
 const Type* GetTypeOf(const Expr* expr) {
+  if (const auto* decl_ref_expr = dyn_cast<DeclRefExpr>(expr))
+    return decl_ref_expr->getDecl()->getType().getTypePtr();
+  if (const auto* cast_expr = dyn_cast<ExplicitCastExpr>(expr))
+    return cast_expr->getTypeAsWritten().getTypePtr();
   return expr->getType().getTypePtr();
 }
 

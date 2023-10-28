@@ -53,8 +53,6 @@ void Fn() {
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   (void)sizeof(ref_nonprovided);
   (void)sizeof(ProvidingRefAlias);
-  // TODO: avoid unwanted reporting.
-  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   (void)sizeof(ref_provided);
 
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
@@ -62,8 +60,6 @@ void Fn() {
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   ref_nonprovided.Method();
   ptr_provided->Method();
-  // TODO: avoid unwanted reporting.
-  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   ref_provided.Method();
 
   try {
@@ -80,8 +76,6 @@ void Fn() {
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   for (auto i : ref_nonprovided)
     ;
-  // TODO: avoid unwanted reporting.
-  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   for (auto i : ref_provided)
     ;
 
@@ -91,8 +85,6 @@ void Fn() {
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   (void)static_cast<NonProvidingRefAlias>(*pB);
   (void)static_cast<ProvidingPtrAlias>(pB);
-  // TODO: avoid unwanted reporting.
-  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   (void)static_cast<ProvidingRefAlias>(*pB);
 
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
@@ -112,8 +104,6 @@ void Fn() {
 
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   ref_nonprovided << 1;
-  // TODO: avoid unwanted reporting.
-  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   ref_provided << 1;
 
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
@@ -129,8 +119,6 @@ void Fn() {
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   (void)sizeof(VarArgFn(ref_nonprovided));
   (void)sizeof(VarArgFn(ptr_provided));
-  // TODO: avoid unwanted reporting.
-  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   (void)sizeof(VarArgFn(ref_provided));
 
   const std::type_info& type_info1 = typeid(NonProvidingPtrAlias);
