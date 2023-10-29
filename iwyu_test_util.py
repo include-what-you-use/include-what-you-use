@@ -163,7 +163,7 @@ def _GetCommandOutput(command):
 
 def _GetMatchingLines(regex, file_names):
   """Returns a map: file location => string matching `regex`.
-  
+
   File location is a tuple (file_name, line number starting from 1)."""
 
   loc_to_line = {}
@@ -463,7 +463,7 @@ def _GetLaunchArguments(cc_file):
       args = args[:-1] + ' ' + line
 
     if args.endswith('\\'):
-      raise SyntaxError('%s:%s syntax error in multiline IWYU_ARGS' % 
+      raise SyntaxError('%s:%s syntax error in multiline IWYU_ARGS' %
           (cc_file, lineno))
 
   return shlex.split(args)
