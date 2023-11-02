@@ -20,7 +20,6 @@
 #include <string>
 #include <utility>
 
-#include "iwyu_globals.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/ArgList.h"
@@ -193,8 +192,6 @@ bool ExecuteAction(int argc, const char** argv,
   if (!compilation)
     return false;
 
-  ParseToolChain(compilation->getDefaultToolChain());
-
   // FIXME: This is copied from ASTUnit.cpp; simplify and eliminate.
 
   // We expect to get back exactly one command job, if we didn't something
@@ -239,7 +236,8 @@ bool ExecuteAction(int argc, const char** argv,
     return false;
 
   // Create and execute the IWYU frontend action.
-  unique_ptr<FrontendAction> action(make_iwyu_action());
+  const ToolChain& toolchain = compilation->getDefaultToolChain();
+  unique_ptr<FrontendAction> action(make_iwyu_action(toolchain));
   return compiler->ExecuteAction(*action);
 }
 

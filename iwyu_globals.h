@@ -59,8 +59,8 @@ class OptionsParser {
   const char** clang_argv_;
 };
 
-void ParseToolChain(const clang::driver::ToolChain&);
-void InitGlobals(clang::CompilerInstance& compiler);
+void InitGlobals(clang::CompilerInstance& compiler,
+                 const clang::driver::ToolChain& toolchain);
 
 // Can be called by tests -- doesn't need a SourceManager or
 // argc/argv.  Note that GlobalSourceManager() and DefaultDataGetter()

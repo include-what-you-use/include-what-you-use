@@ -15,13 +15,19 @@
 
 namespace clang {
 class FrontendAction;
+
+namespace driver {
+class ToolChain;
+}
 }
 
 namespace include_what_you_use {
 
 using clang::FrontendAction;
+using clang::driver::ToolChain;
 
-typedef std::function<std::unique_ptr<FrontendAction>()> ActionFactory;
+typedef std::function<std::unique_ptr<FrontendAction>(const ToolChain&)>
+    ActionFactory;
 
 // Use Clang's Driver to parse the command-line arguments, set up the state for
 // the compilation, and execute the right action. IWYU action type is injected
