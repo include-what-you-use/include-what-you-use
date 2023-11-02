@@ -49,8 +49,6 @@ namespace include_what_you_use {
 
 static CommandlineFlags* commandline_flags = nullptr;
 static clang::SourceManager* source_manager = nullptr;
-static ToolChain::CXXStdlibType cxx_stdlib_type =
-    ToolChain::CXXStdlibType::CST_Libstdcxx;
 static IncludePicker* include_picker = nullptr;
 static const clang::LangOptions default_lang_options;
 static const clang::PrintingPolicy default_print_policy(default_lang_options);
@@ -441,25 +439,26 @@ static CStdLib DeriveCStdLib() {
   return CStdLib::Glibc;
 }
 
-static CXXStdLib DeriveCXXStdLib() {
+static CXXStdLib DeriveCXXStdLib(const ToolChain& toolchain) {
   if (GlobalFlags().no_default_mappings)
     return CXXStdLib::None;
   if (GlobalFlags().HasExperimentalFlag("clang_mappings"))
     return CXXStdLib::ClangSymbols;
-  if (cxx_stdlib_type == ToolChain::CXXStdlibType::CST_Libcxx)
-    return CXXStdLib::Libcxx;
-  return CXXStdLib::Libstdcxx;
-}
 
-void ParseToolChain(const clang::driver::ToolChain& tc) {
-  // Get standard library that has been requested. Get this from the
-  // ToolChain. This should already have been parsed, so pass in an
-  // empty arglist.
+  // Get standard library requested for the compilation. ToolChain caches the
+  // already-parsed args, so pass in an empty arglist.
   llvm::opt::InputArgList nullargs;
-  cxx_stdlib_type = tc.GetCXXStdlibType(nullargs);
+  switch (toolchain.GetCXXStdlibType(nullargs)) {
+    case ToolChain::CXXStdlibType::CST_Libcxx:
+      return CXXStdLib::Libcxx;
+    case ToolChain::CXXStdlibType::CST_Libstdcxx:
+      return CXXStdLib::Libstdcxx;
+  }
+  CHECK_UNREACHABLE_("covered switch for CXXStdlibType above");
 }
 
-void InitGlobals(clang::CompilerInstance& compiler) {
+void InitGlobals(clang::CompilerInstance& compiler,
+                 const ToolChain& toolchain) {
   source_manager = &compiler.getSourceManager();
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
   vector<HeaderSearchPath> search_paths = ComputeHeaderSearchPaths(
@@ -468,7 +467,7 @@ void InitGlobals(clang::CompilerInstance& compiler) {
 
   RegexDialect regex_dialect = GlobalFlags().regex_dialect;
   CStdLib cstdlib = DeriveCStdLib();
-  CXXStdLib cxxstdlib = DeriveCXXStdLib();
+  CXXStdLib cxxstdlib = DeriveCXXStdLib(toolchain);
   include_picker = new IncludePicker(regex_dialect, cstdlib, cxxstdlib);
 
   function_calls_full_use_cache = new FullUseCache;
