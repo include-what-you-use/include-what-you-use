@@ -433,7 +433,7 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
   return NormalizeHeaderSearchPaths(search_path_map);
 }
 
-static CStdLib DeriveCStdLib(clang::CompilerInstance&) {
+static CStdLib DeriveCStdLib() {
   if (GlobalFlags().no_default_mappings)
     return CStdLib::None;
   if (GlobalFlags().HasExperimentalFlag("clang_mappings"))
@@ -441,7 +441,7 @@ static CStdLib DeriveCStdLib(clang::CompilerInstance&) {
   return CStdLib::Glibc;
 }
 
-static CXXStdLib DeriveCXXStdLib(clang::CompilerInstance& compiler) {
+static CXXStdLib DeriveCXXStdLib() {
   if (GlobalFlags().no_default_mappings)
     return CXXStdLib::None;
   if (GlobalFlags().HasExperimentalFlag("clang_mappings"))
@@ -467,8 +467,8 @@ void InitGlobals(clang::CompilerInstance& compiler) {
   SetHeaderSearchPaths(search_paths);
 
   RegexDialect regex_dialect = GlobalFlags().regex_dialect;
-  CStdLib cstdlib = DeriveCStdLib(compiler);
-  CXXStdLib cxxstdlib = DeriveCXXStdLib(compiler);
+  CStdLib cstdlib = DeriveCStdLib();
+  CXXStdLib cxxstdlib = DeriveCXXStdLib();
   include_picker = new IncludePicker(regex_dialect, cstdlib, cxxstdlib);
 
   function_calls_full_use_cache = new FullUseCache;
