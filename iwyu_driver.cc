@@ -30,6 +30,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
@@ -37,6 +38,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/FrontendTool/Utils.h"
 
 namespace llvm {
 class LLVMContext;
@@ -47,7 +49,9 @@ using clang::CompilerInvocation;
 using clang::DiagnosticIDs;
 using clang::DiagnosticOptions;
 using clang::DiagnosticsEngine;
+using clang::FrontendAction;
 using clang::TextDiagnosticPrinter;
+using clang::driver::Action;
 using clang::driver::Command;
 using clang::driver::Compilation;
 using clang::driver::Driver;
@@ -155,6 +159,22 @@ void ExpandArgv(int argc, const char **argv,
   }
 }
 
+bool HasPreprocessOnlyArgs(llvm::ArrayRef<const char*> args) {
+  auto is_preprocess_only = [](StringRef arg) {
+    // Handle GCC spelling.
+    if (arg == "-E")
+      return true;
+
+    // Handle MSVC spellings.
+    if (arg == "/E" || arg == "/EP" || arg == "/P")
+      return true;
+
+    return false;
+  };
+
+  return llvm::any_of(args, is_preprocess_only);
+}
+
 }  // anonymous namespace
 
 bool ExecuteAction(int argc, const char** argv,
@@ -186,7 +206,12 @@ bool ExecuteAction(int argc, const char** argv,
   // FIXME: This is a hack to try to force the driver to do something we can
   // recognize. We need to extend the driver library to support this use model
   // (basically, exactly one input, and the operation mode is hard wired).
-  args.push_back("-fsyntax-only");
+
+  // Add -fsyntax-only to avoid code generation, unless user asked for
+  // preprocessing-only.
+  if (!HasPreprocessOnlyArgs(args)) {
+    args.push_back("-fsyntax-only");
+  }
 
   unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
   if (!compilation)
@@ -235,9 +260,25 @@ bool ExecuteAction(int argc, const char** argv,
   if (!compiler->hasDiagnostics())
     return false;
 
-  // Create and execute the IWYU frontend action.
-  const ToolChain& toolchain = compilation->getDefaultToolChain();
-  unique_ptr<FrontendAction> action(make_iwyu_action(toolchain));
+  unique_ptr<FrontendAction> action;
+  switch (command.getSource().getKind()) {
+    case Action::PreprocessJobClass:
+      // Let Clang create a preprocessing frontend action.
+      action = CreateFrontendAction(*compiler);
+      break;
+
+    case Action::CompileJobClass:
+      // Drop compiler job and run IWYU instead.
+      action = make_iwyu_action(compilation->getDefaultToolChain());
+      break;
+
+    default:
+      errs() << "error: expected compiler or preprocessor job, found:\n";
+      command.Print(errs(), "\n", true);
+      return false;
+  }
+
+  // Run the action.
   return compiler->ExecuteAction(*action);
 }
 

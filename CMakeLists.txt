@@ -162,6 +162,7 @@ else()
     clangAST
     clangSema
     clangFrontend
+    clangFrontendTool
     clangDriver
 
     # Revision [1] in clang moved PCHContainerOperations from Frontend
