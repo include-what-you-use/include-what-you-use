@@ -72,6 +72,7 @@ using clang::DependentScopeDeclRefExpr;
 using clang::DependentTemplateName;
 using clang::DependentTemplateSpecializationType;
 using clang::ElaboratedType;
+using clang::ElaboratedTypeKeyword;
 using clang::EnumDecl;
 using clang::Expr;
 using clang::ExprWithCleanups;
@@ -250,7 +251,8 @@ bool IsElaboratedTypeSpecifier(const ASTNode* ast_node) {
   if (ast_node == nullptr)
     return false;
   const ElaboratedType* elaborated_type = ast_node->GetAs<ElaboratedType>();
-  return elaborated_type && elaborated_type->getKeyword() != clang::ETK_None;
+  return elaborated_type &&
+         elaborated_type->getKeyword() != ElaboratedTypeKeyword::None;
 }
 
 const ASTNode* MostElaboratedAncestor(const ASTNode* ast_node) {
