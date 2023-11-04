@@ -36,18 +36,18 @@ namespace include_what_you_use {
 // required full use of MyClass, but not of allocator<MyClass>).
 // TODO(csilvers): put this somewhere easier to modify, and add to it.
 static const char* const kFullUseTypes[] = {
-  "__gnu_cxx::hash_map",
-  "__gnu_cxx::hash_multimap",
-  "__gnu_cxx::hash_multiset",
-  "__gnu_cxx::hash_set",
-  "std::deque",
-  "std::list",
-  "std::map",
-  "std::multimap",
-  "std::multiset",
-  "std::set",
-  "std::slist",
-  "std::vector",
+    "__gnu_cxx::hash_map",
+    "__gnu_cxx::hash_multimap",
+    "__gnu_cxx::hash_multiset",
+    "__gnu_cxx::hash_set",
+    "std::deque",
+    "std::list",
+    "std::map",
+    "std::multimap",
+    "std::multiset",
+    "std::set",
+    "std::slist",
+    "std::vector",
 };
 
 // If the passed-in tpl_decl is one of the classes we have hard-coded
@@ -60,8 +60,8 @@ static const char* const kFullUseTypes[] = {
 // to instantiate methods, making the hard-coding much easier.
 map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
     const TemplateSpecializationType* tpl_type) {
-  static const int fulluse_size = (sizeof(kFullUseTypes) /
-                                   sizeof(*kFullUseTypes));
+  static const int fulluse_size =
+      (sizeof(kFullUseTypes) / sizeof(*kFullUseTypes));
   static const set<string> fulluse_types(kFullUseTypes,
                                          kFullUseTypes + fulluse_size);
 
@@ -76,8 +76,8 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
           DynCastFrom(tpl_decl)) {
     const TemplateArgumentList& all_tpl_args = tpl_spec_decl->getTemplateArgs();
     for (unsigned i = 0; i < all_tpl_args.size(); ++i) {
-      CHECK_((all_tpl_args.get(i).getKind() == TemplateArgument::Type)
-             && "kFullUseType types must contain only 'type' template args");
+      CHECK_((all_tpl_args.get(i).getKind() == TemplateArgument::Type) &&
+             "kFullUseType types must contain only 'type' template args");
     }
   }
 
