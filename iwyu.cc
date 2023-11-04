@@ -178,6 +178,7 @@ using clang::ArraySubscriptExpr;
 using clang::Attr;
 using clang::BinaryOperator;
 using clang::CXXBaseSpecifier;
+using clang::CXXBindTemporaryExpr;
 using clang::CXXCatchStmt;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
@@ -2170,7 +2171,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     ReportIfReferenceVararg(expr->getArgs(), expr->getNumArgs(),
                             expr->getConstructor());
 
-    HandleAutocastOnCallSite(expr);
+    if (IsAutocastExpr(current_ast_node()))
+      HandleAutocastOnCallSite(expr);
+    else
+      HandleNonAutocastConstruction(expr);
 
     return true;
   }
@@ -2589,6 +2593,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // 'Tpl<Providing>::Type'.
   bool IsProvidedByTplArg(const Type*) = delete;
 
+  // Returns 'true' if either argument or "destination" (currently, function
+  // argument type if it is an argument construction) of 'CXXConstructExpr'
+  // provides the constructed type. In that case, the type should not
+  // be reported.
+  bool SourceOrTargetTypeIsProvided(const ASTNode* construct_expr_node) const =
+      delete;
+
   set<const Type*> GetProvidedTypes(const Type* type,
                                     SourceLocation loc) const {
     set<const Type*> retval;
@@ -2722,11 +2733,20 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // here.  *However*, the function-author can override this
     // iwyu requirement, in which case we're responsible for the
     // casted-to type.  See IwyuBaseASTVisitor::CanBeProvidedTypeComponent.
-    if (!IsAutocastExpr(current_ast_node()))
-      return;
     const Type* type = expr->getType().getTypePtr();
     ReportWithAdditionalBlockedTypes(
         type, GetProvidedTypesForAutocast(current_ast_node()));
+  }
+
+  void HandleNonAutocastConstruction(clang::CXXConstructExpr* expr) {
+    // Avoid reporting of class members from implicit constructor member
+    // initializers: it is redundant and may be attributed to incorrect location
+    // on macro expansion.
+    if (IsCXXConstructExprInInitializer(current_ast_node()))
+      return;
+    if (this->getDerived().SourceOrTargetTypeIsProvided(current_ast_node()))
+      return;
+    ReportTypeUse(CurrentLoc(), expr->getType().getTypePtr(), DerefKind::None);
   }
 
   // Do not add any variables here!  If you do, they will not be shared
@@ -3265,6 +3285,12 @@ class InstantiatedTemplateVisitor
   bool IsProvidedByTplArg(const Type*) {
     // Already inside template instantiation analysis. Types provided
     // by template arguments should be in 'blocked_types_' set.
+    return false;
+  }
+
+  bool SourceOrTargetTypeIsProvided(const ASTNode* construct_expr_node) const {
+    // During instantiated template analysis, provided types are extracted
+    // from template arguments and are in 'blocked_types_' set.
     return false;
   }
 
@@ -4309,6 +4335,35 @@ class IwyuAstConsumer
           return data.provided_types.count(GetCanonicalType(type));
         }
       }
+    }
+    return false;
+  }
+
+  bool SourceOrTargetTypeIsProvided(const ASTNode* construct_expr_node) const {
+    const auto* expr = construct_expr_node->GetAs<CXXConstructExpr>();
+    CHECK_(expr);
+    const Type* type = GetCanonicalType(GetTypeOf(expr));
+    if (expr->getConstructor()->isCopyOrMoveConstructor()) {
+      const Type* source_type =
+          GetTypeOf(expr->getArg(0)->IgnoreParenImpCasts());
+      if (GetProvidedTypeComponents(source_type).count(type))
+        return true;
+    }
+
+    auto get_call_expr = [](const ASTNode* node) -> const CallExpr* {
+      if (const auto* call_expr = node->template GetParentAs<CallExpr>())
+        return call_expr;
+      if (node->template ParentIsA<CXXBindTemporaryExpr>())
+        return node->template GetAncestorAs<CallExpr>(2);
+      return nullptr;
+    };
+
+    if (const CallExpr* call_expr = get_call_expr(construct_expr_node)) {
+      const FunctionDecl* fn_decl = call_expr->getDirectCallee();
+      // For nontemplated functions, 'CXXConstructExpr' type appears to be
+      // sugared and hence handled correctly inside 'ReportTypeUse'.
+      if (GetTplInstData(fn_decl, call_expr).provided_types.count(type))
+        return true;
     }
     return false;
   }
