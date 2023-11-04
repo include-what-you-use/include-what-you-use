@@ -11,10 +11,13 @@
 
 // Tests the precomputed template-arg-use list in iwyu_cache.cc.
 
+#include <forward_list>
 #include <list>
 #include <vector>
 #include <set>
 #include <map>
+#include <unordered_map>
+#include <unordered_set>
 #include <bitset>
 #include "tests/cxx/precomputed_tpl_args-d1.h"
 
@@ -88,6 +91,8 @@ void Fn() {
   (void)sizeof(std::vector<IndirectClass>);
   // IWYU: IndirectClass needs a declaration
   (void)sizeof(std::list<IndirectClass>);
+  // IWYU: IndirectClass needs a declaration
+  (void)sizeof(std::forward_list<IndirectClass>);
 
   // Full type is still needed for the other standard containers.
   // IWYU: IndirectClass needs a declaration
@@ -102,12 +107,28 @@ void Fn() {
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   (void)sizeof(std::multimap<IndirectClass, int>);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::unordered_set<IndirectClass>);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::unordered_multiset<IndirectClass>);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::unordered_map<IndirectClass, int>);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::unordered_multimap<IndirectClass, int>);
 
   // Full type is required for, e.g., destroying sequence containers.
   // IWYU: IndirectClass needs a declaration
   std::list<IndirectClass>* l = nullptr;
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   delete l;
+  // IWYU: IndirectClass needs a declaration
+  std::forward_list<IndirectClass>* fl = nullptr;
+  // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
+  delete fl;
 }
 
 /**** IWYU_SUMMARY
@@ -119,9 +140,12 @@ tests/cxx/precomputed_tpl_args.cc should remove these lines:
 
 The full include-list for tests/cxx/precomputed_tpl_args.cc:
 #include <bitset>  // for bitset
+#include <forward_list>  // for forward_list
 #include <list>  // for list
 #include <map>  // for map, multimap
 #include <set>  // for multiset, set
+#include <unordered_map>  // for unordered_map, unordered_multimap
+#include <unordered_set>  // for unordered_multiset, unordered_set
 #include <vector>  // for vector
 #include "tests/cxx/precomputed_tpl_args-d1.h"  // for D1SpecializationClass, less
 #include "tests/cxx/precomputed_tpl_args-i1.h"  // for IndirectClass, SpecializationClass, less

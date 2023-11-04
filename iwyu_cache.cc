@@ -48,6 +48,10 @@ static const char* const kFullUseTypes[] = {
     "std::multiset",
     "std::set",
     "std::slist",
+    "std::unordered_map",
+    "std::unordered_multimap",
+    "std::unordered_multiset",
+    "std::unordered_set",
 };
 
 // If the passed-in tpl_decl is one of the classes we have hard-coded
@@ -64,7 +68,7 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
       (sizeof(kFullUseTypes) / sizeof(*kFullUseTypes));
   set<string> fulluse_types(kFullUseTypes, kFullUseTypes + fulluse_size);
   if (!lang_opts.CPlusPlus17)
-    fulluse_types.insert({"std::list", "std::vector"});
+    fulluse_types.insert({"std::forward_list", "std::list", "std::vector"});
 
   const NamedDecl* tpl_decl = TypeToDeclAsWritten(tpl_type);
   if (!ContainsKey(fulluse_types, GetWrittenQualifiedNameAsString(tpl_decl)))
