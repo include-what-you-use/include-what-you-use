@@ -120,6 +120,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -148,6 +149,7 @@ using clang::ASTConsumer;
 using clang::ASTContext;
 using clang::ASTFrontendAction;
 using clang::Attr;
+using clang::CXXBaseSpecifier;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
 using clang::CXXDeleteExpr;
@@ -3485,6 +3487,11 @@ class InstantiatedTemplateVisitor
       if (isa<CXXMethodDecl>(*it) || isa<FunctionTemplateDecl>(*it))
         continue;
       if (!TraverseDecl(*it))
+        return false;
+    }
+
+    for (const CXXBaseSpecifier& base : class_decl->bases()) {
+      if (!TraverseType(base.getType()))
         return false;
     }
 
