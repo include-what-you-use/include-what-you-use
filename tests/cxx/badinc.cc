@@ -704,6 +704,7 @@ I1_TemplateClass<I1_Class> i1_templateclass_object;
 // IWYU: I1_TemplateClass is...*badinc-i1.h
 // IWYU: I1_Class needs a declaration
 // IWYU: I1_Class is...*badinc-i1.h
+// IWYU: I1_Union is...*badinc-i1.h
 I1_TemplateClass<std::vector<I1_Class> > i1_nested_templateclass(i1_union);
 // We need full type info for i1_templateclass because we never
 // fwd-declare a class with default template parameters.
@@ -1297,6 +1298,7 @@ int main() {
   I2_Class i2_class_from_struct = ctor_cast_struct;   // ctor takes a reference
   // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Union is...*badinc-i2.h
   I2_Class i2_class_from_union = ctor_cast_union;   // ctor takes a value
 
   // User-defined casts need the full from-type (to call its operator totype()).
@@ -1553,6 +1555,7 @@ int main() {
       // IWYU: I1_TemplateClass is...*badinc-i1.h
       // IWYU: I2_Class needs a declaration
       // IWYU: I2_Class is...*badinc-i2.h
+      // IWYU: I1_Union is...*badinc-i1.h
       = new I1_TemplateClass<I2_Class, I1_Struct>(i1_union);
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_Class is...*badinc-i1.h
@@ -1620,6 +1623,7 @@ int main() {
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   // IWYU: I2_Class needs a declaration
   // IWYU: I2_Class is...*badinc-i2.h
+  // IWYU: I1_Union is...*badinc-i1.h
   I1_TemplateClass<I2_Class, I1_Struct> local_i1_templateclass(i1_union);
   // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
   // IWYU: I1_Struct needs a declaration
@@ -1627,6 +1631,7 @@ int main() {
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   // IWYU: I2_Class needs a declaration
   // IWYU: I2_Class is...*badinc-i2.h
+  // IWYU: I1_Union is...*badinc-i1.h
   (void)I1_TemplateClass<I2_Class, I1_Struct>(i1_union);
 
   (void)(*(new int(4)));

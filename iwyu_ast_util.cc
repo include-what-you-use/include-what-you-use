@@ -204,6 +204,11 @@ static const Type* DesugarAliasTypes(const Type* type) {
   return type;
 }
 
+static bool IsImplicitConversionCtor(const CXXConstructorDecl* ctor) {
+  return !ctor->isExplicit() && ctor->getNumParams() == 1 &&
+         !ctor->isCopyOrMoveConstructor();
+}
+
 }  // anonymous namespace
 
 //------------------------------------------------------------
@@ -386,8 +391,7 @@ bool IsAutocastExpr(const ASTNode* ast_node) {
   // Explicitly written CXXTemporaryObjectExpr aren't 'autocast' expressions.
   if (expr->getStmtClass() != Stmt::StmtClass::CXXConstructExprClass)
     return false;
-  // Copy or move constructors are not 'autocast' constructors.
-  if (expr->getConstructor()->isCopyOrMoveConstructor())
+  if (!IsImplicitConversionCtor(expr->getConstructor()))
     return false;
   return ast_node->template HasAncestorOfType<CallExpr>();
 }
@@ -709,8 +713,7 @@ bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
 
   for (CXXRecordDecl::ctor_iterator ctor = cxx_class->ctor_begin();
        ctor != cxx_class->ctor_end(); ++ctor) {
-    if (ctor->isExplicit() || ctor->getNumParams() != 1 ||
-        ctor->isCopyConstructor() || ctor->isMoveConstructor())
+    if (!IsImplicitConversionCtor(*ctor))
       continue;
     return true;
   }

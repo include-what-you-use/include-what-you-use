@@ -11,3 +11,13 @@ struct IndirectWithImplicitCtor {
   // This is the implicit ctor.
   IndirectWithImplicitCtor(int x) {}
 };
+
+struct NoAutocastCtor {
+  NoAutocastCtor();
+  NoAutocastCtor(int, int);
+};
+
+struct NoTrivialCtorDtor {
+  NoTrivialCtorDtor();
+  ~NoTrivialCtorDtor();
+};
