@@ -7,7 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/explicit_instantiation-spec.h" -I .
+// IWYU_ARGS: -Xiwyu --check_also=tests/cxx/explicit_instantiation-spec.h \
+//            -Xiwyu --check_also=tests/cxx/explicit_instantiation-template.h \
+//            -I .
 
 #include "tests/cxx/explicit_instantiation-spec.h"
 #include "tests/cxx/explicit_instantiation-template_direct.h"
@@ -40,10 +42,20 @@ extern template class Template<char>;
 extern template class Template<int*>;
 template class Template<int*>;
 
+// IWYU: Template is...*explicit_instantiation-template.h
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+extern template class Template<IndirectClass>;
+// IWYU: Template is...*explicit_instantiation-template.h
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+template class Template<IndirectClass>;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/explicit_instantiation.cc should add these lines:
 #include "tests/cxx/explicit_instantiation-template.h"
+#include "tests/cxx/indirect.h"
 
 tests/cxx/explicit_instantiation.cc should remove these lines:
 - #include "tests/cxx/explicit_instantiation-template_direct.h"  // lines XX-XX
@@ -51,5 +63,6 @@ tests/cxx/explicit_instantiation.cc should remove these lines:
 The full include-list for tests/cxx/explicit_instantiation.cc:
 #include "tests/cxx/explicit_instantiation-spec.h"  // for Template
 #include "tests/cxx/explicit_instantiation-template.h"  // for Template
+#include "tests/cxx/indirect.h"  // for IndirectClass
 
 ***** IWYU_SUMMARY */

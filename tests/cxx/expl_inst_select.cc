@@ -19,7 +19,6 @@
 template class Template<char>;
 
 // An explicit instantiation declaration for later use.
-// IWYU: Template needs a declaration...*
 // IWYU: Template is...*expl_inst_select-i1.h
 extern template class Template<int>;
 
