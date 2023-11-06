@@ -578,15 +578,6 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     return true;
   }
 
-  // Class template specialization are similar to regular C++ classes,
-  // particularly they need the same custom handling of implicit destructors.
-  bool TraverseClassTemplateSpecializationDecl(
-      clang::ClassTemplateSpecializationDecl* decl) {
-    if (!Base::TraverseClassTemplateSpecializationDecl(decl))
-      return false;
-    return Base::TraverseCXXRecordDecl(decl);
-  }
-
   //------------------------------------------------------------
   // (5) Add TraverseImplicitDestructorCall and HandleFunctionCall.
 
@@ -3150,7 +3141,8 @@ class InstantiatedTemplateVisitor
         VERRS(6) << "Recursively traversing " << PrintableDecl(cts_decl)
                  << " which was full-used and does not involve a known"
                  << " template param\n";
-        TraverseDecl(const_cast<ClassTemplateSpecializationDecl*>(cts_decl));
+        TraverseCXXRecordDecl(
+            const_cast<ClassTemplateSpecializationDecl*>(cts_decl));
       }
     }
   }
