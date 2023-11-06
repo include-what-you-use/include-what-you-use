@@ -7,7 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "explicit_instantiation-template_direct.h"
+// IWYU_ARGS: -I .
+
+#include "tests/cxx/explicit_instantiation-template_direct.h"
 
 // Test that all explicit instantiations variants of the base template
 // require the full type:
@@ -37,12 +39,12 @@ extern template class Template<char>;
 /**** IWYU_SUMMARY
 
 tests/cxx/explicit_instantiation.cc should add these lines:
-#include "explicit_instantiation-template.h"
+#include "tests/cxx/explicit_instantiation-template.h"
 
 tests/cxx/explicit_instantiation.cc should remove these lines:
-- #include "explicit_instantiation-template_direct.h"  // lines XX-XX
+- #include "tests/cxx/explicit_instantiation-template_direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/explicit_instantiation.cc:
-#include "explicit_instantiation-template.h"  // for Template
+#include "tests/cxx/explicit_instantiation-template.h"  // for Template
 
 ***** IWYU_SUMMARY */
