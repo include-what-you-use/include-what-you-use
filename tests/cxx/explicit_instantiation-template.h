@@ -21,6 +21,20 @@ class Template {
   Inner<T> x;
 };
 
+template <typename T>
+class ClassWithUsingMethod {
+  void Fn() {
+    T t;
+  }
+};
+
+template <typename T>
+class ClassWithMethodUsingPtr {
+  void Fn() {
+    T* t;
+  }
+};
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_EXPLICIT_INSTANTIATION_TEMPLATE_H_
 
 /**** IWYU_SUMMARY
