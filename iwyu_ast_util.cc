@@ -1055,6 +1055,15 @@ bool IsExplicitInstantiation(const clang::Decl* decl) {
          kind == clang::TSK_ExplicitInstantiationDefinition;
 }
 
+bool IsExplicitInstantiationDefinitionAsWritten(
+    const clang::ClassTemplateSpecializationDecl* decl) {
+  // When swithing instantiation declaration to definition, clang preserves
+  // the 'extern' keyword location info.
+  return decl->getSpecializationKind() ==
+             clang::TSK_ExplicitInstantiationDefinition &&
+         decl->getExternLoc().isInvalid();
+}
+
 bool IsInInlineNamespace(const Decl* decl) {
   const DeclContext* dc = decl->getDeclContext();
   for (; dc; dc = dc->getParent()) {

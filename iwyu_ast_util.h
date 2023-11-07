@@ -37,6 +37,7 @@ class CXXRecordDecl;
 class CallExpr;
 class CastExpr;
 class ClassTemplateDecl;
+class ClassTemplateSpecializationDecl;
 class Expr;
 class FunctionDecl;
 class NamedDecl;
@@ -623,6 +624,14 @@ bool IsFriendDecl(const clang::Decl* decl);
 // Returns true if this decl is an explicit template instantiation declaration
 // or definition.
 bool IsExplicitInstantiation(const clang::Decl* decl);
+
+// If an explicit instantiation definition follows the corresponding explicit
+// instantiation declaration, clang marks the first declaration as definition.
+// This function returns true if the given specialization declaration
+// corresponds to the genuine instantiation definition, as written
+// in the source.
+bool IsExplicitInstantiationDefinitionAsWritten(
+    const clang::ClassTemplateSpecializationDecl*);
 
 // Returns true if this decl is nested inside an inline namespace.
 bool IsInInlineNamespace(const clang::Decl* decl);

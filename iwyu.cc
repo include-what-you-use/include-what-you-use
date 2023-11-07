@@ -3976,16 +3976,36 @@ class IwyuAstConsumer
   // we don't want iwyu to recommend removing the 'forward declare' of Foo.
   //
   // Additionally, this type of decl is also used to represent explicit template
-  // instantiations, in which case we want the full type, not only a forward
-  // declaration. But it is reported from VisitTemplateSpecializationType, hence
-  // may be ignored here.
+  // instantiations. Only instantiation definitions causing instantiation of
+  // member functions are handled here. Other instantiated parts of the template
+  // are handled in 'VisitTemplateSpecializationType', as usual.
   bool VisitClassTemplateSpecializationDecl(
       clang::ClassTemplateSpecializationDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    if (!IsExplicitInstantiation(decl))
+    if (!IsExplicitInstantiation(decl)) {
       ReportDeclForwardDeclareUse(CurrentLoc(), decl->getSpecializedTemplate());
+    } else if (IsExplicitInstantiationDefinitionAsWritten(decl)) {
+      // Explicit instantiation definition causes instantiation of all
+      // the template methods. Scan them here to assure that all the needed
+      // template argument types are '#include'd.
+      const TypeLoc type_loc = decl->getTypeAsWritten()->getTypeLoc();
+      // Clang attributes 'ClassTemplateSpecializationDecl' to the original
+      // template location. Construct a new node corresponding to the template
+      // spec type location (as written) so that reportings from
+      // 'InstantiatedTemplateVisitor' are attributed to the correct location.
+      const ASTNode type_loc_node(&type_loc);
+      const map<const Type*, const Type*> resugar_map =
+          GetTplTypeResugarMapForClass(type_loc.getTypePtr());
+      // Clang instantiates methods in the first ("canonical") spec decl context
+      // (which may correspond to instantiation declaration, not to definition).
+      for (const CXXMethodDecl* member : decl->getCanonicalDecl()->methods()) {
+        instantiated_template_visitor_.ScanInstantiatedFunction(
+            member, type_loc.getTypePtr(), &type_loc_node, resugar_map,
+            ExtractProvidedTypeComponents(resugar_map));
+      }
+    }
 
     return Base::VisitClassTemplateSpecializationDecl(decl);
   }
