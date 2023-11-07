@@ -159,7 +159,6 @@ using clang::CXXNewExpr;
 using clang::CXXOperatorCallExpr;
 using clang::CXXRecordDecl;
 using clang::CallExpr;
-using clang::ClassTemplateDecl;
 using clang::ClassTemplateSpecializationDecl;
 using clang::CompilerInstance;
 using clang::ConceptSpecializationExpr;
@@ -3986,17 +3985,15 @@ class IwyuAstConsumer
   //
   // Additionally, this type of decl is also used to represent explicit template
   // instantiations, in which case we want the full type, not only a forward
-  // declaration.
+  // declaration. But it is reported from VisitTemplateSpecializationType, hence
+  // may be ignored here.
   bool VisitClassTemplateSpecializationDecl(
       clang::ClassTemplateSpecializationDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    ClassTemplateDecl* specialized_decl = decl->getSpecializedTemplate();
 
-    if (IsExplicitInstantiation(decl))
-      ReportDeclUse(CurrentLoc(), specialized_decl);
-    else
-      ReportDeclForwardDeclareUse(CurrentLoc(), specialized_decl);
+    if (!IsExplicitInstantiation(decl))
+      ReportDeclForwardDeclareUse(CurrentLoc(), decl->getSpecializedTemplate());
 
     return Base::VisitClassTemplateSpecializationDecl(decl);
   }
