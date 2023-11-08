@@ -168,7 +168,6 @@ using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::DeducedTemplateSpecializationType;
-using clang::ElaboratedTypeKeyword;
 using clang::ElaboratedTypeLoc;
 using clang::EnumConstantDecl;
 using clang::EnumDecl;
@@ -4198,7 +4197,7 @@ class IwyuAstConsumer
   }
 
   bool VisitElaboratedTypeLoc(ElaboratedTypeLoc type_loc) {
-    if (type_loc.getTypePtr()->getKeyword() != ElaboratedTypeKeyword::None) {
+    if (type_loc.getTypePtr()->getKeyword() != clang::ETK_None) {
       preprocessor_info()
           .FileInfoFor(CurrentFileEntry())
           ->AddElaboratedType(type_loc);
