@@ -3981,16 +3981,18 @@ class IwyuAstConsumer
   // are handled in 'VisitTemplateSpecializationType', as usual.
   bool VisitClassTemplateSpecializationDecl(
       clang::ClassTemplateSpecializationDecl* decl) {
-    if (CanIgnoreCurrentASTNode())
-      return true;
-
     if (!IsExplicitInstantiation(decl)) {
-      ReportDeclForwardDeclareUse(CurrentLoc(), decl->getSpecializedTemplate());
+      if (!CanIgnoreCurrentASTNode()) {
+        ReportDeclForwardDeclareUse(CurrentLoc(),
+                                    decl->getSpecializedTemplate());
+      }
     } else if (IsExplicitInstantiationDefinitionAsWritten(decl)) {
       // Explicit instantiation definition causes instantiation of all
       // the template methods. Scan them here to assure that all the needed
       // template argument types are '#include'd.
       const TypeLoc type_loc = decl->getTypeAsWritten()->getTypeLoc();
+      if (CanIgnoreLocation(GetLocation(&type_loc)))
+        return true;
       // Clang attributes 'ClassTemplateSpecializationDecl' to the original
       // template location. Construct a new node corresponding to the template
       // spec type location (as written) so that reportings from
