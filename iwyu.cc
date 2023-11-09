@@ -3476,6 +3476,12 @@ class InstantiatedTemplateVisitor
     if (ReplayClassMemberUsesFromPrecomputedList(type))
       return true;
 
+    // Sometimes, an implicit specialization occurs to be not instantiated.
+    // TODO(bolshakov): don't report them at all as full uses or figure out
+    // how to scan them.
+    if (!class_decl->hasDefinition())
+      return true;
+
     // Make sure all the types we report in the recursive TraverseDecl
     // calls, below, end up in the cache for class_decl.
     CacheStoringScope css(&cache_storers_, ClassMembersFullUseCache(),
