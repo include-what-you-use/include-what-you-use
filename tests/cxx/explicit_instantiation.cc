@@ -13,6 +13,7 @@
 
 #include "tests/cxx/explicit_instantiation-spec.h"
 #include "tests/cxx/explicit_instantiation-template_direct.h"
+#include "tests/cxx/explicit_instantiation-template2.h"
 
 // Test that all explicit instantiations variants of the base template
 // require the full type:
@@ -86,6 +87,12 @@ template class ClassWithUsingMethod<ProvidingTypedef>;
 // IWYU: IndirectClass needs a declaration
 template class ClassWithMethodUsingPtr<IndirectClass>;
 
+// Test traversal of instantiated class methods when the instantiated template
+// file is not analyzed (not included with 'check_also' command line option).
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+template class ClassWithUsingMethod2<IndirectClass>;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/explicit_instantiation.cc should add these lines:
@@ -98,6 +105,7 @@ tests/cxx/explicit_instantiation.cc should remove these lines:
 The full include-list for tests/cxx/explicit_instantiation.cc:
 #include "tests/cxx/explicit_instantiation-spec.h"  // for Template
 #include "tests/cxx/explicit_instantiation-template.h"  // for ClassWithMethodUsingPtr, ClassWithUsingMethod, Template
+#include "tests/cxx/explicit_instantiation-template2.h"  // for ClassWithUsingMethod2
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 
 ***** IWYU_SUMMARY */
