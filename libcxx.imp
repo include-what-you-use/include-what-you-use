@@ -7,17 +7,18 @@
   # For the following entries:
   # cd llvm-project/libcxx/include ; find -type d -name "__*" | sort | sed -e "s#./__\(.*\)#  { include: [\"@<__\1/.*>\", private, \"<\1>\", public ] },#"
   #
-  # tweak tuple_dir entry, and comment out debug_utils, fwd, support
+  # tweak locale_dir entry, and comment out debug_utils, fwd, pstl, support
   { include: ["@<__algorithm/.*>", private, "<algorithm>", public ] },
-  { include: ["@<__atomic/.*>", private, "<atomic>", public] },
-  { include: ["@<__algorithm/.*>", private, "<algorithm>", public ] },
+  { include: ["@<__atomic/.*>", private, "<atomic>", public ] },
   { include: ["@<__bit/.*>", private, "<bit>", public ] },
   { include: ["@<__charconv/.*>", private, "<charconv>", public ] },
   { include: ["@<__chrono/.*>", private, "<chrono>", public ] },
   { include: ["@<__compare/.*>", private, "<compare>", public ] },
   { include: ["@<__concepts/.*>", private, "<concepts>", public ] },
+  { include: ["@<__condition_variable/.*>", private, "<condition_variable>", public ] },
   { include: ["@<__coroutine/.*>", private, "<coroutine>", public ] },
   #{ include: ["@<__debug_utils/.*>", private, "<debug_utils>", public ] },
+  { include: ["@<__exception/.*>", private, "<exception>", public ] },
   { include: ["@<__expected/.*>", private, "<expected>", public ] },
   { include: ["@<__filesystem/.*>", private, "<filesystem>", public ] },
   { include: ["@<__format/.*>", private, "<format>", public ] },
@@ -25,15 +26,21 @@
   #{ include: ["@<__fwd/.*>", private, "<fwd>", public ] },
   { include: ["@<__ios/.*>", private, "<ios>", public ] },
   { include: ["@<__iterator/.*>", private, "<iterator>", public ] },
+  { include: ["@<__locale_dir/.*>", private, "<locale>", public ] },
+  { include: ["@<__mdspan/.*>", private, "<mdspan>", public ] },
   { include: ["@<__memory/.*>", private, "<memory>", public ] },
   { include: ["@<__memory_resource/.*>", private, "<memory_resource>", public ] },
+  { include: ["@<__mutex/.*>", private, "<mutex>", public ] },
   { include: ["@<__numeric/.*>", private, "<numeric>", public ] },
+  #{ include: ["@<__pstl/.*>", private, "<pstl>", public ] },
   { include: ["@<__random/.*>", private, "<random>", public ] },
   { include: ["@<__ranges/.*>", private, "<ranges>", public ] },
+  { include: ["@<__stop_token/.*>", private, "<stop_token>", public ] },
   { include: ["@<__string/.*>", private, "<string>", public ] },
   #{ include: ["@<__support/.*>", private, "<support>", public ] },
+  { include: ["@<__system_error/.*>", private, "<system_error>", public ] },
   { include: ["@<__thread/.*>", private, "<thread>", public ] },
-  { include: ["@<__tuple_dir/.*>", private, "<tuple>", public ] },
+  { include: ["@<__tuple/.*>", private, "<tuple>", public ] },
   { include: ["@<__type_traits/.*>", private, "<type_traits>", public ] },
   { include: ["@<__utility/.*>", private, "<utility>", public ] },
   { include: ["@<__variant/.*>", private, "<variant>", public ] },
@@ -42,6 +49,9 @@
 
   # For older MacOS libc++ (13.0.0), on macOS Ventura (13.2.1)
   { include: ["<__functional_base>", private, "<functional>", public ] },
+
+  # For older libc++ (16.x)
+  { include: ["@<__tuple_dir/.*>", private, "<tuple>", public ] },
 
   { symbol: [ "std::string", private, "<string>", public ] },
 ]

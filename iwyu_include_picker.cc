@@ -970,17 +970,18 @@ const IncludeMapEntry libcxx_include_map[] = {
     // For the following entries:
     // cd llvm-project/libcxx/include ; find -type d -name "__*" | sort | sed -e "s#./__\(.*\)#  { \"@<__\1/.*>\", kPrivate, \"<\1>\", kPublic },#"
     //
-    // tweak tuple_dir entry, and comment out debug_utils, fwd, support
+    // tweak locale_dir entry, and comment out debug_utils, fwd, pstl, support
     {"@<__algorithm/.*>", kPrivate, "<algorithm>", kPublic},
     {"@<__atomic/.*>", kPrivate, "<atomic>", kPublic},
-    {"@<__algorithm/.*>", kPrivate, "<algorithm>", kPublic},
     {"@<__bit/.*>", kPrivate, "<bit>", kPublic},
     {"@<__charconv/.*>", kPrivate, "<charconv>", kPublic},
     {"@<__chrono/.*>", kPrivate, "<chrono>", kPublic},
     {"@<__compare/.*>", kPrivate, "<compare>", kPublic},
     {"@<__concepts/.*>", kPrivate, "<concepts>", kPublic},
+    {"@<__condition_variable/.*>", kPrivate, "<condition_variable>", kPublic},
     {"@<__coroutine/.*>", kPrivate, "<coroutine>", kPublic},
     //{ "@<__debug_utils/.*>", kPrivate, "<debug_utils>", kPublic },
+    {"@<__exception/.*>", kPrivate, "<exception>", kPublic},
     {"@<__expected/.*>", kPrivate, "<expected>", kPublic},
     {"@<__filesystem/.*>", kPrivate, "<filesystem>", kPublic},
     {"@<__format/.*>", kPrivate, "<format>", kPublic},
@@ -988,21 +989,30 @@ const IncludeMapEntry libcxx_include_map[] = {
     //{ "@<__fwd/.*>", kPrivate, "<fwd>", kPublic },
     {"@<__ios/.*>", kPrivate, "<ios>", kPublic},
     {"@<__iterator/.*>", kPrivate, "<iterator>", kPublic},
+    {"@<__locale_dir/.*>", kPrivate, "<locale>", kPublic},
+    {"@<__mdspan/.*>", kPrivate, "<mdspan>", kPublic},
     {"@<__memory/.*>", kPrivate, "<memory>", kPublic},
     {"@<__memory_resource/.*>", kPrivate, "<memory_resource>", kPublic},
+    {"@<__mutex/.*>", kPrivate, "<mutex>", kPublic},
     {"@<__numeric/.*>", kPrivate, "<numeric>", kPublic},
+    //{"@<__pstl/.*>", kPrivate, "<pstl>", kPublic},
     {"@<__random/.*>", kPrivate, "<random>", kPublic},
     {"@<__ranges/.*>", kPrivate, "<ranges>", kPublic},
+    {"@<__stop_token/.*>", kPrivate, "<stop_token>", kPublic},
     {"@<__string/.*>", kPrivate, "<string>", kPublic},
     //{ "@<__support/.*>", kPrivate, "<support>", kPublic },
+    {"@<__system_error/.*>", kPrivate, "<system_error>", kPublic},
     {"@<__thread/.*>", kPrivate, "<thread>", kPublic},
-    {"@<__tuple_dir/.*>", kPrivate, "<tuple>", kPublic},
+    {"@<__tuple/.*>", kPrivate, "<tuple>", kPublic},
     {"@<__type_traits/.*>", kPrivate, "<type_traits>", kPublic},
     {"@<__utility/.*>", kPrivate, "<utility>", kPublic},
     {"@<__variant/.*>", kPrivate, "<variant>", kPublic},
 
     // For older MacOS libc++ (13.0.0), on macOS Ventura (13.2.1)
     {"<__functional_base>", kPrivate, "<functional>", kPublic},
+
+    // For older libc++ (16.x)
+    {"@<__tuple_dir/.*>", kPrivate, "<tuple>", kPublic},
 };
 
 // Returns true if str is a valid quoted filepath pattern (i.e. either
