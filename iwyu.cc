@@ -4388,7 +4388,7 @@ class IwyuAction : public ASTFrontendAction {
 
 using include_what_you_use::OptionsParser;
 using include_what_you_use::IwyuAction;
-using include_what_you_use::CreateCompilerInstance;
+using include_what_you_use::ExecuteAction;
 
 int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj scoped_shutdown;
@@ -4403,16 +4403,9 @@ int main(int argc, char **argv) {
   //   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu --other_iwyu_flag]... \
   //       CLANG_FLAGS... foo.cc
   OptionsParser options_parser(argc, argv);
-
-  std::unique_ptr<clang::CompilerInstance> compiler(CreateCompilerInstance(
-      options_parser.clang_argc(), options_parser.clang_argv()));
-  if (!compiler) {
+  if (!ExecuteAction(options_parser.clang_argc(), options_parser.clang_argv(),
+                     []() { return std::make_unique<IwyuAction>(); })) {
     return EXIT_FAILURE;
   }
-
-  // Create and execute the frontend to generate an LLVM bitcode module.
-  std::unique_ptr<clang::ASTFrontendAction> action(new IwyuAction);
-  compiler->ExecuteAction(*action);
-
   return EXIT_SUCCESS;
 }
