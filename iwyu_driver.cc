@@ -11,6 +11,7 @@
 // argv.
 
 // Everything below is adapted from clang/examples/clang-interpreter/main.cpp.
+#include "iwyu_driver.h"
 
 #include <cctype>
 #include <cstdint>
@@ -155,8 +156,6 @@ void ExpandArgv(int argc, const char **argv,
   }
 }
 
-}  // anonymous namespace
-
 CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
   std::string path = GetExecutablePath(argv[0]);
   IntrusiveRefCntPtr<DiagnosticOptions> diagnostic_options =
@@ -238,6 +237,20 @@ CompilerInstance* CreateCompilerInstance(int argc, const char **argv) {
     return nullptr;
 
   return compiler;
+}
+
+}  // anonymous namespace
+
+bool ExecuteAction(int argc, const char** argv, ActionFactory make_iwyu_action) {
+  unique_ptr<clang::CompilerInstance> compiler(
+      CreateCompilerInstance(argc, argv));
+  if (!compiler) {
+    return false;
+  }
+
+  // Create and execute the IWYU frontend action.
+  unique_ptr<FrontendAction> action(make_iwyu_action());
+  return compiler->ExecuteAction(*action);
 }
 
 }  // namespace include_what_you_use

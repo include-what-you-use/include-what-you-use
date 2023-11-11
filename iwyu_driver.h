@@ -10,15 +10,23 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_DRIVER_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_DRIVER_H_
 
+#include <functional>
+#include <memory>
+
 namespace clang {
-class CompilerInstance;
+class FrontendAction;
 }
 
 namespace include_what_you_use {
 
-// Creates a CompilerInstance object based on the commandline
-// arguments, or NULL if there's an error of some sort.
-clang::CompilerInstance* CreateCompilerInstance(int argc, const char **argv);
+using clang::FrontendAction;
+
+typedef std::function<std::unique_ptr<FrontendAction>()> ActionFactory;
+
+// Use Clang's Driver to parse the command-line arguments, set up the state for
+// the compilation, and execute the right action. IWYU action type is injected
+// via factory callback.
+bool ExecuteAction(int argc, const char** argv, ActionFactory make_iwyu_action);
 
 }  // namespace include_what_you_use
 
