@@ -3405,21 +3405,7 @@ class InstantiatedTemplateVisitor
     }
 
     // We need to iterate over the function.
-    if (!TraverseDecl(const_cast<FunctionDecl*>(fn_decl)))
-      return false;
-
-    // If we're a constructor, we also need to construct the entire class,
-    // even typedefs that aren't used at construct time. Try compiling
-    //    template<class T> struct C { typedef typename T::a t; };
-    //    class S; int main() { C<S> c; }
-    if (isa<CXXConstructorDecl>(fn_decl)) {
-      CHECK_(parent_type && "How can a constructor have no parent?");
-      parent_type = Desugar(parent_type);
-      if (!TraverseDataAndTypeMembersOfClassHelper(
-              dyn_cast<TemplateSpecializationType>(parent_type)))
-        return false;
-    }
-    return true;
+    return TraverseDecl(const_cast<FunctionDecl*>(fn_decl));
   }
 
   // Does the actual recursing over data members and type members of
