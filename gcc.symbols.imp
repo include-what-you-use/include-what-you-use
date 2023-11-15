@@ -44,7 +44,6 @@
   { symbol: [ "intmax_t", private, "<stdint.h>", public ] },
   { symbol: [ "uintmax_t", private, "<stdint.h>", public ] },
   { symbol: [ "ino64_t", private, "<sys/types.h>", public ] },
-  { symbol: [ "ino64_t", private, "<dirent.h>", public ] },
   { symbol: [ "ino_t", private, "<sys/types.h>", public ] },
   { symbol: [ "int8_t", private, "<stdint.h>", public ] },
   { symbol: [ "int16_t", private, "<stdint.h>", public ] },

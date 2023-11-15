@@ -122,7 +122,6 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "intmax_t", kPrivate, "<stdint.h>", kPublic },
   { "uintmax_t", kPrivate, "<stdint.h>", kPublic },
   { "ino64_t", kPrivate, "<sys/types.h>", kPublic },
-  { "ino64_t", kPrivate, "<dirent.h>", kPublic },
   { "ino_t", kPrivate, "<sys/types.h>", kPublic },
   { "int8_t", kPrivate, "<stdint.h>", kPublic },
   { "int16_t", kPrivate, "<stdint.h>", kPublic },
