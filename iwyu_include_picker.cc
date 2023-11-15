@@ -182,7 +182,6 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "size_t", kPrivate, "<stdio.h>", kPublic },
   { "size_t", kPrivate, "<stdlib.h>", kPublic },
   { "size_t", kPrivate, "<string.h>", kPublic },
-  { "size_t", kPrivate, "<sys/types.h>", kPublic },
   { "size_t", kPrivate, "<time.h>", kPublic },
   { "size_t", kPrivate, "<uchar.h>", kPublic },
   { "size_t", kPrivate, "<wchar.h>", kPublic },

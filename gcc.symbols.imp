@@ -102,7 +102,6 @@
   { symbol: [ "size_t", private, "<stdio.h>", public ] },
   { symbol: [ "size_t", private, "<stdlib.h>", public ] },
   { symbol: [ "size_t", private, "<string.h>", public ] },
-  { symbol: [ "size_t", private, "<sys/types.h>", public ] },
   { symbol: [ "size_t", private, "<time.h>", public ] },
   { symbol: [ "size_t", private, "<uchar.h>", public ] },
   { symbol: [ "size_t", private, "<wchar.h>", public ] },
