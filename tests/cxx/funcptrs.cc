@@ -58,7 +58,6 @@ void FreeFunctions() {
   Enum (*fptr)(Class*) = &Function;
 
   // IWYU: Class needs a declaration
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: FunctionTemplate is...*funcptrs-i1.h
   int (*template_fptr)(Class*) = &FunctionTemplate<Retval>;
@@ -67,7 +66,6 @@ void FreeFunctions() {
   // IWYU: Function is...*funcptrs-i1.h
   FunctionThatTakesFptr(Function);
 
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: FunctionTemplate is...*funcptrs-i1.h
   FunctionThatTakesFptr(FunctionTemplate<Retval>);
@@ -76,7 +74,6 @@ void FreeFunctions() {
   // IWYU: Function is...*funcptrs-i1.h
   &Function;
 
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: FunctionTemplate is...*funcptrs-i1.h
   &FunctionTemplate<Retval>;
@@ -98,7 +95,6 @@ void ClassMembers() {
   int (*static_method_ptr)() = &Class::StaticMemberFunction;
 
   // IWYU: Class is...*funcptrs-i1.h
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   int (*static_template_method_ptr)() = &Class::StaticMemberTemplate<Retval>;
 
@@ -106,7 +102,6 @@ void ClassMembers() {
   int (Class::*method_ptr)() const = &Class::MemberFunction;
 
   // IWYU: Class is...*funcptrs-i1.h
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   int (Class::*template_method_ptr)() const = &Class::MemberTemplate<Retval>;
 
@@ -114,7 +109,6 @@ void ClassMembers() {
   // IWYU: Class is...*funcptrs-i1.h
   FunctionThatTakesFptr(Class::StaticMemberFunction);
 
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: Class is...*funcptrs-i1.h
   FunctionThatTakesFptr(Class::StaticMemberTemplate<Retval>);
@@ -123,7 +117,6 @@ void ClassMembers() {
   // IWYU: Class is...*funcptrs-i1.h
   FunctionThatTakesMptr(&Class::MemberFunction);
 
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: Class is...*funcptrs-i1.h
   FunctionThatTakesMptr(&Class::MemberTemplate<Retval>);
@@ -132,7 +125,6 @@ void ClassMembers() {
   // IWYU: Class is...*funcptrs-i1.h
   &Class::StaticMemberFunction;
 
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: Class is...*funcptrs-i1.h
   &Class::StaticMemberTemplate<Retval>;
@@ -140,7 +132,6 @@ void ClassMembers() {
   // IWYU: Class is...*funcptrs-i1.h
   &Class::MemberFunction;
 
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: Class is...*funcptrs-i1.h
   &Class::MemberTemplate<Retval>;
@@ -154,7 +145,6 @@ void ClassTemplateMembers() {
   int (*static_template_method_ptr)() =
       // IWYU: ClassTemplate is...*funcptrs-i1.h
       // IWYU: Class needs a declaration
-      // IWYU: Retval needs a declaration
       // IWYU: Retval is...*funcptrs-i1.h
       &ClassTemplate<Class>::StaticMemberTemplate<Retval>;
 
@@ -170,7 +160,6 @@ void ClassTemplateMembers() {
   int (ClassTemplate<Class>::*template_method_ptr)() const =
       // IWYU: ClassTemplate is...*funcptrs-i1.h
       // IWYU: Class needs a declaration
-      // IWYU: Retval needs a declaration
       // IWYU: Retval is...*funcptrs-i1.h
       &ClassTemplate<Class>::MemberTemplate<Retval>;
 
@@ -179,7 +168,6 @@ void ClassTemplateMembers() {
   // IWYU: Class needs a declaration
   FunctionThatTakesFptr(ClassTemplate<Class>::StaticMemberFunction);
 
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: ClassTemplate is...*funcptrs-i1.h
   // IWYU: Class needs a declaration
@@ -190,7 +178,6 @@ void ClassTemplateMembers() {
   // IWYU: Class needs a declaration
   FunctionThatTakesMptr(&ClassTemplate<Class>::MemberFunction);
 
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: ClassTemplate is...*funcptrs-i1.h
   // IWYU: Class needs a declaration
@@ -201,7 +188,6 @@ void ClassTemplateMembers() {
   // IWYU: Class needs a declaration
   &ClassTemplate<Class>::StaticMemberFunction;
 
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: ClassTemplate is...*funcptrs-i1.h
   // IWYU: Class needs a declaration
@@ -211,7 +197,6 @@ void ClassTemplateMembers() {
   // IWYU: Class needs a declaration
   &ClassTemplate<Class>::MemberFunction;
 
-  // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: ClassTemplate is...*funcptrs-i1.h
   // IWYU: Class needs a declaration

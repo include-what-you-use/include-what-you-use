@@ -28,12 +28,10 @@ template <typename R, typename A1> struct FunctionStruct<R(A1)> {
 };
 
 void FunctionProtoClassArguments() {
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   FunctionStruct<char(IndirectClass&)> f1;
   (void)f1;
 
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   FunctionStruct<IndirectClass(char)> f2;
   (void)f2;
@@ -61,19 +59,15 @@ void PointerClassArguments() {
   // IWYU: IndirectClass needs a declaration
   IndirectClass* ic = 0;
 
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   PointerStruct<IndirectClass*>::a(ic);
 
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   DoublePointerStruct<IndirectClass**>::a(&ic);
 
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   PointerStruct2<IndirectClass>::a(ic);
 
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   DoublePointerStruct2<IndirectClass>::a(&ic);
 }
@@ -90,7 +84,6 @@ struct StaticTemplateFieldStruct {
 };
 
 void NestedTemplateArguments() {
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   Outer<Inner<IndirectClass> > oi;
   (void)oi;
@@ -170,15 +163,12 @@ void TestCreateTemporary() {
   ct.a();
 
   // IWYU: IndirectClass is...*indirect.h
-  // IWYU: IndirectClass needs a declaration
   ct.b<IndirectClass>();
 
   // IWYU: IndirectClass is...*indirect.h
-  // IWYU: IndirectClass needs a declaration
   CreateTemporary<IndirectClass>::statica();
 
   // IWYU: IndirectClass is...*indirect.h
-  // IWYU: IndirectClass needs a declaration
   CreateTemporary<int>::staticb<IndirectClass>();
 }
 

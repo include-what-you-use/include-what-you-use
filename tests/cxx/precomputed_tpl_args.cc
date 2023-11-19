@@ -25,23 +25,19 @@ template <typename T> struct Identity {
   T t;
 };
 
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
 std::vector<IndirectClass> ic_vec;
 
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
 std::vector<Identity<IndirectClass> > i_ic_vec;
 
 // IWYU: IndirectClass needs a declaration
 std::vector<IndirectClass*> icptr_vec;
 
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
 std::set<IndirectClass> ic_set;
 
 // This class provides a specialization of less that we should see.
-// IWYU: SpecializationClass needs a declaration
 // IWYU: SpecializationClass is...*precomputed_tpl_args-i1.h
 // IWYU: std::less is...*precomputed_tpl_args-i1.h
 std::set<SpecializationClass> sc_set;
@@ -68,19 +64,15 @@ std::bitset<5> bitset;
 
 template<typename T> class TemplatedClass {
   // IWYU: SpecializationClass is...*precomputed_tpl_args-i1.h
-  // IWYU: SpecializationClass needs a declaration
   std::map<SpecializationClass, T> t1;
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
-  // IWYU: IndirectClass needs a declaration
   std::map<T, IndirectClass> t3;
 };
 
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
 TemplatedClass<IndirectClass> tc_ic;
 
 // TODO(csilvers): IWYU: std::less is...*precomputed_tpl_args-i1.h
-// IWYU: SpecializationClass needs a declaration
 // IWYU: SpecializationClass is...*precomputed_tpl_args-i1.h
 TemplatedClass<SpecializationClass> tc_sc;
 
@@ -95,28 +87,20 @@ void Fn() {
   (void)sizeof(std::forward_list<IndirectClass>);
 
   // Full type is still needed for the other standard containers.
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   (void)sizeof(std::set<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   (void)sizeof(std::multiset<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   (void)sizeof(std::map<IndirectClass, int>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   (void)sizeof(std::multimap<IndirectClass, int>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   (void)sizeof(std::unordered_set<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   (void)sizeof(std::unordered_multiset<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   (void)sizeof(std::unordered_map<IndirectClass, int>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   (void)sizeof(std::unordered_multimap<IndirectClass, int>);
 

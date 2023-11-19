@@ -44,14 +44,12 @@ template <typename T> struct SizeofTakingStructTplRef2 {
 };
 
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 size_t s = sizeof(IndirectClass&);
 
 // This needs the full type of IndirectTemplateStruct, but also
 // IndirectClass, which is used in the IndirectTemplateStruct
 // instantiation.
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 size_t s2 = sizeof(IndirectTemplateStruct<IndirectClass>&);
 
 // This does not need the full type information for IndirectClass.
@@ -61,7 +59,6 @@ size_t s3 = sizeof(IndirectTemplateStruct<IndirectClass&>);
 // This needs the full type information of IndirectClass because the
 // subclass takes the sizeof().
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 size_t s4 = sizeof(SizeofTakingStruct<IndirectClass&>);
 
 // Also check when sizeof is on a variable, not a type.
@@ -73,11 +70,9 @@ IndirectClass& ref = dummy;
 size_t s5 = sizeof(dummy);
 
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 SizeofTakingStruct<IndirectClass&> sizeof_taking_struct1;
 
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 SizeofTakingStructRef<IndirectClass> sizeof_taking_struct2;
 
 // sizeof(IndirectTemplateStruct<IndirectClass&>) doesn't require IndirectClass
@@ -95,7 +90,6 @@ SizeofTakingStructTpl<IndirectClass&> sizeof_taking_struct3;
 SizeofTakingStructTplRef<IndirectClass> sizeof_taking_struct4;
 
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 SizeofTakingStructTplRef2<IndirectClass> sizeof_taking_struct5;
 
 // sizeof(IndirectTemplateStruct<IndirectClass&>) doesn't require IndirectClass

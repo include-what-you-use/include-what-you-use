@@ -48,7 +48,6 @@ void PointerArithmetic() {
 }
 
 // IWYU: IndirectTemplate is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 IndirectTemplate<IndirectClass> itc1, itc2;
 

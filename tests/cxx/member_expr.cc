@@ -88,7 +88,6 @@ int PtrFn(const IndirectTemplate<IndirectClass>* ic) {
 
 void TemplateStaticFn() {
   // IWYU: IndirectTemplate is...*indirect.h
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   IndirectTemplate<IndirectClass>::StaticMethod();
 }

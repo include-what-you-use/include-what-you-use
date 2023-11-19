@@ -44,11 +44,9 @@ extern template class Template<int*>;
 template class Template<int*>;
 
 // IWYU: Template is...*explicit_instantiation-template.h
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 extern template class Template<IndirectClass>;
 // IWYU: Template is...*explicit_instantiation-template.h
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 template class Template<IndirectClass>;
 
@@ -65,13 +63,11 @@ extern template class ClassWithUsingMethod<IndirectClass>;
 // IWYU: IndirectClass needs a declaration
 extern template class ClassWithUsingMethod<IndirectClass>;
 // IWYU: ClassWithUsingMethod is...*explicit_instantiation-template.h
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 template class ClassWithUsingMethod<IndirectClass>;
 
 // Instantiation definition only.
 // IWYU: ClassWithUsingMethod is...*explicit_instantiation-template.h
-// IWYU: IndirectTemplate needs a declaration
 // IWYU: IndirectTemplate is...*indirect.h
 template class ClassWithUsingMethod<IndirectTemplate<int>>;
 
@@ -89,7 +85,6 @@ template class ClassWithMethodUsingPtr<IndirectClass>;
 
 // Test traversal of instantiated class methods when the instantiated template
 // file is not analyzed (not included with 'check_also' command line option).
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 template class ClassWithUsingMethod2<IndirectClass>;
 

@@ -24,7 +24,6 @@ struct InheritanceFromTplInheritedFromT : DirectInheritance<T> {};
 template <typename T>
 struct TplInBaseNNS : InheritanceFromTplInheritedFromT<T>::Inner {};
 
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 constexpr auto s1 = sizeof(TplInBaseNNS<IndirectClass>);
 
@@ -33,7 +32,6 @@ template <typename T>
 // IWYU: IndirectTemplate is...*indirect.h
 struct InheritanceFromTplWithTMember : IndirectTemplate<T> {};
 
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 constexpr auto s2 = sizeof(InheritanceFromTplWithTMember<IndirectClass>);
 

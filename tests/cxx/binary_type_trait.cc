@@ -13,9 +13,7 @@
 
 int main() {
     // IWYU: BinaryTypeTraitBase is...*binary_type_trait-i1.h
-    // IWYU: BinaryTypeTraitBase needs a declaration
     // IWYU: BinaryTypeTraitDerived is...*binary_type_trait-i2.h
-    // IWYU: BinaryTypeTraitDerived needs a declaration
     static_assert(__is_convertible_to(BinaryTypeTraitDerived*, BinaryTypeTraitBase*),
         "Derived should be convertible to the Base class");
 
@@ -25,9 +23,7 @@ int main() {
         "Indirect pointers shouldn't be convertible");
 
     // IWYU: BinaryTypeTraitBase is...*binary_type_trait-i1.h
-    // IWYU: BinaryTypeTraitBase needs a declaration
     // IWYU: BinaryTypeTraitDerived is...*tests/cxx/binary_type_trait-i2.h
-    // IWYU: BinaryTypeTraitDerived needs a declaration
     static_assert(__is_convertible_to(BinaryTypeTraitDerived&, BinaryTypeTraitBase&),
         "Derived should be convertible to the Base class");
 }

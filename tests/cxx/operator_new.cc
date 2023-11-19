@@ -18,14 +18,12 @@
 // The most primitive ::operator new/delete are builtins, and are basically
 // wrappers around malloc.
 void ExplicitOperators() {
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   IndirectClass* elem = (IndirectClass*)::operator new(sizeof(IndirectClass));
   ::operator delete(elem);
 
   // IWYU: IndirectClass needs a declaration
   IndirectClass* arr =
-      // IWYU: IndirectClass needs a declaration
       // IWYU: IndirectClass is...*indirect.h
       (IndirectClass*)::operator new[](4 * sizeof(IndirectClass));
   ::operator delete[](arr);
@@ -50,13 +48,11 @@ void TplFnWithDelete(T p) {
 }
 
 void ExpressionsUserTypes() {
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   IndirectClass* elem = new IndirectClass;
   // IWYU: IndirectClass is...*indirect.h
   delete elem;
 
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   IndirectClass* arr = new IndirectClass[4];
   // IWYU: IndirectClass is...*indirect.h

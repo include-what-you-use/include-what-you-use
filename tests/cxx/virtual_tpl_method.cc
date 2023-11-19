@@ -32,19 +32,16 @@ template <typename T> struct Deleter {
 
 // Note we require the full type even though we don't call Delete.
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 Deleter<IndirectClass> d(0);
 
 // IWYU: IndirectClass needs a declaration
 Deleter<IndirectClass>* pd
 // Another way to instantiate a template, also requirs the full type.
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
     = new Deleter<IndirectClass>(0);
 
 // This also instantiates the template, and thus requires the deleted-type.
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 int id = Deleter<IndirectClass>::NothingToDoWithDelete();
 
 

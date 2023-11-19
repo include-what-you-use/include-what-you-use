@@ -26,7 +26,6 @@ struct Public {
 };
 
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 Public<IndirectClass> p;
 
 /**** IWYU_SUMMARY

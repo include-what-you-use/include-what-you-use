@@ -20,14 +20,12 @@ template<class T> struct FullUseTemplateArgInSizeof {
 // Test that we go through alias template and handle aliased template
 // specialization.
 template<class T> using Alias = FullUseTemplateArgInSizeof<T>;
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 Alias<IndirectClass> alias;
 
 // Test following through entire chain of aliases.
 template<class T> using AliasChain1 = FullUseTemplateArgInSizeof<T>;
 template<class T> using AliasChain2 = AliasChain1<T>;
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 AliasChain2<IndirectClass> aliasChain;
 
@@ -44,13 +42,11 @@ struct FullUseTemplateArgAsVar {
 template <typename T>
 using AliasNested = FullUseTemplateArgAsVar<FullUseTemplateArgAsVar<T>>;
 
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 AliasNested<IndirectClass> aliasNested;
 
 template <typename T>
 using AliasNested2 = FullUseTemplateArgInSizeof<FullUseTemplateArgInSizeof<T>>;
-// IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 AliasNested2<IndirectClass> aliasNested2;
 

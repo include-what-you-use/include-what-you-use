@@ -24,40 +24,28 @@
 #include "tests/cxx/direct.h"
 
 void Fn() {
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::vector<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::deque<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::list<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::forward_list<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::set<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::multiset<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::map<IndirectClass, int>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::multimap<IndirectClass, int>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::unordered_set<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::unordered_multiset<IndirectClass>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::unordered_map<IndirectClass, int>);
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(std::unordered_multimap<IndirectClass, int>);
 }

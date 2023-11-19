@@ -1736,9 +1736,35 @@ static string GetWarningMsg(const OneUse& use) {
 
 int IwyuFileInfo::EmitWarningMessages(const vector<OneUse>& uses) {
   set<pair<int, string>> iwyu_warnings;   // line-number, warning-msg.
+
+  // Report all full uses, and build an index of their (line,decl).
+  set<pair<int, const NamedDecl*>> full_use_index;
   for (const OneUse& use : uses) {
-    if (use.is_iwyu_violation())
-      iwyu_warnings.insert(make_pair(use.UseLinenum(), GetWarningMsg(use)));
+    if (!use.is_iwyu_violation() || !use.is_full_use())
+      continue;
+
+    int line = use.UseLinenum();
+    iwyu_warnings.insert(std::make_pair(line, GetWarningMsg(use)));
+    full_use_index.insert(std::make_pair(line, use.decl()));
+  }
+
+  // Report all forward-declaration, except for (line,decl) already covered by a
+  // full use.
+  for (const OneUse& use : uses) {
+    if (!use.is_iwyu_violation() || use.is_full_use())
+      continue;
+
+    // For class template implicit instantiations, fwd-decl uses refer to
+    // ClassTemplateDecl whereas full uses refer to their definition nodes.
+    // Partial specs aren't considered for simplicity.
+    const NamedDecl* decl = use.decl();
+    if (isa<ClassTemplateDecl>(decl))
+      decl = GetTagDefinition(decl);
+
+    int line = use.UseLinenum();
+    if (!full_use_index.count(std::make_pair(line, decl))) {
+      iwyu_warnings.insert(std::make_pair(line, GetWarningMsg(use)));
+    }
   }
   // Nice that set<> automatically sorts things for us!
   for (const pair<int, string>& warning : iwyu_warnings) {

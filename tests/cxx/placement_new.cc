@@ -31,7 +31,6 @@ void PlacementNewBuiltinType() {
 
 // Placement new of user-defined type.
 void PlacementNewUserType() {
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   IndirectClass* icptr = new IndirectClass;
 
@@ -49,7 +48,6 @@ static char global_buffer[256];
 #define CONSTRUCT_GLOBAL(T) new (global_buffer) T;
 
 void PlacementNewInMacro() {
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   IndirectClass* a = CONSTRUCT_GLOBAL(IndirectClass);
 }
@@ -71,7 +69,6 @@ void PlacementNewInTemplate(T t) {
 
 // Placement new when the newed type _is_ a template.
 void PlacementNewOfTemplate() {
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   // IWYU: ClassTemplate is...*placement_new-i1.h
   char template_storage[sizeof(ClassTemplate<IndirectClass, IndirectClass>)];
@@ -82,7 +79,6 @@ void PlacementNewOfTemplate() {
       // Need <new> because of placement new, and requires both template and
       // arguments as complete types.
       //
-      // IWYU: IndirectClass needs a declaration
       // IWYU: IndirectClass is...*indirect.h
       // IWYU: ClassTemplate is...*placement_new-i1.h
       // IWYU: operator new is...*<new>
@@ -99,14 +95,12 @@ void PlacementNewOfTemplate() {
 // To use 'std::nothrow' we must include <new>, even if we don't need it for
 // 'new' itself.
 void NoThrow() {
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   // IWYU: std::nothrow is...*<new>
   IndirectClass* elem = new (std::nothrow) IndirectClass;
   // IWYU: IndirectClass is...*indirect.h
   delete elem;
 
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   // IWYU: std::nothrow is...*<new>
   IndirectClass* arr = new (std::nothrow) IndirectClass[4];
@@ -120,14 +114,12 @@ void NoThrow() {
 // for 'new' itself.
 // The aligned allocation mechanics are only available as of C++17.
 void ExplicitAlignedAllocation() {
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   // IWYU: std::align_val_t is...*<new>
   IndirectClass* elem = new (std::align_val_t(32)) IndirectClass;
   // IWYU: IndirectClass is...*indirect.h
   delete elem;
 
-  // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
   // IWYU: std::align_val_t is...*<new>
   IndirectClass* arr = new (std::align_val_t(32)) IndirectClass[10];

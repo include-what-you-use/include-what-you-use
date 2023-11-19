@@ -318,7 +318,6 @@ void TestFunctionReturn() {
   // IWYU: DirectStruct2 needs a declaration
   const DirectStruct2& ds2 = DoesNotForwardDeclareAndIncludesFn();
 
-  // IWYU: IndirectStruct2 needs a declaration
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   const IndirectStruct2& is2 = DoesEverythingRightFn();
 
@@ -337,7 +336,6 @@ void TestFunctionReturn() {
   // IWYU: TplDirectStruct2 needs a declaration
   const TplDirectStruct2<int>& tds2 = TplDoesNotForwardDeclareAndIncludesFn();
 
-  // IWYU: TplIndirectStruct2 needs a declaration
   // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   const TplIndirectStruct2<int>& tis2 = TplDoesEverythingRightFn();
 
@@ -377,12 +375,9 @@ void TestFunctionReturn() {
 
   // IWYU: IndirectStruct1 needs a declaration
   // IWYU: IndirectStruct2 needs a declaration
-  // IWYU: TplIndirectStruct3 needs a declaration
   // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
   Call<TplIndirectStruct3<IndirectStruct1, IndirectStruct2>,
        TplOnlyArgumentTypeProvidedFn>();
-  // IWYU: IndirectStruct2 needs a declaration
-  // IWYU: TplIndirectStruct3 needs a declaration
   // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   Call<TplIndirectStruct3<IndirectStruct2, IndirectStruct2>,
@@ -392,7 +387,6 @@ void TestFunctionReturn() {
   // IWYU: TplDirectStruct7 needs a declaration
   Call<TplDirectStruct7<IndirectStruct1, IndirectStruct2>,
        TplAllNeededTypesProvidedFn>();
-  // IWYU: IndirectStruct2 needs a declaration
   // IWYU: TplDirectStruct7 needs a declaration
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   Call<TplDirectStruct7<IndirectStruct2, IndirectStruct2>,

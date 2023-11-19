@@ -21,7 +21,6 @@ int main() {
   }
 
   try {
-  // IWYU: CatchByRef needs a declaration...*
   // IWYU: CatchByRef...*catch-byref.h
   } catch (const CatchByRef& cbr) {
     // IWYU: LogException...*catch-logex.h
@@ -29,7 +28,6 @@ int main() {
   }
 
   try {
-  // IWYU: CatchByPtr needs a declaration...*
   // IWYU: CatchByPtr...*catch-byptr.h
   } catch (const CatchByPtr* cpr) {
     // IWYU: LogException...*catch-logex.h
@@ -38,7 +36,6 @@ int main() {
 
   // Make sure we see through elaborated types
   try {
-  // IWYU: CatchElab needs a declaration...*
   // IWYU: CatchElab...*catch-elab.h
   } catch (const Namespace::CatchElab&) {
   }
@@ -52,11 +49,9 @@ int main() {
     puts("Unknown exception");
   }
 
-  // IWYU: CatchMacro1 needs a declaration...*
   // IWYU: CatchMacro1...*catch-macro-1.h
   CHECK_THROW_1(CatchMacro1);
 
-  // IWYU: CatchMacro2 needs a declaration...*
   // IWYU: CatchMacro2...*catch-macro-2.h
   CHECK_THROW_2(CatchMacro2);
 

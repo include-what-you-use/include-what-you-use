@@ -39,17 +39,14 @@ void Declarations() {
   // of corresponding template argument type.
 
   // IWYU: Class1 is...*typedef_in_template-i1.h
-  // IWYU: Class1 needs a declaration
   // IWYU: Class2 needs a declaration
   Container<Class1, Class2>::value_type vt;
 
   // IWYU: Class1 needs a declaration
   // IWYU: Class2 is...*typedef_in_template-i2.h
-  // IWYU: Class2 needs a declaration
   Container<Class1, Class2>::pair_type pt;
 
   // IWYU: Class1 is...*typedef_in_template-i1.h
-  // IWYU: Class1 needs a declaration
   // IWYU: Class2 needs a declaration
   Container<Class1, Class2>::alias_type at;
 }
@@ -70,11 +67,9 @@ struct UsesAliasedParameter {
 };
 
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 UsesAliasedParameter<IndirectClass> a;
 
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 UsesAliasedParameter<IndirectClass>::TAlias a2;
 
 // Try a more complex example, through an additional layer of indirection.
@@ -85,7 +80,6 @@ struct IndirectlyUsesAliasedParameter {
 };
 
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 IndirectlyUsesAliasedParameter<IndirectClass> b;
 
 template <typename T>
@@ -95,7 +89,6 @@ struct NestedUseOfAliasedParameter {
 };
 
 // IWYU: IndirectClass is...*indirect.h
-// IWYU: IndirectClass needs a declaration
 NestedUseOfAliasedParameter<IndirectClass> c;
 
 /**** IWYU_SUMMARY

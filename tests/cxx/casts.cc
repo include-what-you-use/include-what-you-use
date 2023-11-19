@@ -25,7 +25,6 @@ template<typename T> void TestTemplateCastBug(CastsClass* foo) {
 int main() {
   // IWYU: CastsClass needs a declaration
   CastsClass* cc = 0;
-  // IWYU: CastsSubclass needs a declaration
   // IWYU: CastsSubclass is...*casts-i1.h
   TestTemplateCastBug<CastsSubclass>(cc);
 
