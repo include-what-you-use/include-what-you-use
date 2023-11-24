@@ -67,6 +67,12 @@ struct NonUsingType {
   T* t = nullptr;
 };
 
+template <typename T1, typename T2>
+struct WithAlias {
+  // IWYU: TplIndirectStruct2 needs a declaration
+  // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  using Type = TplIndirectStruct2<T1>;
+};
 
 typedef DoesEverythingRight DoubleTypedef;
 
@@ -236,6 +242,11 @@ void TestTypeAliases() {
   // IWYU: IndirectStruct4 is...*iwyu_stricter_than_cpp-i4.h
   // IWYU: IndirectClass is...*indirect.h
   IndirectStruct4NonProvidingAl::IndirectClassNonProvidingAl nn;
+
+  // Test that IWYU should not suggest to provide underlying type of template
+  // internal type alias on instantiation side.
+  // IWYU: TplIndirectStruct2 needs a declaration
+  WithAlias<int, TplIndirectStruct2<int>> wa;
 }
 
 void TestAutocast() {
@@ -400,6 +411,7 @@ void TestFunctionReturn() {
 
   // -- Call from a template with "providing" alias as a template argument.
 
+  // IWYU: TplIndirectStruct3 needs a declaration
   // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   using Alias = TplIndirectStruct3<IndirectStruct2, IndirectStruct2>;

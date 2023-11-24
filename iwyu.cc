@@ -2335,14 +2335,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     const NamedDecl* decl = TypeToDeclAsWritten(type);
 
-    const auto [is_provided, comment] =
-        IsProvidedTypeComponent(current_ast_node());
     // If we are forward-declarable, so are our template arguments.
-    if (CanForwardDeclareType(current_ast_node()) && !is_provided) {
+    if (CanForwardDeclareType(current_ast_node())) {
       ReportDeclForwardDeclareUse(CurrentLoc(), decl);
       current_ast_node()->set_in_forward_declare_context(true);
     } else {
-      ReportDeclUse(CurrentLoc(), decl, comment);
+      ReportDeclUse(CurrentLoc(), decl);
     }
 
     return true;
@@ -4137,6 +4135,14 @@ class IwyuAstConsumer
           current_ast_node(), resugar_map,
           ExtractProvidedTypeComponents(resugar_map));
     }
+
+    const auto [is_provided, comment] =
+        IsProvidedTypeComponent(current_ast_node());
+    // Don't call ReportTypeUse here, because scanning of template instantiation
+    // internals should be avoided: it is allowed not to provide some of
+    // template args.
+    if (is_provided)
+      ReportDeclUse(CurrentLoc(), TypeToDeclAsWritten(type), comment);
 
     return Base::VisitTemplateSpecializationType(type);
   }

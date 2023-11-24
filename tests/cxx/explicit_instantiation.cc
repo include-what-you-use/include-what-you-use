@@ -76,6 +76,7 @@ template class ClassWithUsingMethod<IndirectClass>;
 template class ClassWithUsingMethod<IndirectTemplate<int>>;
 
 // The template argument is considered to be provided with type alias.
+// IWYU: IndirectTemplate needs a declaration
 // IWYU: IndirectTemplate is...*indirect.h
 typedef IndirectTemplate<char> ProvidingTypedef;
 // IWYU: ClassWithUsingMethod is...*explicit_instantiation-template.h

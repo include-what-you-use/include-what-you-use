@@ -22,6 +22,7 @@ class Container {
   // C++11 alias declaration, should not be an iwyu violation for T1
   using alias_type = T1;
 
+  // IWYU: Pair needs a declaration
   // IWYU: Pair is...*typedef_in_template-i2.h
   typedef Pair<T2,T2> pair_type;
 };

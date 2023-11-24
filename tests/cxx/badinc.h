@@ -289,6 +289,7 @@ typedef std::set<I2_Enum> H_I2Enum_Set;
 // IWYU: std::vector is...*<vector>
 // IWYU: I2_Class is...*badinc-i2.h
 typedef std::vector<I2_Class> H_I2Class_Vector_Unused;
+// IWYU: I2_TemplateClass needs a declaration
 // IWYU: I2_TemplateClass is...*badinc-i2.h
 // IWYU: I2_TemplateClass::I2_TemplateClass<.*> is...*badinc-i2-inl.h
 // IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
