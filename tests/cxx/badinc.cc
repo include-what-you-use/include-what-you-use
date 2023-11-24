@@ -930,12 +930,14 @@ template class I1_TemplateClass<I1_ClassPtr>;
 // First, make sure the implicit instantiation instantiates some methods too.
 // IWYU: I2_TemplateClass is...*badinc-i2.h
 int i2_tpl_class_a = i2_template_class_with_inl_constructor.a();
+// IWYU: I2_TemplateClass needs a declaration
 // IWYU: I2_TemplateClass is...*badinc-i2.h
 // IWYU: I2_TemplateClass::I2_TemplateClass<.*> is...*badinc-i2-inl.h
 // IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
 // IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
 typedef I2_TemplateClass<int> Cc_typedef_implicit_instantiation;
 // Make sure we can do the same typedef multiple times.
+// IWYU: I2_TemplateClass needs a declaration
 // IWYU: I2_TemplateClass is...*badinc-i2.h
 // IWYU: I2_TemplateClass::I2_TemplateClass<.*> is...*badinc-i2-inl.h
 // IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h

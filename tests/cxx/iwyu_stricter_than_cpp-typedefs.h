@@ -42,9 +42,11 @@ typedef IndirectStruct2 DoesEverythingRight;
 
 // --- Now do it all again, with templates!
 
+// IWYU: IndirectStruct1 needs a declaration
 // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h
 typedef TplIndirectStruct1<int> TplDoesNotForwardDeclare;
 
+// IWYU: IndirectStructForwardDeclaredInD1 needs a declaration
 // IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h
 typedef TplIndirectStructForwardDeclaredInD1<int>
 TplDoesNotForwardDeclareProperly;

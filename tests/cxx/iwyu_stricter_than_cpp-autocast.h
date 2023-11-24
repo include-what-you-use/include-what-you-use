@@ -63,24 +63,30 @@ template <typename T>
 struct TplIndirectStruct2;
 
 void TplFnValues(
+    // IWYU: TplIndirectStruct1 needs a declaration
     // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     TplIndirectStruct1<char> ic1,
+    // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
     // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     struct TplIndirectStructForwardDeclaredInD1<char> icfdid1,
     TplDirectStruct1<char> dc1, struct TplDirectStruct2<char> dc2,
     TplIndirectStruct2<char> ic2);
 
 void TplFnRefs(
+    // IWYU: TplIndirectStruct1 needs a declaration
     // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     const TplIndirectStruct1<char>& ic1,
+    // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
     // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     const struct TplIndirectStructForwardDeclaredInD1<char>& icfdid1,
     const TplDirectStruct3<char>& dc1, const struct TplDirectStruct4<char>& dc2,
     const TplIndirectStruct2<char>& ic2);
 
 inline void HeaderDefinedTplFnRefs(
+    // IWYU: TplIndirectStruct1 needs a declaration
     // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     const TplIndirectStruct1<char>& ic1,
+    // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
     // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
     const struct TplIndirectStructForwardDeclaredInD1<char>& icfdid1,
     const TplDirectStruct5<char>& dc1, const struct TplDirectStruct6<char>& dc2,
@@ -149,6 +155,7 @@ inline void Fn(
 
 // Test that IWYU finds constructors even if they are not instantiated.
 
+// IWYU: NonInstantiated needs a declaration
 // IWYU: NonInstantiated is...*iwyu_stricter_than_cpp-i1.h.*for autocast
 void Fn(NonInstantiated<char>);
 

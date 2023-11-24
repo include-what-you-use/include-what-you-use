@@ -42,11 +42,13 @@ using DoesEverythingRightAl = IndirectStruct2;
 
 // --- Now do it all again, with templates!
 
+// IWYU: TplIndirectStruct1 needs a declaration
 // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h
 using TplDoesNotForwardDeclareAl = TplIndirectStruct1<int>;
 
 using TplDoesNotForwardDeclareProperlyAl
-// IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h
+    // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
+    // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h
     = TplIndirectStructForwardDeclaredInD1<int>;
 
 template <typename T> struct TplDirectStruct1;

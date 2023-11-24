@@ -39,6 +39,7 @@ IndirectStruct2 DoesEverythingRightFn();
 
 // --- Now do it all again, with templates!
 
+// IWYU: TplIndirectStruct1 needs a declaration
 // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
 TplIndirectStruct1<int> TplDoesNotForwardDeclareFn();
 
@@ -46,6 +47,7 @@ TplIndirectStruct1<int> TplDoesNotForwardDeclareFn();
 // IndirectStructForwardDeclaredInD1' does not need to be
 // forward-declared because it's elaborated, but template types need
 // to be forward-declared even when they're elaborated.
+// IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
 // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
 struct TplIndirectStructForwardDeclaredInD1<int>
 TplDoesNotForwardDeclareProperlyFn();
