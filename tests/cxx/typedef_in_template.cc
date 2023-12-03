@@ -72,6 +72,9 @@ struct UsesAliasedParameter {
 // IWYU: IndirectClass is...*indirect.h
 // IWYU: IndirectClass needs a declaration
 UsesAliasedParameter<IndirectClass> a;
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass needs a declaration
+constexpr auto s1 = sizeof(UsesAliasedParameter<IndirectClass>);
 
 // IWYU: IndirectClass is...*indirect.h
 // IWYU: IndirectClass needs a declaration
