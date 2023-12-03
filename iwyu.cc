@@ -3022,67 +3022,6 @@ class InstantiatedTemplateVisitor
     return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
   }
 
-  // Check whether a use of a template parameter is a full use.
-  bool IsTemplateTypeParmUseFullUse(const Type* type) {
-    const ASTNode* node = MostElaboratedAncestor(current_ast_node());
-
-    // If we're a nested-name-specifier class (the Foo in Foo::bar),
-    // we need our full type info no matter what the context (even if
-    // we're a pointer, or a template arg, or whatever).
-    // TODO(csilvers): consider encoding this logic via
-    // in_forward_declare_context.  I think this will require changing
-    // in_forward_declare_context to yes/no/maybe.
-    if (node->ParentIsA<NestedNameSpecifier>()) {
-      return true;
-    }
-
-    // If we're inside a typedef, we don't need our full type info --
-    // in this case we follow what the C++ language allows and let
-    // the underlying type of a typedef be forward-declared.  This has
-    // the effect that code like:
-    //   class MyClass;
-    //   template<class T> struct Foo { typedef T value_type; ... }
-    //   Foo<MyClass> f;
-    // does not make us require the full type of MyClass.  The idea
-    // is that using Foo<MyClass>::value_type already requires the
-    // type for MyClass, so it doesn't make sense for the typedef
-    // to require it as well.  TODO(csilvers): this doesn't really
-    // make any sense.  Who figures out we need the full type if
-    // you do 'Foo<MyClass>::value_type m;'?
-    for (const ASTNode* ast_node = node; ast_node != caller_ast_node_;
-         ast_node = ast_node->parent()) {
-      if (ast_node->IsA<TypedefNameDecl>()) {
-        return false;
-      }
-      if (ast_node->IsA<TemplateSpecializationType>()) {
-        // If we hit a template specialization node before the typedef then we
-        // probably still need a full-use, so stop looking.
-        break;
-      }
-    }
-
-    // sizeof(a reference type) is the same as sizeof(underlying type).
-    // We have to handle that specially here, or else we'll say the
-    // reference is forward-declarable, below.
-    if (node->ParentIsA<UnaryExprOrTypeTraitExpr>() &&
-        isa<ReferenceType>(type)) {
-      return true;
-    }
-
-    // If we're used in a forward-declare context (MyFunc<T>() { T* t; }),
-    // or are ourselves a pointer type (MyFunc<Myclass*>()),
-    // we don't need to do anything: we're fine being forward-declared.
-    if (node->in_forward_declare_context())
-      return false;
-
-    if (node->ParentIsA<PointerType>() ||
-        node->ParentIsA<LValueReferenceType>() ||
-        IsPointerOrReferenceAsWritten(type))
-      return false;
-
-    return true;
-  }
-
   // This helper is called on every use of a template argument type in an
   // instantiated template.  Its goal is to determine whether that use should
   // constitute a full-use by the template caller, and perform other necessary
@@ -3110,17 +3049,10 @@ class InstantiatedTemplateVisitor
     VERRS(6) << "AnalyzeTemplateTypeParmUse: type = " << PrintableType(type)
              << ", actual_type = " << PrintableType(actual_type) << '\n';
 
-    if (!IsTemplateTypeParmUseFullUse(actual_type)) {
+    if (CanForwardDeclareType(node)) {
       // Non-full uses will already have been reported when they were used as
       // template arguments, so nothing to do here.
       return;
-    }
-
-    if (isa<ReferenceType>(actual_type)) {
-      // If the argument type is a reference type, then we actually care about
-      // the referred-to type.
-      const ReferenceType* actual_reftype = cast<ReferenceType>(actual_type);
-      type = actual_reftype->getPointeeTypeAsWritten().getTypePtr();
     }
 
     // At this point we know we are looking at a full-use of type.  However,
