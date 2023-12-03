@@ -2445,21 +2445,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
 
         parent_type = GetTypeOf(decl);
-      } else if (const auto *decl = ast_node->GetParentAs<TypeDecl>()) {
+      } else if (const auto* parent_decl = ast_node->GetParentAs<TagDecl>()) {
         // If we ourselves are a forward-decl -- that is, we're the type
         // component of a forward-declaration (which would be our parent
         // AST node) -- then we're forward-declarable by definition.
-        if (const auto* parent_decl = ast_node->GetParentAs<TagDecl>()) {
-          if (IsForwardDecl(parent_decl))
-            return true;
-        }
-
-        // If we're part of a typedef declaration, we don't want to forward-
-        // declare even if we're a pointer ('typedef Foo* Bar; Bar x; x->a'
-        // needs full type of Foo.)
-        if (ast_node->ParentIsA<TypedefNameDecl>()) {
-          return false;
-        }
+        if (IsForwardDecl(parent_decl))
+          return true;
       }
     }
 
