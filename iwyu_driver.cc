@@ -198,8 +198,7 @@ bool ExecuteAction(int argc, const char** argv,
   ExpandArgv(argc, argv, args, SavedStrings);
 
   // Drop -save-temps arguments to avoid multiple compilation jobs.
-  llvm::erase_if(args, [](const char* v) {
-    StringRef arg(v);
+  llvm::erase_if(args, [](StringRef arg) {
     return arg.startswith("-save-temps") || arg.startswith("--save-temps");
   });
 
