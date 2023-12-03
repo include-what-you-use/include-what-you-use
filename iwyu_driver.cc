@@ -20,6 +20,7 @@
 #include <string>
 #include <utility>
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/ArgList.h"
@@ -54,6 +55,7 @@ using clang::driver::Command;
 using clang::driver::Compilation;
 using clang::driver::Driver;
 using clang::driver::JobList;
+using llvm::ArrayRef;
 using llvm::ErrorOr;
 using llvm::IntrusiveRefCntPtr;
 using llvm::SmallString;
@@ -155,7 +157,7 @@ void ExpandArgv(int argc, const char **argv,
   }
 }
 
-bool HasPreprocessOnlyArgs(llvm::ArrayRef<const char*> args) {
+bool HasPreprocessOnlyArgs(ArrayRef<const char*> args) {
   auto is_preprocess_only = [](StringRef arg) {
     // Handle GCC spelling.
     if (arg == "-E")
