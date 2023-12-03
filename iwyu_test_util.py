@@ -25,7 +25,7 @@ import sys
 import unittest
 
 # These are the warning/error lines that iwyu.cc produces when --verbose >= 3
-_EXPECTED_DIAGNOSTICS_RE = re.compile(r'^\s*//\s*IWYU:\s*(.*)$')
+_EXPECTED_DIAGNOSTICS_RE = re.compile(r'^\s*// IWYU:\s*(.*)$')
 _ACTUAL_DIAGNOSTICS_RE = re.compile(r'^(.*?):(\d+):\d+:\s*'
                                     r'(?:warning|error|fatal error):\s*(.*)$')
 
@@ -34,9 +34,9 @@ _ACTUAL_DIAGNOSTICS_RE = re.compile(r'^(.*?):(\d+):\d+:\s*'
 # surrounded by '/**** IWYU_SUMMARY' and '***** IWYU_SUMMARY */'.
 # The leading summary line may also have an expected exit-code in parentheses
 # after the summary marker: '/**** IWYU_SUMMARY(10)'.
-_EXPECTED_SUMMARY_START_RE = re.compile(r'/\*+\s*IWYU_SUMMARY')
-_EXPECTED_SUMMARY_EXIT_CODE_RE = re.compile(r'/\*+\s*IWYU_SUMMARY\((\d+)\)')
-_EXPECTED_SUMMARY_END_RE = re.compile(r'\**\s*IWYU_SUMMARY\s*\*+/')
+_EXPECTED_SUMMARY_START_RE = re.compile(r'/\*+ IWYU_SUMMARY')
+_EXPECTED_SUMMARY_EXIT_CODE_RE = re.compile(r'/\*+ IWYU_SUMMARY\((\d+)\)')
+_EXPECTED_SUMMARY_END_RE = re.compile(r'\** IWYU_SUMMARY \*+/')
 _ACTUAL_SUMMARY_START_RE = re.compile(r'^(.*?) should add these lines:$')
 _ACTUAL_SUMMARY_END_RE = re.compile(r'^---$')
 _ACTUAL_REMOVAL_LIST_START_RE = re.compile(r'.* should remove these lines:$')
@@ -45,7 +45,7 @@ _NODIFFS_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 # This is an IWYU_ARGS line that specifies launch arguments for a test in its
 # source file. Example:
 # // IWYU_ARGS: -Xiwyu --mapping_file=... -I .
-_IWYU_TEST_RUN_ARGS_RE = re.compile(r'^//\sIWYU_ARGS:\s(.*)$')
+_IWYU_TEST_RUN_ARGS_RE = re.compile(r'^// IWYU_ARGS:\s(.*)$')
 
 # Text matching a condition, either as part of IWYU_REQUIRES,
 # IWYU_UNSUPPORTED or IWYU_XFAIL.
