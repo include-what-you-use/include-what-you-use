@@ -219,6 +219,16 @@ TemplateWithFwdDeclUse<TplInI1<IndirectClass>> c;
 
 // ---------------------------------------------------------------
 
+template <typename T>
+T TplParamRetType() {
+  throw 1;
+}
+
+// IWYU: IndirectClass needs a declaration
+IndirectClass& i = TplParamRetType<IndirectClass&>();
+
+// ---------------------------------------------------------------
+
 /**** IWYU_SUMMARY
 
 tests/cxx/template_args.cc should add these lines:
