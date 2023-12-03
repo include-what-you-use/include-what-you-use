@@ -101,6 +101,17 @@ struct NestedUseOfAliasedParameter {
 // IWYU: IndirectClass needs a declaration
 NestedUseOfAliasedParameter<IndirectClass> c;
 
+template <typename T>
+struct UsesAliasedSugaredParameter {
+  static T t1;
+  using TAlias = decltype(t1);
+  TAlias t2;
+};
+
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass needs a declaration
+constexpr auto s2 = sizeof(UsesAliasedSugaredParameter<IndirectClass>);
+
 /**** IWYU_SUMMARY
 
 tests/cxx/typedef_in_template.cc should add these lines:

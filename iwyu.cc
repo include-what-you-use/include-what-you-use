@@ -2348,6 +2348,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  bool VisitTypedefType(clang::TypedefType* type) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (!CanForwardDeclareType(current_ast_node()))
+      ReportTypeUse(CurrentLoc(), type, DerefKind::None);
+    return true;
+  }
+
   //------------------------------------------------------------
   // Visitors defined by BaseAstVisitor.
 
@@ -3018,19 +3026,6 @@ class InstantiatedTemplateVisitor
   // constitute a full-use by the template caller, and perform other necessary
   // bookkeeping.
   void AnalyzeTemplateTypeParmUse(const Type* type) {
-    const ASTNode* node = MostElaboratedAncestor(current_ast_node());
-
-    // If the immediate parent node is a typedef, then register the new type as
-    // a new name for the template argument.
-    if (const TypedefNameDecl* typedef_decl =
-            node->GetParentAs<TypedefNameDecl>()) {
-      const Type* typedef_type = typedef_decl->getTypeForDecl();
-      VERRS(6) << "Registering " << PrintableType(typedef_type)
-               << " as an alias for " << PrintableType(type)
-               << " in the context of this instantiation\n";
-      template_argument_aliases_.emplace(typedef_type, type);
-    }
-
     // Figure out how this type was actually written.  clang always
     // canonicalizes SubstTemplateTypeParmType, losing typedef info, etc.
     const Type* actual_type = ResugarType(type);
@@ -3040,7 +3035,7 @@ class InstantiatedTemplateVisitor
     VERRS(6) << "AnalyzeTemplateTypeParmUse: type = " << PrintableType(type)
              << ", actual_type = " << PrintableType(actual_type) << '\n';
 
-    if (CanForwardDeclareType(node)) {
+    if (CanForwardDeclareType(MostElaboratedAncestor(current_ast_node()))) {
       // Non-full uses will already have been reported when they were used as
       // template arguments, so nothing to do here.
       return;
@@ -3090,21 +3085,6 @@ class InstantiatedTemplateVisitor
     AnalyzeTemplateTypeParmUse(type);
 
     return Base::VisitSubstTemplateTypeParmType(type);
-  }
-
-  bool VisitTypedefType(clang::TypedefType* type) {
-    if (CanIgnoreCurrentASTNode())
-      return true;
-
-    // Typedefs of template arguments require special handling to ensure that
-    // we record full-uses of those arguments where appropriate.  Those
-    // typedefs are stored in the template_argument_aliases_ map.
-    if (const Type* template_arg_type =
-            GetOrDefault(template_argument_aliases_, type, nullptr)) {
-      AnalyzeTemplateTypeParmUse(template_arg_type);
-    }
-
-    return Base::VisitTypedefType(type);
   }
 
   bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
@@ -3232,7 +3212,6 @@ class InstantiatedTemplateVisitor
   void Clear() {
     caller_ast_node_ = nullptr;
     resugar_map_.clear();
-    template_argument_aliases_.clear();
     traversed_decls_.clear();
     nodes_to_ignore_.clear();
     cache_storers_.clear();
@@ -3567,12 +3546,6 @@ class InstantiatedTemplateVisitor
   // value, it's a default template parameter, that the
   // template-caller may or may not be responsible for.
   map<const Type*, const Type*> resugar_map_;
-
-  // When we see a full-use of a template argument we need to assign that full
-  // use to the template-caller.  Sometimes those uses are hidden behind
-  // type aliases (typedefs).  This maps those aliases to the underlying
-  // template arguments.
-  map<const Type*, const Type*> template_argument_aliases_;
 
   // Used to avoid recursion in the *Helper() methods.
   set<const Decl*> traversed_decls_;
@@ -4085,8 +4058,6 @@ class IwyuAstConsumer
       return true;
     // TypedefType::getDecl() returns the place where the typedef is defined.
     ReportDeclUse(CurrentLoc(), type->getDecl());
-    if (!CanForwardDeclareType(current_ast_node()))
-      ReportTypeUse(CurrentLoc(), type, DerefKind::None);
     return Base::VisitTypedefType(type);
   }
 
