@@ -29,6 +29,11 @@ _EXPECTED_DIAGNOSTICS_RE = re.compile(r'^\s*// IWYU:\s*(.*)$')
 _ACTUAL_DIAGNOSTICS_RE = re.compile(r'^(.*?):(\d+):\d+:\s*'
                                     r'(?:warning|error|fatal error):\s*(.*)$')
 
+# Diagnostics without line/column number (e.g. from driver), e.g.:
+# // IWYU~: argument unused during compilation
+_EXPECTED_NOLOC_DIAGS_RE = re.compile(r'^\s*// IWYU~: (.*)$')
+_ACTUAL_NOLOC_DIAGS_RE = re.compile(r'^(?:warning|error|fatal error):\s*(.*)$')
+
 # This is the final summary output that iwyu.cc produces when --verbose >= 1
 # The summary for a given source file should appear in that source file,
 # surrounded by '/**** IWYU_SUMMARY' and '***** IWYU_SUMMARY */'.
@@ -312,6 +317,27 @@ def _GetActualDiagnostics(actual_output):
   return actual_diagnostics
 
 
+def _GetExpectedNoLocDiagnosticRegexes(filename):
+  """Returns a list of regexes for the file."""
+  expected = []
+  with open(filename, 'r') as fileobj:
+    for line in fileobj:
+      m = _EXPECTED_NOLOC_DIAGS_RE.match(line.strip())
+      if m:
+        expected.append(re.compile(m.group(1)))
+  return expected
+
+
+def _GetActualNoLocDiagnostics(actual_output):
+  """Returns a list of diagnostic messages."""
+  actual_diagnostics = []
+  for line in actual_output:
+    m = _ACTUAL_NOLOC_DIAGS_RE.match(line.strip())
+    if m:
+      actual_diagnostics.append(m.group(1))
+  return actual_diagnostics
+
+
 def _StripCommentFromLine(line):
   """Removes the "// ..." comment at the end of the given line."""
   return re.sub(r'\s*//.*$', '', line)
@@ -457,9 +483,8 @@ def _GetActualSummaries(output):
   return actual_summaries
 
 
-def _VerifyDiagnosticsAtLoc(loc_str, regexes, diagnostics):
-  """Verify the diagnostics at the given location; return a list of failures."""
-
+def _VerifyDiagnostics(regexes, diagnostics, loc_str=''):
+  """Verify the diagnostics; return a list of failures."""
   # Find out which regexes match a diagnostic and vice versa.
   matching_regexes = [[] for unused_i in range(len(diagnostics))]
   matched_diagnostics = [[] for unused_i in range(len(regexes))]
@@ -495,7 +520,7 @@ def _VerifyDiagnosticsAtLoc(loc_str, regexes, diagnostics):
           % (regexes[r_index].pattern,
              '\n'.join([diagnostics[d_index] for d_index in d_indexes])))
 
-  return ['%s %s' % (loc_str, message) for message in failure_messages]
+  return ['\n%s%s' % (loc_str, message) for message in failure_messages]
 
 
 def _CompareExpectedAndActualDiagnostics(expected_diagnostic_regexes,
@@ -508,9 +533,16 @@ def _CompareExpectedAndActualDiagnostics(expected_diagnostic_regexes,
     # Find all regexes and actual diagnostics for the given location.
     regexes = expected_diagnostic_regexes.get(loc, [])
     diagnostics = actual_diagnostics.get(loc, [])
-    failures += _VerifyDiagnosticsAtLoc('\n%s:%s:' % loc, regexes, diagnostics)
+    failures += _VerifyDiagnostics(regexes, diagnostics, '%s:%s: ' % loc)
 
   return failures
+
+
+def _CompareExpectedAndActualNoLocDiagnostics(expected_regexes,
+                                              actual_diagnostics):
+  """Verify that every regex in expected matches a line in actual; return a list
+  of failures"""
+  return _VerifyDiagnostics(expected_regexes, actual_diagnostics)
 
 
 def _CompareExpectedAndActualSummaries(expected_summaries, actual_summaries):
@@ -672,9 +704,15 @@ def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
     raise AssertionError('Unexpected exit code, wanted %d, was %d' %
                          (expected_exit_code, exit_code))
 
+  # Check diagnostics without location (from driver)
+  failures = _CompareExpectedAndActualNoLocDiagnostics(
+      _GetExpectedNoLocDiagnosticRegexes(cc_file),
+      _GetActualNoLocDiagnostics(output))
+
+  # Check IWYU diagnostics
   expected_diagnostics = _GetMatchingLines(
       _EXPECTED_DIAGNOSTICS_RE, cpp_files_to_check)
-  failures = _CompareExpectedAndActualDiagnostics(
+  failures += _CompareExpectedAndActualDiagnostics(
       _GetExpectedDiagnosticRegexes(expected_diagnostics),
       _GetActualDiagnostics(output))
 
