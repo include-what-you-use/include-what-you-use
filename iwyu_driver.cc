@@ -40,9 +40,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/FrontendTool/Utils.h"
 
-namespace llvm {
-class LLVMContext;
-}  // namespace llvm
+namespace include_what_you_use {
 
 using clang::CompilerInstance;
 using clang::CompilerInvocation;
@@ -71,8 +69,6 @@ using llvm::raw_svector_ostream;
 using llvm::sys::getDefaultTargetTriple;
 using std::set;
 using std::unique_ptr;
-
-namespace include_what_you_use {
 
 namespace {
 
