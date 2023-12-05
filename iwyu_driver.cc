@@ -178,14 +178,13 @@ bool HasPreprocessOnlyArgs(ArrayRef<const char*> args) {
 bool ExecuteAction(int argc, const char** argv,
                    ActionFactory make_iwyu_action) {
   std::string path = GetExecutablePath(argv[0]);
+
   IntrusiveRefCntPtr<DiagnosticOptions> diagnostic_options =
       new DiagnosticOptions;
-  auto* diagnostic_client =
-      new TextDiagnosticPrinter(errs(), &*diagnostic_options);
+  DiagnosticsEngine diagnostics(
+      new DiagnosticIDs, diagnostic_options,
+      new TextDiagnosticPrinter(errs(), diagnostic_options.get()), true);
 
-  IntrusiveRefCntPtr<DiagnosticIDs> diagnostic_id(new DiagnosticIDs());
-  DiagnosticsEngine diagnostics(diagnostic_id, &*diagnostic_options,
-                                diagnostic_client);
   Driver driver(path, getDefaultTargetTriple(), diagnostics);
   driver.setTitle("include what you use");
 
