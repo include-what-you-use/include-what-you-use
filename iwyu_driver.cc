@@ -20,6 +20,8 @@
 #include <string>
 #include <utility>
 
+#include "iwyu_verrs.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
@@ -190,6 +192,21 @@ std::string JobsToString(const JobList& jobs, const char* sep) {
   return msg;
 }
 
+std::vector<const Command*> FilterJobs(const JobList& jobs) {
+  std::vector<const Command*> res;
+  for (const Command& job : jobs) {
+    StringRef tool = job.getCreator().getName();
+    if (tool != "clang") {
+      VERRS(2) << "warning: ignoring job from unexpected tool: " << tool
+               << "\n";
+      continue;
+    }
+
+    res.push_back(&job);
+  }
+  return res;
+}
+
 }  // anonymous namespace
 
 bool ExecuteAction(int argc, const char** argv,
@@ -226,28 +243,21 @@ bool ExecuteAction(int argc, const char** argv,
     args.push_back("-fsyntax-only");
   }
 
+  // Build a compilation, get the job list and filter out irrelevant jobs.
   unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
   if (!compilation)
     return false;
 
-  // FIXME: This is copied from ASTUnit.cpp; simplify and eliminate.
-
-  // We expect to get back exactly one command job, if we didn't something
-  // failed. Extract that job from the compilation.
   const JobList& jobs = compilation->getJobs();
-  if (jobs.size() != 1 || !isa<Command>(*jobs.begin())) {
+  std::vector<const Command*> filtered_jobs = FilterJobs(jobs);
+  if (filtered_jobs.size() != 1) {
     diagnostics->Report(clang::diag::err_fe_expected_compiler_job)
         << JobsToString(jobs, "; ");
     return false;
   }
 
-  const Command& command = cast<Command>(*jobs.begin());
-  if (StringRef(command.getCreator().getName()) != "clang") {
-    diagnostics->Report(clang::diag::err_fe_expected_clang_command);
-    return false;
-  }
-
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
+  const Command& command = *filtered_jobs[0];
   const ArgStringList& cc_arguments = command.getArguments();
   std::shared_ptr<CompilerInvocation> invocation(new CompilerInvocation);
   CompilerInvocation::CreateFromArgs(*invocation, cc_arguments, *diagnostics);
