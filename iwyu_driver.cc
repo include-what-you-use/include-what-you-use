@@ -195,6 +195,14 @@ std::string JobsToString(const JobList& jobs, const char* sep) {
 std::vector<const Command*> FilterJobs(const JobList& jobs) {
   std::vector<const Command*> res;
   for (const Command& job : jobs) {
+    const Action& action = job.getSource();
+    if (action.getKind() != Action::CompileJobClass &&
+        action.getKind() != Action::PreprocessJobClass) {
+      VERRS(2) << "warning: ignoring unsupported job type: "
+               << action.getClassName() << "\n";
+      continue;
+    }
+
     StringRef tool = job.getCreator().getName();
     if (tool != "clang") {
       VERRS(2) << "warning: ignoring job from unexpected tool: " << tool
