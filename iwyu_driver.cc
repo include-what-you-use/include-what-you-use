@@ -196,13 +196,13 @@ bool ExecuteAction(int argc, const char** argv,
                    ActionFactory make_iwyu_action) {
   std::string path = GetExecutablePath(argv[0]);
 
-  IntrusiveRefCntPtr<DiagnosticOptions> diagnostic_options =
-      new DiagnosticOptions;
-  DiagnosticsEngine diagnostics(
-      new DiagnosticIDs, diagnostic_options,
-      new TextDiagnosticPrinter(errs(), diagnostic_options.get()), true);
+  IntrusiveRefCntPtr<DiagnosticsEngine> diagnostics =
+      CompilerInstance::createDiagnostics(new DiagnosticOptions,
+                                          /*Client=*/nullptr,
+                                          /*ShouldOwnClient=*/true,
+                                          /*CodeGenOpts=*/nullptr);
 
-  Driver driver(path, getDefaultTargetTriple(), diagnostics);
+  Driver driver(path, getDefaultTargetTriple(), *diagnostics);
   driver.setTitle("include what you use");
 
   // Expand out any response files passed on the command line
@@ -236,21 +236,21 @@ bool ExecuteAction(int argc, const char** argv,
   // failed. Extract that job from the compilation.
   const JobList& jobs = compilation->getJobs();
   if (jobs.size() != 1 || !isa<Command>(*jobs.begin())) {
-    diagnostics.Report(clang::diag::err_fe_expected_compiler_job)
+    diagnostics->Report(clang::diag::err_fe_expected_compiler_job)
         << JobsToString(jobs, "; ");
     return false;
   }
 
   const Command& command = cast<Command>(*jobs.begin());
   if (StringRef(command.getCreator().getName()) != "clang") {
-    diagnostics.Report(clang::diag::err_fe_expected_clang_command);
+    diagnostics->Report(clang::diag::err_fe_expected_clang_command);
     return false;
   }
 
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
   const ArgStringList& cc_arguments = command.getArguments();
   std::shared_ptr<CompilerInvocation> invocation(new CompilerInvocation);
-  CompilerInvocation::CreateFromArgs(*invocation, cc_arguments, diagnostics);
+  CompilerInvocation::CreateFromArgs(*invocation, cc_arguments, *diagnostics);
   invocation->getFrontendOpts().DisableFree = false;
 
   // Show the invocation, with -v.
@@ -263,11 +263,9 @@ bool ExecuteAction(int argc, const char** argv,
   // Create a compiler instance to handle the actual work.
   unique_ptr<CompilerInstance> compiler(new CompilerInstance);
   compiler->setInvocation(invocation);
-
-  // Create the compilers actual diagnostics engine.
+  // It's tempting to reuse the DiagnosticsEngine we created above, but we need
+  // to create a new one to get the options produced by the compiler invocation.
   compiler->createDiagnostics();
-  if (!compiler->hasDiagnostics())
-    return false;
 
   unique_ptr<FrontendAction> action;
   switch (command.getSource().getKind()) {
