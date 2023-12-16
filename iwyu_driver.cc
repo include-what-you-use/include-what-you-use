@@ -265,6 +265,7 @@ bool ExecuteAction(int argc, const char** argv,
   // preprocessing-only.
   if (!HasPreprocessOnlyArgs(args)) {
     args.push_back("-fsyntax-only");
+    args.push_back("-Qunused-arguments");
   }
 
   // Build a compilation, get the job list and filter out irrelevant jobs.
