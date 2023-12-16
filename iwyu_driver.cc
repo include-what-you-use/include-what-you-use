@@ -192,6 +192,15 @@ std::string JobsToString(const JobList& jobs, const char* sep) {
   return msg;
 }
 
+std::string JobsToString(ArrayRef<const Command*> jobs, const char* sep) {
+  std::string msg;
+  raw_string_ostream out(msg);
+  for (const Command* job : jobs) {
+    out << *job << sep;
+  }
+  return msg;
+}
+
 std::vector<const Command*> FilterJobs(const JobList& jobs) {
   std::vector<const Command*> res;
   for (const Command& job : jobs) {
@@ -265,10 +274,18 @@ bool ExecuteAction(int argc, const char** argv,
 
   const JobList& jobs = compilation->getJobs();
   std::vector<const Command*> filtered_jobs = FilterJobs(jobs);
-  if (filtered_jobs.size() != 1) {
+  if (filtered_jobs.empty()) {
     diagnostics->Report(clang::diag::err_fe_expected_compiler_job)
         << JobsToString(jobs, "; ");
     return false;
+  }
+
+  // If we have more than one job after filtering, there's a good chance
+  // FilterJobs could be improved to prune the extra jobs. Log them at level 2.
+  if (filtered_jobs.size() > 1 && ShouldPrint(2)) {
+    auto extra_jobs = ArrayRef<const Command*>(filtered_jobs).drop_front(1);
+    errs() << "warning: ignoring " << extra_jobs.size() << " extra jobs:\n"
+           << JobsToString(extra_jobs, "\n") << "\n";
   }
 
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
