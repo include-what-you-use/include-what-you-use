@@ -1051,6 +1051,8 @@ bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(
   // currently sometimes called with a nullptr main_file_.
   if (!includee)
     return false;
+  if (IsSystemHeader(includee))
+    return false;
   if (GetCanonicalName(GetFilePath(includee)) ==
       GetCanonicalName(GetFilePath(main_file_)))
     return true;

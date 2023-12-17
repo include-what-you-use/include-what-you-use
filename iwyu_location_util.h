@@ -231,6 +231,9 @@ inline bool IsBeforeInSameFile(const T& a, const U& b) {
 // Returns true if the given declaration is located in a header file.
 bool IsInHeader(const clang::Decl*);
 
+// Returns true if file is a system header.
+bool IsSystemHeader(const clang::FileEntry* file);
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_LOCATION_UTIL_H_
