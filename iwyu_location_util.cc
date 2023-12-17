@@ -30,9 +30,11 @@ using clang::CXXOperatorCallExpr;
 using clang::ClassTemplateSpecializationDecl;
 using clang::ConditionalOperator;
 using clang::FileEntry;
+using clang::FileID;
 using clang::FunctionDecl;
 using clang::MemberExpr;
 using clang::SourceLocation;
+using clang::SourceManager;
 using clang::UnaryOperator;
 using clang::UnresolvedMemberExpr;
 
@@ -183,6 +185,13 @@ bool IsInHeader(const clang::Decl* decl) {
     return false;
   }
   return !GlobalSourceManager()->isMainFile(*containing_file);
+}
+
+bool IsSystemHeader(const FileEntry* file) {
+  const SourceManager* sm = GlobalSourceManager();
+  FileID file_id = sm->translateFile(file);
+  SourceLocation loc = sm->getLocForStartOfFile(file_id);
+  return sm->isInSystemHeader(loc);
 }
 
 }  // namespace include_what_you_use
