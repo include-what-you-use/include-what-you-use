@@ -2743,6 +2743,53 @@ The full include-list for weird_pragma_once.h:
     self.RegisterFileContents({'weird_pragma_once.h': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testNoSpaceBeforePragmaPop(self):
+    """Tests that we don't inject a blank line before a #pragma pop """
+    infile = """\
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#include <cstdint>
+#pragma GCC diagnostic pop
+#include <exception>  ///-
+"""
+    iwyu_output = """\
+pragma_spaces.cc should add these lines:
+
+pragma_spaces.cc should remove these lines:
+- #include <exception>  // lines 5-5
+
+The full include-list for pragma_spaces.cc:
+#include <cstdint>
+---
+"""
+    self.RegisterFileContents({'pragma_spaces.cc': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testSpaceBeforePragmaPush(self):
+    """Tests that we inject a blank line before a #pragma push """
+    infile = """\
+#include <cctype>
+///+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#include <cstdint>
+#pragma GCC diagnostic pop
+#include <exception>  ///-
+"""
+    iwyu_output = """\
+pragma_spaces.cc should add these lines:
+
+pragma_spaces.cc should remove these lines:
+- #include <exception>  // lines 6-6
+
+The full include-list for pragma_spaces.cc:
+#include <cctype>
+#include <cstdint>
+---
+"""
+    self.RegisterFileContents({'pragma_spaces.cc': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testAddIncludeAfterWeirdHeaderGuard(self):
     """Test that we are willing to insert .h's inside a non-standard h-guard."""
     infile = """\
