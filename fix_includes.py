@@ -88,6 +88,8 @@ _C_COMMENT_START_RE = re.compile(r'\s*/\*')
 _C_COMMENT_END_RE = re.compile(r'.*\*/\s*(.*)$')
 _COMMENT_LINE_RE = re.compile(r'\s*//')
 _PRAGMA_ONCE_LINE_RE = re.compile(r'\s*#\s*pragma\s+once')
+_PRAGMA_PUSH_LINE_RE = re.compile(r'\s*#\s*pragma.*push.*')
+_PRAGMA_POP_LINE_RE = re.compile(r'\s*#\s*pragma.*pop.*')
 _BLANK_LINE_RE = re.compile(r'\s*$')
 _IF_RE = re.compile(r'\s*#\s*if')               # compiles #if/ifdef/ifndef
 _ELSE_RE = re.compile(r'\s*#\s*(else|elif)\b')  # compiles #else/elif
@@ -136,6 +138,7 @@ _LINE_TYPES = [_COMMENT_LINE_RE, _BLANK_LINE_RE,
                _INCLUDE_RE, _FORWARD_DECLARE_RE,
                _HEADER_GUARD_RE, _HEADER_GUARD_DEFINE_RE,
                _PRAGMA_ONCE_LINE_RE,
+               _PRAGMA_PUSH_LINE_RE, _PRAGMA_POP_LINE_RE,
               ]
 
 # A regexp matching #include lines that should be a barrier for
@@ -1262,6 +1265,7 @@ def _ShouldInsertBlankLine(decorated_move_span, next_decorated_move_span,
             file_lines[next_line].type in (_NAMESPACE_START_RE,
                                            _NAMESPACE_START_ALLMAN_RE,
                                            _NAMESPACE_START_MIXED_RE,
+                                           _PRAGMA_PUSH_LINE_RE,
                                            None))
 
   # We never insert a blank line between two spans of the same kind.
