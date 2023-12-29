@@ -145,8 +145,7 @@ inline int GetLineNumber(clang::SourceLocation loc) {
 // Tells which #include loc comes from.
 // This is the most basic FileEntry getter, it only does a simple lookup in
 // SourceManager to determine which file the location is associated with.
-inline clang::OptionalFileEntryRef GetLocFileEntryRef(
-    clang::SourceLocation loc) {
+inline clang::OptionalFileEntryRef GetLocFileEntry(clang::SourceLocation loc) {
   // clang uses the name FileID to mean 'a filename that was reached via
   // a particular series of #includes.'  (What one might think a FileID
   // might be -- a unique reference to a filesystem object -- is
@@ -155,7 +154,7 @@ inline clang::OptionalFileEntryRef GetLocFileEntryRef(
   return source_manager.getFileEntryRefForID(source_manager.getFileID(loc));
 }
 
-inline clang::OptionalFileEntryRef GetFileEntryRef(clang::SourceLocation loc) {
+inline clang::OptionalFileEntryRef GetFileEntry(clang::SourceLocation loc) {
   if (!loc.isValid())
     return std::nullopt;
 
@@ -167,7 +166,7 @@ inline clang::OptionalFileEntryRef GetFileEntryRef(clang::SourceLocation loc) {
   //
   // FOO(z) will expand to 'z + y', where symbol z's location is
   // foo.h, line 5, and its spelling location is bar.cc, line 10.
-  clang::OptionalFileEntryRef retval = GetLocFileEntryRef(GetSpellingLoc(loc));
+  clang::OptionalFileEntryRef retval = GetLocFileEntry(GetSpellingLoc(loc));
 
   // Sometimes the spelling location is NULL, because the symbol is
   // 'spelled' via macro concatenation.  For instance, all the
@@ -175,7 +174,7 @@ inline clang::OptionalFileEntryRef GetFileEntryRef(clang::SourceLocation loc) {
   // /usr/include/c++/4.2/x86_64-linux-gnu/bits/gthr-default.h.
   // In that case, fall back on the instantiation location.
   if (!retval) {
-    retval = GetLocFileEntryRef(GetInstantiationLoc(loc));
+    retval = GetLocFileEntry(GetInstantiationLoc(loc));
   }
   return retval;
 }
@@ -200,13 +199,13 @@ clang::SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc);
 // GetPath() in terms of GetLocation().  As long as an object defines
 // its own GetLocation(), it will get these other two for free.
 template <typename T>
-clang::OptionalFileEntryRef GetFileEntryRef(const T& obj) {
-  return GetFileEntryRef(GetLocation(obj));
+clang::OptionalFileEntryRef GetFileEntry(const T& obj) {
+  return GetFileEntry(GetLocation(obj));
 }
 
 template <typename T>
 const string GetFilePath(const T& obj) {
-  return GetFilePath(GetFileEntryRef(obj));
+  return GetFilePath(GetFileEntry(obj));
 }
 
 //------------------------------------------------------------
@@ -240,7 +239,7 @@ inline bool IsBeforeInTranslationUnit(const T& a, const U& b) {
 // instantiated in the same file as well.
 template<typename T, typename U>
 inline bool IsBeforeInSameFile(const T& a, const U& b) {
-  if (GetFileEntryRef(a) != GetFileEntryRef(b))
+  if (GetFileEntry(a) != GetFileEntry(b))
     return false;
   return IsBeforeInTranslationUnit(a, b);
 }
