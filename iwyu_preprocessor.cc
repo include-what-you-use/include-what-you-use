@@ -531,10 +531,10 @@ void IwyuPreprocessorInfo::FinalizeProtectedIncludes() {
 
 // Called when a #include is encountered.  i_n_a_t includes <> or "".
 // We keep track of this information in two places:
-// 1) iwyu_file_info_map_ maps the includer as a FileEntry* to the
-//    includee both as the literal name used and as a FileEntry*.
+// 1) iwyu_file_info_map_ maps the includer as a FileEntry to the
+//    includee both as the literal name used and as a FileEntry.
 // 2) include_to_fileentry_map_ maps the includee's literal name
-//    as written to the FileEntry* used.  This can be used (in a
+//    as written to the FileEntry used.  This can be used (in a
 //    limited way, due to non-uniqueness concerns) to map between
 //    names and FileEntries.
 // We also tell this #include to the include-picker, which may

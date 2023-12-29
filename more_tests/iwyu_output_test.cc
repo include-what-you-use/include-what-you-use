@@ -87,7 +87,7 @@ string GetFilePath(const FakeNamedDecl* fake_decl) {
   return fake_decl->decl_filepath();
 }
 
-// Note these return a string, not a FileEntry*.
+// Note these return a string, not a FileEntry.
 string GetFileEntry(const FakeSourceLocation& fake_loc) {
   return fake_loc.filepath;
 }
