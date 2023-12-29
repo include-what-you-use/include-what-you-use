@@ -44,10 +44,13 @@
 
 #include "iwyu_globals.h"
 #include "iwyu_path_util.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Token.h"
+
+#include "llvm/Support/Compiler.h"
 
 namespace clang {
 class Decl;
@@ -64,10 +67,21 @@ using std::string;
 //------------------------------------------------------------
 // Helper functions for FileEntry.
 
+inline const clang::FileEntry* RawFileEntry(clang::OptionalFileEntryRef file) {
+  if (!file) {
+    return nullptr;
+  }
+  return &file->getFileEntry();
+}
+
 // Some symbols are directly defined by the compiler.  For them, the
 // definition location points to the "<built-in>" file.
 inline bool IsBuiltinFile(const clang::FileEntry* file) {
   return file == nullptr;
+}
+
+inline bool IsBuiltinFile(clang::OptionalFileEntryRef file) {
+  return !file;
 }
 
 // There are two kinds of symbols that are not defined in the source
@@ -77,7 +91,13 @@ inline bool IsBuiltinFile(const clang::FileEntry* file) {
 // "<built-in>" in the first case, and "<command line>" in the second.
 // IsBuiltinOrCommandLineFile(file) returns true if it's either of the
 // two cases.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 inline bool IsBuiltinOrCommandLineFile(const clang::FileEntry* file) {
+  return IsBuiltinFile(file) || file->getName().equals("<command line>");
+}
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+
+inline bool IsBuiltinOrCommandLineFile(clang::OptionalFileEntryRef file) {
   return IsBuiltinFile(file) || file->getName().equals("<command line>");
 }
 
@@ -87,9 +107,21 @@ inline bool IsBuiltinOrCommandLineFile(const clang::FileEntry* file) {
 // This function returns true if the provided loc is in scratch space.
 bool IsInScratchSpace(clang::SourceLocation loc);
 
+// Resolve canonical file path from various file entry types.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 inline string GetFilePath(const clang::FileEntry* file) {
   return (IsBuiltinFile(file) ? "<built-in>" :
           NormalizeFilePath(file->getName().str()));
+}
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+
+inline string GetFilePath(clang::OptionalFileEntryRef file) {
+  return (IsBuiltinFile(file) ? "<built-in>"
+                              : NormalizeFilePath(file->getName().str()));
+}
+
+inline string GetFilePath(clang::FileEntryRef file) {
+  return NormalizeFilePath(file.getName().str());
 }
 
 //------------------------------------------------------------
@@ -141,6 +173,16 @@ inline const clang::FileEntry* GetLocFileEntry(clang::SourceLocation loc) {
   return source_manager.getFileEntryForID(source_manager.getFileID(loc));
 }
 
+inline clang::OptionalFileEntryRef GetLocFileEntryRef(
+    clang::SourceLocation loc) {
+  // clang uses the name FileID to mean 'a filename that was reached via
+  // a particular series of #includes.'  (What one might think a FileID
+  // might be -- a unique reference to a filesystem object -- is
+  // actually a FileEntry*.)
+  const clang::SourceManager& source_manager = *GlobalSourceManager();
+  return source_manager.getFileEntryRefForID(source_manager.getFileID(loc));
+}
+
 inline const clang::FileEntry* GetFileEntry(clang::SourceLocation loc) {
   if (!loc.isValid())
     return nullptr;
@@ -166,6 +208,31 @@ inline const clang::FileEntry* GetFileEntry(clang::SourceLocation loc) {
   return retval;
 }
 
+inline clang::OptionalFileEntryRef GetFileEntryRef(clang::SourceLocation loc) {
+  if (!loc.isValid())
+    return std::nullopt;
+
+  // We want where the user actually writes the token, instead of
+  // where it appears as part of a macro expansion.  For example, in:
+  //
+  //  file foo.h,  line 5:  #define FOO(x) x + y
+  //  file bar.cc, line 10: FOO(z)
+  //
+  // FOO(z) will expand to 'z + y', where symbol z's location is
+  // foo.h, line 5, and its spelling location is bar.cc, line 10.
+  clang::OptionalFileEntryRef retval = GetLocFileEntryRef(GetSpellingLoc(loc));
+
+  // Sometimes the spelling location is NULL, because the symbol is
+  // 'spelled' via macro concatenation.  For instance, all the
+  // __gthrw3 symbols in
+  // /usr/include/c++/4.2/x86_64-linux-gnu/bits/gthr-default.h.
+  // In that case, fall back on the instantiation location.
+  if (!retval) {
+    retval = GetLocFileEntryRef(GetInstantiationLoc(loc));
+  }
+  return retval;
+}
+
 //------------------------------------------------------------
 // GetFileEntry(), GetFilePath(), and GetLocation().
 
@@ -185,11 +252,19 @@ clang::SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc);
 // These define default implementations of GetFileEntry() and
 // GetPath() in terms of GetLocation().  As long as an object defines
 // its own GetLocation(), it will get these other two for free.
-template<typename T> const clang::FileEntry* GetFileEntry(const T& obj) {
+template <typename T>
+const clang::FileEntry* GetFileEntry(const T& obj) {
   return GetFileEntry(GetLocation(obj));
 }
-template<typename T> const string GetFilePath(const T& obj) {
-  return GetFilePath(GetFileEntry(obj));
+
+template <typename T>
+clang::OptionalFileEntryRef GetFileEntryRef(const T& obj) {
+  return GetFileEntryRef(GetLocation(obj));
+}
+
+template <typename T>
+const string GetFilePath(const T& obj) {
+  return GetFilePath(GetFileEntryRef(obj));
 }
 
 //------------------------------------------------------------
@@ -223,7 +298,7 @@ inline bool IsBeforeInTranslationUnit(const T& a, const U& b) {
 // instantiated in the same file as well.
 template<typename T, typename U>
 inline bool IsBeforeInSameFile(const T& a, const U& b) {
-  if (GetFileEntry(a) != GetFileEntry(b))
+  if (GetFileEntryRef(a) != GetFileEntryRef(b))
     return false;
   return IsBeforeInTranslationUnit(a, b);
 }
@@ -233,6 +308,7 @@ bool IsInHeader(const clang::Decl*);
 
 // Returns true if file is a system header.
 bool IsSystemHeader(const clang::FileEntry* file);
+bool IsSystemHeader(clang::OptionalFileEntryRef file);
 
 }  // namespace include_what_you_use
 

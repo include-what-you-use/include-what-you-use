@@ -766,7 +766,7 @@ void IwyuPreprocessorInfo::FileSkipped(const FileEntryRef& file,
       GetInstantiationLoc(filename.getLocation());
   ERRSYM(GetFileEntry(include_loc))
       << "[ (#include)  ] " << include_name_as_written
-      << " (" << GetFilePath(&file.getFileEntry()) << ")\n";
+      << " (" << GetFilePath(file) << ")\n";
 
   AddDirectInclude(include_loc, &file.getFileEntry(), include_name_as_written);
   if (ShouldReportIWYUViolationsFor(&file.getFileEntry())) {
