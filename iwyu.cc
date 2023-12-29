@@ -129,6 +129,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -138,7 +139,6 @@
 #include "clang/Sema/Sema.h"
 
 namespace clang {
-class FileEntry;
 class PPCallbacks;
 
 namespace driver {

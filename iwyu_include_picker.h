@@ -50,9 +50,7 @@
 #include <utility>                      // for pair
 #include <vector>                       // for vector
 
-namespace clang {
-class FileEntry;
-}  // namespace clang
+#include "clang/Basic/FileEntry.h"
 
 namespace include_what_you_use {
 

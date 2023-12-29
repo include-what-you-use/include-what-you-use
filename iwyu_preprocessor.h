@@ -70,6 +70,7 @@
 #include "iwyu_output.h"
 #include "iwyu_port.h"  // for CHECK_
 
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
@@ -77,7 +78,6 @@
 #include "clang/Lex/Token.h"
 
 namespace clang {
-class FileEntry;
 class MacroInfo;
 class NamedDecl;
 }  // namespace clang

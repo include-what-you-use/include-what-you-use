@@ -41,13 +41,10 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-
-namespace clang {
-class FileEntry;
-}  // namespace clang
 
 using clang::ASTDumper;
 using clang::BlockPointerType;

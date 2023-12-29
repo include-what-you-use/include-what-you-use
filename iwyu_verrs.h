@@ -12,11 +12,9 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_
 
-#include "llvm/Support/raw_ostream.h"
+#include "clang/Basic/FileEntry.h"
 
-namespace clang {
-class FileEntry;
-}
+#include "llvm/Support/raw_ostream.h"
 
 namespace include_what_you_use {
 
