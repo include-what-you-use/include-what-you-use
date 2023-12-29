@@ -59,10 +59,8 @@ class OneUse {
   // IwyuBaseAstVisitor::VisitCXXNewExpr we make a guess that placement
   // operator new is called (which is defined in <new>), but we don't have
   // <new> FileEntry.
-  OneUse(const string& symbol_name,
-         const clang::FileEntry* dfn_file,
-         const string& dfn_filepath,
-         clang::SourceLocation use_loc);
+  OneUse(const string& symbol_name, clang::OptionalFileEntryRef dfn_file,
+         const string& dfn_filepath, clang::SourceLocation use_loc);
 
   const string& symbol_name() const {
     return symbol_name_;
@@ -73,7 +71,7 @@ class OneUse {
   const clang::NamedDecl* decl() const {
     return decl_;
   }
-  const clang::FileEntry* decl_file() const {
+  clang::OptionalFileEntryRef decl_file() const {
     return decl_file_;
   }
   const string& decl_filepath() const {
@@ -130,7 +128,7 @@ class OneUse {
   string short_symbol_name_;       // 'short' form of the symbol being used
   const clang::NamedDecl* decl_;   // decl of the symbol, if we know it
   clang::SourceLocation decl_loc_;     // where the decl is attributed to live
-  const clang::FileEntry* decl_file_;  // file entry where the symbol lives
+  clang::OptionalFileEntryRef decl_file_;  // file entry where the symbol lives
   string decl_filepath_;           // filepath where the symbol lives
   clang::SourceLocation use_loc_;  // where the symbol is used from
   UseKind use_kind_;               // kFullUse or kForwardDeclareUse
@@ -146,7 +144,7 @@ class OneIncludeOrForwardDeclareLine {
  public:
   explicit OneIncludeOrForwardDeclareLine(const clang::NamedDecl* fwd_decl);
   explicit OneIncludeOrForwardDeclareLine(clang::ElaboratedTypeLoc);
-  OneIncludeOrForwardDeclareLine(const clang::FileEntry* included_file,
+  OneIncludeOrForwardDeclareLine(clang::OptionalFileEntryRef included_file,
                                  const string& quoted_include, int linenum);
 
   const string& line() const {
@@ -173,7 +171,7 @@ class OneIncludeOrForwardDeclareLine {
     return quoted_include_;
   }
 
-  const clang::FileEntry* included_file() const {
+  clang::OptionalFileEntryRef included_file() const {
     CHECK_(IsIncludeLine() && "Must call included_file() on include lines");
     CHECK_(!fwd_decl_ && "included_file and fwd_decl are mutually exclusive");
     return included_file_;
@@ -217,7 +215,7 @@ class OneIncludeOrForwardDeclareLine {
   map<string, int> symbol_counts_;   // how many times we referenced each symbol
   // Only either two following members are set for includes
   string quoted_include_;  // quoted file name we're including
-  const clang::FileEntry* included_file_ = nullptr;  // the file we're including
+  clang::OptionalFileEntryRef included_file_;  // the file we're including
   // ...or this member is set for the fwd-decl we're emitting.
   const clang::NamedDecl* fwd_decl_ = nullptr;
 };
@@ -232,7 +230,7 @@ class IwyuFileInfo {
  public:
   // TODO(csilvers): also take iwyufileinfos for 'associated' files (.h's).
   // And a source-manager.
-  IwyuFileInfo(const clang::FileEntry* this_file,
+  IwyuFileInfo(clang::OptionalFileEntryRef this_file,
                const IwyuPreprocessorInfo* preprocessor_info,
                const string& quoted_include_name);
 
@@ -258,7 +256,7 @@ class IwyuFileInfo {
   // Use these to register an iwyu declaration: either an #include,
   // a forward-declaration or a using-declaration.
 
-  void AddInclude(const clang::FileEntry* includee,
+  void AddInclude(clang::OptionalFileEntryRef includee,
                   const string& quoted_includee, int linenumber);
   // definitely_keep_fwd_decl tells us that we should never suggest
   // the fwd-decl be removed, even if we don't see any uses of it.
@@ -281,7 +279,7 @@ class IwyuFileInfo {
   // only for placement operator new in templates (see
   // IwyuBaseAstVisitor::VisitCXXNewExpr).
   void ReportFullSymbolUse(clang::SourceLocation use_loc,
-                           const clang::FileEntry* dfn_file,
+                           clang::OptionalFileEntryRef dfn_file,
                            const string& symbol);
   // TODO(dsturtevant): Can we determine in_cxx_method_body? Do we care?
 
@@ -291,7 +289,7 @@ class IwyuFileInfo {
                       const string& symbol);
 
   // Called when somebody uses a macro defined in this file.
-  void ReportDefinedMacroUse(const clang::FileEntry* used_in);
+  void ReportDefinedMacroUse(clang::OptionalFileEntryRef used_in);
 
   // We only allow forward-declaring of decls, not arbitrary symbols.
   void ReportForwardDeclareUse(clang::SourceLocation use_loc,
@@ -307,16 +305,17 @@ class IwyuFileInfo {
   // This is used when we see a // NOLINT comment, for instance.  It says
   // '#include this header file as-is, without any public-header mapping.'
   // Input is the include-line as desired: '<string.h>' or '"ads/foo.h"'.
-  void ReportIncludeFileUse(const clang::FileEntry* included_file,
+  void ReportIncludeFileUse(clang::OptionalFileEntryRef included_file,
                             const string& quoted_include);
 
   // This is used when we see a file we want to keep not due to symbol-use
   // reasons.  For example, it can be #included with an "IWYU pragma: keep"
   // comment or it can be an x-macro.
-  void ReportKnownDesiredFile(const clang::FileEntry* included_file);
+  void ReportKnownDesiredFile(clang::OptionalFileEntryRef included_file);
 
   // This is used only in iwyu_preprocessor.cc.  TODO(csilvers): revamp?
-  const set<const clang::FileEntry*>& direct_includes_as_fileentries() const {
+  const set<clang::OptionalFileEntryRef>& direct_includes_as_fileentries()
+      const {
     return direct_includes_as_fileentries_;
   }
 
@@ -350,8 +349,8 @@ class IwyuFileInfo {
     return associated_quoted_includes;
   }
 
-  set<const clang::FileEntry*> AssociatedFileEntries() const {
-    set<const clang::FileEntry*> associated_file_entries;
+  set<clang::OptionalFileEntryRef> AssociatedFileEntries() const {
+    set<clang::OptionalFileEntryRef> associated_file_entries;
     for (const IwyuFileInfo* associated : associated_headers_)
       associated_file_entries.insert(associated->file_);
     return associated_file_entries;
@@ -372,7 +371,7 @@ class IwyuFileInfo {
   int EmitWarningMessages(const vector<OneUse>& uses);
 
   // The constructor arguments.  file_ is 'this file'.
-  const clang::FileEntry* file_;
+  clang::OptionalFileEntryRef file_;
   const IwyuPreprocessorInfo* preprocessor_info_;
 
   string quoted_file_;
@@ -404,15 +403,15 @@ class IwyuFileInfo {
   // We also hold the line information in a few other data structures,
   // for ease of references.
   set<string> direct_includes_;      // key is the quoted include, eg '<set>'
-  set<const clang::FileEntry*> direct_includes_as_fileentries_;
+  set<clang::OptionalFileEntryRef> direct_includes_as_fileentries_;
   set<const clang::NamedDecl*> direct_forward_declares_;
 
   // Holds files forced to be kept.  For example, files included with the
   // "IWYU pragma: keep" comment and x-macros.
-  set<const clang::FileEntry*> kept_includes_;
+  set<clang::OptionalFileEntryRef> kept_includes_;
 
   // Holds files using macros defined in this file.
-  set<const clang::FileEntry*> macro_users_;
+  set<clang::OptionalFileEntryRef> macro_users_;
 
   // What we will recommend the #includes to be.
   set<string> desired_includes_;

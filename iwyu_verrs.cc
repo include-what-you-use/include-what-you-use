@@ -15,7 +15,7 @@
 
 namespace include_what_you_use {
 
-using clang::FileEntry;
+using clang::OptionalFileEntryRef;
 
 namespace {
 int verbose_level = 1;
@@ -29,7 +29,7 @@ int GetVerboseLevel() {
   return verbose_level;
 }
 
-bool ShouldPrintSymbolFromFile(const FileEntry* file) {
+bool ShouldPrintSymbolFromFile(OptionalFileEntryRef file) {
   if (GetVerboseLevel() < 5) {
     return false;
   } else if (GetVerboseLevel() < 10) {

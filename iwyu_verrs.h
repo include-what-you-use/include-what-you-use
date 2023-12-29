@@ -30,7 +30,7 @@ inline bool ShouldPrint(int verbose_level) {
 // given file, at the current verbosity level.  For instance, at most
 // normal verbosities, we don't print information about symbols in
 // system header files.
-bool ShouldPrintSymbolFromFile(const clang::FileEntry* file);
+bool ShouldPrintSymbolFromFile(clang::OptionalFileEntryRef file);
 
 // VERRS(n) << blah;
 // prints blah to errs() if the verbose level is >= n.

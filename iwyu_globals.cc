@@ -533,7 +533,7 @@ void AddGlobToReportIWYUViolationsFor(const string& glob) {
   commandline_flags->check_also.insert(NormalizeFilePath(glob));
 }
 
-bool ShouldReportIWYUViolationsFor(const clang::FileEntry* file) {
+bool ShouldReportIWYUViolationsFor(clang::OptionalFileEntryRef file) {
   const string filepath = GetFilePath(file);
   for (const string& glob : GlobalFlags().check_also)
     if (GlobMatchesPath(glob.c_str(), filepath.c_str()))
@@ -546,7 +546,7 @@ void AddGlobToKeepIncludes(const string& glob) {
   commandline_flags->keep.insert(NormalizeFilePath(glob));
 }
 
-bool ShouldKeepIncludeFor(const clang::FileEntry* file) {
+bool ShouldKeepIncludeFor(clang::OptionalFileEntryRef file) {
   if (GlobalFlags().keep.empty())
     return false;
   const string filepath = GetFilePath(file);

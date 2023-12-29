@@ -178,7 +178,7 @@ class IncludePicker {
   bool HasMapping(const string& map_from_filepath,
                   const string& map_to_filepath) const;
 
-  bool IsPublic(const clang::FileEntry* file) const;
+  bool IsPublic(clang::OptionalFileEntryRef file) const;
 
   // Parses a YAML/JSON file containing mapping directives of various types.
   void AddMappingsFromFile(const string& filename);
