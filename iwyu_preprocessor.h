@@ -260,11 +260,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                         const clang::FileEntry* includee,
                         const string& include_name_as_written);
 
-  // Report a "begin_exports"/"end_exports" pragma pair.
-  // begin_line is first line, end_line is just after the last line.
-  void AddExportedRange(const clang::FileEntry* file,
-                        int begin_line, int end_line);
-
   // Determine if the comment is a pragma, and if so, process it.
   void HandlePragmaComment(clang::SourceRange comment_range);
 
