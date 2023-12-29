@@ -1640,7 +1640,7 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
   return quoted_to == quoted_from;   // indentity mapping, why not?
 }
 
-bool IncludePicker::IsPublic(const clang::FileEntry* file) const {
+bool IncludePicker::IsPublic(clang::OptionalFileEntryRef file) const {
   CHECK_(file && "Need existing FileEntry");
   const string path = GetFilePath(file);
   const string quoted_file = ConvertToQuotedInclude(path);

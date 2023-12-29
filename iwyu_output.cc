@@ -44,10 +44,10 @@ using clang::Decl;
 using clang::DeclContext;
 using clang::ElaboratedTypeLoc;
 using clang::EnumDecl;
-using clang::FileEntry;
 using clang::FunctionDecl;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
+using clang::OptionalFileEntryRef;
 using clang::RecordDecl;
 using clang::SourceLocation;
 using clang::SourceRange;
@@ -265,10 +265,10 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
       short_symbol_name_(internal::GetShortNameAsString(decl)),
       decl_(decl),
       decl_loc_(GetInstantiationLoc(decl_loc)),
-      decl_file_(GetFileEntry(decl_loc_)),
+      decl_file_(GetFileEntryRef(decl_loc_)),
       decl_filepath_(GetFilePath(decl_file_)),
       use_loc_(use_loc),
-      use_kind_(use_kind),             // full use or fwd-declare use
+      use_kind_(use_kind),  // full use or fwd-declare use
       use_flags_(flags),
       comment_(comment ? comment : ""),
       ignore_use_(false),
@@ -276,7 +276,7 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
 }
 
 // This constructor always creates a full use.
-OneUse::OneUse(const string& symbol_name, const FileEntry* dfn_file,
+OneUse::OneUse(const string& symbol_name, OptionalFileEntryRef dfn_file,
                const string& dfn_filepath, SourceLocation use_loc)
     : symbol_name_(symbol_name),
       short_symbol_name_(symbol_name),
@@ -300,7 +300,7 @@ void OneUse::reset_decl(const clang::NamedDecl* decl) {
     CHECK_(decl_ && "Need existing decl to reset it");
     CHECK_(decl && "Need to reset decl with existing decl");
     decl_ = decl;
-    decl_file_ = GetFileEntry(decl);
+    decl_file_ = GetFileEntryRef(decl);
     decl_filepath_ = GetFilePath(decl);
 }
 
@@ -514,7 +514,8 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
 }
 
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
-    const FileEntry* included_file, const string& quoted_include, int linenum)
+    OptionalFileEntryRef included_file, const string& quoted_include,
+    int linenum)
     : line_("#include " + quoted_include),
       start_linenum_(linenum),
       end_linenum_(linenum),
@@ -543,16 +544,16 @@ string OneIncludeOrForwardDeclareLine::LineNumberString() const {
   return buf;
 }
 
-IwyuFileInfo::IwyuFileInfo(const clang::FileEntry* this_file,
+IwyuFileInfo::IwyuFileInfo(clang::OptionalFileEntryRef this_file,
                            const IwyuPreprocessorInfo* preprocessor_info,
                            const string& quoted_include_name)
-  : file_(this_file),
-    preprocessor_info_(preprocessor_info),
-    quoted_file_(quoted_include_name),
-    is_prefix_header_(false),
-    is_pch_in_code_(false),
-    desired_includes_have_been_calculated_(false)
-{}
+    : file_(this_file),
+      preprocessor_info_(preprocessor_info),
+      quoted_file_(quoted_include_name),
+      is_prefix_header_(false),
+      is_pch_in_code_(false),
+      desired_includes_have_been_calculated_(false) {
+}
 
 void IwyuFileInfo::AddAssociatedHeader(const IwyuFileInfo* other) {
   VERRS(6) << "Adding " << GetFilePath(other->file_)
@@ -560,7 +561,7 @@ void IwyuFileInfo::AddAssociatedHeader(const IwyuFileInfo* other) {
   associated_headers_.insert(other);
 }
 
-void IwyuFileInfo::AddInclude(const clang::FileEntry* includee,
+void IwyuFileInfo::AddInclude(clang::OptionalFileEntryRef includee,
                               const string& quoted_includee, int linenumber) {
   OneIncludeOrForwardDeclareLine new_include(includee, quoted_includee,
                                              linenumber);
@@ -667,7 +668,7 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
 }
 
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
-                                       const FileEntry* dfn_file,
+                                       OptionalFileEntryRef dfn_file,
                                        const string& symbol) {
   symbol_uses_.push_back(
       OneUse(symbol, dfn_file, GetFilePath(dfn_file), use_loc));
@@ -677,23 +678,23 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
 void IwyuFileInfo::ReportMacroUse(clang::SourceLocation use_loc,
                                   clang::SourceLocation dfn_loc,
                                   const string& symbol) {
-  symbol_uses_.push_back(OneUse(symbol, GetFileEntry(dfn_loc),
-                                GetFilePath(dfn_loc), use_loc));
+  symbol_uses_.push_back(
+      OneUse(symbol, GetFileEntryRef(dfn_loc), GetFilePath(dfn_loc), use_loc));
   LogSymbolUse("Marked full-info use of macro", symbol_uses_.back());
 }
 
-void IwyuFileInfo::ReportDefinedMacroUse(const clang::FileEntry* used_in) {
+void IwyuFileInfo::ReportDefinedMacroUse(clang::OptionalFileEntryRef used_in) {
   macro_users_.insert(used_in);
 }
 
-void IwyuFileInfo::ReportIncludeFileUse(const clang::FileEntry* included_file,
-                                        const string& quoted_include) {
+void IwyuFileInfo::ReportIncludeFileUse(
+    clang::OptionalFileEntryRef included_file, const string& quoted_include) {
   symbol_uses_.push_back(OneUse("", included_file, quoted_include,
                                 SourceLocation()));
   LogSymbolUse("Marked use of include-file", symbol_uses_.back());
 }
 
-void IwyuFileInfo::ReportKnownDesiredFile(const FileEntry* included_file) {
+void IwyuFileInfo::ReportKnownDesiredFile(OptionalFileEntryRef included_file) {
   kept_includes_.insert(included_file);
 }
 
@@ -789,7 +790,7 @@ bool DeclCanBeForwardDeclared(const Decl* decl) {
 // class.  (You can write a method using a Foo* before defining the
 // nested class Foo later in the class.)
 bool DeclIsVisibleToUseInSameFile(const Decl* decl, const OneUse& use) {
-  if (GetFileEntry(decl) != GetFileEntry(use.use_loc()))
+  if (GetFileEntryRef(decl) != GetFileEntryRef(use.use_loc()))
     return false;
 
   // If the decl comes before the use, it's visible to it.  (The
@@ -1118,7 +1119,7 @@ void ProcessForwardDeclare(OneUse* use,
   // to make sure that the compiler can see some declaration of the symbol.
   if (!use->is_full_use()) {
     if (preprocessor_info->ForwardDeclareIsInhibited(
-            GetFileEntry(use->use_loc()), use->symbol_name())) {
+            GetFileEntryRef(use->use_loc()), use->symbol_name())) {
       VERRS(6) << "Changing fwd-decl use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc()
                << ") to a full-info use: no_forward_declare pragma\n";
@@ -1140,7 +1141,7 @@ void ProcessForwardDeclare(OneUse* use,
     // This exception applies only when the use is in the same class
     // as the decl; we'll be conservative and apply it whenever
     // they're in the same file.
-    if (GetFileEntry(use->use_loc()) != GetFileEntry(use->decl())) {
+    if (GetFileEntryRef(use->use_loc()) != GetFileEntryRef(use->decl())) {
       VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "): nested class\n";
       use->set_ignore_use();
@@ -1250,11 +1251,11 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
   // forward-decl is unnecessary (who cares about forward-decls when
   // we need a definition?), when in fact it's crucial.
   // For now, we assume a 'later' usage must be in the same file.
-  if (GetFileEntry(use->use_loc()) == GetFileEntry(use->decl()) &&
+  if (GetFileEntryRef(use->use_loc()) == GetFileEntryRef(use->decl()) &&
       !DeclIsVisibleToUseInSameFile(use->decl(), *use) &&
       DeclCanBeForwardDeclared(use->decl())) {
     if (preprocessor_info->ForwardDeclareIsInhibited(
-            GetFileEntry(use->use_loc()), use->symbol_name())) {
+            GetFileEntryRef(use->use_loc()), use->symbol_name())) {
       // There is no include we could recommend for any full use, so just
       // ignore the use.
       VERRS(6) << "Ignoring use of " << use->symbol_name()
@@ -1338,9 +1339,9 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
     // See if we also recorded a use of the parent.
     const NamedDecl* parent_dfn = GetDefinitionAsWritten(parent_decl);
 
-    const FileEntry* decl_file_entry = GetFileEntry(use->decl_loc());
-    const FileEntry* parent_file_entry =
-        GetFileEntry(GetInstantiationLoc(GetLocation(parent_dfn)));
+    OptionalFileEntryRef decl_file_entry = GetFileEntryRef(use->decl_loc());
+    OptionalFileEntryRef parent_file_entry =
+        GetFileEntryRef(GetInstantiationLoc(GetLocation(parent_dfn)));
 
     // We want to map the definition-files to their public headers if
     // they're private headers (so bits/stl_vector.h and
@@ -1381,7 +1382,7 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
   // the language requires).
   // TODO(csilvers): remove this when we resolve the bugs with macros/typedefs.
   if (preprocessor_info->FileTransitivelyIncludes(
-          GetFileEntry(use->decl()), GetFileEntry(use->use_loc())) &&
+          GetFileEntryRef(use->decl()), GetFileEntryRef(use->use_loc())) &&
       !is_builtin_function_with_mappings) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): 'backwards' #include\n";
@@ -1395,7 +1396,7 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
   // of some sort.  So we allow a flag to discard such recommendations.
   if (GlobalFlags().transitive_includes_only) {
     if (!preprocessor_info->FileTransitivelyIncludes(
-            GetFileEntry(use->use_loc()), GetFileEntry(use->decl()))) {
+            GetFileEntryRef(use->use_loc()), GetFileEntryRef(use->decl()))) {
       VERRS(6) << "Ignoring use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "):"
                << " non-transitive #include\n";
@@ -1424,7 +1425,7 @@ void ProcessSymbolUse(OneUse* use,
   if (use->ignore_use())   // we're already ignoring it
     return;
 
-  const FileEntry* use_file = GetFileEntry(use->use_loc());
+  OptionalFileEntryRef use_file = GetFileEntryRef(use->use_loc());
   const string quoted_decl_file = ConvertToQuotedInclude(use->decl_filepath());
 
   // (B1') Like (B2), discard symbol uses in the same file as their definition.
@@ -1462,10 +1463,9 @@ void ProcessSymbolUse(OneUse* use,
 }
 
 void CalculateIwyuForForwardDeclareUse(
-    OneUse* use,
-    const set<string>& actual_includes,
+    OneUse* use, const set<string>& actual_includes,
     const set<string>& desired_includes,
-    const set<const FileEntry*>& associated_includes) {
+    const set<OptionalFileEntryRef>& associated_includes) {
   CHECK_(!use->ignore_use() && "Trying to calculate on an ignored use");
   CHECK_(use->decl() && "CalculateIwyuForForwardDeclareUse takes a fwd-decl");
   CHECK_(!use->is_full_use() && "ForwardDeclareUse are not full uses");
@@ -1518,7 +1518,7 @@ void CalculateIwyuForForwardDeclareUse(
   // desired includes, we don't need to check for that.
   if (!same_file_decl) {
     for (const NamedDecl* redecl : redecls) {
-      if (ContainsKey(associated_includes, GetFileEntry(redecl))) {
+      if (ContainsKey(associated_includes, GetFileEntryRef(redecl))) {
         same_file_decl = redecl;
         break;
       }
@@ -1543,7 +1543,7 @@ void CalculateIwyuForForwardDeclareUse(
              << PrintableLoc(GetLocation(providing_decl)) << "\n";
     // If same_file_decl is actually in an associated .h, mark our use
     // of that.  No need to map-to-public for associated .h files.
-    if (GetFileEntry(same_file_decl) != GetFileEntry(use->use_loc()))
+    if (GetFileEntryRef(same_file_decl) != GetFileEntryRef(use->use_loc()))
       use->set_suggested_header(GetFilePath(same_file_decl));
   }
   if (providing_decl) {
@@ -1777,9 +1777,8 @@ void ClearDesiredForSurplusIncludesOrForwardDeclares(ContainerType& container) {
 }
 
 void CalculateDesiredIncludesAndForwardDeclares(
-    const vector<OneUse>& uses,
-    const set<string>& associated_desired_includes,
-    const set<const FileEntry*>& kept_includes,
+    const vector<OneUse>& uses, const set<string>& associated_desired_includes,
+    const set<OptionalFileEntryRef>& kept_includes,
     vector<OneIncludeOrForwardDeclareLine>* lines) {
   // First make sure all uses' includes and fwd decls are reflected in lines.
   for (const OneUse& use : uses) {
@@ -1909,7 +1908,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
   }
 }
 
-bool IsRemovablePrefixHeader(const FileEntry* file_entry,
+bool IsRemovablePrefixHeader(OptionalFileEntryRef file_entry,
                              const IwyuPreprocessorInfo* preprocessor_info) {
   if (file_entry) {
     IwyuFileInfo* file_info = preprocessor_info->FileInfoFor(file_entry);
@@ -1933,7 +1932,7 @@ void CleanupPrefixHeaderIncludes(
     if (line.is_present() && (policy == CommandlineFlags::kKeep))
       continue;  // Keep present line according to policy.
 
-    const FileEntry* file_entry = nullptr;
+    OptionalFileEntryRef file_entry;
     if (line.IsIncludeLine()) {
       file_entry = line.included_file();
       if (!file_entry)
@@ -1943,7 +1942,7 @@ void CleanupPrefixHeaderIncludes(
       // seen quoted_include.  And that's why it cannot be prefix header.
     } else {
       const TagDecl* dfn = GetTagDefinition(line.fwd_decl());
-      file_entry = GetFileEntry(dfn);
+      file_entry = GetFileEntryRef(dfn);
     }
     if (IsRemovablePrefixHeader(file_entry, preprocessor_info)) {
       CHECK_(file_entry && "FileEntry should exist to be prefix header");
@@ -2179,13 +2178,13 @@ void IwyuFileInfo::HandlePreprocessingDone() {
     return;
   }
   bool should_report_violations = ShouldReportIWYUViolationsFor(file_);
-  std::list<const FileEntry*> direct_macro_use_includees;
+  std::list<OptionalFileEntryRef> direct_macro_use_includees;
   std::set_intersection(macro_users_.begin(), macro_users_.end(),
                         direct_includes_as_fileentries_.begin(),
                         direct_includes_as_fileentries_.end(),
                         std::inserter(direct_macro_use_includees,
                                       direct_macro_use_includees.end()));
-  for (const FileEntry* macro_use_includee : direct_macro_use_includees) {
+  for (OptionalFileEntryRef macro_use_includee : direct_macro_use_includees) {
     if (should_report_violations) {
       ERRSYM(file_) << "Keep #include " << GetFilePath(macro_use_includee)
                     << " in " << GetFilePath(file_)

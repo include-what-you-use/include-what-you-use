@@ -94,18 +94,17 @@ using std::multimap;
 class IwyuPreprocessorInfo : public clang::PPCallbacks,
                              public clang::CommentHandler {
  public:
-  IwyuPreprocessorInfo() : main_file_(nullptr) {
-  }
+  IwyuPreprocessorInfo() = default;
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
   void HandlePreprocessingDone();
 
   // More direct ways of getting at this information
-  const clang::FileEntry* main_file() const {
+  clang::OptionalFileEntryRef main_file() const {
     return main_file_;
   }
 
-  const set<const clang::FileEntry*>* files_to_report_iwyu_violations_for()
+  const set<clang::OptionalFileEntryRef>* files_to_report_iwyu_violations_for()
       const {
     return &files_to_report_iwyu_violations_for_;
   }
@@ -115,13 +114,14 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // found.  If multiple files are included under the same
   // quoted-include name (which can happen via #include-next),
   // one is returned arbitrarily.  (But always the same one.)
-  const clang::FileEntry* IncludeToFileEntry(const string quoted_include) const;
+  clang::OptionalFileEntryRef IncludeToFileEntry(
+      const string quoted_include) const;
 
   // Returns an IwyuFileInfo struct (from iwyu_output.h) corresponding
   // to the given file, or nullptr if no such struct can be found.
   // Note this is a const method that returns a non-const pointer.
   // Be careful if using this method in threaded contexts.
-  IwyuFileInfo* FileInfoFor(const clang::FileEntry* file) const;
+  IwyuFileInfo* FileInfoFor(clang::OptionalFileEntryRef file) const;
 
   // For every file we've seen (that is, that we've #included),
   // returns what files it 'intends' to provide full type information
@@ -141,29 +141,30 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // reasonable heuristic.
   //    Returns true iff our analysis shows that public_header intends
   // to provide all the symbols in other_file.
-  bool PublicHeaderIntendsToProvide(const clang::FileEntry* public_header,
-                                    const clang::FileEntry* other_file) const;
+  bool PublicHeaderIntendsToProvide(
+      clang::OptionalFileEntryRef public_header,
+      clang::OptionalFileEntryRef other_file) const;
 
   // Returns true if the first file directly or indirectly includes
   // the second.
-  bool FileTransitivelyIncludes(const clang::FileEntry* includer,
-                                const clang::FileEntry* includee) const;
-  bool FileTransitivelyIncludes(const clang::FileEntry* includer,
+  bool FileTransitivelyIncludes(clang::OptionalFileEntryRef includer,
+                                clang::OptionalFileEntryRef includee) const;
+  bool FileTransitivelyIncludes(clang::OptionalFileEntryRef includer,
                                 const string& quoted_includee) const;
   // This seems like a weird way to call this function, but we
   // happen to need this in iwyu_output.cc:
   bool FileTransitivelyIncludes(const string& quoted_includer,
-                                const clang::FileEntry* includee) const;
+                                clang::OptionalFileEntryRef includee) const;
 
   // Return true if the given file has
   // "// IWYU pragma: no_include <other_filename>".
-  bool IncludeIsInhibited(const clang::FileEntry* file,
+  bool IncludeIsInhibited(clang::OptionalFileEntryRef file,
                           const string& other_filename) const;
 
   // Return true if the given file has
   // "// IWYU pragma: no_forward_declare <qualified_symbol_name>".
-  bool ForwardDeclareIsInhibited(
-      const clang::FileEntry* file, const string& qualified_symbol_name) const;
+  bool ForwardDeclareIsInhibited(clang::OptionalFileEntryRef file,
+                                 const string& qualified_symbol_name) const;
 
   // Return true if the fwd decl is marked with "IWYU pragma: keep".
   bool ForwardDeclareIsMarkedKeep(const clang::NamedDecl* decl) const;
@@ -215,7 +216,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // FileChanged is actually a multi-plexer for 4 different callbacks.
   void FileChanged_EnterFile(clang::SourceLocation file_beginning);
   void FileChanged_ExitToFile(clang::SourceLocation include_loc,
-                              const clang::FileEntry* exiting_from);
+                              clang::OptionalFileEntryRef exiting_from);
   void FileChanged_RenameFile(clang::SourceLocation new_file);
   void FileChanged_SystemHeaderPragma(clang::SourceLocation loc);
 
@@ -229,13 +230,13 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Returns true if includee is considered part of the main
   // compilation unit.  We always generate warnings for violations in
   // files are part of the main compilation unit.
-  bool BelongsToMainCompilationUnit(const clang::FileEntry* includer,
-                                    const clang::FileEntry* includee) const;
+  bool BelongsToMainCompilationUnit(clang::OptionalFileEntryRef includer,
+                                    clang::OptionalFileEntryRef includee) const;
 
   // Creates a new iwyu_file_info_map_[file_entry] if it doesn't exist,
   // or a noop otherwise.  quoted_include_name is used to create the
   // new entry if necessary.
-  void InsertIntoFileInfoMap(const clang::FileEntry* file,
+  void InsertIntoFileInfoMap(clang::OptionalFileEntryRef file,
                              const string& quoted_include_name);
 
   // Helper function that returns iwyu_file_info_map_[file_entry] if
@@ -243,17 +244,17 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // If it creates a new one, it generates the quoted_include_name
   // from the file-path for 'file'.
   // TODO(csilvers): see if, in practice, all uses in here are just 'get's.
-  IwyuFileInfo* GetFromFileInfoMap(const clang::FileEntry* file);
+  IwyuFileInfo* GetFromFileInfoMap(clang::OptionalFileEntryRef file);
 
   // Helper for AddDirectInclude.  Checks if we should protect the
   // #include from iwyu removal.
   void MaybeProtectInclude(clang::SourceLocation includer_loc,
-                           const clang::FileEntry* includee,
+                           clang::OptionalFileEntryRef includee,
                            const string& include_name_as_written);
 
   // Called whenever an #include is seen in the preprocessor output.
   void AddDirectInclude(clang::SourceLocation includer_loc,
-                        const clang::FileEntry* includee,
+                        clang::OptionalFileEntryRef includee,
                         const string& include_name_as_written);
 
   // Determine if the comment is a pragma, and if so, process it.
@@ -273,29 +274,30 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Final-processing routines done after all header files have been read.
   void DoFinalMacroChecks();
   // Helper for PopulateIntendsToProvideMap().
-  void AddAllIncludesAsFileEntries(const clang::FileEntry* includer,
-                                   set<const clang::FileEntry*>* retval) const;
+  void AddAllIncludesAsFileEntries(
+      clang::OptionalFileEntryRef includer,
+      set<clang::OptionalFileEntryRef>* retval) const;
   void PopulateIntendsToProvideMap();
   void PopulateTransitiveIncludeMap();
   void FinalizeProtectedIncludes();
 
   // Return true if at the current point in the parse of the given file,
   // there is a pending "begin_exports" pragma.
-  bool HasOpenBeginExports(const clang::FileEntry* file) const;
+  bool HasOpenBeginExports(clang::OptionalFileEntryRef file) const;
 
   // Return true if at the current point in the parse of the given files,
   // there is a pending "begin_keep" pragma.
-  bool HasOpenBeginKeep(const clang::FileEntry* file) const;
+  bool HasOpenBeginKeep(clang::OptionalFileEntryRef file) const;
 
   // The C++ source file passed in as an argument to the compiler (as
   // opposed to other files seen via #includes).
-  const clang::FileEntry* main_file_;
+  clang::OptionalFileEntryRef main_file_;
 
   // All files that we should report iwyu violations in.  It defaults
   // to the "main compilation unit" (e.g. foo.cc, foo.h, foo-inl.h):
   // main_file_ and its associated .h and -inl.h files, if they exist.
   // But users can add to it via the --check_also flag.
-  set<const clang::FileEntry*> files_to_report_iwyu_violations_for_;
+  set<clang::OptionalFileEntryRef> files_to_report_iwyu_violations_for_;
 
   // These store macros seen, as we see them, and also macros that are
   // called from other macros.  We use this to do limited iwyu-testing
@@ -311,12 +313,12 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // This maps from the include-name as written in the program
   // (including <>'s or ""'s) to the FileEntry we loaded for that
   // #include.
-  map<string, const clang::FileEntry*> include_to_fileentry_map_;
+  map<string, clang::OptionalFileEntryRef> include_to_fileentry_map_;
 
-  map<const clang::FileEntry*, IwyuFileInfo> iwyu_file_info_map_;
+  map<clang::OptionalFileEntryRef, IwyuFileInfo> iwyu_file_info_map_;
 
   // How many #include lines we've encountered from the given file.
-  map<const clang::FileEntry*, int> num_includes_seen_;
+  map<clang::OptionalFileEntryRef, int> num_includes_seen_;
 
   // Maps from a FileEntry* to all files that this file "intends" to
   // provide the symbols from.  For now, we say a file intentionally
@@ -327,22 +329,22 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // or indirectly included by the public file.  This isn't perfect,
   // but is as close as we can be to matching the intent of the author
   // of the public/private system.
-  map<const clang::FileEntry*,
-      set<const clang::FileEntry*>> intends_to_provide_map_;
+  map<clang::OptionalFileEntryRef, set<clang::OptionalFileEntryRef>>
+      intends_to_provide_map_;
 
   // Maps from a FileEntry* to all the files that this file includes,
   // either directly or indirectly.
-  map<const clang::FileEntry*,
-      set<const clang::FileEntry*>> transitive_include_map_;
+  map<clang::OptionalFileEntryRef, set<clang::OptionalFileEntryRef>>
+      transitive_include_map_;
 
   // Maps from a FileEntry* to the quoted names of files that its file
   // is directed *not* to include via the "no_include" pragma.
-  map<const clang::FileEntry*, set<string>> no_include_map_;
+  map<clang::OptionalFileEntryRef, set<string>> no_include_map_;
 
   // Maps from a FileEntry* to the qualified names of symbols that its
   // file is directed *not* to forward-declare via the
   // "no_forward_declare" pragma.
-  map<const clang::FileEntry*, set<string>> no_forward_declare_map_;
+  map<clang::OptionalFileEntryRef, set<string>> no_forward_declare_map_;
 
   // For processing pragmas. It is the current stack of open
   // "begin_exports".  There should be at most one item in this stack
@@ -356,11 +358,13 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
   // For processing forward decls. It is a multimap containing the bounds of
   // every keep range.
-  multimap<const clang::FileEntry*, clang::SourceRange> keep_location_ranges_;
+  multimap<clang::OptionalFileEntryRef, clang::SourceRange>
+      keep_location_ranges_;
 
   // For processing forward decls. It is a multimap containing the bounds of
   // every export range.
-  multimap<const clang::FileEntry*, clang::SourceRange> export_location_ranges_;
+  multimap<clang::OptionalFileEntryRef, clang::SourceRange>
+      export_location_ranges_;
 
   // For processing associated pragma. It is the current open
   // "associated" pragma.
@@ -375,7 +379,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
   // Keeps track of which files have the "always_keep" pragma, so they can be
   // marked as such for all includers.
-  std::set<const clang::FileEntry*> always_keep_files_;
+  std::set<clang::OptionalFileEntryRef> always_keep_files_;
 };
 
 }  // namespace include_what_you_use

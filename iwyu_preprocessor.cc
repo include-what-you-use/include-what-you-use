@@ -32,13 +32,13 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Lex/MacroInfo.h"
 
-using clang::FileEntry;
 using clang::FileEntryRef;
 using clang::FileID;
 using clang::MacroDefinition;
 using clang::MacroDirective;
 using clang::MacroInfo;
 using clang::NamedDecl;
+using clang::OptionalFileEntryRef;
 using clang::Preprocessor;
 using clang::SourceLocation;
 using clang::SourceRange;
@@ -171,17 +171,18 @@ bool MatchTwoTokens(const vector<string>& tokens,
 // there is an open begin_exports pragma in the current state of the
 // parse of the given file. Note that there may be open begin_exports
 // in including files. They don't matter for this function.
-bool IwyuPreprocessorInfo::HasOpenBeginExports(const FileEntry* file) const {
+bool IwyuPreprocessorInfo::HasOpenBeginExports(
+    OptionalFileEntryRef file) const {
   return !begin_exports_location_stack_.empty() &&
-      GetFileEntry(begin_exports_location_stack_.top()) == file;
+         GetFileEntryRef(begin_exports_location_stack_.top()) == file;
 }
 
 // Only call this when the given files is the one being processed
 // Only return true if there is an open begin_keep pragma in the current
 // state of the parse of the given file.
-bool IwyuPreprocessorInfo::HasOpenBeginKeep(const FileEntry* file) const {
+bool IwyuPreprocessorInfo::HasOpenBeginKeep(OptionalFileEntryRef file) const {
   return !begin_keep_location_stack_.empty() &&
-      GetFileEntry(begin_keep_location_stack_.top()) == file;
+         GetFileEntryRef(begin_keep_location_stack_.top()) == file;
 }
 
 bool IwyuPreprocessorInfo::HandleComment(Preprocessor& pp,
@@ -196,7 +197,7 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
   const char* begin_text = DefaultDataGetter().GetCharacterData(begin_loc);
   const char* end_text = DefaultDataGetter().GetCharacterData(end_loc);
   string pragma_text(begin_text, end_text);
-  const FileEntry* const this_file_entry = GetFileEntry(begin_loc);
+  OptionalFileEntryRef const this_file_entry = GetFileEntryRef(begin_loc);
 
   // Pragmas must start comments.
   if (!StripLeft(&pragma_text, "// IWYU pragma: ") &&
@@ -403,7 +404,8 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
 
 // Helper function that returns iwyu_file_info_map_[file_entry] if
 // it already exists, or creates a new one and returns it otherwise.
-IwyuFileInfo* IwyuPreprocessorInfo::GetFromFileInfoMap(const FileEntry* file) {
+IwyuFileInfo* IwyuPreprocessorInfo::GetFromFileInfoMap(
+    OptionalFileEntryRef file) {
   IwyuFileInfo* iwyu_file_info = FindInMap(&iwyu_file_info_map_, file);
   if (!iwyu_file_info) {
     const string quoted_include = ConvertToQuotedInclude(GetFilePath(file));
@@ -416,7 +418,7 @@ IwyuFileInfo* IwyuPreprocessorInfo::GetFromFileInfoMap(const FileEntry* file) {
 }
 
 void IwyuPreprocessorInfo::InsertIntoFileInfoMap(
-    const FileEntry* file, const string& quoted_include_name) {
+    OptionalFileEntryRef file, const string& quoted_include_name) {
   if (!FindInMap(&iwyu_file_info_map_, file)) {
     iwyu_file_info_map_.insert(
         make_pair(file, IwyuFileInfo(file, this, quoted_include_name)));
@@ -427,9 +429,9 @@ void IwyuPreprocessorInfo::InsertIntoFileInfoMap(
 // that iwyu should never recommend removing the #include.  For
 // instance, if it has an IWYU pragma saying to keep it.
 void IwyuPreprocessorInfo::MaybeProtectInclude(
-    SourceLocation includer_loc, const FileEntry* includee,
+    SourceLocation includer_loc, OptionalFileEntryRef includee,
     const string& include_name_as_written) {
-  const FileEntry* includer = GetFileEntry(includer_loc);
+  OptionalFileEntryRef includer = GetFileEntryRef(includer_loc);
   if (IsBuiltinOrCommandLineFile(includer))
     return;
 
@@ -498,11 +500,12 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
 
 void IwyuPreprocessorInfo::FinalizeProtectedIncludes() {
   for (auto& entry : iwyu_file_info_map_) {
-    const FileEntry* includer_file = entry.first;
+    OptionalFileEntryRef includer_file = entry.first;
     IwyuFileInfo& includer = entry.second;
     const string includer_path = GetFilePath(includer_file);
 
-    for (const FileEntry* include : includer.direct_includes_as_fileentries()) {
+    for (OptionalFileEntryRef include :
+         includer.direct_includes_as_fileentries()) {
       const string includee_path = GetFilePath(include);
       if (GlobalIncludePicker().HasMapping(includee_path, includer_path)) {
         // If includer re-exports includee, that counts as a "use" of it, so
@@ -537,7 +540,7 @@ void IwyuPreprocessorInfo::FinalizeProtectedIncludes() {
 // We also tell this #include to the include-picker, which may
 // use it to fine-tune its include-picking algorithms.
 void IwyuPreprocessorInfo::AddDirectInclude(
-    SourceLocation includer_loc, const FileEntry* includee,
+    SourceLocation includer_loc, OptionalFileEntryRef includee,
     const string& include_name_as_written) {
   if (IsBuiltinOrCommandLineFile(includee))
     return;
@@ -545,7 +548,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   // For files we're going to be reporting IWYU errors for, we need
   // both forms of the includee to be specified.  For other files, we
   // don't care as much.
-  const FileEntry* includer = GetFileEntry(includer_loc);
+  OptionalFileEntryRef includer = GetFileEntryRef(includer_loc);
   if (ShouldReportIWYUViolationsFor(includer)) {
     CHECK_(includee != nullptr);
     CHECK_(!include_name_as_written.empty());
@@ -598,8 +601,8 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 
   // Besides marking headers as "associated header" with heuristics, the user
   // can directly mark headers with the associated pragma.
-  const FileEntry* associated_includer =
-      GetFileEntry(associated_pragma_location_);
+  OptionalFileEntryRef associated_includer =
+      GetFileEntryRef(associated_pragma_location_);
   if (associated_pragma_location_.isValid() &&
       associated_includer == includer) {
     GetFromFileInfoMap(includer)->AddAssociatedHeader(
@@ -644,7 +647,7 @@ void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
                                         const MacroDefinition& definition,
                                         SourceRange range,
                                         const clang::MacroArgs* /*args*/) {
-  const FileEntry* macro_file = GetFileEntry(macro_use_token);
+  OptionalFileEntryRef macro_file = GetFileEntryRef(macro_use_token);
   const MacroInfo* macro_def = definition.getMacroInfo();
   if (ShouldPrintSymbolFromFile(macro_file)) {
     errs() << "[ Use macro   ] "
@@ -662,9 +665,9 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
                                         const MacroDirective* directive) {
   const MacroInfo* macro = directive->getMacroInfo();
   const SourceLocation macro_loc = macro->getDefinitionLoc();
-  ERRSYM(GetFileEntry(macro_loc))
-      << "[ #define     ] " << PrintableLoc(macro_loc)
-      << ": " << GetName(id) << "\n";
+  ERRSYM(GetFileEntryRef(macro_loc))
+      << "[ #define     ] " << PrintableLoc(macro_loc) << ": " << GetName(id)
+      << "\n";
   // We'd like to do an iwyu check on every token in the macro
   // definition, but without knowing how and where the macro will be
   // used, we don't have enough context to.  But we *can* check those
@@ -688,18 +691,18 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
 void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
                                  const Token& id,
                                  const MacroDefinition& /*definition*/) {
-  ERRSYM(GetFileEntry(id.getLocation()))
-      << "[ #ifdef      ] " << PrintableLoc(id.getLocation())
-      << ": " << GetName(id) << "\n";
+  ERRSYM(GetFileEntryRef(id.getLocation()))
+      << "[ #ifdef      ] " << PrintableLoc(id.getLocation()) << ": "
+      << GetName(id) << "\n";
   FindAndReportMacroUse(GetName(id), id.getLocation());
 }
 
 void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
                                   const Token& id,
                                   const MacroDefinition& /*definition*/) {
-  ERRSYM(GetFileEntry(id.getLocation()))
-      << "[ #ifndef     ] " << PrintableLoc(id.getLocation())
-      << ": " << GetName(id) << "\n";
+  ERRSYM(GetFileEntryRef(id.getLocation()))
+      << "[ #ifndef     ] " << PrintableLoc(id.getLocation()) << ": "
+      << GetName(id) << "\n";
   FindAndReportMacroUse(GetName(id), id.getLocation());
 }
 
@@ -709,9 +712,9 @@ void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
 void IwyuPreprocessorInfo::Defined(const Token& id,
                                    const MacroDefinition& /*definition*/,
                                    SourceRange /*range*/) {
-  ERRSYM(GetFileEntry(id.getLocation()))
-      << "[ #if defined ] " << PrintableLoc(id.getLocation())
-      << ": " << GetName(id) << "\n";
+  ERRSYM(GetFileEntryRef(id.getLocation()))
+      << "[ #if defined ] " << PrintableLoc(id.getLocation()) << ": "
+      << GetName(id) << "\n";
   FindAndReportMacroUse(GetName(id), id.getLocation());
 }
 
@@ -739,7 +742,7 @@ void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
       return;
     case ExitFile:
       FileChanged_ExitToFile(
-          loc, GlobalSourceManager()->getFileEntryForID(exiting_from_id));
+          loc, GlobalSourceManager()->getFileEntryRefForID(exiting_from_id));
       return;
     case RenameFile:
       FileChanged_RenameFile(loc);
@@ -764,13 +767,13 @@ void IwyuPreprocessorInfo::FileSkipped(const FileEntryRef& file,
       GetIncludeNameAsWritten(include_filename_loc_);
   const SourceLocation include_loc =
       GetInstantiationLoc(filename.getLocation());
-  ERRSYM(GetFileEntry(include_loc))
-      << "[ (#include)  ] " << include_name_as_written
-      << " (" << GetFilePath(file) << ")\n";
+  ERRSYM(GetFileEntryRef(include_loc))
+      << "[ (#include)  ] " << include_name_as_written << " ("
+      << GetFilePath(file) << ")\n";
 
-  AddDirectInclude(include_loc, &file.getFileEntry(), include_name_as_written);
-  if (ShouldReportIWYUViolationsFor(&file.getFileEntry())) {
-    files_to_report_iwyu_violations_for_.insert(&file.getFileEntry());
+  AddDirectInclude(include_loc, file, include_name_as_written);
+  if (ShouldReportIWYUViolationsFor(file)) {
+    files_to_report_iwyu_violations_for_.insert(file);
   }
 }
 
@@ -782,16 +785,16 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   const SourceLocation include_loc = GlobalSourceManager()->getIncludeLoc(
       GlobalSourceManager()->getFileID(file_beginning));
   string include_name_as_written;
-  if (!IsBuiltinOrCommandLineFile(GetFileEntry(include_loc))) {
+  if (!IsBuiltinOrCommandLineFile(GetFileEntryRef(include_loc))) {
     CHECK_(include_filename_loc_.isValid() &&
            "Include from not built-in file must have inclusion directive");
     include_name_as_written = GetIncludeNameAsWritten(include_filename_loc_);
   }
-  ERRSYM(GetFileEntry(include_loc))
-      << "[ #include    ] " << include_name_as_written
-      << " (" << GetFilePath(file_beginning) << ")\n";
+  ERRSYM(GetFileEntryRef(include_loc))
+      << "[ #include    ] " << include_name_as_written << " ("
+      << GetFilePath(file_beginning) << ")\n";
 
-  const FileEntry* const new_file = GetFileEntry(file_beginning);
+  OptionalFileEntryRef const new_file = GetFileEntryRef(file_beginning);
   if (new_file)
     AddDirectInclude(include_loc, new_file, include_name_as_written);
 
@@ -805,7 +808,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
     main_file_ = new_file;
 
   if (main_file_ != nullptr &&
-      BelongsToMainCompilationUnit(GetFileEntry(include_loc), new_file)) {
+      BelongsToMainCompilationUnit(GetFileEntryRef(include_loc), new_file)) {
     VERRS(5) << "Added to main compilation unit: "
              << GetFilePath(new_file) << "\n";
     AddGlobToReportIWYUViolationsFor(GetFilePath(new_file));
@@ -817,7 +820,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   // Mark is_prefix_header.
   CHECK_(new_file && "is_prefix_header is applicable to usual files only");
   IwyuFileInfo *includee_file_info = GetFromFileInfoMap(new_file);
-  const FileEntry* includer_file = GetFileEntry(include_loc);
+  OptionalFileEntryRef includer_file = GetFileEntryRef(include_loc);
   bool is_prefix_header = false;
   if (includer_file) {
     // File included from another prefix header file is prefix header too.
@@ -834,9 +837,9 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
 
 // Called when done with an #included file and returning to the parent file.
 void IwyuPreprocessorInfo::FileChanged_ExitToFile(
-      SourceLocation include_loc, const FileEntry* exiting_from) {
-  ERRSYM(GetFileEntry(include_loc)) << "[ Exiting to  ] "
-                                    << PrintableLoc(include_loc) << "\n";
+    SourceLocation include_loc, OptionalFileEntryRef exiting_from) {
+  ERRSYM(GetFileEntryRef(include_loc))
+      << "[ Exiting to  ] " << PrintableLoc(include_loc) << "\n";
   if (HasOpenBeginExports(exiting_from)) {
     Warn(begin_exports_location_stack_.top(),
          "begin_exports without an end_exports");
@@ -851,13 +854,13 @@ void IwyuPreprocessorInfo::FileChanged_ExitToFile(
 }
 
 void IwyuPreprocessorInfo::FileChanged_RenameFile(SourceLocation new_file) {
-  ERRSYM(GetFileEntry(new_file)) << "[ Renaming to ] "
-                                 << PrintableLoc(new_file) << "\n";
+  ERRSYM(GetFileEntryRef(new_file))
+      << "[ Renaming to ] " << PrintableLoc(new_file) << "\n";
 }
 
 void IwyuPreprocessorInfo::FileChanged_SystemHeaderPragma(SourceLocation loc) {
-  ERRSYM(GetFileEntry(loc)) << "[ #pragma s_h ] "
-                            << PrintableLoc(loc) << "\n";
+  ERRSYM(GetFileEntryRef(loc))
+      << "[ #pragma s_h ] " << PrintableLoc(loc) << "\n";
 }
 
 //------------------------------------------------------------
@@ -870,7 +873,7 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
   // Don't report macro uses that aren't actually in a file somewhere.
   if (!dfn_location.isValid() || GetFilePath(dfn_location) == "<built-in>")
     return;
-  const FileEntry* used_in = GetFileEntry(usage_location);
+  OptionalFileEntryRef used_in = GetFileEntryRef(usage_location);
   if (ShouldReportIWYUViolationsFor(used_in)) {
     // ignore symbols used outside foo.{h,cc}
 
@@ -888,7 +891,7 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
     GetFromFileInfoMap(used_in)->ReportMacroUse(usage_location, dfn_location,
                                                 name);
   }
-  const FileEntry* defined_in = GetFileEntry(dfn_location);
+  OptionalFileEntryRef defined_in = GetFileEntryRef(dfn_location);
   GetFromFileInfoMap(defined_in)->ReportDefinedMacroUse(used_in);
 }
 
@@ -906,12 +909,13 @@ void IwyuPreprocessorInfo::FindAndReportMacroUse(const string& name,
 
 // Adds of includer's includes, direct or indirect, into retval.
 void IwyuPreprocessorInfo::AddAllIncludesAsFileEntries(
-    const FileEntry* includer, set<const FileEntry*>* retval) const {
+    OptionalFileEntryRef includer, set<OptionalFileEntryRef>* retval) const {
   const IwyuFileInfo* file_info = FileInfoFor(includer);
   if (!file_info)
     return;
 
-  for (const FileEntry* include : file_info->direct_includes_as_fileentries()) {
+  for (OptionalFileEntryRef include :
+       file_info->direct_includes_as_fileentries()) {
     if (ContainsKey(*retval, include))  // avoid infinite recursion
       continue;
     retval->insert(include);
@@ -923,16 +927,15 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   CHECK_(intends_to_provide_map_.empty() && "Should only call this fn once");
   // Figure out which of the header files we have are public.  We'll
   // map each one to a set of all private header files that map to it.
-  map<const FileEntry*, set<const FileEntry*>> private_headers_behind;
+  map<OptionalFileEntryRef, set<OptionalFileEntryRef>> private_headers_behind;
   for (const auto& fileinfo : iwyu_file_info_map_) {
-    const FileEntry* header = fileinfo.first;
+    OptionalFileEntryRef header = fileinfo.first;
     const vector<MappedInclude> public_headers_for_header =
         GlobalIncludePicker().GetCandidateHeadersForFilepath(
             GetFilePath(header));
     for (const MappedInclude& pub : public_headers_for_header) {
-      if (const FileEntry* public_file =
-          GetOrDefault(include_to_fileentry_map_, pub.quoted_include,
-                       nullptr)) {
+      if (OptionalFileEntryRef public_file = GetOrDefault(
+              include_to_fileentry_map_, pub.quoted_include, std::nullopt)) {
         CHECK_(ContainsKey(iwyu_file_info_map_, public_file));
         if (public_file != header)  // no credit for mapping to yourself :-)
           private_headers_behind[public_file].insert(header);
@@ -948,16 +951,16 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   // TODO(csilvers): use AddAssociatedHeaders() to get includes here.
   const IncludePicker& picker = GlobalIncludePicker();
   for (const auto& fileinfo : iwyu_file_info_map_) {
-    const FileEntry* file = fileinfo.first;
+    OptionalFileEntryRef file = fileinfo.first;
     if (file == nullptr)
       continue;
     intends_to_provide_map_[file].insert(file);  // Everyone provides itself!
     if (picker.IsPublic(file)) {
       AddAllIncludesAsFileEntries(file, &intends_to_provide_map_[file]);
     } else {
-      const set<const FileEntry*>& direct_includes =
+      const set<OptionalFileEntryRef>& direct_includes =
           fileinfo.second.direct_includes_as_fileentries();
-      for (const FileEntry* inc : direct_includes) {
+      for (OptionalFileEntryRef inc : direct_includes) {
         intends_to_provide_map_[file].insert(inc);
         if (picker.IsPublic(inc))
           AddAllIncludesAsFileEntries(inc, &intends_to_provide_map_[file]);
@@ -967,10 +970,10 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   // Ugh, we can have two files with the same name, using
   // #include-next.  Merge them.
   for (const auto& fileinfo : iwyu_file_info_map_) {
-    const FileEntry* file = fileinfo.first;
+    OptionalFileEntryRef file = fileinfo.first;
     // See if a round-trip to string and back ends up at a different file.
     const string quoted_include = ConvertToQuotedInclude(GetFilePath(file));
-    const FileEntry* other_file =
+    OptionalFileEntryRef other_file =
         GetOrDefault(include_to_fileentry_map_, quoted_include, file);
     if (other_file != file) {
       InsertAllInto(intends_to_provide_map_[file],
@@ -994,8 +997,8 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   //   symbol Foo which isn't a template argument, don't worry about
   //   it.'  Double check whether that's true.
   for (const auto& header_map : private_headers_behind) {
-    const FileEntry* public_header = header_map.first;
-    for (const FileEntry* private_header : header_map.second) {
+    OptionalFileEntryRef public_header = header_map.first;
+    for (OptionalFileEntryRef private_header : header_map.second) {
       CHECK_(ContainsKey(intends_to_provide_map_, private_header));
       InsertAllInto(intends_to_provide_map_[public_header],
                     &intends_to_provide_map_[private_header]);
@@ -1005,7 +1008,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   for (const auto& header_map : intends_to_provide_map_) {
     VERRS(4) << "Intends-to-provide for " << GetFilePath(header_map.first)
              << ":\n";
-    for (const FileEntry* private_header : header_map.second) {
+    for (OptionalFileEntryRef private_header : header_map.second) {
       VERRS(4) << "   " << GetFilePath(private_header) << "\n";
     }
   }
@@ -1014,7 +1017,7 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
 void IwyuPreprocessorInfo::PopulateTransitiveIncludeMap() {
   CHECK_(transitive_include_map_.empty() && "Should only call this fn once");
   for (const auto& fileinfo : iwyu_file_info_map_) {
-    const FileEntry* file = fileinfo.first;
+    OptionalFileEntryRef file = fileinfo.first;
     transitive_include_map_[file].insert(file);   // everyone includes itself!
     AddAllIncludesAsFileEntries(file, &transitive_include_map_[file]);
   }
@@ -1048,7 +1051,7 @@ void IwyuPreprocessorInfo::HandlePreprocessingDone() {
 }
 
 bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(
-    const FileEntry* includer, const FileEntry* includee) const {
+    OptionalFileEntryRef includer, OptionalFileEntryRef includee) const {
   // TODO: Should probably have a CHECK_(main_file_), but this method is
   // currently sometimes called with a nullptr main_file_.
   if (!includee)
@@ -1075,18 +1078,19 @@ bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(
   return false;
 }
 
-const FileEntry* IwyuPreprocessorInfo::IncludeToFileEntry(
+OptionalFileEntryRef IwyuPreprocessorInfo::IncludeToFileEntry(
     const string quoted_include) const {
-  return GetOrDefault(include_to_fileentry_map_, quoted_include, nullptr);
+  return GetOrDefault(include_to_fileentry_map_, quoted_include, std::nullopt);
 }
 
-IwyuFileInfo* IwyuPreprocessorInfo::FileInfoFor(const FileEntry* file) const {
+IwyuFileInfo* IwyuPreprocessorInfo::FileInfoFor(
+    OptionalFileEntryRef file) const {
   return const_cast<IwyuFileInfo*>(FindInMap(&iwyu_file_info_map_, file));
 }
 
 bool IwyuPreprocessorInfo::PublicHeaderIntendsToProvide(
-    const FileEntry* public_header, const FileEntry* other_file) const {
-  if (const set<const FileEntry*>* provides =
+    OptionalFileEntryRef public_header, OptionalFileEntryRef other_file) const {
+  if (const set<OptionalFileEntryRef>* provides =
           FindInMap(&intends_to_provide_map_, public_header)) {
     return ContainsKey(*provides, other_file);
   }
@@ -1094,8 +1098,8 @@ bool IwyuPreprocessorInfo::PublicHeaderIntendsToProvide(
 }
 
 bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
-    const FileEntry* includer, const FileEntry* includee) const {
-  if (const set<const FileEntry*>* all_includes =
+    OptionalFileEntryRef includer, OptionalFileEntryRef includee) const {
+  if (const set<OptionalFileEntryRef>* all_includes =
           FindInMap(&transitive_include_map_, includer)) {
     return ContainsKey(*all_includes, includee);
   }
@@ -1103,10 +1107,10 @@ bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
 }
 
 bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
-    const FileEntry* includer, const string& quoted_includee) const {
-  if (const set<const FileEntry*>* all_includes =
+    OptionalFileEntryRef includer, const string& quoted_includee) const {
+  if (const set<OptionalFileEntryRef>* all_includes =
           FindInMap(&transitive_include_map_, includer)) {
-    for (const FileEntry* include : *all_includes) {
+    for (OptionalFileEntryRef include : *all_includes) {
       if (ConvertToQuotedInclude(GetFilePath(include)) == quoted_includee)
         return true;
     }
@@ -1115,7 +1119,7 @@ bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
 }
 
 bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
-    const string& quoted_includer, const FileEntry* includee) const {
+    const string& quoted_includer, OptionalFileEntryRef includee) const {
   for (const auto& entry : transitive_include_map_) {
     if (ConvertToQuotedInclude(GetFilePath(entry.first)) == quoted_includer)
       return ContainsKey(entry.second, includee);
@@ -1124,14 +1128,15 @@ bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
 }
 
 bool IwyuPreprocessorInfo::IncludeIsInhibited(
-    const clang::FileEntry* file, const string& other_filename) const {
+    clang::OptionalFileEntryRef file, const string& other_filename) const {
   const set<string>* inhibited_includes = FindInMap(&no_include_map_, file);
   return (inhibited_includes != nullptr) &&
       ContainsKey(*inhibited_includes, other_filename);
 }
 
 bool IwyuPreprocessorInfo::ForwardDeclareIsInhibited(
-    const clang::FileEntry* file, const string& qualified_symbol_name) const {
+    clang::OptionalFileEntryRef file,
+    const string& qualified_symbol_name) const {
   const string normalized_symbol_name =
       NormalizeNamespaces(qualified_symbol_name);
   const set<string>* inhibited_forward_declares =
@@ -1146,7 +1151,7 @@ bool IwyuPreprocessorInfo::ForwardDeclareIsMarkedKeep(
   SourceLocation loc = decl->getEndLoc();
 
   // Is the decl part of a begin_keep/end_keep block?
-  const FileEntry* file = GetFileEntry(loc);
+  OptionalFileEntryRef file = GetFileEntryRef(loc);
   auto keep_ranges = keep_location_ranges_.equal_range(file);
   for (auto it = keep_ranges.first; it != keep_ranges.second; ++it) {
     if (it->second.fullyContains(loc)) {
@@ -1164,7 +1169,7 @@ bool IwyuPreprocessorInfo::ForwardDeclareIsExported(
   SourceLocation loc = decl->getEndLoc();
 
   // Is the decl part of a begin_exports/end_exports block?
-  const FileEntry* file = GetFileEntry(loc);
+  OptionalFileEntryRef file = GetFileEntryRef(loc);
   auto export_ranges = export_location_ranges_.equal_range(file);
   for (auto it = export_ranges.first; it != export_ranges.second; ++it) {
     if (it->second.fullyContains(loc)) {
