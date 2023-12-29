@@ -15,9 +15,10 @@
 #include <string>                       // for string
 #include <vector>                       // for vector
 
+#include "clang/Basic/FileEntry.h"
+
 namespace clang {
 class CompilerInstance;
-class FileEntry;
 class HeaderSearch;
 class SourceManager;
 struct PrintingPolicy;

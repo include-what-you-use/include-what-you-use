@@ -25,10 +25,10 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_use_flags.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 
 namespace clang {
-class FileEntry;
 class UsingDecl;
 class ElaboratedTypeLoc;
 }  // namespace clang
