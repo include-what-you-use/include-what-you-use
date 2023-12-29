@@ -188,13 +188,6 @@ bool IsInHeader(const clang::Decl* decl) {
   return !GlobalSourceManager()->isMainFile(containing_file->getFileEntry());
 }
 
-bool IsSystemHeader(const clang::FileEntry* file) {
-  const SourceManager* sm = GlobalSourceManager();
-  FileID file_id = sm->translateFile(file);
-  SourceLocation loc = sm->getLocForStartOfFile(file_id);
-  return sm->isInSystemHeader(loc);
-}
-
 bool IsSystemHeader(OptionalFileEntryRef file) {
   const SourceManager* sm = GlobalSourceManager();
   FileID file_id = sm->translateFile(*file);
