@@ -50,9 +50,9 @@
 // This class finishes its processing before the 'main' iwyu
 // processing is done, so other iwyu consumers can access the main
 // outputs of this class:
-//    * The map from include-name to FileEntry*.
-//    * The map from FileEntry* to its IwyuFileInfo object.
-//    * TODO(csilvers): Information about direct includes of a FileEntry*
+//    * The map from include-name to FileEntry.
+//    * The map from FileEntry to its IwyuFileInfo object.
+//    * TODO(csilvers): Information about direct includes of a FileEntry
 //    * The 'intends to provide' map, which encapsulates some
 //      of the information about public vs private headers.
 //    * Testing and reporting membership in the main compilation unit.
@@ -110,8 +110,8 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   }
 
   // Given a quoted include like '<vector>', or '"ads/base.h"',
-  // returns the FileEntry for that file, or nullptr if none is
-  // found.  If multiple files are included under the same
+  // returns the optional FileEntry for that file.
+  // If multiple files are included under the same
   // quoted-include name (which can happen via #include-next),
   // one is returned arbitrarily.  (But always the same one.)
   clang::OptionalFileEntryRef IncludeToFileEntry(
@@ -320,7 +320,7 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // How many #include lines we've encountered from the given file.
   map<clang::OptionalFileEntryRef, int> num_includes_seen_;
 
-  // Maps from a FileEntry* to all files that this file "intends" to
+  // Maps from a FileEntry to all files that this file "intends" to
   // provide the symbols from.  For now, we say a file intentionally
   // provides a symbol if it defines it, or if any file it directly
   // #includes defines it.  However, if the header is a private header
@@ -332,16 +332,16 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   map<clang::OptionalFileEntryRef, set<clang::OptionalFileEntryRef>>
       intends_to_provide_map_;
 
-  // Maps from a FileEntry* to all the files that this file includes,
+  // Maps from a FileEntry to all the files that this file includes,
   // either directly or indirectly.
   map<clang::OptionalFileEntryRef, set<clang::OptionalFileEntryRef>>
       transitive_include_map_;
 
-  // Maps from a FileEntry* to the quoted names of files that its file
+  // Maps from a FileEntry to the quoted names of files that its file
   // is directed *not* to include via the "no_include" pragma.
   map<clang::OptionalFileEntryRef, set<string>> no_include_map_;
 
-  // Maps from a FileEntry* to the qualified names of symbols that its
+  // Maps from a FileEntry to the qualified names of symbols that its
   // file is directed *not* to forward-declare via the
   // "no_forward_declare" pragma.
   map<clang::OptionalFileEntryRef, set<string>> no_forward_declare_map_;

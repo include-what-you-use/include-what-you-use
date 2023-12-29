@@ -25,8 +25,10 @@
 // Clang uses the type FileEntry to identify a physical file in the
 // file system.  A FileEntry is created for each source file Clang
 // processes.  Clang never creates two FileEntry objects for the same
-// file.  Therefore we use const FileEntry* in IWYU as unique IDs for
-// files.
+// file, so FileEntry objects have pointer identity. Clang wraps
+// FileEntry in a couple of stronger types with similar semantics
+// (FileEntryRef and OptionalFileEntryRef). We use these wrappers
+// as file identities in IWYU.
 //
 // Clang's FileID type is a misnomer.  It's actually an ID of a
 // particular #include statement.  If a file is #included in two
@@ -139,7 +141,7 @@ inline int GetLineNumber(clang::SourceLocation loc) {
 }
 
 // The rest of this section of the file is for returning the
-// FileEntry* corresponding to a source location: the file that the
+// FileEntry corresponding to a source location: the file that the
 // location is in.  This is a surprising amount of work.
 
 // Tells which #include loc comes from.
@@ -149,7 +151,7 @@ inline clang::OptionalFileEntryRef GetLocFileEntry(clang::SourceLocation loc) {
   // clang uses the name FileID to mean 'a filename that was reached via
   // a particular series of #includes.'  (What one might think a FileID
   // might be -- a unique reference to a filesystem object -- is
-  // actually a FileEntry*.)
+  // actually a FileEntry.)
   const clang::SourceManager& source_manager = *GlobalSourceManager();
   return source_manager.getFileEntryRefForID(source_manager.getFileID(loc));
 }
@@ -196,7 +198,7 @@ clang::SourceLocation GetLocation(const clang::NestedNameSpecifierLoc* nnsloc);
 clang::SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc);
 
 // These define default implementations of GetFileEntry() and
-// GetPath() in terms of GetLocation().  As long as an object defines
+// GetFilePath() in terms of GetLocation().  As long as an object defines
 // its own GetLocation(), it will get these other two for free.
 template <typename T>
 clang::OptionalFileEntryRef GetFileEntry(const T& obj) {
