@@ -254,7 +254,7 @@ bool ExecuteAction(int argc, const char** argv,
 
   // Drop -save-temps arguments to avoid multiple compilation jobs.
   llvm::erase_if(args, [](StringRef arg) {
-    return arg.startswith("-save-temps") || arg.startswith("--save-temps");
+    return arg.starts_with("-save-temps") || arg.starts_with("--save-temps");
   });
 
   // FIXME: This is a hack to try to force the driver to do something we can
