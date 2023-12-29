@@ -1950,7 +1950,7 @@ void CleanupPrefixHeaderIncludes(
       line.clear_desired();
       VERRS(6) << "Ignoring '" << line.line()
                << "': is superseded by command line include "
-               << file_entry->getName() << "\n";
+               << GetFilePath(file_entry) << "\n";
     }
   }
 }
@@ -2187,8 +2187,8 @@ void IwyuFileInfo::HandlePreprocessingDone() {
                                       direct_macro_use_includees.end()));
   for (const FileEntry* macro_use_includee : direct_macro_use_includees) {
     if (should_report_violations) {
-      ERRSYM(file_) << "Keep #include " << macro_use_includee->getName()
-                    << " in " << file_->getName()
+      ERRSYM(file_) << "Keep #include " << GetFilePath(macro_use_includee)
+                    << " in " << GetFilePath(file_)
                     << " because used macro is defined by includer.\n";
       ReportKnownDesiredFile(macro_use_includee);
     } else {
