@@ -48,19 +48,23 @@ class OneUse {
  public:
   enum UseKind { kFullUse, kForwardDeclareUse };
 
+  // This constructor is used to track nominal decl uses.
   OneUse(const clang::NamedDecl* decl,
          clang::SourceLocation use_loc,
          clang::SourceLocation decl_loc,
          UseKind use_kind,
          UseFlags flags,
          const char* comment);
-  // Both dfn_file and dfn_filepath are specified to allow to create OneUse
-  // with dfn_filepath and without dfn_file.  For example, in
-  // IwyuBaseAstVisitor::VisitCXXNewExpr we make a guess that placement
-  // operator new is called (which is defined in <new>), but we don't have
-  // <new> FileEntry.
+
+  // This constructor is used to track macro uses and abstract symbol uses (such
+  // as placement operator new, which requires <new>).
   OneUse(const string& symbol_name, clang::OptionalFileEntryRef dfn_file,
-         const string& dfn_filepath, clang::SourceLocation use_loc);
+         clang::SourceLocation use_loc);
+
+  // This constructor is used to track include file uses. See
+  // ReportIncludeFileUse for details.
+  OneUse(clang::OptionalFileEntryRef included_file,
+         const string& quoted_include);
 
   const string& symbol_name() const {
     return symbol_name_;

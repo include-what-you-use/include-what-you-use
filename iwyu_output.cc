@@ -277,23 +277,37 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
 
 // This constructor always creates a full use.
 OneUse::OneUse(const string& symbol_name, OptionalFileEntryRef dfn_file,
-               const string& dfn_filepath, SourceLocation use_loc)
+               SourceLocation use_loc)
     : symbol_name_(symbol_name),
       short_symbol_name_(symbol_name),
       decl_(nullptr),
       decl_file_(dfn_file),
-      decl_filepath_(dfn_filepath),
+      decl_filepath_(GetFilePath(dfn_file)),
       use_loc_(use_loc),
       use_kind_(kFullUse),
       use_flags_(UF_None),
       ignore_use_(false),
       is_iwyu_violation_(false) {
-  // Sometimes dfn_filepath is actually a fully quoted include.  In
-  // that case, we take that as an unchangable mapping that we
-  // should never remove, so we make it the suggested header.
-  CHECK_(!decl_filepath_.empty() && "Must pass a real filepath to OneUse");
-  if (decl_filepath_[0] == '"' || decl_filepath_[0] == '<')
-    suggested_header_ = decl_filepath_;
+  CHECK_(dfn_file && "OneUse: dfn_file must be set");
+  CHECK_(!decl_filepath_.empty() && "OneUse: dfn_file must have a name");
+  CHECK_(!IsQuotedInclude(decl_filepath_))
+      << "OneUse: dfn_file must have a real name, was: " << decl_filepath_;
+}
+
+OneUse::OneUse(OptionalFileEntryRef included_file, const string& quoted_include)
+    : symbol_name_(),
+      short_symbol_name_(),
+      decl_(nullptr),
+      decl_file_(included_file),
+      decl_filepath_(quoted_include),
+      use_loc_(SourceLocation()),
+      use_kind_(kFullUse),
+      use_flags_(UF_None),
+      ignore_use_(false),
+      is_iwyu_violation_(false) {
+  CHECK_(IsQuotedInclude(decl_filepath_))
+      << "OneUse: bad quoted_include: " << quoted_include;
+  suggested_header_ = decl_filepath_;
 }
 
 void OneUse::reset_decl(const clang::NamedDecl* decl) {
@@ -670,16 +684,14 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
                                        OptionalFileEntryRef dfn_file,
                                        const string& symbol) {
-  symbol_uses_.push_back(
-      OneUse(symbol, dfn_file, GetFilePath(dfn_file), use_loc));
+  symbol_uses_.push_back(OneUse(symbol, dfn_file, use_loc));
   LogSymbolUse("Marked full-info use of symbol", symbol_uses_.back());
 }
 
 void IwyuFileInfo::ReportMacroUse(clang::SourceLocation use_loc,
                                   clang::SourceLocation dfn_loc,
                                   const string& symbol) {
-  symbol_uses_.push_back(
-      OneUse(symbol, GetFileEntry(dfn_loc), GetFilePath(dfn_loc), use_loc));
+  symbol_uses_.push_back(OneUse(symbol, GetFileEntry(dfn_loc), use_loc));
   LogSymbolUse("Marked full-info use of macro", symbol_uses_.back());
 }
 
@@ -689,8 +701,7 @@ void IwyuFileInfo::ReportDefinedMacroUse(clang::OptionalFileEntryRef used_in) {
 
 void IwyuFileInfo::ReportIncludeFileUse(
     clang::OptionalFileEntryRef included_file, const string& quoted_include) {
-  symbol_uses_.push_back(OneUse("", included_file, quoted_include,
-                                SourceLocation()));
+  symbol_uses_.push_back(OneUse(included_file, quoted_include));
   LogSymbolUse("Marked use of include-file", symbol_uses_.back());
 }
 
