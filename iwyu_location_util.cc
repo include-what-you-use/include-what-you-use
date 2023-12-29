@@ -29,7 +29,6 @@ using clang::CXXMethodDecl;
 using clang::CXXOperatorCallExpr;
 using clang::ClassTemplateSpecializationDecl;
 using clang::ConditionalOperator;
-using clang::FileEntry;
 using clang::FileID;
 using clang::FunctionDecl;
 using clang::MemberExpr;
