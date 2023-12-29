@@ -94,8 +94,8 @@ using std::multimap;
 class IwyuPreprocessorInfo : public clang::PPCallbacks,
                              public clang::CommentHandler {
  public:
-  IwyuPreprocessorInfo() : main_file_(nullptr),
-                           empty_file_info_(nullptr, this, "") {}
+  IwyuPreprocessorInfo() : main_file_(nullptr) {
+  }
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
   void HandlePreprocessingDone();
@@ -122,10 +122,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Note this is a const method that returns a non-const pointer.
   // Be careful if using this method in threaded contexts.
   IwyuFileInfo* FileInfoFor(const clang::FileEntry* file) const;
-
-  // Instead of returning nullptr if no file info can be found, returns
-  // an empty IwyuFileInfo struct.
-  const IwyuFileInfo& FileInfoOrEmptyFor(const clang::FileEntry* file) const;
 
   // For every file we've seen (that is, that we've #included),
   // returns what files it 'intends' to provide full type information
@@ -347,8 +343,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // file is directed *not* to forward-declare via the
   // "no_forward_declare" pragma.
   map<const clang::FileEntry*, set<string>> no_forward_declare_map_;
-
-  const IwyuFileInfo empty_file_info_;
 
   // For processing pragmas. It is the current stack of open
   // "begin_exports".  There should be at most one item in this stack

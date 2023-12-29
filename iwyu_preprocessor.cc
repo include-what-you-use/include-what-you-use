@@ -907,9 +907,11 @@ void IwyuPreprocessorInfo::FindAndReportMacroUse(const string& name,
 // Adds of includer's includes, direct or indirect, into retval.
 void IwyuPreprocessorInfo::AddAllIncludesAsFileEntries(
     const FileEntry* includer, set<const FileEntry*>* retval) const {
-  set<const FileEntry*> direct_incs =
-      FileInfoOrEmptyFor(includer).direct_includes_as_fileentries();
-  for (const FileEntry* include : direct_incs) {
+  const IwyuFileInfo* file_info = FileInfoFor(includer);
+  if (!file_info)
+    return;
+
+  for (const FileEntry* include : file_info->direct_includes_as_fileentries()) {
     if (ContainsKey(*retval, include))  // avoid infinite recursion
       continue;
     retval->insert(include);
@@ -1080,15 +1082,6 @@ const FileEntry* IwyuPreprocessorInfo::IncludeToFileEntry(
 
 IwyuFileInfo* IwyuPreprocessorInfo::FileInfoFor(const FileEntry* file) const {
   return const_cast<IwyuFileInfo*>(FindInMap(&iwyu_file_info_map_, file));
-}
-
-const IwyuFileInfo& IwyuPreprocessorInfo::FileInfoOrEmptyFor(
-    const FileEntry* file) const {
-  const IwyuFileInfo* retval = FindInMap(&iwyu_file_info_map_, file);
-  if (retval)
-    return *retval;
-
-  return empty_file_info_;
 }
 
 bool IwyuPreprocessorInfo::PublicHeaderIntendsToProvide(
