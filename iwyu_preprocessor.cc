@@ -174,7 +174,7 @@ bool MatchTwoTokens(const vector<string>& tokens,
 bool IwyuPreprocessorInfo::HasOpenBeginExports(
     OptionalFileEntryRef file) const {
   return !begin_exports_location_stack_.empty() &&
-         GetFileEntryRef(begin_exports_location_stack_.top()) == file;
+         GetFileEntry(begin_exports_location_stack_.top()) == file;
 }
 
 // Only call this when the given files is the one being processed
@@ -182,7 +182,7 @@ bool IwyuPreprocessorInfo::HasOpenBeginExports(
 // state of the parse of the given file.
 bool IwyuPreprocessorInfo::HasOpenBeginKeep(OptionalFileEntryRef file) const {
   return !begin_keep_location_stack_.empty() &&
-         GetFileEntryRef(begin_keep_location_stack_.top()) == file;
+         GetFileEntry(begin_keep_location_stack_.top()) == file;
 }
 
 bool IwyuPreprocessorInfo::HandleComment(Preprocessor& pp,
@@ -197,7 +197,7 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
   const char* begin_text = DefaultDataGetter().GetCharacterData(begin_loc);
   const char* end_text = DefaultDataGetter().GetCharacterData(end_loc);
   string pragma_text(begin_text, end_text);
-  OptionalFileEntryRef const this_file_entry = GetFileEntryRef(begin_loc);
+  OptionalFileEntryRef const this_file_entry = GetFileEntry(begin_loc);
 
   // Pragmas must start comments.
   if (!StripLeft(&pragma_text, "// IWYU pragma: ") &&
@@ -431,7 +431,7 @@ void IwyuPreprocessorInfo::InsertIntoFileInfoMap(
 void IwyuPreprocessorInfo::MaybeProtectInclude(
     SourceLocation includer_loc, OptionalFileEntryRef includee,
     const string& include_name_as_written) {
-  OptionalFileEntryRef includer = GetFileEntryRef(includer_loc);
+  OptionalFileEntryRef includer = GetFileEntry(includer_loc);
   if (IsBuiltinOrCommandLineFile(includer))
     return;
 
@@ -548,7 +548,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   // For files we're going to be reporting IWYU errors for, we need
   // both forms of the includee to be specified.  For other files, we
   // don't care as much.
-  OptionalFileEntryRef includer = GetFileEntryRef(includer_loc);
+  OptionalFileEntryRef includer = GetFileEntry(includer_loc);
   if (ShouldReportIWYUViolationsFor(includer)) {
     CHECK_(includee != nullptr);
     CHECK_(!include_name_as_written.empty());
@@ -602,7 +602,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   // Besides marking headers as "associated header" with heuristics, the user
   // can directly mark headers with the associated pragma.
   OptionalFileEntryRef associated_includer =
-      GetFileEntryRef(associated_pragma_location_);
+      GetFileEntry(associated_pragma_location_);
   if (associated_pragma_location_.isValid() &&
       associated_includer == includer) {
     GetFromFileInfoMap(includer)->AddAssociatedHeader(
@@ -647,7 +647,7 @@ void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
                                         const MacroDefinition& definition,
                                         SourceRange range,
                                         const clang::MacroArgs* /*args*/) {
-  OptionalFileEntryRef macro_file = GetFileEntryRef(macro_use_token);
+  OptionalFileEntryRef macro_file = GetFileEntry(macro_use_token);
   const MacroInfo* macro_def = definition.getMacroInfo();
   if (ShouldPrintSymbolFromFile(macro_file)) {
     errs() << "[ Use macro   ] "
@@ -665,7 +665,7 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
                                         const MacroDirective* directive) {
   const MacroInfo* macro = directive->getMacroInfo();
   const SourceLocation macro_loc = macro->getDefinitionLoc();
-  ERRSYM(GetFileEntryRef(macro_loc))
+  ERRSYM(GetFileEntry(macro_loc))
       << "[ #define     ] " << PrintableLoc(macro_loc) << ": " << GetName(id)
       << "\n";
   // We'd like to do an iwyu check on every token in the macro
@@ -691,7 +691,7 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
 void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
                                  const Token& id,
                                  const MacroDefinition& /*definition*/) {
-  ERRSYM(GetFileEntryRef(id.getLocation()))
+  ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifdef      ] " << PrintableLoc(id.getLocation()) << ": "
       << GetName(id) << "\n";
   FindAndReportMacroUse(GetName(id), id.getLocation());
@@ -700,7 +700,7 @@ void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
 void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
                                   const Token& id,
                                   const MacroDefinition& /*definition*/) {
-  ERRSYM(GetFileEntryRef(id.getLocation()))
+  ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifndef     ] " << PrintableLoc(id.getLocation()) << ": "
       << GetName(id) << "\n";
   FindAndReportMacroUse(GetName(id), id.getLocation());
@@ -712,7 +712,7 @@ void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
 void IwyuPreprocessorInfo::Defined(const Token& id,
                                    const MacroDefinition& /*definition*/,
                                    SourceRange /*range*/) {
-  ERRSYM(GetFileEntryRef(id.getLocation()))
+  ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #if defined ] " << PrintableLoc(id.getLocation()) << ": "
       << GetName(id) << "\n";
   FindAndReportMacroUse(GetName(id), id.getLocation());
@@ -767,7 +767,7 @@ void IwyuPreprocessorInfo::FileSkipped(const FileEntryRef& file,
       GetIncludeNameAsWritten(include_filename_loc_);
   const SourceLocation include_loc =
       GetInstantiationLoc(filename.getLocation());
-  ERRSYM(GetFileEntryRef(include_loc))
+  ERRSYM(GetFileEntry(include_loc))
       << "[ (#include)  ] " << include_name_as_written << " ("
       << GetFilePath(file) << ")\n";
 
@@ -785,16 +785,16 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   const SourceLocation include_loc = GlobalSourceManager()->getIncludeLoc(
       GlobalSourceManager()->getFileID(file_beginning));
   string include_name_as_written;
-  if (!IsBuiltinOrCommandLineFile(GetFileEntryRef(include_loc))) {
+  if (!IsBuiltinOrCommandLineFile(GetFileEntry(include_loc))) {
     CHECK_(include_filename_loc_.isValid() &&
            "Include from not built-in file must have inclusion directive");
     include_name_as_written = GetIncludeNameAsWritten(include_filename_loc_);
   }
-  ERRSYM(GetFileEntryRef(include_loc))
+  ERRSYM(GetFileEntry(include_loc))
       << "[ #include    ] " << include_name_as_written << " ("
       << GetFilePath(file_beginning) << ")\n";
 
-  OptionalFileEntryRef const new_file = GetFileEntryRef(file_beginning);
+  OptionalFileEntryRef const new_file = GetFileEntry(file_beginning);
   if (new_file)
     AddDirectInclude(include_loc, new_file, include_name_as_written);
 
@@ -808,7 +808,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
     main_file_ = new_file;
 
   if (main_file_ != nullptr &&
-      BelongsToMainCompilationUnit(GetFileEntryRef(include_loc), new_file)) {
+      BelongsToMainCompilationUnit(GetFileEntry(include_loc), new_file)) {
     VERRS(5) << "Added to main compilation unit: "
              << GetFilePath(new_file) << "\n";
     AddGlobToReportIWYUViolationsFor(GetFilePath(new_file));
@@ -820,7 +820,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   // Mark is_prefix_header.
   CHECK_(new_file && "is_prefix_header is applicable to usual files only");
   IwyuFileInfo *includee_file_info = GetFromFileInfoMap(new_file);
-  OptionalFileEntryRef includer_file = GetFileEntryRef(include_loc);
+  OptionalFileEntryRef includer_file = GetFileEntry(include_loc);
   bool is_prefix_header = false;
   if (includer_file) {
     // File included from another prefix header file is prefix header too.
@@ -838,7 +838,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
 // Called when done with an #included file and returning to the parent file.
 void IwyuPreprocessorInfo::FileChanged_ExitToFile(
     SourceLocation include_loc, OptionalFileEntryRef exiting_from) {
-  ERRSYM(GetFileEntryRef(include_loc))
+  ERRSYM(GetFileEntry(include_loc))
       << "[ Exiting to  ] " << PrintableLoc(include_loc) << "\n";
   if (HasOpenBeginExports(exiting_from)) {
     Warn(begin_exports_location_stack_.top(),
@@ -854,13 +854,12 @@ void IwyuPreprocessorInfo::FileChanged_ExitToFile(
 }
 
 void IwyuPreprocessorInfo::FileChanged_RenameFile(SourceLocation new_file) {
-  ERRSYM(GetFileEntryRef(new_file))
+  ERRSYM(GetFileEntry(new_file))
       << "[ Renaming to ] " << PrintableLoc(new_file) << "\n";
 }
 
 void IwyuPreprocessorInfo::FileChanged_SystemHeaderPragma(SourceLocation loc) {
-  ERRSYM(GetFileEntryRef(loc))
-      << "[ #pragma s_h ] " << PrintableLoc(loc) << "\n";
+  ERRSYM(GetFileEntry(loc)) << "[ #pragma s_h ] " << PrintableLoc(loc) << "\n";
 }
 
 //------------------------------------------------------------
@@ -873,7 +872,7 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
   // Don't report macro uses that aren't actually in a file somewhere.
   if (!dfn_location.isValid() || GetFilePath(dfn_location) == "<built-in>")
     return;
-  OptionalFileEntryRef used_in = GetFileEntryRef(usage_location);
+  OptionalFileEntryRef used_in = GetFileEntry(usage_location);
   if (ShouldReportIWYUViolationsFor(used_in)) {
     // ignore symbols used outside foo.{h,cc}
 
@@ -891,7 +890,7 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
     GetFromFileInfoMap(used_in)->ReportMacroUse(usage_location, dfn_location,
                                                 name);
   }
-  OptionalFileEntryRef defined_in = GetFileEntryRef(dfn_location);
+  OptionalFileEntryRef defined_in = GetFileEntry(dfn_location);
   GetFromFileInfoMap(defined_in)->ReportDefinedMacroUse(used_in);
 }
 
@@ -1151,7 +1150,7 @@ bool IwyuPreprocessorInfo::ForwardDeclareIsMarkedKeep(
   SourceLocation loc = decl->getEndLoc();
 
   // Is the decl part of a begin_keep/end_keep block?
-  OptionalFileEntryRef file = GetFileEntryRef(loc);
+  OptionalFileEntryRef file = GetFileEntry(loc);
   auto keep_ranges = keep_location_ranges_.equal_range(file);
   for (auto it = keep_ranges.first; it != keep_ranges.second; ++it) {
     if (it->second.fullyContains(loc)) {
@@ -1169,7 +1168,7 @@ bool IwyuPreprocessorInfo::ForwardDeclareIsExported(
   SourceLocation loc = decl->getEndLoc();
 
   // Is the decl part of a begin_exports/end_exports block?
-  OptionalFileEntryRef file = GetFileEntryRef(loc);
+  OptionalFileEntryRef file = GetFileEntry(loc);
   auto export_ranges = export_location_ranges_.equal_range(file);
   for (auto it = export_ranges.first; it != export_ranges.second; ++it) {
     if (it->second.fullyContains(loc)) {

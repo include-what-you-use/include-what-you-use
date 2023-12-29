@@ -115,7 +115,7 @@ static SourceLocation GetMemberExprLocation(const MemberExpr* member_expr) {
   // so, we say the whole member-expr is part of that macro.
   // Otherwise, we just say the member-expr is in the file where the
   // member and base macros are called.
-  if (GetFileEntryRef(member_start) == GetFileEntryRef(base_end) &&
+  if (GetFileEntry(member_start) == GetFileEntry(base_end) &&
       GetLineNumber(member_start) == GetLineNumber(base_end)) {
     return member_start;
   }
@@ -179,7 +179,7 @@ bool IsInScratchSpace(SourceLocation loc) {
 }
 
 bool IsInHeader(const clang::Decl* decl) {
-  OptionalFileEntryRef containing_file = GetFileEntryRef(decl);
+  OptionalFileEntryRef containing_file = GetFileEntry(decl);
   if (!containing_file) {
     // This is a builtin, or something is terribly wrong.
     // At any rate, we're not in a header.
