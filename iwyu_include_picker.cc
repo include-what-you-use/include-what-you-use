@@ -16,6 +16,7 @@
 // not hash_map: it's not as portable and needs hash<string>.
 #include <map>                          // for map, map<>::mapped_type, etc
 #include <memory>
+#include <numeric>                      // for accumulate
 #include <string>                       // for string, basic_string, etc
 #include <system_error>                 // for error_code
 #include <utility>                      // for pair, make_pair
@@ -29,10 +30,12 @@
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
@@ -1174,6 +1177,43 @@ string FindFileInSearchPath(const vector<string>& search_path,
   return filename;
 }
 
+void PrintMappings(const IncludePicker::IncludeMap& map, const char* name) {
+  if (map.empty()) {
+    llvm::errs() << name << ": empty, no statistics\n";
+    return;
+  }
+
+  // Compute and print count/min/max/average.
+  std::vector<size_t> lengths;
+  for (const auto& m : map) {
+    lengths.push_back(m.second.size());
+  }
+
+  size_t count = lengths.size();
+  size_t min = *std::min_element(lengths.begin(), lengths.end());
+  size_t max = *std::max_element(lengths.begin(), lengths.end());
+  double avg = std::accumulate(lengths.begin(), lengths.end(), 0.0) / count;
+  llvm::errs() << name << ": count=" << count << ", min=" << min
+               << ", max=" << max << ", average=" << llvm::format("%.2f", avg)
+               << "\n";
+
+  // Sort all mappings by size, ascending, and print them.
+  vector<pair<string, vector<MappedInclude>>> mappings(map.begin(), map.end());
+  std::stable_sort(mappings.begin(), mappings.end(), [](auto& lhs, auto& rhs) {
+    return rhs.second.size() < lhs.second.size();
+  });
+
+  llvm::errs() << "---\n";
+  for (const auto& m : mappings) {
+    llvm::errs() << m.first << ": [";
+    llvm::interleaveComma(m.second, llvm::errs(), [](const MappedInclude& x) {
+      llvm::errs() << x.quoted_include;
+    });
+    llvm::errs() << "]\n";
+  }
+  llvm::errs() << "---\n";
+}
+
 }  // anonymous namespace
 
 MappedInclude::MappedInclude(const string& q, const string& p)
@@ -1487,6 +1527,12 @@ void IncludePicker::FinalizeAddedIncludes() {
   }
 
   has_called_finalize_added_include_lines_ = true;
+
+  // Print some mapping statistics.
+  if (ShouldPrint(9)) {
+    PrintMappings(filepath_include_map_, "filepath_include_map_");
+    PrintMappings(symbol_include_map_, "symbol_include_map_");
+  }
 }
 
 // For the given key, return the vector of values associated with that
