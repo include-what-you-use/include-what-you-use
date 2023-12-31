@@ -213,6 +213,7 @@ using clang::TemplateDecl;
 using clang::TemplateName;
 using clang::TemplateSpecializationType;
 using clang::TemplateSpecializationTypeLoc;
+using clang::TemplateTypeParmDecl;
 using clang::TranslationUnitDecl;
 using clang::Type;
 using clang::TypeDecl;
@@ -1632,6 +1633,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  // Default type template arguments are forward-declarable, but can be provided
+  // by the template author similarly to 'typedef' underlying types. They are
+  // handled by 'IsProvidedTypeComponent'.
+  bool VisitTemplateTypeParmDecl(TemplateTypeParmDecl*) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    current_ast_node()->set_in_forward_declare_context(true);
+    return true;
+  }
+
   // If we're a declared (not defined) function, all our types --
   // return type and argument types -- are forward-declarable.  The
   // one exception required by the language is the throw types, which
@@ -2548,7 +2559,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // case here, since we might be using a typedef type from
     // anywhere.  ('autocast' is similar, but is handled in
     // VisitCastExpr; 'fn-return-type' is also similar and is
-    // handled in HandleFunctionCall.)
+    // handled in HandleFunctionCall; default type template arguments are
+    // handled in InstantiatedTemplateVisitor::CanIgnoreType.)
     if (const auto* typedef_type = type->getAs<TypedefType>()) {
       // One exception: if this TypedefType is being used in another
       // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
@@ -4220,8 +4232,10 @@ class IwyuAstConsumer
 
   pair<bool, const char*> CanBeProvidedTypeComponent(
       const ASTNode* node) const {
-    if (node->HasAncestorOfType<TypedefNameDecl>())
+    if (node->HasAncestorOfType<TypedefNameDecl>() ||
+        node->HasAncestorOfType<TemplateTypeParmDecl>()) {
       return pair(true, nullptr);
+    }
 
     if (const FunctionDecl* decl = node->GetAncestorAs<FunctionDecl>()) {
       // No point in author-intent analysis of function definitions
