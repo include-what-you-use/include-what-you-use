@@ -11,6 +11,7 @@
 //            -Xiwyu --check_also="tests/cxx/*-fnreturn.h" \
 //            -Xiwyu --check_also="tests/cxx/*-typedefs.h" \
 //            -Xiwyu --check_also="tests/cxx/*-type_alias.h" \
+//            -Xiwyu --check_also="tests/cxx/*-def_tpl_arg.h" \
 //            -Xiwyu --check_also="tests/cxx/*-d2.h" \
 //            -I .
 
@@ -37,6 +38,7 @@
 // when these two conditions are met, and not otherwise.
 
 #include "tests/cxx/direct.h"
+#include "tests/cxx/iwyu_stricter_than_cpp-def_tpl_arg.h"
 #include "tests/cxx/iwyu_stricter_than_cpp-typedefs.h"
 #include "tests/cxx/iwyu_stricter_than_cpp-type_alias.h"
 #include "tests/cxx/iwyu_stricter_than_cpp-autocast.h"
@@ -419,6 +421,21 @@ void TestFunctionReturn() {
   Call<Alias, TplAllForwardDeclaredFn>();
 }
 
+void TestDefaultTplArgs() {
+  // There is currently some difference between default type template arguments
+  // and the other cases: on the user's side, IWYU requires complete type info
+  // when the template defining file doesn't provide the corresponding header
+  // (for user-defined templates, it usually means "doesn't include directly")
+  // regardless of fwd-decl presence or absence. Hence, 'IndirectStruct3' (which
+  // is neither directly included nor fwd-declared in the template defn header)
+  // is required both here and at the template definition side.
+  // 'IndirectStruct2' is required here because it is fwd-declared and not
+  // included directly in the template defining header.
+  // IWYU: IndirectStruct3 is...*iwyu_stricter_than_cpp-i3.h
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  TplWithDefaultArgs<> t;
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/iwyu_stricter_than_cpp.cc should add these lines:
@@ -446,6 +463,7 @@ The full include-list for tests/cxx/iwyu_stricter_than_cpp.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/iwyu_stricter_than_cpp-autocast.h"  // for FnRefs, FnValues, HeaderDefinedFnRefs, HeaderDefinedTplFnRefs, TplFnRefs, TplFnValues
 #include "tests/cxx/iwyu_stricter_than_cpp-d3.h"  // for IndirectStruct3ProvidingAl, IndirectStruct3ProvidingTypedef, IndirectStruct4ProvidingAl, IndirectStruct4ProvidingTypedef
+#include "tests/cxx/iwyu_stricter_than_cpp-def_tpl_arg.h"  // for TplWithDefaultArgs
 #include "tests/cxx/iwyu_stricter_than_cpp-fnreturn.h"  // for DoesEverythingRightFn, DoesNotForwardDeclareAndIncludesFn, DoesNotForwardDeclareFn, DoesNotForwardDeclareProperlyFn, IncludesFn, TplAllForwardDeclaredFn, TplAllNeededTypesProvidedFn, TplDoesEverythingRightAgainFn, TplDoesEverythingRightFn, TplDoesNotForwardDeclareAndIncludesFn, TplDoesNotForwardDeclareFn, TplDoesNotForwardDeclareProperlyFn, TplIncludesFn, TplOnlyArgumentTypeProvidedFn, TplOnlyTemplateProvidedFn
 #include "tests/cxx/iwyu_stricter_than_cpp-i2.h"  // for IndirectStruct2, TplIndirectStruct2
 #include "tests/cxx/iwyu_stricter_than_cpp-i3.h"  // for IndirectStruct3
