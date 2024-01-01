@@ -26,3 +26,6 @@ using ::NonProvidingTypedef;
 
 template <int>
 using NonProvidingAlias = ns_in_d2::NonProvidingTypedef;
+
+using NonProvidingFunctionAlias1 = int(IndirectClass&);
+using NonProvidingFunctionAlias2 = IndirectClass(int);

@@ -90,7 +90,9 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
   // design): we fully use all template types.  (Note: we'll have to
   // do something more clever here if any types in kFullUseTypes start
   // accepting template-template types.)
-  return GetTplTypeResugarMapForClassNoComponentTypes(tpl_type);
+  return GetTplInstDataForClassNoComponentTypes(
+             tpl_type, [](const Type* type) { return set<const Type*>(); })
+      .resugar_map;
 }
 
 }  // namespace include_what_you_use

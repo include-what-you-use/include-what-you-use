@@ -129,6 +129,7 @@ using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
 using llvm::raw_string_ostream;
+using std::function;
 
 namespace include_what_you_use {
 
@@ -816,7 +817,7 @@ static map<const Type*, const Type*> ResugarTypeComponents(
   return retval;
 }
 
-// Helpers for GetTplTypeResugarMapForFunction().
+// Helpers for GetTplInstDataForFunction().
 static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
     const FunctionDecl* decl, unsigned start_arg) {
   map<const Type*, const Type*> retval;
@@ -887,9 +888,11 @@ static const Type* GetSugaredTypeOf(const Expr* expr) {
   return v.sugared.getTypePtr();
 }
 
-map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
-    const FunctionDecl* decl, const Expr* calling_expr) {
+TemplateInstantiationData GetTplInstDataForFunction(
+    const FunctionDecl* decl, const Expr* calling_expr,
+    function<set<const Type*>(const Type*)> provided_getter) {
   map<const Type*, const Type*> resugar_map;
+  set<const Type*> provided_types;
 
   // If calling_expr is nullptr, then we can't find any explicit template
   // arguments, if they were specified (e.g. 'Fn<int>()'), and we
@@ -900,7 +903,7 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     resugar_map = GetTplTypeResugarMapForFunctionNoCallExpr(decl, 0);
     resugar_map = ResugarTypeComponents(
         resugar_map);  // add in resugar_map's decomposition
-    return resugar_map;
+    return TemplateInstantiationData{resugar_map};
   }
 
   // If calling_expr is a CXXConstructExpr of CXXNewExpr, then it's
@@ -934,8 +937,10 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
       resugar_map =
           GetTplTypeResugarMapForFunctionExplicitTplArgs(explicit_tpl_args);
       resugar_map = ResugarTypeComponents(resugar_map);
+      for (const auto [_, sugared_type] : resugar_map)
+        InsertAllInto(provided_getter(sugared_type), &provided_types);
     }
-    return resugar_map;
+    return TemplateInstantiationData{resugar_map, provided_types};
   }
 
   // Now we have to figure out, as best we can, the sugar-mappings for
@@ -974,6 +979,12 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
                  << PrintableType(type) << "\n";
       }
     }
+    // TODO(bolshakov): more fine-grained determination of provided types could
+    // e.g. consider only arguments that actually take part in type deduction.
+    // Simply moving the line below into the if-statement body above doesn't
+    // work because 'type' can be just an internal component of a 'typedef'ed
+    // argument.
+    InsertAllInto(provided_getter(type), &provided_types);
   }
 
   // Log the types we never mapped.
@@ -986,7 +997,9 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
 
   resugar_map = ResugarTypeComponents(
       resugar_map);  // add in the decomposition of resugar_map
-  return resugar_map;
+  for (const auto [_, sugared_type] : resugar_map)
+    InsertAllInto(provided_getter(sugared_type), &provided_types);
+  return TemplateInstantiationData{resugar_map, provided_types};
 }
 
 const NamedDecl* GetInstantiatedFromDecl(const CXXRecordDecl* class_decl) {
@@ -1308,8 +1321,7 @@ bool IsClassType(const clang::Type* type) {
           (isa<TemplateSpecializationType>(type) || isa<RecordType>(type)));
 }
 
-bool InvolvesTypeForWhich(const Type* type,
-                          std::function<bool(const Type*)> pred) {
+bool InvolvesTypeForWhich(const Type* type, function<bool(const Type*)> pred) {
   type = Desugar(type);
   if (pred(type))
     return true;
@@ -1443,12 +1455,12 @@ bool HasImplicitConversionConstructor(const Type* type) {
   return HasImplicitConversionCtor(cxx_class);
 }
 
-map<const clang::Type*, const clang::Type*>
-GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
+TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
+    const Type* type, function<set<const Type*>(const Type*)> provided_getter) {
   map<const Type*, const Type*> retval;
   const auto* tpl_spec_type = type->getAs<TemplateSpecializationType>();
   if (!tpl_spec_type) {
-    return retval;
+    return TemplateInstantiationData{retval};
   }
 
   // Pull the template arguments out of the specialization type. If this is
@@ -1472,6 +1484,7 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
   //   template <typename R, typename A1> struct Foo<R(A1)> { ... }
   set<unsigned> explicit_args;   // indices into tpl_args we've filled
   SugaredTypeEnumerator type_enumerator;
+  set<const Type*> provided_types;
   for (unsigned i = 0; i < tpl_spec_type->template_arguments().size(); ++i) {
     set<const Type*> arg_components =
         type_enumerator.Enumerate(tpl_spec_type->template_arguments()[i]);
@@ -1492,6 +1505,9 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
         }
       }
     }
+
+    for (const Type* component : arg_components)
+      InsertAllInto(provided_getter(component), &provided_types);
   }
 
   // Now take a look at the args that were not filled explicitly.
@@ -1505,13 +1521,17 @@ GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type) {
     }
   }
 
-  return retval;
+  return TemplateInstantiationData{retval, provided_types};
 }
 
-map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForClass(
-    const clang::Type* type) {
-  return ResugarTypeComponents(  // add in the decomposition of retval
-      GetTplTypeResugarMapForClassNoComponentTypes(type));
+TemplateInstantiationData GetTplInstDataForClass(
+    const Type* type, function<set<const Type*>(const Type*)> provided_getter) {
+  TemplateInstantiationData result =
+      GetTplInstDataForClassNoComponentTypes(type, provided_getter);
+  return TemplateInstantiationData{
+      ResugarTypeComponents(
+          result.resugar_map),  // add in the decomposition of retval
+      result.provided_types};
 }
 
 bool CanBeOpaqueDeclared(const clang::EnumType* type) {
