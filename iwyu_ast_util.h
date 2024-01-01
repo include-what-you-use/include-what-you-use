@@ -12,6 +12,7 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
 
+#include <functional>                   // for function
 #include <map>                          // for map
 #include <set>                          // for set
 #include <string>                       // for string
@@ -548,6 +549,11 @@ clang::SourceRange GetSourceRangeOfClassDecl(const clang::Decl* decl);
 set<clang::FunctionDecl*> GetLateParsedFunctionDecls(
     clang::TranslationUnitDecl* decl);
 
+struct TemplateInstantiationData {
+  map<const clang::Type*, const clang::Type*> resugar_map;
+  set<const clang::Type*> provided_types;
+};
+
 // One can't have partial template specialization or default template
 // args for function templates, but they're complicated in their own
 // way: they can have deduced template arguments (deduced from the
@@ -580,9 +586,12 @@ set<clang::FunctionDecl*> GetLateParsedFunctionDecls(
 // NOTE: This routine is far from perfect.  To really do this right,
 // we'd need to refactor SemaTemplateDeduction to take an argument to
 // not canonicalize deduced template arguments.
+// Besides, the returned data contains a set of "provided" types (e.g. from
+// a typedef being type template argument).
 // calling_expr should be a CallExpr, CXXConstructExpr, or DeclRefExpr.
-map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForFunction(
-    const clang::FunctionDecl* decl, const clang::Expr* calling_expr);
+TemplateInstantiationData GetTplInstDataForFunction(
+    const clang::FunctionDecl* decl, const clang::Expr* calling_expr,
+    std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
 
 // If class_decl is instantiated from a class template,
 // returns the decl for that template; otherwise returns class_decl.
@@ -821,17 +830,21 @@ bool HasImplicitConversionConstructor(const clang::Type* type);
 // We also include mappings for component types: if we have an entry
 // 'vector<TypedefType>' -> 'vector<Foo>', we also add an entry
 // 'TypedefType' -> 'Foo'.
+// Besides, the returned data contains a set of "provided" types (e.g. from
+// a typedef being type template argument).
 // For ease of calling, this accept any type, but will return an empty
-// map for any input that's not a template specialization type.
-map<const clang::Type*, const clang::Type*> GetTplTypeResugarMapForClass(
-    const clang::Type* type);
+// result for any input that's not a template specialization type.
+TemplateInstantiationData GetTplInstDataForClass(
+    const clang::Type* type,
+    std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
 
-// Like GetTplTypeResugarMapForClass, but if a type has
+// Like GetTplInstDataForClass, but if a type has
 // components (for instance, 'Foo*' and 'vector<Foo>' both
 // have a component Foo), we don't include the components
 // in the result-map.
-map<const clang::Type*, const clang::Type*>
-GetTplTypeResugarMapForClassNoComponentTypes(const clang::Type* type);
+TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
+    const clang::Type* type,
+    std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
 
 // Returns true if, for the given enumeration type, opaque (i.e. forward,
 // in fact) declarations are allowed. It means that the enumeration should be

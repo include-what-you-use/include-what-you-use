@@ -65,11 +65,15 @@ int main() {
   // Now try again, but with a typedef.
   // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   typedef IndirectClass LocalClass;
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
+  typedef IndirectClass* LocalClassPtr;
   LocalClass lc;
   LocalClass* lc_ptr = 0;
+  LocalClassPtr lc_ptr2 = 0;
   Fn(lc);
   Fn(lc_ptr);
   FnWithPtr(lc_ptr);
+  FnWithPtr(lc_ptr2);
   FnWithReference(lc);
   FnWithReference(lc_ptr);
 

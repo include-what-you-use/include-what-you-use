@@ -37,6 +37,14 @@ void FunctionProtoClassArguments() {
   // IWYU: IndirectClass is...*indirect.h
   FunctionStruct<IndirectClass(char)> f2;
   (void)f2;
+
+  // IWYU: IndirectClass is...*indirect.h
+  using ProvidingFunctionAlias = IndirectClass(IndirectClass);
+  FunctionStruct<ProvidingFunctionAlias> f3;
+  // IWYU: IndirectClass is...*indirect.h
+  FunctionStruct<NonProvidingFunctionAlias1> f4;
+  // IWYU: IndirectClass is...*indirect.h
+  FunctionStruct<NonProvidingFunctionAlias2> f5;
 }
 
 // ---------------------------------------------------------------
@@ -241,7 +249,7 @@ tests/cxx/template_args.cc should remove these lines:
 The full include-list for tests/cxx/template_args.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/template_args-d1.h"  // for ProvidingAlias
-#include "tests/cxx/template_args-d2.h"  // for NonProvidingAlias
+#include "tests/cxx/template_args-d2.h"  // for NonProvidingAlias, NonProvidingFunctionAlias1, NonProvidingFunctionAlias2
 #include "tests/cxx/template_args-i1.h"  // for TplInI1
 template <typename F> struct FunctionStruct;  // lines XX-XX
 

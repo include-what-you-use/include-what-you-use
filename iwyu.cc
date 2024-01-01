@@ -3333,7 +3333,7 @@ class InstantiatedTemplateVisitor
     // TODO(csilvers): do better here.
     if (type->isDependentType()) {
       // TODO(csilvers): This is currently always a noop; need to fix
-      // GetTplTypeResugarMapForClassNoComponentTypes to do something
+      // GetTplInstDataForClassNoComponentTypes to do something
       // useful for dependent types.
       ReplayClassMemberUsesFromPrecomputedList(type);   // best-effort
       return true;
@@ -3900,14 +3900,15 @@ class IwyuAstConsumer
       // spec type location (as written) so that reportings from
       // 'InstantiatedTemplateVisitor' are attributed to the correct location.
       const ASTNode type_loc_node(&type_loc);
-      const map<const Type*, const Type*> resugar_map =
-          GetTplTypeResugarMapForClass(type_loc.getTypePtr());
+      const TemplateInstantiationData data = GetTplInstDataForClass(
+          type_loc.getTypePtr(),
+          [this](const Type* type) { return GetProvidedTypeComponents(type); });
       // Clang instantiates methods in the first ("canonical") spec decl context
       // (which may correspond to instantiation declaration, not to definition).
       for (const CXXMethodDecl* member : decl->getCanonicalDecl()->methods()) {
         instantiated_template_visitor_.ScanInstantiatedFunction(
-            member, type_loc.getTypePtr(), &type_loc_node, resugar_map,
-            ExtractProvidedTypeComponents(resugar_map));
+            member, type_loc.getTypePtr(), &type_loc_node, data.resugar_map,
+            data.provided_types);
       }
     }
 
@@ -4097,12 +4098,12 @@ class IwyuAstConsumer
     // If we're not in a forward-declare context, use of a template
     // specialization requires having the full type information.
     if (!CanForwardDeclareType(current_ast_node())) {
-      const map<const Type*, const Type*> resugar_map =
-          GetTplTypeResugarMapForClass(type);
+      const TemplateInstantiationData data = GetTplInstDataForClass(
+          type,
+          [this](const Type* type) { return GetProvidedTypeComponents(type); });
 
       instantiated_template_visitor_.ScanInstantiatedType(
-          current_ast_node(), resugar_map,
-          ExtractProvidedTypeComponents(resugar_map));
+          current_ast_node(), data.resugar_map, data.provided_types);
     }
 
     const auto [is_provided, comment] =
@@ -4178,23 +4179,28 @@ class IwyuAstConsumer
     if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type))
       return true;
 
-    map<const Type*, const Type*> resugar_map =
-        GetTplTypeResugarMapForFunction(callee, calling_expr);
+    auto provided_getter = [this](const Type* type) {
+      return GetProvidedTypeComponents(type);
+    };
+    TemplateInstantiationData data =
+        GetTplInstDataForFunction(callee, calling_expr, provided_getter);
 
     if (parent_type) {    // means we're a method of a class
-      InsertAllInto(GetTplTypeResugarMapForClass(parent_type), &resugar_map);
+      const TemplateInstantiationData class_data =
+          GetTplInstDataForClass(parent_type, provided_getter);
+      InsertAllInto(class_data.resugar_map, &data.resugar_map);
+      InsertAllInto(class_data.provided_types, &data.provided_types);
     }
 
-    set<const Type*> provided_types =
-        ExtractProvidedTypeComponents(resugar_map);
     if (IsAutocastExpr(current_ast_node())) {
       const set<const Type*> provided_for_autocast =
           GetProvidedTypesForAutocast(current_ast_node());
-      provided_types.insert(provided_for_autocast.begin(),
-                            provided_for_autocast.end());
+      data.provided_types.insert(provided_for_autocast.begin(),
+                                 provided_for_autocast.end());
     }
     instantiated_template_visitor_.ScanInstantiatedFunction(
-        callee, parent_type, current_ast_node(), resugar_map, provided_types);
+        callee, parent_type, current_ast_node(), data.resugar_map,
+        data.provided_types);
     return true;
   }
 
@@ -4202,32 +4208,24 @@ class IwyuAstConsumer
 
   void ReportTplSpecComponentTypes(const TemplateSpecializationType* type,
                                    const set<const Type*>& blocked_types) {
-    const map<const Type*, const Type*> resugar_map =
-        GetTplTypeResugarMapForClass(type);
+    TemplateInstantiationData data = GetTplInstDataForClass(
+        type,
+        [this](const Type* type) { return GetProvidedTypeComponents(type); });
     ASTNode node(type);
     node.SetParent(current_ast_node());
-    set<const Type*> merged_blocked =
-        ExtractProvidedTypeComponents(resugar_map);
-    merged_blocked.insert(blocked_types.begin(), blocked_types.end());
-    instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map,
-                                                        merged_blocked);
+    data.provided_types.insert(blocked_types.begin(), blocked_types.end());
+    instantiated_template_visitor_.ScanInstantiatedType(&node, data.resugar_map,
+                                                        data.provided_types);
   }
 
  private:
-  set<const Type*> ExtractProvidedTypeComponents(
-      const map<const Type*, const Type*>& resugar_map) const {
-    set<const Type*> result;
-    for (const auto& canonical_sugared_pair : resugar_map) {
-      const Type* desugared_until_typedef =
-          Desugar(canonical_sugared_pair.second);
-      if (const auto* typedef_type =
-              dyn_cast_or_null<TypedefType>(desugared_until_typedef)) {
-        set<const Type*> provided =
-            GetProvidedTypesForTypedef(typedef_type->getDecl());
-        result.insert(provided.begin(), provided.end());
-      }
+  set<const Type*> GetProvidedTypeComponents(const Type* type) const {
+    const Type* desugared_until_typedef = Desugar(type);
+    if (const auto* typedef_type =
+            dyn_cast_or_null<TypedefType>(desugared_until_typedef)) {
+      return GetProvidedTypesForTypedef(typedef_type->getDecl());
     }
-    return result;
+    return set<const Type*>();
   }
 
   pair<bool, const char*> CanBeProvidedTypeComponent(
