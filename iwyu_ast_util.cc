@@ -837,7 +837,6 @@ static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
 
 static map<const Type*, const Type*>
 GetTplTypeResugarMapForFunctionExplicitTplArgs(
-    const FunctionDecl* decl,
     const TemplateArgumentListInfo& explicit_tpl_list) {
   map<const Type*, const Type*> retval;
   for (const TemplateArgumentLoc& loc : explicit_tpl_list.arguments()) {
@@ -922,8 +921,8 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     const TemplateArgumentListInfo& explicit_tpl_args =
         GetExplicitTplArgs(callee_expr);
     if (explicit_tpl_args.size() > 0) {
-      retval = GetTplTypeResugarMapForFunctionExplicitTplArgs(
-          decl, explicit_tpl_args);
+      retval =
+          GetTplTypeResugarMapForFunctionExplicitTplArgs(explicit_tpl_args);
       start_of_implicit_args = explicit_tpl_args.size();
     }
   } else {
@@ -931,8 +930,8 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     const TemplateArgumentListInfo& explicit_tpl_args =
         GetExplicitTplArgs(calling_expr);
     if (explicit_tpl_args.size() > 0) {
-      retval = GetTplTypeResugarMapForFunctionExplicitTplArgs(
-          decl, explicit_tpl_args);
+      retval =
+          GetTplTypeResugarMapForFunctionExplicitTplArgs(explicit_tpl_args);
       retval = ResugarTypeComponents(retval);
     }
     return retval;
