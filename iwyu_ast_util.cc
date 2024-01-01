@@ -889,7 +889,7 @@ static const Type* GetSugaredTypeOf(const Expr* expr) {
 
 map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     const FunctionDecl* decl, const Expr* calling_expr) {
-  map<const Type*, const Type*> retval;
+  map<const Type*, const Type*> resugar_map;
 
   // If calling_expr is nullptr, then we can't find any explicit template
   // arguments, if they were specified (e.g. 'Fn<int>()'), and we
@@ -897,9 +897,10 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   // can't resugar at all.  We just have to hope that the types happen
   // to be already sugared, because the actual-type is already canonical.
   if (calling_expr == nullptr) {
-    retval = GetTplTypeResugarMapForFunctionNoCallExpr(decl, 0);
-    retval = ResugarTypeComponents(retval);  // add in retval's decomposition
-    return retval;
+    resugar_map = GetTplTypeResugarMapForFunctionNoCallExpr(decl, 0);
+    resugar_map = ResugarTypeComponents(
+        resugar_map);  // add in resugar_map's decomposition
+    return resugar_map;
   }
 
   // If calling_expr is a CXXConstructExpr of CXXNewExpr, then it's
@@ -921,7 +922,7 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     const TemplateArgumentListInfo& explicit_tpl_args =
         GetExplicitTplArgs(callee_expr);
     if (explicit_tpl_args.size() > 0) {
-      retval =
+      resugar_map =
           GetTplTypeResugarMapForFunctionExplicitTplArgs(explicit_tpl_args);
       start_of_implicit_args = explicit_tpl_args.size();
     }
@@ -930,11 +931,11 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
     const TemplateArgumentListInfo& explicit_tpl_args =
         GetExplicitTplArgs(calling_expr);
     if (explicit_tpl_args.size() > 0) {
-      retval =
+      resugar_map =
           GetTplTypeResugarMapForFunctionExplicitTplArgs(explicit_tpl_args);
-      retval = ResugarTypeComponents(retval);
+      resugar_map = ResugarTypeComponents(resugar_map);
     }
-    return retval;
+    return resugar_map;
   }
 
   // Now we have to figure out, as best we can, the sugar-mappings for
@@ -962,10 +963,11 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   }
 
   for (const Type* type : fn_arg_types) {
-    // See if any of the template args in retval are the desugared form of us.
+    // See if any of the template args in resugar_map are the desugared form
+    // of us.
     const Type* desugared_type = GetCanonicalType(type);
     if (ContainsKey(desugared_types, desugared_type)) {
-      retval[desugared_type] = type;
+      resugar_map[desugared_type] = type;
       if (desugared_type != type) {
         VERRS(6) << "Remapping template arg of interest: "
                  << PrintableType(desugared_type) << " -> "
@@ -976,14 +978,15 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
 
   // Log the types we never mapped.
   for (const auto& types : desugared_types) {
-    if (!ContainsKey(retval, types.first)) {
+    if (!ContainsKey(resugar_map, types.first)) {
       VERRS(6) << "Ignoring unseen-in-fn-args template arg of interest: "
                << PrintableType(types.first) << "\n";
     }
   }
 
-  retval = ResugarTypeComponents(retval);  // add in the decomposition of retval
-  return retval;
+  resugar_map = ResugarTypeComponents(
+      resugar_map);  // add in the decomposition of resugar_map
+  return resugar_map;
 }
 
 const NamedDecl* GetInstantiatedFromDecl(const CXXRecordDecl* class_decl) {
