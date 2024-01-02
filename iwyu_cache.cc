@@ -22,10 +22,10 @@
 using clang::ClassTemplateSpecializationDecl;
 using clang::LangOptions;
 using clang::NamedDecl;
-using clang::Type;
 using clang::TemplateArgument;
 using clang::TemplateArgumentList;
 using clang::TemplateSpecializationType;
+using clang::Type;
 using std::set;
 using std::string;
 

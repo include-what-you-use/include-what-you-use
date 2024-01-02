@@ -37,9 +37,9 @@
 namespace include_what_you_use {
 
 using clang::BuiltinTemplateDecl;
+using clang::CXXRecordDecl;
 using clang::ClassTemplateDecl;
 using clang::ClassTemplateSpecializationDecl;
-using clang::CXXRecordDecl;
 using clang::Decl;
 using clang::DeclContext;
 using clang::DeclarationName;
