@@ -38,8 +38,15 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 
-using clang::driver::ToolChain;
+using clang::CompilerInstance;
+using clang::HeaderSearch;
+using clang::LangOptions;
 using clang::OptionalDirectoryEntryRef;
+using clang::OptionalFileEntryRef;
+using clang::PrintingPolicy;
+using clang::SourceManager;
+using clang::driver::ToolChain;
+using clang::getClangFullVersion;
 using std::make_pair;
 using std::map;
 using std::string;
@@ -48,10 +55,10 @@ using std::vector;
 namespace include_what_you_use {
 
 static CommandlineFlags* commandline_flags = nullptr;
-static clang::SourceManager* source_manager = nullptr;
+static SourceManager* source_manager = nullptr;
 static IncludePicker* include_picker = nullptr;
-static const clang::LangOptions default_lang_options;
-static const clang::PrintingPolicy default_print_policy(default_lang_options);
+static const LangOptions default_lang_options;
+static const PrintingPolicy default_print_policy(default_lang_options);
 static SourceManagerCharacterDataGetter* data_getter = nullptr;
 static FullUseCache* function_calls_full_use_cache = nullptr;
 static FullUseCache* class_members_full_use_cache = nullptr;
@@ -135,8 +142,7 @@ static void PrintVersion() {
   if (!iwyu_rev.empty()) {
     llvm::outs() << " (git:" << iwyu_rev << ")";
   }
-  llvm::outs() << " based on " << clang::getClangFullVersion()
-               << "\n";
+  llvm::outs() << " based on " << getClangFullVersion() << "\n";
 }
 
 static bool ParseIntegerOptarg(const char* optarg, int* res) {
@@ -409,7 +415,7 @@ static vector<HeaderSearchPath> NormalizeHeaderSearchPaths(
 // Asks clang what the search-paths are for include files, normalizes
 // them, and returns them in a vector.
 static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
-    clang::HeaderSearch* header_search) {
+    HeaderSearch* header_search) {
   map<string, HeaderSearchPath::Type> search_path_map;
   for (auto it = header_search->system_dir_begin();
        it != header_search->system_dir_end(); ++it) {
@@ -457,8 +463,7 @@ static CXXStdLib DeriveCXXStdLib(const ToolChain& toolchain) {
   CHECK_UNREACHABLE_("covered switch for CXXStdlibType above");
 }
 
-void InitGlobals(clang::CompilerInstance& compiler,
-                 const ToolChain& toolchain) {
+void InitGlobals(CompilerInstance& compiler, const ToolChain& toolchain) {
   source_manager = &compiler.getSourceManager();
   data_getter = new SourceManagerCharacterDataGetter(*source_manager);
   vector<HeaderSearchPath> search_paths = ComputeHeaderSearchPaths(
@@ -496,7 +501,7 @@ CommandlineFlags* MutableGlobalFlagsForTesting() {
   return commandline_flags;
 }
 
-clang::SourceManager* GlobalSourceManager() {
+SourceManager* GlobalSourceManager() {
   CHECK_(source_manager && "Must call InitGlobals() before calling this");
   return source_manager;
 }
@@ -511,7 +516,7 @@ IncludePicker* MutableGlobalIncludePicker() {
   return include_picker;
 }
 
-const clang::PrintingPolicy& DefaultPrintPolicy() {
+const PrintingPolicy& DefaultPrintPolicy() {
   return default_print_policy;
 }
 
@@ -533,7 +538,7 @@ void AddGlobToReportIWYUViolationsFor(const string& glob) {
   commandline_flags->check_also.insert(NormalizeFilePath(glob));
 }
 
-bool ShouldReportIWYUViolationsFor(clang::OptionalFileEntryRef file) {
+bool ShouldReportIWYUViolationsFor(OptionalFileEntryRef file) {
   const string filepath = GetFilePath(file);
   for (const string& glob : GlobalFlags().check_also)
     if (GlobMatchesPath(glob.c_str(), filepath.c_str()))
@@ -546,7 +551,7 @@ void AddGlobToKeepIncludes(const string& glob) {
   commandline_flags->keep.insert(NormalizeFilePath(glob));
 }
 
-bool ShouldKeepIncludeFor(clang::OptionalFileEntryRef file) {
+bool ShouldKeepIncludeFor(OptionalFileEntryRef file) {
   if (GlobalFlags().keep.empty())
     return false;
   const string filepath = GetFilePath(file);

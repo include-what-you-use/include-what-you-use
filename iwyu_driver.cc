@@ -47,7 +47,6 @@ namespace include_what_you_use {
 
 using clang::CompilerInstance;
 using clang::CompilerInvocation;
-using clang::DiagnosticIDs;
 using clang::DiagnosticOptions;
 using clang::DiagnosticsEngine;
 using clang::FrontendAction;
