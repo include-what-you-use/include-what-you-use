@@ -13,7 +13,10 @@
 #define INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_
 
 #include "clang/Basic/FileEntry.h"
-#include "llvm/Support/raw_ostream.h"
+// IWYU can't see the use inside unexpanded macro VERRS(). All users of VERRS()
+// would need to include raw_ostream.h for operator<<() anyway, so export the
+// type for correctness and convenience.
+#include "llvm/Support/raw_ostream.h"  // IWYU pragma: export
 
 namespace include_what_you_use {
 

@@ -23,6 +23,9 @@
 #include "iwyu_ast_util.h"
 #include "iwyu_port.h"
 
+// TODO: Clean out pragmas as IWYU improves.
+// IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
+
 using clang::BinaryOperator;
 using clang::CXXDependentScopeMemberExpr;
 using clang::CXXMethodDecl;

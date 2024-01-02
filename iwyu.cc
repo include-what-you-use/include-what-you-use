@@ -140,9 +140,20 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
+// TODO: Clean out pragmas as IWYU improves.
+// IWYU pragma: no_include "clang/AST/Redeclarable.h"
+// IWYU pragma: no_include "clang/AST/StmtIterator.h"
+// IWYU pragma: no_include "clang/AST/UnresolvedSet.h"
+// IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
+// IWYU pragma: no_include "clang/Lex/PPCallbacks.h"
+// IWYU pragma: no_include "llvm/ADT/iterator.h"
+// IWYU pragma: begin_keep
 namespace clang {
 class PPCallbacks;
+}  // namespace clang
+// IWYU pragma: end_keep
 
+namespace clang {
 namespace driver {
 class ToolChain;
 }
