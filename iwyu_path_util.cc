@@ -9,7 +9,6 @@
 
 #include "iwyu_path_util.h"
 
-#include <algorithm>                    // for std::replace
 #include <cstddef>
 #include <cstring>                      // for strlen
 #include <system_error>
@@ -127,13 +126,8 @@ string GetCanonicalName(string file_path) {
 string NormalizeFilePath(const string& path) {
   llvm::SmallString<128> normalized(path);
   llvm::sys::path::remove_dots(normalized, /*remove_dot_dot=*/true);
-
-#ifdef _WIN32
   // Canonicalize directory separators (forward slashes considered canonical.)
-  std::replace(normalized.begin(), normalized.end(), '\\', '/');
-#endif
-
-  return normalized.str().str();
+  return llvm::sys::path::convert_to_slash(normalized);
 }
 
 string NormalizeDirPath(const string& path) {
