@@ -13,7 +13,6 @@
 #define INCLUDE_WHAT_YOU_USE_IWYU_VERRS_H_
 
 #include "clang/Basic/FileEntry.h"
-
 #include "llvm/Support/raw_ostream.h"
 
 namespace include_what_you_use {

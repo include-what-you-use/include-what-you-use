@@ -9,13 +9,16 @@
 
 #include "iwyu_preprocessor.h"
 
+#include <algorithm>
 #include <cstddef>                      // for size_t
 #include <cstring>
-#include <algorithm>
 #include <iterator>
 #include <string>                       // for string, basic_string, etc
 #include <utility>                      // for pair, make_pair
 
+#include "clang/AST/Decl.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Lex/MacroInfo.h"
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
@@ -28,9 +31,6 @@
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "llvm/Support/raw_ostream.h"
-#include "clang/AST/Decl.h"
-#include "clang/Basic/IdentifierTable.h"
-#include "clang/Lex/MacroInfo.h"
 
 using clang::CharSourceRange;
 using clang::FileEntryRef;

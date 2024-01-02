@@ -9,8 +9,6 @@
 
 #include "iwyu_location_util.h"
 
-#include "iwyu_ast_util.h"
-#include "iwyu_port.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -22,6 +20,8 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
+#include "iwyu_ast_util.h"
+#include "iwyu_port.h"
 
 using clang::BinaryOperator;
 using clang::CXXDependentScopeMemberExpr;

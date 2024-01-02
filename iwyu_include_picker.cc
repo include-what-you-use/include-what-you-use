@@ -22,6 +22,8 @@
 #include <utility>                      // for pair, make_pair
 #include <vector>                       // for vector, vector<>::iterator
 
+#include "clang/Basic/FileManager.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
 #include "iwyu_port.h"
@@ -29,7 +31,6 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
-
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -39,8 +40,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Tooling/Inclusions/StandardLibrary.h"
 
 using clang::OptionalFileEntryRef;
 using llvm::MemoryBuffer;

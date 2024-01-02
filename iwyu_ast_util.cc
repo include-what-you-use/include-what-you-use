@@ -15,15 +15,6 @@
 #include <string>                       // for string, operator+, etc
 #include <utility>                      // for pair
 
-#include "iwyu_globals.h"
-#include "iwyu_location_util.h"
-#include "iwyu_path_util.h"
-#include "iwyu_port.h"  // for CHECK_
-#include "iwyu_stl_util.h"
-#include "iwyu_verrs.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/raw_ostream.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDumper.h"
 #include "clang/AST/CanonicalType.h"
@@ -45,6 +36,15 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "iwyu_globals.h"
+#include "iwyu_location_util.h"
+#include "iwyu_path_util.h"
+#include "iwyu_port.h"  // for CHECK_
+#include "iwyu_stl_util.h"
+#include "iwyu_verrs.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
 
 using clang::ASTDumper;
 using clang::ArrayType;
