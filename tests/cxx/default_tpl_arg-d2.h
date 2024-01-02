@@ -16,3 +16,12 @@ template <typename T = IndirectClass>
 void FnWithProvidedDefaultTplArg() {
   T t;
 }
+
+// Use of this function template instantiated with the default argument and
+// called **without explicit ordinary argument** doesn't require complete
+// 'IndirectClass' type because this header '#include's it directly and hence
+// provides.
+template <typename T = IndirectClass>
+void FnWithProvidedDefaultTplArgAndDefaultCallArg(T* = nullptr) {
+  T t;
+}
