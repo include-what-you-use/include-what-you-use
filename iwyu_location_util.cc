@@ -29,12 +29,17 @@ using clang::CXXMethodDecl;
 using clang::CXXOperatorCallExpr;
 using clang::ClassTemplateSpecializationDecl;
 using clang::ConditionalOperator;
+using clang::Decl;
 using clang::FileID;
 using clang::FunctionDecl;
 using clang::MemberExpr;
+using clang::NestedNameSpecifierLoc;
 using clang::OptionalFileEntryRef;
 using clang::SourceLocation;
 using clang::SourceManager;
+using clang::Stmt;
+using clang::TemplateArgumentLoc;
+using clang::TypeLoc;
 using clang::UnaryOperator;
 using clang::UnresolvedMemberExpr;
 
@@ -65,7 +70,7 @@ namespace include_what_you_use {
 // methods don't have their own location anyway.
 //    Note the two issues can both be present, if an implicit method's
 // parent is an implicit instantiation.
-SourceLocation GetLocation(const clang::Decl* decl) {
+SourceLocation GetLocation(const Decl* decl) {
   if (decl == nullptr)
     return SourceLocation();
 
@@ -122,7 +127,7 @@ static SourceLocation GetMemberExprLocation(const MemberExpr* member_expr) {
   return GetInstantiationLoc(member_start);
 }
 
-SourceLocation GetLocation(const clang::Stmt* stmt) {
+SourceLocation GetLocation(const Stmt* stmt) {
   if (stmt == nullptr)
     return SourceLocation();
   // For some expressions, we take the location to be the 'key' part
@@ -155,19 +160,19 @@ SourceLocation GetLocation(const clang::Stmt* stmt) {
   return stmt->getBeginLoc();
 }
 
-SourceLocation GetLocation(const clang::TypeLoc* typeloc) {
+SourceLocation GetLocation(const TypeLoc* typeloc) {
   if (typeloc == nullptr)
     return SourceLocation();
   return typeloc->getBeginLoc();
 }
 
-SourceLocation GetLocation(const clang::NestedNameSpecifierLoc* nnsloc) {
+SourceLocation GetLocation(const NestedNameSpecifierLoc* nnsloc) {
   if (nnsloc == nullptr)
     return SourceLocation();
   return nnsloc->getBeginLoc();
 }
 
-SourceLocation GetLocation(const clang::TemplateArgumentLoc* argloc) {
+SourceLocation GetLocation(const TemplateArgumentLoc* argloc) {
   if (argloc == nullptr)
     return SourceLocation();
   return argloc->getLocation();
@@ -177,7 +182,7 @@ bool IsInScratchSpace(SourceLocation loc) {
   return StartsWith(PrintableLoc(GetSpellingLoc(loc)), "<scratch space>");
 }
 
-bool IsInHeader(const clang::Decl* decl) {
+bool IsInHeader(const Decl* decl) {
   OptionalFileEntryRef containing_file = GetFileEntry(decl);
   if (!containing_file) {
     // This is a builtin, or something is terribly wrong.

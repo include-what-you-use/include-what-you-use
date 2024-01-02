@@ -32,23 +32,25 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Lex/MacroInfo.h"
 
+using clang::CharSourceRange;
 using clang::FileEntryRef;
 using clang::FileID;
+using clang::MacroArgs;
 using clang::MacroDefinition;
 using clang::MacroDirective;
 using clang::MacroInfo;
+using clang::Module;
 using clang::NamedDecl;
 using clang::OptionalFileEntryRef;
 using clang::Preprocessor;
 using clang::SourceLocation;
 using clang::SourceRange;
+using clang::SrcMgr::CharacteristicKind;
 using clang::Token;
 using llvm::errs;
 using llvm::StringRef;
 using std::make_pair;
 using std::string;
-
-namespace SrcMgr = clang::SrcMgr;
 
 namespace include_what_you_use {
 
@@ -646,7 +648,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
 void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
                                         const MacroDefinition& definition,
                                         SourceRange range,
-                                        const clang::MacroArgs* /*args*/) {
+                                        const MacroArgs* /*args*/) {
   OptionalFileEntryRef macro_file = GetFileEntry(macro_use_token);
   const MacroInfo* macro_def = definition.getMacroInfo();
   if (ShouldPrintSymbolFromFile(macro_file)) {
@@ -719,22 +721,16 @@ void IwyuPreprocessorInfo::Defined(const Token& id,
 }
 
 void IwyuPreprocessorInfo::InclusionDirective(
-    SourceLocation hash_loc,
-    const Token& include_token,
-    StringRef filename,
-    bool is_angled,
-    clang::CharSourceRange filename_range,
-    clang::OptionalFileEntryRef file,
-    StringRef search_path,
-    StringRef relative_path,
-    const clang::Module* imported,
-    SrcMgr::CharacteristicKind file_type) {
+    SourceLocation hash_loc, const Token& include_token, StringRef filename,
+    bool is_angled, CharSourceRange filename_range, OptionalFileEntryRef file,
+    StringRef search_path, StringRef relative_path, const Module* imported,
+    CharacteristicKind file_type) {
   include_filename_loc_ = filename_range.getBegin();
 }
 
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
                                        FileChangeReason reason,
-                                       SrcMgr::CharacteristicKind file_type,
+                                       CharacteristicKind file_type,
                                        FileID exiting_from_id) {
   switch (reason) {
     case EnterFile:
@@ -759,8 +755,8 @@ void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
 // actually read it because it's already been #included (and is
 // protected by a header guard).
 void IwyuPreprocessorInfo::FileSkipped(const FileEntryRef& file,
-                                       const Token &filename,
-                                       SrcMgr::CharacteristicKind file_type) {
+                                       const Token& filename,
+                                       CharacteristicKind file_type) {
   CHECK_(include_filename_loc_.isValid() &&
          "Must skip file only for actual inclusion directive");
   const string include_name_as_written =
@@ -1127,15 +1123,14 @@ bool IwyuPreprocessorInfo::FileTransitivelyIncludes(
 }
 
 bool IwyuPreprocessorInfo::IncludeIsInhibited(
-    clang::OptionalFileEntryRef file, const string& other_filename) const {
+    OptionalFileEntryRef file, const string& other_filename) const {
   const set<string>* inhibited_includes = FindInMap(&no_include_map_, file);
   return (inhibited_includes != nullptr) &&
       ContainsKey(*inhibited_includes, other_filename);
 }
 
 bool IwyuPreprocessorInfo::ForwardDeclareIsInhibited(
-    clang::OptionalFileEntryRef file,
-    const string& qualified_symbol_name) const {
+    OptionalFileEntryRef file, const string& qualified_symbol_name) const {
   const string normalized_symbol_name =
       NormalizeNamespaces(qualified_symbol_name);
   const set<string>* inhibited_forward_declares =

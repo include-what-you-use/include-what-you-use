@@ -46,6 +46,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 
+using clang::ArrayType;
 using clang::ASTDumper;
 using clang::BlockPointerType;
 using clang::CXXConstructExpr;
@@ -71,6 +72,7 @@ using clang::DependentTemplateSpecializationType;
 using clang::ElaboratedType;
 using clang::ElaboratedTypeKeyword;
 using clang::EnumDecl;
+using clang::EnumType;
 using clang::ExplicitCastExpr;
 using clang::Expr;
 using clang::ExprWithCleanups;
@@ -78,23 +80,28 @@ using clang::FullSourceLoc;
 using clang::FunctionDecl;
 using clang::FunctionTemplateSpecializationInfo;
 using clang::FunctionType;
+using clang::IdentifierInfo;
 using clang::ImplicitCastExpr;
 using clang::InjectedClassNameType;
 using clang::LValueReferenceType;
 using clang::MemberExpr;
 using clang::MemberPointerType;
 using clang::NamedDecl;
+using clang::NamespaceDecl;
 using clang::NestedNameSpecifier;
 using clang::ObjCObjectType;
 using clang::OptionalFileEntryRef;
 using clang::OverloadExpr;
 using clang::PointerType;
+using clang::PrintingPolicy;
 using clang::QualType;
 using clang::QualifiedTemplateName;
 using clang::RecordDecl;
 using clang::RecordType;
 using clang::RecursiveASTVisitor;
+using clang::Redeclarable;
 using clang::SourceLocation;
+using clang::SourceManager;
 using clang::SourceRange;
 using clang::Stmt;
 using clang::SubstTemplateTypeParmType;
@@ -204,7 +211,7 @@ SourceLocation ASTNode::GetLocation() const {
   // locations are in a different file, then we're uncertain of our
   // own location.  Return an invalid location.
   if (retval.isValid()) {
-    clang::SourceManager& sm = *GlobalSourceManager();
+    SourceManager& sm = *GlobalSourceManager();
     FullSourceLoc full_loc(retval, sm);
     OptionalFileEntryRef spelling_file =
         sm.getFileEntryRefForID(sm.getFileID(full_loc.getSpellingLoc()));
@@ -428,7 +435,7 @@ string PrintableDecl(const Decl* decl, bool terse/*=true*/) {
     return "<null decl>";
 
   // Use the terse flag to limit the level of output to one line.
-  clang::PrintingPolicy policy = decl->getASTContext().getPrintingPolicy();
+  PrintingPolicy policy = decl->getASTContext().getPrintingPolicy();
   policy.TerseOutput = terse;
   policy.SuppressInitializers = terse;
   policy.PolishForDeclaration = terse;
@@ -522,7 +529,7 @@ void PrintStmt(const Stmt* stmt) {
 string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl) {
   std::string retval;
   llvm::raw_string_ostream ostream(retval);
-  clang::PrintingPolicy printing_policy =
+  PrintingPolicy printing_policy =
       named_decl->getASTContext().getPrintingPolicy();
   printing_policy.SuppressUnwrittenScope = true;
   named_decl->printQualifiedName(ostream, printing_policy);
@@ -1062,14 +1069,14 @@ bool IsFriendDecl(const Decl* decl) {
   return decl->getFriendObjectKind() != Decl::FOK_None;
 }
 
-bool IsExplicitInstantiation(const clang::Decl* decl) {
+bool IsExplicitInstantiation(const Decl* decl) {
   TemplateSpecializationKind kind = GetTemplateSpecializationKind(decl);
   return kind == clang::TSK_ExplicitInstantiationDeclaration ||
          kind == clang::TSK_ExplicitInstantiationDefinition;
 }
 
 bool IsExplicitInstantiationDefinitionAsWritten(
-    const clang::ClassTemplateSpecializationDecl* decl) {
+    const ClassTemplateSpecializationDecl* decl) {
   // When swithing instantiation declaration to definition, clang preserves
   // the 'extern' keyword location info.
   return decl->getSpecializationKind() ==
@@ -1087,8 +1094,7 @@ bool IsInInlineNamespace(const Decl* decl) {
   return false;
 }
 
-bool IsInNamespace(const clang::NamedDecl* decl,
-                   const clang::NamespaceDecl* ns_decl) {
+bool IsInNamespace(const NamedDecl* decl, const NamespaceDecl* ns_decl) {
   const DeclContext* primary_ns_context = ns_decl->getPrimaryContext();
   for (const DeclContext* dc = decl->getDeclContext(); dc;
        dc = dc->getParent()) {
@@ -1127,16 +1133,16 @@ bool HasDefaultTemplateParameters(const TemplateDecl* decl) {
   return tpl_params->getMinRequiredArguments() < tpl_params->size();
 }
 
-template <class T> inline set<const clang::NamedDecl*> GetRedeclsOfRedeclarable(
-    const clang::Redeclarable<T>* decl) {
-  return set<const clang::NamedDecl*>(decl->redecls_begin(),
-                                      decl->redecls_end());
+template <class T>
+inline set<const NamedDecl*> GetRedeclsOfRedeclarable(
+    const Redeclarable<T>* decl) {
+  return set<const NamedDecl*>(decl->redecls_begin(), decl->redecls_end());
 }
 
 // The only way to find out whether a decl can be dyn_cast to a
 // Redeclarable<T> and what T is is to enumerate the possibilities.
 // Hence we hard-code the list.
-set<const clang::NamedDecl*> GetNonTagRedecls(const clang::NamedDecl* decl) {
+set<const NamedDecl*> GetNonTagRedecls(const NamedDecl* decl) {
   CHECK_(!isa<TagDecl>(decl) && "For tag types, call GetTagRedecls()");
   CHECK_(!isa<ClassTemplateDecl>(decl) && "For tpls, call GetTagRedecls()");
   // TODO(wan): go through iwyu to replace TypedefDecl with
@@ -1148,7 +1154,7 @@ set<const clang::NamedDecl*> GetNonTagRedecls(const clang::NamedDecl* decl) {
   if (const VarDecl* specific_decl = DynCastFrom(decl))
     return GetRedeclsOfRedeclarable(specific_decl);
   // Not redeclarable, so the output is just the input.
-  set<const clang::NamedDecl*> retval;
+  set<const NamedDecl*> retval;
   retval.insert(decl);
   return retval;
 }
@@ -1224,8 +1230,8 @@ bool DeclsAreInSameClass(const Decl* decl1, const Decl* decl2) {
   return decl1->getDeclContext()->isRecord();
 }
 
-bool IsBuiltinFunction(const clang::NamedDecl* decl) {
-  if (const clang::IdentifierInfo* iden = decl->getIdentifier()) {
+bool IsBuiltinFunction(const NamedDecl* decl) {
+  if (const IdentifierInfo* iden = decl->getIdentifier()) {
     unsigned builtin_id = iden->getBuiltinID();
     if (builtin_id != 0) {
       const clang::Builtin::Context& ctx = decl->getASTContext().BuiltinInfo;
@@ -1236,7 +1242,7 @@ bool IsBuiltinFunction(const clang::NamedDecl* decl) {
   return false;
 }
 
-bool IsImplicitlyInstantiatedDfn(const clang::FunctionDecl* decl) {
+bool IsImplicitlyInstantiatedDfn(const FunctionDecl* decl) {
   const FunctionTemplateSpecializationInfo* tpl_spec_info =
       decl->getTemplateSpecializationInfo();
   if (!tpl_spec_info)
@@ -1258,7 +1264,7 @@ const Type* GetTypeOf(const Expr* expr) {
 
 const Type* GetTypeOf(const CXXConstructExpr* expr) {
   const Type* type = expr->getType().getTypePtr();
-  if (const clang::ArrayType* array_type = type->getAsArrayTypeUnsafe()) {
+  if (const ArrayType* array_type = type->getAsArrayTypeUnsafe()) {
     type = array_type->getElementType().getTypePtr();
   }
   return type;
@@ -1315,7 +1321,7 @@ bool IsTemplatizedType(const Type* type) {
   return (type && isa<TemplateSpecializationType>(Desugar(type)));
 }
 
-bool IsClassType(const clang::Type* type) {
+bool IsClassType(const Type* type) {
   type = Desugar(type);
   return (type &&
           (isa<TemplateSpecializationType>(type) || isa<RecordType>(type)));
@@ -1534,7 +1540,7 @@ TemplateInstantiationData GetTplInstDataForClass(
       result.provided_types};
 }
 
-bool CanBeOpaqueDeclared(const clang::EnumType* type) {
+bool CanBeOpaqueDeclared(const EnumType* type) {
   return type->getDecl()->isFixed();
 }
 
@@ -1673,7 +1679,7 @@ bool IsDeclaredInsideFunction(const Decl* decl) {
   return isa<FunctionDecl>(decl_ctx);
 }
 
-bool IsDeclaredInsideMacro(const clang::Decl* decl) {
+bool IsDeclaredInsideMacro(const Decl* decl) {
   SourceRange range = decl->getSourceRange();
   return range.getBegin().isMacroID() || range.getEnd().isMacroID();
 }

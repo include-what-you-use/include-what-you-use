@@ -50,6 +50,7 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
+using clang::OptionalFileEntryRef;
 using llvm::MemoryBuffer;
 using llvm::SourceMgr;
 using llvm::yaml::KeyValueNode;
@@ -1686,7 +1687,7 @@ bool IncludePicker::HasMapping(const string& map_from_filepath,
   return quoted_to == quoted_from;   // indentity mapping, why not?
 }
 
-bool IncludePicker::IsPublic(clang::OptionalFileEntryRef file) const {
+bool IncludePicker::IsPublic(OptionalFileEntryRef file) const {
   CHECK_(file && "Need existing FileEntry");
   const string path = GetFilePath(file);
   const string quoted_file = ConvertToQuotedInclude(path);

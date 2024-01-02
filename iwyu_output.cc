@@ -36,12 +36,13 @@
 
 namespace include_what_you_use {
 
+using clang::BuiltinTemplateDecl;
 using clang::ClassTemplateDecl;
 using clang::ClassTemplateSpecializationDecl;
-using clang::CXXMethodDecl;
 using clang::CXXRecordDecl;
 using clang::Decl;
 using clang::DeclContext;
+using clang::DeclarationName;
 using clang::ElaboratedTypeLoc;
 using clang::EnumDecl;
 using clang::FunctionDecl;
@@ -53,6 +54,7 @@ using clang::SourceLocation;
 using clang::SourceRange;
 using clang::TagDecl;
 using clang::TemplateDecl;
+using clang::TypeSourceInfo;
 using clang::UsingDecl;
 using llvm::cast;
 using llvm::dyn_cast;
@@ -141,17 +143,16 @@ string OutputLine::printable_line(size_t min_length, size_t max_length) const {
 // to a FakeNamedDecl. When a FakeNamedDecl is created, it will be
 // inserted into the map with itself as the key (implicitly casted to
 // a NamedDecl).
-std::map<const clang::NamedDecl*, const FakeNamedDecl*>
-g_fake_named_decl_map;
+std::map<const NamedDecl*, const FakeNamedDecl*> g_fake_named_decl_map;
 
 // Since dynamic casting is not an option, this method is provided to
 // determine if a decl is actually a FakeNamedDecl.
-const FakeNamedDecl* FakeNamedDeclIfItIsOne(const clang::NamedDecl* decl) {
+const FakeNamedDecl* FakeNamedDeclIfItIsOne(const NamedDecl* decl) {
   return GetOrDefault(g_fake_named_decl_map, decl, nullptr);
 }
 
 std::string PrintableUnderlyingType(const EnumDecl* enum_decl) {
-  if (const clang::TypeSourceInfo* type_source_info =
+  if (const TypeSourceInfo* type_source_info =
           enum_decl->getIntegerTypeSourceInfo()) {
     return " : " + type_source_info->getType().getAsString(
                        enum_decl->getASTContext().getPrintingPolicy());
@@ -164,11 +165,11 @@ std::string PrintableUnderlyingType(const EnumDecl* enum_decl) {
 
 FakeNamedDecl::FakeNamedDecl(const string& kind_name, const string& qual_name,
                              const string& decl_filepath, int decl_linenum)
-    : clang::NamedDecl(clang::Decl::Record, nullptr, clang::SourceLocation(),
-                       clang::DeclarationName()),
+    : NamedDecl(Decl::Record, nullptr, SourceLocation(), DeclarationName()),
       kind_name_(kind_name),
       qual_name_(qual_name),
-      decl_filepath_(decl_filepath), decl_linenum_(decl_linenum) {
+      decl_filepath_(decl_filepath),
+      decl_linenum_(decl_linenum) {
   g_fake_named_decl_map[this] = this;
 }
 
@@ -179,7 +180,7 @@ FakeNamedDecl::FakeNamedDecl(const string& kind_name, const string& qual_name,
 // call ourselves.
 
 string GetKindName(const TagDecl* tag_decl) {
-  const clang::NamedDecl* const named_decl = tag_decl;
+  const NamedDecl* const named_decl = tag_decl;
   if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
     return fake->kind_name();
   }
@@ -192,7 +193,7 @@ string GetKindName(const TagDecl* tag_decl) {
   return tag_decl->getKindName().str();
 }
 
-string GetQualifiedNameAsString(const clang::NamedDecl* named_decl) {
+string GetQualifiedNameAsString(const NamedDecl* named_decl) {
   if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
     return fake->qual_name();
   }
@@ -200,7 +201,7 @@ string GetQualifiedNameAsString(const clang::NamedDecl* named_decl) {
 }
 
 // Name we put in the comments next to an #include.
-string GetShortNameAsString(const clang::NamedDecl* named_decl) {
+string GetShortNameAsString(const NamedDecl* named_decl) {
   if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
     return fake->qual_name();
   }
@@ -310,12 +311,12 @@ OneUse::OneUse(OptionalFileEntryRef included_file, const string& quoted_include)
   suggested_header_ = decl_filepath_;
 }
 
-void OneUse::reset_decl(const clang::NamedDecl* decl) {
-    CHECK_(decl_ && "Need existing decl to reset it");
-    CHECK_(decl && "Need to reset decl with existing decl");
-    decl_ = decl;
-    decl_file_ = GetFileEntry(decl);
-    decl_filepath_ = GetFilePath(decl);
+void OneUse::reset_decl(const NamedDecl* decl) {
+  CHECK_(decl_ && "Need existing decl to reset it");
+  CHECK_(decl && "Need to reset decl with existing decl");
+  decl_ = decl;
+  decl_file_ = GetFileEntry(decl);
+  decl_filepath_ = GetFilePath(decl);
 }
 
 int OneUse::UseLinenum() const {
@@ -558,7 +559,7 @@ string OneIncludeOrForwardDeclareLine::LineNumberString() const {
   return buf;
 }
 
-IwyuFileInfo::IwyuFileInfo(clang::OptionalFileEntryRef this_file,
+IwyuFileInfo::IwyuFileInfo(OptionalFileEntryRef this_file,
                            const IwyuPreprocessorInfo* preprocessor_info,
                            const string& quoted_include_name)
     : file_(this_file),
@@ -575,7 +576,7 @@ void IwyuFileInfo::AddAssociatedHeader(const IwyuFileInfo* other) {
   associated_headers_.insert(other);
 }
 
-void IwyuFileInfo::AddInclude(clang::OptionalFileEntryRef includee,
+void IwyuFileInfo::AddInclude(OptionalFileEntryRef includee,
                               const string& quoted_includee, int linenumber) {
   OneIncludeOrForwardDeclareLine new_include(includee, quoted_includee,
                                              linenumber);
@@ -603,7 +604,7 @@ void IwyuFileInfo::AddInclude(clang::OptionalFileEntryRef includee,
            << " -> " << GetFilePath(includee) << "\n";
 }
 
-void IwyuFileInfo::AddForwardDeclare(const clang::NamedDecl* fwd_decl,
+void IwyuFileInfo::AddForwardDeclare(const NamedDecl* fwd_decl,
                                      bool definitely_keep_fwd_decl) {
   CHECK_(fwd_decl && "forward_declare_decl unexpectedly nullptr");
   CHECK_((isa<ClassTemplateDecl>(fwd_decl) || isa<TagDecl>(fwd_decl)) &&
@@ -688,19 +689,19 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
   LogSymbolUse("Marked full-info use of symbol", symbol_uses_.back());
 }
 
-void IwyuFileInfo::ReportMacroUse(clang::SourceLocation use_loc,
-                                  clang::SourceLocation dfn_loc,
+void IwyuFileInfo::ReportMacroUse(SourceLocation use_loc,
+                                  SourceLocation dfn_loc,
                                   const string& symbol) {
   symbol_uses_.push_back(OneUse(symbol, GetFileEntry(dfn_loc), use_loc));
   LogSymbolUse("Marked full-info use of macro", symbol_uses_.back());
 }
 
-void IwyuFileInfo::ReportDefinedMacroUse(clang::OptionalFileEntryRef used_in) {
+void IwyuFileInfo::ReportDefinedMacroUse(OptionalFileEntryRef used_in) {
   macro_users_.insert(used_in);
 }
 
-void IwyuFileInfo::ReportIncludeFileUse(
-    clang::OptionalFileEntryRef included_file, const string& quoted_include) {
+void IwyuFileInfo::ReportIncludeFileUse(OptionalFileEntryRef included_file,
+                                        const string& quoted_include) {
   symbol_uses_.push_back(OneUse(included_file, quoted_include));
   LogSymbolUse("Marked use of include-file", symbol_uses_.back());
 }
@@ -1315,7 +1316,7 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
 
   // (B4) Discard symbol uses for builtin symbols, including new/delete and
   // template builtins.
-  if (isa<clang::BuiltinTemplateDecl>(use->decl())) {
+  if (isa<BuiltinTemplateDecl>(use->decl())) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): built-in template\n";
     use->set_ignore_use();
