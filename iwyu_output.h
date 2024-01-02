@@ -21,12 +21,12 @@
 #include <string>                       // for string, operator<
 #include <vector>                       // for vector
 
-#include "iwyu_port.h"  // for CHECK_
-#include "iwyu_stl_util.h"
-#include "iwyu_use_flags.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
+#include "iwyu_port.h"  // for CHECK_
+#include "iwyu_stl_util.h"
+#include "iwyu_use_flags.h"
 
 namespace clang {
 class UsingDecl;

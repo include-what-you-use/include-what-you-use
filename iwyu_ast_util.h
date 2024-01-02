@@ -17,9 +17,6 @@
 #include <set>                          // for set
 #include <string>                       // for string
 
-#include "iwyu_port.h"  // for CHECK_
-#include "iwyu_use_flags.h"
-#include "llvm/Support/Casting.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Stmt.h"
@@ -27,6 +24,9 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
+#include "iwyu_port.h"  // for CHECK_
+#include "iwyu_use_flags.h"
+#include "llvm/Support/Casting.h"
 
 namespace clang {
 class CXXConstructExpr;

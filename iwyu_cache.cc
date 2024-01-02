@@ -12,12 +12,12 @@
 #include <set>
 #include <string>
 
-#include "iwyu_ast_util.h"
-#include "iwyu_stl_util.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LangOptions.h"
+#include "iwyu_ast_util.h"
+#include "iwyu_stl_util.h"
 
 using clang::ClassTemplateSpecializationDecl;
 using clang::LangOptions;
