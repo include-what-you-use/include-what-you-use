@@ -46,8 +46,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 
-using clang::ArrayType;
 using clang::ASTDumper;
+using clang::ArrayType;
 using clang::BlockPointerType;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
