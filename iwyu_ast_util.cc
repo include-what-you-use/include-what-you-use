@@ -82,6 +82,7 @@ using clang::Expr;
 using clang::ExprWithCleanups;
 using clang::FullSourceLoc;
 using clang::FunctionDecl;
+using clang::FunctionTemplateDecl;
 using clang::FunctionTemplateSpecializationInfo;
 using clang::FunctionType;
 using clang::IdentifierInfo;
@@ -120,6 +121,7 @@ using clang::TemplateName;
 using clang::TemplateParameterList;
 using clang::TemplateSpecializationKind;
 using clang::TemplateSpecializationType;
+using clang::TemplateTypeParmDecl;
 using clang::TranslationUnitDecl;
 using clang::Type;
 using clang::TypeAliasTemplateDecl;
@@ -899,6 +901,29 @@ static const Type* GetSugaredTypeOf(const Expr* expr) {
   return v.sugared.getTypePtr();
 }
 
+static map<const Type*, const Type*> GetDefaultedArgResugarMap(
+    const FunctionDecl* decl) {
+  map<const Type*, const Type*> res;
+  const FunctionTemplateDecl* template_decl = decl->getPrimaryTemplate();
+  if (!template_decl)
+    return res;
+  const TemplateParameterList* params = template_decl->getTemplateParameters();
+  const TemplateArgumentList* args = decl->getTemplateSpecializationArgs();
+  const unsigned count = params->size();
+  CHECK_(args->size() == count);
+  for (unsigned i = 0; i < count; ++i) {
+    if (const auto* param_decl =
+            dyn_cast<TemplateTypeParmDecl>(params->getParam(i))) {
+      const QualType type = args->get(i).getAsType().getCanonicalType();
+      if (param_decl->hasDefaultArgument() &&
+          param_decl->getDefaultArgument().getCanonicalType() == type) {
+        res.emplace(type.getTypePtr(), nullptr);
+      }
+    }
+  }
+  return res;
+}
+
 TemplateInstantiationData GetTplInstDataForFunction(
     const FunctionDecl* decl, const Expr* calling_expr,
     function<set<const Type*>(const Type*)> provided_getter) {
@@ -951,6 +976,7 @@ TemplateInstantiationData GetTplInstDataForFunction(
       for (const auto [_, sugared_type] : resugar_map)
         InsertAllInto(provided_getter(sugared_type), &provided_types);
     }
+    InsertAllInto(GetDefaultedArgResugarMap(decl), &resugar_map);
     return TemplateInstantiationData{resugar_map, provided_types};
   }
 
@@ -997,6 +1023,8 @@ TemplateInstantiationData GetTplInstDataForFunction(
     // argument.
     InsertAllInto(provided_getter(type), &provided_types);
   }
+
+  InsertAllInto(GetDefaultedArgResugarMap(decl), &resugar_map);
 
   // Log the types we never mapped.
   for (const auto& types : desugared_types) {
