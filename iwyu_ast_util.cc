@@ -46,6 +46,10 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
+// TODO: Clean out pragmas as IWYU improves.
+// IWYU pragma: no_include "clang/AST/StmtIterator.h"
+// IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
+
 using clang::ASTDumper;
 using clang::ArrayType;
 using clang::BlockPointerType;

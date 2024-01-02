@@ -11,8 +11,6 @@
 
 #include <algorithm>                    // for find
 #include <cstddef>                      // for size_t
-// TODO(wan): make sure IWYU doesn't suggest <iterator>.
-#include <iterator>                     // for find
 // not hash_map: it's not as portable and needs hash<string>.
 #include <map>                          // for map, map<>::mapped_type, etc
 #include <memory>
@@ -40,6 +38,9 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
+
+// TODO: Clean out pragmas as IWYU improves.
+// IWYU pragma: no_include <iterator>
 
 using clang::OptionalFileEntryRef;
 using llvm::MemoryBuffer;

@@ -38,6 +38,10 @@
 #include "iwyu_version.h"
 #include "llvm/Support/raw_ostream.h"
 
+// TODO: Clean out pragmas as IWYU improves.
+// IWYU pragma: no_include <unistd.h>
+// IWYU pragma: no_include "llvm/ADT/iterator.h"
+
 using clang::CompilerInstance;
 using clang::HeaderSearch;
 using clang::LangOptions;

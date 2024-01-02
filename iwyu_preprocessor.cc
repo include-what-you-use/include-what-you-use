@@ -32,6 +32,9 @@
 #include "iwyu_verrs.h"
 #include "llvm/Support/raw_ostream.h"
 
+// TODO: Clean out pragmas as IWYU improves.
+// IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
+
 using clang::CharSourceRange;
 using clang::FileEntryRef;
 using clang::FileID;

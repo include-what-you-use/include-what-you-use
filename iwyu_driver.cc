@@ -41,6 +41,10 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 
+// TODO: Clean out pragmas as IWYU improves.
+// IWYU pragma: no_include "clang/Basic/LLVM.h"
+// IWYU pragma: no_include "llvm/ADT/iterator.h"
+
 namespace include_what_you_use {
 
 using clang::CompilerInstance;
