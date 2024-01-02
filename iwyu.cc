@@ -103,6 +103,7 @@
 
 #include "iwyu_ast_util.h"
 #include "iwyu_cache.h"
+#include "iwyu_driver.h"
 #include "iwyu_globals.h"
 #include "iwyu_lexer_utils.h"
 #include "iwyu_location_util.h"
@@ -115,6 +116,7 @@
 #include "iwyu_use_flags.h"
 #include "iwyu_verrs.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -4319,16 +4321,11 @@ class IwyuAction : public ASTFrontendAction {
 
 } // namespace include_what_you_use
 
-#include "iwyu_driver.h"
-#include "clang/Frontend/FrontendAction.h"
-#include "llvm/Support/TargetSelect.h"
-
-using include_what_you_use::OptionsParser;
-using include_what_you_use::IwyuAction;
-using include_what_you_use::ExecuteAction;
-
 int main(int argc, char **argv) {
   using clang::driver::ToolChain;
+  using include_what_you_use::ExecuteAction;
+  using include_what_you_use::IwyuAction;
+  using include_what_you_use::OptionsParser;
 
   llvm::llvm_shutdown_obj scoped_shutdown;
 
