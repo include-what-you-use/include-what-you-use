@@ -122,6 +122,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
@@ -798,6 +799,11 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (FunctionDecl* fn_decl = DynCastFrom(expr->getDecl())) {
       if (!IsImplicitlyInstantiatedDfn(fn_decl))
         return true;
+      if (const auto* call_expr =  // Skip intermediate ImplicitCastExpr node.
+          current_ast_node_->GetAncestorAs<CallExpr>(2)) {
+        if (call_expr->getDirectCallee() == fn_decl)
+          return true;
+      }
       // If fn_decl has a class-name before it -- 'MyClass::method' --
       // it's a method pointer.
       const Type* parent_type = nullptr;

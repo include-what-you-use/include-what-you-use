@@ -54,6 +54,29 @@ void Fn() {
 
   (void)&FnWithProvidedDefaultTplArg<>;
   FnWithProvidedDefaultTplArg();
+
+  // IWYU: IndirectClass is...*indirect.h
+  using ProvidingAlias = IndirectClass;
+  ProvidingAlias* p = 0;
+  // IWYU: NonProvidingAlias is...*default_tpl_arg-i1.h
+  NonProvidingAlias* n = 0;
+
+  // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg is...*default_tpl_arg-i1.h
+  // IWYU: IndirectClass is...*indirect.h
+  FnWithNonProvidedDefaultTplArgAndDefaultCallArg();
+  // TODO: should not report here.
+  // IWYU: IndirectClass is...*indirect.h
+  FnWithProvidedDefaultTplArgAndDefaultCallArg();
+
+  // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg is...*default_tpl_arg-i1.h
+  FnWithNonProvidedDefaultTplArgAndDefaultCallArg(p);
+  FnWithProvidedDefaultTplArgAndDefaultCallArg(p);
+
+  // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg is...*default_tpl_arg-i1.h
+  // IWYU: IndirectClass is...*indirect.h
+  FnWithNonProvidedDefaultTplArgAndDefaultCallArg(n);
+  // IWYU: IndirectClass is...*indirect.h
+  FnWithProvidedDefaultTplArgAndDefaultCallArg(n);
 }
 
 /**** IWYU_SUMMARY
@@ -67,8 +90,8 @@ tests/cxx/default_tpl_arg.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/default_tpl_arg.cc:
-#include "tests/cxx/default_tpl_arg-d2.h"  // for FnWithProvidedDefaultTplArg
-#include "tests/cxx/default_tpl_arg-i1.h"  // for FnWithNonProvidedDefaultTplArg, UninstantiatedTpl
+#include "tests/cxx/default_tpl_arg-d2.h"  // for FnWithProvidedDefaultTplArg, FnWithProvidedDefaultTplArgAndDefaultCallArg
+#include "tests/cxx/default_tpl_arg-i1.h"  // for FnWithNonProvidedDefaultTplArg, FnWithNonProvidedDefaultTplArgAndDefaultCallArg, NonProvidingAlias, UninstantiatedTpl
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 
 ***** IWYU_SUMMARY */
