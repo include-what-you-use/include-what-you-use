@@ -87,7 +87,7 @@
 //     already get it via foo.h, IWYU won't recommend foo.cc to
 //     #include bar.h, unless it already does so.
 
-#include <stdio.h>
+#include <cstdio>
 #include <cstdlib>                      // for atoi, exit
 #include <functional>
 #include <map>                          // for map, swap, etc

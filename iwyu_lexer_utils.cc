@@ -9,7 +9,7 @@
 
 #include "iwyu_lexer_utils.h"
 
-#include <string.h>
+#include <cstring>
 #include <string>
 
 #include "clang/Basic/SourceLocation.h"
