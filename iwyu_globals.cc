@@ -9,34 +9,38 @@
 
 #include "iwyu_globals.h"
 
-#include <algorithm>                    // for sort, make_pair
-#include <cstdio>                       // for printf
-#include <cstdlib>                      // for atoi, exit, getenv
-#include <map>                          // for map
-#include <set>                          // for set
-#include <string>                       // for string, operator<, etc
-#include <utility>                      // for make_pair, pair
+#include <limits.h>                           // for INT_MAX, INT_MIN
+#include <string.h>                           // for strcmp
+#include <algorithm>                          // for remove, sort
+#include <cstdio>                             // for printf
+#include <cstdlib>                            // for exit, EXIT_FAILURE, atoi
+#include <map>                                // for map
+#include <set>                                // for operator!=, set, _Rb_tr...
+#include <string>                             // for basic_string, string
+#include <utility>                            // for pair, make_pair
 
-#include "clang/AST/PrettyPrinter.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/Version.h"
-#include "clang/Driver/ToolChain.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/Preprocessor.h"
-#include "iwyu_cache.h"
-#include "iwyu_getopt.h"
-#include "iwyu_include_picker.h"
-#include "iwyu_lexer_utils.h"
-#include "iwyu_location_util.h"
-#include "iwyu_path_util.h"
-#include "iwyu_port.h"  // for CHECK_, etc
-#include "iwyu_regex.h"
-#include "iwyu_stl_util.h"
-#include "iwyu_string_util.h"
-#include "iwyu_verrs.h"
-#include "iwyu_version.h"
-#include "llvm/Support/raw_ostream.h"
+#include "clang/AST/PrettyPrinter.h"          // for PrintingPolicy
+#include "clang/Basic/DirectoryEntry.h"       // for DirectoryEntryRef, Opti...
+#include "clang/Basic/LangOptions.h"          // for LangOptions
+#include "clang/Basic/Version.h"              // for getClangFullVersion
+#include "clang/Driver/ToolChain.h"           // for ToolChain
+#include "clang/Frontend/CompilerInstance.h"  // for CompilerInstance
+#include "clang/Lex/DirectoryLookup.h"        // for DirectoryLookup
+#include "clang/Lex/HeaderSearch.h"           // for HeaderSearch
+#include "clang/Lex/Preprocessor.h"           // for Preprocessor
+#include "iwyu_cache.h"                       // for FullUseCache
+#include "iwyu_getopt.h"                      // for no_argument, required_a...
+#include "iwyu_include_picker.h"              // for CXXStdLib, CStdLib, Inc...
+#include "iwyu_lexer_utils.h"                 // for SourceManagerCharacterD...
+#include "iwyu_location_util.h"               // for string, GetFilePath
+#include "iwyu_path_util.h"                   // for HeaderSearchPath, MakeA...
+#include "iwyu_port.h"                        // for CHECK_, GlobMatchesPath
+#include "iwyu_regex.h"                       // for ParseRegexDialect, Rege...
+#include "iwyu_string_util.h"                 // for Split
+#include "iwyu_verrs.h"                       // for raw_ostream, outs, raw_...
+#include "iwyu_version.h"                     // for IWYU_VERSION_STRING
+#include "llvm/ADT/StringRef.h"               // for StringRef
+#include "llvm/Option/ArgList.h"              // for InputArgList
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include <unistd.h>

@@ -60,24 +60,26 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_PREPROCESSOR_H_
 
-#include <map>                          // for map
-#include <set>                          // for set
-#include <stack>                        // for stack
-#include <string>                       // for string
-#include <utility>                      // for pair
-#include <vector>                       // for vector
+#include <map>                           // for map, multimap
+#include <set>                           // for set
+#include <stack>                         // for stack
+#include <string>                        // for string
+#include <vector>                        // for vector
 
-#include "clang/Basic/FileEntry.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Lex/PPCallbacks.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/Token.h"
-#include "iwyu_output.h"
-#include "iwyu_port.h"  // for CHECK_
+#include "clang/Basic/FileEntry.h"       // for OptionalFileEntryRef, FileEn...
+#include "clang/Basic/SourceLocation.h"  // for SourceLocation, SourceRange
+#include "clang/Basic/SourceManager.h"   // for CharacteristicKind
+#include "clang/Lex/PPCallbacks.h"       // for PPCallbacks
+#include "clang/Lex/Preprocessor.h"      // for CommentHandler, Preprocessor...
+#include "clang/Lex/Token.h"             // for Token
+#include "iwyu_output.h"                 // for IwyuFileInfo
+#include "llvm/ADT/StringRef.h"          // for StringRef
 
 namespace clang {
-class MacroInfo;
+class MacroArgs;
+class MacroDefinition;
+class MacroDirective;
+class Module;
 class NamedDecl;
 }  // namespace clang
 

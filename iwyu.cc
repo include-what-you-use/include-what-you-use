@@ -87,58 +87,63 @@
 //     already get it via foo.h, IWYU won't recommend foo.cc to
 //     #include bar.h, unless it already does so.
 
-#include <algorithm>                    // for swap, find, make_pair
-#include <cstddef>                      // for size_t
-#include <cstdlib>                      // for atoi, exit
-#include <cstring>
-#include <deque>                        // for swap
-#include <iterator>                     // for find
-#include <list>                         // for swap
-#include <map>                          // for map, swap, etc
-#include <memory>                       // for unique_ptr
-#include <set>                          // for set, set<>::iterator, swap
-#include <string>                       // for string, operator+, etc
-#include <utility>                      // for pair
-#include <vector>                       // for vector, swap
+#include <stdio.h>                              // for snprintf
+#include <cstdlib>                              // for exit, size_t, EXIT_FA...
+#include <functional>                           // for function
+#include <map>                                  // for map, operator!=, _Rb_...
+#include <memory>                               // for unique_ptr, allocator
+#include <set>                                  // for set
+#include <string>                               // for basic_string, operator+
+#include <utility>                              // for pair, swap
+#include <vector>                               // for vector
 
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/ExprConcepts.h"
-#include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/OperationKinds.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
-#include "clang/AST/TypeLoc.h"
-#include "clang/Basic/FileEntry.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/TypeTraits.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendAction.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/PreprocessorOptions.h"
-#include "clang/Sema/Sema.h"
-#include "iwyu_ast_util.h"
-#include "iwyu_cache.h"
-#include "iwyu_driver.h"
-#include "iwyu_globals.h"
-#include "iwyu_lexer_utils.h"
-#include "iwyu_location_util.h"
-#include "iwyu_output.h"
-#include "iwyu_path_util.h"
-#include "iwyu_port.h"  // for CHECK_
-#include "iwyu_preprocessor.h"
-#include "iwyu_stl_util.h"
-#include "iwyu_string_util.h"
-#include "iwyu_use_flags.h"
-#include "iwyu_verrs.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/raw_ostream.h"
+#include "clang/AST/ASTConsumer.h"              // for ASTConsumer
+#include "clang/AST/ASTContext.h"               // for ASTContext
+#include "clang/AST/Attr.h"                     // for Attr
+#include "clang/AST/Decl.h"                     // for FunctionDecl, NamedDecl
+#include "clang/AST/DeclBase.h"                 // for operator!=, Decl, Dec...
+#include "clang/AST/DeclCXX.h"                  // for CXXRecordDecl, CXXMet...
+#include "clang/AST/DeclTemplate.h"             // for ClassTemplateSpeciali...
+#include "clang/AST/Expr.h"                     // for CallExpr, Expr, DeclR...
+#include "clang/AST/ExprCXX.h"                  // for CXXConstructExpr, Ove...
+#include "clang/AST/ExprConcepts.h"             // for ConceptSpecialization...
+#include "clang/AST/NestedNameSpecifier.h"      // for NestedNameSpecifierLoc
+#include "clang/AST/OperationKinds.h"           // for CastKind, BinaryOpera...
+#include "clang/AST/RecursiveASTVisitor.h"      // for RecursiveASTVisitor
+#include "clang/AST/StmtCXX.h"                  // for CXXCatchStmt, CXXForR...
+#include "clang/AST/TemplateBase.h"             // for TemplateArgument, Tem...
+#include "clang/AST/TemplateName.h"             // for TemplateName
+#include "clang/AST/Type.h"                     // for Type, QualType, Templ...
+#include "clang/AST/TypeLoc.h"                  // for TypeLoc, QualifiedTyp...
+#include "clang/Basic/Diagnostic.h"             // for DiagnosticsEngine
+#include "clang/Basic/FileEntry.h"              // for OptionalFileEntryRef
+#include "clang/Basic/LangOptions.h"            // for LangOptions
+#include "clang/Basic/SourceLocation.h"         // for SourceLocation, opera...
+#include "clang/Basic/SourceManager.h"          // for SourceManager
+#include "clang/Basic/Specifiers.h"             // for ExprValueKind, Templa...
+#include "clang/Basic/TypeTraits.h"             // for TypeTrait
+#include "clang/Frontend/CompilerInstance.h"    // for CompilerInstance
+#include "clang/Frontend/CompilerInvocation.h"  // for CompilerInvocation
+#include "clang/Frontend/FrontendAction.h"      // for ASTFrontendAction
+#include "clang/Lex/Preprocessor.h"             // for Preprocessor
+#include "clang/Lex/PreprocessorOptions.h"      // for PreprocessorOptions
+#include "clang/Sema/Sema.h"                    // for Sema, LateParsedTempl...
+#include "iwyu_ast_util.h"                      // for ASTNode, DynCastFrom
+#include "iwyu_cache.h"                         // for CacheStoringScope
+#include "iwyu_driver.h"                        // for ExecuteAction
+#include "iwyu_globals.h"                       // for GlobalFlags, ClassMem...
+#include "iwyu_location_util.h"                 // for GetFileEntry, GetLoca...
+#include "iwyu_output.h"                        // for IwyuFileInfo
+#include "iwyu_port.h"                          // for CHECK_, CHECK_UNREACH...
+#include "iwyu_preprocessor.h"                  // for IwyuPreprocessorInfo
+#include "iwyu_stl_util.h"                      // for ContainsKey, Extend
+#include "iwyu_use_flags.h"                     // for UseFlags, UF_Explicit...
+#include "iwyu_verrs.h"                         // for raw_ostream, VERRS, errs
+#include "llvm/ADT/ArrayRef.h"                  // for ArrayRef
+#include "llvm/ADT/StringRef.h"                 // for StringRef
+#include "llvm/Support/Casting.h"               // for dyn_cast, isa, cast
+#include "llvm/Support/ManagedStatic.h"         // for llvm_shutdown_obj
+#include "llvm/Support/TargetSelect.h"          // for InitializeAllAsmParsers
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/AST/Redeclarable.h"
@@ -154,6 +159,9 @@ class PPCallbacks;
 // IWYU pragma: end_keep
 
 namespace clang {
+class FriendDecl;
+class Stmt;
+
 namespace driver {
 class ToolChain;
 }

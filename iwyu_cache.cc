@@ -9,15 +9,16 @@
 
 #include "iwyu_cache.h"
 
-#include <set>
-#include <string>
+#include <functional>                 // for function
+#include <set>                        // for set
+#include <string>                     // for basic_string, operator<, string
 
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
-#include "clang/Basic/LangOptions.h"
-#include "iwyu_ast_util.h"
-#include "iwyu_stl_util.h"
+#include "clang/AST/DeclTemplate.h"   // for TemplateArgumentList, ClassTemp...
+#include "clang/AST/TemplateBase.h"   // for TemplateArgument
+#include "clang/AST/Type.h"           // for Type (ptr only), TemplateSpecia...
+#include "clang/Basic/LangOptions.h"  // for LangOptions
+#include "iwyu_ast_util.h"            // for DynCastFrom, DynCastPtr, GetTpl...
+#include "iwyu_stl_util.h"            // for ContainsKey
 
 using clang::ClassTemplateSpecializationDecl;
 using clang::LangOptions;

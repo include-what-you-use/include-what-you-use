@@ -9,30 +9,34 @@
 
 #include "iwyu_output.h"
 
-#include <algorithm>                    // for sort, find
-#include <cstdio>                       // for snprintf
-#include <iterator>                     // for inserter
-#include <map>                          // for _Rb_tree_const_iterator, etc
-#include <utility>                      // for pair, make_pair, operator>
-#include <vector>                       // for vector, vector<>::iterator, etc
+#include <algorithm>                     // for any_of, max, remove_if, set_...
+#include <cstdio>                        // for size_t, snprintf
+#include <iterator>                      // for insert_iterator, inserter, pair
+#include <list>                          // for list, operator!=, _List_iter...
+#include <map>                           // for operator!=, map, _Rb_tree_it...
+#include <utility>                       // for pair, make_pair, operator>
+#include <vector>                        // for vector
 
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Type.h"
-#include "clang/Basic/SourceLocation.h"
-#include "iwyu_ast_util.h"
-#include "iwyu_globals.h"
-#include "iwyu_include_picker.h"
-#include "iwyu_location_util.h"
-#include "iwyu_path_util.h"
-#include "iwyu_preprocessor.h"
-#include "iwyu_stl_util.h"
-#include "iwyu_string_util.h"
-#include "iwyu_verrs.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/raw_ostream.h"
+#include "clang/AST/ASTContext.h"        // for ASTContext
+#include "clang/AST/Decl.h"              // for NamedDecl, TagDecl, EnumDecl
+#include "clang/AST/DeclBase.h"          // for DeclContext, Decl, operator!=
+#include "clang/AST/DeclCXX.h"           // for UsingDecl, CXXRecordDecl
+#include "clang/AST/DeclTemplate.h"      // for ClassTemplateDecl, ClassTemp...
+#include "clang/AST/DeclarationName.h"   // for DeclarationName
+#include "clang/AST/Type.h"              // for ElaboratedType, QualType
+#include "clang/AST/TypeLoc.h"           // for ElaboratedTypeLoc
+#include "clang/Basic/SourceLocation.h"  // for SourceLocation, SourceRange
+#include "iwyu_ast_util.h"               // for DynCastFrom, DynCastPtr, Pri...
+#include "iwyu_globals.h"                // for GlobalFlags, CommandlineFlags
+#include "iwyu_include_picker.h"         // for IncludePicker, MappedInclude
+#include "iwyu_location_util.h"          // for GetFilePath, GetFileEntry
+#include "iwyu_path_util.h"              // for ConvertToQuotedInclude, IsHe...
+#include "iwyu_preprocessor.h"           // for string, IwyuPreprocessorInfo
+#include "iwyu_stl_util.h"               // for ContainsKey, InsertAllInto
+#include "iwyu_string_util.h"            // for EndsWith, StartsWith, Split
+#include "iwyu_verrs.h"                  // for raw_ostream, VERRS, ShouldPrint
+#include "llvm/ADT/StringRef.h"          // for StringRef
+#include "llvm/Support/Casting.h"        // for isa, cast, dyn_cast
 
 namespace include_what_you_use {
 

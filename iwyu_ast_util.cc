@@ -11,40 +11,45 @@
 
 #include "iwyu_ast_util.h"
 
-#include <set>                          // for set
-#include <string>                       // for string, operator+, etc
-#include <utility>                      // for pair
+#include <set>                              // for set
+#include <string>                           // for basic_string, allocator
+#include <utility>                          // for pair
 
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDumper.h"
-#include "clang/AST/CanonicalType.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/ExprCXX.h"
-#include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/AST/Stmt.h"
-#include "clang/AST/TemplateBase.h"
-#include "clang/AST/TemplateName.h"
-#include "clang/AST/Type.h"
-#include "clang/AST/TypeLoc.h"
-#include "clang/Basic/Builtins.h"
-#include "clang/Basic/FileEntry.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/Specifiers.h"
-#include "iwyu_globals.h"
-#include "iwyu_location_util.h"
-#include "iwyu_path_util.h"
-#include "iwyu_port.h"  // for CHECK_
-#include "iwyu_stl_util.h"
-#include "iwyu_verrs.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/raw_ostream.h"
+#include "clang/AST/ASTContext.h"           // for LazyGenerationalUpdatePtr...
+#include "clang/AST/ASTDumper.h"            // for ASTDumper
+#include "clang/AST/CanonicalType.h"        // for Type::getCanonicalTypeUnq...
+#include "clang/AST/Decl.h"                 // for FunctionDecl, TagDecl
+#include "clang/AST/DeclBase.h"             // for Decl, DeclContext, Recurs...
+#include "clang/AST/DeclCXX.h"              // for CXXRecordDecl, CXXConstru...
+#include "clang/AST/DeclTemplate.h"         // for ClassTemplateDecl, ClassT...
+#include "clang/AST/Expr.h"                 // for CallExpr, DeclRefExpr, Expr
+#include "clang/AST/ExprCXX.h"              // for CXXConstructExpr, Depende...
+#include "clang/AST/NestedNameSpecifier.h"  // for NestedNameSpecifier
+#include "clang/AST/OperationKinds.h"       // for UnaryOperatorKind
+#include "clang/AST/PrettyPrinter.h"        // for PrintingPolicy
+#include "clang/AST/RecursiveASTVisitor.h"  // for RecursiveASTVisitor
+#include "clang/AST/Redeclarable.h"         // for operator!=, Redeclarable ...
+#include "clang/AST/Stmt.h"                 // for RecursiveASTVisitor::Visi...
+#include "clang/AST/TemplateBase.h"         // for TemplateArgumentListInfo
+#include "clang/AST/TemplateName.h"         // for TemplateName, DependentTe...
+#include "clang/AST/Type.h"                 // for Type, QualType, Elaborate...
+#include "clang/AST/TypeLoc.h"              // for TypeLoc
+#include "clang/Basic/Builtins.h"           // for Context
+#include "clang/Basic/FileEntry.h"          // for OptionalFileEntryRef, ope...
+#include "clang/Basic/IdentifierTable.h"    // for IdentifierInfo
+#include "clang/Basic/SourceLocation.h"     // for SourceLocation, FullSourc...
+#include "clang/Basic/SourceManager.h"      // for SourceManager
+#include "clang/Basic/Specifiers.h"         // for TemplateSpecializationKind
+#include "iwyu_globals.h"                   // for DefaultPrintPolicy, Globa...
+#include "iwyu_location_util.h"             // for string, GetLocation
+#include "iwyu_path_util.h"                 // for NormalizeFilePath
+#include "iwyu_port.h"                      // for CHECK_, CHECK_UNREACHABLE_
+#include "iwyu_stl_util.h"                  // for InsertAllInto, ContainsKey
+#include "iwyu_verrs.h"                     // for raw_ostream, raw_string_o...
+#include "llvm/ADT/ArrayRef.h"              // for ArrayRef
+#include "llvm/ADT/PointerUnion.h"          // for PointerUnion
+#include "llvm/ADT/StringRef.h"             // for StringRef
+#include "llvm/Support/Casting.h"           // for cast, isa, dyn_cast, dyn_...
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/AST/StmtIterator.h"

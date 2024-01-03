@@ -44,13 +44,14 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_INCLUDE_PICKER_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_INCLUDE_PICKER_H_
 
-#include <map>                          // for map, map<>::value_compare
-#include <set>                          // for set
-#include <string>                       // for string
-#include <utility>                      // for pair
-#include <vector>                       // for vector
+#include <stddef.h>                 // for size_t
+#include <map>                      // for map
+#include <set>                      // for set
+#include <string>                   // for string, basic_string, allocator
+#include <utility>                  // for pair
+#include <vector>                   // for vector
 
-#include "clang/Basic/FileEntry.h"
+#include "clang/Basic/FileEntry.h"  // for OptionalFileEntryRef
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include <iterator>
@@ -64,9 +65,9 @@ using std::string;
 
 using std::vector;
 
+enum class RegexDialect;
 struct IncludeMapEntry;
 
-enum class RegexDialect;
 enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
 enum class CStdLib { None, ClangSymbols, Glibc };
 enum class CXXStdLib { None, ClangSymbols, Libstdcxx, Libcxx };

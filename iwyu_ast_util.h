@@ -12,21 +12,19 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_AST_UTIL_H_
 
-#include <functional>                   // for function
-#include <map>                          // for map
-#include <set>                          // for set
-#include <string>                       // for string
+#include <functional>                       // for function
+#include <map>                              // for map
+#include <set>                              // for set
+#include <string>                           // for string
 
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/Stmt.h"
-#include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
-#include "clang/AST/TypeLoc.h"
-#include "clang/Basic/SourceLocation.h"
-#include "iwyu_port.h"  // for CHECK_
-#include "iwyu_use_flags.h"
-#include "llvm/Support/Casting.h"
+#include "clang/AST/NestedNameSpecifier.h"  // for NestedNameSpecifier (ptr ...
+#include "clang/AST/TemplateBase.h"         // for TemplateArgument (ptr only)
+#include "clang/AST/Type.h"                 // for Type, EnumType (ptr only)
+#include "clang/AST/TypeLoc.h"              // for TypeLoc, operator==
+#include "clang/Basic/SourceLocation.h"     // for SourceLocation, SourceRange
+#include "iwyu_port.h"                      // for CHECK_UNREACHABLE_
+#include "iwyu_use_flags.h"                 // for UseFlags
+#include "llvm/Support/Casting.h"           // for dyn_cast, dyn_cast_or_null
 
 namespace clang {
 class CXXConstructExpr;
@@ -36,20 +34,21 @@ class CXXDestructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
 class CallExpr;
-class CastExpr;
 class ClassTemplateDecl;
 class ClassTemplateSpecializationDecl;
+class Decl;
+class DeclContext;
 class Expr;
 class FunctionDecl;
 class NamedDecl;
 class NamespaceDecl;
+class Stmt;
 class TagDecl;
 class TemplateDecl;
 class TemplateName;
 class TranslationUnitDecl;
 class TypeDecl;
 class ValueDecl;
-struct ASTTemplateArgumentListInfo;
 }  // namespace clang
 
 namespace include_what_you_use {

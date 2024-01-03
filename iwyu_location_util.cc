@@ -9,19 +9,19 @@
 
 #include "iwyu_location_util.h"
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/ExprCXX.h"
-#include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/Stmt.h"
-#include "clang/AST/TemplateBase.h"
-#include "clang/AST/TypeLoc.h"
-#include "clang/Basic/SourceLocation.h"
-#include "iwyu_ast_util.h"
-#include "iwyu_port.h"
+#include "clang/AST/Decl.h"                 // for FunctionDecl, NamedDecl
+#include "clang/AST/DeclBase.h"             // for Decl
+#include "clang/AST/DeclCXX.h"              // for CXXMethodDecl, CXXRecordDecl
+#include "clang/AST/DeclTemplate.h"         // for ClassTemplateSpecializati...
+#include "clang/AST/Expr.h"                 // for Expr, MemberExpr, Conditi...
+#include "clang/AST/ExprCXX.h"              // for CXXDependentScopeMemberExpr
+#include "clang/AST/NestedNameSpecifier.h"  // for NestedNameSpecifierLoc
+#include "clang/AST/Stmt.h"                 // for Stmt
+#include "clang/AST/TemplateBase.h"         // for TemplateArgumentLoc
+#include "clang/AST/TypeLoc.h"              // for TypeLoc
+#include "clang/Basic/SourceLocation.h"     // for SourceLocation, FileID
+#include "iwyu_ast_util.h"                  // for DynCastFrom, DynCastPtr
+#include "iwyu_string_util.h"               // for StartsWith
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"

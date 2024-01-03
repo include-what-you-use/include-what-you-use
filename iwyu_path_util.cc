@@ -9,16 +9,15 @@
 
 #include "iwyu_path_util.h"
 
-#include <cstddef>
-#include <cstring>                      // for strlen
-#include <system_error>
+#include <cstring>                    // for strlen
+#include <system_error>               // for error_code
 
-#include "iwyu_stl_util.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
+#include "iwyu_port.h"                // for CHECK_
+#include "iwyu_string_util.h"         // for StripRight, EndsWith, StartsWith
+#include "llvm/ADT/SmallString.h"     // for SmallString
+#include "llvm/ADT/StringRef.h"       // for StringRef
+#include "llvm/Support/FileSystem.h"  // for make_absolute
+#include "llvm/Support/Path.h"        // for append, convert_to_slash, is_ab...
 
 namespace include_what_you_use {
 

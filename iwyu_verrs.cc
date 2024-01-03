@@ -9,9 +9,11 @@
 
 #include "iwyu_verrs.h"
 
-#include "iwyu_globals.h"
-#include "iwyu_location_util.h"
-#include "iwyu_path_util.h"
+#include <string>                // for basic_string
+
+#include "iwyu_globals.h"        // for ShouldReportIWYUViolationsFor
+#include "iwyu_location_util.h"  // for GetFilePath
+#include "iwyu_path_util.h"      // for IsSystemIncludeFile
 
 namespace include_what_you_use {
 

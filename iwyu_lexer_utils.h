@@ -10,9 +10,10 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
 
-#include <string>                       // for string
+#include <string>                        // for string
 
-#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceLocation.h"  // for SourceLocation
+#include "llvm/ADT/StringRef.h"          // for StringRef
 
 namespace clang {
 class SourceManager;

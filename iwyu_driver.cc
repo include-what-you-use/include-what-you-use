@@ -13,33 +13,39 @@
 // Everything below is adapted from clang/examples/clang-interpreter/main.cpp.
 #include "iwyu_driver.h"
 
-#include <cctype>
-#include <cstdint>
-#include <memory>
-#include <set>
-#include <string>
-#include <utility>
+#include <cctype>                               // for isspace
+#include <cstdint>                              // for intptr_t
+#include <memory>                               // for unique_ptr, allocator
+#include <set>                                  // for set, _Rb_tree_const_i...
+#include <string>                               // for basic_string, string
+#include <utility>                              // for pair
+#include <vector>                               // for vector
 
-#include "iwyu_verrs.h"
-
-#include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Driver/Action.h"
-#include "clang/Driver/Compilation.h"
-#include "clang/Driver/Driver.h"
-#include "clang/Driver/Tool.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendAction.h"
-#include "clang/FrontendTool/Utils.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Option/ArgList.h"
-#include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/TargetParser/Host.h"
-#include "llvm/TargetParser/Triple.h"
+#include "clang/Basic/Diagnostic.h"             // for DiagnosticBuilder
+#include "clang/Basic/DiagnosticFrontend.h"     // for err_fe_expected_compi...
+#include "clang/Basic/DiagnosticOptions.h"      // for DiagnosticOptions
+#include "clang/Driver/Action.h"                // for Action
+#include "clang/Driver/Compilation.h"           // for Compilation
+#include "clang/Driver/Driver.h"                // for Driver
+#include "clang/Driver/Job.h"                   // for Command, JobList
+#include "clang/Driver/Tool.h"                  // for Tool
+#include "clang/Frontend/CompilerInstance.h"    // for CompilerInstance
+#include "clang/Frontend/CompilerInvocation.h"  // for CompilerInvocation
+#include "clang/Frontend/FrontendAction.h"      // for FrontendAction
+#include "clang/Frontend/FrontendOptions.h"     // for FrontendOptions
+#include "clang/FrontendTool/Utils.h"           // for CreateFrontendAction
+#include "clang/Lex/HeaderSearchOptions.h"      // for HeaderSearchOptions
+#include "iwyu_verrs.h"                         // for raw_ostream, errs
+#include "llvm/ADT/ArrayRef.h"                  // for ArrayRef
+#include "llvm/ADT/IntrusiveRefCntPtr.h"        // for IntrusiveRefCntPtr
+#include "llvm/ADT/STLExtras.h"                 // for any_of, erase_if
+#include "llvm/ADT/SmallVector.h"               // for SmallVector, SmallVec...
+#include "llvm/ADT/StringRef.h"                 // for StringRef, operator==
+#include "llvm/Option/Option.h"                 // for ArgStringList
+#include "llvm/Support/ErrorOr.h"               // for ErrorOr
+#include "llvm/Support/FileSystem.h"            // for getMainExecutable
+#include "llvm/Support/MemoryBuffer.h"          // for MemoryBuffer
+#include "llvm/TargetParser/Host.h"             // for getDefaultTargetTriple
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/Basic/LLVM.h"

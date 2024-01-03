@@ -11,17 +11,17 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_GLOBALS_H_
 
-#include <set>                          // for set
-#include <string>                       // for string
-#include <vector>                       // for vector
+#include <set>                      // for set
+#include <string>                   // for string, basic_string
+#include <vector>                   // for vector
 
-#include "clang/Basic/FileEntry.h"
+#include "clang/Basic/FileEntry.h"  // for OptionalFileEntryRef
 
 namespace clang {
 class CompilerInstance;
-class HeaderSearch;
 class SourceManager;
 struct PrintingPolicy;
+
 namespace driver {
 class ToolChain;
 }  // namespace driver
@@ -33,10 +33,10 @@ using std::set;
 using std::string;
 using std::vector;
 
-enum class RegexDialect;
 class FullUseCache;
 class IncludePicker;
 class SourceManagerCharacterDataGetter;
+enum class RegexDialect;
 
 // To set up the global state you need to parse options with OptionsParser when
 // main starts and to call InitGlobals after the clang infrastructure is set up.

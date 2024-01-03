@@ -12,10 +12,8 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
 
-#include <string>                       // for string, allocator, etc
-#include <vector>
-
-#include "iwyu_string_util.h"
+#include <string>  // for string, allocator, basic_string
+#include <vector>  // for vector
 
 namespace include_what_you_use {
 

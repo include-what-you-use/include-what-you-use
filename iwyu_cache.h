@@ -15,12 +15,13 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_CACHE_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_CACHE_H_
 
-#include <map>                          // for map
-#include <set>                          // for set
-#include <utility>                      // for pair
+#include <map>               // for map
+#include <set>               // for set
+#include <utility>           // for pair
 
-#include "iwyu_port.h"  // for CHECK_
-#include "iwyu_stl_util.h"
+#include "clang/AST/Type.h"  // for Type, TemplateSpecializationType (ptr only)
+#include "iwyu_port.h"       // for CHECK_
+#include "iwyu_stl_util.h"   // for FindInMap, ContainsKey
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include <iterator>
@@ -28,8 +29,6 @@
 namespace clang {
 class LangOptions;
 class NamedDecl;
-class TemplateSpecializationType;
-class Type;
 }
 
 namespace include_what_you_use {

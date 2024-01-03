@@ -9,11 +9,13 @@
 
 #include "iwyu_regex.h"
 
-#include <regex>
+#include <string.h>              // for strcmp
+#include <regex>                 // for regex_match, regex_replace, ECMAScript
 
-#include "iwyu_port.h"
-#include "iwyu_string_util.h"
-#include "llvm/Support/Regex.h"
+#include "iwyu_port.h"           // for CHECK_UNREACHABLE_
+#include "iwyu_string_util.h"    // for EndsWith, StartsWith
+#include "llvm/ADT/StringRef.h"  // for StringRef
+#include "llvm/Support/Regex.h"  // for Regex
 
 namespace include_what_you_use {
 

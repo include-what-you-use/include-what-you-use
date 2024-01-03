@@ -16,24 +16,25 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 
-#include <map>                          // for map
-#include <set>                          // for set
-#include <string>                       // for string, operator<
-#include <vector>                       // for vector
+#include <stddef.h>                      // for size_t
+#include <map>                           // for operator!=, map, _Rb_tree_co...
+#include <set>                           // for set
+#include <string>                        // for string, basic_string, operator<
+#include <vector>                        // for vector
 
-#include "clang/AST/Decl.h"
-#include "clang/Basic/FileEntry.h"
-#include "clang/Basic/SourceLocation.h"
-#include "iwyu_port.h"  // for CHECK_
-#include "iwyu_stl_util.h"
-#include "iwyu_use_flags.h"
+#include "clang/AST/Decl.h"              // for NamedDecl
+#include "clang/Basic/FileEntry.h"       // for OptionalFileEntryRef
+#include "clang/Basic/SourceLocation.h"  // for SourceLocation
+#include "iwyu_port.h"                   // for CHECK_
+#include "iwyu_stl_util.h"               // for InsertAllInto
+#include "iwyu_use_flags.h"              // for UseFlags
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
 
 namespace clang {
-class UsingDecl;
 class ElaboratedTypeLoc;
+class UsingDecl;
 }  // namespace clang
 
 namespace include_what_you_use {

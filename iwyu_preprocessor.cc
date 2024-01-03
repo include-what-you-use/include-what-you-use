@@ -9,28 +9,32 @@
 
 #include "iwyu_preprocessor.h"
 
-#include <algorithm>
-#include <cstddef>                      // for size_t
-#include <cstring>
-#include <iterator>
-#include <string>                       // for string, basic_string, etc
-#include <utility>                      // for pair, make_pair
+#include <cstring>                        // for size_t, strlen
+#include <optional>                       // for nullopt
+#include <string>                         // for basic_string, allocator
+#include <utility>                        // for pair, make_pair
 
-#include "clang/AST/Decl.h"
-#include "clang/Basic/IdentifierTable.h"
-#include "clang/Lex/MacroInfo.h"
-#include "iwyu_ast_util.h"
-#include "iwyu_globals.h"
-#include "iwyu_include_picker.h"
-#include "iwyu_lexer_utils.h"
-#include "iwyu_location_util.h"
-#include "iwyu_output.h"
-#include "iwyu_path_util.h"
-#include "iwyu_port.h"  // for CHECK_
-#include "iwyu_stl_util.h"
-#include "iwyu_string_util.h"
-#include "iwyu_verrs.h"
-#include "llvm/Support/raw_ostream.h"
+#include "clang/AST/Decl.h"               // for NamedDecl
+#include "clang/Basic/IdentifierTable.h"  // for IdentifierInfo
+#include "clang/Basic/TokenKinds.h"       // for TokenKind
+#include "clang/Lex/MacroInfo.h"          // for MacroInfo, MacroDefinition
+#include "iwyu_ast_util.h"                // for PrintableLoc
+#include "iwyu_globals.h"                 // for MutableGlobalIncludePicker
+#include "iwyu_include_picker.h"          // for IncludePicker, MappedInclude
+#include "iwyu_lexer_utils.h"             // for LineHasText, SourceManagerC...
+#include "iwyu_location_util.h"           // for GetFilePath, string, GetFil...
+#include "iwyu_output.h"                  // for IwyuFileInfo
+#include "iwyu_path_util.h"               // for ConvertToQuotedInclude, Get...
+#include "iwyu_port.h"                    // for CHECK_, CHECK_UNREACHABLE_
+#include "iwyu_stl_util.h"                // for ContainsKey, FindInMap, Get...
+#include "iwyu_string_util.h"             // for StartsWith, StripLeft, Split
+#include "iwyu_verrs.h"                   // for raw_ostream, ERRSYM, VERRS
+#include "llvm/ADT/ArrayRef.h"            // for ArrayRef
+
+namespace clang {
+class MacroArgs;
+class Module;
+}  // namespace clang
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"

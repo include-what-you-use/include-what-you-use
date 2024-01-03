@@ -9,35 +9,37 @@
 
 #include "iwyu_include_picker.h"
 
-#include <algorithm>                    // for find
-#include <cstddef>                      // for size_t
+#include <algorithm>                                   // for find, max_element
+#include <cstddef>                                     // for size_t
 // not hash_map: it's not as portable and needs hash<string>.
-#include <map>                          // for map, map<>::mapped_type, etc
-#include <memory>
-#include <numeric>                      // for accumulate
-#include <string>                       // for string, basic_string, etc
-#include <system_error>                 // for error_code
-#include <utility>                      // for pair, make_pair
-#include <vector>                       // for vector, vector<>::iterator
+#include <map>                                         // for map, operator!=
+#include <memory>                                      // for unique_ptr
+#include <numeric>                                     // for accumulate
+#include <string>                                      // for basic_string
+#include <system_error>                                // for error_code
+#include <utility>                                     // for pair, make_pair
+#include <vector>                                      // for vector
 
-#include "clang/Basic/FileManager.h"
-#include "clang/Tooling/Inclusions/StandardLibrary.h"
-#include "iwyu_location_util.h"
-#include "iwyu_path_util.h"
-#include "iwyu_port.h"
-#include "iwyu_regex.h"
-#include "iwyu_stl_util.h"
-#include "iwyu_string_util.h"
-#include "iwyu_verrs.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/YAMLParser.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"  // for Header, Symbol
+#include "iwyu_location_util.h"                        // for string, GetFil...
+#include "iwyu_path_util.h"                            // for ConvertToQuote...
+#include "iwyu_port.h"                                 // for CHECK_, IWYU_A...
+#include "iwyu_regex.h"                                // for RegexMatch
+#include "iwyu_stl_util.h"                             // for FindInMap, Con...
+#include "iwyu_string_util.h"                          // for StartsWith
+#include "iwyu_verrs.h"                                // for raw_ostream, errs
+#include "llvm/ADT/STLExtras.h"                        // for interleaveComma
+#include "llvm/ADT/SmallString.h"                      // for SmallString
+#include "llvm/ADT/SmallVector.h"                      // for SmallVector
+#include "llvm/ADT/StringRef.h"                        // for StringRef
+#include "llvm/ADT/Twine.h"                            // for Twine
+#include "llvm/Support/Casting.h"                      // for dyn_cast
+#include "llvm/Support/ErrorOr.h"                      // for ErrorOr
+#include "llvm/Support/FileSystem.h"                   // for exists
+#include "llvm/Support/Format.h"                       // for format, format...
+#include "llvm/Support/MemoryBuffer.h"                 // for MemoryBuffer
+#include "llvm/Support/SourceMgr.h"                    // for SourceMgr
+#include "llvm/Support/YAMLParser.h"                   // for Stream, Sequen...
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include <iterator>
