@@ -9,15 +9,14 @@
 
 #include "iwyu_preprocessor.h"
 
-#include <algorithm>
-#include <cstddef>                      // for size_t
 #include <cstring>
-#include <iterator>
+#include <optional>
 #include <string>                       // for string, basic_string, etc
 #include <utility>                      // for pair, make_pair
 
 #include "clang/AST/Decl.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/MacroInfo.h"
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
@@ -30,7 +29,12 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/ArrayRef.h"
+
+namespace clang {
+class MacroArgs;
+class Module;
+}  // namespace clang
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"

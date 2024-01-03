@@ -12,6 +12,7 @@
 #include <algorithm>                    // for sort, find
 #include <cstdio>                       // for snprintf
 #include <iterator>                     // for inserter
+#include <list>
 #include <map>                          // for _Rb_tree_const_iterator, etc
 #include <utility>                      // for pair, make_pair, operator>
 #include <vector>                       // for vector, vector<>::iterator, etc
@@ -19,8 +20,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
@@ -31,8 +35,8 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace include_what_you_use {
 

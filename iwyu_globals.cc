@@ -9,6 +9,8 @@
 
 #include "iwyu_globals.h"
 
+#include <limits.h>
+#include <string.h>
 #include <algorithm>                    // for sort, make_pair
 #include <cstdio>                       // for printf
 #include <cstdlib>                      // for atoi, exit, getenv
@@ -18,10 +20,12 @@
 #include <utility>                      // for make_pair, pair
 
 #include "clang/AST/PrettyPrinter.h"
-#include "clang/Basic/FileManager.h"
+#include "clang/Basic/DirectoryEntry.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Version.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "iwyu_cache.h"
@@ -32,11 +36,11 @@
 #include "iwyu_path_util.h"
 #include "iwyu_port.h"  // for CHECK_, etc
 #include "iwyu_regex.h"
-#include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "iwyu_version.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Option/ArgList.h"
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include <unistd.h>

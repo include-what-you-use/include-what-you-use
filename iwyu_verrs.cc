@@ -9,6 +9,8 @@
 
 #include "iwyu_verrs.h"
 
+#include <string>
+
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"

@@ -15,8 +15,6 @@
 #include <string>                       // for string, allocator, etc
 #include <vector>
 
-#include "iwyu_string_util.h"
-
 namespace include_what_you_use {
 
 using std::string;

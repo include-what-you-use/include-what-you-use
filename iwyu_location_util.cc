@@ -21,7 +21,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "iwyu_ast_util.h"
-#include "iwyu_port.h"
+#include "iwyu_string_util.h"
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
