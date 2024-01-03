@@ -173,6 +173,7 @@ using clang::CXXBaseSpecifier;
 using clang::CXXCatchStmt;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
+using clang::CXXDefaultArgExpr;
 using clang::CXXDeleteExpr;
 using clang::CXXDestructorDecl;
 using clang::CXXForRangeStmt;
@@ -2327,6 +2328,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
 
     ReportTypeUse(CurrentLoc(), type.getTypePtr(), DerefKind::RemoveRefs);
+    return true;
+  }
+
+  bool TraverseCXXDefaultArgExpr(CXXDefaultArgExpr*) {
+    // They should already be handled at the function declaration site,
+    // not at the call site.
     return true;
   }
 
