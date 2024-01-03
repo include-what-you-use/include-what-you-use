@@ -9,6 +9,7 @@
 
 #include "iwyu_cache.h"
 
+#include <functional>
 #include <set>
 #include <string>
 

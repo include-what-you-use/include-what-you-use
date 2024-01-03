@@ -16,6 +16,7 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 
+#include <stddef.h>
 #include <map>                          // for map
 #include <set>                          // for set
 #include <string>                       // for string, operator<
@@ -32,8 +33,8 @@
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
 
 namespace clang {
-class UsingDecl;
 class ElaboratedTypeLoc;
+class UsingDecl;
 }  // namespace clang
 
 namespace include_what_you_use {

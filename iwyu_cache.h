@@ -19,6 +19,7 @@
 #include <set>                          // for set
 #include <utility>                      // for pair
 
+#include "clang/AST/Type.h"
 #include "iwyu_port.h"  // for CHECK_
 #include "iwyu_stl_util.h"
 
@@ -28,8 +29,6 @@
 namespace clang {
 class LangOptions;
 class NamedDecl;
-class TemplateSpecializationType;
-class Type;
 }
 
 namespace include_what_you_use {

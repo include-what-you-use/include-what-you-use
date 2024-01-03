@@ -20,7 +20,6 @@
 #include <utility>                      // for pair, make_pair
 #include <vector>                       // for vector, vector<>::iterator
 
-#include "clang/Basic/FileManager.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
@@ -30,7 +29,10 @@
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"

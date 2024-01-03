@@ -19,9 +19,9 @@
 
 namespace clang {
 class CompilerInstance;
-class HeaderSearch;
 class SourceManager;
 struct PrintingPolicy;
+
 namespace driver {
 class ToolChain;
 }  // namespace driver
@@ -33,10 +33,10 @@ using std::set;
 using std::string;
 using std::vector;
 
-enum class RegexDialect;
 class FullUseCache;
 class IncludePicker;
 class SourceManagerCharacterDataGetter;
+enum class RegexDialect;
 
 // To set up the global state you need to parse options with OptionsParser when
 // main starts and to call InitGlobals after the clang infrastructure is set up.

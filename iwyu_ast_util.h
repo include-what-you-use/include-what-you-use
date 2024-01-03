@@ -17,9 +17,7 @@
 #include <set>                          // for set
 #include <string>                       // for string
 
-#include "clang/AST/DeclBase.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -36,20 +34,21 @@ class CXXDestructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
 class CallExpr;
-class CastExpr;
 class ClassTemplateDecl;
 class ClassTemplateSpecializationDecl;
+class Decl;
+class DeclContext;
 class Expr;
 class FunctionDecl;
 class NamedDecl;
 class NamespaceDecl;
+class Stmt;
 class TagDecl;
 class TemplateDecl;
 class TemplateName;
 class TranslationUnitDecl;
 class TypeDecl;
 class ValueDecl;
-struct ASTTemplateArgumentListInfo;
 }  // namespace clang
 
 namespace include_what_you_use {

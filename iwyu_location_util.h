@@ -42,15 +42,16 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_LOCATION_UTIL_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_LOCATION_UTIL_H_
 
+#include <optional>
 #include <string>                       // for string
 
 #include "clang/Basic/FileEntry.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Token.h"
 #include "iwyu_globals.h"
 #include "iwyu_path_util.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 class Decl;

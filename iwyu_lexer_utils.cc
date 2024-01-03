@@ -8,14 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "iwyu_lexer_utils.h"
-#include "iwyu_globals.h"
-#include "iwyu_port.h"  // for CHECK_
 
+#include <string.h>
 #include <string>
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Token.h"
+#include "iwyu_globals.h"
+#include "iwyu_port.h"  // for CHECK_
 
 using clang::SourceLocation;
 using clang::SourceManager;
