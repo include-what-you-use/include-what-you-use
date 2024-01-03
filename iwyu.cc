@@ -98,7 +98,7 @@
 #include <memory>                       // for unique_ptr
 #include <set>                          // for set, set<>::iterator, swap
 #include <string>                       // for string, operator+, etc
-#include <utility>                      // for pair, make_pair
+#include <utility>                      // for pair
 #include <vector>                       // for vector, swap
 
 #include "clang/AST/ASTConsumer.h"
@@ -248,7 +248,6 @@ using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
-using std::make_pair;
 using std::map;
 using std::set;
 using std::string;
