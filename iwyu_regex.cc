@@ -9,7 +9,7 @@
 
 #include "iwyu_regex.h"
 
-#include <string.h>
+#include <cstring>
 #include <regex>
 
 #include "iwyu_port.h"

@@ -16,7 +16,7 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 
-#include <stddef.h>
+#include <cstddef>
 #include <map>                          // for map
 #include <set>                          // for set
 #include <string>                       // for string, operator<

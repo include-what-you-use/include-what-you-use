@@ -44,7 +44,7 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_INCLUDE_PICKER_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_INCLUDE_PICKER_H_
 
-#include <stddef.h>
+#include <cstddef>
 #include <map>                          // for map, map<>::value_compare
 #include <set>                          // for set
 #include <string>                       // for string

@@ -9,11 +9,11 @@
 
 #include "iwyu_globals.h"
 
-#include <limits.h>
-#include <string.h>
 #include <algorithm>                    // for sort, make_pair
+#include <climits>
 #include <cstdio>                       // for printf
 #include <cstdlib>                      // for atoi, exit, getenv
+#include <cstring>
 #include <map>                          // for map
 #include <set>                          // for set
 #include <string>                       // for string, operator<, etc
