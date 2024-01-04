@@ -2646,11 +2646,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                  << typedef_decl->getQualifiedNameAsString()
                  << " owns the underlying type:\n";
         // If any of the used types are themselves typedefs, this will
-        // result in a recursive expansion.  Note we are careful to
-        // recurse inside this class, and not go back to subclasses.
+        // result in a recursive expansion.
         const Type* type = typedef_decl->getUnderlyingType().getTypePtr();
-        IwyuBaseAstVisitor<Derived>::ReportTypeUseInternal(
-            used_loc, type, provided_with_typedef, deref_kind);
+        ReportTypeUseInternal(used_loc, type, provided_with_typedef,
+                              deref_kind);
       }
       return;
     }
