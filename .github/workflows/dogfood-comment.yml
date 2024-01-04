@@ -1,0 +1,57 @@
+name: IWYU dogfood comment
+
+# NOTE: this workflow does not run in a pull_request context, and thus
+# GITHUB_TOKEN has slightly eleveated permissions.
+# That means we need to be particularly careful not to run untrusted code such
+# as submitted in PRs.
+# https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+
+on:
+  workflow_run:
+    workflows: [IWYU CI]
+    types:
+      - completed
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  dogfood-comment:
+    # Only run if triggered from a successful PR build.
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Install prerequisites
+        run: |
+          sudo apt update
+          sudo apt install -y \
+               curl \
+               jq
+
+      - name: Download dogfood results
+        uses: actions/download-artifact@v4
+        with:
+          run_id: ${{github.event.workflow_run.id }}
+          name: dogfood-results
+          path: ./dogfood-results
+
+      - name: Add dogfood PR comment
+        if: ${{ hashFiles('./dogfood-results/pr-url') != '' }}
+        env:
+          API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl \
+            -sS \
+            -L \
+            -X POST \
+            "$(cat ./dogfood-results/pr-url)" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $API_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            --data '{ "body": "$(jq -R -s '.' ./dogfood-results/iwyu-dogfood.md)" }'
