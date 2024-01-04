@@ -90,16 +90,15 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           API_URL: ${{ github.event.pull_request.comments_url }}
-          API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./iwyu-dogfood.bash ./build
           cat ./iwyu-dogfood.md >> $GITHUB_STEP_SUMMARY
-          curl \
-            -sS \
-            -L \
-            -X POST \
-            $API_URL \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $API_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            --data '{ "body": "$(jq -R -s '.' ./iwyu-dogfood.md)" }'
+          mkdir dogfood-results
+          mv ./iwyu-dogfood.md dogfood-results/
+          echo "$API_URL" > dogfood-results/pr-url
+
+      - name: Upload dogfood results
+        uses: actions/upload-artifact@v4
+        with:
+          name: dogfood-results
+          path: ./dogfood-results
