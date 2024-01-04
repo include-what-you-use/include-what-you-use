@@ -20,6 +20,9 @@ jobs:
     env:
       LLVM_TAG:
 
+    permissions:
+      pull-requests: write
+
     steps:
       - name: Install prerequisites
         run: |
