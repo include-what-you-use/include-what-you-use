@@ -50,22 +50,24 @@ cat<<EOF > iwyu-dogfood.md
 
 <details>
 <summary>include-what-you-use (exit: $iwyu_exit)</summary>
-\`\`\`
+<p>
 $(cat iwyu-dogfood.out)
-\`\`\`
+</p>
 </details>
 
 <details>
 <summary>fix_includes.py (exit: $fix_includes_exit)</summary>
-\`\`\`
+<pre>
 $(cat iwyu-dogfood.fix)
-\`\`\`
+</pre>
 </details>
 
 <details>
 <summary>diff</summary>
-\`\`\`diff
+<pre>
+<code class="language-diff">
 $(cat iwyu-dogfood.diff)
-\`\`\`
+</code>
+<pre>
 </details>
 EOF
