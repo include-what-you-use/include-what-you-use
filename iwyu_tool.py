@@ -212,8 +212,9 @@ def split_command(cmdstr):
 
 def find_include_what_you_use():
     """ Find IWYU executable and return its full pathname. """
-    if 'IWYU_BINARY' in os.environ:
-        return os.environ.get('IWYU_BINARY')
+    env_iwyu_path = os.environ.get('IWYU_BINARY')
+    if env_iwyu_path:
+        return os.path.realpath(env_iwyu_path)
 
     # TODO: Investigate using shutil.which when Python 2 has passed away.
     executable_name = 'include-what-you-use'
