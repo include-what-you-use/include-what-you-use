@@ -87,6 +87,8 @@ jobs:
       - name: IWYU dogfood
         if: github.event_name == 'pull_request'
         run: |
+          pwd
+          ls -lh ./build/bin/include-what-you-use
           ./iwyu-dogfood.bash ./build
           cat ./iwyu-dogfood.md >> $GITHUB_STEP_SUMMARY
           # # OMG: https://stackoverflow.com/a/71758159
