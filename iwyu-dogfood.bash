@@ -49,21 +49,21 @@ cat<<EOF > iwyu-dogfood.md
 ### Informational: IWYU dogfood results
 
 <details>
-<summary>include-what-you-use (exit: $iwyu_exit)</summary>
+<summary>**include-what-you-use (exit: $iwyu_exit)**</summary>
 \`\`\`
 $(cat iwyu-dogfood.out)
 \`\`\`
 </details>
 
 <details>
-<summary>fix_includes.py (exit: $fix_includes_exit)</summary>
+<summary>**fix_includes.py (exit: $fix_includes_exit)**</summary>
 \`\`\`
 $(cat iwyu-dogfood.fix)
 \`\`\`
 </details>
 
 <details>
-<summary>diff</summary>
+<summary>**diff**</summary>
 \`\`\`diff
 $(cat iwyu-dogfood.diff)
 \`\`\`
