@@ -102,4 +102,4 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $API_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            --data '{ "body": "$(jq -R -s '.' < ./iwyu-dogfood.md)" }'
+            --data '{ "body": "$(jq -R -s '.' ./iwyu-dogfood.md)" }'
