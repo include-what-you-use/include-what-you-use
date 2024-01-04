@@ -32,6 +32,7 @@ jobs:
         with:
           name: dogfood-results
           path: ./dogfood-results
+          run_id: ${{github.event.workflow_run.id }}
 
       - name: Add dogfood PR comment
         if: ${{ hashFiles('./dogfood-results/pr-url') != '' }}
