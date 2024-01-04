@@ -14,8 +14,7 @@
 # It assumes a compile_commands.json compilation database is present in the
 # build directory specified.
 
-builddir=$1
-if [ -z "$builddir" ]; then
+if [ -z "$1" ]; then
     echo "usage: $0 <build-path>"
     exit 1
 fi
@@ -32,6 +31,7 @@ check_alsos=$(for h in $HEADER_ONLY; do echo "-Xiwyu --check_also=*/$h"; done)
 
 # Run IWYU over all source files using iwyu_tool.py with CMake-generated
 # compilation database.
+builddir=$(realpath "$1")
 export IWYU_BINARY=$builddir/bin/include-what-you-use
 ./iwyu_tool.py -v -p "$builddir" *.cc -- $check_alsos > iwyu-dogfood.out 2>&1
 iwyu_exit=$?
