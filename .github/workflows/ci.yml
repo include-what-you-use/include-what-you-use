@@ -99,6 +99,7 @@ jobs:
           # cat ./iwyu-dogfood.md >> $GITHUB_ENV
           # echo 'EOF' >> $GITHUB_ENV
           curl \
+            -L \
             -X POST \
             $API_URL \
             -H "Accept: application/vnd.github+json" \
