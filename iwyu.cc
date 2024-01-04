@@ -3970,9 +3970,8 @@ class IwyuAstConsumer
       // spec type location (as written) so that reportings from
       // 'InstantiatedTemplateVisitor' are attributed to the correct location.
       const ASTNode type_loc_node(&type_loc);
-      const TemplateInstantiationData data = GetTplInstDataForClass(
-          type_loc.getTypePtr(),
-          [this](const Type* type) { return GetProvidedTypeComponents(type); });
+      const TemplateInstantiationData data =
+          GetTplInstData(type_loc.getTypePtr());
       // Clang instantiates methods in the first ("canonical") spec decl context
       // (which may correspond to instantiation declaration, not to definition).
       for (const CXXMethodDecl* member : decl->getCanonicalDecl()->methods()) {
@@ -4168,10 +4167,7 @@ class IwyuAstConsumer
     // If we're not in a forward-declare context, use of a template
     // specialization requires having the full type information.
     if (!CanForwardDeclareType(current_ast_node())) {
-      const TemplateInstantiationData data = GetTplInstDataForClass(
-          type,
-          [this](const Type* type) { return GetProvidedTypeComponents(type); });
-
+      const TemplateInstantiationData data = GetTplInstData(type);
       instantiated_template_visitor_.ScanInstantiatedType(
           current_ast_node(), data.resugar_map, data.provided_types);
     }
@@ -4249,15 +4245,10 @@ class IwyuAstConsumer
     if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type))
       return true;
 
-    auto provided_getter = [this](const Type* type) {
-      return GetProvidedTypeComponents(type);
-    };
-    TemplateInstantiationData data =
-        GetTplInstDataForFunction(callee, calling_expr, provided_getter);
+    TemplateInstantiationData data = GetTplInstData(callee, calling_expr);
 
     if (parent_type) {    // means we're a method of a class
-      const TemplateInstantiationData class_data =
-          GetTplInstDataForClass(parent_type, provided_getter);
+      const TemplateInstantiationData class_data = GetTplInstData(parent_type);
       InsertAllInto(class_data.resugar_map, &data.resugar_map);
       InsertAllInto(class_data.provided_types, &data.provided_types);
     }
@@ -4278,9 +4269,7 @@ class IwyuAstConsumer
 
   void ReportTplSpecComponentTypes(const TemplateSpecializationType* type,
                                    const set<const Type*>& blocked_types) {
-    TemplateInstantiationData data = GetTplInstDataForClass(
-        type,
-        [this](const Type* type) { return GetProvidedTypeComponents(type); });
+    TemplateInstantiationData data = GetTplInstData(type);
     ASTNode node(type);
     node.SetParent(current_ast_node());
     data.provided_types.insert(blocked_types.begin(), blocked_types.end());
@@ -4296,6 +4285,19 @@ class IwyuAstConsumer
       return GetProvidedTypesForTypedef(typedef_type->getDecl());
     }
     return set<const Type*>();
+  }
+
+  TemplateInstantiationData GetTplInstData(const Type* type) const {
+    return GetTplInstDataForClass(type, [this](const Type* type) {
+      return GetProvidedTypeComponents(type);
+    });
+  }
+
+  TemplateInstantiationData GetTplInstData(const FunctionDecl* decl,
+                                           const Expr* calling_expr) const {
+    return GetTplInstDataForFunction(
+        decl, calling_expr,
+        [this](const Type* type) { return GetProvidedTypeComponents(type); });
   }
 
   pair<bool, const char*> CanBeProvidedTypeComponent(
