@@ -88,6 +88,9 @@ jobs:
         run: |
           ./iwyu-dogfood.bash ./build
           echo "IWYU_DOGFOOD_MD=$(cat iwyu-dogfood.md)" >> $GITHUB_ENV
+
+      - name: IWYU dogfood PR update
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
