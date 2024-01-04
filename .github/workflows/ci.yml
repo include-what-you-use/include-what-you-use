@@ -93,11 +93,12 @@ jobs:
         run: |
           ./iwyu-dogfood.bash ./build
           cat ./iwyu-dogfood.md >> $GITHUB_STEP_SUMMARY
-          mkdir dogfood-results
-          mv ./iwyu-dogfood.md dogfood-results/
-          echo "$PR_URL" > dogfood-results/pr-url
+          mkdir ./dogfood-results
+          mv ./iwyu-dogfood.md ./dogfood-results/
+          echo "$PR_URL" > ./dogfood-results/pr-url
 
       - name: Upload dogfood results
         uses: actions/upload-artifact@v4
         with:
           name: dogfood-results
+          path: ./dogfood-results
