@@ -47,7 +47,6 @@ jobs:
         env:
           API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          export CONTENT=$(jq -R -s '.' ./dogfood-results/iwyu-dogfood.md)
           curl \
             -sS \
             -L \
@@ -56,4 +55,4 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $API_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            --data "{ \"body\": \"$CONTENT\" }"
+            --data "{ \"body\": $(jq -R -s '.' ./dogfood-results/iwyu-dogfood.md) }"
