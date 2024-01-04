@@ -62,6 +62,7 @@ jobs:
           mkdir build
           cd ./build
           cmake -G Ninja \
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=on \
                 -DCMAKE_C_COMPILER=clang$LLVM_TAG \
                 -DCMAKE_CXX_COMPILER=clang++$LLVM_TAG \
                 -DCMAKE_INSTALL_PREFIX=./ \
@@ -82,3 +83,23 @@ jobs:
         run: |
           git ls-tree --full-tree --name-only -r HEAD | \
               xargs ./iwyu-check-license-header.py
+
+      - name: IWYU dogfood
+        if: github.event_name == 'pull_request'
+        env:
+          PR_URL: ${{ github.event.pull_request.comments_url }}
+        run: |
+          ./iwyu-dogfood.bash ./build
+          cat ./iwyu-dogfood.md >> $GITHUB_STEP_SUMMARY
+          mkdir ./dogfood-results
+          mv ./iwyu-dogfood.md ./dogfood-results/
+          echo "$PR_URL" > ./dogfood-results/pr-url
+
+      - name: Upload dogfood results
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dogfood-results
+          path: ./dogfood-results
+          retention-days: 1
+          if-no-files-found: error
