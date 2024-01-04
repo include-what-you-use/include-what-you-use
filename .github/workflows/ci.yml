@@ -87,7 +87,10 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           ./iwyu-dogfood.bash ./build
-          echo "IWYU_DOGFOOD_MD=$(cat iwyu-dogfood.md)" >> $GITHUB_ENV
+          # OMG: https://stackoverflow.com/a/71758159
+          echo 'IWYU_DOGFOOD_MD<<EOF' >> $GITHUB_ENV
+          cat ./iwyu-dogfood.md >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
 
       - name: IWYU dogfood PR update
         if: github.event_name == 'pull_request'
