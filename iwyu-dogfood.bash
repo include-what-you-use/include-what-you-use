@@ -30,8 +30,8 @@ fix_includes_exit=$?
 git diff > iwyu-dogfood.diff
 
 # Print out a GitHub Markdown result file.
-cat<<EOF >iwyu-dogfood.md
-Informational: IWYU-on-IWYU results
+cat<<EOF > iwyu-dogfood.md
+### Informational: IWYU dogfood results
 
 <details>
 <summary>include-what-you-use (exit: $iwyu_exit)</summary>
