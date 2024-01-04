@@ -66,6 +66,7 @@ jobs:
                 -DCMAKE_C_COMPILER=clang$LLVM_TAG \
                 -DCMAKE_CXX_COMPILER=clang++$LLVM_TAG \
                 -DCMAKE_INSTALL_PREFIX=./ \
+                -DCMAKE_BUILD_TYPE=RelWithDebInfo \
                 ../
           ninja
 
