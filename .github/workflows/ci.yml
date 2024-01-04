@@ -94,10 +94,6 @@ jobs:
         run: |
           ./iwyu-dogfood.bash ./build
           cat ./iwyu-dogfood.md >> $GITHUB_STEP_SUMMARY
-          # # OMG: https://stackoverflow.com/a/71758159
-          # echo 'IWYU_DOGFOOD_MD<<EOF' >> $GITHUB_ENV
-          # cat ./iwyu-dogfood.md >> $GITHUB_ENV
-          # echo 'EOF' >> $GITHUB_ENV
           curl \
             -sS \
             -L \
@@ -107,16 +103,3 @@ jobs:
             -H "Authorization: Bearer $API_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             --data '{ "body": "$(jq -R -s '.' < ./iwyu-dogfood.md)" }'
-
-      # - name: IWYU dogfood PR update
-      #   if: github.event_name == 'pull_request'
-      #   uses: actions/github-script@v7
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     script: |
-      #       github.rest.issues.createComment({
-      #         issue_number: context.issue.number,
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         body: `${{ env.IWYU_DOGFOOD_MD }}`
-      #       })
