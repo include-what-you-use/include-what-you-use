@@ -13,4 +13,7 @@
 
 class Class1 {};
 
+class IndirectClass;
+using NonProviding = IndirectClass;
+
 #endif // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_IN_TEMPLATE_I1_H_

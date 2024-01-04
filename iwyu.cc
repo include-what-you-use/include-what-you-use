@@ -201,6 +201,7 @@ using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::DeducedTemplateSpecializationType;
+using clang::ElaboratedType;
 using clang::ElaboratedTypeKeyword;
 using clang::ElaboratedTypeLoc;
 using clang::EnumConstantDecl;
@@ -2428,8 +2429,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   bool VisitTypedefType(TypedefType* type) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    if (!CanForwardDeclareType(current_ast_node()))
-      ReportTypeUse(CurrentLoc(), type, DerefKind::None);
+    if (!CanForwardDeclareType(current_ast_node())) {
+      // When the alias is from template (like 'Type' in
+      // 'Tpl<Providing>::Type'), the type may be provided with template
+      // argument and should not be reported. 'ReportTypeUse' performs that
+      // analysis when passing 'ElaboratedType' into it.
+      if (const auto* elaborated =
+              current_ast_node()->template GetParentAs<ElaboratedType>()) {
+        ReportTypeUse(CurrentLoc(), elaborated, DerefKind::None);
+      } else {
+        ReportTypeUse(CurrentLoc(), type, DerefKind::None);
+      }
+    }
     return true;
   }
 
@@ -2573,6 +2584,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                    const set<const Type*>& blocked_types) =
       delete;
 
+  // Figures out if the type is provided by template specialization argument
+  // e.g. when being 'using Type = TemplateArgument;' referred to as
+  // 'Tpl<Providing>::Type'.
+  bool IsProvidedByTplArg(const Type*) = delete;
+
   set<const Type*> GetProvidedTypes(const Type* type,
                                     SourceLocation loc) const {
     set<const Type*> retval;
@@ -2586,6 +2602,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
                              const set<const Type*>& blocked_types,
                              DerefKind deref_kind) {
+    if (this->getDerived().IsProvidedByTplArg(type))
+      return;
     // It is important not to lose info about type aliases while desugaring
     // and dereferencing here, because they are handled further.
     type = Desugar(type);
@@ -3242,6 +3260,12 @@ class InstantiatedTemplateVisitor
                                    const set<const Type*>& /*blocked_types*/) {
     // TODO(bolshakov): should 'blocked_types' argument be considered here?
     TraverseDataAndTypeMembersOfClassHelper(type);
+  }
+
+  bool IsProvidedByTplArg(const Type*) {
+    // Already inside template instantiation analysis. Types provided
+    // by template arguments should be in 'blocked_types_' set.
+    return false;
   }
 
  private:
@@ -4275,6 +4299,18 @@ class IwyuAstConsumer
     data.provided_types.insert(blocked_types.begin(), blocked_types.end());
     instantiated_template_visitor_.ScanInstantiatedType(&node, data.resugar_map,
                                                         data.provided_types);
+  }
+
+  bool IsProvidedByTplArg(const Type* type) {
+    if (const auto* elaborated = dyn_cast_or_null<ElaboratedType>(type)) {
+      if (const NestedNameSpecifier* nns = elaborated->getQualifier()) {
+        if (const Type* host = nns->getAsType()) {
+          TemplateInstantiationData data = GetTplInstData(host);
+          return data.provided_types.count(GetCanonicalType(type));
+        }
+      }
+    }
+    return false;
   }
 
  private:
