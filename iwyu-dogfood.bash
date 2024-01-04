@@ -1,5 +1,19 @@
 #!/bin/bash
 
+##===--- iwyu-dogfood.bash ------------------------------------------------===##
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+##===----------------------------------------------------------------------===##
+
+# This script is used to run IWYU over its own code base and produce a report
+# suitable for GitHub pull requests.
+# It assumes a compile_commands.json compilation database is present in the
+# build directory specified.
+
 builddir=$1
 if [ -z "$builddir" ]; then
     echo "usage: $0 <build-path>"
@@ -26,7 +40,7 @@ iwyu_exit=$?
                   > iwyu-dogfood.fix
 fix_includes_exit=$?
 
-# Let git produce a diff of all suggested changes
+# Let Git produce a diff of all suggested changes
 git diff > iwyu-dogfood.diff
 
 # Print out a GitHub Markdown result file.
