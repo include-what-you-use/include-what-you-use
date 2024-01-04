@@ -14,43 +14,43 @@ iwyu_string_util.h \
 iwyu_use_flags.h \
 iwyu_version.h \
 "
-
-check_alsos=$(for hdr in $HEADER_ONLY; do echo "-Xiwyu --check_also=*/$hdr"; done)
+check_alsos=$(for h in $HEADER_ONLY; do echo "-Xiwyu --check_also=*/$h"; done)
 
 # Run IWYU over all source files using iwyu_tool.py with CMake-generated
 # compilation database.
-./iwyu_tool.py -v -p "$builddir" *.cc -- \
-               $check_alsos \
-               >iwyu-check-iwyu.out
+./iwyu_tool.py -p "$builddir" *.cc -- $check_alsos > iwyu-dogfood.out
 iwyu_exit=$?
 
 # Apply changes in-tree using fix_includes.py.
-./fix_includes.py --nosafe_headers --reorder < iwyu-check-iwyu.out \
-                  >iwyu-check-iwyu.fix
+./fix_includes.py --nosafe_headers --reorder < iwyu-dogfood.out \
+                  > iwyu-dogfood.fix
 fix_includes_exit=$?
 
-# Print out a result file.
-cat<<EOF >iwyu-check-iwyu.md
+# Let git produce a diff of all suggested changes
+git diff > iwyu-dogfood.diff
+
+# Print out a GitHub Markdown result file.
+cat<<EOF >iwyu-dogfood.md
 Informational: IWYU-on-IWYU results
 
 <details>
 <summary>include-what-you-use (exit: $iwyu_exit)</summary>
 \`\`\`
-$(cat iwyu-check-iwyu.out)
+$(cat iwyu-dogfood.out)
 \`\`\`
 </details>
 
 <details>
 <summary>fix_includes.py (exit: $fix_includes_exit)</summary>
 \`\`\`
-$(cat iwyu-check-iwyu.fix)
+$(cat iwyu-dogfood.fix)
 \`\`\`
 </details>
 
 <details>
 <summary>diff</summary>
 \`\`\`diff
-$(git diff)
+$(cat iwyu-dogfood.diff)
 \`\`\`
 </details>
 EOF
