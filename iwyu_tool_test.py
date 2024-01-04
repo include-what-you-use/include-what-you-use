@@ -379,5 +379,20 @@ class CompilationDBTests(unittest.TestCase):
             [iwyu_tool.IWYU_EXECUTABLE, '-c', 'test.c'])
 
 
+class FindIWYUTests(unittest.TestCase):
+    def test_iwyu_binary_made_absolute(self):
+        oldval = os.environ.get('IWYU_BINARY')
+        try:
+            # Seed IWYU_BINARY with a relative path.
+            os.environ['IWYU_BINARY'] = './build/include-what-you-use'
+
+            # Check that find_iwyu returns absolute.
+            path = iwyu_tool.find_include_what_you_use()
+            self.assertTrue(os.path.isabs(path), 'Expected absolute: %r' % path)
+        finally:
+            if oldval:
+                os.environ['IWYU_BINARY'] = oldval
+
+
 if __name__ == '__main__':
     unittest.main()
