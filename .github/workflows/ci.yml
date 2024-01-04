@@ -36,7 +36,8 @@ jobs:
                ninja-build \
                llvm$LLVM_TAG-dev \
                libclang$LLVM_TAG-dev \
-               clang$LLVM_TAG
+               clang$LLVM_TAG \
+               jq
 
       - name: Work around broken packaging
         run: |
@@ -87,6 +88,9 @@ jobs:
 
       - name: IWYU dogfood
         if: github.event_name == 'pull_request'
+        env:
+          GITHUB_ISSUE_API_URL: ${{ github.event.issue.comments_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./iwyu-dogfood.bash ./build
           cat ./iwyu-dogfood.md >> $GITHUB_STEP_SUMMARY
@@ -94,6 +98,12 @@ jobs:
           # echo 'IWYU_DOGFOOD_MD<<EOF' >> $GITHUB_ENV
           # cat ./iwyu-dogfood.md >> $GITHUB_ENV
           # echo 'EOF' >> $GITHUB_ENV
+          curl \
+            -X POST \
+            $GITHUB_ISSUE_API_URL \
+            -H "Content-Type: application/json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            --data '{ "body": "$(jq -R -s '.' < ./iwyu-dogfood.md)" }'
 
       # - name: IWYU dogfood PR update
       #   if: github.event_name == 'pull_request'
