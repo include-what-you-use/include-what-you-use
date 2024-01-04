@@ -50,9 +50,9 @@ cat<<EOF > iwyu-dogfood.md
 
 <details>
 <summary>include-what-you-use (exit: $iwyu_exit)</summary>
-<p>
+<pre>
 $(cat iwyu-dogfood.out)
-</p>
+</pre>
 </details>
 
 <details>
