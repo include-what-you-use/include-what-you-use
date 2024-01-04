@@ -32,6 +32,7 @@ check_alsos=$(for h in $HEADER_ONLY; do echo "-Xiwyu --check_also=*/$h"; done)
 
 # Run IWYU over all source files using iwyu_tool.py with CMake-generated
 # compilation database.
+export IWYU_BINARY=$builddir/bin/include-what-you-use
 ./iwyu_tool.py -v -p "$builddir" *.cc -- $check_alsos > iwyu-dogfood.out 2>&1
 iwyu_exit=$?
 
