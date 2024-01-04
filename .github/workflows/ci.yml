@@ -89,7 +89,7 @@ jobs:
       - name: IWYU dogfood
         if: github.event_name == 'pull_request'
         env:
-          GITHUB_ISSUE_API_URL: ${{ github.event.issue.comments_url }}
+          API_URL: ${{ github.event.pull_request.comments_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./iwyu-dogfood.bash ./build
@@ -100,7 +100,7 @@ jobs:
           # echo 'EOF' >> $GITHUB_ENV
           curl \
             -X POST \
-            $GITHUB_ISSUE_API_URL \
+            $API_URL \
             -H "Content-Type: application/json" \
             -H "Authorization: token $GITHUB_TOKEN" \
             --data '{ "body": "$(jq -R -s '.' < ./iwyu-dogfood.md)" }'
