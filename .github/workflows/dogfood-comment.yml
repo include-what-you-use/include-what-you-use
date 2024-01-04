@@ -12,10 +12,13 @@ defaults:
 
 jobs:
   dogfood-comment:
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: true
-
     steps:
       - name: Install prerequisites
         run: |
