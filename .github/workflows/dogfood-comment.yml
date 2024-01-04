@@ -37,7 +37,8 @@ jobs:
       - name: Download dogfood results
         uses: actions/download-artifact@v4
         with:
-          run-id: ${{github.event.workflow_run.id }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           name: dogfood-results
           path: ./dogfood-results
 
