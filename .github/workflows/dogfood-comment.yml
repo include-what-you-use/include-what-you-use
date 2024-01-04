@@ -1,0 +1,46 @@
+name: IWYU dogfood comment
+
+on:
+  workflow_run:
+    workflows: ["IWYU CI"]
+    types:
+      - completed
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  dogfood-comment:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+
+    steps:
+      - name: Install prerequisites
+        run: |
+          sudo apt update
+          sudo apt install -y \
+               curl \
+               jq
+
+      - name: Download dogfood results
+        uses: actions/download-artifact@v4
+        with:
+          name: dogfood-results
+          path: ./dogfood-results
+
+      - name: Add dogfood PR comment
+        if: ${{ hashFiles('./dogfood-results/pr-url') != '' }}
+        env:
+          API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl \
+            -sS \
+            -L \
+            -X POST \
+            "$(cat ./dogfood-results/pr-url) \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $API_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            --data '{ "body": "$(jq -R -s '.' ./dogfood-results/iwyu-dogfood.md)" }'
