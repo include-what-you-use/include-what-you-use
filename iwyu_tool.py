@@ -361,6 +361,26 @@ def slice_compilation_db(compilation_db, selection):
     return new_db
 
 
+def worst_exit_code(worst, cur):
+    """Return the most extreme exit code of two.
+
+    Negative exit codes occur if the program exits due to a signal (Unix) or
+    structured exception (Windows). If we've seen a negative one before, keep
+    it, as it usually indicates a critical error.
+
+    Otherwise return the biggest positive exit code.
+    """
+    if cur < 0:
+        # Negative results take precedence, return the minimum
+        return min(worst, cur)
+    elif worst < 0:
+        # We know cur is non-negative, negative worst must be minimum
+        return worst
+    else:
+        # We know neither are negative, return the maximum
+        return max(worst, cur)
+
+
 def execute(invocations, verbose, formatter, jobs, max_load_average=0):
     """ Launch processes described by invocations. """
     exit_code = 0
@@ -368,7 +388,7 @@ def execute(invocations, verbose, formatter, jobs, max_load_average=0):
         for invocation in invocations:
             proc = invocation.start(verbose)
             print(formatter(proc.get_output()))
-            exit_code = max(exit_code, proc.returncode)
+            exit_code = worst_exit_code(exit_code, proc.returncode)
         return exit_code
 
     pending = []
@@ -378,7 +398,7 @@ def execute(invocations, verbose, formatter, jobs, max_load_average=0):
         for proc in complete:
             pending.remove(proc)
             print(formatter(proc.get_output()))
-            exit_code = max(exit_code, proc.returncode)
+            exit_code = worst_exit_code(exit_code, proc.returncode)
 
         # Schedule new processes if there's room.
         capacity = jobs - len(pending)
