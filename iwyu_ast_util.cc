@@ -920,6 +920,8 @@ static map<const Type*, const Type*> GetDefaultedArgResugarMap(
   for (unsigned i = 0; i < count; ++i) {
     if (const auto* param_decl =
             dyn_cast<TemplateTypeParmDecl>(params->getParam(i))) {
+      if (param_decl->isParameterPack())
+        continue;
       const QualType type = args->get(i).getAsType().getCanonicalType();
       if (param_decl->hasDefaultArgument() &&
           param_decl->getDefaultArgument().getCanonicalType() == type) {
