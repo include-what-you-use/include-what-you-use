@@ -178,6 +178,42 @@ class IWYUToolTests(unittest.TestCase):
             invocation.will_block(random.random() / 100)
         self.assertEqual(self._execute(invocations, jobs=100), 6)
 
+    def test_worst_returncode(self):
+        # If no invocations fail, we return zero
+        invocations = [MockInvocation() for _ in range(4)]
+        exit_codes = [0, 0, 0, 0]
+        for invocation, exit_code in zip(invocations, exit_codes):
+            invocation.will_returncode(exit_code)
+        self.assertEqual(self._execute(invocations), 0)
+
+        # If one invocation fails, its exit code is returned
+        invocations = [MockInvocation() for _ in range(4)]
+        exit_codes = [0, 1, 0, 0]
+        for invocation, exit_code in zip(invocations, exit_codes):
+            invocation.will_returncode(exit_code)
+        self.assertEqual(self._execute(invocations), 1)
+
+        # The highest of all positive exit codes is returned
+        invocations = [MockInvocation() for _ in range(4)]
+        exit_codes = [0, 1, 2, 3]
+        for invocation, exit_code in zip(invocations, exit_codes):
+            invocation.will_returncode(exit_code)
+        self.assertEqual(self._execute(invocations), 3)
+
+        # The lowest of all negative exit codes is returned
+        invocations = [MockInvocation() for _ in range(4)]
+        exit_codes = [-9, -10, -15, -1]
+        for invocation, exit_code in zip(invocations, exit_codes):
+            invocation.will_returncode(exit_code)
+        self.assertEqual(self._execute(invocations), -15)
+
+        # Negative take precedence over positive/zero
+        invocations = [MockInvocation() for _ in range(4)]
+        exit_codes = [0, 1, -1, 1]
+        for invocation, exit_code in zip(invocations, exit_codes):
+            invocation.will_returncode(exit_code)
+        self.assertEqual(self._execute(invocations), -1)
+
     @unittest.skipIf(sys.platform.startswith('win'), "POSIX only")
     def test_is_subpath_of_posix(self):
         self.assertTrue(iwyu_tool.is_subpath_of('/a/b/c.c', '/a/b'))
