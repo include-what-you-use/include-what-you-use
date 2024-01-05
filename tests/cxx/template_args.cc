@@ -237,6 +237,18 @@ IndirectClass& i = TplParamRetType<IndirectClass&>();
 
 // ---------------------------------------------------------------
 
+// Test that IWYU doesn't crash on function template type parameter packs.
+
+template <typename...>
+void TplFnWithParameterPack() {
+}
+
+void TestParameterPack() {
+  TplFnWithParameterPack();
+}
+
+// ---------------------------------------------------------------
+
 /**** IWYU_SUMMARY
 
 tests/cxx/template_args.cc should add these lines:
