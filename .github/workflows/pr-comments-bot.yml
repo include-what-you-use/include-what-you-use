@@ -1,7 +1,7 @@
 name: pr-comments-bot
 
 # NOTE: this workflow does not run in a pull_request context, and thus
-# GITHUB_TOKEN has slightly eleveated permissions.
+# GITHUB_TOKEN has slightly elevated permissions.
 # That means we need to be particularly careful not to run untrusted code such
 # as submitted in PRs.
 # https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
@@ -34,16 +34,16 @@ jobs:
                curl \
                jq
 
-      - name: Download dogfood results
+      - name: Download PR comments payloads
         uses: actions/download-artifact@v4
         with:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          name: dogfood-results
-          path: ./dogfood-results
+          name: pr-comments
+          path: ./pr-comments
 
-      - name: Add dogfood PR comment
-        if: ${{ hashFiles('./dogfood-results/pr-url') != '' }}
+      - name: Add dogfood PR comment if available
+        if: ${{ hashFiles('./pr-comments/iwyu-dogfood.md') != '' }}
         env:
           API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -51,8 +51,8 @@ jobs:
             -sS \
             -L \
             -X POST \
-            "$(cat ./dogfood-results/pr-url)" \
+            "$(cat ./pr-comments/api-url)" \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $API_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            --data "{ \"body\": $(jq -R -s '.' ./dogfood-results/iwyu-dogfood.md) }"
+            --data "{ \"body\": $(jq -R -s '.' ./pr-comments/iwyu-dogfood.md) }"
