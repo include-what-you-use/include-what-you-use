@@ -35,6 +35,7 @@
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -58,6 +59,7 @@ using clang::CompilerInvocation;
 using clang::DiagnosticOptions;
 using clang::DiagnosticsEngine;
 using clang::FrontendAction;
+using clang::PreprocessorOptions;
 using clang::driver::Action;
 using clang::driver::Command;
 using clang::driver::Compilation;
@@ -302,6 +304,13 @@ bool ExecuteAction(int argc, const char** argv,
   // Show the invocation, with -v.
   if (invocation->getHeaderSearchOpts().Verbose) {
     errs() << "clang invocation:\n" << JobsToString(jobs, "\n") << "\n";
+  }
+
+  // Reject attempts at using precompiled headers.
+  const PreprocessorOptions& opts = invocation->getPreprocessorOpts();
+  if (!opts.ImplicitPCHInclude.empty() || !opts.PCHThroughHeader.empty()) {
+    errs() << "error: include-what-you-use does not support PCH\n";
+    return false;
   }
 
   // FIXME: This is copied from cc1_main.cpp; simplify and eliminate.
