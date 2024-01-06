@@ -90,7 +90,6 @@ jobs:
           PR_URL: ${{ github.event.pull_request.comments_url }}
         run: |
           ./iwyu-dogfood.bash ./build
-          cat ./iwyu-dogfood.md >> $GITHUB_STEP_SUMMARY
           mkdir ./dogfood-results
           mv ./iwyu-dogfood.md ./dogfood-results/
           echo "$PR_URL" > ./dogfood-results/pr-url
