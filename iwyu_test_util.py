@@ -197,23 +197,6 @@ def _Which(program, paths):
 
 _IWYU_PATH = None
 _SYSTEM_PATHS = [p.strip('"') for p in os.environ["PATH"].split(os.pathsep)]
-_IWYU_PATHS = [
-    '../../../../Debug+Asserts/bin',
-    '../../../../Release+Asserts/bin',
-    '../../../../Release/bin',
-    '../../../../build/Debug+Asserts/bin',
-    '../../../../build/Release+Asserts/bin',
-    '../../../../build/Release/bin',
-    # Linux/Mac OS X default out-of-tree paths.
-    '../../../../../build/Debug+Asserts/bin',
-    '../../../../../build/Release+Asserts/bin',
-    '../../../../../build/Release/bin',
-    # Windows default out-of-tree paths.
-    '../../../../../build/bin/Debug',
-    '../../../../../build/bin/Release',
-    '../../../../../build/bin/MinSizeRel',
-    '../../../../../build/bin/RelWithDebInfo',
-    ]
 
 
 def SetIwyuPath(iwyu_path):
@@ -228,11 +211,10 @@ def _GetIwyuPath():
   global _IWYU_PATH
 
   if not _IWYU_PATH:
-    iwyu_paths = _IWYU_PATHS + _SYSTEM_PATHS
-    _IWYU_PATH = _Which('include-what-you-use', iwyu_paths)
+    _IWYU_PATH = _Which('include-what-you-use', _SYSTEM_PATHS)
     if not _IWYU_PATH:
       raise IOError('Failed to locate IWYU.\nSearched\n %s' %
-                    '\n '.join(iwyu_paths))
+                    '\n '.join(_SYSTEM_PATHS))
 
   return _IWYU_PATH
 
