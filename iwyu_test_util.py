@@ -195,8 +195,8 @@ def _Which(program, paths):
     return None
 
 
-_IWYU_PATH = None
 _SYSTEM_PATHS = [p.strip('"') for p in os.environ["PATH"].split(os.pathsep)]
+_IWYU_PATH = _Which('include-what-you-use', _SYSTEM_PATHS)
 
 
 def SetIwyuPath(iwyu_path):
@@ -208,14 +208,9 @@ def SetIwyuPath(iwyu_path):
 
 def _GetIwyuPath():
   """Returns the path to IWYU or raises IOError if it cannot be found."""
-  global _IWYU_PATH
-
   if not _IWYU_PATH:
-    _IWYU_PATH = _Which('include-what-you-use', _SYSTEM_PATHS)
-    if not _IWYU_PATH:
-      raise IOError('Failed to locate IWYU.\nSearched\n %s' %
-                    '\n '.join(_SYSTEM_PATHS))
-
+    raise IOError('Failed to locate IWYU.\nSearched\n %s' %
+                  '\n '.join(_SYSTEM_PATHS))
   return _IWYU_PATH
 
 
