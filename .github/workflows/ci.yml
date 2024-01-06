@@ -85,20 +85,26 @@ jobs:
               xargs ./iwyu-check-license-header.py
 
       - name: IWYU dogfood
-        if: github.event_name == 'pull_request'
-        env:
-          PR_URL: ${{ github.event.pull_request.comments_url }}
         run: |
           ./iwyu-dogfood.bash ./build
-          mkdir ./dogfood-results
-          mv ./iwyu-dogfood.md ./dogfood-results/
-          echo "$PR_URL" > ./dogfood-results/pr-url
+          # Write to step summary primarily for scheduled builds.
+          cat ./iwyu-dogfood.md >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload dogfood results
+      # Hand over payloads for PR comments to separate workflow via artifact.
+      - name: Prepare PR comment payload
+        if: github.event_name == 'pull_request'
+        env:
+          PR_API_URL: ${{ github.event.pull_request.comments_url }}
+        run: |
+          mkdir ./pr-comments
+          echo "$PR_API_URL" > ./pr-comments/api-url
+          cp ./iwyu-dogfood.md ./pr-comments/
+
+      - name: Upload PR comment payload
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: dogfood-results
-          path: ./dogfood-results
+          name: pr-comments
+          path: ./pr-comments
           retention-days: 1
           if-no-files-found: error
