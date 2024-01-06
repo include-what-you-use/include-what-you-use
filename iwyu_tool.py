@@ -35,6 +35,7 @@ import sys
 import json
 import time
 import shlex
+import shutil
 import argparse
 import tempfile
 import subprocess
@@ -216,18 +217,16 @@ def find_include_what_you_use():
     if env_iwyu_path:
         return os.path.realpath(env_iwyu_path)
 
-    # TODO: Investigate using shutil.which when Python 2 has passed away.
-    executable_name = 'include-what-you-use'
-    if sys.platform.startswith('win'):
-        executable_name += '.exe'
+    # Search in same dir as this script.
+    iwyu_path = shutil.which('include-what-you-use',
+                             path=os.path.dirname(__file__))
+    if iwyu_path:
+        return os.path.realpath(iwyu_path)
 
-    search_path = [os.path.dirname(__file__)]
-    search_path += os.environ.get('PATH', '').split(os.pathsep)
-
-    for dirpath in search_path:
-        full = os.path.join(dirpath, executable_name)
-        if os.path.isfile(full):
-            return os.path.realpath(full)
+    # Search the system PATH.
+    iwyu_path = shutil.which('include-what-you-use')
+    if iwyu_path:
+        return os.path.realpath(iwyu_path)
 
     return None
 
