@@ -123,10 +123,8 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
 #include "iwyu_ast_util.h"
 #include "iwyu_cache.h"
@@ -3895,23 +3893,10 @@ class IwyuAstConsumer
     // though, because that will drag in every overload even if we're
     // only using one.  Instead, we keep track of the using decl and
     // mark it as touched when something actually uses it.
-    IwyuFileInfo* file_info =
-        preprocessor_info().FileInfoFor(CurrentFileEntry());
-    if (file_info) {
-      file_info->AddUsingDecl(decl);
-    } else {
-      // For using declarations in a PCH, the preprocessor won't have any
-      // location information. As far as we know, that's the only time the
-      // file-info will be null, so assert that we have a PCH on the
-      // command-line.
-      const string& pch_include =
-           compiler()->getInvocation().getPreprocessorOpts().ImplicitPCHInclude;
-      CHECK_(!pch_include.empty());
-    }
+    preprocessor_info().FileInfoFor(CurrentFileEntry())->AddUsingDecl(decl);
 
     if (CanIgnoreCurrentASTNode())
       return true;
-
     return Base::VisitUsingDecl(decl);
   }
 
