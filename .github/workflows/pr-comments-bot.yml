@@ -1,4 +1,4 @@
-name: IWYU dogfood comment
+name: pr-comments-bot
 
 # NOTE: this workflow does not run in a pull_request context, and thus
 # GITHUB_TOKEN has slightly eleveated permissions.
@@ -17,7 +17,7 @@ defaults:
     shell: bash
 
 jobs:
-  dogfood-comment:
+  add-pr-comments:
     # Only run if triggered from a successful PR build.
     if: >
       github.event.workflow_run.event == 'pull_request' &&
