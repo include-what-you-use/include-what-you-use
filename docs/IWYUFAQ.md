@@ -72,3 +72,43 @@ That should paint a background to help explain the following IWYU switches:
 The `-Xiwyu --prefix_header_includes` switch defaults to `add`, which helps
 extract dependencies from prefix header/PCH into the source files that actually
 use them.
+
+
+### How do I use IWYU on macOS? ###
+
+When analyzing C++ code on macOS, IWYU uses probing (implicitly via Clang
+libraries) to find both system C headers and a libc++ standard library
+installation.
+
+Clang internally uses the environment variable `SDKROOT` to locate the so-called
+sysroot, under which both C and C++ libraries exist in known locations.
+
+Xcode ships with a tool `xcrun` which can build an environment with a valid
+`SDKROOT` for child processes. To use the Xcode headers with IWYU, you can do:
+
+    xcrun include-what-you-use ... sourcefile.cc
+
+To print the sysroot, use:
+
+    xcrun --sdk macosx --show-sdk-path
+
+Note you can also `export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)` into
+your shell environment to avoid having to prefix `include-what-you-use` commands
+with `xcrun`.
+
+If you are using libc++ from Homebrew or MacPorts, you may need to combine
+sysroot setup with explicit system include search paths:
+
+    # example for Homebrew version of llvm-16
+    xcrun include-what-you-use \
+        -nostdinc++ \
+        -isystem /opt/homebrew/opt/llvm\@16/include/c++/v1 \
+        sourcefile.cc
+
+The `xcrun` prefix here sets up the sysroot so the macOS C headers can be found,
+and then overrides the libc++ include path using `-nostdinc++` and `-isystem` to
+point to a libc++ installation provided by Homebrew.
+
+The libc++ library helpfully ships with a set of IWYU mappings, see their
+documentation for details:
+<https://libcxx.llvm.org/UsingLibcxx.html#include-what-you-use-iwyu>.
