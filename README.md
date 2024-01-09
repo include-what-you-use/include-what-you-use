@@ -233,3 +233,8 @@ To find the SDK install root, use:
 Append `/usr/include/c++/v1` to that path to get the libc++ root.
 
 The libc++ library helpfully ships with a set of IWYU mappings, see their documentation for details: <https://libcxx.llvm.org/UsingLibcxx.html#include-what-you-use-iwyu>.
+
+
+## More questions? ##
+
+See our [FAQ](./docs/IWYUFAQ.md) for longer-form Q&A.
