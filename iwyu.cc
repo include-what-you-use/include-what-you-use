@@ -199,6 +199,7 @@ using clang::ConceptSpecializationExpr;
 using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
+using clang::DecltypeType;
 using clang::DeducedTemplateSpecializationType;
 using clang::ElaboratedType;
 using clang::ElaboratedTypeKeyword;
@@ -2443,6 +2444,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         ReportTypeUse(CurrentLoc(), type, DerefKind::None);
       }
     }
+    return true;
+  }
+
+  bool VisitDecltypeType(DecltypeType* type) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (!CanForwardDeclareType(current_ast_node()))
+      ReportTypeUse(CurrentLoc(), type, DerefKind::None);
     return true;
   }
 

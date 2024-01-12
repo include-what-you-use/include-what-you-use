@@ -126,6 +126,9 @@ void Fn() {
   const std::type_info& type_info2 = typeid(NonProvidingRefAlias);
   const std::type_info& type_info3 = typeid(ProvidingPtrAlias);
   const std::type_info& type_info4 = typeid(ProvidingRefAlias);
+
+  decltype(ptr_nonprovided) dpn;
+  decltype(ref_nonprovided) drn = GetRef();
 }
 
 namespace ns {

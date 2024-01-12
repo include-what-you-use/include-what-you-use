@@ -28,6 +28,18 @@ decltype(WithStatic::obj) obj;
 // IWYU: IndirectClass is...*indirect.h
 decltype(WithStatic::tpl) tpl;
 
+// IWYU: IndirectClass is...*indirect.h
+class Derived : decltype(WithStatic::obj) {};
+
+void Fn() {
+  // IWYU: IndirectClass is...*indirect.h
+  (void)&decltype(WithStatic::obj)::a;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(decltype(WithStatic::obj));
+  // No need of the full type in fwd-declarable context.
+  decltype(WithStatic::obj)* p = nullptr;
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/decltype.cc should add these lines:
