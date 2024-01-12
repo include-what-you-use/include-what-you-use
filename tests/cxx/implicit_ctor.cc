@@ -112,6 +112,19 @@ void TestNonAutocastConstruction(const NoAutocastCtor& par) {
   const NoAutocastCtor& x2 = {3, 4};
 }
 
+struct NonAggregate {
+  NonAggregate();
+};
+
+void OverloadedFn(int, NonAggregate);
+void OverloadedFn(float, NonAggregate);
+
+template <typename T>
+void TestNoCrashOnUnresolvedCall(T t) {
+  OverloadedFn(t, NonAggregate{});
+  t.SomeFn(NonAggregate{});
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/implicit_ctor.cc should add these lines:
