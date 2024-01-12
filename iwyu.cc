@@ -4330,11 +4330,13 @@ class IwyuAstConsumer
     };
 
     if (const CallExpr* call_expr = get_call_expr(construct_expr_node)) {
-      const FunctionDecl* fn_decl = call_expr->getDirectCallee();
-      // For nontemplated functions, 'CXXConstructExpr' type appears to be
-      // sugared and hence handled correctly inside 'ReportTypeUse'.
-      if (GetTplInstData(fn_decl, call_expr).provided_types.count(type))
-        return true;
+      // There is no callee for unresolved call exprs in template definitions.
+      if (const FunctionDecl* fn_decl = call_expr->getDirectCallee()) {
+        // For nontemplated functions, 'CXXConstructExpr' type appears to be
+        // sugared and hence handled correctly inside 'ReportTypeUse'.
+        if (GetTplInstData(fn_decl, call_expr).provided_types.count(type))
+          return true;
+      }
     }
     return false;
   }
