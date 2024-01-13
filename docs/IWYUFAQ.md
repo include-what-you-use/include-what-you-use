@@ -96,8 +96,8 @@ Note you can also `export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)` into
 your shell environment to avoid having to prefix `include-what-you-use` commands
 with `xcrun`.
 
-If you are using libc++ from Homebrew or MacPorts, you may need to combine
-sysroot setup with explicit system include search paths:
+If you are using libc++ from e.g. Homebrew or a local LLVM build tree, you may
+need to combine sysroot setup with explicit system include search paths:
 
     # example for Homebrew version of llvm-16
     xcrun include-what-you-use \
@@ -108,7 +108,3 @@ sysroot setup with explicit system include search paths:
 The `xcrun` prefix here sets up the sysroot so the macOS C headers can be found,
 and then overrides the libc++ include path using `-nostdinc++` and `-isystem` to
 point to a libc++ installation provided by Homebrew.
-
-The libc++ library helpfully ships with a set of IWYU mappings, see their
-documentation for details:
-<https://libcxx.llvm.org/UsingLibcxx.html#include-what-you-use-iwyu>.
