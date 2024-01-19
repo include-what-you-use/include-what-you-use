@@ -118,6 +118,20 @@ constexpr auto s2 = sizeof(UsesAliasedSugaredParameter<IndirectClass>);
 template <typename T>
 struct Identity {
   using Type = T;
+
+  struct Inner {
+    using Type = T;
+  };
+};
+
+template <typename T>
+struct Outer {
+  template <typename U>
+  struct Inner {
+    // IWYU: Pair needs a declaration
+    // IWYU: Pair is...*typedef_in_template-i2.h
+    using AliasedTpl = Pair<T, U>;
+  };
 };
 
 // IWYU: IndirectClass is...*indirect.h
@@ -144,6 +158,15 @@ void ArgumentTypeProvision() {
   (void)sizeof(*n2);
   // IWYU: IndirectClass is...*indirect.h
   n2->Method();
+
+  Identity<Providing>::Inner::Type p3;
+
+  Outer<Providing>::Inner<Providing>::AliasedTpl pp;
+
+  // IWYU: IndirectClass needs a declaration
+  Outer<Providing>::Inner<IndirectClass*>::AliasedTpl p_ptr;
+  // IWYU: IndirectClass needs a declaration
+  Outer<IndirectClass*>::Inner<Providing>::AliasedTpl ptr_p;
 }
 
 /**** IWYU_SUMMARY

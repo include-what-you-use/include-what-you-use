@@ -2599,7 +2599,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Figures out if the type is provided by template specialization argument
   // e.g. when being 'using Type = TemplateArgument;' referred to as
   // 'Tpl<Providing>::Type'.
-  bool IsProvidedByTplArg(const Type*) = delete;
+  set<const Type*> GetProvidedByTplArg(const Type*) = delete;
 
   // Returns 'true' if either argument or "destination" (currently, function
   // argument type if it is an argument construction) of 'CXXConstructExpr'
@@ -2619,10 +2619,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
-                             const set<const Type*>& blocked_types,
+                             set<const Type*> blocked_types,
                              DerefKind deref_kind) {
-    if (this->getDerived().IsProvidedByTplArg(type))
-      return;
+    InsertAllInto(this->getDerived().GetProvidedByTplArg(type), &blocked_types);
     // It is important not to lose info about type aliases while desugaring
     // and dereferencing here, because they are handled further.
     type = Desugar(type);
@@ -2679,14 +2678,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
         const set<const Type*>& provided_with_typedef =
             GetProvidedTypesForTypedef(typedef_decl);
+        InsertAllInto(provided_with_typedef, &blocked_types);
         VERRS(6) << "User, not author, of typedef "
                  << typedef_decl->getQualifiedNameAsString()
                  << " owns the underlying type:\n";
         // If any of the used types are themselves typedefs, this will
         // result in a recursive expansion.
         const Type* type = typedef_decl->getUnderlyingType().getTypePtr();
-        ReportTypeUseInternal(used_loc, type, provided_with_typedef,
-                              deref_kind);
+        ReportTypeUseInternal(used_loc, type, blocked_types, deref_kind);
       }
       return;
     }
@@ -3290,10 +3289,10 @@ class InstantiatedTemplateVisitor
     TraverseDataAndTypeMembersOfClassHelper(type);
   }
 
-  bool IsProvidedByTplArg(const Type*) {
+  set<const Type*> GetProvidedByTplArg(const Type*) {
     // Already inside template instantiation analysis. Types provided
     // by template arguments should be in 'blocked_types_' set.
-    return false;
+    return set<const Type*>{};
   }
 
   bool SourceOrTargetTypeIsProvided(const ASTNode* construct_expr_node) const {
@@ -4308,16 +4307,17 @@ class IwyuAstConsumer
                                                         data.provided_types);
   }
 
-  bool IsProvidedByTplArg(const Type* type) {
+  set<const Type*> GetProvidedByTplArg(const Type* type) {
+    set<const Type*> res;
     if (const auto* elaborated = dyn_cast_or_null<ElaboratedType>(type)) {
-      if (const NestedNameSpecifier* nns = elaborated->getQualifier()) {
-        if (const Type* host = nns->getAsType()) {
-          TemplateInstantiationData data = GetTplInstData(host);
-          return data.provided_types.count(GetCanonicalType(type));
-        }
+      const NestedNameSpecifier* nns = elaborated->getQualifier();
+      while (nns) {
+        if (const Type* host = nns->getAsType())
+          InsertAllInto(GetTplInstData(host).provided_types, &res);
+        nns = nns->getPrefix();
       }
     }
-    return false;
+    return res;
   }
 
   bool SourceOrTargetTypeIsProvided(const ASTNode* construct_expr_node) const {
