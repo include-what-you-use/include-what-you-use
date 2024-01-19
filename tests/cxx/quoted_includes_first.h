@@ -18,6 +18,7 @@ inline int GetBaseError() {
 
 extern std::exception global_exception;
 extern IndirectSubDirClass global_var;
+inline IndirectSubDirClass header_defined_var;
 
 /**** IWYU_SUMMARY
 

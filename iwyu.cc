@@ -2542,11 +2542,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (parent_type == nullptr) {
       // It's not a type; analyze different kinds of declarations.
       if (const auto *decl = ast_node->GetParentAs<ValueDecl>()) {
-        // We can shortcircuit static data member declarations immediately,
-        // they can always be forward-declared.
+        // We can shortcircuit static data member and 'extern' variable
+        // declarations immediately, they can always be forward-declared.
         if (const auto *var_decl = dyn_cast<VarDecl>(decl)) {
           if (!var_decl->isThisDeclarationADefinition() &&
-              var_decl->isStaticDataMember()) {
+              (var_decl->isStaticDataMember() ||
+               var_decl->hasExternalStorage())) {
             return true;
           }
         }
