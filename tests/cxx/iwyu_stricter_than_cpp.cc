@@ -274,6 +274,11 @@ void TestAliasTemplates() {
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
   TemplateNotProvidedArgumentNotUsed<IndirectStruct3> tnpanu;
+
+  TemplateProvidedArgumentUsed<DoesNotForwardDeclareAndIncludes>
+      argument_provided;
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  TemplateProvidedArgumentUsed<DoesEverythingRight> argument_not_provided;
 }
 
 void TestAutocast() {

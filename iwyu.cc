@@ -4332,13 +4332,19 @@ class IwyuAstConsumer
 
   set<const Type*> GetProvidedByTplArg(const Type* type) {
     set<const Type*> res;
-    if (const auto* elaborated = dyn_cast_or_null<ElaboratedType>(type)) {
+    if (!type)
+      return res;
+    if (const auto* elaborated = dyn_cast<ElaboratedType>(type)) {
       const NestedNameSpecifier* nns = elaborated->getQualifier();
       while (nns) {
         if (const Type* host = nns->getAsType())
           InsertAllInto(GetTplInstData(host).provided_types, &res);
         nns = nns->getPrefix();
       }
+    }
+    if (const auto* tpl_spec = type->getAs<TemplateSpecializationType>()) {
+      if (tpl_spec->isTypeAlias())
+        InsertAllInto(GetTplInstData(tpl_spec).provided_types, &res);
     }
     return res;
   }
