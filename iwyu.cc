@@ -1447,8 +1447,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  set<const Type*> GetProvidedTypesForAlias(const TypedefNameDecl* decl) const {
-    const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
+  set<const Type*> GetProvidedTypesForAlias(const Type* underlying_type,
+                                            SourceLocation decl_loc) const {
     // If the underlying type is itself a typedef, we recurse.
     if (const auto* underlying_typedef =
             underlying_type->getAs<TypedefType>()) {
@@ -1456,12 +1456,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // TODO(csilvers): if one of the intermediate typedefs
         // #includes the necessary definition of the 'final'
         // underlying type, do we want to return it here?
-        return GetProvidedTypesForAlias(underlying_typedef_decl);
+        return GetProvidedTypesForAlias(
+            underlying_typedef_decl->getUnderlyingType().getTypePtr(),
+            GetLocation(underlying_typedef_decl));
       }
     }
     // TODO(bolshakov): handle underlying alias templates.
 
-    return GetProvidedTypes(underlying_type, GetLocation(decl));
+    return GetProvidedTypes(underlying_type, decl_loc);
   }
 
   // ast_node is the node for the autocast CastExpr.  We use it to get
@@ -2670,15 +2672,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const ASTNode* ast_node = MostElaboratedAncestor(current_ast_node());
       if (!ast_node->ParentIsA<TypedefNameDecl>()) {
         const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
+        const Type* type = typedef_decl->getUnderlyingType().getTypePtr();
         const set<const Type*>& provided_with_typedef =
-            GetProvidedTypesForAlias(typedef_decl);
+            GetProvidedTypesForAlias(type, GetLocation(typedef_decl));
         InsertAllInto(provided_with_typedef, &blocked_types);
         VERRS(6) << "User, not author, of typedef "
                  << typedef_decl->getQualifiedNameAsString()
                  << " owns the underlying type:\n";
         // If any of the used types are themselves typedefs, this will
         // result in a recursive expansion.
-        const Type* type = typedef_decl->getUnderlyingType().getTypePtr();
         ReportTypeUseInternal(used_loc, type, blocked_types, deref_kind);
       }
       return;
@@ -2689,8 +2691,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         const NamedDecl* decl = TypeToDeclAsWritten(template_spec_type);
         if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
           const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
-          InsertAllInto(GetProvidedTypesForAlias(al_decl), &blocked_types);
           const Type* type = template_spec_type->getAliasedType().getTypePtr();
+          InsertAllInto(GetProvidedTypesForAlias(type, GetLocation(al_decl)),
+                        &blocked_types);
           ReportTypeUseInternal(used_loc, type, blocked_types, deref_kind);
         }
         return;
@@ -4376,7 +4379,9 @@ class IwyuAstConsumer
     const Type* desugared_until_typedef = Desugar(type);
     if (const auto* typedef_type =
             dyn_cast_or_null<TypedefType>(desugared_until_typedef)) {
-      return GetProvidedTypesForAlias(typedef_type->getDecl());
+      const TypedefNameDecl* decl = typedef_type->getDecl();
+      return GetProvidedTypesForAlias(decl->getUnderlyingType().getTypePtr(),
+                                      GetLocation(decl));
     }
     // TODO(bolshakov): handle alias templates.
     return set<const Type*>();
