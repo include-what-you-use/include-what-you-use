@@ -1447,8 +1447,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  set<const Type*> GetProvidedTypesForTypedef(
-      const TypedefNameDecl* decl) const {
+  set<const Type*> GetProvidedTypesForAlias(const TypedefNameDecl* decl) const {
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     // If the underlying type is itself a typedef, we recurse.
     if (const auto* underlying_typedef =
@@ -1457,7 +1456,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // TODO(csilvers): if one of the intermediate typedefs
         // #includes the necessary definition of the 'final'
         // underlying type, do we want to return it here?
-        return GetProvidedTypesForTypedef(underlying_typedef_decl);
+        return GetProvidedTypesForAlias(underlying_typedef_decl);
       }
     }
     // TODO(bolshakov): handle underlying alias templates.
@@ -2672,7 +2671,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (!ast_node->ParentIsA<TypedefNameDecl>()) {
         const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
         const set<const Type*>& provided_with_typedef =
-            GetProvidedTypesForTypedef(typedef_decl);
+            GetProvidedTypesForAlias(typedef_decl);
         InsertAllInto(provided_with_typedef, &blocked_types);
         VERRS(6) << "User, not author, of typedef "
                  << typedef_decl->getQualifiedNameAsString()
@@ -2690,7 +2689,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         const NamedDecl* decl = TypeToDeclAsWritten(template_spec_type);
         if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
           const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
-          InsertAllInto(GetProvidedTypesForTypedef(al_decl), &blocked_types);
+          InsertAllInto(GetProvidedTypesForAlias(al_decl), &blocked_types);
           const Type* type = template_spec_type->getAliasedType().getTypePtr();
           ReportTypeUseInternal(used_loc, type, blocked_types, deref_kind);
         }
@@ -4377,7 +4376,7 @@ class IwyuAstConsumer
     const Type* desugared_until_typedef = Desugar(type);
     if (const auto* typedef_type =
             dyn_cast_or_null<TypedefType>(desugared_until_typedef)) {
-      return GetProvidedTypesForTypedef(typedef_type->getDecl());
+      return GetProvidedTypesForAlias(typedef_type->getDecl());
     }
     // TODO(bolshakov): handle alias templates.
     return set<const Type*>();
