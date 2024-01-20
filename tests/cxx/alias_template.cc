@@ -24,6 +24,11 @@ constexpr auto s = sizeof(ic);
 // IWYU: IndirectClass needs a declaration
 Identity<IndirectClass>* pic = nullptr;
 
+// IWYU: IndirectClass is...*indirect.h
+using Providing = IndirectClass;
+
+Identity<Providing> type_is_provided_by_arg;
+
 template<class T> struct FullUseTemplateArgInSizeof {
   char argument[sizeof(T)];
 };
