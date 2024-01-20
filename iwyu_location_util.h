@@ -75,23 +75,6 @@ inline const clang::FileEntry* RawFileEntry(clang::OptionalFileEntryRef file) {
   return &file->getFileEntry();
 }
 
-// Some symbols are directly defined by the compiler.  For them, the
-// definition location points to the "<built-in>" file.
-inline bool IsBuiltinFile(clang::OptionalFileEntryRef file) {
-  return !file;
-}
-
-// There are two kinds of symbols that are not defined in the source
-// files: the compiler can define some standard symbols
-// (e.g. __FILE__), and the user can define macros on the command line
-// of the compiler using -D.  A symbol appears to be defined in file
-// "<built-in>" in the first case, and "<command line>" in the second.
-// IsBuiltinOrCommandLineFile(file) returns true if it's either of the
-// two cases.
-inline bool IsBuiltinOrCommandLineFile(clang::OptionalFileEntryRef file) {
-  return IsBuiltinFile(file) || file->getName().equals("<command line>");
-}
-
 // When macro args are concatenated e.g. '#define CAT(A, B) A##B', their
 // location ends up outside the source text, in what the compiler calls
 // "<scratch space>".
@@ -100,8 +83,7 @@ bool IsInScratchSpace(clang::SourceLocation loc);
 
 // Resolve canonical file path from various file entry types.
 inline string GetFilePath(clang::OptionalFileEntryRef file) {
-  return (IsBuiltinFile(file) ? "<built-in>"
-                              : NormalizeFilePath(file->getName().str()));
+  return (!file ? "<built-in>" : NormalizeFilePath(file->getName().str()));
 }
 
 inline string GetFilePath(clang::FileEntryRef file) {
@@ -245,6 +227,23 @@ inline bool IsBeforeInSameFile(const T& a, const U& b) {
   if (GetFileEntry(a) != GetFileEntry(b))
     return false;
   return IsBeforeInTranslationUnit(a, b);
+}
+
+// Returns true if argument is one of the special files used by Clang for
+// implicit buffers ("<built-in>", "<command-line>", etc).
+// A null value is considered the same as "<built-in>".
+inline bool IsSpecialFile(clang::OptionalFileEntryRef file) {
+  if (!file)
+    return true;
+  return IsSpecialFilename(file->getName());
+}
+
+// Returns true if obj is in a special file, as defined above.
+// Note that it also returns true for objects at invalid locations, as they
+// resolve to a null file.
+template <typename T>
+inline bool IsInSpecialFile(const T& obj) {
+  return IsSpecialFile(GetFileEntry(obj));
 }
 
 // Returns true if the given declaration is located in a header file.
