@@ -91,6 +91,22 @@ using IndirectStruct3NonProvidingAl = IndirectStruct3;
 struct IndirectStruct4;
 using IndirectStruct4NonProvidingAl = IndirectStruct4;
 
+// --- Alias templates.
+
+template <typename>
+// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h
+using DoesNotForwardDeclareAlTpl = IndirectStruct1;
+
+// struct DirectStruct1;  <-- Already present above.
+template <typename>
+using IncludesAlTpl = DirectStruct1;
+
+template <typename>
+using DoesNotForwardDeclareAndIncludesAlTpl = DirectStruct2;
+
+// struct IndirectStruct2;  <-- Already present above.
+template <typename>
+using DoesEverythingRightAlTpl = IndirectStruct2;
 
 /**** IWYU_SUMMARY
 
