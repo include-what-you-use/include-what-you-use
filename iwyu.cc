@@ -3090,6 +3090,9 @@ class InstantiatedTemplateVisitor
     if (CanIgnoreCurrentASTNode())
       return true;
 
+    if (type->isTypeAlias())
+      return TraverseType(type->getAliasedType());
+
     // Skip the template traversal if this occurrence of the template name is
     // just a class qualifier for an out of line method, as opposed to an object
     // instantiation, where the templated code would need to be inspected.
@@ -4219,7 +4222,7 @@ class IwyuAstConsumer
 
     // If we're not in a forward-declare context, use of a template
     // specialization requires having the full type information.
-    if (!CanForwardDeclareType(current_ast_node())) {
+    if (!CanForwardDeclareType(current_ast_node()) || type->isTypeAlias()) {
       const TemplateInstantiationData data = GetTplInstData(type);
       instantiated_template_visitor_.ScanInstantiatedType(
           current_ast_node(), data.resugar_map, data.provided_types);

@@ -70,6 +70,26 @@ using AliasNested2 = FullUseTemplateArgInSizeof<FullUseTemplateArgInSizeof<T>>;
 // IWYU: IndirectClass is...*indirect.h
 AliasNested2<IndirectClass> aliasNested2;
 
+template <typename T>
+using UsingArgInternals = decltype(T::a);
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+UsingArgInternals<IndirectClass> aliased_int;
+// Full type is needed even in fwd-decl context.
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+UsingArgInternals<IndirectClass>* p_int = nullptr;
+
+template <typename T>
+struct TplWithUsingArgInternals {
+  UsingArgInternals<T>* p = nullptr;
+};
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+TplWithUsingArgInternals<IndirectClass> twuai;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/alias_template.cc should add these lines:
