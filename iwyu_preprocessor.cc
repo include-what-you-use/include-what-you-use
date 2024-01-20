@@ -441,7 +441,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     SourceLocation includer_loc, OptionalFileEntryRef includee,
     const string& include_name_as_written) {
   OptionalFileEntryRef includer = GetFileEntry(includer_loc);
-  if (IsBuiltinOrCommandLineFile(includer))
+  if (!IsNamedFile(includer))
     return;
 
   string protect_reason;
@@ -551,7 +551,7 @@ void IwyuPreprocessorInfo::FinalizeProtectedIncludes() {
 void IwyuPreprocessorInfo::AddDirectInclude(
     SourceLocation includer_loc, OptionalFileEntryRef includee,
     const string& include_name_as_written) {
-  if (IsBuiltinOrCommandLineFile(includee))
+  if (!IsNamedFile(includee))
     return;
 
   // For files we're going to be reporting IWYU errors for, we need
@@ -788,7 +788,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   const SourceLocation include_loc = GlobalSourceManager()->getIncludeLoc(
       GlobalSourceManager()->getFileID(file_beginning));
   string include_name_as_written;
-  if (!IsBuiltinOrCommandLineFile(GetFileEntry(include_loc))) {
+  if (IsInNamedFile(include_loc)) {
     CHECK_(include_filename_loc_.isValid() &&
            "Include from not built-in file must have inclusion directive");
     include_name_as_written = GetIncludeNameAsWritten(include_filename_loc_);
@@ -801,7 +801,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   if (new_file)
     AddDirectInclude(include_loc, new_file, include_name_as_written);
 
-  if (IsBuiltinOrCommandLineFile(new_file))
+  if (!IsNamedFile(new_file))
     return;
 
   ProcessHeadernameDirectivesInFile(file_beginning);
@@ -873,7 +873,7 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
                                           SourceLocation usage_location,
                                           SourceLocation dfn_location) {
   // Don't report macro uses that aren't actually in a file somewhere.
-  if (!dfn_location.isValid() || GetFilePath(dfn_location) == "<built-in>")
+  if (!IsInNamedFile(dfn_location))
     return;
   OptionalFileEntryRef used_in = GetFileEntry(usage_location);
   if (ShouldReportIWYUViolationsFor(used_in)) {

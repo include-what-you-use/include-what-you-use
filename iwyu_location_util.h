@@ -75,23 +75,6 @@ inline const clang::FileEntry* RawFileEntry(clang::OptionalFileEntryRef file) {
   return &file->getFileEntry();
 }
 
-// Some symbols are directly defined by the compiler.  For them, the
-// definition location points to the "<built-in>" file.
-inline bool IsBuiltinFile(clang::OptionalFileEntryRef file) {
-  return !file;
-}
-
-// There are two kinds of symbols that are not defined in the source
-// files: the compiler can define some standard symbols
-// (e.g. __FILE__), and the user can define macros on the command line
-// of the compiler using -D.  A symbol appears to be defined in file
-// "<built-in>" in the first case, and "<command line>" in the second.
-// IsBuiltinOrCommandLineFile(file) returns true if it's either of the
-// two cases.
-inline bool IsBuiltinOrCommandLineFile(clang::OptionalFileEntryRef file) {
-  return IsBuiltinFile(file) || file->getName().equals("<command line>");
-}
-
 // When macro args are concatenated e.g. '#define CAT(A, B) A##B', their
 // location ends up outside the source text, in what the compiler calls
 // "<scratch space>".
@@ -100,8 +83,7 @@ bool IsInScratchSpace(clang::SourceLocation loc);
 
 // Resolve canonical file path from various file entry types.
 inline string GetFilePath(clang::OptionalFileEntryRef file) {
-  return (IsBuiltinFile(file) ? "<built-in>"
-                              : NormalizeFilePath(file->getName().str()));
+  return (!file ? "<built-in>" : NormalizeFilePath(file->getName().str()));
 }
 
 inline string GetFilePath(clang::FileEntryRef file) {
@@ -245,6 +227,24 @@ inline bool IsBeforeInSameFile(const T& a, const U& b) {
   if (GetFileEntry(a) != GetFileEntry(b))
     return false;
   return IsBeforeInTranslationUnit(a, b);
+}
+
+// Return true if argument appears to be a named file (i.e. none of the
+// special "<built-in>", "<command-line>", "<scratch space>" or "<stdin>").
+inline bool IsNamedFile(clang::OptionalFileEntryRef file) {
+  // Check if the path starts with the special filename indicator.
+  // This could potentially give false positives, but should work in practice.
+  std::string path = GetFilePath(file);
+  return !path.empty() && path[0] != '<';
+}
+
+// Return true if obj is at a valid location in a named file, as defined above.
+template <typename T>
+inline bool IsInNamedFile(const T& obj) {
+  clang::SourceLocation loc = GetLocation(obj);
+  if (!loc.isValid())
+    return false;
+  return IsNamedFile(GetFileEntry(loc));
 }
 
 // Returns true if the given declaration is located in a header file.
