@@ -249,6 +249,7 @@ using clang::TemplateTypeParmDecl;
 using clang::TranslationUnitDecl;
 using clang::Type;
 using clang::TypeAliasDecl;
+using clang::TypeAliasTemplateDecl;
 using clang::TypeLoc;
 using clang::TypeSourceInfo;
 using clang::TypeTrait;
@@ -1459,6 +1460,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         return GetProvidedTypesForTypedef(underlying_typedef_decl);
       }
     }
+    // TODO(bolshakov): handle underlying alias templates.
 
     return GetProvidedTypes(underlying_type, GetLocation(decl));
   }
@@ -2423,7 +2425,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       ReportDeclForwardDeclareUse(CurrentLoc(), decl);
       current_ast_node()->set_in_forward_declare_context(true);
     } else {
-      ReportDeclUse(CurrentLoc(), decl);
+      if (type->isTypeAlias())
+        ReportWrittenTypeAlias(type);
+      else
+        ReportDeclUse(CurrentLoc(), decl);
     }
 
     return true;
@@ -2432,18 +2437,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   bool VisitTypedefType(TypedefType* type) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    if (!CanForwardDeclareType(current_ast_node())) {
-      // When the alias is from template (like 'Type' in
-      // 'Tpl<Providing>::Type'), the type may be provided with template
-      // argument and should not be reported. 'ReportTypeUse' performs that
-      // analysis when passing 'ElaboratedType' into it.
-      if (const auto* elaborated =
-              current_ast_node()->template GetParentAs<ElaboratedType>()) {
-        ReportTypeUse(CurrentLoc(), elaborated, DerefKind::None);
-      } else {
-        ReportTypeUse(CurrentLoc(), type, DerefKind::None);
-      }
-    }
+    if (!CanForwardDeclareType(current_ast_node()))
+      ReportWrittenTypeAlias(type);
     return true;
   }
 
@@ -2689,6 +2684,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
       return;
     }
+    if (const auto* template_spec_type =
+            type->getAs<TemplateSpecializationType>()) {
+      if (template_spec_type->isTypeAlias()) {
+        const NamedDecl* decl = TypeToDeclAsWritten(template_spec_type);
+        if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
+          const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
+          InsertAllInto(GetProvidedTypesForTypedef(al_decl), &blocked_types);
+          const Type* type = template_spec_type->getAliasedType().getTypePtr();
+          ReportTypeUseInternal(used_loc, type, blocked_types, deref_kind);
+        }
+        return;
+      }
+    }
 
     // Map private types like __normal_iterator to their public counterpart.
     type = MapPrivateTypeToPublicType(type);
@@ -2708,6 +2716,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       decl = GetDefinitionAsWritten(decl);
       VERRS(6) << "(For type " << PrintableType(type) << "):\n";
       IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl);
+    }
+  }
+
+  void ReportWrittenTypeAlias(const Type* type) {
+    // When the alias is from template (like 'Type' in
+    // 'Tpl<Providing>::Type'), the type may be provided with template
+    // argument and should not be reported. 'ReportTypeUse' performs that
+    // analysis when passing 'ElaboratedType' into it.
+    if (const auto* elaborated =
+            current_ast_node()->template GetParentAs<ElaboratedType>()) {
+      ReportTypeUse(CurrentLoc(), elaborated, DerefKind::None);
+    } else {
+      ReportTypeUse(CurrentLoc(), type, DerefKind::None);
     }
   }
 
@@ -4207,7 +4228,7 @@ class IwyuAstConsumer
     // Don't call ReportTypeUse here, because scanning of template instantiation
     // internals should be avoided: it is allowed not to provide some of
     // template args.
-    if (is_provided)
+    if (is_provided || type->isTypeAlias())
       ReportDeclUse(CurrentLoc(), TypeToDeclAsWritten(type), comment);
 
     return Base::VisitTemplateSpecializationType(type);
@@ -4358,6 +4379,7 @@ class IwyuAstConsumer
             dyn_cast_or_null<TypedefType>(desugared_until_typedef)) {
       return GetProvidedTypesForTypedef(typedef_type->getDecl());
     }
+    // TODO(bolshakov): handle alias templates.
     return set<const Type*>();
   }
 

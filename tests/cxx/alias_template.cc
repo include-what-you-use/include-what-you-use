@@ -13,6 +13,17 @@
 
 #include "tests/cxx/direct.h"
 
+template <typename T>
+using Identity = T;
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+Identity<IndirectClass> ic;
+// IWYU: IndirectClass is...*indirect.h
+constexpr auto s = sizeof(ic);
+// IWYU: IndirectClass needs a declaration
+Identity<IndirectClass>* pic = nullptr;
+
 template<class T> struct FullUseTemplateArgInSizeof {
   char argument[sizeof(T)];
 };
