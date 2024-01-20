@@ -81,11 +81,13 @@ string Basename(const string& path) {
 }
 
 string GetCanonicalName(string file_path) {
-  // For this special 'path' we just return it.
-  // Note that we leave the 'quotes' to make it different from regular paths.
-  if (file_path == "<built-in>" || file_path == "<stdin>")
+  // Clang special filenames are already canonical.
+  // <stdin> is not a special filename, but it's canonical too.
+  if (IsSpecialFilename(file_path) || file_path == "<stdin>")
     return file_path;
 
+  // All known special filenames which look like quoted-includes are handled
+  // above. Reject anything else that looks like a quoted-include.
   CHECK_(!IsQuotedInclude(file_path));
 
   file_path = NormalizeFilePath(file_path);
