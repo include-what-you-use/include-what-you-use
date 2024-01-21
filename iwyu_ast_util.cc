@@ -563,6 +563,17 @@ static const Type* GetTemplateArgAsType(const TemplateArgument& tpl_arg) {
   return nullptr;
 }
 
+static bool IsSubstTemplateTypeParmType(const Type* type) {
+  const Type* prev_type = type;
+  do {
+    if (isa<SubstTemplateTypeParmType>(type))
+      return true;
+    prev_type = type;
+    type = type->getLocallyUnqualifiedSingleStepDesugaredType().getTypePtr();
+  } while (type != prev_type);
+  return false;
+}
+
 // These utilities figure out the template arguments and other type components
 // that are specified in various contexts: TemplateSpecializationType (for
 // template classes), FunctionDecl (for template functions), and type aliases.
@@ -667,7 +678,7 @@ class TypeEnumeratorWithoutSubstituted
   bool TraverseTypeHelper(QualType qual_type) {
     CHECK_(!qual_type.isNull());
     const Type* type = qual_type.getTypePtr();
-    if (type->getAs<SubstTemplateTypeParmType>())
+    if (IsSubstTemplateTypeParmType(type))
       return true;
 
     seen_types_.insert(GetCanonicalType(type));
