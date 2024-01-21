@@ -3456,12 +3456,6 @@ class InstantiatedTemplateVisitor
     if (current_ast_node()->in_forward_declare_context())
       return true;
 
-    while (type->isTypeAlias()) {
-      type = type->getAliasedType()->getAs<TemplateSpecializationType>();
-      if (!type)
-        return true;
-    }
-
     // If we're a dependent type, we only try to be analyzed if we're
     // in the precomputed list -- in general, the only thing clang
     // tells us about dependent types is their name (which is all we
