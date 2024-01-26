@@ -14,8 +14,13 @@
 
 class Base;
 
+namespace ns {
+using ::Base;
+}
+
 class ReturnsBase {
   virtual Base* non_covariant() = 0;
+  virtual ns::Base* non_covariant_sugared() = 0;
 
   virtual Base* covariant_derived() = 0;
   virtual const Class* covariant_cv_qual() = 0;
@@ -25,6 +30,12 @@ class ReturnsDerived : public ReturnsBase {
   // Normal case, do not trigger covariant return types.
   // This should require only a forward declaration of Base.
   Base* non_covariant() {
+    return 0;
+  }
+
+  static Base b;
+
+  decltype(b)* non_covariant_sugared() {
     return 0;
   }
 
