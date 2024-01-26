@@ -747,7 +747,8 @@ bool HasCovariantReturnType(const CXXMethodDecl* method_decl) {
     // of where return type differs is when they're actually covariant.
     // That is, if Clang can already compile this code without errors, and
     // return types differ, it can only be due to covariance.
-    if ((*it)->getReturnType() != derived_return_type)
+    if ((*it)->getReturnType().getCanonicalType() !=
+        derived_return_type.getCanonicalType())
       return true;
   }
 
