@@ -40,7 +40,7 @@ jobs:
 
       - name: Work around broken packaging
         run: |
-          sudo touch /usr/lib/llvm-18/lib/libclang-18.so.1
+          sudo touch /usr/lib/llvm-19/lib/libclang-19.so.1
 
       - name: Select checkout ref (PR)
         if: github.event_name == 'pull_request'
