@@ -97,6 +97,11 @@ struct StaticTemplateFieldStruct {
   static NonProvidingAlias<5> aliasedNonProviding;
 };
 
+template <typename T>
+void FnUsingNested() {
+  (void)sizeof(Outer<Inner<T>>);
+}
+
 void NestedTemplateArguments() {
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
@@ -110,6 +115,10 @@ void NestedTemplateArguments() {
   // IWYU: IndirectClass needs a declaration
   Outer<Inner<IndirectClass> >* opi;
   (void)opi;
+
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  FnUsingNested<IndirectClass>();
 
   // Test that use of template specialization type template argument is not
   // hidden by any sugar in the AST.
