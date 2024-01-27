@@ -1168,6 +1168,8 @@ bool IwyuPreprocessorInfo::ForwardDeclareIsExported(
     const NamedDecl* decl) const {
   // Use end-location so that any trailing comments match only on the last line.
   SourceLocation loc = decl->getEndLoc();
+  if (!loc.isValid())
+    return false;
 
   // Is the decl part of a begin_exports/end_exports block?
   OptionalFileEntryRef file = GetFileEntry(loc);
