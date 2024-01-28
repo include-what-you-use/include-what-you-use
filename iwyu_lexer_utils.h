@@ -13,6 +13,8 @@
 #include <string>                       // for string
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -73,6 +75,13 @@ string GetIncludeNameAsWritten(
 // Get the text of a given token.
 string GetTokenText(const clang::Token& token,
                     const CharacterDataGetterInterface& data_getter);
+
+// Given a token iterator inside a macro, returns the kind of the token after
+// current, ignoring comment tokens. If there is no token after, returns
+// clang::tok::unknown.
+clang::tok::TokenKind GetNextMacroTokenKind(
+    const clang::MacroInfo* macro,
+    clang::MacroInfo::const_tokens_iterator current);
 
 }  // namespace include_what_you_use
 

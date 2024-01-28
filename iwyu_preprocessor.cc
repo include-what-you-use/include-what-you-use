@@ -30,7 +30,6 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
-#include "llvm/ADT/ArrayRef.h"
 
 namespace clang {
 class MacroArgs;
@@ -690,26 +689,42 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
     return;
   }
 
-  const MacroInfo* macro = directive->getMacroInfo();
-  const SourceLocation macro_loc = macro->getDefinitionLoc();
-  ERRSYM(macro_file) << "[ #define     ] " << PrintableLoc(macro_loc) << ": "
-                     << GetName(id) << "\n";
+  ERRSYM(macro_file) << "[ #define     ] " << PrintableLoc(GetLocation(id))
+                     << ": " << GetName(id) << "\n";
+
   // We'd love to test macro bodies more completely -- like we do template
   // bodies -- but we don't have enough context to know how to interpret the
   // tokens we see, in general). Our heuristic is: if a token inside a macro X
   // identifies a known-defined macro Y, we say that X uses Y.
-  for (const Token& token_in_macro : macro->tokens()) {
-    if (token_in_macro.getKind() != clang::tok::identifier)
+  const MacroInfo* defined_macro = directive->getMacroInfo();
+  MacroInfo::const_tokens_iterator tok_begin = defined_macro->tokens_begin();
+  MacroInfo::const_tokens_iterator tok_end = defined_macro->tokens_end();
+  for (MacroInfo::const_tokens_iterator it = tok_begin; it != tok_end; ++it) {
+    // The below is an approximation of everything Clang's
+    // Preprocessor::HandleIdentifier needs to be true for a token to be
+    // classified as a macro expansion.
+    const Token& token = *it;
+    if (token.getKind() != clang::tok::identifier)
       continue;
 
-    const clang::IdentifierInfo* token_id = token_in_macro.getIdentifierInfo();
-    if (!token_id->hasMacroDefinition())
+    if (token.isExpandDisabled())
       continue;
 
-    if (const MacroInfo* macro_ref = preprocessor_.getMacroInfo(token_id)) {
-      ReportMacroUse(GetName(token_in_macro), token_in_macro.getLocation(),
-                     GetMacroDefLoc(macro_ref));
+    const MacroInfo* macro =
+        preprocessor_.getMacroInfo(token.getIdentifierInfo());
+    if (!macro || !macro->isEnabled())
+      continue;
+
+    // A token with an associated macro it will only be considered for macro
+    // expansion if it's object-like or function-like and followed by l-paren.
+    if (macro->isFunctionLike() &&
+        GetNextMacroTokenKind(macro, it) != clang::tok::l_paren) {
+      continue;
     }
+
+    // If we've come this far, this must be a token referencing another macro.
+    // Report it as such.
+    ReportMacroUse(GetName(token), token.getLocation(), GetMacroDefLoc(macro));
   }
 }
 
