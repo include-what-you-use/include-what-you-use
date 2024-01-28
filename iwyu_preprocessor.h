@@ -95,7 +95,9 @@ using std::multimap;
 class IwyuPreprocessorInfo : public clang::PPCallbacks,
                              public clang::CommentHandler {
  public:
-  IwyuPreprocessorInfo() = default;
+  explicit IwyuPreprocessorInfo(const clang::Preprocessor& preprocessor)
+      : preprocessor_(preprocessor) {
+  }
 
   // The client *must* call this from the beginning of HandleTranslationUnit()
   void HandlePreprocessingDone();
@@ -269,9 +271,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                       clang::SourceLocation usage_location,
                       clang::SourceLocation dfn_location);
 
-  // As above, but get the definition location from macros_definition_loc_.
-  void FindAndReportMacroUse(const string& name, clang::SourceLocation loc);
-
   // Helper for PopulateIntendsToProvideMap().
   void AddAllIncludesAsFileEntries(
       clang::OptionalFileEntryRef includer,
@@ -288,6 +287,9 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // there is a pending "begin_keep" pragma.
   bool HasOpenBeginKeep(clang::OptionalFileEntryRef file) const;
 
+  // The Clang preprocessor for this compilation.
+  const clang::Preprocessor& preprocessor_;
+
   // The C++ source file passed in as an argument to the compiler (as
   // opposed to other files seen via #includes).
   clang::OptionalFileEntryRef main_file_;
@@ -297,13 +299,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // main_file_ and its associated .h and -inl.h files, if they exist.
   // But users can add to it via the --check_also flag.
   set<clang::OptionalFileEntryRef> files_to_report_iwyu_violations_for_;
-
-  // These store macros seen, as we see them, and also macros that are
-  // called from other macros.  We use this to do limited iwyu-testing
-  // on macro tokens (we'd love to test macro bodies more completely
-  // -- like we do template bodies -- but macros don't give us enough
-  // context to know how to interpret the tokens we see, in general).
-  map<string, clang::SourceLocation> macros_definition_loc_;  // key: macro name
 
   // This should logically be a set, but set<> needs Token::operator<
   // which we don't have.  Luckily, a vector works just as well.

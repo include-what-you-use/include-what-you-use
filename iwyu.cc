@@ -226,6 +226,7 @@ using clang::OverloadExpr;
 using clang::PPCallbacks;
 using clang::ParmVarDecl;
 using clang::PointerType;
+using clang::Preprocessor;
 using clang::QualType;
 using clang::QualifiedTypeLoc;
 using clang::RecordDecl;
@@ -4468,10 +4469,11 @@ class IwyuAction : public ASTFrontendAction {
     // CompilerInstance and ToolChain objects.
     InitGlobals(compiler, toolchain);
 
-    auto* const preprocessor_consumer = new IwyuPreprocessorInfo();
-    compiler.getPreprocessor().addPPCallbacks(
+    Preprocessor& preprocessor = compiler.getPreprocessor();
+    auto* const preprocessor_consumer = new IwyuPreprocessorInfo(preprocessor);
+    preprocessor.addPPCallbacks(
         std::unique_ptr<PPCallbacks>(preprocessor_consumer));
-    compiler.getPreprocessor().addCommentHandler(preprocessor_consumer);
+    preprocessor.addCommentHandler(preprocessor_consumer);
 
     auto* const visitor_state =
         new VisitorState(&compiler, *preprocessor_consumer);
