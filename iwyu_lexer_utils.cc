@@ -18,6 +18,7 @@
 #include "iwyu_globals.h"
 #include "iwyu_port.h"  // for CHECK_
 
+using clang::MacroInfo;
 using clang::SourceLocation;
 using clang::SourceManager;
 using clang::Token;
@@ -90,6 +91,25 @@ string GetTokenText(const Token& token,
                     const CharacterDataGetterInterface& data_getter) {
   const char* text = data_getter.GetCharacterData(token.getLocation());
   return string(text, token.getLength());
+}
+
+// Given a token iterator inside a macro, returns the kind of the token after
+// current, ignoring comment tokens. If there is no token after, returns
+// clang::tok::unknown.
+clang::tok::TokenKind GetNextMacroTokenKind(
+    const MacroInfo* macro, MacroInfo::const_tokens_iterator current) {
+  MacroInfo::const_tokens_iterator token = current;
+  if (token == macro->tokens_end()) {
+    return clang::tok::unknown;
+  }
+  // Return the first non-comment token after current.
+  for (++token; token != macro->tokens_end(); ++token) {
+    // Skip over comment tokens (which may be there in in -E -C[C] mode).
+    if (token->is(clang::tok::comment))
+      continue;
+    return token->getKind();
+  }
+  return clang::tok::unknown;
 }
 
 }  // namespace include_what_you_use
