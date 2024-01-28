@@ -71,7 +71,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/Token.h"
 #include "iwyu_output.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -81,6 +80,7 @@ class MacroDefinition;
 class MacroDirective;
 class Module;
 class NamedDecl;
+class Token;
 }  // namespace clang
 
 namespace include_what_you_use {
@@ -299,10 +299,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // main_file_ and its associated .h and -inl.h files, if they exist.
   // But users can add to it via the --check_also flag.
   set<clang::OptionalFileEntryRef> files_to_report_iwyu_violations_for_;
-
-  // This should logically be a set, but set<> needs Token::operator<
-  // which we don't have.  Luckily, a vector works just as well.
-  vector<clang::Token> macros_called_from_macros_;
 
   // This maps from the include-name as written in the program
   // (including <>'s or ""'s) to the FileEntry we loaded for that
