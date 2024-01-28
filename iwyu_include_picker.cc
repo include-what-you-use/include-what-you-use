@@ -190,6 +190,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "size_t", kPrivate, "<time.h>", kPublic },
   { "size_t", kPrivate, "<uchar.h>", kPublic },
   { "size_t", kPrivate, "<wchar.h>", kPublic },
+  { "static_assert", kPrivate, "<assert.h>", kPublic },
   // Macros that can be defined in more than one file, don't have the
   // same __foo_defined guard that other types do, so the grep above
   // doesn't discover them.  Until I figure out a better way, I just
