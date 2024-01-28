@@ -42,6 +42,7 @@ class Module;
 using clang::CharSourceRange;
 using clang::FileEntryRef;
 using clang::FileID;
+using clang::IdentifierInfo;
 using clang::MacroArgs;
 using clang::MacroDefinition;
 using clang::MacroDirective;
@@ -108,6 +109,17 @@ static string GetIncludeNameAsWritten(SourceLocation include_loc) {
 
 static string GetName(const Token& token) {
   return token.getIdentifierInfo()->getName().str();
+}
+
+static SourceLocation GetMacroDefLoc(const MacroInfo* macro) {
+  if (!macro) {
+    return SourceLocation();
+  }
+  return macro->getDefinitionLoc();
+}
+
+static SourceLocation GetMacroDefLoc(const MacroDefinition& macro) {
+  return GetMacroDefLoc(macro.getMacroInfo());
 }
 
 //------------------------------------------------------------
@@ -687,8 +699,6 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
   // body, and then after reading the whole file we do an iwyu
   // analysis on the results.  (This can make mistakes if the code
   // #undefs and re-defines a macro, but should work fine in practice.)
-  if (macro_loc.isValid())
-    macros_definition_loc_[GetName(id)] = macro_loc;
   for (const Token& token_in_macro : macro->tokens()) {
     if (token_in_macro.getKind() == clang::tok::identifier &&
         token_in_macro.getIdentifierInfo()->hasMacroDefinition()) {
@@ -697,34 +707,32 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
   }
 }
 
-void IwyuPreprocessorInfo::Ifdef(SourceLocation loc,
-                                 const Token& id,
-                                 const MacroDefinition& /*definition*/) {
+void IwyuPreprocessorInfo::Ifdef(SourceLocation loc, const Token& id,
+                                 const MacroDefinition& definition) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifdef      ] " << PrintableLoc(id.getLocation()) << ": "
       << GetName(id) << "\n";
-  FindAndReportMacroUse(GetName(id), id.getLocation());
+  ReportMacroUse(GetName(id), id.getLocation(), GetMacroDefLoc(definition));
 }
 
-void IwyuPreprocessorInfo::Ifndef(SourceLocation loc,
-                                  const Token& id,
-                                  const MacroDefinition& /*definition*/) {
+void IwyuPreprocessorInfo::Ifndef(SourceLocation loc, const Token& id,
+                                  const MacroDefinition& definition) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #ifndef     ] " << PrintableLoc(id.getLocation()) << ": "
       << GetName(id) << "\n";
-  FindAndReportMacroUse(GetName(id), id.getLocation());
+  ReportMacroUse(GetName(id), id.getLocation(), GetMacroDefLoc(definition));
 }
 
 // Clang will give a MacroExpands() callback for all macro-tokens
 // used inside an #if or #elif, *except* macro-tokens used within a
 // 'defined' operator. They produce a Defined() callback.
 void IwyuPreprocessorInfo::Defined(const Token& id,
-                                   const MacroDefinition& /*definition*/,
+                                   const MacroDefinition& definition,
                                    SourceRange /*range*/) {
   ERRSYM(GetFileEntry(id.getLocation()))
       << "[ #if defined ] " << PrintableLoc(id.getLocation()) << ": "
       << GetName(id) << "\n";
-  FindAndReportMacroUse(GetName(id), id.getLocation());
+  ReportMacroUse(GetName(id), id.getLocation(), GetMacroDefLoc(definition));
 }
 
 void IwyuPreprocessorInfo::InclusionDirective(
@@ -897,15 +905,6 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
   GetFromFileInfoMap(defined_in)->ReportDefinedMacroUse(used_in);
 }
 
-// As above, but get the definition location from macros_definition_loc_.
-void IwyuPreprocessorInfo::FindAndReportMacroUse(const string& name,
-                                                 SourceLocation loc) {
-  if (const SourceLocation* dfn_loc =
-          FindInMap(&macros_definition_loc_, name)) {
-    ReportMacroUse(name, loc, *dfn_loc);
-  }
-}
-
 //------------------------------------------------------------
 // Post-processing functions (done after all source is read).
 
@@ -1039,7 +1038,11 @@ void IwyuPreprocessorInfo::HandlePreprocessingDone() {
   // actually have to be defined until FOO is actually used, which
   // could be later in the preprocessing.)
   for (const Token& token : macros_called_from_macros_) {
-    FindAndReportMacroUse(GetName(token), token.getLocation());
+    const IdentifierInfo* token_id = token.getIdentifierInfo();
+    if (const MacroInfo* macro = preprocessor_.getMacroInfo(token_id)) {
+      ReportMacroUse(GetName(token), token.getLocation(),
+                     GetMacroDefLoc(macro));
+    }
   }
 
   // Other post-processing steps.
