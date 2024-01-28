@@ -272,8 +272,6 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // As above, but get the definition location from macros_definition_loc_.
   void FindAndReportMacroUse(const string& name, clang::SourceLocation loc);
 
-  // Final-processing routines done after all header files have been read.
-  void DoFinalMacroChecks();
   // Helper for PopulateIntendsToProvideMap().
   void AddAllIncludesAsFileEntries(
       clang::OptionalFileEntryRef includer,
