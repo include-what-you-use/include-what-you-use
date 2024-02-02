@@ -685,11 +685,15 @@ void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
 
 void IwyuPreprocessorInfo::MacroDefined(const Token& id,
                                         const MacroDirective* directive) {
+  OptionalFileEntryRef macro_file = GetFileEntry(id);
+  if (!ShouldReportIWYUViolationsFor(macro_file)) {
+    return;
+  }
+
   const MacroInfo* macro = directive->getMacroInfo();
   const SourceLocation macro_loc = macro->getDefinitionLoc();
-  ERRSYM(GetFileEntry(macro_loc))
-      << "[ #define     ] " << PrintableLoc(macro_loc) << ": " << GetName(id)
-      << "\n";
+  ERRSYM(macro_file) << "[ #define     ] " << PrintableLoc(macro_loc) << ": "
+                     << GetName(id) << "\n";
   // We'd love to test macro bodies more completely -- like we do template
   // bodies -- but we don't have enough context to know how to interpret the
   // tokens we see, in general). Our heuristic is: if a token inside a macro X
