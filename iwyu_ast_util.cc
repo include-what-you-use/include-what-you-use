@@ -686,7 +686,7 @@ class TypeEnumeratorWithoutSubstituted
     if (IsSubstTemplateTypeParmType(type))
       return true;
 
-    seen_types_.insert(GetCanonicalType(type));
+    seen_types_.insert(Desugar(type));
 
     return Base::TraverseType(qual_type);
   }

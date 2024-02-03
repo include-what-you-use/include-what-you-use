@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_I4_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_I4_H_
+
 class IndirectClass;
 
 struct IndirectStruct4 {
@@ -14,3 +17,5 @@ struct IndirectStruct4 {
 
   using IndirectClassNonProvidingAl = IndirectClass;
 };
+
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_I4_H_

@@ -9,8 +9,13 @@
 
 // This header mimics ext/alloc_traits.h in libstdc++.
 
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_CHAIN_IN_TEMPLATE_I1_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_CHAIN_IN_TEMPLATE_I1_H_
+
 template<typename T>
 struct TypedefWrapper {
   typedef T value_type;
   typedef value_type& reference;
 };
+
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_CHAIN_IN_TEMPLATE_I1_H_

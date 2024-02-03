@@ -48,6 +48,7 @@
 #include "tests/cxx/iwyu_stricter_than_cpp-autocast2.h"
 #include "tests/cxx/iwyu_stricter_than_cpp-d2.h"
 #include "tests/cxx/iwyu_stricter_than_cpp-d3.h"
+#include "tests/cxx/iwyu_stricter_than_cpp-d5.h"
 
 template <typename T>
 void UsingFn() {
@@ -449,6 +450,9 @@ void TestFunctionReturn() {
   using Alias = TplIndirectStruct3<IndirectStruct2, IndirectStruct2>;
 
   Call<Alias, TplAllForwardDeclaredFn>();
+
+  // IWYU: IndirectClass is...*indirect.h
+  RetNonProvidingTypedef();
 }
 
 void TestDefaultTplArgs() {
@@ -493,6 +497,7 @@ The full include-list for tests/cxx/iwyu_stricter_than_cpp.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/iwyu_stricter_than_cpp-autocast.h"  // for FnRefs, FnValues, HeaderDefinedFnRefs, HeaderDefinedTplFnRefs, TplFnRefs, TplFnValues
 #include "tests/cxx/iwyu_stricter_than_cpp-d3.h"  // for IndirectStruct3ProvidingAl, IndirectStruct3ProvidingTypedef, IndirectStruct4ProvidingAl, IndirectStruct4ProvidingTypedef
+#include "tests/cxx/iwyu_stricter_than_cpp-d5.h"  // for RetNonProvidingTypedef
 #include "tests/cxx/iwyu_stricter_than_cpp-def_tpl_arg.h"  // for TplWithDefaultArgs
 #include "tests/cxx/iwyu_stricter_than_cpp-fnreturn.h"  // for DoesEverythingRightFn, DoesNotForwardDeclareAndIncludesFn, DoesNotForwardDeclareFn, DoesNotForwardDeclareProperlyFn, IncludesFn, TplAllForwardDeclaredFn, TplAllNeededTypesProvidedFn, TplDoesEverythingRightAgainFn, TplDoesEverythingRightFn, TplDoesNotForwardDeclareAndIncludesFn, TplDoesNotForwardDeclareFn, TplDoesNotForwardDeclareProperlyFn, TplIncludesFn, TplOnlyArgumentTypeProvidedFn, TplOnlyTemplateProvidedFn
 #include "tests/cxx/iwyu_stricter_than_cpp-i2.h"  // for IndirectStruct2, TplIndirectStruct2

@@ -1450,20 +1450,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   set<const Type*> GetProvidedTypesForAlias(const Type* underlying_type,
                                             SourceLocation decl_loc) const {
-    // If the underlying type is itself a typedef, we recurse.
-    if (const auto* underlying_typedef =
-            underlying_type->getAs<TypedefType>()) {
-      if (const auto* underlying_typedef_decl = dyn_cast<TypedefNameDecl>(TypeToDeclAsWritten(underlying_typedef))) {
-        // TODO(csilvers): if one of the intermediate typedefs
-        // #includes the necessary definition of the 'final'
-        // underlying type, do we want to return it here?
-        return GetProvidedTypesForAlias(
-            underlying_typedef_decl->getUnderlyingType().getTypePtr(),
-            GetLocation(underlying_typedef_decl));
-      }
-    }
-    // TODO(bolshakov): handle underlying alias templates.
-
     return GetProvidedTypes(underlying_type, decl_loc);
   }
 
@@ -2609,8 +2595,31 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                     SourceLocation loc) const {
     set<const Type*> retval;
     for (const Type* component : GetComponentsOfTypeWithoutSubstituted(type)) {
-      if (!CodeAuthorWantsJustAForwardDeclare(component, loc))
-        retval.insert(component);
+      // TODO(csilvers): if one of the intermediate typedefs
+      // #includes the necessary definition of the 'final'
+      // underlying type, do we want to return it here?
+      if (const auto* typedef_type = dyn_cast<TypedefType>(component)) {
+        InsertAllInto(
+            GetProvidedTypesForAlias(typedef_type->desugar().getTypePtr(),
+                                     GetLocation(typedef_type->getDecl())),
+            &retval);
+        continue;
+      }
+      if (const auto* tpl_spec_type =
+              dyn_cast<TemplateSpecializationType>(component)) {
+        const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
+        if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
+          const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
+          InsertAllInto(
+              GetProvidedTypesForAlias(tpl_spec_type->desugar().getTypePtr(),
+                                       GetLocation(al_decl)),
+              &retval);
+          continue;
+        }
+      }
+      const Type* canonical = GetCanonicalType(component);
+      if (!CodeAuthorWantsJustAForwardDeclare(canonical, loc))
+        retval.insert(canonical);
     }
     return retval;
   }
