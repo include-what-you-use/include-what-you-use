@@ -19,6 +19,7 @@
 #include "tests/cxx/typedef_chain_in_template-d2.h"
 #include "tests/cxx/typedef_chain_in_template-d3.h"
 #include "tests/cxx/typedef_chain_in_template-d4.h"
+#include "tests/cxx/typedef_chain_in_template-d5.h"
 
 void UsageAsWithLibstdcpp() {
   // IWYU: TypedefChainClass needs a declaration
@@ -56,6 +57,25 @@ void UsageWithLongerTypedefChain() {
   c.GetContent2().Method();
 }
 
+void Fn() {
+  // IWYU: TypedefChainClass needs a declaration
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
+  IdentityStructComplex<TypedefChainClass>::Type isc;
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
+  isc.Method();
+
+  // IWYU: TypedefChainClass needs a declaration
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
+  IdentityAliasComplex<TypedefChainClass> iac;
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
+  iac.Method();
+
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
+  (void)sizeof(TplWithNonProvidedAliased1);
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
+  (void)sizeof(TplWithNonProvidedAliased2);
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/typedef_chain_in_template.cc should add these lines:
@@ -69,5 +89,6 @@ The full include-list for tests/cxx/typedef_chain_in_template.cc:
 #include "tests/cxx/typedef_chain_in_template-d2.h"  // for ContainerAsLibcpp
 #include "tests/cxx/typedef_chain_in_template-d3.h"  // for ContainerShortTypedefChain
 #include "tests/cxx/typedef_chain_in_template-d4.h"  // for ContainerLongTypedefChain
+#include "tests/cxx/typedef_chain_in_template-d5.h"  // for IdentityAliasComplex, IdentityStructComplex, TplWithNonProvidedAliased1, TplWithNonProvidedAliased2
 
 ***** IWYU_SUMMARY */

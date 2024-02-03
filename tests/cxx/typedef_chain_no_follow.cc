@@ -26,6 +26,9 @@ void TypedefDeclaredInGlobalNamespace() {
 
   ProvidingWithAliasTpl pwat;
   pwat.Method();
+
+  ProvidingWithStructTpl pwst;
+  pwst.Method();
 }
 
 // Tests how we handle a typedef declared in a class.  Main purpose is to make
@@ -54,6 +57,6 @@ The full include-list for tests/cxx/typedef_chain_no_follow.cc:
 #include "tests/cxx/typedef_chain_no_follow-d1.h"  // for TypedefChainTypedef
 #include "tests/cxx/typedef_chain_no_follow-d2.h"  // for NonContainer1
 #include "tests/cxx/typedef_chain_no_follow-d3.h"  // for NonContainer2
-#include "tests/cxx/typedef_chain_no_follow-d4.h"  // for ProvidingWithAliasTpl
+#include "tests/cxx/typedef_chain_no_follow-d4.h"  // for ProvidingWithAliasTpl, ProvidingWithStructTpl
 
 ***** IWYU_SUMMARY */

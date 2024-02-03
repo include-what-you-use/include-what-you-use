@@ -13,3 +13,10 @@ template <typename T>
 using IdentityAlias = T;
 
 using ProvidingWithAliasTpl = IdentityAlias<TypedefChainClass>;
+
+template <typename T>
+struct IdentityStruct {
+  using Type = T;
+};
+
+using ProvidingWithStructTpl = IdentityStruct<TypedefChainClass>::Type;
