@@ -19,39 +19,49 @@
 #include "tests/cxx/typedef_chain_in_template-d2.h"
 #include "tests/cxx/typedef_chain_in_template-d3.h"
 #include "tests/cxx/typedef_chain_in_template-d4.h"
-#include "tests/cxx/typedef_chain_class.h"
-// Unused include to trigger IWYU summary telling what symbols are used from
-// every file.
-#include "tests/cxx/direct.h"
 
 void UsageAsWithLibstdcpp() {
+  // IWYU: TypedefChainClass needs a declaration
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
   ContainerAsLibstdcpp<TypedefChainClass> c;
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
   c.GetContent().Method();
 }
 
 void UsageAsWithLibcpp() {
+  // IWYU: TypedefChainClass needs a declaration
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
   ContainerAsLibcpp<TypedefChainClass> c;
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
   c.GetContent().Method();
 }
 
 void UsageWithShorterTypedefChain() {
+  // IWYU: TypedefChainClass needs a declaration
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
   ContainerShortTypedefChain<TypedefChainClass> c;
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
   c.GetContent1().Method();
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
   c.GetContent2().Method();
 }
 
 void UsageWithLongerTypedefChain() {
+  // IWYU: TypedefChainClass needs a declaration
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
   ContainerLongTypedefChain<TypedefChainClass> c;
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
   c.GetContent1().Method();
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
   c.GetContent2().Method();
 }
 
 /**** IWYU_SUMMARY
 
 tests/cxx/typedef_chain_in_template.cc should add these lines:
+#include "tests/cxx/typedef_chain_class.h"
 
 tests/cxx/typedef_chain_in_template.cc should remove these lines:
-- #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/typedef_chain_in_template.cc:
 #include "tests/cxx/typedef_chain_class.h"  // for TypedefChainClass

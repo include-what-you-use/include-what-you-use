@@ -9,6 +9,7 @@
 
 // This header mimics std::vector in libstdc++.
 
+#include "tests/cxx/typedef_chain_class.h"
 #include "tests/cxx/typedef_chain_in_template-i1.h"
 
 template<typename T>
