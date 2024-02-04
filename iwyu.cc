@@ -4017,13 +4017,30 @@ class InstantiatedTemplateVisitor
     return true;
   }
 
+  bool TraverseInstantiatedAliasTemplateHelper(
+      const TemplateSpecializationType* type) {
+    // Alias template instantiations have no corresponding 'TypeLoc's
+    // or specialization declarations like ClassTemplateSpecializationDecl.
+    // In order to have the correct location information in the AST stack,
+    // the alias template declaration is put there before traversing
+    // the underlying type resulting from instantiation.
+    const Decl* decl = TypeToDeclAsWritten(type);
+    ASTNode new_node{decl};
+    CurrentASTNodeUpdater canu{&current_ast_node_, &new_node};
+    if (ShouldPrintSymbolFromCurrentFile()) {
+      errs() << AnnotatedName(GetKindName(decl)) << PrintablePtr(decl)
+             << PrintableDecl(decl) << "\n";
+    }
+    return TraverseType(type->getAliasedType());
+  }
+
   bool TraverseTemplateSpecializationTypeHelper(
       const TemplateSpecializationType* type) {
     if (CanIgnoreCurrentASTNode())
       return true;
 
     if (type->isTypeAlias())
-      return TraverseType(type->getAliasedType());
+      return TraverseInstantiatedAliasTemplateHelper(type);
 
     ASTNode* ast_node = current_ast_node();
     if (CanForwardDeclareType(ast_node))
