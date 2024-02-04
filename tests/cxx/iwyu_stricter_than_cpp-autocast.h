@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef IWYU_STRICTER_THAN_CPP_AUTOCAST_H_
-#define IWYU_STRICTER_THAN_CPP_AUTOCAST_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_AUTOCAST_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_AUTOCAST_H_
 
 // The two rules the author has to follow to disable iwyu's
 // stricter-than-C++ rule and force it to fall back on the c++
@@ -166,7 +166,7 @@ void Fn(NoAutocastForSpec<char>);
 // IWYU: AutocastInPartialSpec needs a declaration
 void Fn(AutocastInPartialSpec<char*>);
 
-#endif  // IWYU_STRICTER_THAN_CPP_AUTOCAST_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_AUTOCAST_H_
 
 /**** IWYU_SUMMARY
 

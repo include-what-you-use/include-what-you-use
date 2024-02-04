@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CVR_CLASS_H
-#define CVR_CLASS_H
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_CVR_CLASS_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_CVR_CLASS_H_
 
 class Class {};
 
-#endif
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_CVR_CLASS_H_

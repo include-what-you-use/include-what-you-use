@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef INCLUDE_CYCLE_D1_H
-#define INCLUDE_CYCLE_D1_H
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_INTERNAL_INCLUDE_CYCLE_D1_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_INTERNAL_INCLUDE_CYCLE_D1_H_
 
 // Include itself (cycle length 1)
 #include "tests/cxx/internal/include_cycle-d1.h"
@@ -18,4 +18,4 @@
 
 struct IncludeCycleD1 {};
 
-#endif  /* #ifndef INCLUDE_CYCLE_D1_H */
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_INTERNAL_INCLUDE_CYCLE_D1_H_

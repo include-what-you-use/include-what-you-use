@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef PTR_REF_ALIASES_D3_H_
-#define PTR_REF_ALIASES_D3_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_PTR_REF_ALIASES_D3_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_PTR_REF_ALIASES_D3_H_
 
 struct IndirectBase {};
 
-#endif
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_PTR_REF_ALIASES_D3_H_

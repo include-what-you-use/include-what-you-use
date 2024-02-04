@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef INCLUDE_CYCLE_I1_H
-#define INCLUDE_CYCLE_I1_H
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_INTERNAL_INCLUDE_CYCLE_I1_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_INTERNAL_INCLUDE_CYCLE_I1_H_
 
 #include "tests/cxx/internal/include_cycle-d1.h"
 
-#endif  /* #ifndef INCLUDE_CYCLE_I1_H */
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_INTERNAL_INCLUDE_CYCLE_I1_H_
