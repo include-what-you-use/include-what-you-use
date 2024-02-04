@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CVR_DERIVED_H
-#define CVR_DERIVED_H
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_CVR_DERIVED_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_CVR_DERIVED_H_
 
 #include "tests/cxx/cvr-base.h"
 
 class Derived : public Base {};
 
-#endif
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_CVR_DERIVED_H_

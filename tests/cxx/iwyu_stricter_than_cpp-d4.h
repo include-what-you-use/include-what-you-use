@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef IWYU_STRICTER_THAN_CPP_D4_H_
-#define IWYU_STRICTER_THAN_CPP_D4_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_D4_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_D4_H_
 
 #include "tests/cxx/iwyu_stricter_than_cpp-i5.h"
 
@@ -25,4 +25,4 @@ struct TplDirectStruct7 {
   T2* t2;
 };
 
-#endif
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_D4_H_

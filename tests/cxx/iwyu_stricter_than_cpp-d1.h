@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef IWYU_STRICTER_THAN_CPP_D1_H_
-#define IWYU_STRICTER_THAN_CPP_D1_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_D1_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_D1_H_
 
 #include "tests/cxx/iwyu_stricter_than_cpp-i1.h"
 #include "tests/cxx/iwyu_stricter_than_cpp-i2.h"
@@ -74,4 +74,4 @@ struct TplDirectStruct6 {
 template <typename T>
 struct TplIndirectStructForwardDeclaredInD1;
 
-#endif
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_D1_H_

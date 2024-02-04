@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CVR_BASE_H
-#define CVR_BASE_H
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_CVR_BASE_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_CVR_BASE_H_
 
 class Base {};
 
-#endif
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_CVR_BASE_H_

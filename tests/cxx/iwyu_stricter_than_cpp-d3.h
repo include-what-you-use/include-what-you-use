@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef IWYU_STRICTER_THAN_CPP_D3_H_
-#define IWYU_STRICTER_THAN_CPP_D3_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_D3_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_D3_H_
 
 #include "tests/cxx/iwyu_stricter_than_cpp-i3.h"
 #include "tests/cxx/iwyu_stricter_than_cpp-i4.h"
@@ -19,4 +19,4 @@ typedef IndirectStruct4 IndirectStruct4ProvidingTypedef;
 using IndirectStruct3ProvidingAl = IndirectStruct3;
 using IndirectStruct4ProvidingAl = IndirectStruct4;
 
-#endif
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_IWYU_STRICTER_THAN_CPP_D3_H_
