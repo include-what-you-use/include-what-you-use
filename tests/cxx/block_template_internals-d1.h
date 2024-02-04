@@ -11,3 +11,6 @@
 
 template <typename T1, typename T2>
 class DerivedTpl : public BaseTpl<T1> {};
+
+template <typename T1, typename T2>
+using ToIntType = typename ToInt<T1>::Type;

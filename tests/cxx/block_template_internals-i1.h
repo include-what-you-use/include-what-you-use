@@ -16,3 +16,8 @@ int TplFn(T t) {
 
 template <typename>
 class BaseTpl {};
+
+template <typename>
+struct ToInt {
+  using Type = int;
+};

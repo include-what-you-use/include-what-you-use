@@ -29,15 +29,23 @@ auto s1 = sizeof(DerivedTpl<int, BaseTpl<int>>);
 // like in this case:
 // DerivedTpl<int, BaseTpl<int>> t;
 
+// The same for ToInt here: the 2nd template parameter of ToIntType is not used.
+// IWYU: ToInt needs a declaration
+ToIntType<int, ToInt<int>> i;
+// IWYU: ToInt needs a declaration
+ToIntType<int, ToInt<int>>* pi;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/block_template_internals.cc should add these lines:
 template <typename> class BaseTpl;
+template <typename> struct ToInt;
 
 tests/cxx/block_template_internals.cc should remove these lines:
 
 The full include-list for tests/cxx/block_template_internals.cc:
-#include "tests/cxx/block_template_internals-d1.h"  // for DerivedTpl, TplFn
+#include "tests/cxx/block_template_internals-d1.h"  // for DerivedTpl, ToIntType, TplFn
 template <typename> class BaseTpl;
+template <typename> struct ToInt;
 
 ***** IWYU_SUMMARY */
