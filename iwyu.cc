@@ -1448,11 +1448,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  set<const Type*> GetProvidedTypesForAlias(const Type* underlying_type,
-                                            SourceLocation decl_loc) const {
-    return GetProvidedTypes(underlying_type, decl_loc);
-  }
-
   // ast_node is the node for the autocast CastExpr.  We use it to get
   // the parent CallExpr to figure out what function is being called.
   set<const Type*> GetProvidedTypesForAutocast(const ASTNode* ast_node) const {
@@ -2554,6 +2549,37 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return visitor_state_->preprocessor_info;
   }
 
+  set<const Type*> GetProvidedTypes(const Type* type,
+                                    SourceLocation loc) const {
+    set<const Type*> retval;
+    for (const Type* component : GetComponentsOfTypeWithoutSubstituted(type)) {
+      // TODO(csilvers): if one of the intermediate typedefs
+      // #includes the necessary definition of the 'final'
+      // underlying type, do we want to return it here?
+      if (const auto* typedef_type = dyn_cast<TypedefType>(component)) {
+        InsertAllInto(GetProvidedTypes(typedef_type->desugar().getTypePtr(),
+                                       GetLocation(typedef_type->getDecl())),
+                      &retval);
+        continue;
+      }
+      if (const auto* tpl_spec_type =
+              dyn_cast<TemplateSpecializationType>(component)) {
+        const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
+        if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
+          const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
+          InsertAllInto(GetProvidedTypes(tpl_spec_type->desugar().getTypePtr(),
+                                         GetLocation(al_decl)),
+                        &retval);
+          continue;
+        }
+      }
+      const Type* canonical = GetCanonicalType(component);
+      if (!CodeAuthorWantsJustAForwardDeclare(canonical, loc))
+        retval.insert(canonical);
+    }
+    return retval;
+  }
+
   set<const Type*> blocked_types_;
 
  private:
@@ -2590,39 +2616,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // be reported.
   bool SourceOrTargetTypeIsProvided(const ASTNode* construct_expr_node) const =
       delete;
-
-  set<const Type*> GetProvidedTypes(const Type* type,
-                                    SourceLocation loc) const {
-    set<const Type*> retval;
-    for (const Type* component : GetComponentsOfTypeWithoutSubstituted(type)) {
-      // TODO(csilvers): if one of the intermediate typedefs
-      // #includes the necessary definition of the 'final'
-      // underlying type, do we want to return it here?
-      if (const auto* typedef_type = dyn_cast<TypedefType>(component)) {
-        InsertAllInto(
-            GetProvidedTypesForAlias(typedef_type->desugar().getTypePtr(),
-                                     GetLocation(typedef_type->getDecl())),
-            &retval);
-        continue;
-      }
-      if (const auto* tpl_spec_type =
-              dyn_cast<TemplateSpecializationType>(component)) {
-        const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
-        if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
-          const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
-          InsertAllInto(
-              GetProvidedTypesForAlias(tpl_spec_type->desugar().getTypePtr(),
-                                       GetLocation(al_decl)),
-              &retval);
-          continue;
-        }
-      }
-      const Type* canonical = GetCanonicalType(component);
-      if (!CodeAuthorWantsJustAForwardDeclare(canonical, loc))
-        retval.insert(canonical);
-    }
-    return retval;
-  }
 
   void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
                              set<const Type*> blocked_types,
@@ -2684,7 +2677,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
         const Type* type = typedef_decl->getUnderlyingType().getTypePtr();
         const set<const Type*>& provided_with_typedef =
-            GetProvidedTypesForAlias(type, GetLocation(typedef_decl));
+            GetProvidedTypes(type, GetLocation(typedef_decl));
         InsertAllInto(provided_with_typedef, &blocked_types);
         VERRS(6) << "User, not author, of typedef "
                  << typedef_decl->getQualifiedNameAsString()
@@ -2702,7 +2695,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
           const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
           const Type* type = template_spec_type->getAliasedType().getTypePtr();
-          InsertAllInto(GetProvidedTypesForAlias(type, GetLocation(al_decl)),
+          InsertAllInto(GetProvidedTypes(type, GetLocation(al_decl)),
                         &blocked_types);
           ReportTypeUseInternal(used_loc, type, blocked_types, deref_kind);
         }
@@ -4393,8 +4386,8 @@ class IwyuAstConsumer
     if (const auto* typedef_type =
             dyn_cast_or_null<TypedefType>(desugared_until_typedef)) {
       const TypedefNameDecl* decl = typedef_type->getDecl();
-      return GetProvidedTypesForAlias(decl->getUnderlyingType().getTypePtr(),
-                                      GetLocation(decl));
+      return GetProvidedTypes(decl->getUnderlyingType().getTypePtr(),
+                              GetLocation(decl));
     }
     // TODO(bolshakov): handle alias templates.
     return set<const Type*>();
