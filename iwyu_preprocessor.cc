@@ -756,11 +756,17 @@ void IwyuPreprocessorInfo::Defined(const Token& id,
   ReportMacroUse(GetName(id), id.getLocation(), GetMacroDefLoc(definition));
 }
 
-void IwyuPreprocessorInfo::InclusionDirective(
-    SourceLocation hash_loc, const Token& include_token, StringRef filename,
-    bool is_angled, CharSourceRange filename_range, OptionalFileEntryRef file,
-    StringRef search_path, StringRef relative_path, const Module* imported,
-    CharacteristicKind file_type) {
+void IwyuPreprocessorInfo::InclusionDirective(SourceLocation hash_loc,
+                                              const Token& include_token,
+                                              StringRef filename,
+                                              bool is_angled,
+                                              CharSourceRange filename_range,
+                                              OptionalFileEntryRef file,
+                                              StringRef search_path,
+                                              StringRef relative_path,
+                                              const Module* suggested_module,
+                                              bool module_imported,
+                                              CharacteristicKind file_type) {
   include_filename_loc_ = filename_range.getBegin();
 }
 
