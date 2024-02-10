@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
 
     env:
-      LLVM_TAG:
+      LLVM_TAG: -18
 
     steps:
       - name: Install prerequisites
@@ -37,10 +37,6 @@ jobs:
                llvm$LLVM_TAG-dev \
                libclang$LLVM_TAG-dev \
                clang$LLVM_TAG
-
-      - name: Work around broken packaging
-        run: |
-          sudo touch /usr/lib/llvm-19/lib/libclang-19.so.1
 
       - name: Select checkout ref (PR)
         if: github.event_name == 'pull_request'
