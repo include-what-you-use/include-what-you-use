@@ -1699,6 +1699,23 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  bool VisitVarDecl(VarDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    if (decl->isThisDeclarationADefinition()) {
+      // For variable definitions, report use of all previously seen decls with
+      // external storage.
+      const VarDecl* redecl = decl;
+      while ((redecl = redecl->getPreviousDecl())) {
+        if (!redecl->hasExternalStorage())
+          continue;
+        ReportDeclUse(CurrentLoc(), redecl, nullptr, UF_DefinitionUse);
+      }
+    }
+    return true;
+  }
+
   // Special handling for C++ methods to detect covariant return types.
   // These are defined as a derived class overriding a method with a different
   // return type from the base.
