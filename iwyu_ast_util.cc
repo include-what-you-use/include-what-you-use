@@ -336,7 +336,7 @@ UseFlags ComputeUseFlags(const ASTNode* ast_node) {
   // isn't necessary/valid for this case, so mark it up for later.
   if (const auto* fd = ast_node->GetAs<FunctionDecl>()) {
     if (fd->getKind() == Decl::Function && fd->isThisDeclarationADefinition())
-      flags |= UF_FunctionDfn;
+      flags |= UF_DefinitionUse;
   }
 
   return flags;
