@@ -30,6 +30,7 @@ jobs:
           sudo apt remove -y \
                "libclang*" \
                "clang*" \
+               "libllvm*" \
                "llvm*"
           # Reinstall tagged versions
           sudo apt install -y \
@@ -38,9 +39,13 @@ jobs:
                libclang$LLVM_TAG-dev \
                clang$LLVM_TAG
 
-      - name: Work around broken packaging
+      - name: Install broken dependencies
+        # The dylib packages only appear to be available version-tagged
         run: |
-          sudo touch /usr/lib/llvm-19/lib/libclang-19.so.1
+          LLVM_LATEST_VER=$(ls -d1 /usr/lib/llvm-* | sort -n | tail -1 | sed 's#.*/llvm-##')
+          sudo apt install -y \
+               libllvm$LLVM_LATEST_VER \
+               libclang-cpp$LLVM_LATEST_VER
 
       - name: Select checkout ref (PR)
         if: github.event_name == 'pull_request'
