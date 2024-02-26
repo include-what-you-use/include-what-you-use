@@ -134,8 +134,9 @@ class I2_Subclass : public I2_ThisClassIsOnlySubclassedWithVirtualMethod {
 class I2_InlFileClass;   // defined in badinc-i2-inl.h
 template<typename T> class I2_InlFileTemplateClass;  // ditto
 
-inline int InlFileFreeFn();   // defined in badinc-d1-inl.h
-template<typename T> int InlFileFreeTemplateFn();   // ditto
+inline int InlFileNonMemberFn();  // defined in badinc-d1-inl.h
+template <typename T>
+int InlFileNonMemberTemplateFn();  // ditto
 
 extern int inlfile_var;   // defined in badinc-d1-inl.h
 

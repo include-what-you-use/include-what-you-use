@@ -1374,12 +1374,12 @@ int main() {
   // IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
   // IWYU: I2_TemplateClass is...*badinc-i2.h
   local_i2_template_class.CcFileFn();
-  // IWYU: InlFileFreeFn is...*badinc-i2-inl.h
-  InlFileFreeFn();
-  // IWYU: InlFileFreeTemplateFn is...*badinc-i2-inl.h
-  InlFileFreeTemplateFn<float>();
-  // IWYU: InlFileFreeTemplateFn is...*badinc-i2-inl.h
-  InlFileFreeTemplateFn<int>();     // a specialization
+  // IWYU: InlFileNonMemberFn is...*badinc-i2-inl.h
+  InlFileNonMemberFn();
+  // IWYU: InlFileNonMemberTemplateFn is...*badinc-i2-inl.h
+  InlFileNonMemberTemplateFn<float>();
+  // IWYU: InlFileNonMemberTemplateFn is...*badinc-i2-inl.h
+  InlFileNonMemberTemplateFn<int>();  // a specialization
   // IWYU: inlfile_var is...*badinc-i2-inl.h
   (void)(inlfile_var);
   // TODO(csilvers): IWYU: I1_FunctionPtr is...*badinc-i1.h
@@ -1438,7 +1438,7 @@ int main() {
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
   local_i1_const_ptr.indirect_del();
-  // This calls *ptr_, but in a free function.
+  // This calls *ptr_, but in a non-member function.
   // IWYU: operator== is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
   (void)(local_i1_const_ptr == i1_class);
