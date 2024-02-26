@@ -1691,11 +1691,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         while ((redecl = redecl->getPreviousDecl()))
           ReportDeclUse(CurrentLoc(), redecl);
       }
-      if (!IsInHeader(decl)) {
-        // No point in author-intent analysis of function definitions
-        // in source files or for builtins.
-        return true;
-      }
     } else {
       // Make all our types forward-declarable.
       current_ast_node()->set_in_forward_declare_context(true);
