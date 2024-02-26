@@ -66,6 +66,7 @@ jobs:
                 -DCMAKE_C_COMPILER=clang$LLVM_TAG \
                 -DCMAKE_CXX_COMPILER=clang++$LLVM_TAG \
                 -DCMAKE_INSTALL_PREFIX=./ \
+                -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=on \
                 ../
           ninja
 
