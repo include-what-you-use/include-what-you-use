@@ -868,7 +868,7 @@ const clang::Type* TypeOfParentIfMethod(const clang::CallExpr* expr);
 
 // Given a function call, return the first argument that's a class
 // (possibly a template specialization).  Note we ignore pointers to a
-// class.  This is used with 'free' overloaded operators ('ostream&
+// class.  This is used with non-member overloaded operators ('ostream&
 // operator<<(ostream& a, int x)' to figure out what class the
 // operator 'logically' belongs to.  This is a heuristic (the operator
 // may "belong" to more than one argument, for instance), but covers

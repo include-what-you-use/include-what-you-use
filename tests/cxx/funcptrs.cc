@@ -16,7 +16,7 @@
 // 2) Calls: FunctionThatTakesFptr(function);
 // 3) Naked expressions: &function;
 //
-// A 'function' can be a free function, a static member function, a member
+// A 'function' can be a non-member function, a static member function, a member
 // function, or any template instantiation of the above.
 
 #include "tests/cxx/direct.h"
@@ -50,7 +50,7 @@ void FunctionThatTakesMptr(int (ClassTemplate<Class>::*mptr)() const);
 // Each test creates function pointers to a plain function and a template
 // instantiation, and for classes similarly for instance member functions.
 
-void FreeFunctions() {
+void NonMemberFunctions() {
   // Assignment of function pointer to function and template instantiation.
   // IWYU: Class needs a declaration
   // IWYU: Enum is...*funcptrs-i1.h

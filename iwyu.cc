@@ -720,8 +720,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
 
     const Type* parent_type = TypeOfParentIfMethod(expr);
-    // If we're a free function -- bool operator==(MyClass a, MyClass b) --
-    // we still want to have a parent_type, as if we were defined as
+    // If we're a non-member function -- bool operator==(MyClass a, MyClass b)
+    // -- we still want to have a parent_type, as if we were defined as
     // MyClass::operator==.  So we go through the arguments and take the
     // first one that's a class, and associate the function with that.
     if (!parent_type) {
@@ -1204,7 +1204,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // myvec.end(), foo)), so we need to manually map back.  We map
   // __normal_iterator<foo, vector> to vector<> and __wrap_iter<foo> to foo,
   // assuming that the vector<> class includes the typedef.  Likewise, we map
-  // any free function taking a private iterator (such as operator==) the
+  // any non-member function taking a private iterator (such as operator==) the
   // same way, assuming that that (templatized) function is instantiated
   // as part of the vector class.
   //    We do something similar for _List_iterator and _List_const_iterator
@@ -1218,7 +1218,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   const Type* MapPrivateDeclToPublicType(const NamedDecl* decl) const {
     const NamedDecl* class_decl = decl;
     // If we're a member method, then the __normal_iterator or __wrap_iter will
-    // be the parent: __normal_iterator::operator=.  If we're a free
+    // be the parent: __normal_iterator::operator=.  If we're a non-member
     // overloaded operator, then the __normal_iterator will be the
     // first argument: operator==(__normal_iterator<...>& lhs, ...);
     if (const CXXMethodDecl* method_decl = DynCastFrom(class_decl)) {
@@ -1685,7 +1685,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     if (decl->isThisDeclarationADefinition()) {
-      // For free functions, report use of all previously seen decls.
+      // For non-member functions, report use of all previously seen decls.
       if (decl->getKind() == Decl::Function) {
         FunctionDecl* redecl = decl;
         while ((redecl = redecl->getPreviousDecl()))
@@ -2058,7 +2058,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  // We want to mark use of the base type For 'free function' operator
+  // We want to mark use of the base type For non-member operator
   // overloads ('ostream& operator<<(ostream& o, int x)') just like we
   // do for member functions ('ostream& ostream::operator<<(int x)')
   // -- for iwyu purposes, 'x << 4' is just semantic sugar around
