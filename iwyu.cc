@@ -1685,11 +1685,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     if (decl->isThisDeclarationADefinition()) {
-      // For non-member functions, report use of all previously seen decls.
+      // For non-member function definitions, report use of all previously seen
+      // decls.
       if (decl->getKind() == Decl::Function) {
-        FunctionDecl* redecl = decl;
+        const FunctionDecl* redecl = decl;
         while ((redecl = redecl->getPreviousDecl()))
-          ReportDeclUse(CurrentLoc(), redecl);
+          ReportDeclUse(CurrentLoc(), redecl, nullptr, UF_DefinitionUse);
       }
     } else {
       // Make all our types forward-declarable.
