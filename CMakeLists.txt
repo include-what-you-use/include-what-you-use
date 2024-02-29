@@ -126,8 +126,10 @@ set_target_properties(include-what-you-use PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+
 target_compile_definitions(include-what-you-use PRIVATE
-  ${LLVM_DEFINITIONS}
+  ${LLVM_DEFINITIONS_LIST}
   IWYU_GIT_REV="${iwyu_git_rev}"
 )
 target_include_directories(include-what-you-use PRIVATE
