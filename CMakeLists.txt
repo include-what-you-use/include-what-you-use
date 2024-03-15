@@ -110,6 +110,7 @@ add_llvm_executable(include-what-you-use
   iwyu_location_util.cc
   iwyu_output.cc
   iwyu_path_util.cc
+  iwyu_port.cc
   iwyu_preprocessor.cc
   iwyu_regex.cc
   iwyu_verrs.cc
