@@ -64,28 +64,6 @@ class OstreamVoidifier {
   ::include_what_you_use::FatalMessageEmitter( \
       __FILE__, __LINE__, message).stream()
 
-#if defined(_WIN32)
-
-#define NOMINMAX 1 // Prevent Windows headers from redefining min/max.
-#include "Shlwapi.h"  // for PathMatchSpecA
-
-// This undef is necessary to prevent conflicts between llvm
-// and Windows headers.
-// objbase.h has #define interface struct.
-#undef interface
-
-inline bool GlobMatchesPath(const char *glob, const char *path) {
-  return PathMatchSpecA(path, glob);
-}
-
-#else  // #if defined(_WIN32)
-
-#include <fnmatch.h>
-
-inline bool GlobMatchesPath(const char *glob, const char *path) {
-  return fnmatch(glob, path, 0) == 0;
-}
-
-#endif  // #if defined(_WIN32)
+bool GlobMatchesPath(const char *glob, const char *path);
 
 #endif  // INCLUDE_WHAT_YOU_USE_PORT_H_
