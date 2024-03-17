@@ -2867,7 +2867,7 @@ class InstantiatedTemplateVisitor
   // value, it's a default template parameter, that the
   // template-caller may or may not be responsible for.
   void ScanInstantiatedFunction(
-      const FunctionDecl* fn_decl, const Type* parent_type,
+      const FunctionDecl* fn_decl,
       const ASTNode* caller_ast_node,
       const map<const Type*, const Type*>& resugar_map,
       const set<const Type*>& blocked_types) {
@@ -2883,7 +2883,7 @@ class InstantiatedTemplateVisitor
     // node (instead, we immediately push a new node on top of it).
     set_current_ast_node(const_cast<ASTNode*>(caller_ast_node));
 
-    TraverseExpandedTemplateFunctionHelper(fn_decl, parent_type);
+    TraverseExpandedTemplateFunctionHelper(fn_decl);
   }
 
   // This isn't a Stmt, but sometimes we need to fully instantiate
@@ -3078,7 +3078,7 @@ class InstantiatedTemplateVisitor
       return false;
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
-    return TraverseExpandedTemplateFunctionHelper(callee, parent_type);
+    return TraverseExpandedTemplateFunctionHelper(callee);
   }
 
   bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr* expr) {
@@ -3417,8 +3417,7 @@ class InstantiatedTemplateVisitor
     return GetOrDefault(resugar_map_, type, type);
   }
 
-  bool TraverseExpandedTemplateFunctionHelper(const FunctionDecl* fn_decl,
-                                              const Type* parent_type) {
+  bool TraverseExpandedTemplateFunctionHelper(const FunctionDecl* fn_decl) {
     if (!fn_decl || ContainsKey(traversed_decls_, fn_decl))
       return true;   // avoid recursion and repetition
     traversed_decls_.insert(fn_decl);
@@ -3553,7 +3552,7 @@ class InstantiatedTemplateVisitor
          it != class_decl->decls_end(); ++it) {
       if (const CXXMethodDecl* method_decl = DynCastFrom(*it)) {
         if (method_decl->isVirtual()) {
-          if (!TraverseExpandedTemplateFunctionHelper(method_decl, type))
+          if (!TraverseExpandedTemplateFunctionHelper(method_decl))
             return false;
         }
       }
@@ -4043,8 +4042,7 @@ class IwyuAstConsumer
       // (which may correspond to instantiation declaration, not to definition).
       for (const CXXMethodDecl* member : decl->getCanonicalDecl()->methods()) {
         instantiated_template_visitor_.ScanInstantiatedFunction(
-            member, type_loc.getTypePtr(), &type_loc_node, data.resugar_map,
-            data.provided_types);
+            member, &type_loc_node, data.resugar_map, data.provided_types);
       }
     }
 
@@ -4327,8 +4325,7 @@ class IwyuAstConsumer
                                  provided_for_autocast.end());
     }
     instantiated_template_visitor_.ScanInstantiatedFunction(
-        callee, parent_type, current_ast_node(), data.resugar_map,
-        data.provided_types);
+        callee, current_ast_node(), data.resugar_map, data.provided_types);
     return true;
   }
 
