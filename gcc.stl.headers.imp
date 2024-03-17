@@ -56,6 +56,7 @@
   { include: ["<bits/locale_facets.tcc>", private, "<locale>", public ] },
   { include: ["<bits/localefwd.h>", private, "<locale>", public ] },
   { include: ["<bits/mask_array.h>", private, "<valarray>", public ] },
+  { include: ["<bits/memory_resource.h>", private, "<memory_resource>", public ] },
   { include: ["<bits/memoryfwd.h>", private, "<memory>", public ] },
   { include: ["<bits/move.h>", private, "<utility>", public ] },
   { include: ["<bits/nested_exception.h>", private, "<exception>", public ] },
