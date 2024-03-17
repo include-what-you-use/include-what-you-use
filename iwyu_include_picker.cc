@@ -699,6 +699,7 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<bits/locale_facets.tcc>", kPrivate, "<locale>", kPublic },
   { "<bits/localefwd.h>", kPrivate, "<locale>", kPublic },
   { "<bits/mask_array.h>", kPrivate, "<valarray>", kPublic },
+  { "<bits/memory_resource.h>", kPrivate, "<memory_resource>", kPublic },
   { "<bits/memoryfwd.h>", kPrivate, "<memory>", kPublic },
   { "<bits/move.h>", kPrivate, "<utility>", kPublic },
   { "<bits/nested_exception.h>", kPrivate, "<exception>", kPublic },
