@@ -310,7 +310,6 @@
   # ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && grep -R '^ *# *include.*tcc' * | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ && print qq@    { include: ["<$2>", private, "<$1>", public ] },@' | sort )
   # I had to manually edit some of the entries to say the map-to is private.
   { include: ["<bits/cmath.tcc>", private, "<cmath>", public ] },
-  { include: ["<debug/safe_iterator.tcc>", private, "<debug/safe_iterator.h>", public ] },
   { include: ["<tr1_impl/random.tcc>", private, "<tr1_impl/random>", private ] },
   # Some bits->bits //includes: A few files in bits re-export
   # symbols from other files in bits.
