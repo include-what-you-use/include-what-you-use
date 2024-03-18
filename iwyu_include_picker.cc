@@ -772,6 +772,7 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<bits/unique_ptr.h>", kPrivate, "<memory>", kPublic },
   { "<bits/unordered_map.h>", kPrivate, "<unordered_map>", kPublic },
   { "<bits/unordered_set.h>", kPrivate, "<unordered_set>", kPublic },
+  { "<bits/uses_allocator.h>", kPrivate, "<memory>", kPublic },
   { "<bits/utility.h>", kPrivate, "<utility>", kPublic },
   { "<bits/valarray_after.h>", kPrivate, "<valarray>", kPublic },
   { "<bits/valarray_array.h>", kPrivate, "<valarray>", kPublic },
