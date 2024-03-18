@@ -779,52 +779,6 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<bits/valarray_array.tcc>", kPrivate, "<valarray>", kPublic },
   { "<bits/valarray_before.h>", kPrivate, "<valarray>", kPublic },
   { "<bits/vector.tcc>", kPrivate, "<vector>", kPublic },
-  // I don't have a reusable pipeline for the debug headers, but they're pretty
-  // straightforward (<debug/xx> maps to <xx>, and then private-to-private for
-  // the rest).
-  { "<debug/bitset>", kPrivate, "<bitset>", kPublic },
-  { "<debug/deque>", kPrivate, "<deque>", kPublic },
-  { "<debug/forward_list>", kPrivate, "<forward_list>", kPublic },
-  { "<debug/list>", kPrivate, "<list>", kPublic },
-  { "<debug/map.h>", kPrivate, "<debug/map>", kPrivate },
-  { "<debug/map>", kPrivate, "<map>", kPublic },
-  { "<debug/multimap.h>", kPrivate, "<debug/map>", kPrivate },
-  { "<debug/multiset.h>", kPrivate, "<debug/set>", kPrivate },
-  { "<debug/safe_container.h>", kPrivate, "<debug/deque>", kPrivate },
-  { "<debug/safe_container.h>", kPrivate, "<debug/forward_list>", kPrivate },
-  { "<debug/safe_container.h>", kPrivate, "<debug/list>", kPrivate },
-  { "<debug/safe_container.h>", kPrivate, "<debug/string>", kPrivate },
-  { "<debug/safe_container.h>", kPrivate, "<debug/unordered_map>", kPrivate },
-  { "<debug/safe_container.h>", kPrivate, "<debug/unordered_set>", kPrivate },
-  { "<debug/safe_container.h>", kPrivate, "<debug/vector>", kPrivate },
-  { "<debug/safe_iterator.h>", kPrivate, "<debug/bitset>", kPrivate },
-  { "<debug/safe_iterator.h>", kPrivate, "<debug/deque>", kPrivate },
-  { "<debug/safe_iterator.h>", kPrivate, "<debug/forward_list>", kPrivate },
-  { "<debug/safe_iterator.h>", kPrivate, "<debug/list>", kPrivate },
-  { "<debug/safe_iterator.h>", kPrivate, "<debug/string>", kPrivate },
-  { "<debug/safe_iterator.h>", kPrivate, "<debug/unordered_map>", kPrivate },
-  { "<debug/safe_iterator.h>", kPrivate, "<debug/unordered_set>", kPrivate },
-  { "<debug/safe_iterator.h>", kPrivate, "<debug/vector>", kPrivate },
-  { "<debug/safe_iterator.tcc>", kPrivate, "<debug/safe_iterator.h>", kPrivate },
-  { "<debug/safe_local_iterator.h>", kPrivate, "<debug/unordered_map>", kPrivate },
-  { "<debug/safe_local_iterator.h>", kPrivate, "<debug/unordered_set>", kPrivate },
-  { "<debug/safe_local_iterator.tcc>", kPrivate, "<debug/safe_local_iterator.h>", kPrivate },
-  { "<debug/safe_sequence.h>", kPrivate, "<debug/bitset>", kPrivate },
-  { "<debug/safe_sequence.h>", kPrivate, "<debug/deque>", kPrivate },
-  { "<debug/safe_sequence.h>", kPrivate, "<debug/forward_list>", kPrivate },
-  { "<debug/safe_sequence.h>", kPrivate, "<debug/list>", kPrivate },
-  { "<debug/safe_sequence.h>", kPrivate, "<debug/string>", kPrivate },
-  { "<debug/safe_sequence.h>", kPrivate, "<debug/vector>", kPrivate },
-  { "<debug/safe_sequence.tcc>", kPrivate, "<debug/safe_sequence.h>", kPrivate },
-  { "<debug/safe_unordered_container.h>", kPrivate, "<debug/unordered_map>", kPrivate },
-  { "<debug/safe_unordered_container.h>", kPrivate, "<debug/unordered_set>", kPrivate },
-  { "<debug/safe_unordered_container.tcc>", kPrivate, "<debug/safe_unordered_container.h>", kPrivate },
-  { "<debug/set.h>", kPrivate, "<debug/set>", kPrivate },
-  { "<debug/set>", kPrivate, "<set>", kPublic },
-  { "<debug/string>", kPrivate, "<string>", kPublic },
-  { "<debug/unordered_map>", kPrivate, "<unordered_map>", kPublic },
-  { "<debug/unordered_set>", kPrivate, "<unordered_set>", kPublic },
-  { "<debug/vector>", kPrivate, "<vector>", kPublic },
   { "<decimal/decimal.h>", kPrivate, "<decimal>", kPublic },
   { "<experimental/bits/fs_dir.h>", kPrivate, "<experimental/filesystem>", kPublic },
   { "<experimental/bits/fs_fwd.h>", kPrivate, "<experimental/filesystem>", kPublic },
@@ -994,6 +948,59 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<pstl/glue_execution_defs.h>", kPrivate, "<execution>", kPublic },
   { "<pstl/parallel_backend_tbb.h>", kPrivate, "<execution>", kPublic },
   { "<tbb/tbb_stddef.h>", kPrivate, "<execution>", kPublic },
+};
+
+// Debug header include mappings for GNU libstdc++
+//
+// Note: make sure to sync this setting with gcc.stl.debug.imp
+//
+const IncludeMapEntry libstdcpp_debug_map[] = {
+  // I don't have a reusable pipeline for the debug headers, but they're pretty
+  // straightforward (<debug/xx> maps to <xx>, and then private-to-private for
+  // the rest).
+  { "<debug/bitset>", kPrivate, "<bitset>", kPublic },
+  { "<debug/deque>", kPrivate, "<deque>", kPublic },
+  { "<debug/forward_list>", kPrivate, "<forward_list>", kPublic },
+  { "<debug/list>", kPrivate, "<list>", kPublic },
+  { "<debug/map.h>", kPrivate, "<debug/map>", kPrivate },
+  { "<debug/map>", kPrivate, "<map>", kPublic },
+  { "<debug/multimap.h>", kPrivate, "<debug/map>", kPrivate },
+  { "<debug/multiset.h>", kPrivate, "<debug/set>", kPrivate },
+  { "<debug/safe_container.h>", kPrivate, "<debug/deque>", kPrivate },
+  { "<debug/safe_container.h>", kPrivate, "<debug/forward_list>", kPrivate },
+  { "<debug/safe_container.h>", kPrivate, "<debug/list>", kPrivate },
+  { "<debug/safe_container.h>", kPrivate, "<debug/string>", kPrivate },
+  { "<debug/safe_container.h>", kPrivate, "<debug/unordered_map>", kPrivate },
+  { "<debug/safe_container.h>", kPrivate, "<debug/unordered_set>", kPrivate },
+  { "<debug/safe_container.h>", kPrivate, "<debug/vector>", kPrivate },
+  { "<debug/safe_iterator.h>", kPrivate, "<debug/bitset>", kPrivate },
+  { "<debug/safe_iterator.h>", kPrivate, "<debug/deque>", kPrivate },
+  { "<debug/safe_iterator.h>", kPrivate, "<debug/forward_list>", kPrivate },
+  { "<debug/safe_iterator.h>", kPrivate, "<debug/list>", kPrivate },
+  { "<debug/safe_iterator.h>", kPrivate, "<debug/string>", kPrivate },
+  { "<debug/safe_iterator.h>", kPrivate, "<debug/unordered_map>", kPrivate },
+  { "<debug/safe_iterator.h>", kPrivate, "<debug/unordered_set>", kPrivate },
+  { "<debug/safe_iterator.h>", kPrivate, "<debug/vector>", kPrivate },
+  { "<debug/safe_iterator.tcc>", kPrivate, "<debug/safe_iterator.h>", kPrivate },
+  { "<debug/safe_local_iterator.h>", kPrivate, "<debug/unordered_map>", kPrivate },
+  { "<debug/safe_local_iterator.h>", kPrivate, "<debug/unordered_set>", kPrivate },
+  { "<debug/safe_local_iterator.tcc>", kPrivate, "<debug/safe_local_iterator.h>", kPrivate },
+  { "<debug/safe_sequence.h>", kPrivate, "<debug/bitset>", kPrivate },
+  { "<debug/safe_sequence.h>", kPrivate, "<debug/deque>", kPrivate },
+  { "<debug/safe_sequence.h>", kPrivate, "<debug/forward_list>", kPrivate },
+  { "<debug/safe_sequence.h>", kPrivate, "<debug/list>", kPrivate },
+  { "<debug/safe_sequence.h>", kPrivate, "<debug/string>", kPrivate },
+  { "<debug/safe_sequence.h>", kPrivate, "<debug/vector>", kPrivate },
+  { "<debug/safe_sequence.tcc>", kPrivate, "<debug/safe_sequence.h>", kPrivate },
+  { "<debug/safe_unordered_container.h>", kPrivate, "<debug/unordered_map>", kPrivate },
+  { "<debug/safe_unordered_container.h>", kPrivate, "<debug/unordered_set>", kPrivate },
+  { "<debug/safe_unordered_container.tcc>", kPrivate, "<debug/safe_unordered_container.h>", kPrivate },
+  { "<debug/set.h>", kPrivate, "<debug/set>", kPrivate },
+  { "<debug/set>", kPrivate, "<set>", kPublic },
+  { "<debug/string>", kPrivate, "<string>", kPublic },
+  { "<debug/unordered_map>", kPrivate, "<unordered_map>", kPublic },
+  { "<debug/unordered_set>", kPrivate, "<unordered_set>", kPublic },
+  { "<debug/vector>", kPrivate, "<vector>", kPublic },
 };
 
 const IncludeMapEntry libcxx_symbol_map[] = {
@@ -1315,6 +1322,8 @@ void IncludePicker::AddDefaultMappings(CStdLib cstdlib,
                       IWYU_ARRAYSIZE(libstdcpp_symbol_map));
     AddIncludeMappings(libstdcpp_include_map,
                        IWYU_ARRAYSIZE(libstdcpp_include_map));
+    AddIncludeMappings(libstdcpp_debug_map,
+                       IWYU_ARRAYSIZE(libstdcpp_debug_map));
   } else if (cxxstdlib == CXXStdLib::Libcxx) {
     AddSymbolMappings(libcxx_symbol_map, IWYU_ARRAYSIZE(libcxx_symbol_map));
     AddIncludeMappings(libcxx_include_map, IWYU_ARRAYSIZE(libcxx_include_map));
