@@ -173,6 +173,10 @@
   { symbol: [ "std::char_traits", private, "<ostream>", public ] },
   { symbol: [ "std::char_traits", private, "<istream>", public ] },
 
+  # std::ptrdiff_t is often an architecture specific definition, force the
+  # canonical location.
+  { symbol: [ "std::ptrdiff_t", private, "<cstddef>", public ] },
+
   { symbol: [ "std::size_t", private, "<cstddef>", public ] },
   { symbol: [ "std::size_t", private, "<cstdio>", public ] },
   { symbol: [ "std::size_t", private, "<cstdlib>", public ] },
