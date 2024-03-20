@@ -842,7 +842,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       const Type* parent_type = nullptr;
       if (expr->getQualifier() && expr->getQualifier()->getAsType())
         parent_type = expr->getQualifier()->getAsType();
-      if (!this->getDerived().HandleFunctionCall(fn_decl, parent_type, expr))
+      if (!this->getDerived().TraverseFunctionIfInstantiatedTpl(
+              fn_decl, parent_type, expr))
         return false;
     }
     return true;
@@ -1052,6 +1053,12 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
                           const Expr* calling_expr) {
     AddAstNodeAsPointer(callee);
     return Base::HandleFunctionCall(callee, parent_type, calling_expr);
+  }
+
+  bool TraverseFunctionIfInstantiatedTpl(FunctionDecl*,
+                                         const Type*,
+                                         const Expr*) {
+    return true;
   }
 
   //------------------------------------------------------------
@@ -3076,6 +3083,12 @@ class InstantiatedTemplateVisitor
       parent_type = resugared_type;
     if (!Base::HandleFunctionCall(callee, parent_type, calling_expr))
       return false;
+    return TraverseFunctionIfInstantiatedTpl(callee, parent_type, calling_expr);
+  }
+
+  bool TraverseFunctionIfInstantiatedTpl(FunctionDecl* callee,
+                                         const Type* /*parent_type*/,
+                                         const Expr* /*calling_expr*/) {
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
     return TraverseExpandedTemplateFunctionHelper(callee);
@@ -4304,6 +4317,12 @@ class IwyuAstConsumer
                           const Expr* calling_expr) {
     if (!Base::HandleFunctionCall(callee, parent_type, calling_expr))
       return false;
+    return TraverseFunctionIfInstantiatedTpl(callee, parent_type, calling_expr);
+  }
+
+  bool TraverseFunctionIfInstantiatedTpl(FunctionDecl* callee,
+                                         const Type* parent_type,
+                                         const Expr* calling_expr) {
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
 
