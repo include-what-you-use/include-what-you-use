@@ -830,8 +830,6 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
 
     if (FunctionDecl* fn_decl = DynCastFrom(expr->getDecl())) {
-      if (!IsImplicitlyInstantiatedDfn(fn_decl))
-        return true;
       if (const auto* call_expr =  // Skip intermediate ImplicitCastExpr node.
           current_ast_node_->GetAncestorAs<CallExpr>(2)) {
         if (call_expr->getDirectCallee() == fn_decl)
@@ -3453,6 +3451,7 @@ class InstantiatedTemplateVisitor
     // the uninstantiated function, so we don't need to re-traverse
     // them here.
     AstFlattenerVisitor nodeset_getter(compiler());
+    ValueSaver<AstFlattenerVisitor::NodeSet> s(&nodes_to_ignore_);
     // This gets to the decl for the (uninstantiated) template-as-written:
     const FunctionDecl* decl_as_written =
         fn_decl->getTemplateInstantiationPattern();
