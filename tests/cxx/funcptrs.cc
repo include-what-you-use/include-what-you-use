@@ -91,6 +91,11 @@ void NonMemberFunctions() {
   // references.
   // IWYU: FunctionTemplate2 is...*funcptrs-i1.h
   &FunctionTemplate2<int>;
+
+  // IWYU: FunctionTemplateWithoutDef is...*funcptrs-i1.h
+  // IWYU: Class needs a declaration
+  // IWYU: Class is...*funcptrs-i1.h
+  &FunctionTemplateWithoutDef<Class>;
 }
 
 void ClassMembers() {
@@ -201,6 +206,11 @@ void ClassTemplateMembers() {
   // IWYU: Class needs a declaration
   &ClassTemplate<Class>::StaticMemberFunction;
 
+  // IWYU: ClassTemplate is...*funcptrs-i1.h
+  // IWYU: Class needs a declaration
+  // IWYU: Class is...*funcptrs-i1.h
+  &ClassTemplate<Class>::StaticMemberFunctionUsingTplArg;
+
   // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: ClassTemplate is...*funcptrs-i1.h
@@ -210,6 +220,11 @@ void ClassTemplateMembers() {
   // IWYU: ClassTemplate is...*funcptrs-i1.h
   // IWYU: Class needs a declaration
   &ClassTemplate<Class>::MemberFunction;
+
+  // IWYU: ClassTemplate is...*funcptrs-i1.h
+  // IWYU: Class needs a declaration
+  // IWYU: Class is...*funcptrs-i1.h
+  &ClassTemplate<Class>::MemberFunctionUsingTplArg;
 
   // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
@@ -228,6 +243,6 @@ tests/cxx/funcptrs.cc should remove these lines:
 - #include "tests/cxx/funcptrs-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/funcptrs.cc:
-#include "tests/cxx/funcptrs-i1.h"  // for Class, ClassTemplate, Enum, Function, FunctionReturningRecordType, FunctionTemplate, FunctionTemplate2, Retval
+#include "tests/cxx/funcptrs-i1.h"  // for Class, ClassTemplate, Enum, Function, FunctionReturningRecordType, FunctionTemplate, FunctionTemplate2, FunctionTemplateWithoutDef, Retval
 
 ***** IWYU_SUMMARY */

@@ -57,6 +57,9 @@ int FunctionTemplate(Class*) {
 template <typename T>
 IndirectClass FunctionTemplate2();
 
+template <typename T>
+decltype(T::StaticMemberFunction()) FunctionTemplateWithoutDef();
+
 extern template IndirectClass FunctionTemplate2<int>();
 
 template<typename T>
@@ -64,11 +67,19 @@ class ClassTemplate {
  public:
   int MemberFunction() const { return 20; }
 
+  void MemberFunctionUsingTplArg() {
+    T t;
+  }
+
   template<typename R>
   int MemberTemplate() const { return R(50).Value(); }
 
   static int StaticMemberFunction() {
     return 100;
+  }
+
+  static void StaticMemberFunctionUsingTplArg() {
+    T t;
   }
 
   template<typename R>
