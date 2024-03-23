@@ -814,11 +814,9 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<tr1/unordered_map.h>", kPrivate, "<tr1/unordered_map>", kPublic },
   { "<tr1/unordered_set.h>", kPrivate, "<tr1/unordered_set>", kPublic },
   { "<tr2/dynamic_bitset.tcc>", kPrivate, "<tr2/dynamic_bitset>", kPublic },
-  // cd /usr/include/x86_64-linux-gnu/c++/10 && grep -r headername | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { "<$1>", kPrivate, "<$2>", kPublic },@' | sort -u
+  // cd /usr/include/x86_64-linux-gnu/c++/11 && grep -r headername | grep -v "c++config.h" | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { "<$1>", kPrivate, "<$2>", kPublic },@' | sort -u
   { "<bits/basic_file.h>", kPrivate, "<ios>", kPublic },
   { "<bits/c++allocator.h>", kPrivate, "<memory>", kPublic },
-  { "<bits/c++config.h>", kPrivate, "<iosfwd>", kPublic },
-  { "<bits/c++config.h>", kPrivate, "<version>", kPublic },
   { "<bits/c++io.h>", kPrivate, "<ios>", kPublic },
   { "<bits/c++locale.h>", kPrivate, "<locale>", kPublic },
   { "<bits/cpu_defines.h>", kPrivate, "<iosfwd>", kPublic },
