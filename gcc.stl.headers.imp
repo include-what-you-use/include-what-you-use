@@ -171,11 +171,9 @@
   { include: ["<tr1/unordered_map.h>", private, "<tr1/unordered_map>", public ] },
   { include: ["<tr1/unordered_set.h>", private, "<tr1/unordered_set>", public ] },
   { include: ["<tr2/dynamic_bitset.tcc>", private, "<tr2/dynamic_bitset>", public ] },
-  # ( cd /usr/include/x86_64-linux-gnu/c++/10 && grep -r headername | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { include: ["<$1>", private, "<$2>", public ] },@' | sort -u )
+  # ( cd /usr/include/x86_64-linux-gnu/c++/11 && grep -r headername | grep -v "c++config.h" | perl -nle 'm/^([^:]+).*@headername\{([^,]*)\}/ && print qq@  { include: ["<$1>", private, "<$2>", public ] },@' | sort -u )
   { include: ["<bits/basic_file.h>", private, "<ios>", public ] },
   { include: ["<bits/c++allocator.h>", private, "<memory>", public ] },
-  { include: ["<bits/c++config.h>", private, "<iosfwd>", public ] },
-  { include: ["<bits/c++config.h>", private, "<version>", public ] },
   { include: ["<bits/c++io.h>", private, "<ios>", public ] },
   { include: ["<bits/c++locale.h>", private, "<locale>", public ] },
   { include: ["<bits/cpu_defines.h>", private, "<iosfwd>", public ] },
