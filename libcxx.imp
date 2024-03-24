@@ -5,7 +5,7 @@
   { include: ["<__tree>", private, "<map>", public ] },
 
   # For the following entries:
-  # cd llvm-project/libcxx/include ; find -type d -name "__*" | sort | sed -e "s#./__\(.*\)#  { include: [\"@<__\1/.*>\", private, \"<\1>\", public ] },#"
+  # cd llvm-project/libcxx/include ; find -type d -name "__*" | sort | sed -e 's#./__\(.*\)#  { include: ["@<__\1/.*>", private, "<\1>", public ] },#'
   #
   # tweak locale_dir entry, and comment out debug_utils, fwd, pstl, support
   { include: ["@<__algorithm/.*>", private, "<algorithm>", public ] },
