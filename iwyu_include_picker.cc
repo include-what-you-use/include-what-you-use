@@ -1018,7 +1018,7 @@ const IncludeMapEntry libcxx_include_map[] = {
     {"<__tree>", kPrivate, "<map>", kPublic},
 
     // For the following entries:
-    // cd llvm-project/libcxx/include ; find -type d -name "__*" | sort | sed -e "s#./__\(.*\)#  { \"@<__\1/.*>\", kPrivate, \"<\1>\", kPublic },#"
+    // cd llvm-project/libcxx/include ; find -type d -name "__*" | sort | sed -e 's#./__\(.*\)#  { "@<__\1/.*>", kPrivate, "<\1>", kPublic },#'
     //
     // tweak locale_dir entry, and comment out debug_utils, fwd, pstl, support
     {"@<__algorithm/.*>", kPrivate, "<algorithm>", kPublic},
