@@ -1,8 +1,8 @@
 # Default include mappings for IWYU with GCC
 [
-  { ref: gcc.libc.imp },
-  { ref: gcc.symbols.imp },
-  { ref: gcc.stl.debug.imp },
-  { ref: gcc.stl.headers.imp },
-  { ref: stl.c.headers.imp },
+  { "ref": "gcc.libc.imp" },
+  { "ref": "gcc.symbols.imp" },
+  { "ref": "gcc.stl.debug.imp" },
+  { "ref": "gcc.stl.headers.imp" },
+  { "ref": "stl.c.headers.imp" },
 ]
