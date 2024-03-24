@@ -18,7 +18,7 @@ IWYU's default mappings are hard-coded in `iwyu_include_picker.cc`, and are very
 
 ## Mapping files ##
 
-The mapping files conventionally use the `.imp` file extension, for "Iwyu MaPping" (terrible, I know). They use a [JSON](http://json.org/) meta-format with the following general form:
+The mapping files conventionally use the `.imp` file extension, for "Iwyu MaPping" (terrible, I know). They have the following general form:
 
     [
       { <directive>: <data> },
@@ -35,12 +35,7 @@ and data varies between the directives, see below.
 
 Note that you can mix directives of different kinds within the same mapping file.
 
-IWYU uses LLVM's YAML/JSON parser to interpret the mapping files, and it has some idiosyncrasies:
-
-* Comments use a Python-style `#` prefix, not Javascript's `//`
-* Single-word strings can be left un-quoted
-
-If the YAML parser is ever made more rigorous, it might be wise not to lean on non-standard behavior, so apart from comment style, try to keep mapping files in line with the JSON spec.
+The `.imp` format looks like [JSON](http://json.org/), but IWYU actually uses LLVM's [YAML](https://yaml.org/) parser to interpret the mapping files, which technically allows a richer syntax. We try to use a minimum of YAML features to get basic functionality (trailing comma syntax, `#` comments), but please be conservative to keep it easy to do machine rewrites.
 
 ### Include mappings ###
 
@@ -57,13 +52,13 @@ Data for this directive is a list of four strings containing:
 
 For example;
 
-    { include: ["<bits/unique_ptr.h>", "private", "<memory>", "public"] }
+    { "include": ["<bits/unique_ptr.h>", "private", "<memory>", "public"] }
 
 Most of the original mappings were generated with shell scripts (as evident from the embedded comments) so there are several multi-step mappings from one private header to another, to a third and finally to a public header. This reflects the `#include` chain in the actual library headers. A hand-written mapping could be reduced to one mapping per private header to its corresponding public header.
 
 Include mappings support a special wildcard syntax for the first entry:
 
-    { include: ["@<internal/.*>", "private", "<public>", "public"] }
+    { "include": ["@<internal/.*>", "private", "<public>", "public"] }
 
 The `@` prefix is a signal that the remaining content is a regex, and can be used to re-map a whole subdirectory of private headers to a public facade header.
 
@@ -87,7 +82,7 @@ Data for this directive is a list of four strings containing:
 
 For example;
 
-    { symbol: ["NULL", "private", "<cstddef>", "public"] }
+    { "symbol": ["NULL", "private", "<cstddef>", "public"] }
 
 The symbol visibility is largely redundant -- it must always be `private`. It isn't entirely clear why symbol visibility needs to be specified, and it might be removed moving forward.
 
@@ -99,12 +94,12 @@ The last kind of directive, `ref`, is used to pull in another mapping file, much
 
 For example;
 
-    { ref: "more.symbols.imp" },
-    { ref: "/usr/lib/other.includes.imp" }
+    { "ref": "more.symbols.imp" },
+    { "ref": "/usr/lib/other.includes.imp" }
 
 The rationale for the `ref` directive was to make it easier to compose project-specific mappings from a set of library-oriented mapping files. For example, IWYU might ship with mapping files for [Boost](http://www.boost.org), the SCL, various C standard libraries, the Windows API, the [Poco Library](http://pocoproject.org), etc. Depending on what your specific project uses, you could easily create an aggregate mapping file with refs to the relevant mappings.
 
-### Specifying mapping files ###
+### Command-line switches for mapping files ###
 
 Mapping files are specified on the command-line using the `--mapping_file` switch:
 
@@ -115,3 +110,7 @@ The switch can be added multiple times to add more than one mapping file.
 If the mapping filename is relative, it will be looked up relative to the current directory.
 
 `ref` directives are first looked up relative to the current directory and if not found, relative to the referring mapping file.
+
+The default mappings can be turned off (e.g. for baremetal projects like an OS kernel) using the `--no_default_mappings` switch:
+
+    $ include-what-you-use -Xiwyu --no_default_mappings --mapping_file=kernel_libc.imp kernel/main.c
