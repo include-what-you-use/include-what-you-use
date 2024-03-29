@@ -45,7 +45,7 @@
   { "include": ["@<__utility/.*>", private, "<utility>", public ] },
   { "include": ["@<__variant/.*>", private, "<variant>", public ] },
 
-  { symbol: [ "std::nullptr_t", private, "<cstddef>", public ] },
+  { "symbol": [ "std::nullptr_t", private, "<cstddef>", public ] },
 
   # For older MacOS libc++ (13.0.0), on macOS Ventura (13.2.1)
   { "include": ["<__functional_base>", private, "<functional>", public ] },
@@ -53,5 +53,5 @@
   # For older libc++ (16.x)
   { "include": ["@<__tuple_dir/.*>", private, "<tuple>", public ] },
 
-  { symbol: [ "std::string", private, "<string>", public ] },
+  { "symbol": [ "std::string", private, "<string>", public ] },
 ]

@@ -2,8 +2,8 @@
 # Note that some headers listed here don't actually exist; we just want
 # IWYU to suggest using them
 [
-  { symbol: ["__builtin_expect", "private", "\"tests/cxx/builtins_with_mapping-d2.h\"", "public"] },
-  { symbol: ["__builtin_strlen", "private", "\"tests/cxx/builtins_with_mapping-d3.h\"", "public"] },
-  { symbol: ["__builtin_strcmp", "private", "\"tests/cxx/builtins_with_mapping.h\"", "public"] },
-  { symbol: ["__builtin_invented_for_test", "private", "\"tests/cxx/builtins_with_mapping.h\"", "public"] },
+  { "symbol": ["__builtin_expect", "private", "\"tests/cxx/builtins_with_mapping-d2.h\"", "public"] },
+  { "symbol": ["__builtin_strlen", "private", "\"tests/cxx/builtins_with_mapping-d3.h\"", "public"] },
+  { "symbol": ["__builtin_strcmp", "private", "\"tests/cxx/builtins_with_mapping.h\"", "public"] },
+  { "symbol": ["__builtin_invented_for_test", "private", "\"tests/cxx/builtins_with_mapping.h\"", "public"] },
 ]
