@@ -35,6 +35,7 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 
@@ -63,6 +64,7 @@ using clang::UsingDecl;
 using llvm::cast;
 using llvm::dyn_cast;
 using llvm::errs;
+using llvm::find_if;
 using llvm::isa;
 using llvm::raw_string_ostream;
 using std::map;
@@ -335,14 +337,8 @@ void OneUse::SetPublicHeaders() {
   // We should never need to deal with public headers if we already know
   // who we map to.
   CHECK_(suggested_header_.empty() && "Should not need a public header here");
-  const IncludePicker& picker = GlobalIncludePicker();   // short alias
-  const string use_path = GetFilePath(use_loc_);
-  // If the symbol has a special mapping, use it, otherwise map its file.
-  public_headers_ = picker.GetCandidateHeadersForSymbolUsedFrom(
-      symbol_name_, use_path);
-  if (public_headers_.empty())
-    public_headers_ = picker.GetCandidateHeadersForFilepathIncludedFrom(
-        decl_filepath(), use_path);
+  public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
+      symbol_name_, GetFilePath(use_loc_), decl_filepath());
   if (public_headers_.empty())
     public_headers_.push_back(ConvertToQuotedInclude(decl_filepath()));
 }
@@ -2296,6 +2292,24 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   errs() << diff_output;
 
   return num_edits;
+}
+
+bool IsDirectlyIncluded(const NamedDecl* decl, const IwyuFileInfo& includer) {
+  // If the decl or its header is private then a user should '#include' any of
+  // the specified public headers for it, so check their presence.
+  const vector<string> mapped_headers =
+      GlobalIncludePicker().GetMappedPublicHeaders(
+          GetWrittenQualifiedNameAsString(decl),
+          GetFilePath(includer.file_entry()), GetFilePath(decl));
+  if (!mapped_headers.empty()) {
+    auto pred = [&direct_includes =
+                     includer.direct_includes()](const string& header) {
+      return direct_includes.count(header);
+    };
+    return find_if(mapped_headers, pred) != mapped_headers.end();
+  }
+  // Otherwise, check the decl header directly.
+  return includer.direct_includes_as_fileentries().count(GetFileEntry(decl));
 }
 
 }  // namespace include_what_you_use

@@ -252,6 +252,14 @@ class IwyuFileInfo {
   }
   void set_pch_in_code() { is_pch_in_code_ = true; }
 
+  clang::OptionalFileEntryRef file_entry() const {
+    return file_;
+  }
+
+  const set<string>& direct_includes() const {
+    return direct_includes_;
+  }
+
   // An 'associated' header is a header that this file #includes
   // (possibly indirectly) that we should treat as being logically
   // part of this file.  In particular, when computing the direct
@@ -340,10 +348,6 @@ class IwyuFileInfo {
   size_t CalculateAndReportIwyuViolations();
 
  private:
-  const set<string>& direct_includes() const {
-    return direct_includes_;
-  }
-
   const set<string>& desired_includes() const {
     CHECK_(desired_includes_have_been_calculated_ &&
            "Must calculate desired includes before calling desired_includes()");
@@ -425,6 +429,10 @@ class IwyuFileInfo {
   set<string> desired_includes_;
   bool desired_includes_have_been_calculated_;
 };
+
+// Returns true if a public header (i.e. with respect to mappings) for NamedDecl
+// is directly included.
+bool IsDirectlyIncluded(const clang::NamedDecl*, const IwyuFileInfo& includer);
 
 // Helpers for testing.
 

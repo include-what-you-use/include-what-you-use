@@ -187,6 +187,12 @@ class IncludePicker {
   // Parses a YAML/JSON file containing mapping directives of various types.
   void AddMappingsFromFile(const string& filename);
 
+  // Returns the headers which the symbol is mapped to. If none, returns
+  // the headers which decl_filepath is mapped to.
+  vector<string> GetMappedPublicHeaders(const string& symbol_name,
+                                        const string& use_path,
+                                        const string& decl_filepath) const;
+
  private:
   // Private implementation of mapping file parser, which takes
   // mapping file search path to allow recursion that builds up

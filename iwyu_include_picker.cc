@@ -1760,6 +1760,18 @@ void IncludePicker::AddMappingsFromFile(const string& filename) {
   return AddMappingsFromFile(filename, default_search_path);
 }
 
+vector<string> IncludePicker::GetMappedPublicHeaders(
+    const string& symbol_name,
+    const string& use_path,
+    const string& decl_filepath) const {
+  // If the symbol has a special mapping, use it, otherwise map its file.
+  vector<string> symbol_headers =
+      GetCandidateHeadersForSymbolUsedFrom(symbol_name, use_path);
+  if (!symbol_headers.empty())
+    return symbol_headers;
+  return GetCandidateHeadersForFilepathIncludedFrom(decl_filepath, use_path);
+}
+
 // Parses a YAML/JSON file containing mapping directives of various types:
 //  symbol   - symbol name -> quoted include
 //  include  - private quoted include -> public quoted include

@@ -33,6 +33,10 @@ typedef DirectStruct1 Includes;
 // Essentially the same; should require corresponding header inclusion here.
 typedef struct DirectStruct3 IncludesElaborated;
 
+// The same: the public header for MappedToD1 is directly included.
+struct MappedToD1;
+typedef MappedToD1 IncludesPublicHeader;
+
 // Requires the full type because it does not obey rules (1) *or* (2)
 typedef DirectStruct2 DoesNotForwardDeclareAndIncludes;
 
@@ -99,10 +103,11 @@ tests/cxx/iwyu_stricter_than_cpp-typedefs.h should add these lines:
 
 tests/cxx/iwyu_stricter_than_cpp-typedefs.h should remove these lines:
 - struct DirectStruct1;  // lines XX-XX
+- struct MappedToD1;  // lines XX-XX
 - template <typename T> struct TplDirectStruct1;  // lines XX-XX
 
 The full include-list for tests/cxx/iwyu_stricter_than_cpp-typedefs.h:
-#include "tests/cxx/iwyu_stricter_than_cpp-d1.h"  // for DirectStruct1, DirectStruct2, DirectStruct3, TplDirectStruct1, TplDirectStruct2
+#include "tests/cxx/iwyu_stricter_than_cpp-d1.h"  // for DirectStruct1, DirectStruct2, DirectStruct3, MappedToD1, TplDirectStruct1, TplDirectStruct2
 #include "tests/cxx/iwyu_stricter_than_cpp-d4.h"  // for TplDirectStruct7
 #include "tests/cxx/iwyu_stricter_than_cpp-i1.h"  // for IndirectStruct1, IndirectStructForwardDeclaredInD1, TplIndirectStruct1, TplIndirectStructForwardDeclaredInD1
 struct IndirectStruct2;  // lines XX-XX
