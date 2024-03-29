@@ -10,7 +10,7 @@
 
     # grep -r --exclude-dir={detail,impl} '^ *# *include' boost/ | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", public ] },@' | grep -e \/detail\/ -e \/impl\/ | grep -e '\["<boost/'|sort -u
 
-    # grep --exclude-dir={detail,impl,util} -r '^ *# *include' boost/ | grep -e "boost/geometry/[^:]*/.*hp*:" | grep -e "\:.*/geometry/util/" | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", public ] },@' | grep -e '\["<boost/' | sort -u 
+    # grep --exclude-dir={detail,impl,util} -r '^ *# *include' boost/ | grep -e "boost/geometry/[^:]*/.*hp*:" | grep -e "\:.*/geometry/util/" | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", public ] },@' | grep -e '\["<boost/' | sort -u
     #
     # For the Boost.Geometry tweaks, see the notes on private.imp
     #
@@ -11311,4 +11311,3 @@
     { include: ["<boost/yap/detail/algorithm.hpp>", private, "<boost/yap/algorithm.hpp>", public ] },
     { include: ["<boost/yap/detail/transform.hpp>", private, "<boost/yap/algorithm.hpp>", public ] },
 ]
-

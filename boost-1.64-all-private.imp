@@ -1,5 +1,5 @@
 [
-# grep -r '^ *# *include' boost/ | grep -e "boost/[^:]*/detail/.*hp*:" -e "boost/[^:]*/impl/.*hp*:" | grep -e "\:.*/detail/" -e "\:.*/impl/" | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", private ] },@' | grep -e \\[\"\<boost/ | sort -u 
+# grep -r '^ *# *include' boost/ | grep -e "boost/[^:]*/detail/.*hp*:" -e "boost/[^:]*/impl/.*hp*:" | grep -e "\:.*/detail/" -e "\:.*/impl/" | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", private ] },@' | grep -e \\[\"\<boost/ | sort -u
 # manually remove circular dependencies
 #  * boost/fusion/container/set/detail/value_of_data_impl.hpp with itself
 #  * boost/variant/detail/multivisitors_cpp14_based.hpp with itself
