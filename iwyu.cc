@@ -2201,12 +2201,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // an iwyu warning now, even without knowing the exact overload.
   // In that case, we store the fact we warned, so we won't warn again
   // when the template is instantiated.
-  // TODO(csilvers): to be really correct, we should report *every*
-  // overload that callers couldn't match via ADL.
+  // Otherwise, all directly included overloads are reported just to be kept.
   bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr* expr) {
     // No CanIgnoreCurrentASTNode() check here!  It's later in the function.
 
-    // Make sure all overloads are in the same file.
     if (expr->decls_begin() == expr->decls_end()) {
       // This can occur when there are no overloads before the template
       // definition, and a callee may be found only via ADL.
@@ -2214,11 +2212,43 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
     const NamedDecl* first_decl = *expr->decls_begin();
     OptionalFileEntryRef first_decl_file_entry = GetFileEntry(first_decl);
+    OptionalFileEntryRef current_file_entry = GetFileEntry(CurrentLoc());
+    const IwyuFileInfo* current_file_info =
+        preprocessor_info().FileInfoFor(current_file_entry);
+    if (!current_file_info)
+      return true;
+    vector<const NamedDecl*> directly_included;
+    bool same_file = true;
     for (const NamedDecl* decl : expr->decls()) {
-      if (GetFileEntry(decl) != first_decl_file_entry)
-        return true;
+      // TODO(bolshakov): filter overloads suitable by number and type
+      // of parameters. Take into account default arguments, ellipsis, explicit
+      // template arguments, and pack expansions. See
+      // clang::Sema::AddOverloadedCallCandidates for guidance.
+      if (IsDirectlyIncluded(decl, *current_file_info))
+        directly_included.push_back(decl);
+      same_file &= GetFileEntry(decl) == first_decl_file_entry;
     }
 
+    if (!same_file) {
+      if (CanIgnoreCurrentASTNode())
+        return true;
+      if (!directly_included.empty()) {
+        for (const NamedDecl* decl : directly_included)
+          ReportDeclUse(CurrentLoc(), decl);
+        // No AddProcessedOverloadLoc here: PublicHeaderIntendsToProvide should
+        // already work well at the instantiation site.
+      } else if (!expr->requiresADL()) {
+        // Report any of the decls so as to keep the code compilable. If ADL is
+        // to be applied (i.e. the function name is unqualified), it is allowed
+        // to have no declaration.
+        ReportDeclUse(CurrentLoc(), first_decl);
+        // No AddProcessedOverloadLoc here: even first_decl may be different
+        // when scanning different translation units. It's better to
+        // double-report it on template-defn and instantiation sites than not
+        // to report an actually used decl at all.
+      }
+      return true;
+    }
     // For now, we're only worried about function calls.
     // TODO(csilvers): are there other kinds of overloads we need to check?
     const FunctionDecl* arbitrary_fn_decl = nullptr;
