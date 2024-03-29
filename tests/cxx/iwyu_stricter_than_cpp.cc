@@ -13,6 +13,7 @@
 //            -Xiwyu --check_also="tests/cxx/*-type_alias.h" \
 //            -Xiwyu --check_also="tests/cxx/*-def_tpl_arg.h" \
 //            -Xiwyu --check_also="tests/cxx/*-d2.h" \
+//            -Xiwyu --mapping_file=tests/cxx/iwyu_stricter_than_cpp.imp \
 //            -I .
 
 // There are a few scenarios where iwyu requires a full type but c++
@@ -86,6 +87,7 @@ void TestTypedefs() {
   DoesNotForwardDeclareProperly dnfdp(2);
   Includes i(3);
   IncludesElaborated ie(3);
+  IncludesPublicHeader ip;
   DoesNotForwardDeclareAndIncludes dnfdai(4);
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   DoesEverythingRight dor(5);
@@ -463,10 +465,11 @@ void TestDefaultTplArgs() {
   // regardless of fwd-decl presence or absence. Hence, 'IndirectStruct3' (which
   // is neither directly included nor fwd-declared in the template defn header)
   // is required both here and at the template definition side.
-  // 'IndirectStruct2' is required here because it is fwd-declared and not
-  // included directly in the template defining header.
+  // TODO: 'IndirectStruct2' should better be required here because it is
+  // fwd-declared and not included directly in the template defining header. But
+  // it doesn't because the public header "*-d1.h" includes it transitively,
+  // which means it is considered as provided in template instantiation context.
   // IWYU: IndirectStruct3 is...*iwyu_stricter_than_cpp-i3.h
-  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   TplWithDefaultArgs<> t;
 }
 
@@ -505,7 +508,7 @@ The full include-list for tests/cxx/iwyu_stricter_than_cpp.cc:
 #include "tests/cxx/iwyu_stricter_than_cpp-i4.h"  // for IndirectStruct4
 #include "tests/cxx/iwyu_stricter_than_cpp-i5.h"  // for TplIndirectStruct3
 #include "tests/cxx/iwyu_stricter_than_cpp-type_alias.h"  // for DoesEverythingRightAl, DoesEverythingRightAlTpl, DoesNotForwardDeclareAl, DoesNotForwardDeclareAlTpl, DoesNotForwardDeclareAndIncludesAl, DoesNotForwardDeclareAndIncludesAlTpl, DoesNotForwardDeclareProperlyAl, IncludesAl, IncludesAlTpl, IncludesElaboratedAl, IndirectStruct3NonProvidingAl, IndirectStruct4NonProvidingAl, TemplateNotProvidedArgumentNotUsed, TemplateNotProvidedArgumentUsed, TemplateProvidedArgumentNotUsed, TemplateProvidedArgumentUsed, TplAllForwardDeclaredAl, TplAllNeededTypesProvidedAl, TplDoesEverythingRightAgainAl, TplDoesEverythingRightAl, TplDoesNotForwardDeclareAl, TplDoesNotForwardDeclareAndIncludesAl, TplDoesNotForwardDeclareProperlyAl, TplIncludesAl, TplOnlyArgumentTypeProvidedAl, TplOnlyTemplateProvidedAl
-#include "tests/cxx/iwyu_stricter_than_cpp-typedefs.h"  // for DoesEverythingRight, DoesNotForwardDeclare, DoesNotForwardDeclareAndIncludes, DoesNotForwardDeclareProperly, Includes, IncludesElaborated, IndirectStruct3NonProvidingTypedef, IndirectStruct4NonProvidingTypedef, TplAllForwardDeclared, TplAllNeededTypesProvided, TplDoesEverythingRight, TplDoesEverythingRightAgain, TplDoesNotForwardDeclare, TplDoesNotForwardDeclareAndIncludes, TplDoesNotForwardDeclareProperly, TplIncludes, TplOnlyArgumentTypeProvided, TplOnlyTemplateProvided
+#include "tests/cxx/iwyu_stricter_than_cpp-typedefs.h"  // for DoesEverythingRight, DoesNotForwardDeclare, DoesNotForwardDeclareAndIncludes, DoesNotForwardDeclareProperly, Includes, IncludesElaborated, IncludesPublicHeader, IndirectStruct3NonProvidingTypedef, IndirectStruct4NonProvidingTypedef, TplAllForwardDeclared, TplAllNeededTypesProvided, TplDoesEverythingRight, TplDoesEverythingRightAgain, TplDoesNotForwardDeclare, TplDoesNotForwardDeclareAndIncludes, TplDoesNotForwardDeclareProperly, TplIncludes, TplOnlyArgumentTypeProvided, TplOnlyTemplateProvided
 struct DirectStruct1;
 struct DirectStruct2;
 struct IndirectStruct1;

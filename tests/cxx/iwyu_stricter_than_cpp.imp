@@ -1,0 +1,6 @@
+# The primary reason to add this file is to mark "-d1.h" header as public.
+# Public headers have special handling in IWYU.
+[
+    { "symbol": ["DirectStruct1", "private", "\"tests/cxx/iwyu_stricter_than_cpp-d1.h\"", "public"] },
+    { "symbol": ["MappedToD1", "private", "\"tests/cxx/iwyu_stricter_than_cpp-d1.h\"", "public"] },
+]

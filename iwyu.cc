@@ -1436,17 +1436,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return false;
 
     // Check if the the author is not #including the file with the
-    // definition.  PublicHeaderIntendsToProvide has exactly the
-    // semantics we want.  Note if there's no definition anywhere, we
+    // definition. Note if there's no definition anywhere, we
     // say the author does not want the full type (which is a good
     // thing, since there isn't one!)
     if (const NamedDecl* dfn = GetTagDefinition(decl)) {
       if (IsBeforeInSameFile(dfn, use_loc))
         return false;
-      if (preprocessor_info().PublicHeaderIntendsToProvide(
-              GetFileEntry(use_loc), GetFileEntry(dfn))) {
+      const IwyuFileInfo* use_file =
+          preprocessor_info().FileInfoFor(GetFileEntry(use_loc));
+      if (!use_file)  // Not sure whether this is possible.
+        return true;
+      if (IsDirectlyIncluded(dfn, *use_file))
         return false;
-      }
     }
 
     // OK, looks like the author has stated they don't want the fulll type.
