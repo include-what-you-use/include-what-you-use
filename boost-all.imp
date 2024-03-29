@@ -1,13 +1,13 @@
 [
-#  cd /usr/include && grep -r --exclude-dir={detail,impl} '^ *# *include' boost/ | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", public ] },@' | grep -e \/detail\/ -e \/impl\/ | grep -e \\[\"\<boost/ | sort -u
-#manually include:
-{ include: ["@<boost/bind/.*>", private, "<boost/bind.hpp>", public ] },
-{ include: ["@<boost/format/.*>", private, "<boost/format.hpp>", public ] },
-{ include: ["@<boost/filesystem/.*>", private, "<boost/filesystem.hpp>", public ] },
-{ include: ["@<boost/function/.*>", private, "<boost/function.hpp>", public ] },
-#manually delete $ sed '/workarounds*\.hpp/d' -i boost-all.imp
-#also good idea to remove all lines refering to directories above (e.g., sed '/\/format\//d' -i boost-all.imp)
-#programatically include:
+# cd /usr/include && grep -r --exclude-dir={detail,impl} '^ *# *include' boost/ | perl -nle 'm/^([^:]+).*["<]([^>]+)[">]/ && print qq@    { include: ["<$2>", private, "<$1>", public ] },@' | grep -e \/detail\/ -e \/impl\/ | grep -e \\[\"\<boost/ | sort -u
+# manually include:
+    { include: ["@<boost/bind/.*>", private, "<boost/bind.hpp>", public ] },
+    { include: ["@<boost/format/.*>", private, "<boost/format.hpp>", public ] },
+    { include: ["@<boost/filesystem/.*>", private, "<boost/filesystem.hpp>", public ] },
+    { include: ["@<boost/function/.*>", private, "<boost/function.hpp>", public ] },
+# manually delete $ sed '/workarounds*\.hpp/d' -i boost-all.imp
+# also good idea to remove all lines refering to directories above (e.g., sed '/\/format\//d' -i boost-all.imp)
+# programatically include:
     { include: ["<boost/accumulators/numeric/detail/function1.hpp>", private, "<boost/accumulators/numeric/functional.hpp>", public ] },
     { include: ["<boost/accumulators/numeric/detail/function2.hpp>", private, "<boost/accumulators/numeric/functional.hpp>", public ] },
     { include: ["<boost/accumulators/numeric/detail/pod_singleton.hpp>", private, "<boost/accumulators/numeric/functional.hpp>", public ] },

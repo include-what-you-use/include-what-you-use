@@ -1,5 +1,4 @@
 [
-
 # Per le documentation, each class lives in it's own header file. These are the
 # official header files (as far as I can determine, from a scan of the QT includes
 # directory)
@@ -2457,17 +2456,16 @@
     { include: [ "@[\"<](QtCore/)?qobjectdefs\\.h[\">]", "private", "<QObject>", "public" ] },
     { include: [ "@[\"<](QtCore/)?qglobal\\.h[\">]", "private", "<QtGlobal>", "public" ] },
     { include: [ "@[\"<](QtCore/)?qnamespace\\.h[\">]", "private", "<Qt>", "public" ] },
-    { include: [ "@[\"<](QtCore/)?qlogging\\.h[\">]", "private", "<QtDebug>", "public" ] }, #qDebug, qWarning, etc
-    { include: [ "@[\"<](QtCore/)?qalgorithms\\.h[\">]", "private", "<QtAlgorithms>", "public" ] }, #qSort, etc
-    { include: [ "@[\"<](QtWinExtras/)?qwinfunctions\\.h[\">]", "private", "<QtWin>", "public" ] },  # for fromHICON
+    { include: [ "@[\"<](QtCore/)?qlogging\\.h[\">]", "private", "<QtDebug>", "public" ] },
+    { include: [ "@[\"<](QtCore/)?qalgorithms\\.h[\">]", "private", "<QtAlgorithms>", "public" ] },
+    { include: [ "@[\"<](QtWinExtras/)?qwinfunctions\\.h[\">]", "private", "<QtWin>", "public" ] },
 
 # These ones are just madness. For instance, why with the above do we get
 #    #include "QtCore/qcoreevent.h"      // for QEvent (ptr only), etc
     { include: [ "@\"(QtCore/)?qcoreevent\\.h\"", "private", "<QEvent>", "public" ] },
 
 # You'll get these and probably have to ignore them. I'm not sure how to deal with these.
-#include "QtCore/qtypetraits.h"  // for remove_reference<>::type
-#include "QtCore/qsharedpointer_impl.h"            // for swap
-#include "QtCore/qatomic_msvc.h"
-
+# #include "QtCore/qtypetraits.h"  // for remove_reference<>::type
+# #include "QtCore/qsharedpointer_impl.h"            // for swap
+# #include "QtCore/qatomic_msvc.h"
 ]
