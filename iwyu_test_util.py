@@ -73,6 +73,14 @@ _IWYU_TEST_PREREQ_RE = re.compile(r'^// IWYU_(REQUIRES|UNSUPPORTED): ' +
 _IWYU_TEST_XFAIL_RE = re.compile(r'^// IWYU_XFAIL(?:: ' +
                                  _IWYU_CONDITION + r')?$')
 
+
+def cache(fn):
+  """ functools has a cache decorator starting with Python 3.9. Support 3.2+ with
+  a local alias.
+  """
+  return functools.lru_cache(maxsize=None)(fn)
+
+
 class Features:
   """ Implements feature support functions for prerequisites and
       expected failures. """
@@ -119,12 +127,12 @@ class Features:
     return macros
 
   @staticmethod
-  @functools.cache
+  @cache
   def _GetCXXPreprocessorMacros():
     return Features._GetPreprocessorMacros('c++', '<cstdlib>')
 
   @staticmethod
-  @functools.cache
+  @cache
   def _GetCPreprocessorMacros():
     return Features._GetPreprocessorMacros('c', '<stdlib.h>')
 
