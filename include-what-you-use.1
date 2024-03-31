@@ -193,33 +193,33 @@ brackets
 .BR [] .
 A rule can be any of the following:
 .TP
-.BI "{ include: [" header ", " header "] }"
+.BI "{ \(dqinclude\(dq: [" header ", " header "] }"
 Declares that instead of the first
 .I header
 the second can be used.
 A header can appear on the left-hand side in multiple rules,
 meaning that any of the right-hand side headers can be used instead.
 .TP
-.BI "{ symbol: [" symbol ", " header "] }"
+.BI "{ \(dqsymbol\(dq: [" symbol ", " header "] }"
 Declares that to use a
 .IR symbol ,
 a certain
 .I header
 should be included.
 .TP
-.BI "{ ref: " mapping-file " }"
+.BI "{ \(dqref\(dq: " mapping-file " }"
 Includes the contents of another
 .IR mapping-file .
 .PP
 The descriptions of headers and symbols are as follows:
 .TP
-.IB "header\fR := " \(dq include-spec "\(dq, " visibility
+.IB "header\fR := " \(dq include-spec "\(dq, " \(dqvisibility\(dq
 Describes a header file. The
 .I include-spec
 specifies the header file and
 .I visibility
 specifies whether the header is
-.BR public " or " private .
+.BR \(dqpublic\(dq " or " \(dqprivate\(dq .
 Private headers are not allowed to be included directly.
 So every private header file should appear on the left-hand side of a mapping
 at least once.
@@ -232,7 +232,7 @@ How the header is
 in a source file.
 Quotation marks need to be escaped.
 .TP
-.IB "symbol\fR := " \(dq symbol-name "\(dq, " visibility
+.IB "symbol\fR := " \(dq symbol-name "\(dq, " \(dqvisibility\(dq
 Describes a symbol, for example a type, function or macro. The
 .I visibility
 is ignored, by convention
