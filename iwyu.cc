@@ -1859,6 +1859,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_AddressSpaceConversion:  // Address spaces are associated
                                               // with pointers, so no need for
                                               // the full type.
+      case clang::CK_HLSLArrayRValue:
       case clang::CK_HLSLVectorTruncation:
         break;
 
