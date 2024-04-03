@@ -38,9 +38,13 @@ jobs:
                libclang$LLVM_TAG-dev \
                clang$LLVM_TAG
 
+      - name: Capture LLVM major version
+        run: |
+          echo "LLVM_MAJOR=$(ls -1d /usr/lib/llvm-* | sort | tail -n1 | sed 's/.*llvm-//')" >> $GITHUB_ENV
+
       - name: Work around broken packaging
         run: |
-          sudo touch /usr/lib/llvm-19/lib/libclang-19.so.1
+          sudo touch /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-$LLVM_MAJOR.so.1
 
       - name: Select checkout ref (PR)
         if: github.event_name == 'pull_request'
