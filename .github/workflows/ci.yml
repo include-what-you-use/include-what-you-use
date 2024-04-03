@@ -46,20 +46,8 @@ jobs:
         run: |
           sudo touch /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-$LLVM_MAJOR.so.1
 
-      - name: Select checkout ref (PR)
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "IWYU_CHECKOUT_REF=${{github.event.pull_request.head.sha}}" >> $GITHUB_ENV
-
-      - name: Select checkout ref (push/schedule)
-        if: github.event_name == 'push' || github.event_name == 'schedule'
-        run: |
-          echo "IWYU_CHECKOUT_REF=${{github.sha}}" >> $GITHUB_ENV
-
       - name: Check out branch
         uses: actions/checkout@v4
-        with:
-          ref: ${{env.IWYU_CHECKOUT_REF}}
 
       - name: Build include-what-you-use
         run: |
