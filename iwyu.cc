@@ -2205,8 +2205,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // No CanIgnoreCurrentASTNode() check here!  It's later in the function.
 
     // Make sure all overloads are in the same file.
-    if (expr->decls_begin() == expr->decls_end())   // not sure this is possible
+    if (expr->decls_begin() == expr->decls_end()) {
+      // This can occur when there are no overloads before the template
+      // definition, and a callee may be found only via ADL.
       return true;
+    }
     const NamedDecl* first_decl = *expr->decls_begin();
     OptionalFileEntryRef first_decl_file_entry = GetFileEntry(first_decl);
     for (OverloadExpr::decls_iterator it = expr->decls_begin();
