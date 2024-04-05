@@ -223,7 +223,6 @@ using clang::NamespaceAliasDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::OptionalFileEntryRef;
-using clang::OverloadExpr;
 using clang::PPCallbacks;
 using clang::ParmVarDecl;
 using clang::PointerType;
@@ -260,6 +259,7 @@ using clang::TypedefDecl;
 using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryExprOrTypeTraitExpr;
+using clang::UnresolvedLookupExpr;
 using clang::UsingDecl;
 using clang::UsingDirectiveDecl;
 using clang::UsingShadowDecl;
@@ -2185,9 +2185,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  // An OverloadExpr is an overloaded function (or method) in an
-  // uninstantiated template, that can't be resolved until the
-  // template is instantiated.  The simplest case is something like:
+  // An UnresolvedLookupExpr is an overloaded function or variable template
+  // reference in an uninstantiated template, that can't be resolved until
+  // the template is instantiated.  The simplest case is something like:
   //    void Foo(int) { ... }
   //    void Foo(float) { ... }
   //    template<typename T> Fn(T t) { Foo(t); }
@@ -2203,7 +2203,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // when the template is instantiated.
   // TODO(csilvers): to be really correct, we should report *every*
   // overload that callers couldn't match via ADL.
-  bool VisitOverloadExpr(OverloadExpr* expr) {
+  bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr* expr) {
     // No CanIgnoreCurrentASTNode() check here!  It's later in the function.
 
     // Make sure all overloads are in the same file.
@@ -2270,7 +2270,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // like a placement-new, we handle it at template-writing time
   // anyway.
   bool VisitCXXNewExpr(CXXNewExpr* expr) {
-    // Like in VisitOverloadExpr(), we update processed_overload_locs
+    // Like in VisitUnresolvedLookupExpr(), we update processed_overload_locs
     // regardless of the value of CanIgnoreCurrentASTNode().
 
     // We say it's placement-new if it has a single placement-arg, which _might_
@@ -2290,7 +2290,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
          GetTypeOf(placement_expr)->isArrayType() ||
          IsAddressOf(placement_expr) ||
          IsDependentNameCall(placement_expr))) {
-      // Treat this like an OverloadExpr.
+      // Treat this like an UnresolvedLookupExpr.
       AddProcessedOverloadLoc(CurrentLoc());
       VERRS(7) << "Adding to processed_overload_locs (placement-new): "
                << PrintableCurrentLoc() << "\n";
@@ -2357,7 +2357,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       HandleFnReturnOnCallSite(callee);
 
     // We may have already been checked in a previous
-    // VisitOverloadExpr() call.  Don't check again in that case.
+    // VisitUnresolvedLookupExpr() call.  Don't check again in that case.
     if (IsProcessedOverloadLoc(CurrentLoc()))
       return true;
 
