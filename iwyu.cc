@@ -139,6 +139,7 @@
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
@@ -2213,18 +2214,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
     const NamedDecl* first_decl = *expr->decls_begin();
     OptionalFileEntryRef first_decl_file_entry = GetFileEntry(first_decl);
-    for (OverloadExpr::decls_iterator it = expr->decls_begin();
-         it != expr->decls_end(); ++it) {
-      if (GetFileEntry(*it) != first_decl_file_entry)
+    for (const NamedDecl* decl : expr->decls()) {
+      if (GetFileEntry(decl) != first_decl_file_entry)
         return true;
     }
 
     // For now, we're only worried about function calls.
     // TODO(csilvers): are there other kinds of overloads we need to check?
     const FunctionDecl* arbitrary_fn_decl = nullptr;
-    for (OverloadExpr::decls_iterator it = expr->decls_begin();
-         it != expr->decls_end(); ++it) {
-      const NamedDecl* decl = *it;
+    for (const NamedDecl* decl : expr->decls()) {
       // Sometimes a UsingShadowDecl comes between us and the 'real' decl.
       if (const UsingShadowDecl* using_shadow_decl = DynCastFrom(decl))
         decl = using_shadow_decl->getTargetDecl();
