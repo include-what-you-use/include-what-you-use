@@ -53,7 +53,7 @@ LINES_RE = re.compile(r'^- (.*?)  // lines ([0-9]+)-[0-9]+$')
 GENERAL, ADD, REMOVE, LIST = range(4)
 
 
-def clang_formatter(output):
+def clang_formatter(output, style):
     """ Process iwyu's output into something clang-like. """
     formatted = []
 
@@ -84,15 +84,19 @@ def clang_formatter(output):
         elif state[0] == ADD:
             match = ADD_RE.match(line)
             if match:
-                formatted.append("%s:1:1: error: add '%s' (%s)" %
-                                 (state[1], match.group(1), match.group(2)))
+                formatted.append("%s:1:1: %s: add '%s' (%s)" %
+                                 (state[1],
+                                  style,
+                                  match.group(1),
+                                  match.group(2)))
             else:
-                formatted.append("%s:1:1: error: add '%s'" % (state[1], line))
+                formatted.append("%s:1:1: %s: add '%s'" %
+                                 (state[1], style, line))
         elif state[0] == REMOVE:
             match = LINES_RE.match(line)
             line_no = match.group(2) if match else '1'
-            formatted.append("%s:%s:1: error: superfluous '%s'" %
-                             (state[1], line_no, match.group(1)))
+            formatted.append("%s:%s:1: %s: superfluous '%s'" %
+                             (state[1], line_no, style, match.group(1)))
 
     return os.linesep.join(formatted)
 
@@ -100,7 +104,8 @@ def clang_formatter(output):
 DEFAULT_FORMAT = 'iwyu'
 FORMATTERS = {
     'iwyu': lambda output: output,
-    'clang': clang_formatter
+    'clang': lambda output: clang_formatter(output, style="error"),
+    'clang-warning': lambda output: clang_formatter(output, style="warning"),
 }
 
 
