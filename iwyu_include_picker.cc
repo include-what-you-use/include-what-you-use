@@ -159,6 +159,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "regex_t", kPrivate, "<regex.h>", kPublic },
   { "regmatch_t", kPrivate, "<regex.h>", kPublic },
   { "regoff_t", kPrivate, "<regex.h>", kPublic },
+  { "sig_atomic_t", kPrivate, "<signal.h>", kPublic },
   { "sigevent", kPrivate, "<signal.h>", kPublic },
   { "siginfo_t", kPrivate, "<signal.h>", kPublic },
   { "sigset_t", kPrivate, "<signal.h>", kPublic },
