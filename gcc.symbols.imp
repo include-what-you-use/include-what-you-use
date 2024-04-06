@@ -97,6 +97,7 @@
   { "symbol": [ "useconds_t", "private", "<sys/types.h>", "public"] },
   { "symbol": [ "wchar_t", "private", "<stddef.h>", "public"] },
   { "symbol": [ "wchar_t", "private", "<stdlib.h>", "public"] },
+  { "symbol": [ "sig_atomic_t", "private", "<signal.h>", "public"] },
   { "symbol": [ "size_t", "private", "<stddef.h>", "public"] },
   { "symbol": [ "size_t", "private", "<signal.h>", "public"] },
   { "symbol": [ "size_t", "private", "<stdio.h>", "public"] },
