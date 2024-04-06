@@ -10,3 +10,6 @@ tags
 TAGS
 
 /build
+
+.vs/
+CMakeSettings.json
