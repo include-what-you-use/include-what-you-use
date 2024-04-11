@@ -86,7 +86,6 @@ using clang::EnumType;
 using clang::ExplicitCastExpr;
 using clang::Expr;
 using clang::ExprWithCleanups;
-using clang::FullSourceLoc;
 using clang::FunctionDecl;
 using clang::FunctionTemplateDecl;
 using clang::FunctionTemplateSpecializationInfo;
@@ -229,11 +228,10 @@ SourceLocation ASTNode::GetLocation() const {
   // own location.  Return an invalid location.
   if (retval.isValid()) {
     SourceManager& sm = *GlobalSourceManager();
-    FullSourceLoc full_loc(retval, sm);
     OptionalFileEntryRef spelling_file =
-        sm.getFileEntryRefForID(sm.getFileID(full_loc.getSpellingLoc()));
+        sm.getFileEntryRefForID(sm.getFileID(sm.getSpellingLoc(retval)));
     OptionalFileEntryRef instantiation_file =
-        sm.getFileEntryRefForID(sm.getFileID(full_loc.getExpansionLoc()));
+        sm.getFileEntryRefForID(sm.getFileID(sm.getExpansionLoc(retval)));
     if (spelling_file != instantiation_file)
       return SourceLocation();
   }
@@ -1245,14 +1243,16 @@ set<const NamedDecl*> GetTagRedecls(const NamedDecl* decl) {
 
 const NamedDecl* GetFirstRedecl(const NamedDecl* decl) {
   const NamedDecl* first_decl = decl;
-  FullSourceLoc first_decl_loc(GetLocation(first_decl), *GlobalSourceManager());
+  SourceLocation first_decl_loc = GetLocation(first_decl);
+
   set<const NamedDecl*> all_redecls = GetTagRedecls(decl);
   if (all_redecls.empty())  // input is not a class or class template
     return nullptr;
 
+  SourceManager& sm = *GlobalSourceManager();
   for (const NamedDecl* redecl : all_redecls) {
-    const FullSourceLoc redecl_loc(GetLocation(redecl), *GlobalSourceManager());
-    if (redecl_loc.isBeforeInTranslationUnitThan(first_decl_loc)) {
+    SourceLocation redecl_loc = GetLocation(redecl);
+    if (sm.isBeforeInTranslationUnit(redecl_loc, first_decl_loc)) {
       first_decl = redecl;
       first_decl_loc = redecl_loc;
     }

@@ -113,11 +113,11 @@ inline bool IsInMacro(clang::SourceLocation loc) {
 inline int GetLineNumber(clang::SourceLocation loc) {
   if (!loc.isValid())
     return -1;
-  const clang::FullSourceLoc fullloc(loc, *GlobalSourceManager());
+  clang::SourceManager& sm = *GlobalSourceManager();
   bool invalid = false;
-  int retval = fullloc.getSpellingLineNumber(&invalid);
+  int retval = sm.getSpellingLineNumber(loc, &invalid);
   if (invalid)
-    retval = fullloc.getExpansionLineNumber(&invalid);
+    retval = sm.getExpansionLineNumber(loc, &invalid);
   if (invalid)
     retval = -1;
   return retval;
@@ -202,8 +202,8 @@ const string GetFilePath(const T& obj) {
 // the other looking at the output of cc -E or equivalent.
 template<typename T, typename U>
 inline bool IsBeforeInTranslationUnit(const T& a, const U& b) {
-  const clang::FullSourceLoc a_loc(GetLocation(a), *GlobalSourceManager());
-  const clang::FullSourceLoc b_loc(GetLocation(b), *GlobalSourceManager());
+  clang::SourceLocation a_loc = GetLocation(a);
+  clang::SourceLocation b_loc = GetLocation(b);
   // Inside a macro, everything has the same instantiation location.
   // We'd like to use spelling-location to break that tie, but it's
   // unreliable since a or b might be spelled in "<scratch space>".
@@ -217,7 +217,7 @@ inline bool IsBeforeInTranslationUnit(const T& a, const U& b) {
   if ((IsInMacro(a_loc) || IsInMacro(b_loc)) &&
       GetInstantiationLoc(a_loc) == GetInstantiationLoc(b_loc))
     return true;
-  return a_loc.isBeforeInTranslationUnitThan(b_loc);
+  return GlobalSourceManager()->isBeforeInTranslationUnit(a_loc, b_loc);
 }
 
 // Like IsBeforeInTranslationUnit, but both a and b must be
