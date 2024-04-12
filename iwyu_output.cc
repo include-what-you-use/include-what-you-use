@@ -467,14 +467,13 @@ string MungedForwardDeclareLineForNontemplates(const TagDecl* decl) {
 // forward-declare the template, e.g.
 //     "namespace ns { template <typename T> class Foo; }".
 string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
-  // DeclPrinter prints the class name just as we like it (with
-  // default args and everything) -- with logic that doesn't exist
-  // elsewhere in clang that I can see.  Unfortunately, it also prints
-  // the full class body.  So, as a hack, we use PrintableDecl to get
-  // the full declaration, and then hack off everything after the
-  // template name.  We also have to replace the name with the fully
-  // qualified name.  TODO(csilvers): prepend namespaces instead.
-  std::string line;       // llvm wants regular string, not our versa-string
+  // DeclPrinter prints the class name just as we like it (with default args and
+  // everything) -- with logic that doesn't exist elsewhere in clang that I can
+  // see. Unfortunately, it also prints the full class body. So, as a hack, we
+  // postprocess the printed decl and then cut off everything after the template
+  // name. We also have to replace the name with the fully qualified name.
+  // TODO(csilvers): prepend namespaces instead.
+  std::string line;
   raw_string_ostream ostream(line);
 
   // Print the decl using PolishForDeclaration, which strips some semantic
@@ -484,8 +483,7 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   decl->print(ostream, policy);
   ostream.flush();
 
-  // Remove "final" specifier which isn't needed for forward
-  // declarations.
+  // Remove "final" specifier, it isn't allowed for forward declarations.
   ReplaceAll(&line, " final ", " ");
 
   // Get rid of the superclasses, if any (this will nix the body too).
@@ -493,8 +491,8 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   // Get rid of the template body, if any (true if no superclasses).
   line = Split(line, " {", 2)[0];
 
-  // The template name is now the last word on the line.  Replace it
-  // by its fully-qualified form.
+  // The template name is now the last word on the line. Replace it by its
+  // fully-qualified form.
   const string::size_type name = line.rfind(' ');
   CHECK_(name != string::npos && "Unexpected printable template-type");
 
