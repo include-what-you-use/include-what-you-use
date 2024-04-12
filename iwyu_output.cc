@@ -487,9 +487,9 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   ReplaceAll(&line, " final ", " ");
 
   // Get rid of the superclasses, if any (this will nix the body too).
-  line = Split(line, " :", 2)[0];
+  DropFrom(&line, " :");
   // Get rid of the template body, if any (true if no superclasses).
-  line = Split(line, " {", 2)[0];
+  DropFrom(&line, " {");
 
   // The template name is now the last word on the line. Replace it by its
   // fully-qualified form.
