@@ -23,6 +23,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
@@ -54,6 +55,7 @@ using clang::FunctionDecl;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
 using clang::OptionalFileEntryRef;
+using clang::PrintingPolicy;
 using clang::RecordDecl;
 using clang::SourceLocation;
 using clang::SourceRange;
@@ -474,8 +476,13 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   // qualified name.  TODO(csilvers): prepend namespaces instead.
   std::string line;       // llvm wants regular string, not our versa-string
   raw_string_ostream ostream(line);
-  decl->print(ostream);   // calls DeclPrinter
-  line = ostream.str();
+
+  // Print the decl using PolishForDeclaration, which strips some semantic
+  // attributes.
+  PrintingPolicy policy = decl->getASTContext().getPrintingPolicy();
+  policy.PolishForDeclaration = true;
+  decl->print(ostream, policy);
+  ostream.flush();
 
   // Remove "final" specifier which isn't needed for forward
   // declarations.
