@@ -2017,10 +2017,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     for (const Stmt* child : expr->children()) {
-      const Type* type = GetTypeOf(cast<Expr>(child));
+      // Dig past implicit casts and parens to get the real location.
+      const Expr* term = cast<Expr>(child)->IgnoreImpCasts()->IgnoreParens();
+
+      // If the term expression is pointer-typed we need the full types for
+      // pointer arithmetic.
+      const Type* type = GetTypeOf(term);
       if (type->isPointerType()) {
-        // It's a pointer-typed expression.
-        ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefsAndPtr);
+        ReportTypeUse(GetLocation(term), type, DerefKind::RemoveRefsAndPtr);
       }
     }
 
