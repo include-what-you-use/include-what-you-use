@@ -1121,16 +1121,21 @@ int main() {
 
   // Calling an overloaded function.  In the first two cases,
   // CallOverloadedFunctionSameFile() is responsible for the call,
-  // since it's just a single file.  In the second two cases, we
-  // can't know the file required until now (when the templated
-  // function is instantiated).
+  // since it's just a single file. But in general, we cannot know it for sure.
+  // Hence it is reported because the template-defining file doesn't include
+  // the function-defining file directly. In the second two cases, we can't know
+  // the file required until now (when the templated function is instantiated).
+  // IWYU: I1_OverloadedFunction is...*badinc-i1.h
   CallOverloadedFunctionSameFile(5);
+  // IWYU: I1_OverloadedFunction is...*badinc-i1.h
   CallOverloadedFunctionSameFile(5.0f);
   // IWYU: I1_And_I2_OverloadedFunction is...*badinc-i1.h
   CallOverloadedFunctionDifferentFiles(5);
   // IWYU: I1_And_I2_OverloadedFunction is...*badinc-i2.h
   CallOverloadedFunctionDifferentFiles(5.0f);
-  // This should not be an IWYU violation either: the iwyu use is in the fn.
+  // Again, it is reported because the template defining file doesn't include
+  // the function defining file directly.
+  // IWYU: i1_ns::I1_NamespaceTemplateFn is...*badinc-i1.h
   CallOverloadWithUsingShadowDecl(5);
 
   // Calling operator<< when the first argument is a macro.  We should

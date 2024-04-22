@@ -25,15 +25,25 @@ void TplFn3() {
   return OverloadedFn(T{});
 }
 
+template <typename T>
+void TplFn4() {
+  // All the overloads which are visible without ADL are in a single file, hence
+  // report it here even if not included directly.
+  // IWYU: OverloadedFn2 is...*overload_expr-i4.h
+  OverloadedFn2(T{});
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/overload_expr-d2.h should add these lines:
+#include "tests/cxx/overload_expr-i4.h"
 #include "tests/cxx/overload_expr-int.h"
 
 tests/cxx/overload_expr-d2.h should remove these lines:
 - #include "tests/cxx/overload_expr-i1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/overload_expr-d2.h:
+#include "tests/cxx/overload_expr-i4.h"  // for OverloadedFn2
 #include "tests/cxx/overload_expr-int.h"  // for add
 
 ***** IWYU_SUMMARY */

@@ -11,3 +11,4 @@
 #include "tests/cxx/overload_expr-float.h"
 #include "tests/cxx/overload_expr-i2.h"
 #include "tests/cxx/overload_expr-i3.h"
+#include "tests/cxx/overload_expr-i4.h"

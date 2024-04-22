@@ -1,4 +1,4 @@
-//===--- overload_expr-i2.h - test input file for iwyu --------------------===//
+//===--- overload_expr-i4.h - test input file for iwyu --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-struct A;
+// All the OverloadedFn2 overloads visible without ADL are in the same file.
 
-void OverloadedFn(A);
-
-namespace ns {
-struct B;
-
-void OverloadedFn2(B);
-}  // namespace ns
+void OverloadedFn2(int);
+void OverloadedFn2(char);

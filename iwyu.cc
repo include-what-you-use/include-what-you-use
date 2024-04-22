@@ -1103,18 +1103,10 @@ struct VisitorState {
   // Information gathered at preprocessor time, including #include info.
   const IwyuPreprocessorInfo& preprocessor_info;
 
-  // When we see an overloaded function that depends on a template
-  // parameter, we can't resolve the overload until the template
-  // is instantiated (e.g., MyFunc<int> in the following example):
-  //    template<typename T> MyFunc() { OverloadedFunction(T()); }
-  // However, sometimes we can do iwyu even before resolving the
-  // overload, if *all* potential overloads live in the same file.  We
-  // mark the location of such 'early-processed' functions here, so
-  // when we see the function again at template-instantiation time, we
-  // know not to do iwyu-checking on it again.  (Since the actual
-  // function-call exprs are different between the uninstantiated and
+  // Currently, this is used only for handling placement-new calls. Since
+  // the actual function-call exprs are different between the uninstantiated and
   // instantiated calls, we can't store the exprs themselves, but have
-  // to store their location.)
+  // to store their location.
   set<SourceLocation> processed_overload_locs;
 };
 
@@ -2203,11 +2195,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // all exist in the same file -- which is pretty much always the
   // case, especially with a template calling a template -- we can do
   // an iwyu warning now, even without knowing the exact overload.
-  // In that case, we store the fact we warned, so we won't warn again
-  // when the template is instantiated.
   // Otherwise, all directly included overloads are reported just to be kept.
   bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr* expr) {
-    // No CanIgnoreCurrentASTNode() check here!  It's later in the function.
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     if (expr->decls_begin() == expr->decls_end()) {
       // This can occur when there are no overloads before the template
@@ -2234,8 +2225,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     }
 
     if (!same_file) {
-      if (CanIgnoreCurrentASTNode())
-        return true;
       if (!directly_included.empty()) {
         for (const NamedDecl* decl : directly_included)
           ReportDeclUse(CurrentLoc(), decl);
@@ -2274,19 +2263,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // end up being the built-in form of the operator.  (Even if the
     // only operator==() we see is in foo.h, we don't need to #include
     // foo.h if the only call to operator== we see is on two integers.)
-    if (arbitrary_fn_decl && !arbitrary_fn_decl->isOverloadedOperator()) {
-      AddProcessedOverloadLoc(CurrentLoc());
-      VERRS(7) << "Adding to processed_overload_locs: "
-               << PrintableCurrentLoc() << "\n";
-      // Because processed_overload_locs might be set in one visitor
-      // but used in another, each with a different definition of
-      // CanIgnoreCurrentASTNode(), we have to be conservative and set
-      // the has-considered flag always.  But of course we only
-      // actually report the function use if CanIgnoreCurrentASTNode()
-      // is *currently* false.
-      if (!CanIgnoreCurrentASTNode())
-        ReportDeclUse(CurrentLoc(), arbitrary_fn_decl);
-    }
+    if (arbitrary_fn_decl && !arbitrary_fn_decl->isOverloadedOperator())
+      ReportDeclUse(CurrentLoc(), arbitrary_fn_decl);
     return true;
   }
 
