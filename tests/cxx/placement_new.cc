@@ -153,7 +153,6 @@ void TaggedNewInTemplate() {
 template <typename T>
 void Reconstruct(T& ref) {
   // IWYU: operator new is...*<new>
-  // IWYU: AddressOf is...*placement_new-i2.h
   new (AddressOf(ref)) T();
 }
 
@@ -163,7 +162,6 @@ tests/cxx/placement_new.cc should add these lines:
 #include <new>
 #include "tests/cxx/indirect.h"
 #include "tests/cxx/placement_new-i1.h"
-#include "tests/cxx/placement_new-i2.h"
 
 tests/cxx/placement_new.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
@@ -173,6 +171,5 @@ The full include-list for tests/cxx/placement_new.cc:
 #include <new>  // for align_val_t, nothrow, operator new
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/placement_new-i1.h"  // for ClassTemplate
-#include "tests/cxx/placement_new-i2.h"  // for AddressOf
 
 ***** IWYU_SUMMARY */

@@ -341,10 +341,7 @@ template <class T, class U> struct Cc_PTS<T U::*> {
 
 template<class T,int> class Cc_TemplateSubclass : public H_TemplateTypedef { };
 
-// Let's test that we detect overloaded functions correctly when all
-// overloads are in the same file, and then when they're in different files.
 template<typename T> void CallOverloadedFunctionSameFile(T t) {
-  // IWYU: I1_OverloadedFunction is...*badinc-i1.h
   I1_OverloadedFunction(t);
 }
 
@@ -355,10 +352,6 @@ template<typename T> void CallOverloadedFunctionDifferentFiles(T t) {
 }
 
 template<typename T> void CallOverloadWithUsingShadowDecl(T t) {
-  // This is only defined in one place, but because we get to it via
-  // a using expression, it generates a UsingShadowExpr.  Make sure we
-  // "see through" that properly.
-  // IWYU: i1_ns::I1_NamespaceTemplateFn is...*badinc-i1.h
   I1_NamespaceTemplateFn(t);
 }
 
@@ -1119,18 +1112,16 @@ int main() {
   // IWYU: I1_PtrDereferenceClass is...*badinc-i1.h
   local_i1_ptrdereference_class->a();
 
-  // Calling an overloaded function.  In the first two cases,
-  // CallOverloadedFunctionSameFile() is responsible for the call,
-  // since it's just a single file.  In the second two cases, we
-  // can't know the file required until now (when the templated
-  // function is instantiated).
+  // Calling an overloaded function.
+  // IWYU: I1_OverloadedFunction is...*badinc-i1.h
   CallOverloadedFunctionSameFile(5);
+  // IWYU: I1_OverloadedFunction is...*badinc-i1.h
   CallOverloadedFunctionSameFile(5.0f);
   // IWYU: I1_And_I2_OverloadedFunction is...*badinc-i1.h
   CallOverloadedFunctionDifferentFiles(5);
   // IWYU: I1_And_I2_OverloadedFunction is...*badinc-i2.h
   CallOverloadedFunctionDifferentFiles(5.0f);
-  // This should not be an IWYU violation either: the iwyu use is in the fn.
+  // IWYU: i1_ns::I1_NamespaceTemplateFn is...*badinc-i1.h
   CallOverloadWithUsingShadowDecl(5);
 
   // Calling operator<< when the first argument is a macro.  We should

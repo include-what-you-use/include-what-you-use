@@ -25,6 +25,11 @@ void TplFn3() {
   return OverloadedFn(T{});
 }
 
+template <typename T>
+void TplFn4() {
+  OverloadedFn2(T{});
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/overload_expr-d2.h should add these lines:

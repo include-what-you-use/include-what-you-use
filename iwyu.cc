@@ -1103,18 +1103,10 @@ struct VisitorState {
   // Information gathered at preprocessor time, including #include info.
   const IwyuPreprocessorInfo& preprocessor_info;
 
-  // When we see an overloaded function that depends on a template
-  // parameter, we can't resolve the overload until the template
-  // is instantiated (e.g., MyFunc<int> in the following example):
-  //    template<typename T> MyFunc() { OverloadedFunction(T()); }
-  // However, sometimes we can do iwyu even before resolving the
-  // overload, if *all* potential overloads live in the same file.  We
-  // mark the location of such 'early-processed' functions here, so
-  // when we see the function again at template-instantiation time, we
-  // know not to do iwyu-checking on it again.  (Since the actual
-  // function-call exprs are different between the uninstantiated and
+  // Currently, this is used only for handling placement-new calls. Since
+  // the actual function-call exprs are different between the uninstantiated and
   // instantiated calls, we can't store the exprs themselves, but have
-  // to store their location.)
+  // to store their location.
   set<SourceLocation> processed_overload_locs;
 };
 
@@ -2199,15 +2191,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // is also a templated function:
   //    template<typename T> Fn1(T t) { ... }
   //    template<typename T> Fn2(T t) { Fn1(t); }
-  // In either case, we look at all the potential overloads.  If they
-  // all exist in the same file -- which is pretty much always the
-  // case, especially with a template calling a template -- we can do
-  // an iwyu warning now, even without knowing the exact overload.
-  // In that case, we store the fact we warned, so we won't warn again
-  // when the template is instantiated.
-  // Otherwise, all directly included overloads are reported just to be kept.
+  // All directly included overloads are reported just to be kept.
   bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr* expr) {
-    // No CanIgnoreCurrentASTNode() check here!  It's later in the function.
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     if (expr->decls_begin() == expr->decls_end()) {
       // This can occur when there are no overloads before the template
@@ -2215,14 +2202,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
     }
     const NamedDecl* first_decl = *expr->decls_begin();
-    OptionalFileEntryRef first_decl_file_entry = GetFileEntry(first_decl);
     OptionalFileEntryRef current_file_entry = GetFileEntry(CurrentLoc());
     const IwyuFileInfo* current_file_info =
         preprocessor_info().FileInfoFor(current_file_entry);
     if (!current_file_info)
       return true;
     vector<const NamedDecl*> directly_included;
-    bool same_file = true;
     for (const NamedDecl* decl : expr->decls()) {
       // TODO(bolshakov): filter overloads suitable by number and type
       // of parameters. Take into account default arguments, ellipsis, explicit
@@ -2230,73 +2215,25 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // clang::Sema::AddOverloadedCallCandidates for guidance.
       if (IsDirectlyIncluded(decl, *current_file_info))
         directly_included.push_back(decl);
-      same_file &= GetFileEntry(decl) == first_decl_file_entry;
     }
 
-    if (!same_file) {
-      if (CanIgnoreCurrentASTNode())
-        return true;
-      if (!directly_included.empty()) {
-        for (const NamedDecl* decl : directly_included)
-          ReportDeclUse(CurrentLoc(), decl);
-        // No AddProcessedOverloadLoc here: PublicHeaderIntendsToProvide should
-        // already work well at the instantiation site.
-      } else if (!expr->requiresADL()) {
-        // Report any of the decls so as to keep the code compilable. If ADL is
-        // to be applied (i.e. the function name is unqualified), it is allowed
-        // to have no declaration.
-        ReportDeclUse(CurrentLoc(), first_decl);
-        // No AddProcessedOverloadLoc here: even first_decl may be different
-        // when scanning different translation units. It's better to
-        // double-report it on template-defn and instantiation sites than not
-        // to report an actually used decl at all.
-      }
-      return true;
-    }
-    // For now, we're only worried about function calls.
-    // TODO(csilvers): are there other kinds of overloads we need to check?
-    const FunctionDecl* arbitrary_fn_decl = nullptr;
-    for (const NamedDecl* decl : expr->decls()) {
-      // Sometimes a UsingShadowDecl comes between us and the 'real' decl.
-      if (const UsingShadowDecl* using_shadow_decl = DynCastFrom(decl))
-        decl = using_shadow_decl->getTargetDecl();
-      if (const FunctionDecl* fn_decl = DynCastFrom(decl)) {
-        arbitrary_fn_decl = fn_decl;
-        break;
-      } else if (const FunctionTemplateDecl* tpl_decl = DynCastFrom(decl)) {
-        arbitrary_fn_decl = tpl_decl->getTemplatedDecl();
-        break;
-      }
-    }
-
-    // If we're an overloaded operator, we can never do the iwyu check
-    // before instantiation-time, because we don't know if we might
-    // end up being the built-in form of the operator.  (Even if the
-    // only operator==() we see is in foo.h, we don't need to #include
-    // foo.h if the only call to operator== we see is on two integers.)
-    if (arbitrary_fn_decl && !arbitrary_fn_decl->isOverloadedOperator()) {
-      AddProcessedOverloadLoc(CurrentLoc());
-      VERRS(7) << "Adding to processed_overload_locs: "
-               << PrintableCurrentLoc() << "\n";
-      // Because processed_overload_locs might be set in one visitor
-      // but used in another, each with a different definition of
-      // CanIgnoreCurrentASTNode(), we have to be conservative and set
-      // the has-considered flag always.  But of course we only
-      // actually report the function use if CanIgnoreCurrentASTNode()
-      // is *currently* false.
-      if (!CanIgnoreCurrentASTNode())
-        ReportDeclUse(CurrentLoc(), arbitrary_fn_decl);
+    if (!directly_included.empty()) {
+      for (const NamedDecl* decl : directly_included)
+        ReportDeclUse(CurrentLoc(), decl);
+      // No AddProcessedOverloadLoc here: PublicHeaderIntendsToProvide should
+      // already work well at the instantiation site.
+    } else if (!expr->requiresADL()) {
+      // Report any of the decls so as to keep the code compilable. If ADL is
+      // to be applied (i.e. the function name is unqualified), it is allowed
+      // to have no declaration.
+      ReportDeclUse(CurrentLoc(), first_decl);
+      // No AddProcessedOverloadLoc here: even first_decl may be different
+      // when scanning different translation units. It's better to
+      // double-report it on template-defn and instantiation sites than not
+      // to report an actually used decl at all.
     }
     return true;
   }
-
-  // TODO(csilvers): handle some special cases when we're a
-  // CXXDependentScopeMemberExpr (e.g. vector<T>::resize().).  If the
-  // base class is a TemplateSpecializationType, get its TemplateDecl
-  // and if all explicit specializations and patterns are defined in
-  // the same file, treat it as an expr with only one decl.  May have
-  // trouble with methods defined in a different file than they're
-  // declared.
 
   // If getOperatorNew() returns nullptr, it means the operator-new is
   // overloaded, and technically we can't know which operator-new is
