@@ -9,13 +9,11 @@
 
 // Check that IWYU fails for MSVC spelling of PCH args.
 
-// IWYU_ARGS: --driver-mode=cl /I . /Yu tests/driver/use_pch_msvc.h
-
-// Clang for some reason creates a precompiler job when /Yu (use PCH) is
-// present. We filter it out, but warn, so expect that warning.
-// IWYU~: ignoring unsupported job type: precompiler
+// IWYU_ARGS: --driver-mode=cl /I . /Yutests/driver/use_pch_msvc.h
 
 // IWYU~: include-what-you-use does not support PCH
+
+#include "tests/driver/use_pch_msvc.h"
 
 /**** IWYU_SUMMARY(1)
 
