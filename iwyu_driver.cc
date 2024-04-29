@@ -211,6 +211,7 @@ std::vector<const Command*> FilterJobs(const JobList& jobs) {
   for (const Command& job : jobs) {
     const Action& action = job.getSource();
     if (action.getKind() != Action::CompileJobClass &&
+        action.getKind() != Action::PrecompileJobClass &&
         action.getKind() != Action::PreprocessJobClass) {
       VERRS(2) << "warning: ignoring unsupported job type: "
                << action.getClassName() << "\n";
@@ -330,6 +331,7 @@ bool ExecuteAction(int argc, const char** argv,
       break;
 
     case Action::CompileJobClass:
+    case Action::PrecompileJobClass:
       // Drop compiler job and run IWYU instead.
       action = make_iwyu_action(compilation->getDefaultToolChain());
       break;
