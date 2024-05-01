@@ -348,6 +348,7 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/sigcontext.h>", kPrivate, "<signal.h>", kPublic },
   { "<bits/siginfo.h>", kPrivate, "<signal.h>", kPublic },
   { "<bits/signum.h>", kPrivate, "<signal.h>", kPublic },
+  { "<bits/signum-arch.h>", kPrivate, "<signal.h>", kPublic },
   { "<bits/sigset.h>", kPrivate, "<signal.h>", kPublic },
   { "<bits/sigstack.h>", kPrivate, "<signal.h>", kPublic },
   { "<bits/sigthread.h>", kPrivate, "<signal.h>", kPublic },
