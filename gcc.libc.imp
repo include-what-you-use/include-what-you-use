@@ -67,6 +67,7 @@
   { "include": [ "<bits/sigcontext.h>", "private", "<signal.h>", "public"] },
   { "include": [ "<bits/siginfo.h>", "private", "<signal.h>", "public"] },
   { "include": [ "<bits/signum.h>", "private", "<signal.h>", "public"] },
+  { "include": [ "<bits/signum-arch.h>", "private", "<signal.h>", "public"] },
   { "include": [ "<bits/sigset.h>", "private", "<signal.h>", "public"] },
   { "include": [ "<bits/sigstack.h>", "private", "<signal.h>", "public"] },
   { "include": [ "<bits/sigthread.h>", "private", "<signal.h>", "public"] },
