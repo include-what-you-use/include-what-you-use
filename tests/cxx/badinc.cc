@@ -57,6 +57,7 @@
 // Some of the #include lines are deliberately formatted wrong, in
 // order to test that IWYU handles them correctly.
 #include  <math.h>    // not actually used
+#include <stdarg.h>   // for va_list
 #include <typeinfo>   // for typeid
 #include "tests/cxx/badinc-inl.h"
 #include  "tests/cxx/badinc.h"
@@ -70,8 +71,7 @@
 #include UNUSED_INC
 // The following ilne is not needed, but use a 'keep' pragma anyway.
 #include <setjmp.h>   // IWYU pragma: keep
-#include <clocale>    // for NULL (though we get NULL via badinc.h's stdio.h).
-                      // clocale is chosen as it provides NULL but not size_t.
+#include <stddef.h>   // for NULL
 #include <algorithm>  // try #including the same file twice
 #include <algorithm>  // ...and then 3 times
 
@@ -1017,7 +1017,7 @@ class CC_TemplateClass {
   typedef I1_TemplateClass<A> i1_typedef;
 
   // Let's throw in per-class operator new/delete.
-  // IWYU: size_t is...*((<stddef.h>)|(stdio.h)|(string.h)|(time.h)|(wchar.h))
+  // IWYU: size_t is...*<stddef.h>
   void* operator new(size_t size) {
     B b;
     (void)b;
@@ -1808,7 +1808,6 @@ int main() {
 
 tests/cxx/badinc.cc should add these lines:
 #include <ctype.h>
-#include <stddef.h>
 #include <list>
 #include "tests/cxx/badinc-i1.h"
 class D2_Class;
@@ -1825,7 +1824,6 @@ tests/cxx/badinc.cc should remove these lines:
 - #include <math.h>  // lines XX-XX
 - #include <algorithm>  // lines XX-XX
 - #include <algorithm>  // lines XX-XX
-- #include <clocale>  // lines XX-XX
 - #include <locale>  // lines XX-XX
 - #include "tests/cxx/badinc-d2.h"  // lines XX-XX
 - class Cc_ForwardDeclare_Function::I2_Class;  // lines XX-XX
@@ -1837,7 +1835,8 @@ The full include-list for tests/cxx/badinc.cc:
 #include "tests/cxx/badinc-inl.h"
 #include <ctype.h>  // for isascii
 #include <setjmp.h>
-#include <stddef.h>  // for offsetof
+#include <stdarg.h>  // for va_list
+#include <stddef.h>  // for NULL, offsetof, size_t
 #include <algorithm>  // for find
 #include <fstream>  // for basic_fstream, fstream
 #include <list>  // for list

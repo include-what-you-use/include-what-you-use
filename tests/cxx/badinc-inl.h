@@ -10,7 +10,7 @@
 #ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_INL_H_
 #define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_INL_H_
 
-#include <locale.h>   // the way to get NULL without size_t
+#include <stddef.h>
 #include "tests/cxx/badinc-private.h"
 #include "tests/cxx/badinc-private2.h"
 
