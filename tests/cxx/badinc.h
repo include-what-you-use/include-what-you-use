@@ -14,6 +14,7 @@
 #include <ctype.h>  // used only in badinc.cc
 #include <errno.h>  // used both here and in badinc.cc
 #include <math.h>
+#include <stddef.h> // for NULL
 #include <queue>    // used only in this .h file, not in any other file.
 #include <string>
 #include "tests/cxx/badinc-d2.h"
@@ -393,7 +394,8 @@ tests/cxx/badinc.h should remove these lines:
 
 The full include-list for tests/cxx/badinc.h:
 #include <errno.h>  // for errno
-#include <stdio.h>  // for NULL, printf
+#include <stddef.h>  // for NULL
+#include <stdio.h>  // for printf
 #include <queue>  // for queue
 #include <set>  // for set
 #include <string>  // for basic_string, string
