@@ -81,7 +81,7 @@ This build mode assumes you already have compiled LLVM and Clang libraries on yo
       iwyu/build$ cmake -G "Unix Makefiles" -DIWYU_LLVM_ROOT_PATH=/usr/lib/llvm-6.0 ../include-what-you-use
 
       # For IWYU 0.11/Clang 7 and later
-      iwyu/build$ cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/usr/lib/llvm-7 ../include-what-you-use
+      iwyu/build$ cmake .. -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/usr/lib/llvm-7
 
   (substitute the `llvm-6.0` or `llvm-7` suffixes with the actual version compatible with your IWYU branch)
 
@@ -117,6 +117,13 @@ Note that some distributions/packages may have different defaults, you can use `
 So for IWYU to function correctly, you need to copy the Clang `include` directory to the expected location before running (similarly, use `include-what-you-use -print-resource-dir` to learn exactly where IWYU wants the headers).
 
 This weirdness is tracked in [issue 100](https://github.com/include-what-you-use/include-what-you-use/issues/100), hopefully we can make this more transparent over time.
+
+Another way to insatall is
+```sh
+cd  build
+make install .
+```
+Then you can directly call e.g.`iwyu_tool.py` on any terminal.
 
 ### How to run ###
 
@@ -173,6 +180,8 @@ The script's command-line syntax is designed to mimic Clang's LibTooling, but th
       mkdir build && cd build
       CC="clang" CXX="clang++" cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ...
       iwyu_tool.py -p .
+      # or save the result to apply fixes 
+      iwyu_toolpy -p . > iwyu.out
 
 or, on Windows systems:
 
@@ -190,6 +199,8 @@ We also include a tool that automatically fixes up your source files based on th
 
       make -k CXX=include-what-you-use CXXFLAGS="-Xiwyu --error_always" 2> /tmp/iwyu.out
       python3 fix_includes.py < /tmp/iwyu.out
+      # or
+      fix_includes.py < iwyu.out 
 
 If you don't like the way `fix_includes.py` munges your `#include` lines, you can control its behavior via flags. `fix_includes.py --help` will give a full list, but these are some common ones:
 
