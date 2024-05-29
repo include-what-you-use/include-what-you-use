@@ -1131,7 +1131,7 @@ bool IsExplicitInstantiationDefinitionAsWritten(
   // the 'extern' keyword location info.
   return decl->getSpecializationKind() ==
              clang::TSK_ExplicitInstantiationDefinition &&
-         decl->getExternLoc().isInvalid();
+         decl->getExternKeywordLoc().isInvalid();
 }
 
 bool IsInInlineNamespace(const Decl* decl) {
