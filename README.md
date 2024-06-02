@@ -12,7 +12,7 @@ This puts us in a state where every file includes the headers it needs to declar
 
 ### CAVEAT ###
 
-This is alpha quality software -- at best (as of July 2018).  It was originally written to work specifically in the Google source tree, and may make assumptions, or have gaps, that are immediately and embarrassingly evident in other types of code.
+This is experimental software, as of June 2024.  It was originally written to work specifically in the Google source tree, and may make assumptions, or have gaps, that are immediately and embarrassingly evident in other types of code.
 
 While we work to get IWYU quality up, we will be stinting new features, and will prioritize reported bugs along with the many existing, known bugs.  The best chance of getting a problem fixed is to submit a patch that fixes it (along with a test case that verifies the fix)!
 
