@@ -930,10 +930,15 @@ static map<const Type*, const Type*> GetDefaultedArgResugarMap(
             dyn_cast<TemplateTypeParmDecl>(params->getParam(i))) {
       if (param_decl->isParameterPack())
         continue;
-      const QualType type = args->get(i).getAsType().getCanonicalType();
-      if (param_decl->hasDefaultArgument() &&
-          param_decl->getDefaultArgument().getCanonicalType() == type) {
-        res.emplace(type.getTypePtr(), nullptr);
+      if (!param_decl->hasDefaultArgument())
+        continue;
+      const QualType arg_type = args->get(i).getAsType().getCanonicalType();
+      const QualType default_arg_type = param_decl->getDefaultArgument()
+                                            .getArgument()
+                                            .getAsType()
+                                            .getCanonicalType();
+      if (arg_type == default_arg_type) {
+        res.emplace(arg_type.getTypePtr(), nullptr);
       }
     }
   }
