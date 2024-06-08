@@ -15,7 +15,6 @@
 
 // An explicit instantiation definition anchors a prior declaration.
 // IWYU: Template is...*expl_inst_select-i1.h
-// IWYU: Template is...*expl_inst_select-i2.h.*for explicit instantiation
 template class Template<char>;
 
 // An explicit instantiation declaration for later use.

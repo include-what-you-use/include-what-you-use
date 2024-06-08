@@ -35,6 +35,16 @@ class ClassWithMethodUsingPtr {
   }
 };
 
+template <typename, typename = void>
+class TplWithDefArg {};
+
+template <typename T>
+class TplWithDefArg<int, T> {};
+
+constexpr int getInt() {
+  return 1;
+}
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_EXPLICIT_INSTANTIATION_TEMPLATE_H_
 
 /**** IWYU_SUMMARY
