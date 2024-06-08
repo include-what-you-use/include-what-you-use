@@ -19,7 +19,6 @@
 // Positive scenarios:
 // 1a/1b: Implicit instantiation before and after an explicit instantiation
 //        definition (2), as it affects the semantics.
-// 2: Explicit instantiation definition.
 // 3: Full use in a template, provided as an explicit parameter.
 // 5: Full use in a template, provided as an default parameter.
 // 7: Full use in a template, provided as a template template parameter.
@@ -27,6 +26,7 @@
 //
 // Negative scenarios, where the dependent template specialization is not
 // required, or it does not provide an explicit instantiation:
+// 2: Explicit instantiation definition.
 // 4: Fwd-decl use in a template, provided as an explicit parameter.
 // 6: Fwd-decl use in a template, provided as a default parameter.
 // 9: Implicit instantiation of Template<int>
@@ -40,7 +40,6 @@
 Template<bool> t1a; // 1a
 
 // IWYU: Template is...*explicit_instantiation-template.h
-// IWYU: Template is...*template_bool.h.*for explicit instantiation
 template class Template<bool>;  // 2
 
 // Included explicit instantiation no longer reported here as a local definition

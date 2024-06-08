@@ -51,6 +51,11 @@ class TypeDecl;
 class ValueDecl;
 }  // namespace clang
 
+namespace llvm {
+template <typename>
+class ArrayRef;
+}  // namespace llvm
+
 namespace include_what_you_use {
 
 using std::map;
@@ -613,7 +618,7 @@ TemplateInstantiationData GetTplInstDataForFunction(
 // return the template decl, which provides the actual class body.
 // We try to return a decl that's also a definition, when possible.
 const clang::NamedDecl* GetInstantiatedFromDecl(
-    const clang::CXXRecordDecl* class_decl);
+    const clang::NamedDecl* class_decl);
 
 // For an implicitly instantiated templated c++ class -- that is, a
 // class like vector<int> that isn't explicitly written in the source
@@ -835,6 +840,11 @@ bool HasImplicitConversionConstructor(const clang::Type* type);
 // result for any input that's not a template specialization type.
 TemplateInstantiationData GetTplInstDataForClass(
     const clang::Type* type,
+    std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
+
+TemplateInstantiationData GetTplInstDataForClass(
+    llvm::ArrayRef<clang::TemplateArgument> written_tpl_args,
+    const clang::ClassTemplateSpecializationDecl* cls_tpl_decl,
     std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
 
 // Like GetTplInstDataForClass, but if a type has

@@ -2457,7 +2457,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
       return true;
 
-    const NamedDecl* decl = TypeToDeclAsWritten(type);
+    // If not a full explicit specialization, report the original template
+    // or a partial specialization from which the specialization is instantiated
+    // (and don't report explicit instantiations here).
+    const NamedDecl* decl = GetInstantiatedFromDecl(TypeToDeclAsWritten(type));
 
     // If we are forward-declarable, so are our template arguments.
     if (CanForwardDeclareType(current_ast_node())) {
@@ -2900,6 +2903,10 @@ class InstantiatedTemplateVisitor
   //
   // ScanInstantiatedType() is similar, except that it looks through
   // the definition of a class template instead of a statement.
+  //
+  // ScanInstantiatedClass() may be used in cases when a specific
+  // TemplateSpecializationType referring to the class template specialization
+  // is not known.
 
   // resugar_map is a map from an unsugared (canonicalized) template
   // type to the template type as written (or as close as we can find
@@ -2959,6 +2966,24 @@ class InstantiatedTemplateVisitor
 
     TraverseTemplateSpecializationType(
         const_cast<TemplateSpecializationType*>(type));
+  }
+
+  void ScanInstantiatedClass(ClassTemplateSpecializationDecl* decl,
+                             ASTNode* caller_ast_node,
+                             const map<const Type*, const Type*>& resugar_map,
+                             const set<const Type*>& blocked_types) {
+    Clear();
+    caller_ast_node_ = caller_ast_node;
+    resugar_map_ = resugar_map;
+    blocked_types_ = blocked_types;
+
+    set_current_ast_node(caller_ast_node);
+
+    AstFlattenerVisitor nodeset_getter(compiler());
+    nodes_to_ignore_ = nodeset_getter.GetNodesBelow(
+        const_cast<NamedDecl*>(GetDefinitionAsWritten(decl)));
+
+    TraverseDataAndTypeMembersOfClassHelper(decl);
   }
 
   //------------------------------------------------------------
@@ -3557,14 +3582,19 @@ class InstantiatedTemplateVisitor
       return true;   // avoid recursion & repetition
     traversed_decls_.insert(class_decl);
 
+    if (ReplayClassMemberUsesFromPrecomputedList(type))
+      return true;
+    return TraverseDataAndTypeMembersOfClassHelper(class_decl);
+  }
+
+  bool TraverseDataAndTypeMembersOfClassHelper(
+      const ClassTemplateSpecializationDecl* class_decl) {
     // If we have cached the reporting done for this decl before,
     // report again (but with the new caller_loc this time).
     // Otherwise, for all reporting done in the rest of this scope,
     // store in the cache for this function.
     if (ReplayUsesFromCache(*ClassMembersFullUseCache(),
                             class_decl, caller_loc()))
-      return true;
-    if (ReplayClassMemberUsesFromPrecomputedList(type))
       return true;
 
     // Sometimes, an implicit specialization occurs to be not instantiated.
@@ -4063,9 +4093,7 @@ class IwyuAstConsumer
   // we don't want iwyu to recommend removing the 'forward declare' of Foo.
   //
   // Additionally, this type of decl is also used to represent explicit template
-  // instantiations. Only instantiation definitions causing instantiation of
-  // member functions are handled here. Other instantiated parts of the template
-  // are handled in 'VisitTemplateSpecializationType', as usual.
+  // instantiations.
   bool VisitClassTemplateSpecializationDecl(
       ClassTemplateSpecializationDecl* decl) {
     if (!IsExplicitInstantiation(decl)) {
@@ -4073,25 +4101,36 @@ class IwyuAstConsumer
         ReportDeclForwardDeclareUse(CurrentLoc(),
                                     decl->getSpecializedTemplate());
       }
-    } else if (IsExplicitInstantiationDefinitionAsWritten(decl)) {
-      // Explicit instantiation definition causes instantiation of all
-      // the template methods. Scan them here to assure that all the needed
-      // template argument types are '#include'd.
-      const TypeLoc type_loc = decl->getTypeAsWritten()->getTypeLoc();
-      if (CanIgnoreLocation(GetLocation(&type_loc)))
+    } else {
+      if (CanIgnoreLocation(decl->getLocation()))
         return true;
-      // Clang attributes 'ClassTemplateSpecializationDecl' to the original
-      // template location. Construct a new node corresponding to the template
-      // spec type location (as written) so that reportings from
-      // 'InstantiatedTemplateVisitor' are attributed to the correct location.
-      const ASTNode type_loc_node(&type_loc);
-      const TemplateInstantiationData data =
-          GetTplInstData(type_loc.getTypePtr());
-      // Clang instantiates methods in the first ("canonical") spec decl context
-      // (which may correspond to instantiation declaration, not to definition).
-      for (const CXXMethodDecl* member : decl->getCanonicalDecl()->methods()) {
-        instantiated_template_visitor_.ScanInstantiatedFunction(
-            member, &type_loc_node, data.resugar_map, data.provided_types);
+      // Report the original template definition, or a partial or full
+      // specialization, whichever is appropriate. GetTagDefinition returns
+      // the right one.
+      ReportDeclUse(CurrentLoc(), GetTagDefinition(decl));
+
+      std::vector<TemplateArgument> args;
+      for (const auto arg : decl->getTemplateArgsAsWritten()->arguments())
+        args.push_back(arg.getArgument());
+
+      const TemplateInstantiationData data = GetTplInstData(args, decl);
+      instantiated_template_visitor_.ScanInstantiatedClass(
+          decl, current_ast_node(), data.resugar_map, data.provided_types);
+
+      if (IsExplicitInstantiationDefinitionAsWritten(decl)) {
+        // Explicit instantiation definition causes instantiation of all
+        // the template methods. Scan them here to assure that all the needed
+        // template argument types are '#include'd.
+
+        // Clang instantiates methods in the first ("canonical") spec decl
+        // context (which may correspond to instantiation declaration,
+        // not to definition).
+        for (const CXXMethodDecl* member :
+             decl->getCanonicalDecl()->methods()) {
+          instantiated_template_visitor_.ScanInstantiatedFunction(
+              member, current_ast_node(), data.resugar_map,
+              data.provided_types);
+        }
       }
     }
 
@@ -4461,6 +4500,14 @@ class IwyuAstConsumer
 
   TemplateInstantiationData GetTplInstData(const Type* type) const {
     return GetTplInstDataForClass(type, [this](const Type* type) {
+      return GetProvidedTypeComponents(type);
+    });
+  }
+
+  TemplateInstantiationData GetTplInstData(
+      llvm::ArrayRef<TemplateArgument> args,
+      const ClassTemplateSpecializationDecl* decl) const {
+    return GetTplInstDataForClass(args, decl, [this](const Type* type) {
       return GetProvidedTypeComponents(type);
     });
   }

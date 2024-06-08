@@ -1064,7 +1064,7 @@ TemplateInstantiationData GetTplInstDataForFunction(
   return TemplateInstantiationData{resugar_map, provided_types};
 }
 
-const NamedDecl* GetInstantiatedFromDecl(const CXXRecordDecl* class_decl) {
+const NamedDecl* GetInstantiatedFromDecl(const NamedDecl* class_decl) {
   if (const ClassTemplateSpecializationDecl* tpl_sp_decl =
       DynCastFrom(class_decl)) {  // an instantiated class template
     PointerUnion<ClassTemplateDecl*, ClassTemplatePartialSpecializationDecl*>
@@ -1518,22 +1518,18 @@ bool HasImplicitConversionConstructor(const Type* type) {
   return HasImplicitConversionCtor(cxx_class);
 }
 
-TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
-    const Type* type, function<set<const Type*>(const Type*)> provided_getter) {
+static TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
+    ArrayRef<TemplateArgument> written_tpl_args,
+    const ClassTemplateSpecializationDecl* cls_tpl_decl,
+    function<set<const Type*>(const Type*)> provided_getter) {
   map<const Type*, const Type*> retval;
-  const auto* tpl_spec_type = type->getAs<TemplateSpecializationType>();
-  if (!tpl_spec_type) {
-    return TemplateInstantiationData{retval, {}};
-  }
 
   // Pull the template arguments out of the specialization type. If this is
   // a ClassTemplateSpecializationDecl specifically, we want to
   // get the arguments therefrom to correctly handle default arguments.
-  llvm::ArrayRef<TemplateArgument> tpl_args = tpl_spec_type->template_arguments();
+  llvm::ArrayRef<TemplateArgument> tpl_args = written_tpl_args;
   unsigned num_args = tpl_args.size();
 
-  const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
-  const auto* cls_tpl_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl);
   if (cls_tpl_decl) {
     const TemplateArgumentList& tpl_arg_list =
         cls_tpl_decl->getTemplateInstantiationArgs();
@@ -1548,9 +1544,9 @@ TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
   set<unsigned> explicit_args;   // indices into tpl_args we've filled
   SugaredTypeEnumerator type_enumerator;
   set<const Type*> provided_types;
-  for (unsigned i = 0; i < tpl_spec_type->template_arguments().size(); ++i) {
+  for (unsigned i = 0; i < written_tpl_args.size(); ++i) {
     set<const Type*> arg_components =
-        type_enumerator.Enumerate(tpl_spec_type->template_arguments()[i]);
+        type_enumerator.Enumerate(written_tpl_args[i]);
     // Go through all template types mentioned in the arg-as-written,
     // and compare it against each of the types in the template decl
     // (the latter are all desugared).  If there's a match, update
@@ -1587,10 +1583,35 @@ TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
   return TemplateInstantiationData{retval, provided_types};
 }
 
+TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
+    const clang::Type* type,
+    std::function<set<const clang::Type*>(const clang::Type*)>
+        provided_getter) {
+  const auto* tpl_spec_type = type->getAs<TemplateSpecializationType>();
+  if (!tpl_spec_type)
+    return TemplateInstantiationData{};
+  const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
+  const auto* cls_tpl_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl);
+  return GetTplInstDataForClassNoComponentTypes(
+      tpl_spec_type->template_arguments(), cls_tpl_decl, provided_getter);
+}
+
 TemplateInstantiationData GetTplInstDataForClass(
     const Type* type, function<set<const Type*>(const Type*)> provided_getter) {
   TemplateInstantiationData result =
       GetTplInstDataForClassNoComponentTypes(type, provided_getter);
+  return TemplateInstantiationData{
+      ResugarTypeComponents(
+          result.resugar_map),  // add in the decomposition of retval
+      result.provided_types};
+}
+
+TemplateInstantiationData GetTplInstDataForClass(
+    ArrayRef<TemplateArgument> written_tpl_args,
+    const ClassTemplateSpecializationDecl* cls_tpl_decl,
+    function<set<const Type*>(const Type*)> provided_getter) {
+  TemplateInstantiationData result = GetTplInstDataForClassNoComponentTypes(
+      written_tpl_args, cls_tpl_decl, provided_getter);
   return TemplateInstantiationData{
       ResugarTypeComponents(
           result.resugar_map),  // add in the decomposition of retval

@@ -20,6 +20,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "iwyu_ast_util.h"
 #include "iwyu_string_util.h"
 
@@ -42,6 +43,7 @@ using clang::SourceLocation;
 using clang::SourceManager;
 using clang::Stmt;
 using clang::TemplateArgumentLoc;
+using clang::TemplateSpecializationKind;
 using clang::TypeLoc;
 using clang::UnaryOperator;
 using clang::UnresolvedMemberExpr;
@@ -79,10 +81,13 @@ SourceLocation GetLocation(const Decl* decl) {
 
   if (const CXXMethodDecl* method_decl = DynCastFrom(decl)) {
     if (method_decl->isImplicit())
-      decl = method_decl->getParent();
+      decl = GetDefinitionAsWritten(method_decl->getParent());
   }
   if (const ClassTemplateSpecializationDecl* spec = DynCastFrom(decl)) {
-    decl = GetDefinitionAsWritten(spec);             // templated class
+    const TemplateSpecializationKind kind = spec->getSpecializationKind();
+    if (kind != clang::TSK_ExplicitInstantiationDeclaration &&
+        kind != clang::TSK_ExplicitInstantiationDefinition)
+      decl = GetDefinitionAsWritten(spec);  // templated class
   } else if (const FunctionDecl* fn_decl = DynCastFrom(decl)) {
     if (fn_decl->getTemplateInstantiationPattern())  // templated function
       decl = GetDefinitionAsWritten(fn_decl);
