@@ -830,6 +830,7 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<bits/c++allocator.h>", kPrivate, "<memory>", kPublic },
   { "<bits/c++io.h>", kPrivate, "<ios>", kPublic },
   { "<bits/c++locale.h>", kPrivate, "<locale>", kPublic },
+  { "<bits/chrono.h>", kPrivate, "<chrono>", kPublic },
   { "<bits/cpu_defines.h>", kPrivate, "<iosfwd>", kPublic },
   { "<bits/ctype_base.h>", kPrivate, "<locale>", kPublic },
   { "<bits/ctype_inline.h>", kPrivate, "<locale>", kPublic },
