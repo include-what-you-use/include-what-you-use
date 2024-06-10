@@ -21,6 +21,7 @@
   { "include": ["<bits/c++0x_warning.h>", "private", "<iosfwd>", "public"] },
   { "include": ["<bits/charconv.h>", "private", "<charconv>", "public"] },
   { "include": ["<bits/char_traits.h>", "private", "<string>", "public"] },
+  { "include": ["<bits/chrono.h>", "private", "<chrono>", "public"] },
   { "include": ["<bits/codecvt.h>", "private", "<locale>", "public"] },
   { "include": ["<bits/concept_check.h>", "private", "<iterator>", "public"] },
   { "include": ["<bits/cpp_type_traits.h>", "private", "<ext/type_traits>", "public"] },
