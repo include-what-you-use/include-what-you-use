@@ -82,18 +82,7 @@ namespace {
 
 // Symbol -> include mappings for GNU libc
 const IncludeMapEntry libc_symbol_map[] = {
-  // For library symbols that can be defined in more than one header
-  // file, maps from symbol-name to legitimate header files.
-  // This list was generated via
-  // grep -R '__.*_defined' /usr/include | perl -nle 'm,/usr/include/([^:]*):#\s*\S+ __(.*)_defined, and print qq@    { "$2", kPublic, "<$1>", kPublic },@' | sort -u
-  // I ignored all entries that only appeared once on the list (eg uint32_t).
-  // I then added in NULL, which according to [diff.null] C.2.2.3, can
-  // be defined in <clocale>, <cstddef>, <cstdio>, <cstdlib>,
-  // <cstring>, <ctime>, or <cwchar>.  We also allow their C
-  // equivalents.
-  // In each case, I ordered them so <sys/types.h> was first, if it was
-  // an option for this type.  That's the preferred #include all else
-  // equal.  The visibility on the symbol-name is ignored; by convention
+  // The visibility on the symbol-name is ignored; by convention
   // we always set it to kPrivate.
   { "aiocb", kPrivate, "<aio.h>", kPublic },
   { "blkcnt_t", kPrivate, "<sys/types.h>", kPublic },
@@ -113,7 +102,6 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "fenv_t", kPrivate, "<fenv.h>", kPublic },
   { "fexcept_t", kPrivate, "<fenv.h>", kPublic },
   { "FILE", kPrivate, "<stdio.h>", kPublic },
-  { "FILE", kPrivate, "<wchar.h>", kPublic },
   { "float_t", kPrivate, "<math.h>", kPublic },
   { "fsblkcnt_t", kPrivate, "<sys/types.h>", kPublic },
   { "fsfilcnt_t", kPrivate, "<sys/types.h>", kPublic },
@@ -173,29 +161,15 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "time_t", kPrivate, "<sys/types.h>", kPublic },
   { "timer_t", kPrivate, "<sys/types.h>", kPublic },
   { "timespec", kPrivate, "<time.h>", kPublic },
-  { "timespec", kPrivate, "<signal.h>", kPublic },
   { "timeval", kPrivate, "<sys/time.h>", kPublic },
   { "tm", kPrivate, "<time.h>", kPublic },
   { "u_char", kPrivate, "<sys/types.h>", kPublic },
   { "uid_t", kPrivate, "<sys/types.h>", kPublic },
   { "useconds_t", kPrivate, "<sys/types.h>", kPublic },
   { "wchar_t", kPrivate, "<stddef.h>", kPublic },
-  { "wchar_t", kPrivate, "<stdlib.h>", kPublic },
   { "wint_t", kPrivate, "<wchar.h>", kPublic },
-  // It is unspecified if the cname headers provide ::size_t.
-  // <locale.h> is the one header which defines NULL but not size_t.
-  { "size_t", kPrivate, "<stddef.h>", kPublic },  // 'canonical' location for size_t
-  { "size_t", kPrivate, "<signal.h>", kPublic },
-  { "size_t", kPrivate, "<stdio.h>", kPublic },
-  { "size_t", kPrivate, "<stdlib.h>", kPublic },
-  { "size_t", kPrivate, "<string.h>", kPublic },
-  { "size_t", kPrivate, "<time.h>", kPublic },
-  { "size_t", kPrivate, "<uchar.h>", kPublic },
-  { "size_t", kPrivate, "<wchar.h>", kPublic },
-  // Macros that can be defined in more than one file, don't have the
-  // same __foo_defined guard that other types do, so the grep above
-  // doesn't discover them.  Until I figure out a better way, I just
-  // add them in by hand as I discover them.
+  { "size_t", kPrivate, "<stddef.h>", kPublic },
+
   { "EOF", kPrivate, "<stdio.h>", kPublic },
   { "FILE", kPrivate, "<stdio.h>", kPublic },
   { "IBSHIFT", kPrivate, "<asm/termbits.h>", kPublic },
@@ -211,8 +185,6 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "va_copy", kPrivate, "<stdarg.h>", kPublic },
   { "va_end", kPrivate, "<stdarg.h>", kPublic },
   { "va_list", kPrivate, "<stdarg.h>", kPublic },
-  { "va_list", kPrivate, "<stdio.h>", kPublic },
-  { "va_list", kPrivate, "<wchar.h>", kPublic },
   { "va_start", kPrivate, "<stdarg.h>", kPublic },
   // These are symbols that could be defined in either stdlib.h or
   // malloc.h, but we always want the stdlib location.
@@ -220,21 +192,8 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "calloc", kPrivate, "<stdlib.h>", kPublic },
   { "realloc", kPrivate, "<stdlib.h>", kPublic },
   { "free", kPrivate, "<stdlib.h>", kPublic },
-  // Entries for NULL
-  { "NULL", kPrivate, "<stddef.h>", kPublic },  // 'canonical' location for NULL
-  { "NULL", kPrivate, "<clocale>", kPublic },
-  { "NULL", kPrivate, "<cstddef>", kPublic },
-  { "NULL", kPrivate, "<cstdio>", kPublic },
-  { "NULL", kPrivate, "<cstdlib>", kPublic },
-  { "NULL", kPrivate, "<cstring>", kPublic },
-  { "NULL", kPrivate, "<ctime>", kPublic },
-  { "NULL", kPrivate, "<cwchar>", kPublic },
-  { "NULL", kPrivate, "<locale.h>", kPublic },
-  { "NULL", kPrivate, "<stdio.h>", kPublic },
-  { "NULL", kPrivate, "<stdlib.h>", kPublic },
-  { "NULL", kPrivate, "<string.h>", kPublic },
-  { "NULL", kPrivate, "<time.h>", kPublic },
-  { "NULL", kPrivate, "<wchar.h>", kPublic },
+
+  { "NULL", kPrivate, "<stddef.h>", kPublic },
   { "offsetof", kPrivate, "<stddef.h>", kPublic },
 };
 
@@ -268,13 +227,7 @@ const IncludeMapEntry stdlib_cxx_symbol_map[] = {
   // canonical location.
   { "std::ptrdiff_t", kPrivate, "<cstddef>", kPublic },
 
-  { "std::size_t", kPrivate, "<cstddef>", kPublic },  // 'canonical' location for std::size_t
-  { "std::size_t", kPrivate, "<cstdio>", kPublic },
-  { "std::size_t", kPrivate, "<cstdlib>", kPublic },
-  { "std::size_t", kPrivate, "<cstring>", kPublic },
-  { "std::size_t", kPrivate, "<ctime>", kPublic },
-  { "std::size_t", kPrivate, "<cuchar>", kPublic },
-  { "std::size_t", kPrivate, "<cwchar>", kPublic },
+  { "std::size_t", kPrivate, "<cstddef>", kPublic },
 };
 
 // Symbol -> include mappings for GNU libstdc++

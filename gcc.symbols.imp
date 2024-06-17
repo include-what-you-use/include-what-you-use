@@ -30,7 +30,6 @@
   { "symbol": [ "fenv_t", "private", "<fenv.h>", "public"] },
   { "symbol": [ "fexcept_t", "private", "<fenv.h>", "public"] },
   { "symbol": [ "FILE", "private", "<stdio.h>", "public"] },
-  { "symbol": [ "FILE", "private", "<wchar.h>", "public"] },
   { "symbol": [ "float_t", "private", "<math.h>", "public"] },
   { "symbol": [ "fsblkcnt_t", "private", "<sys/types.h>", "public"] },
   { "symbol": [ "fsfilcnt_t", "private", "<sys/types.h>", "public"] },
@@ -89,28 +88,16 @@
   { "symbol": [ "time_t", "private", "<sys/types.h>", "public"] },
   { "symbol": [ "timer_t", "private", "<sys/types.h>", "public"] },
   { "symbol": [ "timespec", "private", "<time.h>", "public"] },
-  { "symbol": [ "timespec", "private", "<signal.h>", "public"] },
   { "symbol": [ "timeval", "private", "<sys/time.h>", "public"] },
   { "symbol": [ "tm", "private", "<time.h>", "public"] },
   { "symbol": [ "u_char", "private", "<sys/types.h>", "public"] },
   { "symbol": [ "uid_t", "private", "<sys/types.h>", "public"] },
   { "symbol": [ "useconds_t", "private", "<sys/types.h>", "public"] },
   { "symbol": [ "wchar_t", "private", "<stddef.h>", "public"] },
-  { "symbol": [ "wchar_t", "private", "<stdlib.h>", "public"] },
   { "symbol": [ "wint_t", "private", "<wchar.h>", "public"] },
   { "symbol": [ "sig_atomic_t", "private", "<signal.h>", "public"] },
   { "symbol": [ "size_t", "private", "<stddef.h>", "public"] },
-  { "symbol": [ "size_t", "private", "<signal.h>", "public"] },
-  { "symbol": [ "size_t", "private", "<stdio.h>", "public"] },
-  { "symbol": [ "size_t", "private", "<stdlib.h>", "public"] },
-  { "symbol": [ "size_t", "private", "<string.h>", "public"] },
-  { "symbol": [ "size_t", "private", "<time.h>", "public"] },
-  { "symbol": [ "size_t", "private", "<uchar.h>", "public"] },
-  { "symbol": [ "size_t", "private", "<wchar.h>", "public"] },
-  # Macros that can be defined in more than one file, don't have the
-  # same __foo_defined guard that other types do, so the grep above
-  # doesn't discover them.  Until I figure out a better way, I just
-  # add them in by hand as I discover them.
+
   { "symbol": [ "EOF", "private", "<stdio.h>", "public"] },
   { "symbol": [ "FILE", "private", "<stdio.h>", "public"] },
   { "symbol": [ "IBSHIFT", "private", "<asm/termbits.h>", "public"] },
@@ -126,8 +113,6 @@
   { "symbol": [ "va_copy", "private", "<stdarg.h>", "public"] },
   { "symbol": [ "va_end", "private", "<stdarg.h>", "public"] },
   { "symbol": [ "va_list", "private", "<stdarg.h>", "public"] },
-  { "symbol": [ "va_list", "private", "<stdio.h>", "public"] },
-  { "symbol": [ "va_list", "private", "<wchar.h>", "public"] },
   { "symbol": [ "va_start", "private", "<stdarg.h>", "public"] },
   # These are symbols that could be defined in either stdlib.h or
   # malloc.h, but we always want the stdlib location.
@@ -135,21 +120,7 @@
   { "symbol": [ "calloc", "private", "<stdlib.h>", "public"] },
   { "symbol": [ "realloc", "private", "<stdlib.h>", "public"] },
   { "symbol": [ "free", "private", "<stdlib.h>", "public"] },
-  # Entries for NULL
-  { "symbol": [ "NULL", "private", "<stddef.h>", "public"] },  # 'canonical' location for NULL
-  { "symbol": [ "NULL", "private", "<clocale>", "public"] },
-  { "symbol": [ "NULL", "private", "<cstddef>", "public"] },
-  { "symbol": [ "NULL", "private", "<cstdio>", "public"] },
-  { "symbol": [ "NULL", "private", "<cstdlib>", "public"] },
-  { "symbol": [ "NULL", "private", "<cstring>", "public"] },
-  { "symbol": [ "NULL", "private", "<ctime>", "public"] },
-  { "symbol": [ "NULL", "private", "<cwchar>", "public"] },
-  { "symbol": [ "NULL", "private", "<locale.h>", "public"] },
-  { "symbol": [ "NULL", "private", "<stdio.h>", "public"] },
-  { "symbol": [ "NULL", "private", "<stdlib.h>", "public"] },
-  { "symbol": [ "NULL", "private", "<string.h>", "public"] },
-  { "symbol": [ "NULL", "private", "<time.h>", "public"] },
-  { "symbol": [ "NULL", "private", "<wchar.h>", "public"] },
+  { "symbol": [ "NULL", "private", "<stddef.h>", "public"] },
   { "symbol": [ "offsetof", "private", "<stddef.h>", "public"] },
 
   # GCC defines std::declval in <type_traits>, but the canonical location is <utility>
@@ -184,10 +155,4 @@
   { "symbol": [ "std::ptrdiff_t", "private", "<cstddef>", "public"] },
 
   { "symbol": [ "std::size_t", "private", "<cstddef>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<cstdio>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<cstdlib>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<cstring>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<ctime>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<cuchar>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<cwchar>", "public"] }
 ]
