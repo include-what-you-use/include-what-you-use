@@ -363,6 +363,35 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(['arg1', '--', 'another_arg1'],
                          self.main.call_args['extra_args'])
 
+    def test_jobs_normal(self):
+        """ Nonzero values for -j are forwarded as they are. """
+        argv = ['iwyu_tool.py', '-p', '.', '-j', '4']
+        iwyu_tool._bootstrap(argv)
+        self.assertEqual(4, self.main.call_args['jobs'])
+
+
+    def test_jobs_zero(self):
+        """ -j=0 is translated to a nonzero job count. """
+        argv = ['iwyu_tool.py', '-p', '.', '-j', '0']
+        iwyu_tool._bootstrap(argv)
+        self.assertIsNotNone(self.main.call_args['jobs'])
+        self.assertLess(0, self.main.call_args['jobs'],
+                        'The automatically chosen job count should be >0.')
+
+    def test_jobs_novalue(self):
+        """ It is allowed to use -j without a value. """
+        argv = ['iwyu_tool.py', '-j', '-p', '.']
+        iwyu_tool._bootstrap(argv)
+        self.assertIsNotNone(self.main.call_args['jobs'])
+        self.assertLess(0, self.main.call_args['jobs'],
+                        'The automatically chosen job count should be >0.')
+
+    def test_jobs_default(self):
+        """ By default, we run singlethreaded. """
+        argv = ['iwyu_tool.py', '-p', '.']
+        iwyu_tool._bootstrap(argv)
+        self.assertEqual(1, self.main.call_args['jobs'])
+
 
 class CompilationDBTests(unittest.TestCase):
     def setUp(self):
