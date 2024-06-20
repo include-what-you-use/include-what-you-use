@@ -497,7 +497,10 @@ def _bootstrap(sys_argv):
                         choices=FORMATTERS.keys(), default=DEFAULT_FORMAT,
                         help='Output format (default: %s)' % DEFAULT_FORMAT)
     parser.add_argument('-j', '--jobs', type=int, default=1,
-                        help='Number of concurrent subprocesses')
+                        nargs='?', const=0,
+                        help=('Number of concurrent subprocesses. If zero, '
+                              'will try to match the logical cores of the '
+                              'system.'))
     parser.add_argument('-l', '--load', type=float, default=0,
                         help='Do not start new jobs if the 1min load average is greater than the provided value')
     parser.add_argument('-p', metavar='<build-path>', required=True,
@@ -517,8 +520,12 @@ def _bootstrap(sys_argv):
     argv, extra_args = partition_args(sys_argv[1:])
     args = parser.parse_args(argv)
 
+    jobs = args.jobs
+    if jobs == 0:
+        jobs = os.cpu_count() or 1
+
     return main(args.dbpath, args.source, args.verbose,
-                FORMATTERS[args.output_format], args.jobs, args.load, extra_args)
+                FORMATTERS[args.output_format], jobs, args.load, extra_args)
 
 
 if __name__ == '__main__':
