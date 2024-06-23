@@ -502,7 +502,8 @@ def _bootstrap(sys_argv):
                               'will try to match the logical cores of the '
                               'system.'))
     parser.add_argument('-l', '--load', type=float, default=0,
-                        help='Do not start new jobs if the 1min load average is greater than the provided value')
+                        help=('Do not start new jobs if the 1min load average '
+                              'is greater than the provided value'))
     parser.add_argument('-p', metavar='<build-path>', required=True,
                         help='Compilation database path', dest='dbpath')
     parser.add_argument('source', nargs='*',
