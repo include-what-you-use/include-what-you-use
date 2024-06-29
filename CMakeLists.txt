@@ -53,9 +53,13 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Synthesize clang-resource-headers target if necessary.
 if (NOT TARGET clang-resource-headers)
+  find_program(CLANG_EXECUTABLE NAMES clang${LLVM_VERSION_MAJOR} clang-${LLVM_VERSION_MAJOR} clang REQUIRED)
+  execute_process(COMMAND ${CLANG_EXECUTABLE} -print-resource-dir
+    OUTPUT_VARIABLE clang_resource_dir)
+  string(STRIP "${clang_resource_dir}" clang_resource_dir)
+  set(clang_headers_src ${clang_resource_dir}/include)
   # Use only LLVM_VERSION_MAJOR for the resource directory structure; some
   # platforms include suffix in LLVM_VERSION.
-  set(clang_headers_src "${LLVM_LIBRARY_DIR}/clang/${LLVM_VERSION_MAJOR}/include")
   set(clang_headers_dst "${CMAKE_BINARY_DIR}/lib/clang/${LLVM_VERSION_MAJOR}/include")
 
   file(GLOB_RECURSE in_files RELATIVE "${clang_headers_src}"
