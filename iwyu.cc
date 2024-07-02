@@ -2242,8 +2242,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
       return true;
     }
-    // For now, we're only worried about function calls.
-    // TODO(csilvers): are there other kinds of overloads we need to check?
+
     const FunctionDecl* arbitrary_fn_decl = nullptr;
     for (const NamedDecl* decl : expr->decls()) {
       // Sometimes a UsingShadowDecl comes between us and the 'real' decl.
@@ -2263,8 +2262,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // end up being the built-in form of the operator.  (Even if the
     // only operator==() we see is in foo.h, we don't need to #include
     // foo.h if the only call to operator== we see is on two integers.)
-    if (arbitrary_fn_decl && !arbitrary_fn_decl->isOverloadedOperator())
-      ReportDeclUse(CurrentLoc(), arbitrary_fn_decl);
+    if (!arbitrary_fn_decl || !arbitrary_fn_decl->isOverloadedOperator())
+      ReportDeclUse(CurrentLoc(), first_decl);
     return true;
   }
 

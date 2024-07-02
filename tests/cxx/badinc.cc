@@ -137,7 +137,6 @@ using namespace i1_ns2;
 using i1_ns3::i1_int_global3;
 namespace cc_ns_alias = i1_ns4;
 using i1_ns::I1_NamespaceStruct;
-// IWYU: i1_ns::I1_NamespaceTemplateFn is...*badinc-i1.h
 using i1_ns::I1_NamespaceTemplateFn;
 // TODO(csilvers): mark this using declaration as redundant and remove it?
 // IWYU: i1_ns::I1_UnusedNamespaceStruct needs a declaration
