@@ -178,7 +178,6 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "uid_t", kPrivate, "<sys/types.h>", kPublic },
   { "useconds_t", kPrivate, "<sys/types.h>", kPublic },
   { "wchar_t", kPrivate, "<stddef.h>", kPublic },
-  { "wchar_t", kPrivate, "<stdlib.h>", kPublic },
   { "wint_t", kPrivate, "<wchar.h>", kPublic },
   // It is unspecified if the cname headers provide ::size_t.
   // <locale.h> is the one header which defines NULL but not size_t.
