@@ -172,7 +172,6 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "time_t", kPrivate, "<sys/types.h>", kPublic },
   { "timer_t", kPrivate, "<sys/types.h>", kPublic },
   { "timespec", kPrivate, "<time.h>", kPublic },
-  { "timespec", kPrivate, "<signal.h>", kPublic },
   { "timeval", kPrivate, "<sys/time.h>", kPublic },
   { "tm", kPrivate, "<time.h>", kPublic },
   { "u_char", kPrivate, "<sys/types.h>", kPublic },
