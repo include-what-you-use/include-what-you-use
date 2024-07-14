@@ -274,6 +274,21 @@ bool ExecuteAction(int argc, const char** argv,
     args.push_back("-Qunused-arguments");
   }
 
+#if defined(IWYU_CLANG_EXECUTABLE_PATH)
+  // Use the full Clang executable path provided by CMake to compute Clang's
+  // resource dir, which is the base for the compiler builtin headers (stddef.h
+  // and friends). Add an explicit -resource-dir argument to tell IWYU to look
+  // there.
+  std::string resource_dir =
+      Driver::GetResourcesPath(IWYU_CLANG_EXECUTABLE_PATH);
+  args.push_back("-resource-dir");
+  args.push_back(resource_dir.c_str());
+#else
+  // The default is to look relative to the IWYU executable, which is fine if
+  // IWYU and the builtin headers are installed into the same prefix, or if IWYU
+  // is installed into the same prefix as Clang.
+#endif
+
   // Build a compilation, get the job list and filter out irrelevant jobs.
   unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
   if (!compilation)
