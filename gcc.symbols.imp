@@ -179,12 +179,5 @@
   # std::ptrdiff_t is often an architecture specific definition, force the
   # canonical location.
   { "symbol": [ "std::ptrdiff_t", "private", "<cstddef>", "public"] },
-
   { "symbol": [ "std::size_t", "private", "<cstddef>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<cstdio>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<cstdlib>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<cstring>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<ctime>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<cuchar>", "public"] },
-  { "symbol": [ "std::size_t", "private", "<cwchar>", "public"] }
 ]
