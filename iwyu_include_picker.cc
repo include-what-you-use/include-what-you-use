@@ -261,8 +261,6 @@ const IncludeMapEntry stdlib_cxx_symbol_map[] = {
   { "std::char_traits", kPrivate, "<ostream>", kPublic },
   { "std::char_traits", kPrivate, "<istream>", kPublic },
 
-  // std::ptrdiff_t is often an architecture specific definition, force the
-  // canonical location.
   { "std::ptrdiff_t", kPrivate, "<cstddef>", kPublic },
   { "std::size_t", kPrivate, "<cstddef>", kPublic },
 };
