@@ -759,9 +759,6 @@ set<const clang::Type*> GetComponentsOfTypeWithoutSubstituted(
 // Returns true if the type has any template arguments.
 bool IsTemplatizedType(const clang::Type* type);
 
-// Returns true if the type is a RecordType or a TemplateSpecializationType.
-bool IsClassType(const clang::Type* type);
-
 // Returns true if any type involved (recursively examining template
 // arguments) satisfies the given predicate.
 bool InvolvesTypeForWhich(const clang::Type* type,

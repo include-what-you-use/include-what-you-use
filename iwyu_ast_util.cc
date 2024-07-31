@@ -1378,12 +1378,6 @@ bool IsTemplatizedType(const Type* type) {
   return (type && isa<TemplateSpecializationType>(Desugar(type)));
 }
 
-bool IsClassType(const Type* type) {
-  type = Desugar(type);
-  return (type &&
-          (isa<TemplateSpecializationType>(type) || isa<RecordType>(type)));
-}
-
 bool InvolvesTypeForWhich(const Type* type, function<bool(const Type*)> pred) {
   type = Desugar(type);
   if (pred(type))
