@@ -610,9 +610,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       member_types.insert(it->getType().getTypePtr());
     }
     for (const Type* type : member_types) {
-      const NamedDecl* member_decl = TypeToDeclAsWritten(type);
       // We only want those fields that are c++ classes.
-      if (const CXXRecordDecl* cxx_field_decl = DynCastFrom(member_decl)) {
+      if (const CXXRecordDecl* cxx_field_decl = type->getAsCXXRecordDecl()) {
         if (const CXXDestructorDecl* field_dtor =
                 cxx_field_decl->getDestructor()) {
           if (!this->getDerived().TraverseImplicitDestructorCall(

@@ -20,8 +20,23 @@ struct Tpl {
   }
 };
 
+template <typename T>
+struct TplUsingInDtor {
+  ~TplUsingInDtor() {
+    T t;
+  }
+};
+
 class IndirectClass;
 using NonProviding = Tpl<IndirectClass>;
+using NonProvidingTplUsingInDtor = TplUsingInDtor<IndirectClass>;
+
+struct Struct {
+  // IWYU: IndirectClass is...*indirect.h
+  ~Struct() = default;
+
+  NonProvidingTplUsingInDtor member;
+};
 
 template <typename T>
 struct Outer {
