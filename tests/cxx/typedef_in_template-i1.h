@@ -16,4 +16,8 @@ class Class1 {};
 class IndirectClass;
 using NonProviding = IndirectClass;
 
+template <typename>
+struct Identity;
+using NonProvidingNested = Identity<IndirectClass>;
+
 #endif // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_IN_TEMPLATE_I1_H_
