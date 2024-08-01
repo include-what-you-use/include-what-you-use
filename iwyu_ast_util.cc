@@ -1594,6 +1594,7 @@ TemplateInstantiationData GetTplInstDataForClass(
     const Type* type, function<set<const Type*>(const Type*)> provided_getter) {
   TemplateInstantiationData result =
       GetTplInstDataForClassNoComponentTypes(type, provided_getter);
+  InsertAllInto(provided_getter(type), &result.provided_types);
   return TemplateInstantiationData{
       ResugarTypeComponents(
           result.resugar_map),  // add in the decomposition of retval
