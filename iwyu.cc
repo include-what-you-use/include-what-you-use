@@ -4412,7 +4412,7 @@ class IwyuAstConsumer
                                                         data.provided_types);
   }
 
-  set<const Type*> GetProvidedByTplArg(const Type* type) {
+  set<const Type*> GetProvidedByTplArg(const Type* type) const {
     set<const Type*> res;
     if (!type)
       return res;
@@ -4464,15 +4464,17 @@ class IwyuAstConsumer
 
  private:
   set<const Type*> GetProvidedTypeComponents(const Type* type) const {
+    set<const Type*> res;
     const Type* desugared_until_typedef = Desugar(type);
     if (const auto* typedef_type =
             dyn_cast_or_null<TypedefType>(desugared_until_typedef)) {
       const TypedefNameDecl* decl = typedef_type->getDecl();
-      return GetProvidedTypes(decl->getUnderlyingType().getTypePtr(),
-                              GetLocation(decl));
+      res = GetProvidedTypes(decl->getUnderlyingType().getTypePtr(),
+                             GetLocation(decl));
+      InsertAllInto(GetProvidedByTplArg(type), &res);
     }
     // TODO(bolshakov): handle alias templates.
-    return set<const Type*>();
+    return res;
   }
 
   TemplateInstantiationData GetTplInstData(const Type* type) const {
