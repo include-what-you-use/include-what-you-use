@@ -1375,7 +1375,7 @@ const Type* Desugar(const Type* type) {
 }
 
 bool IsTemplatizedType(const Type* type) {
-  return (type && isa<TemplateSpecializationType>(Desugar(type)));
+  return type && type->getAs<TemplateSpecializationType>();
 }
 
 bool InvolvesTypeForWhich(const Type* type, function<bool(const Type*)> pred) {

@@ -193,6 +193,9 @@ typedef I1_Class Cc_typedef_array[kI1ConstInt];
 typedef I1_TemplateClass<I1_TemplateClass<I1_Class,I2_Class> > Cc_tpl_typedef;
 // TODO(csilvers): it would be nice to be able to take this line out and
 // still have the above tests pass:
+// TODO(bolshakov): figure out how to determine at the use site that a typedef
+// provides not only the types but also the member functions.
+// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
 Cc_tpl_typedef cc_tpl_typedef;
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class::I2_Class is...*badinc-i2-inl.h
