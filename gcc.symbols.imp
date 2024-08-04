@@ -123,8 +123,6 @@
   { "symbol": [ "va_copy", "private", "<stdarg.h>", "public"] },
   { "symbol": [ "va_end", "private", "<stdarg.h>", "public"] },
   { "symbol": [ "va_list", "private", "<stdarg.h>", "public"] },
-  { "symbol": [ "va_list", "private", "<stdio.h>", "public"] },
-  { "symbol": [ "va_list", "private", "<wchar.h>", "public"] },
   { "symbol": [ "va_start", "private", "<stdarg.h>", "public"] },
   # These are symbols that could be defined in either stdlib.h or
   # malloc.h, but we always want the stdlib location.

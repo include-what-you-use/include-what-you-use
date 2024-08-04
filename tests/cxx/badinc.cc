@@ -1056,10 +1056,6 @@ int main() {
   // IWYU: I1_PtrDereferenceClass needs a declaration
   I1_PtrDereferenceClass* local_i1_ptrdereference_class = 0;
   int x;
-  // va_list is normally in <stdarg.h>, but we already have <stdio.h>
-  // available, so mappings will source it from there.
-  // IWYU: va_list is...*<stdio.h>
-  va_list vl;
   D1_I1_Typedef d1_i1_typedef;
   // IWYU: i1_int is...*badinc-i1.h
   int vararray[i1_int];
