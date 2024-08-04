@@ -208,8 +208,6 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "va_copy", kPrivate, "<stdarg.h>", kPublic },
   { "va_end", kPrivate, "<stdarg.h>", kPublic },
   { "va_list", kPrivate, "<stdarg.h>", kPublic },
-  { "va_list", kPrivate, "<stdio.h>", kPublic },
-  { "va_list", kPrivate, "<wchar.h>", kPublic },
   { "va_start", kPrivate, "<stdarg.h>", kPublic },
   // These are symbols that could be defined in either stdlib.h or
   // malloc.h, but we always want the stdlib location.
