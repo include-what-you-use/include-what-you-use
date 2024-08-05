@@ -51,33 +51,6 @@ option(IWYU_LINK_CLANG_DYLIB
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Synthesize clang-resource-headers target if necessary.
-if (NOT TARGET clang-resource-headers)
-  # Use only LLVM_VERSION_MAJOR for the resource directory structure; some
-  # platforms include suffix in LLVM_VERSION.
-  set(clang_headers_src "${LLVM_LIBRARY_DIR}/clang/${LLVM_VERSION_MAJOR}/include")
-  set(clang_headers_dst "${CMAKE_BINARY_DIR}/lib/clang/${LLVM_VERSION_MAJOR}/include")
-
-  file(GLOB_RECURSE in_files RELATIVE "${clang_headers_src}"
-    "${clang_headers_src}/*"
-  )
-
-  set(out_files)
-  foreach (file ${in_files})
-    set(src "${clang_headers_src}/${file}")
-    set(dst "${clang_headers_dst}/${file}")
-
-    add_custom_command(OUTPUT "${dst}"
-      DEPENDS "${src}"
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${src}" "${dst}"
-      COMMENT "Copying ${src}..."
-    )
-    list(APPEND out_files "${dst}")
-  endforeach()
-
-  add_custom_target(clang-resource-headers ALL DEPENDS ${out_files})
-endif()
-
 # Pick up Git revision so we can report it in version information.
 include(FindGit)
 if (GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
@@ -116,9 +89,22 @@ add_llvm_executable(include-what-you-use
   iwyu_verrs.cc
 )
 
-# Add a dependency on clang-resource-headers to ensure the builtin headers are
-# available when IWYU is executed from the build dir.
-add_dependencies(include-what-you-use clang-resource-headers)
+if (iwyu_standalone_build)
+  # Get the clang target full output path
+  get_property(iwyu_clang_path TARGET clang PROPERTY LOCATION)
+  message(STATUS
+    "IWYU: Using resource dir relative to Clang binary: ${iwyu_clang_path}")
+
+  target_compile_definitions(include-what-you-use PRIVATE
+    IWYU_CLANG_EXECUTABLE_PATH="${iwyu_clang_path}"
+  )
+else()
+  # When building as part of LLVM, add a dependency on clang-resource-headers to
+  # ensure the builtin headers are available when IWYU is executed from the
+  # build dir. Omit IWYU_CLANG_EXECUTABLE_PATH to rely on the default resource
+  # dir from clang/lib/Driver/Driver.cpp in this mode.
+  add_dependencies(include-what-you-use clang-resource-headers)
+endif()
 
 # LLVM requires C++17, so follow suit.
 set_target_properties(include-what-you-use PROPERTIES
