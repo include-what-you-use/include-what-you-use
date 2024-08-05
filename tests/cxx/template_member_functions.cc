@@ -18,10 +18,21 @@ struct Tpl {
   static void StaticFn() {
     T t;
   }
+
+  ~Tpl() {
+    T t;
+  }
 };
 
 class IndirectClass;
 using NonProviding = Tpl<IndirectClass>;
+
+struct Struct {
+  // IWYU: IndirectClass is...*indirect.h
+  ~Struct() = default;
+
+  NonProviding member;
+};
 
 void Fn() {
   // IWYU: IndirectClass is...*indirect.h
