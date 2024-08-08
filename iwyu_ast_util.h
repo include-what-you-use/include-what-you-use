@@ -16,6 +16,7 @@
 #include <map>                          // for map
 #include <set>                          // for set
 #include <string>                       // for string
+#include <vector>                       // for vector
 
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
@@ -857,6 +858,11 @@ TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
 // either scoped or unscoped with explicitly stated underlying type,
 // according to the standard.
 bool CanBeOpaqueDeclared(const clang::EnumType* type);
+
+// Collects template argument type components and returns them desugared.
+// The result may contain duplicates.
+std::vector<const clang::Type*> GetCanonicalArgComponents(
+    const clang::TemplateSpecializationType*);
 
 // --- Utilities for Stmt.
 

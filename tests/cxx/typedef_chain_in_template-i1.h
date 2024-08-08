@@ -18,4 +18,7 @@ struct TypedefWrapper {
   typedef value_type& reference;
 };
 
+template <typename T>
+using IdentityAlias2 = T;
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_CHAIN_IN_TEMPLATE_I1_H_
