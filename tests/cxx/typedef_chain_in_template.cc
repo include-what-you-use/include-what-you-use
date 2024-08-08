@@ -74,6 +74,11 @@ void Fn() {
   (void)sizeof(TplWithNonProvidedAliased1);
   // IWYU: TypedefChainClass is...*typedef_chain_class.h
   (void)sizeof(TplWithNonProvidedAliased2);
+
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
+  NonProvidingAliasByOther<1> npabo;
+  // IWYU: TypedefChainClass is...*typedef_chain_class.h
+  npabo.Method();
 }
 
 /**** IWYU_SUMMARY
@@ -89,6 +94,6 @@ The full include-list for tests/cxx/typedef_chain_in_template.cc:
 #include "tests/cxx/typedef_chain_in_template-d2.h"  // for ContainerAsLibcpp
 #include "tests/cxx/typedef_chain_in_template-d3.h"  // for ContainerShortTypedefChain
 #include "tests/cxx/typedef_chain_in_template-d4.h"  // for ContainerLongTypedefChain
-#include "tests/cxx/typedef_chain_in_template-d5.h"  // for IdentityAliasComplex, IdentityStructComplex, TplWithNonProvidedAliased1, TplWithNonProvidedAliased2
+#include "tests/cxx/typedef_chain_in_template-d5.h"  // for IdentityAliasComplex, IdentityStructComplex, NonProvidingAliasByOther, TplWithNonProvidedAliased1, TplWithNonProvidedAliased2
 
 ***** IWYU_SUMMARY */

@@ -28,3 +28,8 @@ struct Tpl {
 
 using TplWithNonProvidedAliased1 = Tpl<NonProvidingAlias>;
 using TplWithNonProvidedAliased2 = Tpl<NonProvidingAliasTpl<1>>;
+
+class TypedefChainClass;
+
+template <int>
+using NonProvidingAliasByOther = IdentityAlias2<TypedefChainClass>;
