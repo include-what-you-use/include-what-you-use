@@ -148,6 +148,7 @@ using llvm::errs;
 using llvm::isa;
 using llvm::raw_string_ostream;
 using std::function;
+using std::vector;
 
 namespace include_what_you_use {
 
@@ -1615,6 +1616,17 @@ TemplateInstantiationData GetTplInstDataForClass(
 
 bool CanBeOpaqueDeclared(const EnumType* type) {
   return type->getDecl()->isFixed();
+}
+
+vector<const Type*> GetCanonicalArgComponents(
+    const TemplateSpecializationType* type) {
+  vector<const Type*> res;
+  SugaredTypeEnumerator enumerator;
+  for (const TemplateArgument& arg : type->template_arguments()) {
+    for (const Type* component : enumerator.Enumerate(arg))
+      res.push_back(GetCanonicalType(component));
+  }
+  return res;
 }
 
 // --- Utilities for Stmt.
