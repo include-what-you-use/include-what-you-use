@@ -636,27 +636,6 @@ const char* stdlib_cpp_public_headers[] = {
 //
 // Note: make sure to sync this setting with stl.public.imp
 //
-const IncludeMapEntry stdlib_cpp_include_map[] = {
-  // The iostream .h files are confusing.  Lots of private headers,
-  // which are handled below, but we also have public headers
-  // #including each other (eg <iostream> #includes <istream>).  We
-  // are pretty forgiving: if a user specifies any public header, we
-  // generally don't require the others.
-  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && egrep '^ *# *include <(istream|ostream|iostream|fstream|sstream|streambuf|ios|iosfwd)>' *stream* ios | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ and print qq@    { "<$2>", kPublic, "<$1>", kPublic },@' | sort -u )
-  { "<ios>", kPublic, "<istream>", kPublic },
-  { "<ios>", kPublic, "<ostream>", kPublic },
-  { "<iosfwd>", kPublic, "<ios>", kPublic },
-  { "<iosfwd>", kPublic, "<streambuf>", kPublic },
-  { "<istream>", kPublic, "<fstream>", kPublic },
-  { "<istream>", kPublic, "<iostream>", kPublic },
-  { "<istream>", kPublic, "<sstream>", kPublic },
-  { "<ostream>", kPublic, "<fstream>", kPublic },
-  { "<ostream>", kPublic, "<iostream>", kPublic },
-  { "<ostream>", kPublic, "<istream>", kPublic },
-  { "<ostream>", kPublic, "<sstream>", kPublic },
-  { "<streambuf>", kPublic, "<ios>", kPublic },
-};
-
 // GNU libstdc++ mappings generated with:
 //
 // mapgen/iwyu-mapgen-libstdcxx.py --lang=c++ /usr/include/c++/11 \
@@ -1491,10 +1470,6 @@ void IncludePicker::AddDefaultMappings(CStdLib cstdlib,
     // mappings shouldn't be mentioning the C headers.
     AddIncludeMappings(stdlib_c_include_map,
                        IWYU_ARRAYSIZE(stdlib_c_include_map));
-    // C++ include mappings to allow different public headers that
-    // generally include each other.
-    AddIncludeMappings(stdlib_cpp_include_map,
-                       IWYU_ARRAYSIZE(stdlib_cpp_include_map));
 
     // Add common C++ mappings to deal with generic C++ standard
     // library symbol issues (so the standard library doesn't have to
