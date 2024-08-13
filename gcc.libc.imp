@@ -79,6 +79,7 @@
   { "include": [ "<bits/stat.h>", "private", "<sys/stat.h>", "public"] },
   { "include": [ "<bits/statfs.h>", "private", "<sys/statfs.h>", "public"] },
   { "include": [ "<bits/statvfs.h>", "private", "<sys/statvfs.h>", "public"] },
+  { "include": [ "<bits/std_abs.h>", "private", "<stdlib.h>", "public"] },
   { "include": [ "<bits/stdio-ldbl.h>", "private", "<stdio.h>", "public"] },
   { "include": [ "<bits/stdio-lock.h>", "private", "<libio.h>", "public"] },
   { "include": [ "<bits/stdio.h>", "private", "<stdio.h>", "public"] },

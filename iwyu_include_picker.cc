@@ -359,6 +359,7 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/stat.h>", kPrivate, "<sys/stat.h>", kPublic },
   { "<bits/statfs.h>", kPrivate, "<sys/statfs.h>", kPublic },
   { "<bits/statvfs.h>", kPrivate, "<sys/statvfs.h>", kPublic },
+  { "<bits/std_abs.h>", kPrivate, "<stdlib.h>", kPublic },
   { "<bits/stdio-ldbl.h>", kPrivate, "<stdio.h>", kPublic },
   { "<bits/stdio-lock.h>", kPrivate, "<libio.h>", kPublic },
   { "<bits/stdio.h>", kPrivate, "<stdio.h>", kPublic },
