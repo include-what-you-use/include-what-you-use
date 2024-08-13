@@ -166,6 +166,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "sockaddr", kPrivate, "<sys/socket.h>", kPublic },
   { "socklen_t", kPrivate, "<sys/socket.h>", kPublic },
   { "ssize_t", kPrivate, "<sys/types.h>", kPublic },
+  { "stack_t", kPrivate, "<signal.h>", kPublic },
   { "stat", kPrivate, "<sys/stat.h>", kPublic },
   { "suseconds_t", kPrivate, "<sys/types.h>", kPublic },
   { "time_t", kPrivate, "<time.h>", kPublic },
