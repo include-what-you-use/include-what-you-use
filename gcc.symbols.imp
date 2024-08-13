@@ -82,6 +82,7 @@
   { "symbol": [ "sockaddr", "private", "<sys/socket.h>", "public"] },
   { "symbol": [ "socklen_t", "private", "<sys/socket.h>", "public"] },
   { "symbol": [ "ssize_t", "private", "<sys/types.h>", "public"] },
+  { "symbol": [ "stack_t", "private", "<signal.h>", "public"] },
   { "symbol": [ "stat", "private", "<sys/stat.h>", "public"] },
   { "symbol": [ "suseconds_t", "private", "<sys/types.h>", "public"] },
   { "symbol": [ "time_t", "private", "<time.h>", "public"] },
