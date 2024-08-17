@@ -74,7 +74,7 @@ extract dependencies from prefix header/PCH into the source files that actually
 use them.
 
 
-### How do I use IWYU on macOS? ###
+## How do I use IWYU on macOS? ##
 
 When analyzing C++ code on macOS, IWYU uses probing (implicitly via Clang
 libraries) to find both system C headers and a libc++ standard library
