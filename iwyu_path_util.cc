@@ -213,6 +213,12 @@ bool IsQuotedInclude(const string& s) {
           (StartsWith(s, "\"") && EndsWith(s, "\"")));
 }
 
+// Removes <> or "" from a quoted include.
+string StripQuotes(const string& quoted_include) {
+  CHECK_(IsQuotedInclude(quoted_include));
+  return quoted_include.substr(1, quoted_include.size() - 2);
+}
+
 // Returns whether this is a system (as opposed to user) include file,
 // based on where it lives.
 bool IsSystemIncludeFile(const string& filepath) {

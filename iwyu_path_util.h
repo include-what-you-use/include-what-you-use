@@ -84,6 +84,9 @@ string ConvertToQuotedInclude(const string& filepath,
 // Returns true if the string is a quoted include.
 bool IsQuotedInclude(const string& s);
 
+// Removes <> or "" from a quoted include.
+string StripQuotes(const string& quoted_include);
+
 // Returns whether this is a system (as opposed to user) include
 // file, based on where it lives.
 bool IsSystemIncludeFile(const string& filepath);

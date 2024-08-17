@@ -72,6 +72,12 @@
 //     internally IWYU wants a full-use which it downgrades to a forward-decl.
 // 22. "no_forward_declare" pragma: cpd20a and cpd20b are defined inside an
 //     anonymous namespace.
+// 23. @file without filename should synthesize a filename and map to
+//     @headername. cp23 defined in d23, which has
+//     @headername{some_system_header_file}
+// 24. @file with spurious leading include/ in filename.
+//     cp24 defined in d24, which has @headername{some_system_header_file}
+
 #include "tests/cxx/comment_pragmas-d1.h"
 #include "tests/cxx/comment_pragmas-d10.h"
 #include "tests/cxx/comment_pragmas-d11.h"
@@ -107,6 +113,9 @@
 
 #include "tests/cxx/comment_pragmas-d22.h" // IWYU pragma: keep
 #include "tests/cxx/comment_pragmas-d22.h"
+
+#include "tests/cxx/comment_pragmas-d23.h"
+#include "tests/cxx/comment_pragmas-d24.h"
 
 class CommentPragmasD19;  // Needed, but removed due to no_forward_declare.
 class CommentPragmasTest21a;  // Needed but removed due to no_forward_declare.
@@ -200,6 +209,12 @@ CommentPragmasD20c* cpd20c;
 typedef CommentPragmasTest21a CommentPragmasTest21b;
 class CommentPragmasTest21a {};
 
+// IWYU: CommentPragmasD23 is...*<some_system_header_file>
+CommentPragmasD23 cpd23;
+
+// IWYU: CommentPragmasD24 is...*<some_system_header_file>
+CommentPragmasD24 cpd24;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/comment_pragmas.cc should add these lines:
@@ -215,6 +230,8 @@ tests/cxx/comment_pragmas.cc should remove these lines:
 - #include "tests/cxx/comment_pragmas-d1.h"  // lines XX-XX
 - #include "tests/cxx/comment_pragmas-d10.h"  // lines XX-XX
 - #include "tests/cxx/comment_pragmas-d2.h"  // lines XX-XX
+- #include "tests/cxx/comment_pragmas-d23.h"  // lines XX-XX
+- #include "tests/cxx/comment_pragmas-d24.h"  // lines XX-XX
 - #include "tests/cxx/comment_pragmas-d3.h"  // lines XX-XX
 - #include "tests/cxx/comment_pragmas-d4.h"  // lines XX-XX
 - #include "tests/cxx/comment_pragmas-d7.h"  // lines XX-XX
@@ -224,7 +241,7 @@ tests/cxx/comment_pragmas.cc should remove these lines:
 - class CommentPragmasTest21a;  // lines XX-XX
 
 The full include-list for tests/cxx/comment_pragmas.cc:
-#include <some_system_header_file>  // for CommentPragmasD8, CommentPragmasD9
+#include <some_system_header_file>  // for CommentPragmasD23, CommentPragmasD24, CommentPragmasD8, CommentPragmasD9
 #include "tests/cxx/comment_pragmas-d11.h"  // for CommentPragmasD11
 #include "tests/cxx/comment_pragmas-d12.h"  // for CommentPragmasD12
 #include "tests/cxx/comment_pragmas-d13.h"  // for CommentPragmasI10

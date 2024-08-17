@@ -369,16 +369,27 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
   SourceLocation current_loc = file_beginning;
 
   while (true) {
-    // Figure out the canonical name of this file.  We can't use
-    // GetFilePath() because it may not interact properly with -I.
-    current_loc = GetLocationAfter(current_loc,
-                                   "@file ",
-                                   DefaultDataGetter());
+    // Try to use file directive to get a canonical name of this file. It should
+    // be suitable for inclusion.
+    current_loc = GetLocationAfter(current_loc, "@file", DefaultDataGetter());
     if (!current_loc.isValid()) {
       break;
     }
-    const string filename = GetSourceTextUntilEndOfLine(current_loc,
-                                                        DefaultDataGetter()).str();
+
+    string filename =
+        GetSourceTextUntilEndOfLine(current_loc, DefaultDataGetter()).str();
+    StripWhiteSpace(&filename);
+
+    // Some directives have a redundant include/ prefix, strip it.
+    (void)StripPast(&filename, "include/");
+
+    // Some directives are empty. Synthesize a quoted include from the full path
+    // and strip the quotes to match directive format.
+    if (filename.empty()) {
+      string quoted_include = ConvertToQuotedInclude(GetFilePath(current_loc));
+      filename = StripQuotes(quoted_include);
+    }
+
     // Use "" or <> based on where the file lives.
     string quoted_private_include;
     if (IsSystemIncludeFile(GetFilePath(current_loc)))
