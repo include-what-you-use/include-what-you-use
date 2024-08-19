@@ -1458,6 +1458,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (!fn_decl)     // TODO(csilvers): what to do for fn ptrs and the like?
       return set<const Type*>();
 
+    if (const auto* method = dyn_cast<CXXMethodDecl>(fn_decl))
+      fn_decl = GetFromLeastDerived(method);
+
     // Collect the non-explicit, one-arg constructor ('autocast') types.
     set<const Type*> autocast_types;
     for (FunctionDecl::param_const_iterator param = fn_decl->param_begin();
@@ -1494,8 +1497,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   set<const Type*> GetProvidedTypesForFnReturn(const FunctionDecl* decl) const {
-    const Type* return_type = decl->getReturnType().getTypePtr();
-    return GetProvidedTypes(return_type, GetLocation(decl));
+    const FunctionDecl* providing_decl = decl;
+    if (const auto* method = dyn_cast<CXXMethodDecl>(decl))
+      providing_decl = GetFromLeastDerived(method);
+    const Type* return_type = providing_decl->getReturnType().getTypePtr();
+    return GetProvidedTypes(return_type, GetLocation(providing_decl));
   }
 
   //------------------------------------------------------------

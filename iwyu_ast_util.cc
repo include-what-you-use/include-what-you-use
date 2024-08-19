@@ -1310,6 +1310,12 @@ bool IsImplicitlyInstantiatedDfn(const FunctionDecl* decl) {
              clang::TSK_ImplicitInstantiation;
 }
 
+const CXXMethodDecl* GetFromLeastDerived(const CXXMethodDecl* decl) {
+  while (decl->size_overridden_methods())
+    decl = *decl->begin_overridden_methods();
+  return decl;
+}
+
 // --- Utilities for Type.
 
 const Type* GetTypeOf(const Expr* expr) {
