@@ -717,6 +717,11 @@ bool IsBuiltinFunction(const clang::NamedDecl* decl);
 // (in particular, not just a declaration).
 bool IsImplicitlyInstantiatedDfn(const clang::FunctionDecl*);
 
+// If the given method overrides base class methods, returns the overridden
+// method declaration from the least derived class, otherwise returns the given
+// argument.
+const clang::CXXMethodDecl* GetFromLeastDerived(const clang::CXXMethodDecl*);
+
 // --- Utilities for Type.
 
 const clang::Type* GetTypeOf(const clang::Expr* expr);
