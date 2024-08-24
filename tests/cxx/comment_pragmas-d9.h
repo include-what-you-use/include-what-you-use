@@ -12,7 +12,7 @@
 /** @file tests/cxx/comment_pragmas-d9.h
  *  This is an internal header file, included by other library headers
  *  Do not attempt to use it directly.
- *  @headername{some_system_header_file, some_other_system_header_file}
+ *  @headername{some_public_header_file, some_other_public_header_file}
  */
 
 #ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_COMMENT_PRAGMAS_D9_H_

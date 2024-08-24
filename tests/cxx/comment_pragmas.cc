@@ -42,10 +42,10 @@
 // 12. Unknown pragma => warning
 //     d7.h
 // 13. @headername{foo} directive (gcc and ?) => include <foo>.
-//     cp8 defined in d8.h which has @headername{some_system_header_file}
+//     cp8 defined in d8.h which has @headername{some_public_header_file}
 // 14. @headername{foo, bar} directive (gcc and ?) => include <foo>.
 //     cp9 defined in d9.h which has
-//     @headername{some_system_header_file, some_other_header_file}
+//     @headername{some_public_header_file, some_other_public_header_file}
 // 15. Malformed @headername -> warning
 //     d7.h
 // 16. "no_include" pragma: Don't suggest include.
@@ -145,10 +145,10 @@ CommentPragmasI8 cpi8;
 // IWYU: IndirectClass is ...*indirect.h
 IndirectClass ic;
 
-// IWYU: CommentPragmasD8 is...*<some_system_header_file>
+// IWYU: CommentPragmasD8 is...*"some_public_header_file"
 CommentPragmasD8 cpd8;
 
-// IWYU: CommentPragmasD9 is...*<some_system_header_file>
+// IWYU: CommentPragmasD9 is...*"some_public_header_file"
 CommentPragmasD9 cpd9;
 
 // Note: IWYU will emit the diagnostic but suppress the include
@@ -203,7 +203,7 @@ class CommentPragmasTest21a {};
 /**** IWYU_SUMMARY
 
 tests/cxx/comment_pragmas.cc should add these lines:
-#include <some_system_header_file>
+#include "some_public_header_file"
 #include "tests/cxx/comment_pragmas-i1.h"
 #include "tests/cxx/comment_pragmas-i6.h"
 #include "tests/cxx/comment_pragmas-i7.h"
@@ -224,7 +224,7 @@ tests/cxx/comment_pragmas.cc should remove these lines:
 - class CommentPragmasTest21a;  // lines XX-XX
 
 The full include-list for tests/cxx/comment_pragmas.cc:
-#include <some_system_header_file>  // for CommentPragmasD8, CommentPragmasD9
+#include "some_public_header_file"  // for CommentPragmasD8, CommentPragmasD9
 #include "tests/cxx/comment_pragmas-d11.h"  // for CommentPragmasD11
 #include "tests/cxx/comment_pragmas-d12.h"  // for CommentPragmasD12
 #include "tests/cxx/comment_pragmas-d13.h"  // for CommentPragmasI10

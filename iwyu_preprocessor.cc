@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Token.h"
 #include "iwyu_ast_util.h"
@@ -367,25 +368,18 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
 void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     SourceLocation file_beginning) {
   SourceLocation current_loc = file_beginning;
+  OptionalFileEntryRef file = GetFileEntry(current_loc);
+  if (!file) {
+    return;
+  }
 
   while (true) {
-    // Figure out the canonical name of this file.  We can't use
-    // GetFilePath() because it may not interact properly with -I.
-    current_loc = GetLocationAfter(current_loc,
-                                   "@file ",
-                                   DefaultDataGetter());
+    // Find any headername directive after a file directive. This is a Doxygen
+    // convention in libstdc++ to point users from private to public headers.
+    current_loc = GetLocationAfter(current_loc, "@file ", DefaultDataGetter());
     if (!current_loc.isValid()) {
       break;
     }
-    const string filename = GetSourceTextUntilEndOfLine(current_loc,
-                                                        DefaultDataGetter()).str();
-    // Use "" or <> based on where the file lives.
-    string quoted_private_include =
-        AddQuotes(filename, IsSystemIncludeFile(GetFilePath(current_loc)));
-
-    // TODO(dsturtevant): Maybe place restrictions on the
-    // placement. E.g., in a comment, before any code, or perhaps only
-    // when in the same comment as an @file directive.
     current_loc = GetLocationAfter(current_loc,
                                    "@headername{",
                                    DefaultDataGetter());
@@ -403,10 +397,27 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     after_text = after_text.substr(0, close_brace_pos);
     vector<string> public_includes = Split(after_text, ",", 0);
 
+    // Lookup the current filename as a quoted include.
+    bool is_angled = IsSystemHeader(file);
+    string include_name = preprocessor_.getHeaderSearchInfo()
+                              .getIncludeNameForHeader(*file)
+                              .str();
+    if (include_name.empty()) {
+      // Sometimes the preprocessor state can't resolve the include name; don't
+      // map empty names in that case.
+      // TODO: figure out a bullet-proof way to get include name from file.
+      VERRS(8) << PrintableLoc(file_beginning)
+               << ": No private include name found for headername mapping\n";
+      return;
+    }
+    string quoted_private_include = AddQuotes(include_name, is_angled);
+
+    // Generate mappings from the private to all public names.
     for (string& public_include : public_includes) {
       StripWhiteSpace(&public_include);
-      const string quoted_header_name =
-          AddQuotes(public_include, /*angled=*/true);
+
+      // Use the same angle/quote policy as for the private file.
+      const string quoted_header_name = AddQuotes(public_include, is_angled);
 
       VERRS(8) << "Adding dynamic mapping for @headername\n";
       MutableGlobalIncludePicker()->AddMapping(
