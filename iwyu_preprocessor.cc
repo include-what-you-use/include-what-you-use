@@ -380,11 +380,8 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     const string filename = GetSourceTextUntilEndOfLine(current_loc,
                                                         DefaultDataGetter()).str();
     // Use "" or <> based on where the file lives.
-    string quoted_private_include;
-    if (IsSystemIncludeFile(GetFilePath(current_loc)))
-      quoted_private_include = "<" + filename + ">";
-    else
-      quoted_private_include = "\"" + filename + "\"";
+    string quoted_private_include =
+        AddQuotes(filename, IsSystemIncludeFile(GetFilePath(current_loc)));
 
     // TODO(dsturtevant): Maybe place restrictions on the
     // placement. E.g., in a comment, before any code, or perhaps only
@@ -408,7 +405,8 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
 
     for (string& public_include : public_includes) {
       StripWhiteSpace(&public_include);
-      const string quoted_header_name = "<" + public_include + ">";
+      const string quoted_header_name =
+          AddQuotes(public_include, /*angled=*/true);
 
       VERRS(8) << "Adding dynamic mapping for @headername\n";
       MutableGlobalIncludePicker()->AddMapping(

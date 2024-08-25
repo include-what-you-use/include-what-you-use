@@ -95,6 +95,11 @@ inline bool IsSpecialFilename(llvm::StringRef name) {
           name == "<scratch space>" || name == "<inline asm>");
 }
 
+// Returns include name enclosed in double quotes or angle quotes, depending on
+// the angled flag. An include name is the unquoted relative name that would be
+// used on an include line, e.g. lib/mytype.h or stdio.h.
+string AddQuotes(string include_name, bool angled);
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_

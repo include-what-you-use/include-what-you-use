@@ -192,10 +192,7 @@ string ConvertToQuotedInclude(const string& filepath,
     // quoted include by just stripping the prefix.
 
     if (StripPathPrefix(&path, entry.path)) {
-      if (entry.path_type == HeaderSearchPath::kSystemPath)
-        return "<" + path + ">";
-      else
-        return "\"" + path + "\"";
+      return AddQuotes(path, entry.path_type == HeaderSearchPath::kSystemPath);
     }
   }
 
@@ -203,7 +200,7 @@ string ConvertToQuotedInclude(const string& filepath,
   // Uses the implicit "-I <basename current file>" entry on the search path.
   if (!includer_path.empty())
     StripPathPrefix(&path, NormalizeDirPath(includer_path));
-  return "\"" + path + "\"";
+  return AddQuotes(path, /*angled=*/false);
 }
 
 bool IsQuotedInclude(const string& s) {
@@ -217,6 +214,13 @@ bool IsQuotedInclude(const string& s) {
 // based on where it lives.
 bool IsSystemIncludeFile(const string& filepath) {
   return ConvertToQuotedInclude(filepath)[0] == '<';
+}
+
+string AddQuotes(string include_name, bool angled) {
+  if (angled) {
+      return "<" + include_name + ">";
+  }
+  return "\"" + include_name + "\"";
 }
 
 }  // namespace include_what_you_use
