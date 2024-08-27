@@ -752,6 +752,9 @@ const clang::Type* Desugar(const clang::Type* type);
 // 'B' but not 'Tpl1<A, B>'.
 set<const clang::Type*> GetComponentsOfType(const clang::Type* type);
 
+// Almost the same except it returns canonical types.
+set<const clang::Type*> GetCanonicalComponentsOfType(const clang::Type* type);
+
 // Returns types for determination of their "provision" status. They are
 // canonicalized because intermediate sugar should be always provided already
 // according to language rules. Substituted template parameter types (and their

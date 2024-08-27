@@ -1579,8 +1579,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     OptionalFileEntryRef used_in = GetFileEntry(used_loc);
-    preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, target_decl, use_flags, comment);
+    if (!blocked_for_fwd_decl_.count(target_decl->getCanonicalDecl())) {
+      preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
+          used_loc, target_decl, use_flags, comment);
+    }
 
     // If we're a use that depends on a using declaration, make sure
     // we #include the file with the using declaration.
@@ -2622,6 +2624,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   set<const Type*> blocked_types_;
+  set<const Decl*> blocked_for_fwd_decl_;
 
  private:
   template <typename T> friend class IwyuBaseAstVisitor;
@@ -4223,6 +4226,36 @@ class IwyuAstConsumer
     return HandleAliasedClassMethods(decl);
   }
 
+  // Avoid forward-declaration warnings for types which _should_ be already
+  // provided by the primary method declaration. For example,
+  // for 'struct Derived : public Base { T1 method(const T2&); };', T1 and T2
+  // are provided by Base, and should not be forward-decl reported in Derived.
+  bool TraverseCXXMethodDecl(CXXMethodDecl* method_decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    if (!method_decl->size_overridden_methods())
+      return Base::TraverseCXXMethodDecl(method_decl);
+
+    set<const Decl*> fwd_blocked = blocked_for_fwd_decl_;
+    auto add_canonical_components = [&fwd_blocked](QualType part) {
+      for (const Type* type : GetCanonicalComponentsOfType(part.getTypePtr())) {
+        // For templates, use GetInstantiatedFromDecl so as to match
+        // what VisitTemplateSpecializationType does.
+        const Decl* decl = GetInstantiatedFromDecl(TypeToDeclAsWritten(type));
+        if (decl)
+          fwd_blocked.insert(decl->getCanonicalDecl());
+      }
+    };
+    add_canonical_components(method_decl->getReturnType());
+    for (const ParmVarDecl* param : method_decl->parameters())
+      add_canonical_components(param->getType());
+    ValueSaver<set<const Decl*>> s{&blocked_for_fwd_decl_, fwd_blocked};
+    // Full type info suggestions are blocked in CanBeProvidedTypeComponent.
+
+    return Base::TraverseCXXMethodDecl(method_decl);
+  }
+
   // --- Visitors of types derived from Stmt.
 
   // Called whenever a variable, function, enum, etc is used.
@@ -4540,6 +4573,11 @@ class IwyuAstConsumer
       // in source files, or for builtins, or for friend declarations.
       if (!IsInHeader(decl) || IsFriendDecl(decl))
         return pair(false, nullptr);
+      if (const auto* method = dyn_cast<CXXMethodDecl>(decl)) {
+        // Only the primary (least derived) declaration can provide types.
+        if (method->size_overridden_methods())
+          return pair(false, nullptr);
+      }
       for (const ParmVarDecl* param : decl->parameters()) {
         if (node->StackContainsContent(param)) {
           if (HasImplicitConversionConstructor(GetTypeOf(param)))
