@@ -683,6 +683,48 @@ class TypeEnumeratorWithoutSubstituted
   set<const Type*> seen_types_;
 };
 
+class CanonicalTypeEnumerator
+    : public RecursiveASTVisitor<CanonicalTypeEnumerator> {
+ public:
+  // --- Public interface
+  set<const Type*> Enumerate(const Type* type) {
+    seen_types_.clear();
+    if (!type)
+      return seen_types_;
+    TraverseType(QualType(type, 0));
+    return seen_types_;
+  }
+
+  // --- Methods on RecursiveASTVisitor
+  bool TraverseType(QualType type) {
+    if (type.isNull())
+      return Base::TraverseType(type);
+    return TraverseTypeHelper(type);
+  }
+
+  bool TraverseTypeLoc(TypeLoc type_loc) {
+    if (!type_loc)
+      return Base::TraverseTypeLoc(type_loc);
+    return TraverseTypeHelper(type_loc.getType());
+  }
+
+ private:
+  typedef RecursiveASTVisitor<CanonicalTypeEnumerator> Base;
+
+  bool TraverseTypeHelper(QualType qual_type) {
+    CHECK_(!qual_type.isNull());
+
+    const Type* type = qual_type.getTypePtr();
+    seen_types_.insert(GetCanonicalType(type));
+
+    const Type* desugared = DesugarAliasTypes(type);
+    // Add desugared type components.
+    return Base::TraverseType(QualType(desugared, 0));
+  }
+
+  set<const Type*> seen_types_;
+};
+
 // A 'component' of a type is a type beneath it in the AST tree.
 // So 'Foo*' has component 'Foo', as does 'vector<Foo>', while
 // vector<pair<Foo, Bar>> has components pair<Foo,Bar>, Foo, and Bar.
@@ -693,6 +735,11 @@ set<const Type*> GetComponentsOfType(const Type* type) {
 
 set<const Type*> GetComponentsOfTypeWithoutSubstituted(const Type* type) {
   TypeEnumeratorWithoutSubstituted type_enumerator;
+  return type_enumerator.Enumerate(type);
+}
+
+set<const Type*> GetCanonicalComponentsOfType(const Type* type) {
+  CanonicalTypeEnumerator type_enumerator;
   return type_enumerator.Enumerate(type);
 }
 
