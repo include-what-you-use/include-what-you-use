@@ -376,7 +376,7 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
   while (true) {
     // Find any headername directive after a file directive. This is a Doxygen
     // convention in libstdc++ to point users from private to public headers.
-    current_loc = GetLocationAfter(current_loc, "@file ", DefaultDataGetter());
+    current_loc = GetLocationAfter(current_loc, "@file", DefaultDataGetter());
     if (!current_loc.isValid()) {
       break;
     }
@@ -406,8 +406,7 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
       // Sometimes the preprocessor state can't resolve the include name; don't
       // map empty names in that case.
       // TODO: figure out a bullet-proof way to get include name from file.
-      VERRS(8) << PrintableLoc(file_beginning)
-               << ": No private include name found for headername mapping\n";
+      Warn(file_beginning, "no private include name for @headername mapping");
       return;
     }
     string quoted_private_include = AddQuotes(include_name, is_angled);
