@@ -416,6 +416,14 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     for (string& public_include : public_includes) {
       StripWhiteSpace(&public_include);
 
+      // HACK: work around known inconsistency in libstdc++ headers.
+      // Upstream fix proposed:
+      // https://gcc.gnu.org/pipermail/libstdc++/2024-August/059430.html
+      if (quoted_private_include == "<bits/cpp_type_traits.h>" &&
+          public_include == "ext/type_traits") {
+        public_include = "ext/type_traits.h";
+      }
+
       // Use the same angle/quote policy as for the private file.
       const string quoted_header_name = AddQuotes(public_include, is_angled);
 
