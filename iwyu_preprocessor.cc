@@ -31,11 +31,7 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
-
-namespace clang {
-class MacroArgs;
-class Module;
-}  // namespace clang
+#include "llvm/ADT/StringRef.h"
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
