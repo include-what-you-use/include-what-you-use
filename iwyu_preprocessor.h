@@ -72,15 +72,9 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "iwyu_output.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace clang {
-class MacroArgs;
-class MacroDefinition;
-class MacroDirective;
-class Module;
 class NamedDecl;
-class Token;
 }  // namespace clang
 
 namespace include_what_you_use {
