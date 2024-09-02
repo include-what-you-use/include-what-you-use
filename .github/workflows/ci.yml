@@ -45,6 +45,10 @@ jobs:
       - name: Work around broken packaging
         run: |
           sudo touch /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-$LLVM_MAJOR.so.1
+          # Link libLLVM.so.1 if it doesn't exist
+          [[ -f /usr/lib/llvm-$LLVM_MAJOR/lib/libLLVM.so.1 ]] || sudo ln -s libLLVM.so /usr/lib/llvm-$LLVM_MAJOR/lib/libLLVM.so.1
+          # Link libclang-cpp.so.*.0 if it doesn't exist
+          [[ -f /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-cpp.so.$LLVM_MAJOR.0 ]] || sudo ln -s ../../x86_64-linux-gnu/libclang-cpp.so.$LLVM_MAJOR.0 /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-cpp.so.$LLVM_MAJOR.0
 
       - name: Check out branch
         uses: actions/checkout@v4
