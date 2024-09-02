@@ -36,16 +36,19 @@
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "iwyu_port.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Host.h"
 
 // TODO: Clean out pragmas as IWYU improves.
@@ -69,6 +72,7 @@ using llvm::ArrayRef;
 using llvm::ErrorOr;
 using llvm::IntrusiveRefCntPtr;
 using llvm::MemoryBuffer;
+using llvm::SmallString;
 using llvm::SmallVector;
 using llvm::SmallVectorImpl;
 using llvm::StringRef;
@@ -243,21 +247,46 @@ std::vector<const Command*> FilterJobs(const JobList& jobs) {
   return res;
 }
 
+static std::string ComputeCustomResourceDir(StringRef iwyu_executable_path) {
+  // There are basically four ways this can go...
+  StringRef iwyu_resource_binary_path(IWYU_RESOURCE_BINARY_PATH);
+  StringRef iwyu_resource_dir(IWYU_RESOURCE_DIR);
+  if (iwyu_resource_binary_path.empty() && iwyu_resource_dir.empty()) {
+    // 1. Neither are specified, so don't add explicit resource dir, and let
+    // Clang driver do its default based on IWYU executable path (with
+    // CLANG_RESOURCE_DIR in clang-20 and later).
+    return std::string();
+  }
+
+  if (iwyu_resource_dir.empty()) {
+    CHECK_(!iwyu_resource_binary_path.empty());
+    // 2. Only IWYU_RESOURCE_BINARY_PATH specified, pass it to Driver to run it
+    // through the default algorithm (with CLANG_RESOURCE_DIR in clang-20 and
+    // later).
+    return Driver::GetResourcesPath(iwyu_resource_binary_path);
+  }
+
+  CHECK_(!iwyu_resource_dir.empty());
+  if (iwyu_resource_binary_path.empty()) {
+    // 3. Only IWYU_RESOURCE_DIR specified. Default binary path to IWYU
+    // executable path and carry on to (4).
+    iwyu_resource_binary_path = iwyu_executable_path;
+  }
+
+  // 4. Both IWYU_RESOURCE_BINARY_PATH and IWYU_RESOURCE_DIR specified, join
+  // them to form a custom resource dir.
+  StringRef dir = llvm::sys::path::parent_path(iwyu_resource_binary_path);
+  SmallString<128> res(dir);
+  llvm::sys::path::append(res, iwyu_resource_dir);
+  llvm::sys::path::remove_dots(res, /*remove_dot_dot=*/true);
+  return std::string(res);
+}
+
 }  // anonymous namespace
 
-bool ExecuteAction(int argc, const char** argv,
+bool ExecuteAction(int argc,
+                   const char** argv,
                    ActionFactory make_iwyu_action) {
-  std::string path = GetExecutablePath(argv[0]);
-
-  IntrusiveRefCntPtr<DiagnosticsEngine> diagnostics =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions,
-                                          /*Client=*/nullptr,
-                                          /*ShouldOwnClient=*/true,
-                                          /*CodeGenOpts=*/nullptr);
-
-  Driver driver(path, getDefaultTargetTriple(), *diagnostics);
-  driver.setTitle("include what you use");
-
   // Expand out any response files passed on the command line
   set<std::string> SavedStrings;
   SmallVector<const char*, 256> args;
@@ -279,6 +308,29 @@ bool ExecuteAction(int argc, const char** argv,
     args.push_back("-fsyntax-only");
     args.push_back("-Qunused-arguments");
   }
+
+  std::string iwyu_executable_path = GetExecutablePath(argv[0]);
+  if (!HasArg(args, "-resource-dir")) {
+    // If user didn't specify something explicit, compute a resource dir based
+    // on configured CMake variables.
+    std::string resource_dir = ComputeCustomResourceDir(iwyu_executable_path);
+    if (!resource_dir.empty()) {
+      args.push_back("-resource-dir");
+      args.push_back(SaveStringInSet(SavedStrings, resource_dir));
+    }
+  }
+
+  IntrusiveRefCntPtr<DiagnosticsEngine> diagnostics =
+      CompilerInstance::createDiagnostics(new DiagnosticOptions,
+                                          /*Client=*/nullptr,
+                                          /*ShouldOwnClient=*/true,
+                                          /*CodeGenOpts=*/nullptr);
+
+  // The Driver constructor sets the resource dir implicitly based on path,
+  // which may then be overwritten by BuildCompilation based on any
+  // -resource-dir argument from above.
+  Driver driver(iwyu_executable_path, getDefaultTargetTriple(), *diagnostics);
+  driver.setTitle("include what you use");
 
   // Build a compilation, get the job list and filter out irrelevant jobs.
   unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
