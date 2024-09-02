@@ -46,6 +46,7 @@ jobs:
         run: |
           sudo touch /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-$LLVM_MAJOR.so.1
           sudo touch /usr/lib/llvm-$LLVM_MAJOR/lib/libLLVM.so.1
+          sudo touch /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-cpp.so.$LLVM_MAJOR.0
 
       - name: Check out branch
         uses: actions/checkout@v4
