@@ -45,6 +45,7 @@ jobs:
       - name: Work around broken packaging
         run: |
           sudo touch /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-$LLVM_MAJOR.so.1
+          sudo touch /usr/lib/llvm-$LLVM_MAJOR/lib/libLLVM.so.1
 
       - name: Check out branch
         uses: actions/checkout@v4
