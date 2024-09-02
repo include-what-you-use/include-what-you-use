@@ -40,7 +40,7 @@ jobs:
 
       - name: Capture LLVM major version
         run: |
-          echo "LLVM_MAJOR=$(ls -1d /usr/lib/llvm-* | sort | tail -n1 | sed 's/.*llvm-//')" >> $GITHUB_ENV
+          echo "LLVM_MAJOR=$(ls -1d /usr/lib/llvm-* | sort -n | tail -n1 | sed 's/.*llvm-//')" >> $GITHUB_ENV
 
       - name: Work around broken packaging
         run: |
