@@ -828,13 +828,13 @@ bool DeclIsVisibleToUseInSameFile(const Decl* decl, const OneUse& use) {
 // might be "calculate minimal-ish includes". :-)  It populates
 // each OneUse in uses with the best #include for that use.
 // direct_includes: this file's direct includes only.
-// associated_direct_includes: direct includes for 'associated'
+// associated_desired_includes: desired includes for 'associated'
 // files.  For everything but foo.cc, this is empty; for foo.cc it's
 // foo.h's includes and foo-inl.h's includes.
 set<string> CalculateMinimalIncludes(
     const string& use_quoted_include,
     const set<string>& direct_includes,
-    const set<string>& associated_direct_includes,
+    const set<string>& associated_desired_includes,
     vector<OneUse>* uses) {
   set<string> desired_headers;
 
@@ -875,9 +875,8 @@ set<string> CalculateMinimalIncludes(
   // Steps (2): Go through the needed private-includes that map to
   // more than one public #include.  Use the following priority order:
   // - Ourselves.
-  // - An include in associated_direct_includes (those are includes
-  //   that are not going away, since we can't change associated
-  //   files).
+  // - An include in associated_desired_includes (those are includes
+  //   that are not going away, since they should be calculated already).
   // - Includes in direct_includes that are also already in
   //   desired_headers.
   // - Includes in desired_headers.
@@ -900,7 +899,7 @@ set<string> CalculateMinimalIncludes(
     for (const string& choice : public_headers) {
       if (use.has_suggested_header())
         break;
-      if (ContainsKey(associated_direct_includes, choice)) {
+      if (ContainsKey(associated_desired_includes, choice)) {
         use.set_suggested_header(choice);
         desired_headers.insert(use.suggested_header());
         LogIncludeMapping("in associated header", use);
@@ -1697,8 +1696,9 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
       Union(associated_direct_includes, direct_includes());
 
   // (C2) + (C3) Find the minimal 'set cover' for all symbol uses.
+  const set<string>& associated_desired_includes = AssociatedDesiredIncludes();
   const set<string> desired_set_cover = internal::CalculateMinimalIncludes(
-      quoted_file_, direct_includes(), associated_direct_includes, uses);
+      quoted_file_, direct_includes(), associated_desired_includes, uses);
 
   // (C4) Remove .cc files from desired-includes unless they're in actual-inc.
   for (const string& header_name : desired_set_cover) {
@@ -1714,7 +1714,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // NOTE: this depends on our associated headers having had their
   // iwyu analysis done before us.
   set<string> effective_desired_includes = desired_includes();
-  InsertAllInto(AssociatedDesiredIncludes(), &effective_desired_includes);
+  InsertAllInto(associated_desired_includes, &effective_desired_includes);
 
   // Now that we've figured out desired_includes, figure out iwyu violations.
   for (OneUse& use : *uses) {
