@@ -173,3 +173,52 @@ kernel) using the `--no_default_mappings` switch:
 
     $ include-what-you-use -Xiwyu --no_default_mappings \
         --mapping_file=kernel_libc.imp kernel/main.c
+
+
+## Generating mapping files ##
+
+As part of the IWYU project, we maintain a set of scripts to generate mappings
+for widely-used libraries. See the `mapgen/` directory for the available
+generators. Most of them are best-effort for users to run in their own
+environments and generate external mappings out of whatever header source tree
+they have available.
+
+But one of them, `mapgen/iwyu-mapgen-libstdcxx.py`, is used to generate the
+built-in mappings for GNU libstdc++ shipped with IWYU. The procedure for
+refreshing built-in mappings is:
+
+```
+$ mapgen/iwyu-mapgen-libstdcxx.py --lang=imp \
+    /usr/include/c++/11 \
+    /usr/include/x86_64-linux-gnu/c++/11 \
+    > gcc.stl.headers.imp
+
+$ mapgen/iwyu-mapgen-libstdcxx.py --lang=c++ \
+    /usr/include/c++/11 \
+    /usr/include/x86_64-linux-gnu/c++/11 \
+    > libstdcxx_11.cc
+```
+
+The external mappings can be generated straight into the `gcc.stl.headers.imp`
+file.
+
+The built-in C++ mappings, however, are generated into a temporary file
+`libstdcxx_11.cc`, and can then be pasted into `iwyu_include_picker.cc` to
+replace the `libstdcpp_include_map` table.
+
+There are two placeholders above:
+
+* `11` -- the version of libstdc++ installed
+* `x86_64-linux-gnu` -- the default target for the system; this may vary
+  depending on CPU architecture, etc
+
+The generator script makes no difference between the plain `/usr/include` and
+the per-target `/usr/include/x86_64-linux-gnu` directories and analyzes header
+dependencies in both (they are both necessary, as some symbols are defined in
+private per-target headers, but mapped to plain public headers).
+
+The generated mappings obviously work best on systems where both libstdc++
+version and target match, but they should port pretty well.
+
+There is no strong policy for updating the built-in mappings, we try to use a
+mainstream target and a middle-aged libstdc++ version.
