@@ -38,20 +38,22 @@ jobs:
                libclang$LLVM_TAG-dev \
                clang$LLVM_TAG
 
-      - name: Capture LLVM major version
+      - name: Capture LLVM major version and install prefix
         run: |
-          echo "LLVM_MAJOR=$(ls -1d /usr/lib/llvm-* | sort -n | tail -n1 | sed 's/.*llvm-//')" >> $GITHUB_ENV
-
-      - name: Work around broken packaging
-        run: |
-          sudo touch /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-$LLVM_MAJOR.so.1
-          # Link libLLVM.so.1 if it doesn't exist
-          [[ -f /usr/lib/llvm-$LLVM_MAJOR/lib/libLLVM.so.1 ]] || sudo ln -s libLLVM.so /usr/lib/llvm-$LLVM_MAJOR/lib/libLLVM.so.1
-          # Link libclang-cpp.so.*.0 if it doesn't exist
-          [[ -f /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-cpp.so.$LLVM_MAJOR.0 ]] || sudo ln -s ../../x86_64-linux-gnu/libclang-cpp.so.$LLVM_MAJOR.0 /usr/lib/llvm-$LLVM_MAJOR/lib/libclang-cpp.so.$LLVM_MAJOR.0
+          LLVM_MAJOR=$(ls -1d /usr/lib/llvm-* | sort -n | tail -n1 | sed 's/.*llvm-//')
+          LLVM_PREFIX=$(llvm-config-$LLVM_MAJOR --prefix)
+          echo "LLVM_MAJOR=${LLVM_MAJOR}" >> $GITHUB_ENV
+          echo "LLVM_PREFIX=${LLVM_PREFIX}" >> $GITHUB_ENV
 
       - name: Check out branch
         uses: actions/checkout@v4
+
+      - name: Work around broken packaging
+        run: |
+          # Disable CMake target checks.
+          sudo ./iwyu-fixup-llvm-target-checks.bash "$LLVM_PREFIX"
+          # Link libclang-cpp.so.*.0 if it doesn't exist
+          [[ -e $LLVM_PREFIX/lib/libclang-cpp.so.$LLVM_MAJOR.0 ]] || sudo ln -s ../../x86_64-linux-gnu/libclang-cpp.so.$LLVM_MAJOR.0 $LLVM_PREFIX/lib/libclang-cpp.so.$LLVM_MAJOR.0
 
       - name: Build include-what-you-use
         run: |
