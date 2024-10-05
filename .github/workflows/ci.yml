@@ -51,9 +51,7 @@ jobs:
       - name: Work around broken packaging
         run: |
           # Disable CMake target checks.
-          sudo ./iwyu-fixup-llvm-target-checks.bash "$LLVM_PREFIX"
-          # Link libclang-cpp.so.*.0 if it doesn't exist
-          [[ -e $LLVM_PREFIX/lib/libclang-cpp.so.$LLVM_MAJOR.0 ]] || sudo ln -s ../../x86_64-linux-gnu/libclang-cpp.so.$LLVM_MAJOR.0 $LLVM_PREFIX/lib/libclang-cpp.so.$LLVM_MAJOR.0
+          # sudo ./iwyu-fixup-llvm-target-checks.bash "$LLVM_PREFIX"
 
       - name: Build include-what-you-use
         run: |
