@@ -49,34 +49,60 @@ option(IWYU_LINK_CLANG_DYLIB
   ${CLANG_LINK_CLANG_DYLIB}
 )
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
-# Synthesize clang-resource-headers target if necessary.
-if (NOT TARGET clang-resource-headers)
-  # Use only LLVM_VERSION_MAJOR for the resource directory structure; some
-  # platforms include suffix in LLVM_VERSION.
-  set(clang_headers_src "${LLVM_LIBRARY_DIR}/clang/${LLVM_VERSION_MAJOR}/include")
-  set(clang_headers_dst "${CMAKE_BINARY_DIR}/lib/clang/${LLVM_VERSION_MAJOR}/include")
-
-  file(GLOB_RECURSE in_files RELATIVE "${clang_headers_src}"
-    "${clang_headers_src}/*"
-  )
-
-  set(out_files)
-  foreach (file ${in_files})
-    set(src "${clang_headers_src}/${file}")
-    set(dst "${clang_headers_dst}/${file}")
-
-    add_custom_command(OUTPUT "${dst}"
-      DEPENDS "${src}"
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${src}" "${dst}"
-      COMMENT "Copying ${src}..."
-    )
-    list(APPEND out_files "${dst}")
-  endforeach()
-
-  add_custom_target(clang-resource-headers ALL DEPENDS ${out_files})
+# IWYU needs to know where to find Clang builtin headers (stddef.h, stdint.h,
+# etc). The builtin headers are shipped in the Clang resource directory.
+# You can configure IWYU's resource directory lookup using two options:
+#
+# * IWYU_RESOURCE_RELATIVE_TO: which executable to serve as the base path for
+#   relative resource dir lookups ('iwyu' or 'clang')
+# * IWYU_RESOURCE_DIR: a path relative to the executable above, resolved at
+#   runtime (analogous to Clang's CLANG_RESOURCE_DIR)
+#
+# IWYU configures with IWYU_RESOURCE_RELATIVE_TO=clang and IWYU_RESOURCE_DIR=""
+# by default, because the builtin headers are always available next to Clang for
+# development and local test.
+#
+# When packaging IWYU, you can:
+#
+# * configure it relative to 'clang' and add a package dependency from IWYU to
+#   Clang to ensure the headers are available
+# * configure it relative to 'iwyu' and add custom package install steps to copy
+#   the headers from the Clang tree into the IWYU install tree
+#
+# Generally if you override the defaults, you are responsible for making sure
+# the headers are where you said they would be.
+if (NOT IWYU_RESOURCE_RELATIVE_TO)
+  # This might look counter-intuitive, but it is most likely what you want for
+  # local developer builds and packaging builds. See above for details.
+  set(IWYU_RESOURCE_RELATIVE_TO "clang")
 endif()
+
+if (IWYU_RESOURCE_RELATIVE_TO STREQUAL "clang")
+  # Point resource bin path to the clang target's output name if nothing else
+  # specified (e.g. /usr/lib/llvm-<ver>/bin/clang).
+  set(iwyu_resource_binary_path $<TARGET_FILE:clang>)
+elseif (IWYU_RESOURCE_RELATIVE_TO STREQUAL "iwyu")
+  # Leave bin path empty so IWYU can resolve its own path at runtime.
+  set(iwyu_resource_binary_path "")
+else()
+  message(FATAL_ERROR "Invalid IWYU_RESOURCE_RELATIVE_TO value: "
+    "'${IWYU_RESOURCE_RELATIVE_TO}'. Must be 'iwyu' or 'clang'.")
+endif()
+
+if (NOT IWYU_RESOURCE_DIR)
+  # CLANG_RESOURCE_DIR is not exported so will be empty for standalone builds.
+  # It might, but usually doesn't, have a value in non-standalone builds, where
+  # IWYU is part of LLVM's CMake system.
+  set(iwyu_resource_dir "${CLANG_RESOURCE_DIR}")
+else()
+  set(iwyu_resource_dir "${IWYU_RESOURCE_DIR}")
+endif()
+
+message(STATUS
+  "IWYU: Resource dir will be computed at runtime with IWYU_RESOURCE_DIR="
+  "'${iwyu_resource_dir}' relative to '${IWYU_RESOURCE_RELATIVE_TO}'")
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Pick up Git revision so we can report it in version information.
 include(FindGit)
@@ -116,9 +142,12 @@ add_llvm_executable(include-what-you-use
   iwyu_verrs.cc
 )
 
-# Add a dependency on clang-resource-headers to ensure the builtin headers are
-# available when IWYU is executed from the build dir.
-add_dependencies(include-what-you-use clang-resource-headers)
+# Add a dependency on clang-resource-headers if it exists, to ensure the builtin
+# headers are available where Clang/IWYU expects them after build.
+# This should only have any effect in non-standalone builds.
+if (TARGET clang-resource-headers)
+  add_dependencies(include-what-you-use clang-resource-headers)
+endif()
 
 # LLVM requires C++17, so follow suit.
 set_target_properties(include-what-you-use PROPERTIES
@@ -132,6 +161,8 @@ separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 target_compile_definitions(include-what-you-use PRIVATE
   ${LLVM_DEFINITIONS_LIST}
   IWYU_GIT_REV="${iwyu_git_rev}"
+  IWYU_RESOURCE_BINARY_PATH="${iwyu_resource_binary_path}"
+  IWYU_RESOURCE_DIR="${iwyu_resource_dir}"
 )
 target_include_directories(include-what-you-use PRIVATE
   ${iwyu_include_dirs}
