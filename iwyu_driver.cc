@@ -181,6 +181,12 @@ bool HasPreprocessOnlyArgs(ArrayRef<const char*> args) {
   return llvm::any_of(args, is_preprocess_only);
 }
 
+bool HasArg(ArrayRef<const char*> args, const char* needle) {
+  return llvm::any_of(args, [&](StringRef arg) {
+    return arg == needle;
+  });
+}
+
 // Print the command prefixed by its action class
 raw_ostream& operator<<(raw_ostream& s, const Command& job) {
   s << "(" << job.getSource().getClassName() << ")";
@@ -278,6 +284,12 @@ bool ExecuteAction(int argc, const char** argv,
   unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
   if (!compilation)
     return false;
+
+  // This diagnostic switch is handled and executed inside BuildCompilation.
+  // Exit immediately so we don't print errors.
+  if (HasArg(args, "-print-resource-dir")) {
+    return false;
+  }
 
   const JobList& jobs = compilation->getJobs();
   std::vector<const Command*> filtered_jobs = FilterJobs(jobs);
