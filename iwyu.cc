@@ -135,6 +135,7 @@
 #include "iwyu_port.h"  // for CHECK_
 #include "iwyu_preprocessor.h"
 #include "iwyu_stl_util.h"
+#include "iwyu_string_util.h"
 #include "iwyu_use_flags.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1352,6 +1353,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (IsInScratchSpace(spelling_loc)) {
       VERRS(5) << "Spelling location is in <scratch space>, presumably as a "
                << "result of macro arg concatenation\n";
+      use_loc = expansion_loc;
+      side = "expansion";
+    } else if (StartsWith(PrintableLoc(spelling_loc), "<command line>")) {
+      VERRS(5) << "Spelling location is in <command line> (macro defined in "
+                  "command line), use expansion location instead\n";
       use_loc = expansion_loc;
       side = "expansion";
     } else if (fwd_decl != nullptr) {
