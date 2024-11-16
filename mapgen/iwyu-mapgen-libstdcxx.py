@@ -173,13 +173,13 @@ def write_imp_mappings(public_mappings, private_mappings):
     print("  # Private-to-public #include mappings.")
     for map_from, mapping_list in sorted(public_mappings.items()):
         for map_to in sorted(mapping_list):
-            print('  { "include": %s, "private", %s, "public" },' %
+            print('  { "include": [%s, "private", %s, "public"] },' %
                   (quoted(map_from), quoted(map_to)))
 
     print("  # Private-to-private #include mappings.")
     for map_from, mapping_list in sorted(private_mappings.items()):
         for map_to in sorted(mapping_list):
-            print('  { "include": %s, "private", %s, "private" },' %
+            print('  { "include": [%s, "private", %s, "private"] },' %
                   (quoted(map_from), quoted(map_to)))
     print("]")
 
