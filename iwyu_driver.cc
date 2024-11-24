@@ -47,6 +47,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Host.h"
@@ -81,6 +82,7 @@ using llvm::opt::ArgStringList;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using llvm::sys::getDefaultTargetTriple;
+using llvm::vfs::FileSystem;
 using std::set;
 using std::unique_ptr;
 
@@ -320,11 +322,9 @@ bool ExecuteAction(int argc,
     }
   }
 
+  IntrusiveRefCntPtr<FileSystem> fs = llvm::vfs::getRealFileSystem();
   IntrusiveRefCntPtr<DiagnosticsEngine> diagnostics =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions,
-                                          /*Client=*/nullptr,
-                                          /*ShouldOwnClient=*/true,
-                                          /*CodeGenOpts=*/nullptr);
+      CompilerInstance::createDiagnostics(*fs, new DiagnosticOptions);
 
   // The Driver constructor sets the resource dir implicitly based on path,
   // which may then be overwritten by BuildCompilation based on any
@@ -385,7 +385,7 @@ bool ExecuteAction(int argc,
   compiler->setInvocation(invocation);
   // It's tempting to reuse the DiagnosticsEngine we created above, but we need
   // to create a new one to get the options produced by the compiler invocation.
-  compiler->createDiagnostics();
+  compiler->createDiagnostics(*fs);
 
   unique_ptr<FrontendAction> action;
   switch (command.getSource().getKind()) {
