@@ -2435,7 +2435,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       for (FunctionProtoType::exception_iterator it =
                fn_type->exception_begin();
            it != fn_type->exception_end(); ++it)
-        if (it->getTypePtr() == type) {  // *we're* an exception decl
+        if (GetCanonicalType(it->getTypePtr()) ==
+            GetCanonicalType(type)) {  // *we're* an exception decl
           current_ast_node()->set_in_forward_declare_context(false);
           break;
         }
@@ -4288,6 +4289,26 @@ class IwyuAstConsumer
   }
 
   // --- Visitors of types derived from Type.
+
+  // Avoid reporting any type sugar in an implicit code. It is assumed that
+  // TraverseType isn't called for explicitly written types. TraverseTypeLoc
+  // uses an additional check.
+  bool TraverseType(QualType type) {
+    if (type.isNull())
+      return true;
+    const Type* desugared = Desugar(type.getTypePtr());
+    return Base::TraverseType(QualType{desugared, 0});
+  }
+
+  bool TraverseTypeLoc(TypeLoc typeloc) {
+    if (typeloc.isNull())
+      return true;
+    if (current_ast_node()->GetAncestorAs<Decl>()->isImplicit()) {
+      const Type* desugared = Desugar(typeloc.getTypePtr());
+      return Base::TraverseType(QualType{desugared, 0});
+    }
+    return Base::TraverseTypeLoc(typeloc);
+  }
 
   bool VisitTypedefType(TypedefType* type) {
     if (CanIgnoreCurrentASTNode())
