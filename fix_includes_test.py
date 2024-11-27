@@ -43,6 +43,7 @@ class FakeFlags(object):
     self.keep_iwyu_namespace_format = False
     self.reorder = True
     self.basedir = None
+    self.quoted_includes_first = False
 
 
 class FixIncludesBase(unittest.TestCase):
@@ -4489,6 +4490,30 @@ namespace A { class AC; } // A
     self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
+
+  def testQuotedFirst(self):
+    infile = """\
+#include <notused.h>  ///-
+#include <foo>  ///-
+#include "bar"
+///+#include <foo>
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+simple should add these lines:
+
+simple should remove these lines:
+- #include <notused.h>  // lines 1-1
+
+The full include-list for simple:
+#include <foo>
+#include "bar"
+---
+"""
+    self.RegisterFileContents({'simple': infile})
+    self.flags.quoted_includes_first = True
+    self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
 
 
 class FileInfoTest(unittest.TestCase):
