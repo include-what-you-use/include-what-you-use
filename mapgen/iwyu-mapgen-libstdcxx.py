@@ -204,6 +204,9 @@ def main(rootdirs, lang):
                 else:
                     public_headers[header.includename] = header
 
+    # There must be no overlap between public and private headers.
+    assert public_headers.keys().isdisjoint(private_headers.keys())
+
     # Build private-to-public mappings first
     public_mappings = {}
     for header in public_headers.values():
@@ -213,13 +216,10 @@ def main(rootdirs, lang):
                 public_mappings.setdefault(include, set()).add(
                     header.includename)
 
-    # Then add private-to-private mappings for all headers not already mapped to
-    # a public header.
+    # Then add private-to-private mappings for all private headers including
+    # another private header.
     private_mappings = {}
     for header in private_headers.values():
-        if header.includename in public_mappings:
-            continue
-
         for include in header.includes:
             included_header = private_headers.get(include)
             if included_header and not included_header.has_headername:
