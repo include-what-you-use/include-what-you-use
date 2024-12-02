@@ -14,7 +14,7 @@ if (iwyu_standalone_build)
     cmake_policy(SET CMP0077 NEW)
   endif()
 
-  project(include-what-you-use)
+  project(include-what-you-use LANGUAGES CXX)
 
   find_package(LLVM CONFIG REQUIRED)
   find_package(Clang CONFIG REQUIRED)
