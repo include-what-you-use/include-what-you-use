@@ -83,7 +83,7 @@ class FixIncludesBase(unittest.TestCase):
     fix_includes.sys.stdout = self.stdout_stub
 
   def RegisterFileContents(self, file_contents_map):
-    """Parses and stores the given map from filename to file-contents.
+    r"""Parses and stores the given map from filename to file-contents.
 
     The values of the map are file 'contents', written in a simple
     markup language that allows us to encode both the 'before' and
@@ -104,7 +104,7 @@ class FixIncludesBase(unittest.TestCase):
       file_contents_map: a map from filename to 'contents'.  Contents
          is a string, having the format mentioned above.
     """
-    remove_re = re.compile('\s*///-$')
+    remove_re = re.compile(r'\s*///-$')
     for (filename, contents) in file_contents_map.items():
       before_contents = []
       expected_after_contents = []
@@ -138,9 +138,9 @@ class FixIncludesBase(unittest.TestCase):
        cwd: working directory passed to ProcessIWYUOutput, used to normalize
           paths in cmdline_files. If None, no normalization occurs.
     """
-    filenames = re.findall('^(\S+) should add these lines:', iwyu_output, re.M)
+    filenames = re.findall(r'^(\S+) should add these lines:', iwyu_output, re.M)
     if not filenames:    # This is the other possible starting-line
-      filenames = re.findall('^\((\S+) has correct #includes/fwd-decls\)',
+      filenames = re.findall(r'^\((\S+) has correct #includes/fwd-decls\)',
                              iwyu_output, re.M)
 
     expected_after = []
