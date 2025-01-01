@@ -304,11 +304,12 @@ bool ExecuteAction(int argc,
   // recognize. We need to extend the driver library to support this use model
   // (basically, exactly one input, and the operation mode is hard wired).
 
+  std::vector<const char*> extra_args;
   // Add -fsyntax-only to avoid code generation, unless user asked for
   // preprocessing-only.
   if (!HasPreprocessOnlyArgs(args)) {
-    args.push_back("-fsyntax-only");
-    args.push_back("-Qunused-arguments");
+    extra_args.push_back("-fsyntax-only");
+    extra_args.push_back("-Qunused-arguments");
   }
 
   std::string iwyu_executable_path = GetExecutablePath(argv[0]);
@@ -317,10 +318,16 @@ bool ExecuteAction(int argc,
     // on configured CMake variables.
     std::string resource_dir = ComputeCustomResourceDir(iwyu_executable_path);
     if (!resource_dir.empty()) {
-      args.push_back("-resource-dir");
-      args.push_back(SaveStringInSet(SavedStrings, resource_dir));
+      extra_args.push_back("-resource-dir");
+      extra_args.push_back(SaveStringInSet(SavedStrings, resource_dir));
     }
   }
+
+  // If there is no -- in the args, the extra_pos will be args.end() and insert
+  // will append to the back of the args sequence.
+  auto extra_pos =
+      llvm::find_if(args, [](StringRef arg) { return arg == "--"; });
+  args.insert(extra_pos, extra_args.begin(), extra_args.end());
 
   IntrusiveRefCntPtr<FileSystem> fs = llvm::vfs::getRealFileSystem();
   IntrusiveRefCntPtr<DiagnosticsEngine> diagnostics =
