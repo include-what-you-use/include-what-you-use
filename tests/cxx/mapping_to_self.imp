@@ -1,4 +1,4 @@
 [
-  { symbol: ["E", "private", "\"tests/cxx/some_other_header.h\"", "public"] },
-  { symbol: ["E", "private", "\"tests/cxx/mapping_to_self.h\"", "public"] }
+  { "symbol": ["E", "private", "\"tests/cxx/some_other_header.h\"", "public"] },
+  { "symbol": ["E", "private", "\"tests/cxx/mapping_to_self.h\"", "public"] }
 ]

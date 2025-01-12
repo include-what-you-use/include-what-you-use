@@ -1,5 +1,5 @@
 # Maps headers to a different include path.
 # The foobar directory does not exist; we just want IWYU to suggest using it.
 [
-  { include: ['@"(tests/cxx/.*)"', private, '"foobar/\1"', public ] },
+  { "include": ['@"(tests/cxx/.*)"', "private", '"foobar/\1"', "public"] },
 ]

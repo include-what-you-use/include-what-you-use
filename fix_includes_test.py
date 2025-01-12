@@ -43,6 +43,7 @@ class FakeFlags(object):
     self.keep_iwyu_namespace_format = False
     self.reorder = True
     self.basedir = None
+    self.quoted_includes_first = False
 
 
 class FixIncludesBase(unittest.TestCase):
@@ -83,7 +84,7 @@ class FixIncludesBase(unittest.TestCase):
     fix_includes.sys.stdout = self.stdout_stub
 
   def RegisterFileContents(self, file_contents_map):
-    """Parses and stores the given map from filename to file-contents.
+    r"""Parses and stores the given map from filename to file-contents.
 
     The values of the map are file 'contents', written in a simple
     markup language that allows us to encode both the 'before' and
@@ -104,7 +105,7 @@ class FixIncludesBase(unittest.TestCase):
       file_contents_map: a map from filename to 'contents'.  Contents
          is a string, having the format mentioned above.
     """
-    remove_re = re.compile('\s*///-$')
+    remove_re = re.compile(r'\s*///-$')
     for (filename, contents) in file_contents_map.items():
       before_contents = []
       expected_after_contents = []
@@ -138,9 +139,9 @@ class FixIncludesBase(unittest.TestCase):
        cwd: working directory passed to ProcessIWYUOutput, used to normalize
           paths in cmdline_files. If None, no normalization occurs.
     """
-    filenames = re.findall('^(\S+) should add these lines:', iwyu_output, re.M)
+    filenames = re.findall(r'^(\S+) should add these lines:', iwyu_output, re.M)
     if not filenames:    # This is the other possible starting-line
-      filenames = re.findall('^\((\S+) has correct #includes/fwd-decls\)',
+      filenames = re.findall(r'^\((\S+) has correct #includes/fwd-decls\)',
                              iwyu_output, re.M)
 
     expected_after = []
@@ -4489,6 +4490,30 @@ namespace A { class AC; } // A
     self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(1, num_files_modified)
+
+  def testQuotedFirst(self):
+    infile = """\
+#include <notused.h>  ///-
+#include <foo>  ///-
+#include "bar"
+///+#include <foo>
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+simple should add these lines:
+
+simple should remove these lines:
+- #include <notused.h>  // lines 1-1
+
+The full include-list for simple:
+#include <foo>
+#include "bar"
+---
+"""
+    self.RegisterFileContents({'simple': infile})
+    self.flags.quoted_includes_first = True
+    self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
 
 
 class FileInfoTest(unittest.TestCase):

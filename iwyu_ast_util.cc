@@ -86,7 +86,6 @@ using clang::EnumType;
 using clang::ExplicitCastExpr;
 using clang::Expr;
 using clang::ExprWithCleanups;
-using clang::FullSourceLoc;
 using clang::FunctionDecl;
 using clang::FunctionTemplateDecl;
 using clang::FunctionTemplateSpecializationInfo;
@@ -149,6 +148,7 @@ using llvm::errs;
 using llvm::isa;
 using llvm::raw_string_ostream;
 using std::function;
+using std::vector;
 
 namespace include_what_you_use {
 
@@ -229,11 +229,10 @@ SourceLocation ASTNode::GetLocation() const {
   // own location.  Return an invalid location.
   if (retval.isValid()) {
     SourceManager& sm = *GlobalSourceManager();
-    FullSourceLoc full_loc(retval, sm);
     OptionalFileEntryRef spelling_file =
-        sm.getFileEntryRefForID(sm.getFileID(full_loc.getSpellingLoc()));
+        sm.getFileEntryRefForID(sm.getFileID(sm.getSpellingLoc(retval)));
     OptionalFileEntryRef instantiation_file =
-        sm.getFileEntryRefForID(sm.getFileID(full_loc.getExpansionLoc()));
+        sm.getFileEntryRefForID(sm.getFileID(sm.getExpansionLoc(retval)));
     if (spelling_file != instantiation_file)
       return SourceLocation();
   }
@@ -328,16 +327,6 @@ UseFlags ComputeUseFlags(const ASTNode* ast_node) {
 
   if (IsNodeInsideCXXMethodBody(ast_node))
     flags |= UF_InCxxMethodBody;
-
-  // Definitions of free functions are a little special, because they themselves
-  // count as uses of all prior declarations (ideally we should probably just
-  // require one but it's hard to say which, so we pick all previously seen).
-  // Later IWYU analysis phases do some canonicalization that isn't
-  // necessary/valid for this case, so mark it up for later.
-  if (const auto* fd = ast_node->GetAs<FunctionDecl>()) {
-    if (fd->getKind() == Decl::Function && fd->isThisDeclarationADefinition())
-      flags |= UF_FunctionDfn;
-  }
 
   return flags;
 }
@@ -694,6 +683,48 @@ class TypeEnumeratorWithoutSubstituted
   set<const Type*> seen_types_;
 };
 
+class CanonicalTypeEnumerator
+    : public RecursiveASTVisitor<CanonicalTypeEnumerator> {
+ public:
+  // --- Public interface
+  set<const Type*> Enumerate(const Type* type) {
+    seen_types_.clear();
+    if (!type)
+      return seen_types_;
+    TraverseType(QualType(type, 0));
+    return seen_types_;
+  }
+
+  // --- Methods on RecursiveASTVisitor
+  bool TraverseType(QualType type) {
+    if (type.isNull())
+      return Base::TraverseType(type);
+    return TraverseTypeHelper(type);
+  }
+
+  bool TraverseTypeLoc(TypeLoc type_loc) {
+    if (!type_loc)
+      return Base::TraverseTypeLoc(type_loc);
+    return TraverseTypeHelper(type_loc.getType());
+  }
+
+ private:
+  typedef RecursiveASTVisitor<CanonicalTypeEnumerator> Base;
+
+  bool TraverseTypeHelper(QualType qual_type) {
+    CHECK_(!qual_type.isNull());
+
+    const Type* type = qual_type.getTypePtr();
+    seen_types_.insert(GetCanonicalType(type));
+
+    const Type* desugared = DesugarAliasTypes(type);
+    // Add desugared type components.
+    return Base::TraverseType(QualType(desugared, 0));
+  }
+
+  set<const Type*> seen_types_;
+};
+
 // A 'component' of a type is a type beneath it in the AST tree.
 // So 'Foo*' has component 'Foo', as does 'vector<Foo>', while
 // vector<pair<Foo, Bar>> has components pair<Foo,Bar>, Foo, and Bar.
@@ -704,6 +735,11 @@ set<const Type*> GetComponentsOfType(const Type* type) {
 
 set<const Type*> GetComponentsOfTypeWithoutSubstituted(const Type* type) {
   TypeEnumeratorWithoutSubstituted type_enumerator;
+  return type_enumerator.Enumerate(type);
+}
+
+set<const Type*> GetCanonicalComponentsOfType(const Type* type) {
+  CanonicalTypeEnumerator type_enumerator;
   return type_enumerator.Enumerate(type);
 }
 
@@ -942,10 +978,15 @@ static map<const Type*, const Type*> GetDefaultedArgResugarMap(
             dyn_cast<TemplateTypeParmDecl>(params->getParam(i))) {
       if (param_decl->isParameterPack())
         continue;
-      const QualType type = args->get(i).getAsType().getCanonicalType();
-      if (param_decl->hasDefaultArgument() &&
-          param_decl->getDefaultArgument().getCanonicalType() == type) {
-        res.emplace(type.getTypePtr(), nullptr);
+      if (!param_decl->hasDefaultArgument())
+        continue;
+      const QualType arg_type = args->get(i).getAsType().getCanonicalType();
+      const QualType default_arg_type = param_decl->getDefaultArgument()
+                                            .getArgument()
+                                            .getAsType()
+                                            .getCanonicalType();
+      if (arg_type == default_arg_type) {
+        res.emplace(arg_type.getTypePtr(), nullptr);
       }
     }
   }
@@ -1071,7 +1112,7 @@ TemplateInstantiationData GetTplInstDataForFunction(
   return TemplateInstantiationData{resugar_map, provided_types};
 }
 
-const NamedDecl* GetInstantiatedFromDecl(const CXXRecordDecl* class_decl) {
+const NamedDecl* GetInstantiatedFromDecl(const NamedDecl* class_decl) {
   if (const ClassTemplateSpecializationDecl* tpl_sp_decl =
       DynCastFrom(class_decl)) {  // an instantiated class template
     PointerUnion<ClassTemplateDecl*, ClassTemplatePartialSpecializationDecl*>
@@ -1143,7 +1184,7 @@ bool IsExplicitInstantiationDefinitionAsWritten(
   // the 'extern' keyword location info.
   return decl->getSpecializationKind() ==
              clang::TSK_ExplicitInstantiationDefinition &&
-         decl->getExternLoc().isInvalid();
+         decl->getExternKeywordLoc().isInvalid();
 }
 
 bool IsInInlineNamespace(const Decl* decl) {
@@ -1255,14 +1296,16 @@ set<const NamedDecl*> GetTagRedecls(const NamedDecl* decl) {
 
 const NamedDecl* GetFirstRedecl(const NamedDecl* decl) {
   const NamedDecl* first_decl = decl;
-  FullSourceLoc first_decl_loc(GetLocation(first_decl), *GlobalSourceManager());
+  SourceLocation first_decl_loc = GetLocation(first_decl);
+
   set<const NamedDecl*> all_redecls = GetTagRedecls(decl);
   if (all_redecls.empty())  // input is not a class or class template
     return nullptr;
 
+  SourceManager& sm = *GlobalSourceManager();
   for (const NamedDecl* redecl : all_redecls) {
-    const FullSourceLoc redecl_loc(GetLocation(redecl), *GlobalSourceManager());
-    if (redecl_loc.isBeforeInTranslationUnitThan(first_decl_loc)) {
+    SourceLocation redecl_loc = GetLocation(redecl);
+    if (sm.isBeforeInTranslationUnit(redecl_loc, first_decl_loc)) {
       first_decl = redecl;
       first_decl_loc = redecl_loc;
     }
@@ -1312,6 +1355,12 @@ bool IsImplicitlyInstantiatedDfn(const FunctionDecl* decl) {
   return decl->isThisDeclarationADefinition() &&
          tpl_spec_info->getTemplateSpecializationKind() ==
              clang::TSK_ImplicitInstantiation;
+}
+
+const CXXMethodDecl* GetFromLeastDerived(const CXXMethodDecl* decl) {
+  while (decl->size_overridden_methods())
+    decl = *decl->begin_overridden_methods();
+  return decl;
 }
 
 // --- Utilities for Type.
@@ -1380,13 +1429,7 @@ const Type* Desugar(const Type* type) {
 }
 
 bool IsTemplatizedType(const Type* type) {
-  return (type && isa<TemplateSpecializationType>(Desugar(type)));
-}
-
-bool IsClassType(const Type* type) {
-  type = Desugar(type);
-  return (type &&
-          (isa<TemplateSpecializationType>(type) || isa<RecordType>(type)));
+  return type && type->getAs<TemplateSpecializationType>();
 }
 
 bool InvolvesTypeForWhich(const Type* type, function<bool(const Type*)> pred) {
@@ -1523,22 +1566,18 @@ bool HasImplicitConversionConstructor(const Type* type) {
   return HasImplicitConversionCtor(cxx_class);
 }
 
-TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
-    const Type* type, function<set<const Type*>(const Type*)> provided_getter) {
+static TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
+    ArrayRef<TemplateArgument> written_tpl_args,
+    const ClassTemplateSpecializationDecl* cls_tpl_decl,
+    function<set<const Type*>(const Type*)> provided_getter) {
   map<const Type*, const Type*> retval;
-  const auto* tpl_spec_type = type->getAs<TemplateSpecializationType>();
-  if (!tpl_spec_type) {
-    return TemplateInstantiationData{retval, {}};
-  }
 
   // Pull the template arguments out of the specialization type. If this is
   // a ClassTemplateSpecializationDecl specifically, we want to
   // get the arguments therefrom to correctly handle default arguments.
-  llvm::ArrayRef<TemplateArgument> tpl_args = tpl_spec_type->template_arguments();
+  llvm::ArrayRef<TemplateArgument> tpl_args = written_tpl_args;
   unsigned num_args = tpl_args.size();
 
-  const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
-  const auto* cls_tpl_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl);
   if (cls_tpl_decl) {
     const TemplateArgumentList& tpl_arg_list =
         cls_tpl_decl->getTemplateInstantiationArgs();
@@ -1553,9 +1592,9 @@ TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
   set<unsigned> explicit_args;   // indices into tpl_args we've filled
   SugaredTypeEnumerator type_enumerator;
   set<const Type*> provided_types;
-  for (unsigned i = 0; i < tpl_spec_type->template_arguments().size(); ++i) {
+  for (unsigned i = 0; i < written_tpl_args.size(); ++i) {
     set<const Type*> arg_components =
-        type_enumerator.Enumerate(tpl_spec_type->template_arguments()[i]);
+        type_enumerator.Enumerate(written_tpl_args[i]);
     // Go through all template types mentioned in the arg-as-written,
     // and compare it against each of the types in the template decl
     // (the latter are all desugared).  If there's a match, update
@@ -1592,10 +1631,36 @@ TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
   return TemplateInstantiationData{retval, provided_types};
 }
 
+TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
+    const clang::Type* type,
+    std::function<set<const clang::Type*>(const clang::Type*)>
+        provided_getter) {
+  const auto* tpl_spec_type = type->getAs<TemplateSpecializationType>();
+  if (!tpl_spec_type)
+    return TemplateInstantiationData{};
+  const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
+  const auto* cls_tpl_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl);
+  return GetTplInstDataForClassNoComponentTypes(
+      tpl_spec_type->template_arguments(), cls_tpl_decl, provided_getter);
+}
+
 TemplateInstantiationData GetTplInstDataForClass(
     const Type* type, function<set<const Type*>(const Type*)> provided_getter) {
   TemplateInstantiationData result =
       GetTplInstDataForClassNoComponentTypes(type, provided_getter);
+  InsertAllInto(provided_getter(type), &result.provided_types);
+  return TemplateInstantiationData{
+      ResugarTypeComponents(
+          result.resugar_map),  // add in the decomposition of retval
+      result.provided_types};
+}
+
+TemplateInstantiationData GetTplInstDataForClass(
+    ArrayRef<TemplateArgument> written_tpl_args,
+    const ClassTemplateSpecializationDecl* cls_tpl_decl,
+    function<set<const Type*>(const Type*)> provided_getter) {
+  TemplateInstantiationData result = GetTplInstDataForClassNoComponentTypes(
+      written_tpl_args, cls_tpl_decl, provided_getter);
   return TemplateInstantiationData{
       ResugarTypeComponents(
           result.resugar_map),  // add in the decomposition of retval
@@ -1604,6 +1669,17 @@ TemplateInstantiationData GetTplInstDataForClass(
 
 bool CanBeOpaqueDeclared(const EnumType* type) {
   return type->getDecl()->isFixed();
+}
+
+vector<const Type*> GetCanonicalArgComponents(
+    const TemplateSpecializationType* type) {
+  vector<const Type*> res;
+  SugaredTypeEnumerator enumerator;
+  for (const TemplateArgument& arg : type->template_arguments()) {
+    for (const Type* component : enumerator.Enumerate(arg))
+      res.push_back(GetCanonicalType(component));
+  }
+  return res;
 }
 
 // --- Utilities for Stmt.
@@ -1643,7 +1719,7 @@ const Expr* GetFirstClassArgument(CallExpr* expr) {
       // If a method is called, return 'this'.
       return expr->getArg(0);
     }
-    // Handle free functions.
+    // Handle non-member functions.
     CHECK_(callee_decl->getNumParams() == expr->getNumArgs() &&
         "Require one-to-one match between call arguments and decl parameters");
     int params_count = callee_decl->getNumParams();

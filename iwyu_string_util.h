@@ -88,6 +88,19 @@ inline bool StripPast(string* str, const string& substr) {
   return true;
 }
 
+// Finds the first occurrence of substr in *str and removes from *str
+// everything after the occurrence and the occurrence itself.  For
+// example, string s = "What a hat!"; DropFrom(&s, "hat"); will make s
+// "W".
+inline bool DropFrom(string* str, const string& substr) {
+  const size_t pos = str->find(substr);
+  if (pos == string::npos)
+    return false;
+
+  *str = str->substr(0, pos);
+  return true;
+}
+
 // Removes leading whitespace.
 inline void StripWhiteSpaceLeft(string* str) {
   for (string::size_type i = 0; i < str->size(); ++i) {

@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Token.h"
 #include "iwyu_ast_util.h"
@@ -30,11 +31,7 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
-
-namespace clang {
-class MacroArgs;
-class Module;
-}  // namespace clang
+#include "llvm/ADT/StringRef.h"
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
@@ -367,28 +364,18 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
 void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     SourceLocation file_beginning) {
   SourceLocation current_loc = file_beginning;
+  OptionalFileEntryRef file = GetFileEntry(current_loc);
+  if (!file) {
+    return;
+  }
 
   while (true) {
-    // Figure out the canonical name of this file.  We can't use
-    // GetFilePath() because it may not interact properly with -I.
-    current_loc = GetLocationAfter(current_loc,
-                                   "@file ",
-                                   DefaultDataGetter());
+    // Find any headername directive after a file directive. This is a Doxygen
+    // convention in libstdc++ to point users from private to public headers.
+    current_loc = GetLocationAfter(current_loc, "@file", DefaultDataGetter());
     if (!current_loc.isValid()) {
       break;
     }
-    const string filename = GetSourceTextUntilEndOfLine(current_loc,
-                                                        DefaultDataGetter()).str();
-    // Use "" or <> based on where the file lives.
-    string quoted_private_include;
-    if (IsSystemIncludeFile(GetFilePath(current_loc)))
-      quoted_private_include = "<" + filename + ">";
-    else
-      quoted_private_include = "\"" + filename + "\"";
-
-    // TODO(dsturtevant): Maybe place restrictions on the
-    // placement. E.g., in a comment, before any code, or perhaps only
-    // when in the same comment as an @file directive.
     current_loc = GetLocationAfter(current_loc,
                                    "@headername{",
                                    DefaultDataGetter());
@@ -406,9 +393,34 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     after_text = after_text.substr(0, close_brace_pos);
     vector<string> public_includes = Split(after_text, ",", 0);
 
+    // Lookup the current filename as a quoted include.
+    bool is_angled = IsSystemHeader(file);
+    string include_name = preprocessor_.getHeaderSearchInfo()
+                              .getIncludeNameForHeader(*file)
+                              .str();
+    if (include_name.empty()) {
+      // Sometimes the preprocessor state can't resolve the include name; don't
+      // map empty names in that case.
+      // TODO: figure out a bullet-proof way to get include name from file.
+      Warn(file_beginning, "no private include name for @headername mapping");
+      return;
+    }
+    string quoted_private_include = AddQuotes(include_name, is_angled);
+
+    // Generate mappings from the private to all public names.
     for (string& public_include : public_includes) {
       StripWhiteSpace(&public_include);
-      const string quoted_header_name = "<" + public_include + ">";
+
+      // HACK: work around known inconsistency in libstdc++ headers.
+      // Upstream fix proposed:
+      // https://gcc.gnu.org/pipermail/libstdc++/2024-August/059430.html
+      if (quoted_private_include == "<bits/cpp_type_traits.h>" &&
+          public_include == "ext/type_traits") {
+        public_include = "ext/type_traits.h";
+      }
+
+      // Use the same angle/quote policy as for the private file.
+      const string quoted_header_name = AddQuotes(public_include, is_angled);
 
       VERRS(8) << "Adding dynamic mapping for @headername\n";
       MutableGlobalIncludePicker()->AddMapping(
@@ -756,11 +768,17 @@ void IwyuPreprocessorInfo::Defined(const Token& id,
   ReportMacroUse(GetName(id), id.getLocation(), GetMacroDefLoc(definition));
 }
 
-void IwyuPreprocessorInfo::InclusionDirective(
-    SourceLocation hash_loc, const Token& include_token, StringRef filename,
-    bool is_angled, CharSourceRange filename_range, OptionalFileEntryRef file,
-    StringRef search_path, StringRef relative_path, const Module* imported,
-    CharacteristicKind file_type) {
+void IwyuPreprocessorInfo::InclusionDirective(SourceLocation hash_loc,
+                                              const Token& include_token,
+                                              StringRef filename,
+                                              bool is_angled,
+                                              CharSourceRange filename_range,
+                                              OptionalFileEntryRef file,
+                                              StringRef search_path,
+                                              StringRef relative_path,
+                                              const Module* suggested_module,
+                                              bool module_imported,
+                                              CharacteristicKind file_type) {
   include_filename_loc_ = filename_range.getBegin();
 }
 

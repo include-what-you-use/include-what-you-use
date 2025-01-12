@@ -38,24 +38,20 @@ jobs:
                libclang$LLVM_TAG-dev \
                clang$LLVM_TAG
 
-      - name: Work around broken packaging
+      - name: Capture LLVM major version and install prefix
         run: |
-          sudo touch /usr/lib/llvm-19/lib/libclang-19.so.1
-
-      - name: Select checkout ref (PR)
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "IWYU_CHECKOUT_REF=${{github.event.pull_request.head.sha}}" >> $GITHUB_ENV
-
-      - name: Select checkout ref (push/schedule)
-        if: github.event_name == 'push' || github.event_name == 'schedule'
-        run: |
-          echo "IWYU_CHECKOUT_REF=${{github.sha}}" >> $GITHUB_ENV
+          LLVM_MAJOR=$(ls -1d /usr/lib/llvm-* | sort -n | tail -n1 | sed 's/.*llvm-//')
+          LLVM_PREFIX=$(llvm-config-$LLVM_MAJOR --prefix)
+          echo "LLVM_MAJOR=${LLVM_MAJOR}" >> $GITHUB_ENV
+          echo "LLVM_PREFIX=${LLVM_PREFIX}" >> $GITHUB_ENV
 
       - name: Check out branch
-        uses: actions/checkout@v3
-        with:
-          ref: ${{env.IWYU_CHECKOUT_REF}}
+        uses: actions/checkout@v4
+
+      - name: Work around broken packaging
+        run: |
+          # Disable CMake target checks.
+          # sudo ./iwyu-fixup-llvm-target-checks.bash "$LLVM_PREFIX"
 
       - name: Build include-what-you-use
         run: |
@@ -66,6 +62,7 @@ jobs:
                 -DCMAKE_C_COMPILER=clang$LLVM_TAG \
                 -DCMAKE_CXX_COMPILER=clang++$LLVM_TAG \
                 -DCMAKE_INSTALL_PREFIX=./ \
+                -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=on \
                 ../
           ninja
 

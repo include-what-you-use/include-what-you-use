@@ -1,0 +1,4 @@
+# The presence of the mapping file should not spoil IWYU analysis.
+[
+    { "symbol": ["TplFn1", "private", "\"tests/cxx/overload_expr-d1.h\"", "public"] },
+]

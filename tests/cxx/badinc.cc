@@ -137,7 +137,6 @@ using namespace i1_ns2;
 using i1_ns3::i1_int_global3;
 namespace cc_ns_alias = i1_ns4;
 using i1_ns::I1_NamespaceStruct;
-// IWYU: i1_ns::I1_NamespaceTemplateFn is...*badinc-i1.h
 using i1_ns::I1_NamespaceTemplateFn;
 // TODO(csilvers): mark this using declaration as redundant and remove it?
 // IWYU: i1_ns::I1_UnusedNamespaceStruct needs a declaration
@@ -194,6 +193,9 @@ typedef I1_Class Cc_typedef_array[kI1ConstInt];
 typedef I1_TemplateClass<I1_TemplateClass<I1_Class,I2_Class> > Cc_tpl_typedef;
 // TODO(csilvers): it would be nice to be able to take this line out and
 // still have the above tests pass:
+// TODO(bolshakov): figure out how to determine at the use site that a typedef
+// provides not only the types but also the member functions.
+// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
 Cc_tpl_typedef cc_tpl_typedef;
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class::I2_Class is...*badinc-i2-inl.h
@@ -1057,10 +1059,6 @@ int main() {
   // IWYU: I1_PtrDereferenceClass needs a declaration
   I1_PtrDereferenceClass* local_i1_ptrdereference_class = 0;
   int x;
-  // va_list is normally in <stdarg.h>, but we already have <stdio.h>
-  // available, so mappings will source it from there.
-  // IWYU: va_list is...*<stdio.h>
-  va_list vl;
   D1_I1_Typedef d1_i1_typedef;
   // IWYU: i1_int is...*badinc-i1.h
   int vararray[i1_int];
@@ -1121,16 +1119,21 @@ int main() {
 
   // Calling an overloaded function.  In the first two cases,
   // CallOverloadedFunctionSameFile() is responsible for the call,
-  // since it's just a single file.  In the second two cases, we
-  // can't know the file required until now (when the templated
-  // function is instantiated).
+  // since it's just a single file. But in general, we cannot know it for sure.
+  // Hence it is reported because the template-defining file doesn't include
+  // the function-defining file directly. In the second two cases, we can't know
+  // the file required until now (when the templated function is instantiated).
+  // IWYU: I1_OverloadedFunction is...*badinc-i1.h
   CallOverloadedFunctionSameFile(5);
+  // IWYU: I1_OverloadedFunction is...*badinc-i1.h
   CallOverloadedFunctionSameFile(5.0f);
   // IWYU: I1_And_I2_OverloadedFunction is...*badinc-i1.h
   CallOverloadedFunctionDifferentFiles(5);
   // IWYU: I1_And_I2_OverloadedFunction is...*badinc-i2.h
   CallOverloadedFunctionDifferentFiles(5.0f);
-  // This should not be an IWYU violation either: the iwyu use is in the fn.
+  // Again, it is reported because the template defining file doesn't include
+  // the function defining file directly.
+  // IWYU: i1_ns::I1_NamespaceTemplateFn is...*badinc-i1.h
   CallOverloadWithUsingShadowDecl(5);
 
   // Calling operator<< when the first argument is a macro.  We should
@@ -1374,12 +1377,12 @@ int main() {
   // IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
   // IWYU: I2_TemplateClass is...*badinc-i2.h
   local_i2_template_class.CcFileFn();
-  // IWYU: InlFileFreeFn is...*badinc-i2-inl.h
-  InlFileFreeFn();
-  // IWYU: InlFileFreeTemplateFn is...*badinc-i2-inl.h
-  InlFileFreeTemplateFn<float>();
-  // IWYU: InlFileFreeTemplateFn is...*badinc-i2-inl.h
-  InlFileFreeTemplateFn<int>();     // a specialization
+  // IWYU: InlFileNonMemberFn is...*badinc-i2-inl.h
+  InlFileNonMemberFn();
+  // IWYU: InlFileNonMemberTemplateFn is...*badinc-i2-inl.h
+  InlFileNonMemberTemplateFn<float>();
+  // IWYU: InlFileNonMemberTemplateFn is...*badinc-i2-inl.h
+  InlFileNonMemberTemplateFn<int>();  // a specialization
   // IWYU: inlfile_var is...*badinc-i2-inl.h
   (void)(inlfile_var);
   // TODO(csilvers): IWYU: I1_FunctionPtr is...*badinc-i1.h
@@ -1438,7 +1441,7 @@ int main() {
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
   local_i1_const_ptr.indirect_del();
-  // This calls *ptr_, but in a free function.
+  // This calls *ptr_, but in a non-member function.
   // IWYU: operator== is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
   (void)(local_i1_const_ptr == i1_class);

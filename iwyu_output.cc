@@ -23,6 +23,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
@@ -35,6 +36,7 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 
@@ -53,6 +55,7 @@ using clang::FunctionDecl;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
 using clang::OptionalFileEntryRef;
+using clang::PrintingPolicy;
 using clang::RecordDecl;
 using clang::SourceLocation;
 using clang::SourceRange;
@@ -63,6 +66,7 @@ using clang::UsingDecl;
 using llvm::cast;
 using llvm::dyn_cast;
 using llvm::errs;
+using llvm::find_if;
 using llvm::isa;
 using llvm::raw_string_ostream;
 using std::map;
@@ -335,14 +339,8 @@ void OneUse::SetPublicHeaders() {
   // We should never need to deal with public headers if we already know
   // who we map to.
   CHECK_(suggested_header_.empty() && "Should not need a public header here");
-  const IncludePicker& picker = GlobalIncludePicker();   // short alias
-  const string use_path = GetFilePath(use_loc_);
-  // If the symbol has a special mapping, use it, otherwise map its file.
-  public_headers_ = picker.GetCandidateHeadersForSymbolUsedFrom(
-      symbol_name_, use_path);
-  if (public_headers_.empty())
-    public_headers_ = picker.GetCandidateHeadersForFilepathIncludedFrom(
-        decl_filepath(), use_path);
+  public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
+      symbol_name_, GetFilePath(use_loc_), decl_filepath());
   if (public_headers_.empty())
     public_headers_.push_back(ConvertToQuotedInclude(decl_filepath()));
 }
@@ -469,29 +467,32 @@ string MungedForwardDeclareLineForNontemplates(const TagDecl* decl) {
 // forward-declare the template, e.g.
 //     "namespace ns { template <typename T> class Foo; }".
 string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
-  // DeclPrinter prints the class name just as we like it (with
-  // default args and everything) -- with logic that doesn't exist
-  // elsewhere in clang that I can see.  Unfortunately, it also prints
-  // the full class body.  So, as a hack, we use PrintableDecl to get
-  // the full declaration, and then hack off everything after the
-  // template name.  We also have to replace the name with the fully
-  // qualified name.  TODO(csilvers): prepend namespaces instead.
-  std::string line;       // llvm wants regular string, not our versa-string
+  // DeclPrinter prints the class name just as we like it (with default args and
+  // everything) -- with logic that doesn't exist elsewhere in clang that I can
+  // see. Unfortunately, it also prints the full class body. So, as a hack, we
+  // postprocess the printed decl and then cut off everything after the template
+  // name. We also have to replace the name with the fully qualified name.
+  // TODO(csilvers): prepend namespaces instead.
+  std::string line;
   raw_string_ostream ostream(line);
-  decl->print(ostream);   // calls DeclPrinter
-  line = ostream.str();
 
-  // Remove "final" specifier which isn't needed for forward
-  // declarations.
+  // Print the decl using PolishForDeclaration, which strips some semantic
+  // attributes.
+  PrintingPolicy policy = decl->getASTContext().getPrintingPolicy();
+  policy.PolishForDeclaration = true;
+  decl->print(ostream, policy);
+  ostream.flush();
+
+  // Remove "final" specifier, it isn't allowed for forward declarations.
   ReplaceAll(&line, " final ", " ");
 
   // Get rid of the superclasses, if any (this will nix the body too).
-  line = Split(line, " :", 2)[0];
+  DropFrom(&line, " :");
   // Get rid of the template body, if any (true if no superclasses).
-  line = Split(line, " {", 2)[0];
+  DropFrom(&line, " {");
 
-  // The template name is now the last word on the line.  Replace it
-  // by its fully-qualified form.
+  // The template name is now the last word on the line. Replace it by its
+  // fully-qualified form.
   const string::size_type name = line.rfind(' ');
   CHECK_(name != string::npos && "Unexpected printable template-type");
 
@@ -668,14 +669,15 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
     const NamedDecl* report_decl;
     SourceLocation report_decl_loc;
 
-    if ((flags & (UF_FunctionDfn | UF_ExplicitInstantiation)) == 0) {
+    if ((flags & (UF_DefinitionUse | UF_ExplicitInstantiation)) == 0) {
       // Since we need the full symbol, we need the decl's definition-site too.
       // Also, by default we canonicalize the location, using GetLocation.
       report_decl = GetDefinitionAsWritten(decl);
       report_decl_loc = GetLocation(report_decl);
     } else {
-      // However, if we're defining the function or we are targeting an explicit
-      // instantiation, we want to use it as-is and not try to canonicalize at all.
+      // However, if a declaration is used by its own definition or we are
+      // targeting an explicit instantiation, we want to use them as-is and not
+      // try to canonicalize at all.
       report_decl = decl;
       report_decl_loc = decl->getLocation();
     }
@@ -826,13 +828,13 @@ bool DeclIsVisibleToUseInSameFile(const Decl* decl, const OneUse& use) {
 // might be "calculate minimal-ish includes". :-)  It populates
 // each OneUse in uses with the best #include for that use.
 // direct_includes: this file's direct includes only.
-// associated_direct_includes: direct includes for 'associated'
+// associated_desired_includes: desired includes for 'associated'
 // files.  For everything but foo.cc, this is empty; for foo.cc it's
 // foo.h's includes and foo-inl.h's includes.
 set<string> CalculateMinimalIncludes(
     const string& use_quoted_include,
     const set<string>& direct_includes,
-    const set<string>& associated_direct_includes,
+    const set<string>& associated_desired_includes,
     vector<OneUse>* uses) {
   set<string> desired_headers;
 
@@ -873,9 +875,8 @@ set<string> CalculateMinimalIncludes(
   // Steps (2): Go through the needed private-includes that map to
   // more than one public #include.  Use the following priority order:
   // - Ourselves.
-  // - An include in associated_direct_includes (those are includes
-  //   that are not going away, since we can't change associated
-  //   files).
+  // - An include in associated_desired_includes (those are includes
+  //   that are not going away, since they should be calculated already).
   // - Includes in direct_includes that are also already in
   //   desired_headers.
   // - Includes in desired_headers.
@@ -898,7 +899,7 @@ set<string> CalculateMinimalIncludes(
     for (const string& choice : public_headers) {
       if (use.has_suggested_header())
         break;
-      if (ContainsKey(associated_direct_includes, choice)) {
+      if (ContainsKey(associated_desired_includes, choice)) {
         use.set_suggested_header(choice);
         desired_headers.insert(use.suggested_header());
         LogIncludeMapping("in associated header", use);
@@ -1298,10 +1299,11 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
   // definition from iwyu's point of view.)  We don't bother with
   // RedeclarableTemplate<> types (FunctionTemplateDecl), since for
   // those types, iwyu *does* care about the definition vs declaration.
-  // All this is moot when FunctionDecls are being defined, all their redecls
+  // All this is moot for decl uses triggered by definitions, all their redecls
   // are separately registered as uses so that a definition anchors all its
   // declarations.
-  if (!(use->flags() & UF_FunctionDfn) && !is_builtin_function_with_mappings) {
+  if (!(use->flags() & UF_DefinitionUse) &&
+      !is_builtin_function_with_mappings) {
     set<const NamedDecl*> all_redecls;
     if (isa<TagDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
       all_redecls.insert(use->decl());  // for classes, just consider the dfn
@@ -1694,8 +1696,9 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
       Union(associated_direct_includes, direct_includes());
 
   // (C2) + (C3) Find the minimal 'set cover' for all symbol uses.
+  const set<string>& associated_desired_includes = AssociatedDesiredIncludes();
   const set<string> desired_set_cover = internal::CalculateMinimalIncludes(
-      quoted_file_, direct_includes(), associated_direct_includes, uses);
+      quoted_file_, direct_includes(), associated_desired_includes, uses);
 
   // (C4) Remove .cc files from desired-includes unless they're in actual-inc.
   for (const string& header_name : desired_set_cover) {
@@ -1711,7 +1714,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // NOTE: this depends on our associated headers having had their
   // iwyu analysis done before us.
   set<string> effective_desired_includes = desired_includes();
-  InsertAllInto(AssociatedDesiredIncludes(), &effective_desired_includes);
+  InsertAllInto(associated_desired_includes, &effective_desired_includes);
 
   // Now that we've figured out desired_includes, figure out iwyu violations.
   for (OneUse& use : *uses) {
@@ -2294,6 +2297,24 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   errs() << diff_output;
 
   return num_edits;
+}
+
+bool IsDirectlyIncluded(const NamedDecl* decl, const IwyuFileInfo& includer) {
+  // If the decl or its header is private then a user should '#include' any of
+  // the specified public headers for it, so check their presence.
+  const vector<string> mapped_headers =
+      GlobalIncludePicker().GetMappedPublicHeaders(
+          GetWrittenQualifiedNameAsString(decl),
+          GetFilePath(includer.file_entry()), GetFilePath(decl));
+  if (!mapped_headers.empty()) {
+    auto pred = [&direct_includes =
+                     includer.direct_includes()](const string& header) {
+      return direct_includes.count(header);
+    };
+    return find_if(mapped_headers, pred) != mapped_headers.end();
+  }
+  // Otherwise, check the decl header directly.
+  return includer.direct_includes_as_fileentries().count(GetFileEntry(decl));
 }
 
 }  // namespace include_what_you_use

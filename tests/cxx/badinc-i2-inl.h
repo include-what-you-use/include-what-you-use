@@ -57,15 +57,17 @@ template<typename T> class I2_InlFileTemplateClass {
   T a;
 };
 
-inline int InlFileFreeFn() {
+inline int InlFileNonMemberFn() {
   return 7;
 }
 
-template<typename T> int InlFileFreeTemplateFn() {
+template <typename T>
+int InlFileNonMemberTemplateFn() {
   return 8;
 }
 
-template<> int InlFileFreeTemplateFn<int>() {
+template <>
+int InlFileNonMemberTemplateFn<int>() {
   return 9;
 }
 

@@ -143,6 +143,9 @@ struct Outer {
 // IWYU: IndirectClass is...*indirect.h
 using Providing = IndirectClass;
 
+// IWYU: IndirectClass is...*indirect.h
+using ProvidingNested = Identity<IndirectClass>;
+
 void ArgumentTypeProvision() {
   Identity<Providing>::Type p1;
   (void)sizeof(p1);
@@ -182,6 +185,11 @@ void ArgumentTypeProvision() {
   // IWYU: NonProviding is...*typedef_in_template-i1.h
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(Identity<NonProviding>::AliasTemplate<1>);
+
+  ProvidingNested::Type pnt;
+  // IWYU: NonProvidingNested is...*typedef_in_template-i1.h
+  // IWYU: IndirectClass is...*indirect.h
+  NonProvidingNested::Type nnt;
 }
 
 // IWYU: IndirectClass needs a declaration
@@ -202,7 +210,7 @@ tests/cxx/typedef_in_template.cc should remove these lines:
 
 The full include-list for tests/cxx/typedef_in_template.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
-#include "tests/cxx/typedef_in_template-i1.h"  // for Class1, NonProviding
+#include "tests/cxx/typedef_in_template-i1.h"  // for Class1, NonProviding, NonProvidingNested
 #include "tests/cxx/typedef_in_template-i2.h"  // for Class2, Pair
 
 ***** IWYU_SUMMARY */

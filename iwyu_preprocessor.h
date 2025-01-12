@@ -72,15 +72,9 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "iwyu_output.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace clang {
-class MacroArgs;
-class MacroDefinition;
-class MacroDirective;
-class Module;
 class NamedDecl;
-class Token;
 }  // namespace clang
 
 namespace include_what_you_use {
@@ -208,7 +202,8 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                           clang::OptionalFileEntryRef file,
                           llvm::StringRef search_path,
                           llvm::StringRef relative_path,
-                          const clang::Module* imported,
+                          const clang::Module* suggested_module,
+                          bool module_imported,
                           clang::SrcMgr::CharacteristicKind file_type) override;
 
   void FileChanged(clang::SourceLocation loc, FileChangeReason reason,

@@ -94,6 +94,23 @@ template class ClassWithMethodUsingPtr<IndirectClass>;
 // IWYU: IndirectClass is...*indirect.h
 template class ClassWithUsingMethod2<IndirectClass>;
 
+// IWYU should not forward-declare templates with default args. Test that
+// an explicit instantiation after the template spec reference doesn't muss
+// the tool.
+// IWYU: TplWithDefArg is...*explicit_instantiation-template.h
+TplWithDefArg<int>* p = nullptr;
+// IWYU: TplWithDefArg is...*explicit_instantiation-template.h
+extern template class TplWithDefArg<int>;
+
+template <typename>
+class TplUsingNondependentDecl {
+  // IWYU: getInt is...*explicit_instantiation-template.h
+  static constexpr int i = getInt();
+};
+
+// No reporting getInt here.
+template class TplUsingNondependentDecl<void>;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/explicit_instantiation.cc should add these lines:
@@ -105,7 +122,7 @@ tests/cxx/explicit_instantiation.cc should remove these lines:
 
 The full include-list for tests/cxx/explicit_instantiation.cc:
 #include "tests/cxx/explicit_instantiation-spec.h"  // for Template
-#include "tests/cxx/explicit_instantiation-template.h"  // for ClassWithMethodUsingPtr, ClassWithUsingMethod, Template
+#include "tests/cxx/explicit_instantiation-template.h"  // for ClassWithMethodUsingPtr, ClassWithUsingMethod, Template, TplWithDefArg, getInt
 #include "tests/cxx/explicit_instantiation-template2.h"  // for ClassWithUsingMethod2
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 

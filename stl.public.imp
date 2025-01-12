@@ -8,17 +8,17 @@
   # #including each other (eg <iostream> //includes <istream>).  We
   # are pretty forgiving: if a user specifies any public header, we
   # generally don't require the others.
-  # ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && egrep '^ *# *include <(istream|ostream|iostream|fstream|sstream|streambuf|ios|iosfwd)>' *stream* ios | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ and print qq@    { include: ["<$2>", public, "<$1>", public ] },@' | sort -u )
-  { include: ["<ios>", public, "<istream>", public ] },
-  { include: ["<ios>", public, "<ostream>", public ] },
-  { include: ["<iosfwd>", public, "<ios>", public ] },
-  { include: ["<iosfwd>", public, "<streambuf>", public ] },
-  { include: ["<istream>", public, "<fstream>", public ] },
-  { include: ["<istream>", public, "<iostream>", public ] },
-  { include: ["<istream>", public, "<sstream>", public ] },
-  { include: ["<ostream>", public, "<fstream>", public ] },
-  { include: ["<ostream>", public, "<iostream>", public ] },
-  { include: ["<ostream>", public, "<istream>", public ] },
-  { include: ["<ostream>", public, "<sstream>", public ] },
-  { include: ["<streambuf>", public, "<ios>", public ] },
+  # ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && egrep '^ *# *include <(istream|ostream|iostream|fstream|sstream|streambuf|ios|iosfwd)>' *stream* ios | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ and print qq@    { "include": ["<$2>", "public", "<$1>", "public"] },@' | sort -u )
+  { "include": ["<ios>", "public", "<istream>", "public"] },
+  { "include": ["<ios>", "public", "<ostream>", "public"] },
+  { "include": ["<iosfwd>", "public", "<ios>", "public"] },
+  { "include": ["<iosfwd>", "public", "<streambuf>", "public"] },
+  { "include": ["<istream>", "public", "<fstream>", "public"] },
+  { "include": ["<istream>", "public", "<iostream>", "public"] },
+  { "include": ["<istream>", "public", "<sstream>", "public"] },
+  { "include": ["<ostream>", "public", "<fstream>", "public"] },
+  { "include": ["<ostream>", "public", "<iostream>", "public"] },
+  { "include": ["<ostream>", "public", "<istream>", "public"] },
+  { "include": ["<ostream>", "public", "<sstream>", "public"] },
+  { "include": ["<streambuf>", "public", "<ios>", "public"] },
 ]

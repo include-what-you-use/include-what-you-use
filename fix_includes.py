@@ -1536,7 +1536,6 @@ def _GetNamespaceLevelReorderSpans(file_lines):
 
 
 # These are potential 'kind' arguments to _FirstReorderSpanWith.
-# We also sort our output in this order, to the extent possible.
 _MAIN_CU_INCLUDE_KIND = 1         # e.g. #include "foo.h" when editing foo.cc
 _C_SYSTEM_INCLUDE_KIND = 2        # e.g. #include <stdio.h>
 _CXX_SYSTEM_INCLUDE_KIND = 3      # e.g. #include <vector>
@@ -1545,6 +1544,22 @@ _PROJECT_INCLUDE_KIND = 5         # e.g. #include "myproject/quux.h"
 _FORWARD_DECLARE_KIND = 6         # e.g. class Baz;
 _EOF_KIND = 7                     # used at eof
 
+# The span kinds are defined in default sort order, so generate a default
+# identity mapping.
+SORT_ORDER_DEFAULT = {
+  kind: kind for kind in range(_MAIN_CU_INCLUDE_KIND, _EOF_KIND + 1)
+}
+
+# In quoted-first mode, we sort all quoted kinds before system kinds.
+SORT_ORDER_QUOTED_FIRST = {
+  _MAIN_CU_INCLUDE_KIND: 1,
+  _NONSYSTEM_INCLUDE_KIND: 2,
+  _PROJECT_INCLUDE_KIND: 3,
+  _C_SYSTEM_INCLUDE_KIND: 4,
+  _CXX_SYSTEM_INCLUDE_KIND: 5,
+  _FORWARD_DECLARE_KIND: 6,
+  _EOF_KIND: 7,
+}
 
 def _IsSystemInclude(line_info):
   """Given a line-info, return true iff the line is a <>-style #include."""
@@ -2071,6 +2086,13 @@ def _GetSymbolNameFromForwardDeclareLine(line):
   return symbol_name
 
 
+def GetLineSortOrdinal(kind, quoted_includes_first):
+  if quoted_includes_first:
+    return SORT_ORDER_QUOTED_FIRST[kind]
+  else:
+    return SORT_ORDER_DEFAULT[kind]
+
+
 def FixFileLines(iwyu_record, file_lines, flags, fileinfo):
   """Applies one block of lines from the iwyu output script.
 
@@ -2142,10 +2164,16 @@ def FixFileLines(iwyu_record, file_lines, flags, fileinfo):
   # Add a sentinel decorated move-span, to make life easy, and sort.
   decorated_move_spans.append(((len(file_lines), len(file_lines)),
                                _EOF_KIND, '', []))
-  if flags.reorder:
-    decorated_move_spans.sort()
-  else:
-    decorated_move_spans.sort(key=lambda x: x[0:-2])
+
+  def key(decorated_span):
+    reorder_span, kind, sort_key, all_lines = decorated_span
+    kind_key = GetLineSortOrdinal(kind, flags.quoted_includes_first)
+    if flags.reorder:
+      return reorder_span, kind_key, sort_key, all_lines
+    else:
+      return reorder_span, kind_key
+
+  decorated_move_spans.sort(key=key)
 
   # Now go through all the lines of the input file and construct the
   # output file.  Before we get to the next reorder-span, we just
@@ -2435,6 +2463,9 @@ def main(argv):
                       help=('Specify the base directory. fix_includes will '
                             'interpret non-absolute filenames relative to this '
                             'path.'))
+  parser.add_argument('--quoted_includes_first', action='store_true',
+                      default=False,
+                      help='When sorting includes, place quoted ones first')
 
   parser.add_argument('files', nargs='*', metavar='FILES')
 

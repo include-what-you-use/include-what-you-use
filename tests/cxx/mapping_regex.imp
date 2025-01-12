@@ -1,5 +1,5 @@
 # Bogus header mapping using a negative lookahead regex.
 # The foobar.h header does not exist; we just want IWYU to suggest using it.
 [
-  { include: ["@\"(?!.*not-tests/not-cxx/).*indirect.h\"", private, "\"foobar.h\"", public ] },
+  { "include": ["@\"(?!.*not-tests/not-cxx/).*indirect.h\"", "private", "\"foobar.h\"", "public"] },
 ]

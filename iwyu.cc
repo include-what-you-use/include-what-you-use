@@ -135,10 +135,12 @@
 #include "iwyu_port.h"  // for CHECK_
 #include "iwyu_preprocessor.h"
 #include "iwyu_stl_util.h"
+#include "iwyu_string_util.h"
 #include "iwyu_use_flags.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
@@ -222,7 +224,6 @@ using clang::NamespaceAliasDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::OptionalFileEntryRef;
-using clang::OverloadExpr;
 using clang::PPCallbacks;
 using clang::ParmVarDecl;
 using clang::PointerType;
@@ -230,6 +231,7 @@ using clang::Preprocessor;
 using clang::QualType;
 using clang::QualifiedTypeLoc;
 using clang::RecordDecl;
+using clang::RecordType;
 using clang::RecursiveASTVisitor;
 using clang::ReferenceType;
 using clang::Sema;
@@ -259,6 +261,7 @@ using clang::TypedefDecl;
 using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryExprOrTypeTraitExpr;
+using clang::UnresolvedLookupExpr;
 using clang::UsingDecl;
 using clang::UsingDirectiveDecl;
 using clang::UsingShadowDecl;
@@ -608,9 +611,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       member_types.insert(it->getType().getTypePtr());
     }
     for (const Type* type : member_types) {
-      const NamedDecl* member_decl = TypeToDeclAsWritten(type);
       // We only want those fields that are c++ classes.
-      if (const CXXRecordDecl* cxx_field_decl = DynCastFrom(member_decl)) {
+      if (const CXXRecordDecl* cxx_field_decl = type->getAsCXXRecordDecl()) {
         if (const CXXDestructorDecl* field_dtor =
                 cxx_field_decl->getDestructor()) {
           if (!this->getDerived().TraverseImplicitDestructorCall(
@@ -720,8 +722,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
 
     const Type* parent_type = TypeOfParentIfMethod(expr);
-    // If we're a free function -- bool operator==(MyClass a, MyClass b) --
-    // we still want to have a parent_type, as if we were defined as
+    // If we're a non-member function -- bool operator==(MyClass a, MyClass b)
+    // -- we still want to have a parent_type, as if we were defined as
     // MyClass::operator==.  So we go through the arguments and take the
     // first one that's a class, and associate the function with that.
     if (!parent_type) {
@@ -830,8 +832,6 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
 
     if (FunctionDecl* fn_decl = DynCastFrom(expr->getDecl())) {
-      if (!IsImplicitlyInstantiatedDfn(fn_decl))
-        return true;
       if (const auto* call_expr =  // Skip intermediate ImplicitCastExpr node.
           current_ast_node_->GetAncestorAs<CallExpr>(2)) {
         if (call_expr->getDirectCallee() == fn_decl)
@@ -842,7 +842,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       const Type* parent_type = nullptr;
       if (expr->getQualifier() && expr->getQualifier()->getAsType())
         parent_type = expr->getQualifier()->getAsType();
-      if (!this->getDerived().HandleFunctionCall(fn_decl, parent_type, expr))
+      if (!this->getDerived().TraverseFunctionIfInstantiatedTpl(
+              fn_decl, parent_type, expr))
         return false;
     }
     return true;
@@ -1054,6 +1055,12 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
     return Base::HandleFunctionCall(callee, parent_type, calling_expr);
   }
 
+  bool TraverseFunctionIfInstantiatedTpl(FunctionDecl*,
+                                         const Type*,
+                                         const Expr*) {
+    return true;
+  }
+
   //------------------------------------------------------------
   // Class logic.
 
@@ -1097,18 +1104,10 @@ struct VisitorState {
   // Information gathered at preprocessor time, including #include info.
   const IwyuPreprocessorInfo& preprocessor_info;
 
-  // When we see an overloaded function that depends on a template
-  // parameter, we can't resolve the overload until the template
-  // is instantiated (e.g., MyFunc<int> in the following example):
-  //    template<typename T> MyFunc() { OverloadedFunction(T()); }
-  // However, sometimes we can do iwyu even before resolving the
-  // overload, if *all* potential overloads live in the same file.  We
-  // mark the location of such 'early-processed' functions here, so
-  // when we see the function again at template-instantiation time, we
-  // know not to do iwyu-checking on it again.  (Since the actual
-  // function-call exprs are different between the uninstantiated and
+  // Currently, this is used only for handling placement-new calls. Since
+  // the actual function-call exprs are different between the uninstantiated and
   // instantiated calls, we can't store the exprs themselves, but have
-  // to store their location.)
+  // to store their location.
   set<SourceLocation> processed_overload_locs;
 };
 
@@ -1204,7 +1203,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // myvec.end(), foo)), so we need to manually map back.  We map
   // __normal_iterator<foo, vector> to vector<> and __wrap_iter<foo> to foo,
   // assuming that the vector<> class includes the typedef.  Likewise, we map
-  // any free function taking a private iterator (such as operator==) the
+  // any non-member function taking a private iterator (such as operator==) the
   // same way, assuming that that (templatized) function is instantiated
   // as part of the vector class.
   //    We do something similar for _List_iterator and _List_const_iterator
@@ -1218,7 +1217,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   const Type* MapPrivateDeclToPublicType(const NamedDecl* decl) const {
     const NamedDecl* class_decl = decl;
     // If we're a member method, then the __normal_iterator or __wrap_iter will
-    // be the parent: __normal_iterator::operator=.  If we're a free
+    // be the parent: __normal_iterator::operator=.  If we're a non-member
     // overloaded operator, then the __normal_iterator will be the
     // first argument: operator==(__normal_iterator<...>& lhs, ...);
     if (const CXXMethodDecl* method_decl = DynCastFrom(class_decl)) {
@@ -1356,6 +1355,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                << "result of macro arg concatenation\n";
       use_loc = expansion_loc;
       side = "expansion";
+    } else if (StartsWith(PrintableLoc(spelling_loc), "<command line>")) {
+      VERRS(5) << "Spelling location is in <command line> (macro defined in "
+                  "command line), use expansion location instead\n";
+      use_loc = expansion_loc;
+      side = "expansion";
     } else if (fwd_decl != nullptr) {
       VERRS(5) << "Found a hint decl in macro definition file\n";
       use_loc = expansion_loc;
@@ -1431,17 +1435,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return false;
 
     // Check if the the author is not #including the file with the
-    // definition.  PublicHeaderIntendsToProvide has exactly the
-    // semantics we want.  Note if there's no definition anywhere, we
+    // definition. Note if there's no definition anywhere, we
     // say the author does not want the full type (which is a good
     // thing, since there isn't one!)
     if (const NamedDecl* dfn = GetTagDefinition(decl)) {
       if (IsBeforeInSameFile(dfn, use_loc))
         return false;
-      if (preprocessor_info().PublicHeaderIntendsToProvide(
-              GetFileEntry(use_loc), GetFileEntry(dfn))) {
+      const IwyuFileInfo* use_file =
+          preprocessor_info().FileInfoFor(GetFileEntry(use_loc));
+      if (!use_file)  // Not sure whether this is possible.
+        return true;
+      if (IsDirectlyIncluded(dfn, *use_file))
         return false;
-      }
     }
 
     // OK, looks like the author has stated they don't want the fulll type.
@@ -1458,6 +1463,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const FunctionDecl* fn_decl = call_expr->getDirectCallee();
     if (!fn_decl)     // TODO(csilvers): what to do for fn ptrs and the like?
       return set<const Type*>();
+
+    if (const auto* method = dyn_cast<CXXMethodDecl>(fn_decl))
+      fn_decl = GetFromLeastDerived(method);
 
     // Collect the non-explicit, one-arg constructor ('autocast') types.
     set<const Type*> autocast_types;
@@ -1495,8 +1503,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   set<const Type*> GetProvidedTypesForFnReturn(const FunctionDecl* decl) const {
-    const Type* return_type = decl->getReturnType().getTypePtr();
-    return GetProvidedTypes(return_type, GetLocation(decl));
+    const FunctionDecl* providing_decl = decl;
+    if (const auto* method = dyn_cast<CXXMethodDecl>(decl))
+      providing_decl = GetFromLeastDerived(method);
+    const Type* return_type = providing_decl->getReturnType().getTypePtr();
+    return GetProvidedTypes(return_type, GetLocation(providing_decl));
   }
 
   //------------------------------------------------------------
@@ -1574,8 +1585,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     OptionalFileEntryRef used_in = GetFileEntry(used_loc);
-    preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
-        used_loc, target_decl, use_flags, comment);
+    if (!blocked_for_fwd_decl_.count(target_decl->getCanonicalDecl())) {
+      preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
+          used_loc, target_decl, use_flags, comment);
+    }
 
     // If we're a use that depends on a using declaration, make sure
     // we #include the file with the using declaration.
@@ -1685,20 +1698,33 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     if (decl->isThisDeclarationADefinition()) {
-      // For free functions, report use of all previously seen decls.
+      // For non-member function definitions, report use of all previously seen
+      // decls.
       if (decl->getKind() == Decl::Function) {
-        FunctionDecl* redecl = decl;
+        const FunctionDecl* redecl = decl;
         while ((redecl = redecl->getPreviousDecl()))
-          ReportDeclUse(CurrentLoc(), redecl);
-      }
-      if (!IsInHeader(decl)) {
-        // No point in author-intent analysis of function definitions
-        // in source files or for builtins.
-        return true;
+          ReportDeclUse(CurrentLoc(), redecl, nullptr, UF_DefinitionUse);
       }
     } else {
       // Make all our types forward-declarable.
       current_ast_node()->set_in_forward_declare_context(true);
+    }
+    return true;
+  }
+
+  bool VisitVarDecl(VarDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    if (decl->isThisDeclarationADefinition()) {
+      // For variable definitions, report use of all previously seen decls with
+      // external storage.
+      const VarDecl* redecl = decl;
+      while ((redecl = redecl->getPreviousDecl())) {
+        if (!redecl->hasExternalStorage())
+          continue;
+        ReportDeclUse(CurrentLoc(), redecl, nullptr, UF_DefinitionUse);
+      }
     }
     return true;
   }
@@ -1840,6 +1866,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_AddressSpaceConversion:  // Address spaces are associated
                                               // with pointers, so no need for
                                               // the full type.
+      case clang::CK_HLSLArrayRValue:
+      case clang::CK_HLSLVectorTruncation:
         break;
 
       // Ignore non-ptr-to-ptr casts.
@@ -1995,10 +2023,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     for (const Stmt* child : expr->children()) {
-      const Type* type = GetTypeOf(cast<Expr>(child));
+      // Dig past implicit casts and parens to get the real location.
+      const Expr* term = cast<Expr>(child)->IgnoreImpCasts()->IgnoreParens();
+
+      // If the term expression is pointer-typed we need the full types for
+      // pointer arithmetic.
+      const Type* type = GetTypeOf(term);
       if (type->isPointerType()) {
-        // It's a pointer-typed expression.
-        ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefsAndPtr);
+        ReportTypeUse(GetLocation(term), type, DerefKind::RemoveRefsAndPtr);
       }
     }
 
@@ -2062,7 +2094,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  // We want to mark use of the base type For 'free function' operator
+  // We want to mark use of the base type For non-member operator
   // overloads ('ostream& operator<<(ostream& o, int x)') just like we
   // do for member functions ('ostream& ostream::operator<<(int x)')
   // -- for iwyu purposes, 'x << 4' is just semantic sugar around
@@ -2163,9 +2195,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
-  // An OverloadExpr is an overloaded function (or method) in an
-  // uninstantiated template, that can't be resolved until the
-  // template is instantiated.  The simplest case is something like:
+  // An UnresolvedLookupExpr is an overloaded function or variable template
+  // reference in an uninstantiated template, that can't be resolved until
+  // the template is instantiated.  The simplest case is something like:
   //    void Foo(int) { ... }
   //    void Foo(float) { ... }
   //    template<typename T> Fn(T t) { Foo(t); }
@@ -2177,30 +2209,56 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // all exist in the same file -- which is pretty much always the
   // case, especially with a template calling a template -- we can do
   // an iwyu warning now, even without knowing the exact overload.
-  // In that case, we store the fact we warned, so we won't warn again
-  // when the template is instantiated.
-  // TODO(csilvers): to be really correct, we should report *every*
-  // overload that callers couldn't match via ADL.
-  bool VisitOverloadExpr(OverloadExpr* expr) {
-    // No CanIgnoreCurrentASTNode() check here!  It's later in the function.
-
-    // Make sure all overloads are in the same file.
-    if (expr->decls_begin() == expr->decls_end())   // not sure this is possible
+  // Otherwise, all directly included overloads are reported just to be kept.
+  bool VisitUnresolvedLookupExpr(UnresolvedLookupExpr* expr) {
+    if (CanIgnoreCurrentASTNode())
       return true;
+
+    if (expr->decls_begin() == expr->decls_end()) {
+      // This can occur when there are no overloads before the template
+      // definition, and a callee may be found only via ADL.
+      return true;
+    }
     const NamedDecl* first_decl = *expr->decls_begin();
     OptionalFileEntryRef first_decl_file_entry = GetFileEntry(first_decl);
-    for (OverloadExpr::decls_iterator it = expr->decls_begin();
-         it != expr->decls_end(); ++it) {
-      if (GetFileEntry(*it) != first_decl_file_entry)
-        return true;
+    OptionalFileEntryRef current_file_entry = GetFileEntry(CurrentLoc());
+    const IwyuFileInfo* current_file_info =
+        preprocessor_info().FileInfoFor(current_file_entry);
+    if (!current_file_info)
+      return true;
+    vector<const NamedDecl*> directly_included;
+    bool same_file = true;
+    for (const NamedDecl* decl : expr->decls()) {
+      // TODO(bolshakov): filter overloads suitable by number and type
+      // of parameters. Take into account default arguments, ellipsis, explicit
+      // template arguments, and pack expansions. See
+      // clang::Sema::AddOverloadedCallCandidates for guidance.
+      if (IsDirectlyIncluded(decl, *current_file_info))
+        directly_included.push_back(decl);
+      same_file &= GetFileEntry(decl) == first_decl_file_entry;
     }
 
-    // For now, we're only worried about function calls.
-    // TODO(csilvers): are there other kinds of overloads we need to check?
+    if (!same_file) {
+      if (!directly_included.empty()) {
+        for (const NamedDecl* decl : directly_included)
+          ReportDeclUse(CurrentLoc(), decl);
+        // No AddProcessedOverloadLoc here: PublicHeaderIntendsToProvide should
+        // already work well at the instantiation site.
+      } else if (!expr->requiresADL()) {
+        // Report any of the decls so as to keep the code compilable. If ADL is
+        // to be applied (i.e. the function name is unqualified), it is allowed
+        // to have no declaration.
+        ReportDeclUse(CurrentLoc(), first_decl);
+        // No AddProcessedOverloadLoc here: even first_decl may be different
+        // when scanning different translation units. It's better to
+        // double-report it on template-defn and instantiation sites than not
+        // to report an actually used decl at all.
+      }
+      return true;
+    }
+
     const FunctionDecl* arbitrary_fn_decl = nullptr;
-    for (OverloadExpr::decls_iterator it = expr->decls_begin();
-         it != expr->decls_end(); ++it) {
-      const NamedDecl* decl = *it;
+    for (const NamedDecl* decl : expr->decls()) {
       // Sometimes a UsingShadowDecl comes between us and the 'real' decl.
       if (const UsingShadowDecl* using_shadow_decl = DynCastFrom(decl))
         decl = using_shadow_decl->getTargetDecl();
@@ -2218,19 +2276,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // end up being the built-in form of the operator.  (Even if the
     // only operator==() we see is in foo.h, we don't need to #include
     // foo.h if the only call to operator== we see is on two integers.)
-    if (arbitrary_fn_decl && !arbitrary_fn_decl->isOverloadedOperator()) {
-      AddProcessedOverloadLoc(CurrentLoc());
-      VERRS(7) << "Adding to processed_overload_locs: "
-               << PrintableCurrentLoc() << "\n";
-      // Because processed_overload_locs might be set in one visitor
-      // but used in another, each with a different definition of
-      // CanIgnoreCurrentASTNode(), we have to be conservative and set
-      // the has-considered flag always.  But of course we only
-      // actually report the function use if CanIgnoreCurrentASTNode()
-      // is *currently* false.
-      if (!CanIgnoreCurrentASTNode())
-        ReportDeclUse(CurrentLoc(), arbitrary_fn_decl);
-    }
+    if (!arbitrary_fn_decl || !arbitrary_fn_decl->isOverloadedOperator())
+      ReportDeclUse(CurrentLoc(), first_decl);
     return true;
   }
 
@@ -2248,7 +2295,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // like a placement-new, we handle it at template-writing time
   // anyway.
   bool VisitCXXNewExpr(CXXNewExpr* expr) {
-    // Like in VisitOverloadExpr(), we update processed_overload_locs
+    // Like in VisitUnresolvedLookupExpr(), we update processed_overload_locs
     // regardless of the value of CanIgnoreCurrentASTNode().
 
     // We say it's placement-new if it has a single placement-arg, which _might_
@@ -2268,7 +2315,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
          GetTypeOf(placement_expr)->isArrayType() ||
          IsAddressOf(placement_expr) ||
          IsDependentNameCall(placement_expr))) {
-      // Treat this like an OverloadExpr.
+      // Treat this like an UnresolvedLookupExpr.
       AddProcessedOverloadLoc(CurrentLoc());
       VERRS(7) << "Adding to processed_overload_locs (placement-new): "
                << PrintableCurrentLoc() << "\n";
@@ -2335,7 +2382,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       HandleFnReturnOnCallSite(callee);
 
     // We may have already been checked in a previous
-    // VisitOverloadExpr() call.  Don't check again in that case.
+    // VisitUnresolvedLookupExpr() call.  Don't check again in that case.
     if (IsProcessedOverloadLoc(CurrentLoc()))
       return true;
 
@@ -2401,7 +2448,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
       return true;
 
-    const NamedDecl* decl = TypeToDeclAsWritten(type);
+    // If not a full explicit specialization, report the original template
+    // or a partial specialization from which the specialization is instantiated
+    // (and don't report explicit instantiations here).
+    const NamedDecl* decl = GetInstantiatedFromDecl(TypeToDeclAsWritten(type));
 
     // If we are forward-declarable, so are our template arguments.
     if (CanForwardDeclareType(current_ast_node())) {
@@ -2566,10 +2616,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
               dyn_cast<TemplateSpecializationType>(component)) {
         const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
         if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
-          const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
-          InsertAllInto(GetProvidedTypes(tpl_spec_type->desugar().getTypePtr(),
-                                         GetLocation(al_decl)),
-                        &retval);
+          InsertAllInto(
+              GetAliasTemplateProvidedTypes(tpl_spec_type, al_tpl_decl),
+              &retval);
           continue;
         }
       }
@@ -2581,6 +2630,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   set<const Type*> blocked_types_;
+  set<const Decl*> blocked_for_fwd_decl_;
 
  private:
   template <typename T> friend class IwyuBaseAstVisitor;
@@ -2616,6 +2666,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // be reported.
   bool SourceOrTargetTypeIsProvided(const ASTNode* construct_expr_node) const =
       delete;
+
+  set<const Type*> GetAliasTemplateProvidedTypes(
+      const TemplateSpecializationType* type,
+      const TypeAliasTemplateDecl* al_tpl_decl) const {
+    const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
+    set<const Type*> res = GetProvidedTypes(type->getAliasedType().getTypePtr(),
+                                            GetLocation(al_decl));
+    RemoveAllFrom(GetCanonicalArgComponents(type), &res);
+    return res;
+  }
 
   void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
                              set<const Type*> blocked_types,
@@ -2693,10 +2753,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (template_spec_type->isTypeAlias()) {
         const NamedDecl* decl = TypeToDeclAsWritten(template_spec_type);
         if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
-          const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
+          InsertAllInto(
+              GetAliasTemplateProvidedTypes(template_spec_type, al_tpl_decl),
+              &blocked_types);
           const Type* type = template_spec_type->getAliasedType().getTypePtr();
-          InsertAllInto(GetProvidedTypes(type, GetLocation(al_decl)),
-                        &blocked_types);
           ReportTypeUseInternal(used_loc, type, blocked_types, deref_kind);
         }
         return;
@@ -2844,6 +2904,10 @@ class InstantiatedTemplateVisitor
   //
   // ScanInstantiatedType() is similar, except that it looks through
   // the definition of a class template instead of a statement.
+  //
+  // ScanInstantiatedClass() may be used in cases when a specific
+  // TemplateSpecializationType referring to the class template specialization
+  // is not known.
 
   // resugar_map is a map from an unsugared (canonicalized) template
   // type to the template type as written (or as close as we can find
@@ -2853,7 +2917,7 @@ class InstantiatedTemplateVisitor
   // value, it's a default template parameter, that the
   // template-caller may or may not be responsible for.
   void ScanInstantiatedFunction(
-      const FunctionDecl* fn_decl, const Type* parent_type,
+      const FunctionDecl* fn_decl,
       const ASTNode* caller_ast_node,
       const map<const Type*, const Type*>& resugar_map,
       const set<const Type*>& blocked_types) {
@@ -2869,7 +2933,7 @@ class InstantiatedTemplateVisitor
     // node (instead, we immediately push a new node on top of it).
     set_current_ast_node(const_cast<ASTNode*>(caller_ast_node));
 
-    TraverseExpandedTemplateFunctionHelper(fn_decl, parent_type);
+    TraverseExpandedTemplateFunctionHelper(fn_decl);
   }
 
   // This isn't a Stmt, but sometimes we need to fully instantiate
@@ -2903,6 +2967,24 @@ class InstantiatedTemplateVisitor
 
     TraverseTemplateSpecializationType(
         const_cast<TemplateSpecializationType*>(type));
+  }
+
+  void ScanInstantiatedClass(ClassTemplateSpecializationDecl* decl,
+                             ASTNode* caller_ast_node,
+                             const map<const Type*, const Type*>& resugar_map,
+                             const set<const Type*>& blocked_types) {
+    Clear();
+    caller_ast_node_ = caller_ast_node;
+    resugar_map_ = resugar_map;
+    blocked_types_ = blocked_types;
+
+    set_current_ast_node(caller_ast_node);
+
+    AstFlattenerVisitor nodeset_getter(compiler());
+    nodes_to_ignore_ = nodeset_getter.GetNodesBelow(
+        const_cast<NamedDecl*>(GetDefinitionAsWritten(decl)));
+
+    TraverseDataAndTypeMembersOfClassHelper(decl);
   }
 
   //------------------------------------------------------------
@@ -3062,9 +3144,15 @@ class InstantiatedTemplateVisitor
       parent_type = resugared_type;
     if (!Base::HandleFunctionCall(callee, parent_type, calling_expr))
       return false;
+    return TraverseFunctionIfInstantiatedTpl(callee, parent_type, calling_expr);
+  }
+
+  bool TraverseFunctionIfInstantiatedTpl(FunctionDecl* callee,
+                                         const Type* /*parent_type*/,
+                                         const Expr* /*calling_expr*/) {
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
-    return TraverseExpandedTemplateFunctionHelper(callee, parent_type);
+    return TraverseExpandedTemplateFunctionHelper(callee);
   }
 
   bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr* expr) {
@@ -3179,8 +3267,7 @@ class InstantiatedTemplateVisitor
         VERRS(6) << "Recursively traversing " << PrintableDecl(cts_decl)
                  << " which was full-used and does not involve a known"
                  << " template param\n";
-        TraverseCXXRecordDecl(
-            const_cast<ClassTemplateSpecializationDecl*>(cts_decl));
+        TraverseDataAndTypeMembersOfClassHelper(cts_decl);
       }
     }
   }
@@ -3196,6 +3283,22 @@ class InstantiatedTemplateVisitor
     AnalyzeTemplateTypeParmUse(type);
 
     return Base::VisitSubstTemplateTypeParmType(type);
+  }
+
+  bool VisitRecordType(RecordType* type) {
+    if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
+      return true;
+
+    // CanForwardDeclareType function relies on the specific placement of
+    // the type node in the AST. An intermediate SubstTemplateTypeParmType could
+    // break that logic. However, such cases don't even need to be considered
+    // here, because they are handled in VisitSubstTemplateTypeParmType. But
+    // maybe using HasAncestorOfType, or replacing VisitSubst...Type with
+    // TraverseSubst...Type and Traverse...TypeLoc would be more reliable.
+    if (!current_ast_node()->ParentIsA<SubstTemplateTypeParmType>())
+      AnalyzeTemplateTypeParmUse(type);
+
+    return Base::VisitRecordType(type);
   }
 
   bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
@@ -3403,8 +3506,7 @@ class InstantiatedTemplateVisitor
     return GetOrDefault(resugar_map_, type, type);
   }
 
-  bool TraverseExpandedTemplateFunctionHelper(const FunctionDecl* fn_decl,
-                                              const Type* parent_type) {
+  bool TraverseExpandedTemplateFunctionHelper(const FunctionDecl* fn_decl) {
     if (!fn_decl || ContainsKey(traversed_decls_, fn_decl))
       return true;   // avoid recursion and repetition
     traversed_decls_.insert(fn_decl);
@@ -3427,6 +3529,7 @@ class InstantiatedTemplateVisitor
     // the uninstantiated function, so we don't need to re-traverse
     // them here.
     AstFlattenerVisitor nodeset_getter(compiler());
+    ValueSaver<AstFlattenerVisitor::NodeSet> s(&nodes_to_ignore_);
     // This gets to the decl for the (uninstantiated) template-as-written:
     const FunctionDecl* decl_as_written =
         fn_decl->getTemplateInstantiationPattern();
@@ -3495,14 +3598,19 @@ class InstantiatedTemplateVisitor
       return true;   // avoid recursion & repetition
     traversed_decls_.insert(class_decl);
 
+    if (ReplayClassMemberUsesFromPrecomputedList(type))
+      return true;
+    return TraverseDataAndTypeMembersOfClassHelper(class_decl);
+  }
+
+  bool TraverseDataAndTypeMembersOfClassHelper(
+      const ClassTemplateSpecializationDecl* class_decl) {
     // If we have cached the reporting done for this decl before,
     // report again (but with the new caller_loc this time).
     // Otherwise, for all reporting done in the rest of this scope,
     // store in the cache for this function.
     if (ReplayUsesFromCache(*ClassMembersFullUseCache(),
                             class_decl, caller_loc()))
-      return true;
-    if (ReplayClassMemberUsesFromPrecomputedList(type))
       return true;
 
     // Sometimes, an implicit specialization occurs to be not instantiated.
@@ -3539,7 +3647,7 @@ class InstantiatedTemplateVisitor
          it != class_decl->decls_end(); ++it) {
       if (const CXXMethodDecl* method_decl = DynCastFrom(*it)) {
         if (method_decl->isVirtual()) {
-          if (!TraverseExpandedTemplateFunctionHelper(method_decl, type))
+          if (!TraverseExpandedTemplateFunctionHelper(method_decl))
             return false;
         }
       }
@@ -4001,9 +4109,7 @@ class IwyuAstConsumer
   // we don't want iwyu to recommend removing the 'forward declare' of Foo.
   //
   // Additionally, this type of decl is also used to represent explicit template
-  // instantiations. Only instantiation definitions causing instantiation of
-  // member functions are handled here. Other instantiated parts of the template
-  // are handled in 'VisitTemplateSpecializationType', as usual.
+  // instantiations.
   bool VisitClassTemplateSpecializationDecl(
       ClassTemplateSpecializationDecl* decl) {
     if (!IsExplicitInstantiation(decl)) {
@@ -4011,26 +4117,36 @@ class IwyuAstConsumer
         ReportDeclForwardDeclareUse(CurrentLoc(),
                                     decl->getSpecializedTemplate());
       }
-    } else if (IsExplicitInstantiationDefinitionAsWritten(decl)) {
-      // Explicit instantiation definition causes instantiation of all
-      // the template methods. Scan them here to assure that all the needed
-      // template argument types are '#include'd.
-      const TypeLoc type_loc = decl->getTypeAsWritten()->getTypeLoc();
-      if (CanIgnoreLocation(GetLocation(&type_loc)))
+    } else {
+      if (CanIgnoreLocation(decl->getLocation()))
         return true;
-      // Clang attributes 'ClassTemplateSpecializationDecl' to the original
-      // template location. Construct a new node corresponding to the template
-      // spec type location (as written) so that reportings from
-      // 'InstantiatedTemplateVisitor' are attributed to the correct location.
-      const ASTNode type_loc_node(&type_loc);
-      const TemplateInstantiationData data =
-          GetTplInstData(type_loc.getTypePtr());
-      // Clang instantiates methods in the first ("canonical") spec decl context
-      // (which may correspond to instantiation declaration, not to definition).
-      for (const CXXMethodDecl* member : decl->getCanonicalDecl()->methods()) {
-        instantiated_template_visitor_.ScanInstantiatedFunction(
-            member, type_loc.getTypePtr(), &type_loc_node, data.resugar_map,
-            data.provided_types);
+      // Report the original template definition, or a partial or full
+      // specialization, whichever is appropriate. GetTagDefinition returns
+      // the right one.
+      ReportDeclUse(CurrentLoc(), GetTagDefinition(decl));
+
+      std::vector<TemplateArgument> args;
+      for (const auto arg : decl->getTemplateArgsAsWritten()->arguments())
+        args.push_back(arg.getArgument());
+
+      const TemplateInstantiationData data = GetTplInstData(args, decl);
+      instantiated_template_visitor_.ScanInstantiatedClass(
+          decl, current_ast_node(), data.resugar_map, data.provided_types);
+
+      if (IsExplicitInstantiationDefinitionAsWritten(decl)) {
+        // Explicit instantiation definition causes instantiation of all
+        // the template methods. Scan them here to assure that all the needed
+        // template argument types are '#include'd.
+
+        // Clang instantiates methods in the first ("canonical") spec decl
+        // context (which may correspond to instantiation declaration,
+        // not to definition).
+        for (const CXXMethodDecl* member :
+             decl->getCanonicalDecl()->methods()) {
+          instantiated_template_visitor_.ScanInstantiatedFunction(
+              member, current_ast_node(), data.resugar_map,
+              data.provided_types);
+        }
       }
     }
 
@@ -4114,6 +4230,36 @@ class IwyuAstConsumer
       return false;
 
     return HandleAliasedClassMethods(decl);
+  }
+
+  // Avoid forward-declaration warnings for types which _should_ be already
+  // provided by the primary method declaration. For example,
+  // for 'struct Derived : public Base { T1 method(const T2&); };', T1 and T2
+  // are provided by Base, and should not be forward-decl reported in Derived.
+  bool TraverseCXXMethodDecl(CXXMethodDecl* method_decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    if (!method_decl->size_overridden_methods())
+      return Base::TraverseCXXMethodDecl(method_decl);
+
+    set<const Decl*> fwd_blocked = blocked_for_fwd_decl_;
+    auto add_canonical_components = [&fwd_blocked](QualType part) {
+      for (const Type* type : GetCanonicalComponentsOfType(part.getTypePtr())) {
+        // For templates, use GetInstantiatedFromDecl so as to match
+        // what VisitTemplateSpecializationType does.
+        const Decl* decl = GetInstantiatedFromDecl(TypeToDeclAsWritten(type));
+        if (decl)
+          fwd_blocked.insert(decl->getCanonicalDecl());
+      }
+    };
+    add_canonical_components(method_decl->getReturnType());
+    for (const ParmVarDecl* param : method_decl->parameters())
+      add_canonical_components(param->getType());
+    ValueSaver<set<const Decl*>> s{&blocked_for_fwd_decl_, fwd_blocked};
+    // Full type info suggestions are blocked in CanBeProvidedTypeComponent.
+
+    return Base::TraverseCXXMethodDecl(method_decl);
   }
 
   // --- Visitors of types derived from Stmt.
@@ -4292,6 +4438,12 @@ class IwyuAstConsumer
                           const Expr* calling_expr) {
     if (!Base::HandleFunctionCall(callee, parent_type, calling_expr))
       return false;
+    return TraverseFunctionIfInstantiatedTpl(callee, parent_type, calling_expr);
+  }
+
+  bool TraverseFunctionIfInstantiatedTpl(FunctionDecl* callee,
+                                         const Type* parent_type,
+                                         const Expr* calling_expr) {
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
 
@@ -4313,8 +4465,7 @@ class IwyuAstConsumer
                                  provided_for_autocast.end());
     }
     instantiated_template_visitor_.ScanInstantiatedFunction(
-        callee, parent_type, current_ast_node(), data.resugar_map,
-        data.provided_types);
+        callee, current_ast_node(), data.resugar_map, data.provided_types);
     return true;
   }
 
@@ -4330,7 +4481,7 @@ class IwyuAstConsumer
                                                         data.provided_types);
   }
 
-  set<const Type*> GetProvidedByTplArg(const Type* type) {
+  set<const Type*> GetProvidedByTplArg(const Type* type) const {
     set<const Type*> res;
     if (!type)
       return res;
@@ -4382,19 +4533,29 @@ class IwyuAstConsumer
 
  private:
   set<const Type*> GetProvidedTypeComponents(const Type* type) const {
+    set<const Type*> res;
     const Type* desugared_until_typedef = Desugar(type);
     if (const auto* typedef_type =
             dyn_cast_or_null<TypedefType>(desugared_until_typedef)) {
       const TypedefNameDecl* decl = typedef_type->getDecl();
-      return GetProvidedTypes(decl->getUnderlyingType().getTypePtr(),
-                              GetLocation(decl));
+      res = GetProvidedTypes(decl->getUnderlyingType().getTypePtr(),
+                             GetLocation(decl));
+      InsertAllInto(GetProvidedByTplArg(type), &res);
     }
     // TODO(bolshakov): handle alias templates.
-    return set<const Type*>();
+    return res;
   }
 
   TemplateInstantiationData GetTplInstData(const Type* type) const {
     return GetTplInstDataForClass(type, [this](const Type* type) {
+      return GetProvidedTypeComponents(type);
+    });
+  }
+
+  TemplateInstantiationData GetTplInstData(
+      llvm::ArrayRef<TemplateArgument> args,
+      const ClassTemplateSpecializationDecl* decl) const {
+    return GetTplInstDataForClass(args, decl, [this](const Type* type) {
       return GetProvidedTypeComponents(type);
     });
   }
@@ -4418,6 +4579,11 @@ class IwyuAstConsumer
       // in source files, or for builtins, or for friend declarations.
       if (!IsInHeader(decl) || IsFriendDecl(decl))
         return pair(false, nullptr);
+      if (const auto* method = dyn_cast<CXXMethodDecl>(decl)) {
+        // Only the primary (least derived) declaration can provide types.
+        if (method->size_overridden_methods())
+          return pair(false, nullptr);
+      }
       for (const ParmVarDecl* param : decl->parameters()) {
         if (node->StackContainsContent(param)) {
           if (HasImplicitConversionConstructor(GetTypeOf(param)))

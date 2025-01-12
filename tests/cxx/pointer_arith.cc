@@ -103,6 +103,34 @@ void BuiltinPointerArithmetic() {
   x = pi - &i;
 }
 
+// Pointer arithmetic is inside a macro, but only using arguments, macro doesn't
+// know about the types involved. Should be reported at expansion.
+#define DISTANCE(ptr1, ptr2) ((ptr1) - (ptr2))
+
+void MacroArgPointerArithmetic() {
+  // IWYU: IndirectClass needs a declaration
+  IndirectClass* p1 = &ic1;
+  // IWYU: IndirectClass needs a declaration
+  IndirectClass* p2 = &ic2;
+
+  // IWYU: IndirectClass is...*indirect.h
+  (void)DISTANCE(p2, p1);
+}
+
+// Pointer arithmetic is entirely inside macro, caller doesn't know about the
+// types involved. Should be reported at spelling inside macro.
+
+// IWYU: IndirectClass needs a declaration
+static IndirectClass* table;
+
+// IWYU: IndirectClass is...*indirect.h
+#define GET_NTH(n) (*(table + n))
+
+void MacroBodyPointerArithmetic() {
+  // Use is entirely contained in macro.
+  (void)GET_NTH(10);
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/pointer_arith.cc should add these lines:

@@ -7,17 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Check that IWYU ignores the 'precompile' job produced by a PCH-generating
-// command. Since that's the only job, it proceeds to fail because there's no
-// compiler job to replace.
+// Check that IWYU uses the 'precompile' job produced by a PCH-generating
+// command.
 
 // IWYU_ARGS: -o generate_pch.c.pch -xc-header
 
-// IWYU~: ignoring unsupported job type.*precompile
-// IWYU~: expected exactly one compiler job
+/**** IWYU_SUMMARY(0)
 
-/**** IWYU_SUMMARY(1)
-
-// No IWYU summary expected.
+(tests/driver/generate_pch.c has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */

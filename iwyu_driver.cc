@@ -36,16 +36,20 @@
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "iwyu_port.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
 // TODO: Clean out pragmas as IWYU improves.
@@ -69,6 +73,7 @@ using llvm::ArrayRef;
 using llvm::ErrorOr;
 using llvm::IntrusiveRefCntPtr;
 using llvm::MemoryBuffer;
+using llvm::SmallString;
 using llvm::SmallVector;
 using llvm::SmallVectorImpl;
 using llvm::StringRef;
@@ -77,6 +82,7 @@ using llvm::opt::ArgStringList;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using llvm::sys::getDefaultTargetTriple;
+using llvm::vfs::FileSystem;
 using std::set;
 using std::unique_ptr;
 
@@ -181,6 +187,12 @@ bool HasPreprocessOnlyArgs(ArrayRef<const char*> args) {
   return llvm::any_of(args, is_preprocess_only);
 }
 
+bool HasArg(ArrayRef<const char*> args, const char* needle) {
+  return llvm::any_of(args, [&](StringRef arg) {
+    return arg == needle;
+  });
+}
+
 // Print the command prefixed by its action class
 raw_ostream& operator<<(raw_ostream& s, const Command& job) {
   s << "(" << job.getSource().getClassName() << ")";
@@ -211,6 +223,7 @@ std::vector<const Command*> FilterJobs(const JobList& jobs) {
   for (const Command& job : jobs) {
     const Action& action = job.getSource();
     if (action.getKind() != Action::CompileJobClass &&
+        action.getKind() != Action::PrecompileJobClass &&
         action.getKind() != Action::PreprocessJobClass) {
       VERRS(2) << "warning: ignoring unsupported job type: "
                << action.getClassName() << "\n";
@@ -236,21 +249,46 @@ std::vector<const Command*> FilterJobs(const JobList& jobs) {
   return res;
 }
 
+static std::string ComputeCustomResourceDir(StringRef iwyu_executable_path) {
+  // There are basically four ways this can go...
+  StringRef iwyu_resource_binary_path(IWYU_RESOURCE_BINARY_PATH);
+  StringRef iwyu_resource_dir(IWYU_RESOURCE_DIR);
+  if (iwyu_resource_binary_path.empty() && iwyu_resource_dir.empty()) {
+    // 1. Neither are specified, so don't add explicit resource dir, and let
+    // Clang driver do its default based on IWYU executable path (with
+    // CLANG_RESOURCE_DIR in clang-20 and later).
+    return std::string();
+  }
+
+  if (iwyu_resource_dir.empty()) {
+    CHECK_(!iwyu_resource_binary_path.empty());
+    // 2. Only IWYU_RESOURCE_BINARY_PATH specified, pass it to Driver to run it
+    // through the default algorithm (with CLANG_RESOURCE_DIR in clang-20 and
+    // later).
+    return Driver::GetResourcesPath(iwyu_resource_binary_path);
+  }
+
+  CHECK_(!iwyu_resource_dir.empty());
+  if (iwyu_resource_binary_path.empty()) {
+    // 3. Only IWYU_RESOURCE_DIR specified. Default binary path to IWYU
+    // executable path and carry on to (4).
+    iwyu_resource_binary_path = iwyu_executable_path;
+  }
+
+  // 4. Both IWYU_RESOURCE_BINARY_PATH and IWYU_RESOURCE_DIR specified, join
+  // them to form a custom resource dir.
+  StringRef dir = llvm::sys::path::parent_path(iwyu_resource_binary_path);
+  SmallString<128> res(dir);
+  llvm::sys::path::append(res, iwyu_resource_dir);
+  llvm::sys::path::remove_dots(res, /*remove_dot_dot=*/true);
+  return std::string(res);
+}
+
 }  // anonymous namespace
 
-bool ExecuteAction(int argc, const char** argv,
+bool ExecuteAction(int argc,
+                   const char** argv,
                    ActionFactory make_iwyu_action) {
-  std::string path = GetExecutablePath(argv[0]);
-
-  IntrusiveRefCntPtr<DiagnosticsEngine> diagnostics =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions,
-                                          /*Client=*/nullptr,
-                                          /*ShouldOwnClient=*/true,
-                                          /*CodeGenOpts=*/nullptr);
-
-  Driver driver(path, getDefaultTargetTriple(), *diagnostics);
-  driver.setTitle("include what you use");
-
   // Expand out any response files passed on the command line
   set<std::string> SavedStrings;
   SmallVector<const char*, 256> args;
@@ -266,17 +304,51 @@ bool ExecuteAction(int argc, const char** argv,
   // recognize. We need to extend the driver library to support this use model
   // (basically, exactly one input, and the operation mode is hard wired).
 
+  std::vector<const char*> extra_args;
   // Add -fsyntax-only to avoid code generation, unless user asked for
   // preprocessing-only.
   if (!HasPreprocessOnlyArgs(args)) {
-    args.push_back("-fsyntax-only");
-    args.push_back("-Qunused-arguments");
+    extra_args.push_back("-fsyntax-only");
+    extra_args.push_back("-Qunused-arguments");
   }
+
+  std::string iwyu_executable_path = GetExecutablePath(argv[0]);
+  if (!HasArg(args, "-resource-dir")) {
+    // If user didn't specify something explicit, compute a resource dir based
+    // on configured CMake variables.
+    std::string resource_dir = ComputeCustomResourceDir(iwyu_executable_path);
+    if (!resource_dir.empty()) {
+      extra_args.push_back("-resource-dir");
+      extra_args.push_back(SaveStringInSet(SavedStrings, resource_dir));
+    }
+  }
+
+  // If there is no -- in the args, the extra_pos will be args.end() and insert
+  // will append to the back of the args sequence.
+  auto extra_pos =
+      llvm::find_if(args, [](StringRef arg) { return arg == "--"; });
+  args.insert(extra_pos, extra_args.begin(), extra_args.end());
+
+  IntrusiveRefCntPtr<FileSystem> fs = llvm::vfs::getRealFileSystem();
+  IntrusiveRefCntPtr<DiagnosticsEngine> diagnostics =
+      CompilerInstance::createDiagnostics(*fs, new DiagnosticOptions);
+
+  // The Driver constructor sets the resource dir implicitly based on path,
+  // which may then be overwritten by BuildCompilation based on any
+  // -resource-dir argument from above.
+  Driver driver(iwyu_executable_path, getDefaultTargetTriple(), *diagnostics);
+  driver.setTitle("include what you use");
 
   // Build a compilation, get the job list and filter out irrelevant jobs.
   unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
   if (!compilation)
     return false;
+
+  // This diagnostic switch is handled and executed inside BuildCompilation.
+  // Exit immediately so we don't print errors.
+  if (HasArg(args, "-print-resource-dir")) {
+    return false;
+  }
 
   const JobList& jobs = compilation->getJobs();
   std::vector<const Command*> filtered_jobs = FilterJobs(jobs);
@@ -320,7 +392,7 @@ bool ExecuteAction(int argc, const char** argv,
   compiler->setInvocation(invocation);
   // It's tempting to reuse the DiagnosticsEngine we created above, but we need
   // to create a new one to get the options produced by the compiler invocation.
-  compiler->createDiagnostics();
+  compiler->createDiagnostics(*fs);
 
   unique_ptr<FrontendAction> action;
   switch (command.getSource().getKind()) {
@@ -330,6 +402,7 @@ bool ExecuteAction(int argc, const char** argv,
       break;
 
     case Action::CompileJobClass:
+    case Action::PrecompileJobClass:
       // Drop compiler job and run IWYU instead.
       action = make_iwyu_action(compilation->getDefaultToolChain());
       break;

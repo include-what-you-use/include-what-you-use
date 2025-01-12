@@ -46,3 +46,5 @@ struct AutocastInPartialSpec<T*> {
   AutocastInPartialSpec(int) {
   }
 };
+
+struct MappedToD1 {};

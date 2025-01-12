@@ -91,9 +91,14 @@ bool IsSystemIncludeFile(const string& filepath);
 // Returns true if argument is one of the special filenames used by Clang for
 // implicit buffers ("<built-in>", "<command-line>", etc).
 inline bool IsSpecialFilename(llvm::StringRef name) {
-  return (name.equals("<built-in>") || name.equals("<command line>") ||
-          name.equals("<scratch space>") || name.equals("<inline asm>"));
+  return (name == "<built-in>" || name == "<command line>" ||
+          name == "<scratch space>" || name == "<inline asm>");
 }
+
+// Returns include name enclosed in double quotes or angle quotes, depending on
+// the angled flag. An include name is the unquoted relative name that would be
+// used on an include line, e.g. lib/mytype.h or stdio.h.
+string AddQuotes(string include_name, bool angled);
 
 }  // namespace include_what_you_use
 

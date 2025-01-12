@@ -16,6 +16,7 @@
 #include <map>                          // for map
 #include <set>                          // for set
 #include <string>                       // for string
+#include <vector>                       // for vector
 
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
@@ -50,6 +51,11 @@ class TranslationUnitDecl;
 class TypeDecl;
 class ValueDecl;
 }  // namespace clang
+
+namespace llvm {
+template <typename>
+class ArrayRef;
+}  // namespace llvm
 
 namespace include_what_you_use {
 
@@ -613,7 +619,7 @@ TemplateInstantiationData GetTplInstDataForFunction(
 // return the template decl, which provides the actual class body.
 // We try to return a decl that's also a definition, when possible.
 const clang::NamedDecl* GetInstantiatedFromDecl(
-    const clang::CXXRecordDecl* class_decl);
+    const clang::NamedDecl* class_decl);
 
 // For an implicitly instantiated templated c++ class -- that is, a
 // class like vector<int> that isn't explicitly written in the source
@@ -711,6 +717,11 @@ bool IsBuiltinFunction(const clang::NamedDecl* decl);
 // (in particular, not just a declaration).
 bool IsImplicitlyInstantiatedDfn(const clang::FunctionDecl*);
 
+// If the given method overrides base class methods, returns the overridden
+// method declaration from the least derived class, otherwise returns the given
+// argument.
+const clang::CXXMethodDecl* GetFromLeastDerived(const clang::CXXMethodDecl*);
+
 // --- Utilities for Type.
 
 const clang::Type* GetTypeOf(const clang::Expr* expr);
@@ -741,6 +752,9 @@ const clang::Type* Desugar(const clang::Type* type);
 // 'B' but not 'Tpl1<A, B>'.
 set<const clang::Type*> GetComponentsOfType(const clang::Type* type);
 
+// Almost the same except it returns canonical types.
+set<const clang::Type*> GetCanonicalComponentsOfType(const clang::Type* type);
+
 // Returns types for determination of their "provision" status. They are
 // canonicalized because intermediate sugar should be always provided already
 // according to language rules. Substituted template parameter types (and their
@@ -753,9 +767,6 @@ set<const clang::Type*> GetComponentsOfTypeWithoutSubstituted(
 
 // Returns true if the type has any template arguments.
 bool IsTemplatizedType(const clang::Type* type);
-
-// Returns true if the type is a RecordType or a TemplateSpecializationType.
-bool IsClassType(const clang::Type* type);
 
 // Returns true if any type involved (recursively examining template
 // arguments) satisfies the given predicate.
@@ -837,6 +848,11 @@ TemplateInstantiationData GetTplInstDataForClass(
     const clang::Type* type,
     std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
 
+TemplateInstantiationData GetTplInstDataForClass(
+    llvm::ArrayRef<clang::TemplateArgument> written_tpl_args,
+    const clang::ClassTemplateSpecializationDecl* cls_tpl_decl,
+    std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
+
 // Like GetTplInstDataForClass, but if a type has
 // components (for instance, 'Foo*' and 'vector<Foo>' both
 // have a component Foo), we don't include the components
@@ -850,6 +866,11 @@ TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
 // either scoped or unscoped with explicitly stated underlying type,
 // according to the standard.
 bool CanBeOpaqueDeclared(const clang::EnumType* type);
+
+// Collects template argument type components and returns them desugared.
+// The result may contain duplicates.
+std::vector<const clang::Type*> GetCanonicalArgComponents(
+    const clang::TemplateSpecializationType*);
 
 // --- Utilities for Stmt.
 
@@ -868,7 +889,7 @@ const clang::Type* TypeOfParentIfMethod(const clang::CallExpr* expr);
 
 // Given a function call, return the first argument that's a class
 // (possibly a template specialization).  Note we ignore pointers to a
-// class.  This is used with 'free' overloaded operators ('ostream&
+// class.  This is used with non-member overloaded operators ('ostream&
 // operator<<(ostream& a, int x)' to figure out what class the
 // operator 'logically' belongs to.  This is a heuristic (the operator
 // may "belong" to more than one argument, for instance), but covers

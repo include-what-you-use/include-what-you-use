@@ -1,4 +1,5 @@
 BasedOnStyle: Google
+BinPackParameters: false
 AllowShortBlocksOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: false

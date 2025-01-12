@@ -16,7 +16,7 @@
 // 2) Calls: FunctionThatTakesFptr(function);
 // 3) Naked expressions: &function;
 //
-// A 'function' can be a free function, a static member function, a member
+// A 'function' can be a non-member function, a static member function, a member
 // function, or any template instantiation of the above.
 
 #include "tests/cxx/direct.h"
@@ -50,7 +50,7 @@ void FunctionThatTakesMptr(int (ClassTemplate<Class>::*mptr)() const);
 // Each test creates function pointers to a plain function and a template
 // instantiation, and for classes similarly for instance member functions.
 
-void FreeFunctions() {
+void NonMemberFunctions() {
   // Assignment of function pointer to function and template instantiation.
   // IWYU: Class needs a declaration
   // IWYU: Enum is...*funcptrs-i1.h
@@ -91,6 +91,11 @@ void FreeFunctions() {
   // references.
   // IWYU: FunctionTemplate2 is...*funcptrs-i1.h
   &FunctionTemplate2<int>;
+
+  // IWYU: FunctionTemplateWithoutDef is...*funcptrs-i1.h
+  // IWYU: Class needs a declaration
+  // IWYU: Class is...*funcptrs-i1.h
+  &FunctionTemplateWithoutDef<Class>;
 }
 
 void ClassMembers() {
@@ -201,6 +206,11 @@ void ClassTemplateMembers() {
   // IWYU: Class needs a declaration
   &ClassTemplate<Class>::StaticMemberFunction;
 
+  // IWYU: ClassTemplate is...*funcptrs-i1.h
+  // IWYU: Class needs a declaration
+  // IWYU: Class is...*funcptrs-i1.h
+  &ClassTemplate<Class>::StaticMemberFunctionUsingTplArg;
+
   // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: ClassTemplate is...*funcptrs-i1.h
@@ -210,6 +220,11 @@ void ClassTemplateMembers() {
   // IWYU: ClassTemplate is...*funcptrs-i1.h
   // IWYU: Class needs a declaration
   &ClassTemplate<Class>::MemberFunction;
+
+  // IWYU: ClassTemplate is...*funcptrs-i1.h
+  // IWYU: Class needs a declaration
+  // IWYU: Class is...*funcptrs-i1.h
+  &ClassTemplate<Class>::MemberFunctionUsingTplArg;
 
   // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
@@ -228,6 +243,6 @@ tests/cxx/funcptrs.cc should remove these lines:
 - #include "tests/cxx/funcptrs-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/funcptrs.cc:
-#include "tests/cxx/funcptrs-i1.h"  // for Class, ClassTemplate, Enum, Function, FunctionReturningRecordType, FunctionTemplate, FunctionTemplate2, Retval
+#include "tests/cxx/funcptrs-i1.h"  // for Class, ClassTemplate, Enum, Function, FunctionReturningRecordType, FunctionTemplate, FunctionTemplate2, FunctionTemplateWithoutDef, Retval
 
 ***** IWYU_SUMMARY */
