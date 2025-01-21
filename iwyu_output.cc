@@ -1790,7 +1790,8 @@ void ClearDesiredForSurplusIncludesOrForwardDeclares(ContainerType& container) {
     typename ContainerType::iterator v = ++container.lower_bound(k->first);
     typename ContainerType::iterator vend = container.upper_bound(k->first);
     for (; v != vend; ++v) {
-      v->second->clear_desired();
+      if (!v->second->is_elaborated_type())
+        v->second->clear_desired();
     }
   }
 }
