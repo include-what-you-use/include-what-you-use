@@ -75,6 +75,18 @@ class FirstForwardDeclared;
 void bare_first_forward_declared(FirstForwardDeclared*);
 void elaborated_first_forward_declared(class FirstForwardDeclared*);
 
+// Test that IWYU doesn't suggest to remove a line with an elaborated type as if
+// there was a duplicating forward-declaration.
+class ElaboratedInMultipleDecl *p1, *p2;
+union {
+  float a;
+  int b;
+} unnamed_union_obj1, unnamed_union_obj2;
+struct {
+} unnamed_struct_obj1, unnamed_struct_obj2;
+struct NamedStruct {
+} named_struct_obj1, named_struct_obj2;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/elaborated_type.cc should add these lines:
