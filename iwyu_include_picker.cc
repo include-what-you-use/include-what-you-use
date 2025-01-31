@@ -1183,23 +1183,23 @@ const IncludeMapEntry libcxx_include_map[] = {
 
 
     // For the following entries:
-    // cd llvm-project/libcxx/include ; find __fwd -type f -name "*.h" | sort | sed -e 's#__fwd/\(.*\).h#  { "<__fwd/\1.h>", kPrivate, "<\1>", kPublic },#'
+    // cd llvm-project/libcxx/include ; find __fwd -type f -name "*.h" | sort | sed -E 's#__fwd/(.*).h#  { "<__fwd/\1.h>", kPrivate, "<\1>", kPublic },# ; s#<(fstream|ios|istream|ostream|sstream|streambuf)>#<iosfwd>#'
     //
     // tweak hash, pair, subrange entries, and comment out bit_reference, get
     {"<__fwd/array.h>", kPrivate, "<array>", kPublic},
     //{"<__fwd/bit_reference.h>", kPrivate, "<bit_reference>", kPublic},
-    {"<__fwd/fstream.h>", kPrivate, "<fstream>", kPublic},
+    {"<__fwd/fstream.h>", kPrivate, "<iosfwd>", kPublic},
     //{"<__fwd/get.h>", kPrivate, "<get>", kPublic},
     {"<__fwd/hash.h>", kPrivate, "<functional>", kPublic},
-    {"<__fwd/ios.h>", kPrivate, "<ios>", kPublic},
-    {"<__fwd/istream.h>", kPrivate, "<istream>", kPublic},
+    {"<__fwd/ios.h>", kPrivate, "<iosfwd>", kPublic},
+    {"<__fwd/istream.h>", kPrivate, "<iosfwd>", kPublic},
     {"<__fwd/mdspan.h>", kPrivate, "<mdspan>", kPublic},
     {"<__fwd/memory_resource.h>", kPrivate, "<memory_resource>", kPublic},
-    {"<__fwd/ostream.h>", kPrivate, "<ostream>", kPublic},
+    {"<__fwd/ostream.h>", kPrivate, "<iosfwd>", kPublic},
     {"<__fwd/pair.h>", kPrivate, "<utility>", kPublic},
     {"<__fwd/span.h>", kPrivate, "<span>", kPublic},
-    {"<__fwd/sstream.h>", kPrivate, "<sstream>", kPublic},
-    {"<__fwd/streambuf.h>", kPrivate, "<streambuf>", kPublic},
+    {"<__fwd/sstream.h>", kPrivate, "<iosfwd>", kPublic},
+    {"<__fwd/streambuf.h>", kPrivate, "<iosfwd>", kPublic},
     {"<__fwd/string.h>", kPrivate, "<string>", kPublic},
     {"<__fwd/string_view.h>", kPrivate, "<string_view>", kPublic},
     {"<__fwd/subrange.h>", kPrivate, "<ranges>", kPublic},
