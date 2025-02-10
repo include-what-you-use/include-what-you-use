@@ -148,31 +148,93 @@ This builds all of LLVM, Clang and IWYU in a single tree.
 
 ### How to install ###
 
-If you're building IWYU out-of-tree or installing pre-built binaries, you need
-to make sure it can find Clang built-in headers (`stdarg.h` and friends.)
+To install and use a pre-built IWYU, besides any dynamic library dependencies,
+you need to make sure it can find the Clang built-in headers (`stdarg.h` and
+friends).
 
-Clang's default policy is to look in
-`path/to/clang-executable/../lib/clang/<clang ver>/include`. So if Clang 3.5.0
-is installed in `/usr/bin`, it will search for built-ins in
-`/usr/lib/clang/3.5.0/include`.
+This is a surprisingly complex problem, so it helps to first understand how
+Clang locates the built-in headers.
 
-Clang tools have the same policy by default, so in order for IWYU to analyze any
-non-trivial code, it needs to find Clang's built-ins in
-`path/to/iwyu/../lib/clang/3.5.0/include` where `3.5.0` is a stand-in for the
-version of Clang your IWYU was built against.
+The built-in headers live in what Clang calls the _resource directory_, which
+contains various runtime resources for the compiler. The resource dir is
+configurable at Clang build time, using the `CLANG_RESOURCE_DIR` CMake
+variable. `CLANG_RESOURCE_DIR` is always a relative path, so the effective
+absolute path can be computed at runtime relative to the `clang` executable.
 
-Note that some distributions/packages may have different defaults, you can use
-`clang -print-resource-dir` to find the base path of the built-in headers on
-your system.
+The Clang build sets up a resource dir in the build tree and copies the relevant
+resources there (the built-in headers among them), so it's possible to run
+`clang` directly from the build tree. Furthermore, the Clang install target will
+copy the resource dir to the install tree.
 
-So for IWYU to function correctly, you need to copy the Clang `include`
-directory to the expected location before running (similarly, use
-`include-what-you-use -print-resource-dir` to learn exactly where IWYU wants the
-headers).
+The Clang `Driver` library is responsible for computing the effective path at
+runtime. It will look up the current executable path (typically `clang`), strip
+off the filename and append `CLANG_RESOURCE_DIR` to form the resource dir
+path. You can use `clang -print-resource-dir` to print the effective resource
+dir for a particular Clang tree.
 
-This weirdness is tracked in [issue
-100](https://github.com/include-what-you-use/include-what-you-use/issues/100),
-hopefully we can make this more transparent over time.
+Phew! What does this mean for IWYU?
+
+IWYU links to the Clang `Driver` library, and so would nominally get the exact
+same policy by default: `CLANG_RESOURCE_DIR` relative to the
+`include-what-you-use` executable. This means the IWYU build would have to
+create the resource dir in its build tree, and also make sure it's available in
+the install tree, using a custom install target. But `CLANG_RESOURCE_DIR` is not
+exported from the Clang CMake system, so it's not possible to know at build-time
+where the resources need to be.
+
+Since Clang has all the knowledge about which resources need to go into the
+resource dir, and also decides under the covers where it has to be, it's
+difficult for IWYU to make any principled decisions. We side-step this conflict
+by exposing our own set of CMake variables for the resource dir:
+
+* `IWYU_RESOURCE_DIR`: same semantics as Clang's `CLANG_RESOURCE_DIR`
+* `IWYU_RESOURCE_RELATIVE_TO`: which executable to serve as the anchor path for
+  the resource directory (`clang` or `iwyu`)
+
+First, `IWYU_RESOURCE_DIR` exists to supplement `CLANG_RESOURCE_DIR`. Packagers
+for a platform where Clang has a custom `CLANG_RESOURCE_DIR` can repeat the same
+customization for IWYU. By default it will use the same default pattern as
+Clang, i.e. `../lib/clang/<clang-version>`.
+
+Second, we can use `IWYU_RESOURCE_RELATIVE_TO` to decide which executable path
+to use as the anchor for the relative `IWYU_RESOURCE_DIR`.
+
+If it is `clang`, we resolve the path to the `clang` executable _at configure-
+time_, and bake that absolute path into `include-what-you-use`.
+
+If it is `iwyu`, the `include-what-you-use` executable resolves its own path _at
+runtime_.
+
+That means packagers can easily build:
+
+* an `include-what-you-use` that has a package dependency on Clang, and relies
+  entirely on its resource dir (`-DIWYU_RESOURCE_RELATIVE_TO=clang`)
+* an `include-what-you-use` that has a package dependency on a Clang with a
+  custom resource dir (`-DIWYU_RESOURCE_RELATIVE_TO=clang
+  -DIWYU_RESOURCE_DIR=../what/clang/said`)
+* an `include-what-you-use` that can be installed separate from Clang in its own
+  prefix (`-DIWYU_RESOURCE_RELATIVE_TO=iwyu -DCMAKE_INSTALL_PREFIX=/usr/local`),
+  assuming a custom install step to also copy the built-in headers to the
+  default `IWYU_RESOURCE_DIR` in the same prefix.
+* an `include-what-you-use` that can be installed separate from Clang in an
+  arbitrary prefix with a custom resource dir (`-DIWYU_RESOURCE_RELATIVE_TO=iwyu
+  -DIWYU_RESOURCE_DIR=../share/include-what-you-use`), assuming a custom install
+  step to also copy the built-in headers to the custom `IWYU_RESOURCE_DIR`.
+
+IWYU uses `IWYU_RESOURCE_RELATIVE_TO=clang` by default, because that produces a
+runnable `include-what-you-use` in the build tree, which depends directly on the
+Clang package it was configured for with `-DCMAKE_PREFIX_PATH`. It's also
+suitable for packaging, in the sense that the IWYU package can be made to depend
+on the Clang package, and will then automatically use the Clang resource dir on
+the target system.
+
+`IWYU_RESOURCE_RELATIVE_TO=iwyu` is more suitable to build a fully independent
+IWYU package, but also requires some custom logic outside the IWYU build to
+package and install relevant parts of the resource dir from Clang in a suitable
+location.
+
+Use `include-what-you-use -print-resource-dir` to learn exactly where IWYU
+expects the resource dir to be installed.
 
 
 ### How to run ###
