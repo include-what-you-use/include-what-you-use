@@ -91,12 +91,13 @@ void IncompleteArrayTypeParamFn(IndirectClass param[]) {
   (void)pointer_array[1];
   (void)sizeof(pointer_array);
 
-  // TODO: no need of full type-info.
-  // TODO: IWYU: IndirectClass needs a declaration
-  // IWYU: IndirectClass is...*indirect.h
+  // IWYU: IndirectClass needs a declaration
   IndirectClass(*array_pointer)[5];
   // IWYU: IndirectClass is...*indirect.h
   (void)array_pointer[0];
+
+  // IWYU: IndirectClass needs a declaration
+  IndirectClass(((*test_reaching_pointer_through_parens_and_arrays)[7][6])[5]);
 }
 
 // This is a confusing and harmful way of writing parameter of a pointer type,
