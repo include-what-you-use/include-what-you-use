@@ -175,6 +175,7 @@ using clang::ASTConsumer;
 using clang::ASTContext;
 using clang::ASTFrontendAction;
 using clang::ArraySubscriptExpr;
+using clang::ArrayType;
 using clang::Attr;
 using clang::BinaryOperator;
 using clang::CXXBaseSpecifier;
@@ -2565,6 +2566,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Read past elaborations like 'class' keyword or namespaces.
     ast_node = MostElaboratedAncestor(ast_node);
 
+    while (ast_node->ParentIsA<ArrayType>())
+      ast_node = ast_node->parent();
+
     // Now there are two options: either we are part of a type or we are part of
     // a declaration involving a type.
     const Type* parent_type = ast_node->GetParentAs<Type>();
@@ -2762,6 +2766,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
         return;
       }
+    }
+
+    if (const auto* array_type = dyn_cast<ArrayType>(type)) {
+      const Type* elem = array_type->getElementType().getTypePtr();
+      return ReportTypeUseInternal(used_loc, elem, blocked_types, deref_kind);
     }
 
     // Map private types like __normal_iterator to their public counterpart.
