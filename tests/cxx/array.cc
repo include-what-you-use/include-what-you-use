@@ -9,7 +9,8 @@
 
 // IWYU_ARGS: -I .
 
-// Tests that we handle correctly identify a[i] as a full use of a.
+// Tests handling C-style arrays. In particular, tests that we handle correctly
+// a[i] as a full use of a.
 
 #include "tests/cxx/direct.h"
 
@@ -60,6 +61,53 @@ class A {
   IndirectTemplate<IndirectClass> **ppt;
 };
 
+// No need of full type info for external variable declarations.
+// IWYU: IndirectClass needs a declaration
+extern IndirectClass extern_array[5];
+// IWYU: IndirectClass needs a declaration
+extern IndirectClass extern_multidim_array[5][6][7];
+
+// IWYU: IndirectClass is...*indirect.h
+IndirectClass defined_array1[5];
+// IWYU: IndirectClass is...*indirect.h
+decltype(extern_array) defined_array2;
+// IWYU: IndirectClass is...*indirect.h
+IndirectClass defined_multidim_array1[5][6][7];
+// IWYU: IndirectClass is...*indirect.h
+decltype(extern_multidim_array) defined_multidim_array2;
+
+// No need of full type for the parameter: it's just a pointer in fact.
+// IWYU: IndirectClass needs a declaration
+void IncompleteArrayTypeParamFn(IndirectClass param[]) {
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(IndirectClass[5]);
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(extern_array);
+  // IWYU: IndirectClass is...*indirect.h
+  (void)extern_array[1];
+
+  // IWYU: IndirectClass needs a declaration
+  IndirectClass* pointer_array[5];
+  (void)pointer_array[1];
+  (void)sizeof(pointer_array);
+
+  // TODO: no need of full type-info.
+  // TODO: IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  IndirectClass(*array_pointer)[5];
+  // IWYU: IndirectClass is...*indirect.h
+  (void)array_pointer[0];
+}
+
+// This is a confusing and harmful way of writing parameter of a pointer type,
+// but compilers accept it.
+// IWYU: IndirectClass needs a declaration
+void ConstantArrayTypeParamFn(IndirectClass param[5]) {
+}
+
+// No need to report anything but extern_array, which is already in this file.
+void DecltypeParamFn(decltype(extern_array)) {
+}
 
 /**** IWYU_SUMMARY
 
