@@ -226,6 +226,7 @@ using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::OptionalFileEntryRef;
 using clang::PPCallbacks;
+using clang::ParenType;
 using clang::ParmVarDecl;
 using clang::PointerType;
 using clang::Preprocessor;
@@ -2566,7 +2567,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Read past elaborations like 'class' keyword or namespaces.
     ast_node = MostElaboratedAncestor(ast_node);
 
-    while (ast_node->ParentIsA<ArrayType>())
+    while (ast_node->ParentIsA<ArrayType>() || ast_node->ParentIsA<ParenType>())
       ast_node = ast_node->parent();
 
     // Now there are two options: either we are part of a type or we are part of
