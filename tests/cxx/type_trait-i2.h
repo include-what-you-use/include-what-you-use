@@ -1,4 +1,4 @@
-//===--- binary_type_trait-i2.h - test input file for iwyu ----------------===//
+//===--- type_trait-i2.h - test input file for iwyu -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BINARY_TYPE_TRAIT_I2_H_
-#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BINARY_TYPE_TRAIT_I2_H_
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPE_TRAIT_I2_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPE_TRAIT_I2_H_
 
-#include "tests/cxx/binary_type_trait-i1.h"
+#include "tests/cxx/type_trait-i1.h"
 
 class BinaryTypeTraitDerived : public BinaryTypeTraitBase {};
 
-#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_BINARY_TYPE_TRAIT_I2_H_
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPE_TRAIT_I2_H_
