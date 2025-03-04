@@ -12,6 +12,6 @@
 
 #include "tests/cxx/type_trait-i1.h"
 
-class BinaryTypeTraitDerived : public BinaryTypeTraitBase {};
+class Derived : public Base {};
 
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPE_TRAIT_I2_H_

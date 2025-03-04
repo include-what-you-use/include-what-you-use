@@ -11,26 +11,24 @@
 
 #include "tests/cxx/type_trait-d1.h"
 
-int main() {
-    // IWYU: BinaryTypeTraitBase is...*type_trait-i1.h
-    // IWYU: BinaryTypeTraitBase needs a declaration
-    // IWYU: BinaryTypeTraitDerived is...*type_trait-i2.h
-    // IWYU: BinaryTypeTraitDerived needs a declaration
-    static_assert(__is_convertible_to(BinaryTypeTraitDerived*, BinaryTypeTraitBase*),
-        "Derived should be convertible to the Base class");
+// IWYU: Base is...*type_trait-i1.h
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*type_trait-i2.h
+// IWYU: Derived needs a declaration
+static_assert(__is_convertible_to(Derived*, Base*),
+              "Derived should be convertible to the Base class");
 
-    // IWYU: BinaryTypeTraitBase needs a declaration
-    // IWYU: BinaryTypeTraitDerived needs a declaration
-    static_assert(!__is_convertible_to(BinaryTypeTraitDerived**, BinaryTypeTraitBase**),
-        "Indirect pointers shouldn't be convertible");
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_convertible_to(Derived**, Base**),
+              "Indirect pointers shouldn't be convertible");
 
-    // IWYU: BinaryTypeTraitBase is...*type_trait-i1.h
-    // IWYU: BinaryTypeTraitBase needs a declaration
-    // IWYU: BinaryTypeTraitDerived is...*tests/cxx/type_trait-i2.h
-    // IWYU: BinaryTypeTraitDerived needs a declaration
-    static_assert(__is_convertible_to(BinaryTypeTraitDerived&, BinaryTypeTraitBase&),
-        "Derived should be convertible to the Base class");
-}
+// IWYU: Base is...*type_trait-i1.h
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+// IWYU: Derived needs a declaration
+static_assert(__is_convertible_to(Derived&, Base&),
+              "Derived should be convertible to the Base class");
 
 /**** IWYU_SUMMARY
 
@@ -42,7 +40,7 @@ tests/cxx/type_trait.cc should remove these lines:
 - #include "tests/cxx/type_trait-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/type_trait.cc:
-#include "tests/cxx/type_trait-i1.h"  // for BinaryTypeTraitBase
-#include "tests/cxx/type_trait-i2.h"  // for BinaryTypeTraitDerived
+#include "tests/cxx/type_trait-i1.h"  // for Base
+#include "tests/cxx/type_trait-i2.h"  // for Derived
 
 ***** IWYU_SUMMARY */
