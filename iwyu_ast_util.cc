@@ -1540,6 +1540,12 @@ const NamedDecl* TypeToDeclForContent(const Type* type) {
   return TypeToDeclImpl(type, /*as_written=*/false);
 }
 
+const Type* RemoveReference(const Type* type) {
+  if (const auto* ref_type = type->getAs<ReferenceType>())
+    return ref_type->getPointeeType().getTypePtr();
+  return type;
+}
+
 const Type* RemoveReferenceAsWritten(const Type* type) {
   if (const LValueReferenceType* ref_type = DynCastFrom(type))
     return ref_type->getPointeeType().getTypePtr();
@@ -1681,6 +1687,28 @@ vector<const Type*> GetCanonicalArgComponents(
       res.push_back(GetCanonicalType(component));
   }
   return res;
+}
+
+bool IsReferenceToModifiableLValue(const Type* type) {
+  return type->isLValueReferenceType() &&
+         !type->getPointeeType().getQualifiers().hasConst();
+}
+
+bool IsDerivedToBasePtrConvertible(const Type* derived_ptr_type,
+                                   const Type* base_ptr_type) {
+  if (!derived_ptr_type->isPointerType() || !base_ptr_type->isPointerType())
+    return false;
+
+  const QualType derived = derived_ptr_type->getPointeeType();
+  const QualType base = base_ptr_type->getPointeeType();
+  if (const CXXRecordDecl* derived_decl = derived->getAsCXXRecordDecl()) {
+    if (const CXXRecordDecl* base_decl = base->getAsCXXRecordDecl()) {
+      if (!derived_decl->isDerivedFrom(base_decl))
+        return false;
+      return base.isAtLeastAsQualifiedAs(derived, base_decl->getASTContext());
+    }
+  }
+  return false;
 }
 
 // --- Utilities for Stmt.
