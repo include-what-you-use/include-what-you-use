@@ -12,4 +12,9 @@
 
 #include "tests/cxx/type_trait-i2.h"
 
+using DerivedPtrRefProviding = Derived*&;
+using DerivedRefProviding = Derived&;
+using ClassRefProviding = Class&;
+using Union1RefProviding = Union1&;
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPE_TRAIT_D1_H_
