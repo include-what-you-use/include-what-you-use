@@ -110,6 +110,7 @@ using clang::RecordDecl;
 using clang::RecordType;
 using clang::RecursiveASTVisitor;
 using clang::Redeclarable;
+using clang::ReferenceType;
 using clang::SourceLocation;
 using clang::SourceManager;
 using clang::SourceRange;
@@ -1453,7 +1454,7 @@ bool InvolvesTypeForWhich(const Type* type, function<bool(const Type*)> pred) {
 
 bool IsPointerOrReferenceAsWritten(const Type* type) {
   type = Desugar(type);
-  return isa<PointerType>(type) || isa<LValueReferenceType>(type);
+  return isa<PointerType>(type) || isa<ReferenceType>(type);
 }
 
 const Type* RemovePointersAndReferencesAsWritten(const Type* type) {
