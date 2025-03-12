@@ -191,7 +191,7 @@ def write_imp_mappings(public_mappings, private_mappings):
     print("]")
 
 
-def main(rootdirs, lang):
+def main(rootdirs, lang, verbose):
     """ Entry point. """
     public_headers = {}
     private_headers = {}
@@ -236,6 +236,14 @@ def main(rootdirs, lang):
     # Keep only unambiguous mappings.
     public_mappings = {k: v for k, v in public_mappings.items() if len(v) == 1}
 
+    # Print suppressed mappings in verbose mode.
+    if verbose:
+        for private, public in raw_public_mappings.items():
+            if private in public_mappings:
+                continue
+            print("suppressed ambiguous mapping: %s -> %s" %
+                  (private, public), file=sys.stderr)
+
     # Then add private-to-private mappings for all private headers including
     # another private header.
     private_mappings = {}
@@ -262,9 +270,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--lang", choices=["c++", "imp"], default="c++",
                         help="output language")
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="verbose output")
     parser.add_argument("rootdirs",
                         nargs="+",
                         help=("include roots (usually /usr/include/c++/11 "
                               "/usr/include/x86_64-linux-gnu/c++/11/)"))
     args = parser.parse_args()
-    sys.exit(main(args.rootdirs, args.lang))
+    sys.exit(main(args.rootdirs, args.lang, args.verbose))
