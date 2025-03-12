@@ -57,6 +57,13 @@ IGNORE_HEADERS = frozenset((
     "bits/c++0x_warning.h",
 ))
 
+# These private headers are included by multiple public headers, but should
+# always map to a single one.
+EXPLICIT_MAPPINGS = {
+    "bits/exception.h": "exception",
+    # Only ambiguous in libstdc++-14, but override always.
+    "debug/vector": "vector",
+}
 
 class Header:
     """ Carries information about a single libstdc++ header. """
@@ -207,14 +214,27 @@ def main(rootdirs, lang):
     # There must be no overlap between public and private headers.
     assert public_headers.keys().isdisjoint(private_headers.keys())
 
-    # Build private-to-public mappings first
-    public_mappings = {}
+    # Build private-to-public mappings for all private headers without
+    # @headername included by a public header.
+    raw_public_mappings = {}
     for header in public_headers.values():
         for include in header.includes:
             included_header = private_headers.get(include)
             if included_header and not included_header.has_headername:
-                public_mappings.setdefault(include, set()).add(
+                raw_public_mappings.setdefault(include, set()).add(
                     header.includename)
+
+    # Overwrite any explicit mappings.
+    public_mappings = {}
+    for private, public in raw_public_mappings.items():
+        override = EXPLICIT_MAPPINGS.get(private)
+        if override:
+            public_mappings[private] = {override}
+        else:
+            public_mappings[private] = public
+
+    # Keep only unambiguous mappings.
+    public_mappings = {k: v for k, v in public_mappings.items() if len(v) == 1}
 
     # Then add private-to-private mappings for all private headers including
     # another private header.
