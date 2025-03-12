@@ -57,6 +57,13 @@ IGNORE_HEADERS = frozenset((
     "bits/c++0x_warning.h",
 ))
 
+# These private headers are included by multiple public headers, but should
+# always map to a single one.
+EXPLICIT_MAPPINGS = {
+    "bits/exception.h": "exception",
+    # Only ambiguous in libstdc++-14, but override always.
+    "debug/vector": "vector",
+}
 
 class Header:
     """ Carries information about a single libstdc++ header. """
@@ -184,7 +191,7 @@ def write_imp_mappings(public_mappings, private_mappings):
     print("]")
 
 
-def main(rootdirs, lang):
+def main(rootdirs, lang, verbose):
     """ Entry point. """
     public_headers = {}
     private_headers = {}
@@ -207,14 +214,35 @@ def main(rootdirs, lang):
     # There must be no overlap between public and private headers.
     assert public_headers.keys().isdisjoint(private_headers.keys())
 
-    # Build private-to-public mappings first
-    public_mappings = {}
+    # Build private-to-public mappings for all private headers without
+    # @headername included by a public header.
+    raw_public_mappings = {}
     for header in public_headers.values():
         for include in header.includes:
             included_header = private_headers.get(include)
             if included_header and not included_header.has_headername:
-                public_mappings.setdefault(include, set()).add(
+                raw_public_mappings.setdefault(include, set()).add(
                     header.includename)
+
+    # Overwrite any explicit mappings.
+    public_mappings = {}
+    for private, public in raw_public_mappings.items():
+        override = EXPLICIT_MAPPINGS.get(private)
+        if override:
+            public_mappings[private] = {override}
+        else:
+            public_mappings[private] = public
+
+    # Keep only unambiguous mappings.
+    public_mappings = {k: v for k, v in public_mappings.items() if len(v) == 1}
+
+    # Print suppressed mappings in verbose mode.
+    if verbose:
+        for private, public in raw_public_mappings.items():
+            if private in public_mappings:
+                continue
+            print("suppressed ambiguous mapping: %s -> %s" %
+                  (private, public), file=sys.stderr)
 
     # Then add private-to-private mappings for all private headers including
     # another private header.
@@ -242,9 +270,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--lang", choices=["c++", "imp"], default="c++",
                         help="output language")
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="verbose output")
     parser.add_argument("rootdirs",
                         nargs="+",
                         help=("include roots (usually /usr/include/c++/11 "
                               "/usr/include/x86_64-linux-gnu/c++/11/)"))
     args = parser.parse_args()
-    sys.exit(main(args.rootdirs, args.lang))
+    sys.exit(main(args.rootdirs, args.lang, args.verbose))
