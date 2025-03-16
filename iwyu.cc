@@ -2043,21 +2043,87 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    // We assume that all type traits with >= 2 arguments, except '__is_same',
-    // require full type information even for pointer types. For example,
-    // this is the case for `__is_convertible_to` trait.
-    if (expr == nullptr || expr->getNumArgs() < 2 ||
-        expr->getTrait() == TypeTrait::BTT_IsSame) {
+    if (expr == nullptr || expr->getNumArgs() < 2)
       return true;
-    }
 
-    for (const TypeSourceInfo* arg : expr->getArgs()) {
-      QualType qual_type = arg->getType();
-      const Type* type = qual_type.getTypePtr();
-      ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefsAndPtr);
-    }
+    const Type* lhs_type = expr->getArg(0)->getType().getTypePtr();
+    const Type* rhs_type = nullptr;
+    if (expr->getNumArgs() == 2)
+      rhs_type = expr->getArg(1)->getType().getTypePtr();
 
-    return true;
+    // Most of the binary type traits require the types to be complete types or
+    // arrays of unknown bound for compilable code. It means that compilers
+    // accept pointers or references to fwd-declared types. However, in certain
+    // cases it may cause a UB (C++20 [meta.rqmts]p5) because the full
+    // pointed-to type is needed to determine the trait value correctly, so it's
+    // better for IWYU to require the full type info in such situations. It is
+    // important not to suggest a full type when it is decidedly unnecessary
+    // for computing the correct value.
+    switch (expr->getTrait()) {
+      case TypeTrait::BTT_IsSame:
+        return true;
+      case TypeTrait::BTT_IsAssignable:
+      case TypeTrait::BTT_IsNothrowAssignable:
+        // TODO(bolshakov): require complete argument types here when
+        // CanForwardDeclareType stops doing it.
+        if (RemoveReference(lhs_type)->isRecordType()) {
+          // If the first type is a class/struct/union type, it may have
+          // a user-defined operator= which accepts the second type or its base
+          // class by reference or by pointer.
+          ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::RemoveRefs);
+          ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefsAndPtr);
+          // TODO(bolshakov): report a 3rd type involved in the conversion, if
+          // present. See an example in
+          // github.com/include-what-you-use/include-what-you-use/pull/745.
+        } else if (IsReferenceToModifiableLValue(lhs_type)) {
+          // Scalar types can be assigned to only if they're modifiable lvalues.
+          const Type* lhs_deref_type = RemoveReference(lhs_type);
+          const Type* rhs_deref_type = RemoveReference(rhs_type);
+          // For derived-to-base pointer conversion to be allowed, the derived
+          // type should be complete.
+          // TODO(bolshakov): what about member pointers?
+          if (IsDerivedToBasePtrConvertible(rhs_deref_type, lhs_deref_type)) {
+            ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefsAndPtr);
+            return true;
+          }
+          // Otherwise, report the rhs record type (ReportTypeUse doesn't report
+          // other kinds of types) because they may have a conversion operator
+          // to the lhs type.
+          ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
+        }
+        return true;
+      case TypeTrait::BTT_IsTriviallyAssignable: {
+        // Trivial assignment doesn't involve any user-defined operators but may
+        // involve a derived-to-base conversion.
+        const Type* lhs_deref_type = RemoveReference(lhs_type);
+        if (lhs_deref_type->isStructureOrClassType()) {
+          // The rhs may be the same or derived class. In both cases, its type
+          // info may be needed at least to determine if the defaulted operator=
+          // is not deleted.
+          if (RemoveReference(rhs_type)->isStructureOrClassType())
+            ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
+        } else if (lhs_deref_type->isUnionType()) {
+          // Unions are specific in that they cannot take part in inheritance,
+          // so the rhs may be only the same type to be trivially assignable.
+          if (RemoveReference(rhs_type) == lhs_deref_type)
+            ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
+        } else if (IsReferenceToModifiableLValue(lhs_type)) {
+          const Type* rhs_deref_type = RemoveReference(rhs_type);
+          if (IsDerivedToBasePtrConvertible(rhs_deref_type, lhs_deref_type))
+            ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefsAndPtr);
+          // Don't care about user-defined conversions.
+        }
+        return true;
+      }
+      default:
+        for (const TypeSourceInfo* arg : expr->getArgs()) {
+          QualType qual_type = arg->getType();
+          const Type* type = qual_type.getTypePtr();
+          ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefsAndPtr);
+        }
+
+        return true;
+    }
   }
 
   // Mark that we need the full type info for the thing we're taking

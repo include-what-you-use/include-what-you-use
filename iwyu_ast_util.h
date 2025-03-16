@@ -780,6 +780,10 @@ bool InvolvesTypeForWhich(const clang::Type* type,
 // TODO(csilvers): what about array-type?
 bool IsPointerOrReferenceAsWritten(const clang::Type* type);
 
+// This function removes a reference even it is hidden by some type sugar.
+const clang::Type* RemoveReference(const clang::Type*);
+
+// This function doesn't "see through" type sugar.
 const clang::Type* RemoveReferenceAsWritten(const clang::Type* type);
 
 // Gets rid of all the pointers and references to get to the 'base'
@@ -871,6 +875,14 @@ bool CanBeOpaqueDeclared(const clang::EnumType* type);
 // The result may contain duplicates.
 std::vector<const clang::Type*> GetCanonicalArgComponents(
     const clang::TemplateSpecializationType*);
+
+bool IsReferenceToModifiableLValue(const clang::Type*);
+
+// Returns true when the arguments are pointer types referring to classes or
+// structs related by direct inheritance. Also checks that their qualifiers
+// allow the conversion.
+bool IsDerivedToBasePtrConvertible(const clang::Type* derived_ptr_type,
+                                   const clang::Type* base_ptr_type);
 
 // --- Utilities for Stmt.
 
