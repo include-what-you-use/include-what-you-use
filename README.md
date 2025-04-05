@@ -68,6 +68,7 @@ use this mapping table to combine Clang and IWYU versions correctly:
 | 17    | 0.21         | `clang_17`     |
 | 18    | 0.22         | `clang_18`     |
 | 19    | 0.23         | `clang_19`     |
+| 20    | 0.24         | `clang_20`     |
 | ...   | ...          | ...            |
 | main  |              | `master`       |
 
