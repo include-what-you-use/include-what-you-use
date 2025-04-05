@@ -4,7 +4,7 @@
 .\" This file is distributed under the University of Illinois Open Source
 .\" License. See LICENSE.TXT for details.
 .\"
-.TH INCLUDE-WHAT-YOU-USE 1 "2022-02-21" include-what-you-use "User Commands"
+.TH INCLUDE-WHAT-YOU-USE 1 "2025-04-05" include-what-you-use "User Commands"
 .SH NAME
 include-what-you-use \- analyze includes in C and C++ source files.
 .SH SYNOPSIS
@@ -77,9 +77,11 @@ Exit with error code
 (defaults to 1 if omitted) whether there are \(lqinclude-what-you-use\(rq
 violations or not (for use with \fBmake\fR(1)).
 .TP
-.BI \-\-experimental= flag[,flag...]
+.BI \-\-experimental= flag\fR[ , flag\fR]*
 Enable experimental feature. These feature may change or be removed
-without any notice. Current experimental features are:
+without any notice. The
+.IR flag s
+for current experimental features are:
 .RS
 .TP
 .B clang_mappings
@@ -213,13 +215,13 @@ Includes the contents of another
 .PP
 The descriptions of headers and symbols are as follows:
 .TP
-.IB "header\fR := " \(dq include-spec "\(dq, " \(dqvisibility\(dq
+.IB "header\fR := " \(dq include-spec "\(dq, \(dq" visibility \(dq
 Describes a header file. The
 .I include-spec
 specifies the header file and
 .I visibility
 specifies whether the header is
-.BR \(dqpublic\(dq " or " \(dqprivate\(dq .
+.BR public " or " private .
 Private headers are not allowed to be included directly.
 So every private header file should appear on the left-hand side of a mapping
 at least once.
@@ -232,7 +234,7 @@ How the header is
 in a source file.
 Quotation marks need to be escaped.
 .TP
-.IB "symbol\fR := " \(dq symbol-name "\(dq, " \(dqvisibility\(dq
+.IB "symbol\fR := " \(dq symbol-name "\(dq, \(dq" visibility \(dq
 Describes a symbol, for example a type, function or macro. The
 .I visibility
 is ignored, by convention
