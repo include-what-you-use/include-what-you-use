@@ -405,8 +405,10 @@ const NestedNameSpecifier* GetQualifier(const ASTNode* ast_node) {
   }
   if (!nns) nns = TryGetQualifier<ElaboratedType>(ast_node);
   if (!nns) nns = TryGetQualifier<DependentNameType>(ast_node);
-  if (!nns)
-    nns = TryGetQualifier<DependentTemplateSpecializationType>(ast_node);
+  if (!nns && ast_node->IsA<DependentTemplateSpecializationType>()) {
+    const auto* dtst = ast_node->GetAs<DependentTemplateSpecializationType>();
+    nns = dtst->getDependentTemplateName().getQualifier();
+  }
   if (!nns) nns = TryGetQualifier<UsingDirectiveDecl>(ast_node);
   if (!nns) nns = TryGetQualifier<EnumDecl>(ast_node);
   if (!nns) nns = TryGetQualifier<RecordDecl>(ast_node);
