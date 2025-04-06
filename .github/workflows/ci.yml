@@ -52,6 +52,11 @@ jobs:
         run: |
           # Disable CMake target checks.
           # sudo ./iwyu-fixup-llvm-target-checks.bash "$LLVM_PREFIX"
+          # Patch broken relative paths in the CMake Config modules.
+          sudo sed -zi 's/get_filename_component/#get_filename_component/2' \
+              $LLVM_PREFIX/lib/cmake/llvm/LLVMConfig.cmake
+          sudo sed -zi 's/get_filename_component/#get_filename_component/2' \
+              $LLVM_PREFIX/lib/cmake/clang/ClangConfig.cmake
 
       - name: Build include-what-you-use
         run: |
