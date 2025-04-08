@@ -220,6 +220,7 @@ using clang::FunctionType;
 using clang::LateParsedTemplate;
 using clang::LinkageSpecDecl;
 using clang::MemberExpr;
+using clang::MemberPointerType;
 using clang::NamedDecl;
 using clang::NamespaceAliasDecl;
 using clang::NestedNameSpecifier;
@@ -2566,10 +2567,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     if (!Base::VisitNestedNameSpecifier(nns))
       return false;
-    // If we're in an nns (e.g. the Foo in Foo::bar), we're never
-    // forward-declarable, even if we're part of a pointer type, or in
-    // a template argument, or whatever.
-    current_ast_node()->set_in_forward_declare_context(false);
+
+    // MemberPointerType allows forward-declaration of their nested names, e.g.
+    // Class in Class::*member...
+    ASTNode* ast_node = current_ast_node();
+    if (!ast_node->ParentIsA<MemberPointerType>()) {
+      // ... but for other nns (e.g. the Foo in Foo::bar), we're never
+      // forward-declarable, even if we're part of a pointer type, or in a
+      // template argument, or whatever.
+      ast_node->set_in_forward_declare_context(false);
+    }
     return true;
   }
 
