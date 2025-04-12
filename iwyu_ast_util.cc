@@ -29,6 +29,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Redeclarable.h"
+#include "clang/Sema/Sema.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
@@ -111,6 +112,7 @@ using clang::RecordType;
 using clang::RecursiveASTVisitor;
 using clang::Redeclarable;
 using clang::ReferenceType;
+using clang::Sema;
 using clang::SourceLocation;
 using clang::SourceManager;
 using clang::SourceRange;
@@ -1711,6 +1713,38 @@ bool IsDerivedToBasePtrConvertible(const Type* derived_ptr_type,
     }
   }
   return false;
+}
+
+bool IsBaseToDerivedMemPtrConvertible(const Type* maybe_base_mem_ptr_type,
+                                      const Type* maybe_derived_mem_ptr_type,
+                                      Sema& sema) {
+  const auto* base_mem_ptr_type =
+      maybe_base_mem_ptr_type->getAs<MemberPointerType>();
+  const auto* derived_mem_ptr_type =
+      maybe_derived_mem_ptr_type->getAs<MemberPointerType>();
+  if (!base_mem_ptr_type || !derived_mem_ptr_type)
+    return false;
+  const CXXRecordDecl* base_decl =
+      base_mem_ptr_type->getQualifier()->getAsRecordDecl();
+  const CXXRecordDecl* derived_decl =
+      derived_mem_ptr_type->getQualifier()->getAsRecordDecl();
+  if (!derived_decl->isDerivedFrom(base_decl))
+    return false;
+  const QualType base_mem_type =
+      base_mem_ptr_type->getPointeeType().getCanonicalType();
+  const QualType derived_mem_type =
+      derived_mem_ptr_type->getPointeeType().getCanonicalType();
+  // The unqualified canonical member types should be the same except the known
+  // acceptable differences in 'noexcept' specifier of member functions.
+  if (base_mem_type->isFunctionProtoType()) {
+    QualType converted{};
+    if (sema.IsFunctionConversion(base_mem_type, derived_mem_type, converted))
+      return true;
+  }
+  if (base_mem_type.getTypePtr() != derived_mem_type.getTypePtr())
+    return false;
+  return derived_mem_type.isAtLeastAsQualifiedAs(base_mem_type,
+                                                 base_decl->getASTContext());
 }
 
 // --- Utilities for Stmt.

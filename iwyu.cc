@@ -2085,9 +2085,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           const Type* rhs_deref_type = RemoveReference(rhs_type);
           // For derived-to-base pointer conversion to be allowed, the derived
           // type should be complete.
-          // TODO(bolshakov): what about member pointers?
           if (IsDerivedToBasePtrConvertible(rhs_deref_type, lhs_deref_type)) {
             ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefsAndPtr);
+            return true;
+          }
+          if (IsBaseToDerivedMemPtrConvertible(rhs_deref_type, lhs_deref_type,
+                                               compiler()->getSema())) {
+            const auto* lhs_mem_ptr_type =
+                lhs_deref_type->castAs<MemberPointerType>();
+            // TODO(bolshakov): check whether the type is provided by member
+            // pointer type alias, probably?
+            ReportTypeUse(CurrentLoc(),
+                          lhs_mem_ptr_type->getQualifier()->getAsType(),
+                          DerefKind::None);
             return true;
           }
           // Otherwise, report the rhs record type (ReportTypeUse doesn't report
@@ -2113,8 +2123,17 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
             ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
         } else if (IsReferenceToModifiableLValue(lhs_type)) {
           const Type* rhs_deref_type = RemoveReference(rhs_type);
-          if (IsDerivedToBasePtrConvertible(rhs_deref_type, lhs_deref_type))
+          if (IsDerivedToBasePtrConvertible(rhs_deref_type, lhs_deref_type)) {
             ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefsAndPtr);
+          } else if (IsBaseToDerivedMemPtrConvertible(rhs_deref_type,
+                                                      lhs_deref_type,
+                                                      compiler()->getSema())) {
+            const auto* lhs_mem_ptr_type =
+                lhs_deref_type->castAs<MemberPointerType>();
+            ReportTypeUse(CurrentLoc(),
+                          lhs_mem_ptr_type->getQualifier()->getAsType(),
+                          DerefKind::None);
+          }
           // Don't care about user-defined conversions.
         }
         return true;

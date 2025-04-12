@@ -43,6 +43,7 @@ class Expr;
 class FunctionDecl;
 class NamedDecl;
 class NamespaceDecl;
+class Sema;
 class Stmt;
 class TagDecl;
 class TemplateDecl;
@@ -883,6 +884,18 @@ bool IsReferenceToModifiableLValue(const clang::Type*);
 // allow the conversion.
 bool IsDerivedToBasePtrConvertible(const clang::Type* derived_ptr_type,
                                    const clang::Type* base_ptr_type);
+
+// Pointers to members of a class can be implicitly converted to pointers
+// to members of its derived class (looks like the opposite to the conventional
+// derived-to-base pointer conversion) when the member types are identical or
+// related by certain standard conversions, like in this case:
+// int Base::* p1;
+// const int Derived::* p2 = p1;
+// This function checks if it actually can be done. If either of the given types
+// is not a MemberPointerType, returns false.
+bool IsBaseToDerivedMemPtrConvertible(const clang::Type* base_mem_ptr_type,
+                                      const clang::Type* derived_mem_ptr_type,
+                                      clang::Sema&);
 
 // --- Utilities for Stmt.
 
