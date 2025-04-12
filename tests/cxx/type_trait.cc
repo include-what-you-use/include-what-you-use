@@ -366,6 +366,95 @@ static_assert(__is_trivially_assignable(int Derived::*&, int Base::*));
 // IWYU: Base is...*tests/cxx/type_trait-i1.h
 // IWYU: Derived is...*tests/cxx/type_trait-i2.h
 static_assert(__is_nothrow_assignable(int Derived::*&, int Base::*));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_assignable(DerivedMemPtr<int>&, BaseMemPtr<int>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_trivially_assignable(DerivedMemPtr<int>&, BaseMemPtr<int>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_nothrow_assignable(DerivedMemPtr<int>&, BaseMemPtr<int>));
+static_assert(!__is_assignable(BaseMemPtr<int>&, UnionMemPtr<int>));
+static_assert(!__is_trivially_assignable(BaseMemPtr<int>&, UnionMemPtr<int>));
+static_assert(!__is_nothrow_assignable(BaseMemPtr<int>&, UnionMemPtr<int>));
+static_assert(__is_assignable(BaseMemPtr<int>&, BaseMemPtr<int>));
+static_assert(__is_trivially_assignable(BaseMemPtr<int>&, BaseMemPtr<int>));
+static_assert(__is_nothrow_assignable(BaseMemPtr<int>&, BaseMemPtr<int>));
+static_assert(!__is_assignable(DerivedMemPtr<unsigned int>&, BaseMemPtr<int>));
+static_assert(!__is_trivially_assignable(DerivedMemPtr<unsigned int>&,
+                                         BaseMemPtr<int>));
+static_assert(!__is_nothrow_assignable(DerivedMemPtr<unsigned int>&,
+                                       BaseMemPtr<int>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_assignable(DerivedMemPtr<const int>&, BaseMemPtr<int>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_trivially_assignable(DerivedMemPtr<const int>&,
+                                        BaseMemPtr<int>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_nothrow_assignable(DerivedMemPtr<const int>&,
+                                      BaseMemPtr<int>));
+static_assert(!__is_assignable(DerivedMemPtr<const int>&,
+                               BaseMemPtr<volatile int>));
+static_assert(!__is_trivially_assignable(DerivedMemPtr<const int>&,
+                                         BaseMemPtr<volatile int>));
+static_assert(!__is_nothrow_assignable(DerivedMemPtr<const int>&,
+                                       BaseMemPtr<volatile int>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_assignable(DerivedMemPtr<int()>&, BaseMemPtr<int()>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_trivially_assignable(DerivedMemPtr<int()>&,
+                                        BaseMemPtr<int()>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_nothrow_assignable(DerivedMemPtr<int()>&,
+                                      BaseMemPtr<int()>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_assignable(DerivedMemPtr<int()>&,
+                              BaseMemPtr<int() noexcept>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_trivially_assignable(DerivedMemPtr<int()>&,
+                                        BaseMemPtr<int() noexcept>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_nothrow_assignable(DerivedMemPtr<int()>&,
+                                      BaseMemPtr<int() noexcept>));
+static_assert(!__is_assignable(DerivedMemPtr<int() noexcept>&,
+                               BaseMemPtr<int()>));
+static_assert(!__is_trivially_assignable(DerivedMemPtr<int() noexcept>&,
+                                         BaseMemPtr<int()>));
+static_assert(!__is_nothrow_assignable(DerivedMemPtr<int() noexcept>&,
+                                       BaseMemPtr<int()>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_assignable(DerivedMemPtr<int() noexcept>&,
+                              BaseMemPtr<int() noexcept>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_trivially_assignable(DerivedMemPtr<int() noexcept>&,
+                                        BaseMemPtr<int() noexcept>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_nothrow_assignable(DerivedMemPtr<int() noexcept>&,
+                                      BaseMemPtr<int() noexcept>));
+static_assert(!__is_assignable(DerivedMemPtr<void()>&, BaseMemPtr<int()>));
+static_assert(!__is_trivially_assignable(DerivedMemPtr<void()>&,
+                                         BaseMemPtr<int()>));
+static_assert(!__is_nothrow_assignable(DerivedMemPtr<void()>&,
+                                       BaseMemPtr<int()>));
+static_assert(!__is_assignable(DerivedMemPtr<void()>&,
+                               BaseMemPtr<int() noexcept>));
+static_assert(!__is_trivially_assignable(DerivedMemPtr<void()>&,
+                                         BaseMemPtr<int() noexcept>));
+static_assert(!__is_nothrow_assignable(DerivedMemPtr<void()>&,
+                                       BaseMemPtr<int() noexcept>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_assignable(DerivedMemPtr<int (*)()>&,
+                              BaseMemPtr<int (*)()>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_trivially_assignable(DerivedMemPtr<int (*)()>&,
+                                        BaseMemPtr<int (*)()>));
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_nothrow_assignable(DerivedMemPtr<int (*)()>&,
+                                      BaseMemPtr<int (*)()>));
+static_assert(!__is_assignable(DerivedMemPtr<int (*)()>&,
+                               BaseMemPtr<int (*)() noexcept>));
+static_assert(!__is_trivially_assignable(DerivedMemPtr<int (*)()>&,
+                                         BaseMemPtr<int (*)() noexcept>));
+static_assert(!__is_nothrow_assignable(DerivedMemPtr<int (*)()>&,
+                                       BaseMemPtr<int (*)() noexcept>));
 // TODO: handle other types in an implicit conversion chain like Derived in
 // __is_assignable(Base*&, Class&) when Class has operator Derived*().
 
@@ -384,7 +473,7 @@ tests/cxx/type_trait.cc should remove these lines:
 
 The full include-list for tests/cxx/type_trait.cc:
 #include "tests/cxx/type_trait-d1.h"  // for ClassRefProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
-#include "tests/cxx/type_trait-d2.h"  // for ClassRefNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1RefNonProviding
+#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, ClassRefNonProviding, DerivedMemPtr, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1RefNonProviding, UnionMemPtr
 #include "tests/cxx/type_trait-i1.h"  // for Base, Class, Struct, StructDerivedClass, Union1, Union2
 #include "tests/cxx/type_trait-i2.h"  // for Derived
 

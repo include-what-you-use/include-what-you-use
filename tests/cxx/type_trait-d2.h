@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+class Base;
 class Derived;
 class Class;
 union Union1;
@@ -15,3 +16,10 @@ using DerivedPtrRefNonProviding = Derived*&;
 using DerivedRefNonProviding = Derived&;
 using ClassRefNonProviding = Class&;
 using Union1RefNonProviding = Union1&;
+
+template <typename T>
+using BaseMemPtr = T Base::*;
+template <typename T>
+using DerivedMemPtr = T Derived::*;
+template <typename T>
+using UnionMemPtr = T Union1::*;
