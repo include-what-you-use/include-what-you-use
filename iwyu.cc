@@ -2575,6 +2575,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  bool VisitMemberPointerType(MemberPointerType* type) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    current_ast_node()->set_in_forward_declare_context(true);
+    return true;
+  }
+
   //------------------------------------------------------------
   // Visitors of attributes.
 
