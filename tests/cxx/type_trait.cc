@@ -356,14 +356,16 @@ static_assert(__is_assignable(Union1RefProviding, Union1RefProviding));
 static_assert(__is_trivially_assignable(Union1RefProviding,
                                         Union1RefProviding));
 static_assert(__is_nothrow_assignable(Union1RefProviding, Union1RefProviding));
-// TODO: the full Base type is redundant here.
-// IWYU: Base is...*tests/cxx/type_trait-i1.h
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
 // IWYU: Derived is...*tests/cxx/type_trait-i2.h
 static_assert(__is_assignable(int Derived::*&, int Base::*));
-// IWYU: Base is...*tests/cxx/type_trait-i1.h
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
 // IWYU: Derived is...*tests/cxx/type_trait-i2.h
 static_assert(__is_trivially_assignable(int Derived::*&, int Base::*));
-// IWYU: Base is...*tests/cxx/type_trait-i1.h
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
 // IWYU: Derived is...*tests/cxx/type_trait-i2.h
 static_assert(__is_nothrow_assignable(int Derived::*&, int Base::*));
 // IWYU: Derived is...*tests/cxx/type_trait-i2.h

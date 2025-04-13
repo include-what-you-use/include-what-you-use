@@ -241,7 +241,7 @@ class Cc_Subclass : public I2_ThisClassIsOnlySubclassed {
     (m.*ptr_)();
     a();   // defined in the superclass
   }
-  // IWYU: I1_MemberPtr is...*badinc-i1.h
+  // IWYU: I1_MemberPtr needs a declaration
   int (I1_MemberPtr::*ptr_)();
   // IWYU: I2_Class needs a declaration
   H_ScopedPtr<I2_Class> scoped_ptr_;
