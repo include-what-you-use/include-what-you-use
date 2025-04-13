@@ -197,6 +197,7 @@ using clang::CXXTypeidExpr;
 using clang::CallExpr;
 using clang::CastExpr;
 using clang::ClassTemplateSpecializationDecl;
+using clang::CleanupAttr;
 using clang::CompilerInstance;
 using clang::ConceptSpecializationExpr;
 using clang::Decl;
@@ -2552,6 +2553,17 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
     if (!CanForwardDeclareType(current_ast_node()))
       ReportTypeUse(CurrentLoc(), type, DerefKind::None);
+    return true;
+  }
+
+  //------------------------------------------------------------
+  // Visitors of attributes.
+
+  bool VisitCleanupAttr(CleanupAttr *attr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    ReportDeclUse(CurrentLoc(), attr->getFunctionDecl());
     return true;
   }
 
