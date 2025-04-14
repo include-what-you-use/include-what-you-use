@@ -181,12 +181,21 @@
   # $ for i in /usr/include/*; do [ -f $i ] } && [ `wc -l < $i` = 1 ] } && echo $i; done
   # (poll.h, syscall.h, syslog.h, ustat.h, wait.h).
   # For each file, I looked at the list of canonical header files --
-  # http://www.opengroup.org/onlinepubs/9699919799/idx/head.html --
+  # https://pubs.opengroup.org/onlinepubs/9799919799/idx/head.html --
   # to decide which of the two files is canonical.  If neither is
-  # on the POSIX.1 1998 list, I just choose the top-level one.
+  # on the POSIX.1-2024 list, I just choose the top-level one.
+  { "include": [ "<sys/aio.h>", "private", "<aio.h>", "public"] },
+  { "include": [ "<sys/dirent.h>", "private", "<dirent.h>", "public"] },
+  { "include": [ "<sys/errno.h>", "private", "<errno.h>", "public"] },
+  { "include": [ "<sys/fcntl.h>", "private", "<fcntl.h>", "public"] },
   { "include": [ "<sys/poll.h>", "private", "<poll.h>", "public"] },
+  { "include": [ "<sys/semaphore.h>", "private", "<semaphore.h>", "public"] },
+  { "include": [ "<sys/signal.h>", "private", "<signal.h>", "public"] },
+  { "include": [ "<sys/spawn.h>", "private", "<spawn.h>", "public"] },
+  { "include": [ "<sys/stdio.h>", "private", "<stdio.h>", "public"] },
   { "include": [ "<sys/syslog.h>", "private", "<syslog.h>", "public"] },
-  { "include": [ "<sys/ustat.h>", "private", "<ustat.h>", "public"] },
+  { "include": [ "<sys/termios.h>", "private", "<termios.h>", "public"] },
+  { "include": [ "<sys/unistd.h>", "private", "<unistd.h>", "public"] },
   { "include": [ "<wait.h>", "private", "<sys/wait.h>", "public"] },
   # These are all files in bits/ that delegate to asm/ and linux/ to
   # do all (or lots) of the work.  Note these are private->private.
@@ -209,7 +218,12 @@
   { "include": [ "<asm/unistd.h>", "private", "<sys/syscall.h>", "public"] },
   { "include": [ "<linux/limits.h>", "private", "<limits.h>", "public"] },   # PATH_MAX
   { "include": [ "<linux/prctl.h>", "private", "<sys/prctl.h>", "public"] },
+  { "include": [ "<sys/dtrace.h>", "private", "<dtrace.h>", "public"] },
+  { "include": [ "<sys/paths.h>", "private", "<paths.h>", "public"] },
+  { "include": [ "<sys/syslimits.h>", "private", "<limits.h>", "public"] },
+  { "include": [ "<sys/ttycom.h>", "private", "<termios.h>", "public"] },
   { "include": [ "<sys/ucontext.h>", "private", "<ucontext.h>", "public"] },
+  { "include": [ "<sys/ustat.h>", "private", "<ustat.h>", "public"] },
   # Exports guaranteed by the C standard
   { "include": [ "<stdint.h>", "public", "<inttypes.h>", "public"] },
 ]
