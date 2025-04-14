@@ -21,15 +21,7 @@ from operator import itemgetter
 from pathlib import Path
 
 
-PATTERN_MAPPINGS = {
-    'pthread_*': 'pthread.h',
-    'sys/_types/_fd_*': 'sys/select.h',
-    'sys/_types/_in_*': 'netinet/in.h',
-    'sys/_types/_o_*': 'fcntl.h',
-    'sys/_types/_s_*': 'sys/stat.h',
-    'sys/_types/_seek_*': 'stdio.h',
-    'sys/ttycom.h': 'sys/ioctl.h',
-}
+PATTERN_MAPPINGS = {}
 
 
 def main(dir, verbose):
@@ -64,18 +56,10 @@ def main(dir, verbose):
             if public_path in paths:
                 p = public_path
 
-        # eg. sys/time.h -> time.h
+        # eg. machine/limits.h -> limits.h
         # do not map machine/profile.h to profile.h which is a kerberos header
-        if p.parent.name in {
-            'arm', 'arm64' 'i386', 'machine', 'pthread', 'sys'
-        } and p.name != 'profile.h':
+        if p.parent.name == 'machine' and p.name != 'profile.h':
             public_path = p.parent.with_name(p.name)
-            if public_path in paths:
-                p = public_path
-
-        # architecture/byte_order.h -> machine/byte_order.h
-        if p.parent.name == 'architecture':
-            public_path = p.parent.with_name('machine') / p.name
             if public_path in paths:
                 p = public_path
 
