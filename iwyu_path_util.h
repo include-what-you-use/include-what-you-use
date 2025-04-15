@@ -84,10 +84,6 @@ string ConvertToQuotedInclude(const string& filepath,
 // Returns true if the string is a quoted include.
 bool IsQuotedInclude(const string& s);
 
-// Returns whether this is a system (as opposed to user) include
-// file, based on where it lives.
-bool IsSystemIncludeFile(const string& filepath);
-
 // Returns true if argument is one of the special filenames used by Clang for
 // implicit buffers ("<built-in>", "<command-line>", etc).
 inline bool IsSpecialFilename(llvm::StringRef name) {
