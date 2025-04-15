@@ -210,12 +210,6 @@ bool IsQuotedInclude(const string& s) {
           (StartsWith(s, "\"") && EndsWith(s, "\"")));
 }
 
-// Returns whether this is a system (as opposed to user) include file,
-// based on where it lives.
-bool IsSystemIncludeFile(const string& filepath) {
-  return ConvertToQuotedInclude(filepath)[0] == '<';
-}
-
 string AddQuotes(string include_name, bool angled) {
   if (angled) {
       return "<" + include_name + ">";

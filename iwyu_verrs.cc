@@ -13,7 +13,6 @@
 
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
-#include "iwyu_path_util.h"
 
 namespace include_what_you_use {
 
@@ -37,7 +36,7 @@ bool ShouldPrintSymbolFromFile(OptionalFileEntryRef file) {
   } else if (GetVerboseLevel() < 10) {
     return ShouldReportIWYUViolationsFor(file);
   } else if (GetVerboseLevel() < 11) {
-    return !IsSystemIncludeFile(GetFilePath(file));
+    return !IsSpecialFile(file) && !IsSystemHeader(file);
   } else {
     return true;
   }
