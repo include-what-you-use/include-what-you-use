@@ -2071,6 +2071,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // TODO(bolshakov): require complete argument types here when
         // CanForwardDeclareType stops doing it.
         if (RemoveReference(lhs_type)->isRecordType()) {
+          // No assignment from void.
+          if (rhs_type->isVoidType())
+            return true;
           // If the first type is a class/struct/union type, it may have
           // a user-defined operator= which accepts the second type or its base
           // class by reference or by pointer.
