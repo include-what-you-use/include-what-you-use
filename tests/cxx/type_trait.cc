@@ -356,6 +356,9 @@ static_assert(__is_assignable(Union1RefProviding, Union1RefProviding));
 static_assert(__is_trivially_assignable(Union1RefProviding,
                                         Union1RefProviding));
 static_assert(__is_nothrow_assignable(Union1RefProviding, Union1RefProviding));
+static_assert(!__is_assignable(Class&, void));
+static_assert(!__is_trivially_assignable(Class&, void));
+static_assert(!__is_nothrow_assignable(Class&, void));
 // IWYU: Base needs a declaration
 // IWYU: Derived needs a declaration
 // IWYU: Derived is...*tests/cxx/type_trait-i2.h
