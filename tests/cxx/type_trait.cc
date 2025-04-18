@@ -332,7 +332,7 @@ static_assert(__is_nothrow_assignable(Union2&, Union1&));
 // IWYU: Struct is...*-i1.h
 // IWYU: Union1 is...*-i1.h
 static_assert(__is_assignable(Struct&, Union1&));
-static_assert(!__is_trivially_assignable(Union2&, Union1&));
+static_assert(!__is_trivially_assignable(Struct&, Union1&));
 // IWYU: Struct is...*-i1.h
 // IWYU: Union1 is...*-i1.h
 static_assert(__is_nothrow_assignable(Struct&, Union1&));
