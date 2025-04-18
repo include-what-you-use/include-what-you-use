@@ -16,6 +16,7 @@ using DerivedPtrRefNonProviding = Derived*&;
 using DerivedRefNonProviding = Derived&;
 using ClassRefNonProviding = Class&;
 using Union1RefNonProviding = Union1&;
+using Union1PtrRefNonProviding = Union1*&;
 
 template <typename T>
 using BaseMemPtr = T Base::*;

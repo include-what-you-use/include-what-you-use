@@ -2076,9 +2076,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
             return true;
           // If the first type is a class/struct/union type, it may have
           // a user-defined operator= which accepts the second type or its base
-          // class by reference or by pointer.
+          // class (for non-unions) by reference or by pointer. OTOH, the second
+          // type may have a conversion operator to the first type, which may be
+          // used if the rhs is not a pointer.
           ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::RemoveRefs);
-          ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefsAndPtr);
+          ReportTypeUse(CurrentLoc(), rhs_type,
+                        RemovePointersAndReferences(rhs_type)->isUnionType()
+                            ? DerefKind::RemoveRefs
+                            : DerefKind::RemoveRefsAndPtr);
           // TODO(bolshakov): report a 3rd type involved in the conversion, if
           // present. See an example in
           // github.com/include-what-you-use/include-what-you-use/pull/745.
