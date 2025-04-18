@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/DiagnosticFrontend.h"  // IWYU pragma: keep
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
@@ -53,6 +53,7 @@
 #include "llvm/TargetParser/Host.h"
 
 // TODO: Clean out pragmas as IWYU improves.
+// IWYU pragma: no_include "clang/Basic/DiagnosticFrontendInterface.inc"
 // IWYU pragma: no_include "clang/Basic/LLVM.h"
 // IWYU pragma: no_include "llvm/ADT/iterator.h"
 
