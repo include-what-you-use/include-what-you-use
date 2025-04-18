@@ -344,6 +344,25 @@ static_assert(__is_assignable(Union1&, Union1&));
 static_assert(__is_trivially_assignable(Union1&, Union1&));
 // IWYU: Union1 is...*-i1.h
 static_assert(__is_nothrow_assignable(Union1&, Union1&));
+// IWYU: Struct is...*-i1.h
+static_assert(__is_assignable(Struct&, Union1*));
+static_assert(!__is_trivially_assignable(Struct&, Union1*));
+// IWYU: Struct is...*-i1.h
+static_assert(__is_nothrow_assignable(Struct&, Union1*));
+// IWYU: Struct is...*-i1.h
+static_assert(__is_assignable(Struct&, Union1PtrRefNonProviding));
+static_assert(!__is_trivially_assignable(Struct&, Union1PtrRefNonProviding));
+// IWYU: Struct is...*-i1.h
+static_assert(__is_nothrow_assignable(Struct&, Union1PtrRefNonProviding));
+// TODO: no need of the complete Union1 type for arrays of unknown bound.
+// IWYU: Struct is...*-i1.h
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_assignable(Struct&, Union1[]));
+// IWYU: Union1 is...*-i1.h
+static_assert(!__is_trivially_assignable(Struct&, Union1[]));
+// IWYU: Struct is...*-i1.h
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_nothrow_assignable(Struct&, Union1[]));
 // IWYU: Union1 is...*-i1.h
 static_assert(__is_assignable(Union1RefNonProviding, Union1RefNonProviding));
 // IWYU: Union1 is...*-i1.h
@@ -478,7 +497,7 @@ tests/cxx/type_trait.cc should remove these lines:
 
 The full include-list for tests/cxx/type_trait.cc:
 #include "tests/cxx/type_trait-d1.h"  // for ClassRefProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
-#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, ClassRefNonProviding, DerivedMemPtr, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1RefNonProviding, UnionMemPtr
+#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, ClassRefNonProviding, DerivedMemPtr, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
 #include "tests/cxx/type_trait-i1.h"  // for Base, Class, Struct, StructDerivedClass, Union1, Union2
 #include "tests/cxx/type_trait-i2.h"  // for Derived
 

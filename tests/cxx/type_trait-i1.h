@@ -25,6 +25,7 @@ union Union1;
 struct Struct : Base {
   Struct& operator=(Class&) noexcept;
   Struct& operator=(Union1&) noexcept;
+  Struct& operator=(Union1*) noexcept;
 };
 
 class StructDerivedClass : public Struct {};
