@@ -66,12 +66,8 @@ $(cat iwyu-dogfood.fix)
 
 </details>
 
-<details>
-<summary>diff</summary>
-
 \`\`\`diff
 $(cat iwyu-dogfood.diff)
 \`\`\`
 
-</details>
 EOF
