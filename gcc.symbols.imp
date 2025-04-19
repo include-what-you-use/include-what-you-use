@@ -157,6 +157,7 @@
   { "symbol": [ "wchar_t", "private", "<stddef.h>", "public"] },
   { "symbol": [ "wctrans_t", "private", "<wctype.h>", "public"] },
   { "symbol": [ "wctype_t", "private", "<wctype.h>", "public"] },
+  { "symbol": [ "winsize", "private", "<termios.h>", "public"] },
   { "symbol": [ "wint_t", "private", "<wchar.h>", "public"] },
   { "symbol": [ "sig_atomic_t", "private", "<signal.h>", "public"] },
   { "symbol": [ "size_t", "private", "<stddef.h>", "public"] },
@@ -187,6 +188,7 @@
   { "symbol": [ "va_end", "private", "<stdarg.h>", "public"] },
   { "symbol": [ "va_list", "private", "<stdarg.h>", "public"] },
   { "symbol": [ "va_start", "private", "<stdarg.h>", "public"] },
+  { "symbol": [ "WEOF", "private", "<wchar.h>", "public"] },
   # These are symbols that could be defined in either stdlib.h or
   # malloc.h, but we always want the stdlib location.
   { "symbol": [ "malloc", "private", "<stdlib.h>", "public"] },

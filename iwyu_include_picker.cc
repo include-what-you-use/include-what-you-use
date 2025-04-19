@@ -241,6 +241,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "wchar_t", kPrivate, "<stddef.h>", kPublic },
   { "wctrans_t", kPrivate, "<wctype.h>", kPublic },
   { "wctype_t", kPrivate, "<wctype.h>", kPublic },
+  { "winsize", kPrivate, "<termios.h>", kPublic },
   { "wint_t", kPrivate, "<wchar.h>", kPublic },
   // It is unspecified if the cname headers provide ::size_t.
   // <locale.h> is the one header which defines NULL but not size_t.
@@ -272,6 +273,7 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "va_end", kPrivate, "<stdarg.h>", kPublic },
   { "va_list", kPrivate, "<stdarg.h>", kPublic },
   { "va_start", kPrivate, "<stdarg.h>", kPublic },
+  { "WEOF", kPrivate, "<wchar.h>", kPublic },
   // These are symbols that could be defined in either stdlib.h or
   // malloc.h, but we always want the stdlib location.
   { "malloc", kPrivate, "<stdlib.h>", kPublic },
