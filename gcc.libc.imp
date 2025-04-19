@@ -218,11 +218,12 @@
   { "include": [ "<asm/unistd.h>", "private", "<sys/syscall.h>", "public"] },
   { "include": [ "<linux/limits.h>", "private", "<limits.h>", "public"] },   # PATH_MAX
   { "include": [ "<linux/prctl.h>", "private", "<sys/prctl.h>", "public"] },
+  { "include": [ "<sys/ucontext.h>", "private", "<ucontext.h>", "public"] },
+  # System headers available on AIX, BSD, Solaris and other Unix systems
   { "include": [ "<sys/dtrace.h>", "private", "<dtrace.h>", "public"] },
   { "include": [ "<sys/paths.h>", "private", "<paths.h>", "public"] },
   { "include": [ "<sys/syslimits.h>", "private", "<limits.h>", "public"] },
-  { "include": [ "<sys/ttycom.h>", "private", "<termios.h>", "public"] },
-  { "include": [ "<sys/ucontext.h>", "private", "<ucontext.h>", "public"] },
+  { "include": [ "<sys/ttycom.h>", "private", "<sys/ioctl.h>", "public"] },
   { "include": [ "<sys/ustat.h>", "private", "<ustat.h>", "public"] },
   # Exports guaranteed by the C standard
   { "include": [ "<stdint.h>", "public", "<inttypes.h>", "public"] },

@@ -563,11 +563,12 @@ const IncludeMapEntry libc_include_map[] = {
   { "<asm/unistd.h>", kPrivate, "<sys/syscall.h>", kPublic },
   { "<linux/limits.h>", kPrivate, "<limits.h>", kPublic },   // PATH_MAX
   { "<linux/prctl.h>", kPrivate, "<sys/prctl.h>", kPublic },
+  { "<sys/ucontext.h>", kPrivate, "<ucontext.h>", kPublic },
+  // System headers available on AIX, BSD, Solaris and other Unix systems
   { "<sys/dtrace.h>", kPrivate, "<dtrace.h>", kPublic },
   { "<sys/paths.h>", kPrivate, "<paths.h>", kPublic },
   { "<sys/syslimits.h>", kPrivate, "<limits.h>", kPublic },
-  { "<sys/ttycom.h>", kPrivate, "<termios.h>", kPublic },
-  { "<sys/ucontext.h>", kPrivate, "<ucontext.h>", kPublic },
+  { "<sys/ttycom.h>", kPrivate, "<sys/ioctl.h>", kPublic },
   { "<sys/ustat.h>", kPrivate, "<ustat.h>", kPublic },
   // Exports guaranteed by the C standard
   { "<stdint.h>", kPublic, "<inttypes.h>", kPublic },
