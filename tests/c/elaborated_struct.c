@@ -7,8 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I .
+// IWYU_ARGS: -I . -Xiwyu --check_also=tests/c/elaborated_struct-d2.h
 
+#include "tests/c/elaborated_struct-d2.h"
 #include "tests/c/elaborated_struct-d1.h"
 
 // C basically never requires an explicit forward declaration, all uses of
@@ -43,6 +44,7 @@ struct Struct;
 
 tests/c/elaborated_struct.c should remove these lines:
 - #include "tests/c/elaborated_struct-d1.h"  // lines XX-XX
+- #include "tests/c/elaborated_struct-d2.h"  // lines XX-XX
 
 The full include-list for tests/c/elaborated_struct.c:
 struct ForwardDeclared;  // lines XX-XX
