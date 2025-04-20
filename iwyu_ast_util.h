@@ -879,6 +879,11 @@ std::vector<const clang::Type*> GetCanonicalArgComponents(
 
 bool IsReferenceToModifiableLValue(const clang::Type*);
 
+// Returns true if the given type is a reference that can bind to a temporary
+// object, i.e. when it is either an rvalue reference or an lvalue reference to
+// a non-volatile const type (C++17 [dcl.init.ref]p.5.2).
+bool RefCanBindToTemp(const clang::Type*);
+
 // Returns true when the arguments are pointer types referring to classes or
 // structs related by direct inheritance. Also checks that their qualifiers
 // allow the conversion.

@@ -2146,6 +2146,61 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
         return true;
       }
+      case TypeTrait::BTT_IsConvertible:
+      case TypeTrait::BTT_IsConvertibleTo:
+      case TypeTrait::BTT_IsNothrowConvertible: {
+        // No conversion to/from void or to a function type.
+        if (lhs_type->isVoidType() || rhs_type->isVoidType())
+          return true;
+        if (rhs_type->isFunctionType())
+          return true;
+        // Only non-reference-related types can involve user-defined conversions
+        // (C++17 [dcl.init.ref]).
+        if (GetCanonicalType(RemoveReference(lhs_type)) ==
+            GetCanonicalType(RemoveReference(rhs_type))) {
+          return true;
+        }
+        const bool rhs_can_bind_to_temp = RefCanBindToTemp(rhs_type);
+        // If the rhs is a reference that can bind to its class temporary
+        // object, the ctors of the class are to be considered.
+        if (rhs_can_bind_to_temp)
+          ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
+        // Pointer and pointer-to-member conversions should be taken into
+        // account if the rhs type is a pointer or pointer-to-member type
+        // directly, or a reference which can bind to a temporary pointer
+        // object.
+        if (!rhs_type->isReferenceType() || rhs_can_bind_to_temp) {
+          const Type* lhs_deref_type = RemoveReference(lhs_type);
+          const Type* rhs_deref_type = RemoveReference(rhs_type);
+          if (IsDerivedToBasePtrConvertible(lhs_deref_type, rhs_deref_type)) {
+            ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::RemoveRefsAndPtr);
+            return true;
+          }
+          if (IsBaseToDerivedMemPtrConvertible(lhs_deref_type, rhs_deref_type,
+                                               compiler()->getSema())) {
+            const auto* rhs_mem_ptr_type =
+                rhs_deref_type->castAs<MemberPointerType>();
+            ReportTypeUse(CurrentLoc(),
+                          rhs_mem_ptr_type->getQualifier()->getAsType(),
+                          DerefKind::None);
+            return true;
+          }
+        }
+        const bool rhs_can_bind_to_temp_record =
+            rhs_can_bind_to_temp && rhs_type->getPointeeType()->isRecordType();
+        if ((rhs_type->isRecordType() || rhs_can_bind_to_temp_record) &&
+            !RemovePointersAndReferences(lhs_type)->isUnionType()) {
+          // If the rhs type ctors are to be considered, the lhs type should be
+          // reported even if it is under the pointer, because an rhs type ctor
+          // might take a pointer to its base class (if not a union).
+          ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::RemoveRefsAndPtr);
+        } else {
+          // In other cases, report the lhs type because it may contain a
+          // conversion operator to the rhs type.
+          ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::RemoveRefs);
+        }
+        return true;
+      }
       default:
         for (const TypeSourceInfo* arg : expr->getArgs()) {
           QualType qual_type = arg->getType();

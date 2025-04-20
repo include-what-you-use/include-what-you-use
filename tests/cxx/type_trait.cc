@@ -19,7 +19,12 @@ struct Struct;
 union Union1;
 union Union2;
 
-// IWYU: Base is...*type_trait-i1.h
+// clang doesn't require full type info for types used in "convertible" traits.
+// The C++ standard requires complete types or unbounded arrays. Despite
+// pointers and references are always complete, it is better to suggest the full
+// pointed-to type in certain cases to produce stable result and thus to avoid
+// a UB.
+
 // IWYU: Base needs a declaration
 // IWYU: Derived is...*type_trait-i2.h
 // IWYU: Derived needs a declaration
@@ -31,12 +36,281 @@ static_assert(__is_convertible_to(Derived*, Base*),
 static_assert(!__is_convertible_to(Derived**, Base**),
               "Indirect pointers shouldn't be convertible");
 
-// IWYU: Base is...*type_trait-i1.h
 // IWYU: Base needs a declaration
 // IWYU: Derived is...*tests/cxx/type_trait-i2.h
 // IWYU: Derived needs a declaration
 static_assert(__is_convertible_to(Derived&, Base&),
               "Derived should be convertible to the Base class");
+
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(Class, int));
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(Class, int));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_convertible(int, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_nothrow_convertible(int, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_convertible(void, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_nothrow_convertible(void, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_convertible(int, Class[5]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_nothrow_convertible(int, Class[5]));
+// TODO: no need of full type for arrays of unknown bound.
+// IWYU: Class is...*-i1.h
+static_assert(!__is_convertible(int, Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_nothrow_convertible(int, Class[]));
+// When the pointed-to types are the same, user-defined conversions are not
+// considered, hence the complete type is not needed.
+static_assert(__is_convertible(Class&, Class&));
+static_assert(__is_nothrow_convertible(Class&, Class&));
+static_assert(!__is_convertible(Class&, Class&&));
+static_assert(!__is_nothrow_convertible(Class&, Class&&));
+static_assert(!__is_convertible(Class&&, Class&));
+static_assert(!__is_nothrow_convertible(Class&&, Class&));
+static_assert(__is_convertible(Class&&, const Class&));
+static_assert(__is_nothrow_convertible(Class&&, const Class&));
+static_assert(__is_convertible(Class*, Class*));
+static_assert(__is_nothrow_convertible(Class*, Class*));
+static_assert(!__is_convertible(const Class*, Class*));
+static_assert(!__is_nothrow_convertible(const Class*, Class*));
+static_assert(__is_convertible(Class* const, Class*));
+static_assert(__is_nothrow_convertible(Class* const, Class*));
+static_assert(__is_convertible(Class*&, Class*));
+static_assert(__is_nothrow_convertible(Class*&, Class*));
+static_assert(__is_convertible(Class * &&, const Class* const&));
+static_assert(__is_nothrow_convertible(Class * &&, const Class* const&));
+static_assert(__is_convertible(ClassRefNonProviding, Class&));
+static_assert(__is_nothrow_convertible(ClassRefNonProviding, Class&));
+static_assert(__is_convertible(Class&, ClassRefNonProviding));
+static_assert(__is_nothrow_convertible(Class&, ClassRefNonProviding));
+static_assert(__is_convertible(ClassNonProviding&, Class&));
+static_assert(__is_nothrow_convertible(ClassNonProviding&, Class&));
+static_assert(__is_convertible(Class&, ClassNonProviding&));
+static_assert(__is_nothrow_convertible(Class&, ClassNonProviding&));
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(Class&, int));
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(Class&, int));
+// Struct has the conversion operator to Class& (or could be a class derived
+// from Class), but the details of Class type are irrelevant for non-const
+// lvalue reference case, because its constructors cannot be involved.
+// TODO: Struct may have a conversion operator to the reference to a class
+// derived from Class. It should be reported.
+// IWYU: Struct is...*-i1.h
+static_assert(__is_convertible(Struct&, Class&));
+// IWYU: Struct is...*-i1.h
+static_assert(__is_nothrow_convertible(Struct&, Class&));
+// 'const Class&' may bind to a Class temporary object, so its constructors are
+// to be considered, in general.
+// IWYU: Struct is...*-i1.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(Struct&, const Class&));
+// IWYU: Struct is...*-i1.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(Struct&, const Class&));
+// Class has constructors from Base& and Base*, so the complete Derived type is
+// required to detect the inheritance.
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(Derived&, const Class&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(Derived&, const Class&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(Derived*, const Class&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(Derived*, const Class&));
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(DerivedRefNonProviding,
+                               ClassConstRefNonProviding));
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(DerivedRefNonProviding,
+                                       ClassConstRefNonProviding));
+static_assert(__is_convertible(DerivedRefProviding, ClassConstRefProviding));
+static_assert(__is_nothrow_convertible(DerivedRefProviding,
+                                       ClassConstRefProviding));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_convertible(DerivedPtrRefNonProviding,
+                               ClassConstRefProviding));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_nothrow_convertible(DerivedPtrRefNonProviding,
+                                       ClassConstRefProviding));
+static_assert(__is_convertible(DerivedPtrRefProviding, ClassConstRefProviding));
+static_assert(__is_nothrow_convertible(DerivedPtrRefProviding,
+                                       ClassConstRefProviding));
+// References to volatile don't bind to constructed temporary objects.
+// IWYU: Derived needs a declaration
+static_assert(!__is_convertible(Derived*, volatile Class&));
+// IWYU: Derived needs a declaration
+static_assert(!__is_nothrow_convertible(Derived*, volatile Class&));
+// IWYU: Derived needs a declaration
+static_assert(!__is_convertible(Derived*, const volatile Class&));
+// IWYU: Derived needs a declaration
+static_assert(!__is_nothrow_convertible(Derived*, const volatile Class&));
+// IWYU: Derived needs a declaration
+static_assert(!__is_convertible(Derived*, Class&));
+// IWYU: Derived needs a declaration
+static_assert(!__is_nothrow_convertible(Derived*, Class&));
+// Rvalue references bind to temporaries.
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(Derived*, Class&&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(Derived*, Class&&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(Derived*, Class));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(Derived*, Class));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(Derived* const volatile&, Class&&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(Derived* const volatile&, Class&&));
+// Unions don't take part in inheritance, so the pointed-to type in the Struct
+// ctor should be exactly the same (Union1).
+// IWYU: Struct is...*-i1.h
+static_assert(__is_convertible(Union1* const volatile&, Struct&&));
+// IWYU: Struct is...*-i1.h
+static_assert(__is_nothrow_convertible(Union1* const volatile&, Struct&&));
+// IWYU: Struct is...*-i1.h
+static_assert(__is_convertible(Union1PtrRefNonProviding, Struct&&));
+// IWYU: Struct is...*-i1.h
+static_assert(__is_nothrow_convertible(Union1PtrRefNonProviding, Struct&&));
+// Union1 has a constructor from 'const Base*'.
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_convertible(const Derived*, Union1&&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_nothrow_convertible(const Derived*, Union1&&));
+static_assert(!__is_convertible(void, Class&&));
+static_assert(!__is_nothrow_convertible(void, Class&&));
+static_assert(!__is_convertible(Class&, void));
+static_assert(!__is_nothrow_convertible(Class&, void));
+// No conversion to function type.
+static_assert(!__is_convertible(Class&, void()));
+static_assert(!__is_nothrow_convertible(Class&, void()));
+// The complete Class type is required according to the standard.
+// IWYU: Class is...*-i1.h
+static_assert(!__is_convertible(Class, void()));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_nothrow_convertible(Class, void()));
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(void(), const Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(void(), const Class&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(Derived*, Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(Derived*, Base*));
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(Derived[], Base*));
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(Derived[], Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(Derived*, Base* const&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(Derived*, Base* const&));
+// IWYU: Derived needs a declaration
+// IWYU: Base needs a declaration
+static_assert(!__is_convertible(Derived*, Base*&));
+// IWYU: Derived needs a declaration
+// IWYU: Base needs a declaration
+static_assert(!__is_nothrow_convertible(Derived*, Base*&));
+// IWYU: Derived needs a declaration
+// IWYU: Base needs a declaration
+static_assert(!__is_convertible(Derived*&, Base*&));
+// IWYU: Derived needs a declaration
+// IWYU: Base needs a declaration
+static_assert(!__is_nothrow_convertible(Derived*&, Base*&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(Derived*&, Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(Derived*&, Base*));
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(DerivedPtrRefNonProviding, Base*));
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(DerivedPtrRefNonProviding, Base*));
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(DerivedPtrRefProviding, Base*));
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(DerivedPtrRefProviding, Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(int Base::*, int Derived::*));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(int Base::*, int Derived::*));
+// IWYU: Derived needs a declaration
+// IWYU: Base needs a declaration
+static_assert(!__is_convertible(int Base::*, int Derived::*&));
+// IWYU: Derived needs a declaration
+// IWYU: Base needs a declaration
+static_assert(!__is_nothrow_convertible(int Base::*, int Derived::*&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(int Base::*&, int Derived::*&&));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(int Base::*&, int Derived::*&&));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_convertible(BaseMemPtr<int>, DerivedMemPtr<int>));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_nothrow_convertible(BaseMemPtr<int>, DerivedMemPtr<int>));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_convertible(BaseMemPtr<int> volatile&,
+                               DerivedMemPtr<int> const&));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_nothrow_convertible(BaseMemPtr<int> volatile&,
+                                       DerivedMemPtr<int> const&));
+static_assert(!__is_convertible(BaseMemPtr<int> const&,
+                                DerivedMemPtr<int> volatile&));
+static_assert(!__is_nothrow_convertible(BaseMemPtr<int> const&,
+                                        DerivedMemPtr<int> volatile&));
 
 // IWYU: Class is...*-i1.h
 static_assert(__is_assignable(Class, Class));
@@ -496,8 +770,8 @@ tests/cxx/type_trait.cc should remove these lines:
 - union Union2;  // lines XX-XX
 
 The full include-list for tests/cxx/type_trait.cc:
-#include "tests/cxx/type_trait-d1.h"  // for ClassRefProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
-#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, ClassRefNonProviding, DerivedMemPtr, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
+#include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassRefProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
+#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedMemPtr, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
 #include "tests/cxx/type_trait-i1.h"  // for Base, Class, Struct, StructDerivedClass, Union1, Union2
 #include "tests/cxx/type_trait-i2.h"  // for Derived
 
