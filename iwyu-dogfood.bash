@@ -65,9 +65,15 @@ $(cat iwyu-dogfood.fix)
 \`\`\`
 
 </details>
+EOF
+
+# Append diff if IWYU found something.
+if [[ $iwyu_exit -ne 0 ]]; then
+    cat<<EOF >> iwyu-dogfood.md
 
 \`\`\`diff
 $(cat iwyu-dogfood.diff)
 \`\`\`
-
 EOF
+
+fi
