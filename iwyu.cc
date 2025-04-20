@@ -1430,7 +1430,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Check if the author forward-declared the class in the same file.
     bool found_earlier_forward_declare_in_same_file = false;
     for (const NamedDecl* redecl : redecls) {
-      if (IsBeforeInSameFile(redecl, use_loc)) {
+      // In case of something like "typedef struct Manager Manager", the
+      // redeclaration and the type will have the same location.
+      if (GetLocation(redecl) == use_loc ||
+          IsBeforeInSameFile(redecl, use_loc)) {
         found_earlier_forward_declare_in_same_file = true;
         break;
       }
