@@ -1698,6 +1698,17 @@ bool IsReferenceToModifiableLValue(const Type* type) {
          !type->getPointeeType().getQualifiers().hasConst();
 }
 
+bool RefCanBindToTemp(const Type* type) {
+  if (type->isRValueReferenceType())
+    return true;
+  const auto* ref_type = type->getAs<LValueReferenceType>();
+  if (!ref_type)
+    return false;
+  const QualType referred_type = ref_type->getPointeeType();
+  return referred_type.isConstQualified() &&
+         !referred_type.isVolatileQualified();
+}
+
 bool IsDerivedToBasePtrConvertible(const Type* derived_ptr_type,
                                    const Type* base_ptr_type) {
   if (!derived_ptr_type->isPointerType() || !base_ptr_type->isPointerType())

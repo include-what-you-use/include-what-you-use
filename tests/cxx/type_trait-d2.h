@@ -12,9 +12,11 @@ class Derived;
 class Class;
 union Union1;
 
+using ClassNonProviding = Class;
 using DerivedPtrRefNonProviding = Derived*&;
 using DerivedRefNonProviding = Derived&;
 using ClassRefNonProviding = Class&;
+using ClassConstRefNonProviding = const Class&;
 using Union1RefNonProviding = Union1&;
 using Union1PtrRefNonProviding = Union1*&;
 

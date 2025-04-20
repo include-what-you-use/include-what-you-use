@@ -160,14 +160,16 @@ void TestSomeComplexIndirectionCases() {
 
 tests/cxx/ptr_ref_aliases.cc should add these lines:
 #include "tests/cxx/ptr_ref_aliases-i2.h"
+struct IndirectBase;
 
 tests/cxx/ptr_ref_aliases.cc should remove these lines:
+- #include "tests/cxx/ptr_ref_aliases-d3.h"  // lines XX-XX
 
 The full include-list for tests/cxx/ptr_ref_aliases.cc:
 #include <typeinfo>  // for type_info
 #include "tests/cxx/ptr_ref_aliases-d1.h"  // for NonProvidingDoublePtrAlias, NonProvidingDoubleRefAlias, NonProvidingDoubleRefPtrAlias, NonProvidingPtrAlias, NonProvidingRefAlias, NonProvidingRefPtrAlias
 #include "tests/cxx/ptr_ref_aliases-d2.h"  // for ProvidingPtrAlias, ProvidingRefAlias
-#include "tests/cxx/ptr_ref_aliases-d3.h"  // for IndirectBase
 #include "tests/cxx/ptr_ref_aliases-i2.h"  // for Indirect
+struct IndirectBase;
 
 ***** IWYU_SUMMARY */
