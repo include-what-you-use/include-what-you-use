@@ -14,9 +14,9 @@
 
 #include "tests/c/var_cleanup_attr-d1.h"
 
-void cleanup(void) {
-  // IWYU: freep is...*var_cleanup_attr-i1.h
-  __attribute__((__cleanup__(freep))) char* x = 0;
+void Foo(void) {
+  // IWYU: Free is...*var_cleanup_attr-i1.h
+  __attribute__((__cleanup__(Free))) char* x = 0;
 }
 
 /**** IWYU_SUMMARY
@@ -28,6 +28,6 @@ tests/c/var_cleanup_attr.c should remove these lines:
 - #include "tests/c/var_cleanup_attr-d1.h"  // lines XX-XX
 
 The full include-list for tests/c/var_cleanup_attr.c:
-#include "tests/c/var_cleanup_attr-i1.h"  // for freep
+#include "tests/c/var_cleanup_attr-i1.h"  // for Free
 
 ***** IWYU_SUMMARY */

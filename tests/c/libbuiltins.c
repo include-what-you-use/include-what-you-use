@@ -15,7 +15,7 @@
 
 #include "tests/c/libbuiltins-direct.h"
 
-float kapow(float x) {
+float Kapow(float x) {
   // IWYU: pow is...*math.h
   return pow(x, 2.0F);
 }
