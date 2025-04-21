@@ -756,6 +756,38 @@ static_assert(!__is_nothrow_assignable(DerivedMemPtr<int (*)()>&,
 // TODO: handle other types in an implicit conversion chain like Derived in
 // __is_assignable(Base*&, Class&) when Class has operator Derived*().
 
+// Types for is_layout_compatible trait should be complete types, cv void,
+// or arrays of unknown bound (C++20 [meta.rel]).
+// IWYU: Class is...*-i1.h
+static_assert(!__is_layout_compatible(Class, int));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_layout_compatible(int, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_layout_compatible(const Class, int));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_layout_compatible(int, volatile Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_layout_compatible(Class, void));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_layout_compatible(void, Class));
+// IWYU: Class is...*-i1.h
+static_assert(__is_layout_compatible(Class, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_layout_compatible(Class[5], int));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_layout_compatible(int, Class[5]));
+// TODO: no need of full type for arrays of unknown bound.
+// IWYU: Class is...*-i1.h
+static_assert(!__is_layout_compatible(Class[], int));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_layout_compatible(int, Class[]));
+static_assert(__is_layout_compatible(Class*, Class*));
+static_assert(__is_layout_compatible(Class&, Class&));
+static_assert(!__is_layout_compatible(Class*, Class&));
+static_assert(!__is_layout_compatible(Class&, Class*));
+static_assert(!__is_layout_compatible(Class*, Struct*));
+static_assert(!__is_layout_compatible(Class&, Struct&));
+
 /**** IWYU_SUMMARY
 
 tests/cxx/type_trait.cc should add these lines:
