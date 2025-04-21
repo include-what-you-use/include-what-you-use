@@ -42,10 +42,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 
-// TODO: Clean out pragmas as IWYU improves.
-// IWYU pragma: no_include <unistd.h>
-// IWYU pragma: no_include "llvm/ADT/iterator.h"
-
 using clang::CompilerInstance;
 using clang::HeaderSearch;
 using clang::LangOptions;

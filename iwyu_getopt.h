@@ -41,7 +41,8 @@ int getopt_long(int argc, char* const argv[],
 
 #else  // #if defined(_MSC_VER)
 
-#include <getopt.h>   // IWYU pragma: export
+#include <unistd.h> // IWYU pragma: export
+#include <getopt.h> // IWYU pragma: export
 
 #endif  // #if defined(_MSC_VER)
 
