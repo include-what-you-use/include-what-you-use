@@ -141,6 +141,24 @@ static_assert(__is_nothrow_convertible(DerivedRefNonProviding,
 static_assert(__is_convertible(DerivedRefProviding, ClassConstRefProviding));
 static_assert(__is_nothrow_convertible(DerivedRefProviding,
                                        ClassConstRefProviding));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_convertible(Derived&, Base&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_nothrow_convertible(Derived&, Base&));
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(DerivedRefNonProviding, Base&));
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(DerivedRefNonProviding, Base&));
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(DerivedRefProviding, Base&));
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(DerivedRefProviding, Base&));
 // IWYU: Derived is...*-i2.h
 static_assert(__is_convertible(DerivedPtrRefNonProviding,
                                ClassConstRefProviding));
@@ -275,6 +293,16 @@ static_assert(__is_nothrow_convertible(DerivedPtrRefNonProviding, Base*));
 static_assert(__is_convertible(DerivedPtrRefProviding, Base*));
 // IWYU: Base needs a declaration
 static_assert(__is_nothrow_convertible(DerivedPtrRefProviding, Base*));
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(DerivedPtrNonProviding, Base*));
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(DerivedPtrNonProviding, Base*));
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(DerivedPtrProviding, Base*));
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(DerivedPtrProviding, Base*));
 // IWYU: Derived needs a declaration
 // IWYU: Derived is...*-i2.h
 // IWYU: Base needs a declaration
@@ -802,8 +830,8 @@ tests/cxx/type_trait.cc should remove these lines:
 - union Union2;  // lines XX-XX
 
 The full include-list for tests/cxx/type_trait.cc:
-#include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassRefProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
-#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedMemPtr, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
+#include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassRefProviding, DerivedPtrProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
+#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedMemPtr, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
 #include "tests/cxx/type_trait-i1.h"  // for Base, Class, Struct, StructDerivedClass, Union1, Union2
 #include "tests/cxx/type_trait-i2.h"  // for Derived
 

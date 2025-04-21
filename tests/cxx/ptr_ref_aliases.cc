@@ -96,13 +96,6 @@ void Fn() {
   (void)(ptr_provided + 1);
 
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
-  static_assert(__is_convertible_to(NonProvidingPtrAlias, IndirectBase*));
-  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
-  static_assert(__is_convertible_to(NonProvidingRefAlias, IndirectBase&));
-  static_assert(__is_convertible_to(ProvidingPtrAlias, IndirectBase*));
-  static_assert(__is_convertible_to(ProvidingRefAlias, IndirectBase&));
-
-  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   ref_nonprovided << 1;
   ref_provided << 1;
 
