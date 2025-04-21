@@ -2201,6 +2201,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
         return true;
       }
+      case TypeTrait::BTT_IsLayoutCompatible:
+        // C++20 [basic.types.general]p.11: two types cv1 T1 and cv2 T2 are
+        // layout-compatible types if T1 and T2 are the same type,
+        // layout-compatible enumerations, or layout-compatible standard-layout
+        // class types.
+        // No need to analyse pointers or references.
+        // TODO(bolshakov): require complete argument types here when
+        // CanForwardDeclareType stops doing it.
+        return true;
       default:
         for (const TypeSourceInfo* arg : expr->getArgs()) {
           QualType qual_type = arg->getType();
