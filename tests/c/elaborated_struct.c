@@ -30,10 +30,10 @@ void UseForwardDeclared(struct ForwardDeclared*);
 
 // If a forward-declaration is seen before an actual struct declaration in the
 // same file, no diagnostic is expected (see issue #1065).
-typedef struct local_struct local_struct_t;
-struct local_struct {
+typedef struct LocalStruct LocalStructAlias;
+struct LocalStruct {
   int x;
-  local_struct_t* next;
+  LocalStructAlias* next;
 };
 
 /**** IWYU_SUMMARY
