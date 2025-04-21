@@ -12,6 +12,7 @@
 
 #include "tests/cxx/type_trait-i2.h"
 
+using DerivedPtrProviding = Derived*;
 using DerivedPtrRefProviding = Derived*&;
 using DerivedRefProviding = Derived&;
 using ClassRefProviding = Class&;

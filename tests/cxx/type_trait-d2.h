@@ -13,6 +13,7 @@ class Class;
 union Union1;
 
 using ClassNonProviding = Class;
+using DerivedPtrNonProviding = Derived*;
 using DerivedPtrRefNonProviding = Derived*&;
 using DerivedRefNonProviding = Derived&;
 using ClassRefNonProviding = Class&;
