@@ -27,6 +27,8 @@ PATTERN_MAPPINGS = {}
 def main(dir, verbose):
     """ Entry point. """
 
+    """ dummy """
+
     root = Path(dir)
 
     paths = set(root.glob('**/*.h'))
