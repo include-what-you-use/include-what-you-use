@@ -1,0 +1,91 @@
+name: mapgen
+
+on:
+  push:
+    paths:
+      - 'mapgen/**'
+  pull_request:
+    paths:
+      - 'mapgen/**'
+
+permissions:
+  contents: read
+
+jobs:
+  apple-libc:
+
+    strategy:
+      matrix:
+        os: [macos-13, macos-14, macos-15]
+        python-version: [3.9, '3.10', '3.11', '3.12', '3.13']
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+
+    # TODO: only run when this generator was modified
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          check-latest: true
+
+      - name: run mapgen
+        run: |
+          python ./mapgen/iwyu-mapgen-apple-libc.py $(xcrun --show-sdk-path)/usr/include > apple-libc.imp
+
+      # TODO: add smoketest
+
+      - uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: Mappings (apple-libc - ${{ matrix.os }} - ${{ matrix.python-version }})
+          path: ./apple-libc.imp
+
+  qt:
+
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        qt-version: [6.9.0]
+        python-version: [3.9, '3.10', '3.11', '3.12', '3.13']
+
+      fail-fast: false
+
+    # TODO: only run when this generator was modified
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Qt ${{ matrix.qt-version }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt-version }}
+          setup-python: 'false'
+          install-deps: false
+          cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          check-latest: true
+
+      - name: run mapgen
+        run: |
+          python ./mapgen/iwyu-mapgen-qt.py /usr/include/qt/ > qt.imp
+
+      # TODO: add smoketest
+
+      - uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: Mappings (qt - ${{ matrix.os }} - ${{ matrix.qt-version }} - ${{ matrix.python-version }})
+          path: ./qt.imp
