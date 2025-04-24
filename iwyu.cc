@@ -2149,6 +2149,22 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
         return true;
       }
+      case TypeTrait::BTT_ReferenceBindsToTemporary:
+      case TypeTrait::BTT_ReferenceConstructsFromTemporary:
+      case TypeTrait::BTT_ReferenceConvertsFromTemporary:
+        // Seems like __reference_binds_to_temporary differs from
+        // __reference_constructs_from_temporary only when the rhs is an object
+        // (i.e. not reference) type reference-compatible to the lhs referred-to
+        // type, whereas __reference_converts_from_temporary considers whether
+        // a conversion function is not explicit. All of this is irrelevant to
+        // IWYU because the complete type is requested in either case.
+        if (!RefCanBindToTemp(lhs_type))
+          return true;
+        // No temporaries of function type.
+        if (RemoveReference(lhs_type)->isFunctionType())
+          return true;
+        swap(lhs_type, rhs_type);
+        [[fallthrough]];
       case TypeTrait::BTT_IsConvertible:
       case TypeTrait::BTT_IsConvertibleTo:
       case TypeTrait::BTT_IsNothrowConvertible: {
