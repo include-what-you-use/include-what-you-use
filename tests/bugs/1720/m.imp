@@ -1,0 +1,3 @@
+[
+    { "include": ["\"private.h\"", "private", "\"public.h\"", "public"] },
+]
