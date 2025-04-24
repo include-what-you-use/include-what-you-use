@@ -232,6 +232,11 @@ static_assert(!__is_nothrow_convertible(Class&, void));
 // No conversion to function type.
 static_assert(!__is_convertible(Class&, void()));
 static_assert(!__is_nothrow_convertible(Class&, void()));
+// But there may be conversions to function reference types.
+// IWYU: Class is...*-i1.h
+static_assert(__is_convertible(Class&, void (&&)()));
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_convertible(Class&, void (&&)()));
 // The complete Class type is required according to the standard.
 // IWYU: Class is...*-i1.h
 static_assert(!__is_convertible(Class, void()));
@@ -815,6 +820,140 @@ static_assert(!__is_layout_compatible(Class*, Class&));
 static_assert(!__is_layout_compatible(Class&, Class*));
 static_assert(!__is_layout_compatible(Class*, Struct*));
 static_assert(!__is_layout_compatible(Class&, Struct&));
+
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_binds_to_temporary(Class, void));
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_constructs_from_temporary(Class, void));
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_converts_from_temporary(Class, void));
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_binds_to_temporary(void, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_constructs_from_temporary(void, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_converts_from_temporary(void, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_binds_to_temporary(void, Class[5]));
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_constructs_from_temporary(void, Class[5]));
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_converts_from_temporary(void, Class[5]));
+// TODO: no need of full type for arrays of unknown bound.
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_binds_to_temporary(void, Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_constructs_from_temporary(void, Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__reference_converts_from_temporary(void, Class[]));
+static_assert(!__reference_binds_to_temporary(Class&&, void));
+static_assert(!__reference_constructs_from_temporary(Class&&, void));
+static_assert(!__reference_converts_from_temporary(Class&&, void));
+// Class has ctor from void() function type.
+// IWYU: Class is...*-i1.h
+static_assert(__reference_binds_to_temporary(Class&&, void()));
+// IWYU: Class is...*-i1.h
+static_assert(__reference_constructs_from_temporary(Class&&, void()));
+// IWYU: Class is...*-i1.h
+static_assert(__reference_converts_from_temporary(Class&&, void()));
+// Class has the conversion function to void(&&)() reference-to-function type,
+// but the reference binding cannot involve a temporary object.
+static_assert(!__reference_binds_to_temporary(void (&&)(), Class&));
+static_assert(!__reference_constructs_from_temporary(void (&&)(), Class&));
+static_assert(!__reference_converts_from_temporary(void (&&)(), Class&));
+// Class has the conversion function to int.
+// IWYU: Class is...*-i1.h
+static_assert(__reference_binds_to_temporary(int&&, Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__reference_constructs_from_temporary(int&&, Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__reference_converts_from_temporary(int&&, Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__reference_binds_to_temporary(const int&, Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__reference_constructs_from_temporary(const int&, Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__reference_converts_from_temporary(const int&, Class&));
+static_assert(!__reference_binds_to_temporary(const volatile int&, Class&));
+static_assert(!__reference_constructs_from_temporary(const volatile int&,
+                                                     Class&));
+static_assert(!__reference_converts_from_temporary(const volatile int&,
+                                                   Class&));
+static_assert(!__reference_binds_to_temporary(int, Class&));
+static_assert(!__reference_constructs_from_temporary(int, Class&));
+static_assert(!__reference_converts_from_temporary(int, Class&));
+// Class has ctor from Base*.
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__reference_binds_to_temporary(Class&&, Derived*));
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__reference_constructs_from_temporary(Class&&, Derived*));
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__reference_converts_from_temporary(Class&&, Derived*));
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+static_assert(!__reference_binds_to_temporary(Class, Derived*));
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+static_assert(!__reference_constructs_from_temporary(Class, Derived*));
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+static_assert(!__reference_converts_from_temporary(Class, Derived*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__reference_binds_to_temporary(Base*, Derived*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__reference_constructs_from_temporary(Base*, Derived*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__reference_converts_from_temporary(Base*, Derived*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__reference_binds_to_temporary(Base * &&, Derived*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__reference_constructs_from_temporary(Base * &&, Derived*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__reference_converts_from_temporary(Base * &&, Derived*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__reference_binds_to_temporary(int Derived::*, int Base::*));
+static_assert(
+    // IWYU: Derived needs a declaration
+    !__reference_constructs_from_temporary(int Derived::*,
+                                           // IWYU: Base needs a declaration
+                                           int Base::*));
+static_assert(
+    // IWYU: Derived needs a declaration
+    !__reference_converts_from_temporary(int Derived::*,
+                                         // IWYU: Base needs a declaration
+                                         int Base::*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__reference_binds_to_temporary(int Derived::*&&, int Base::*));
+static_assert(
+    // IWYU: Derived needs a declaration
+    // IWYU: Derived is...*-i2.h
+    __reference_constructs_from_temporary(int Derived::*&&,
+                                          // IWYU: Base needs a declaration
+                                          int Base::*));
+static_assert(
+    // IWYU: Derived needs a declaration
+    // IWYU: Derived is...*-i2.h
+    __reference_converts_from_temporary(int Derived::*&&,
+                                        // IWYU: Base needs a declaration
+                                        int Base::*));
 
 /**** IWYU_SUMMARY
 
