@@ -2120,6 +2120,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case TypeTrait::BTT_IsTriviallyAssignable: {
         // Trivial assignment doesn't involve any user-defined operators but may
         // involve a derived-to-base conversion.
+        // TODO: check qualifiers. For example,
+        // __is_trivially_assignable(volatile Base, Derived&) is always false.
         const Type* lhs_deref_type = RemoveReference(lhs_type);
         if (lhs_deref_type->isStructureOrClassType()) {
           // The rhs may be the same or derived class. In both cases, its type
