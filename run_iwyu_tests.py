@@ -64,14 +64,17 @@ def TestIwyuOnRelevantFiles(filename):
   iwyu_test_util.TestIwyuOnRelativeFile(filename, files_to_check, verbose=True)
 
 
-def GenerateTests(rootdir, pattern):
+def GenerateTests(rootdir, patterns):
+  def _IsTestInput(name):
+    return any(fnmatch(name, p) for p in patterns)
+
   def _AddTestFunctions(cls):
     filenames = []
     test_files = {}
     for (dirpath, _, files) in os.walk(rootdir):
       dirpath = PosixPath(dirpath)  # Normalize path separators.
       filenames.extend(posixpath.join(dirpath, f) for f in files
-                       if fnmatch(f, pattern))
+                       if _IsTestInput(f))
     if not filenames:
       print('No tests found in %s!' % os.path.abspath(rootdir))
       return
@@ -160,13 +163,13 @@ if __name__ == '__main__':
   if runner_args.run_test_file:
     exit(RunTestFile(runner_args.run_test_file))
 
-  @GenerateTests(rootdir='tests/c', pattern='*.c')
+  @GenerateTests(rootdir='tests/c', patterns=['*.c'])
   class c(unittest.TestCase): pass
 
-  @GenerateTests(rootdir='tests/cxx', pattern='*.cc')
+  @GenerateTests(rootdir='tests/cxx', patterns=['*.cc'])
   class cxx(unittest.TestCase): pass
 
-  @GenerateTests(rootdir='tests/driver', pattern='*.c')
+  @GenerateTests(rootdir='tests/driver', patterns=['*.c'])
   class driver(unittest.TestCase): pass
 
   if runner_args.list_tests:
