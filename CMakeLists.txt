@@ -41,6 +41,11 @@ endif()
 message(STATUS
   "IWYU: configuring for LLVM ${LLVM_VERSION} from ${iwyu_llvm_dir}")
 
+if (LLVM_VERSION VERSION_LESS 21)
+  message(FATAL_ERROR
+    "IWYU: LLVM 21 or later required")
+endif()
+
 # The good default is given by the llvm toolchain installation itself, but still
 # in case both static and shared libraries are available, allow to override that
 # default.
