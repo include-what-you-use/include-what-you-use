@@ -2165,6 +2165,29 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // No temporaries of function type.
         if (RemoveReference(lhs_type)->isFunctionType())
           return true;
+        [[fallthrough]];
+      case TypeTrait::TT_IsConstructible:
+      case TypeTrait::TT_IsNothrowConstructible:
+        // Should not be true for the previous traits.
+        if (expr->getNumArgs() > 2) {
+          // References and other non-class types have at most one init expr.
+          if (!lhs_type->isRecordType())
+            return true;
+          // Check whether all the args can be acceptable.
+          for (const TypeSourceInfo* arg : expr->getArgs()) {
+            if (arg->getType()->isVoidType())
+              return true;
+          }
+          for (const TypeSourceInfo* arg : expr->getArgs()) {
+            const Type* arg_type = arg->getType().getTypePtr();
+            // Unions cannot be derived but can have conversion functions.
+            ReportTypeUse(CurrentLoc(), arg_type,
+                          RemovePointersAndReferences(arg_type)->isUnionType()
+                              ? DerefKind::RemoveRefs
+                              : DerefKind::RemoveRefsAndPtr);
+          }
+          return true;
+        }
         swap(lhs_type, rhs_type);
         [[fallthrough]];
       case TypeTrait::BTT_IsConvertible:

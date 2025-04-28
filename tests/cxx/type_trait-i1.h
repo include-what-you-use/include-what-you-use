@@ -17,6 +17,7 @@ class Class {
   Class(Base*) noexcept;
   Class(Base&) noexcept;
   Class(void()) noexcept;
+  Class(double, Base*) noexcept;
 
   Class& operator=(int) noexcept;
   Class& operator=(Base*) noexcept;
@@ -30,6 +31,8 @@ union Union1;
 
 struct Struct : Base {
   Struct(Union1*) noexcept;
+  Struct(int, Base*, double) noexcept;
+  Struct(void(), Union1*, Base&) noexcept;
 
   Struct& operator=(Class&) noexcept;
   Struct& operator=(Union1&) noexcept;
@@ -41,8 +44,10 @@ class StructDerivedClass : public Struct {};
 
 union Union1 {
   Union1(const Base*) noexcept;
+  Union1(int, const volatile Base*) noexcept;
 
   Union1& operator=(Struct&) noexcept;
+  operator double() const noexcept;
 };
 union Union2 {
   Union2& operator=(Union1&) noexcept;
