@@ -25,6 +25,13 @@ void test() {
 
 /**** IWYU_SUMMARY
 
-(tests/cxx/expl_inst_macro.cc has correct #includes/fwd-decls)
+tests/cxx/expl_inst_macro.cc should add these lines:
+#include <iostream>
+
+tests/cxx/expl_inst_macro.cc should remove these lines:
+
+The full include-list for tests/cxx/expl_inst_macro.cc:
+#include "tests/cxx/expl_inst_macro.h"
+#include <iostream>  // for basic_ostream, cout, operator<<
 
 ***** IWYU_SUMMARY */

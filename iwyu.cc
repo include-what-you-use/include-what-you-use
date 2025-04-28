@@ -135,7 +135,6 @@
 #include "iwyu_port.h"  // for CHECK_
 #include "iwyu_preprocessor.h"
 #include "iwyu_stl_util.h"
-#include "iwyu_string_util.h"
 #include "iwyu_use_flags.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1285,98 +1284,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return type;
   }
 
-  // Get the canonical use location for a (location, decl) pair.
-  // Decide whether the file expanding the macro or the file defining the macro
-  // should be held responsible for a use.
-  SourceLocation GetCanonicalUseLocation(SourceLocation use_loc,
-                                         const NamedDecl* decl) {
-    CHECK_(decl != nullptr) << ": Need a decl to compute use location";
-
-    // If we're not in a macro, just echo the use location.
+  SourceLocation GetCanonicalUseLocation(SourceLocation use_loc) {
     if (!use_loc.isMacroID())
-      return use_loc;
+        return use_loc;
 
-    VERRS(5) << "Trying to determine use location for '" << PrintableDecl(decl)
-             << "'\n";
-
+    // Always use the expansion location for a macro so that all headers
+    // required to use the macro are added to the file where the macro is
+    // expanded.
     SourceManager* sm = GlobalSourceManager();
-    SourceLocation spelling_loc = sm->getSpellingLoc(use_loc);
-    SourceLocation expansion_loc = sm->getExpansionLoc(use_loc);
-
-    // If the file defining the macro contains a forward decl, keep it around
-    // and treat it as a hint that the expansion loc is responsible for the
-    // symbol.
-    OptionalFileEntryRef macro_def_file = GetLocFileEntry(spelling_loc);
-    VERRS(5) << "Macro is defined in '" << GetFilePath(macro_def_file) << "'\n";
-
-    const NamedDecl* fwd_decl = nullptr;
-    for (const NamedDecl* redecl : GetTagRedecls(decl)) {
-      if (GetFileEntry(redecl) == macro_def_file && IsForwardDecl(redecl)) {
-        VERRS(5) << "Found fwd-decl hint at "
-                 << PrintableLoc(GetLocation(redecl)) << "\n";
-        fwd_decl = redecl;
-        break;
-      }
-    }
-
-    if (!fwd_decl) {
-      if (const auto* func_decl = dyn_cast<FunctionDecl>(decl)) {
-        if (const FunctionTemplateDecl* ft_decl =
-                func_decl->getPrimaryTemplate()) {
-          VERRS(5) << "No fwd-decl found, looking for function template decl\n";
-          for (const NamedDecl* redecl : ft_decl->redecls()) {
-            if (GetFileEntry(redecl) == macro_def_file) {
-              VERRS(5) << "Found function template at "
-                       << PrintableLoc(GetLocation(redecl)) << "\n";
-              fwd_decl = redecl;
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (fwd_decl) {
-      // Make sure we keep that forward-declaration, even if it's probably
-      // unused in this file.
-      IwyuFileInfo* file_info = preprocessor_info().FileInfoFor(macro_def_file);
-      file_info->ReportForwardDeclareUse(
-          spelling_loc, fwd_decl, ComputeUseFlags(current_ast_node()), nullptr);
-    }
-
-    // Resolve the best use location based on our current knowledge.
-    //
-    // 1) If the use_loc is in <scratch space>, we assume it's formed by macro
-    //    argument concatenation, and attribute responsibility to the expansion
-    //    location.
-    // 2) If the macro definition file forward-declares the used decl, that's a
-    //    hint that it wants the expansion location to take responsibility.
-    //
-    // Otherwise, the spelling loc is responsible.
-    const char* side;
-    if (IsInScratchSpace(spelling_loc)) {
-      VERRS(5) << "Spelling location is in <scratch space>, presumably as a "
-               << "result of macro arg concatenation\n";
-      use_loc = expansion_loc;
-      side = "expansion";
-    } else if (StartsWith(PrintableLoc(spelling_loc), "<command line>")) {
-      VERRS(5) << "Spelling location is in <command line> (macro defined in "
-                  "command line), use expansion location instead\n";
-      use_loc = expansion_loc;
-      side = "expansion";
-    } else if (fwd_decl != nullptr) {
-      VERRS(5) << "Found a hint decl in macro definition file\n";
-      use_loc = expansion_loc;
-      side = "expansion";
-    } else {
-      use_loc = spelling_loc;
-      side = "spelling";
-    }
-
-    VERRS(4) << "Attributing use of '" << PrintableDecl(decl) << "' to " << side
-             << " location at " << PrintableLoc(use_loc) << "\n";
-
-    return use_loc;
+    return sm->getExpansionLoc(use_loc);
   }
 
   // There are a few situations where iwyu is more restrictive than
@@ -1545,7 +1461,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     UseFlags use_flags = ComputeUseFlags(current_ast_node()) | extra_use_flags;
 
     // Canonicalize the use location and report the use.
-    used_loc = GetCanonicalUseLocation(used_loc, target_decl);
+    used_loc = GetCanonicalUseLocation(used_loc);
     OptionalFileEntryRef used_in = GetFileEntry(used_loc);
 
     preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
@@ -1590,7 +1506,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     UseFlags use_flags = ComputeUseFlags(current_ast_node());
 
     // Canonicalize the use location and report the use.
-    used_loc = GetCanonicalUseLocation(used_loc, target_decl);
+    used_loc = GetCanonicalUseLocation(used_loc);
     OptionalFileEntryRef used_in = GetFileEntry(used_loc);
     if (!blocked_for_fwd_decl_.count(target_decl->getCanonicalDecl())) {
       preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(

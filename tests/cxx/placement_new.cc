@@ -43,14 +43,14 @@ void PlacementNewUserType() {
   delete icptr;
 }
 
-// Placement new in macro, use is attributed to the macro.
+// Placement new in macro, use is attributed to the macro expansion.
 static char global_buffer[256];
-// IWYU: operator new is...*<new>
 #define CONSTRUCT_GLOBAL(T) new (global_buffer) T;
 
 void PlacementNewInMacro() {
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*indirect.h
+  // IWYU: operator new is...*<new>
   IndirectClass* a = CONSTRUCT_GLOBAL(IndirectClass);
 }
 

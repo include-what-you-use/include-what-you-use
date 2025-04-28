@@ -13,20 +13,20 @@
 #include "tests/cxx/macro_location-i5.h" // for UNNAMED_TYPE_IN_MACRO
 
 // A class declared in this file and used via a macro defined in this file
-// should not be seen by IWYU in files expanding the macro.
+// should be seen by IWYU in files expanding the macro.
 class Logger {
  public:
   void Log(int level, const char* msg);
 };
 
-// A forward-declaration inside a macro should not count as a use-attribution
-// hint and should not be seen by IWYU in files expanding other macros.
+// A forward-declaration inside a macro should count as a use-attribution
+// hint and should be seen by IWYU in files expanding other macros.
 #define UNRELATED_FORWARD_DECLARE class Logger;
 
 #define LOG_INFO(x) \
   Logger().Log(0, x);
 
-// A class declared and used in this macro should not be seen by IWYU in files
+// A class declared and used in this macro should be seen by IWYU in files
 // expanding the macro. This is similar to USE_CLASS in macro_location-d2.h, but
 // doesn't involve macro arg concatentation.
 // (And yes, this code is broken in so many ways, it's only to put the test case

@@ -19,13 +19,14 @@ class HClass { };
 // IWYU: Foo is...*macro_location-i3.h
 const int s = ARRAYSIZE(foo);
 // Should not need a declaration of NewClass_Bar, or NewClass.
+// IWYU: NewClass is...*macro_location-d1.h
+// IWYU: OtherClass is...*macro_location-d1.h
 NEW_CLASS(Bar);
 // This shouldn't cause weird iwyu issues between us and macro_location-d2.h.
 USE_CLASS(HClass);
 // This shouldn't cause macro_location-d1.h to need to include us for HClass.
 CREATE_VAR(HClass);
-// This should force us to #include a definition of IndirectClass, because it's
-// forward-declared by DECLARE_INDIRECT's file.
+// This should force us to #include a definition of IndirectClass.
 DECLARE_INDIRECT(global_indirect);
 
 // Macro-concatenated locations end up in <scratch space>, check that they're
@@ -39,7 +40,7 @@ CONCAT(Concat, FwdDeclClass) *global_concat_ptr;
 CONCAT(Concat, Class) global_concat;
 
 // Make sure types defined and used only within a macro definition file
-// aren't attributed to the macro expansion loc.
+// are attributed to the macro expansion loc.
 
 // IWYU: UNNAMED_TYPE_IN_MACRO is...*macro_location-i5.h
 UNNAMED_TYPE_IN_MACRO(500);
@@ -52,6 +53,7 @@ void func() {
 /**** IWYU_SUMMARY
 
 tests/cxx/macro_location.h should add these lines:
+#include "tests/cxx/macro_location-d1.h"
 #include "tests/cxx/macro_location-i3.h"
 #include "tests/cxx/macro_location-i4.h"
 #include "tests/cxx/macro_location-i5.h"
@@ -62,8 +64,9 @@ tests/cxx/macro_location.h should remove these lines:
 
 The full include-list for tests/cxx/macro_location.h:
 #include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/macro_location-d1.h"  // for NewClass, OtherClass
 #include "tests/cxx/macro_location-d2.h"  // for ARRAYSIZE, CREATE_VAR, DECLARE_INDIRECT, NEW_CLASS, USE_CLASS
-#include "tests/cxx/macro_location-d4.h"  // for DECLARE_AND_USE_CLASS, LOG_INFO
+#include "tests/cxx/macro_location-d4.h"  // for DECLARE_AND_USE_CLASS, LOG_INFO, Logger
 #include "tests/cxx/macro_location-i3.h"  // for Foo
 #include "tests/cxx/macro_location-i4.h"  // for ConcatClass, ConcatFwdDeclClass (ptr only)
 #include "tests/cxx/macro_location-i5.h"  // for UNNAMED_TYPE_IN_MACRO

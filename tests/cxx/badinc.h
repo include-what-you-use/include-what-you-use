@@ -392,7 +392,7 @@ tests/cxx/badinc.h should remove these lines:
 - template <typename T> class I2_TypedefOnly_Class;  // lines XX-XX
 
 The full include-list for tests/cxx/badinc.h:
-#include <errno.h>  // for errno
+#include <errno.h>  // for __errno_location, errno
 #include <stdio.h>  // for NULL, printf
 #include <queue>  // for queue
 #include <set>  // for set

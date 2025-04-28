@@ -123,11 +123,11 @@ void MacroArgPointerArithmetic() {
 // IWYU: IndirectClass needs a declaration
 static IndirectClass* table;
 
-// IWYU: IndirectClass is...*indirect.h
+// Use is entirely contained in macro expansion.
 #define GET_NTH(n) (*(table + n))
 
 void MacroBodyPointerArithmetic() {
-  // Use is entirely contained in macro.
+  // IWYU: IndirectClass is...*indirect.h
   (void)GET_NTH(10);
 }
 

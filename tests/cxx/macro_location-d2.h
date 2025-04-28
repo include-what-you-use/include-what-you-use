@@ -9,8 +9,8 @@
 
 #include "tests/cxx/macro_location-d1.h"
 
-// The forward-declare is a hint that the use should be attributed
-// to users of the DECLARE_INDIRECT macro, not this file.
+// The forward-declare should get removed as the use of the macro
+// is attributed to the users of DECLARE_INDIRECT macro, not this file.
 class IndirectClass;
 
 #define DECLARE_INDIRECT(name) IndirectClass name;
@@ -39,6 +39,12 @@ class IndirectClass;
 
 /**** IWYU_SUMMARY
 
-(tests/cxx/macro_location-d2.h has correct #includes/fwd-decls)
+tests/cxx/macro_location-d2.h should add these lines:
+
+tests/cxx/macro_location-d2.h should remove these lines:
+- #include "tests/cxx/macro_location-d1.h"  // lines XX-XX
+- class IndirectClass;  // lines XX-XX
+
+The full include-list for tests/cxx/macro_location-d2.h:
 
 ***** IWYU_SUMMARY */
