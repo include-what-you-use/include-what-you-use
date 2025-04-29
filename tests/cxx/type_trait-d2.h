@@ -23,6 +23,7 @@ using DerivedRefNonProviding = Derived&;
 using DerivedArrayNonProviding = Derived[];
 using ClassRefNonProviding = Class&;
 using ClassConstRefNonProviding = const Class&;
+using Union1NonProviding = Union1;
 using Union1RefNonProviding = Union1&;
 using Union1PtrRefNonProviding = Union1*&;
 

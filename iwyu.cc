@@ -2334,6 +2334,149 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
         return true;
       }
+      case TypeTrait::TT_IsTriviallyConstructible: {
+        if (lhs_type->isRecordType()) {
+          // Seems like __is_trivially_constructible may return true only for
+          // default and copy construction before C++20. In C++20, apparently
+          // after P0960, it may return true for aggregate initialization even
+          // with multiple argument types. It is better to report the types even
+          // in the older language modes to avoid possible UB in user's code
+          // after switching to a newer standard.
+          // Unions cannot have multiple initializer expressions.
+          if (expr->getNumArgs() > 2 && lhs_type->isUnionType())
+            return true;
+          // Check arguments.
+          for (const TypeSourceInfo* arg : expr->getArgs()) {
+            if (arg->getType()->isVoidType())
+              return true;
+          }
+          // Report arguments.
+          for (const TypeSourceInfo* arg : expr->getArgs()) {
+            const Type* arg_type = arg->getType().getTypePtr();
+            // Unions don't take part in inheritance, and user-defined
+            // conversions of unions are not trivial operations.
+            if (RemovePointersAndReferences(arg_type)
+                    ->isStructureOrClassType()) {
+              ReportTypeUse(CurrentLoc(), arg_type,
+                            DerefKind::RemoveRefsAndPtr);
+            }
+          }
+          return true;
+        }
+
+        // The trait may return true in C++20 for the array aggregate init.
+        if (const ArrayType* array_type = lhs_type->getAsArrayTypeUnsafe()) {
+          if (const auto* const_array_type =
+                  dyn_cast<ConstantArrayType>(array_type)) {
+            if (const_array_type->getZExtSize() + 1 < expr->getNumArgs())
+              return true;
+          }
+          QualType elem_type = array_type->getElementType();
+          // There are 3 kinds of trivially constructible arrays which should be
+          // considered: array of classes, of pointers to classes, and of member
+          // pointers.
+          // Class type elements may be trivially initialized from arguments
+          // of the same or a derived type. Unions cannot have derived types.
+          if (elem_type->isStructureOrClassType()) {
+            // Check arguments.
+            for (const TypeSourceInfo* arg : drop_begin(expr->getArgs())) {
+              if (!RemoveReference(arg->getType())->isStructureOrClassType())
+                return true;
+            }
+            // Report arguments.
+            for (const TypeSourceInfo* arg : drop_begin(expr->getArgs())) {
+              const Type* arg_type = arg->getType().getTypePtr();
+              ReportTypeUse(CurrentLoc(), arg_type, DerefKind::RemoveRefs);
+            }
+            return true;
+          }
+          // Any object pointer is convertible to void*, no full type needed.
+          // User-defined conversions are not trivial.
+          if (elem_type->isVoidPointerType())
+            return true;
+          // Check arguments.
+          for (const TypeSourceInfo* arg : drop_begin(expr->getArgs())) {
+            QualType arg_type = arg->getType();
+            // Conversion functions of class/struct/union types are not trivial.
+            if (RemoveReference(arg_type)->isRecordType())
+              return true;
+            if (!IsConvertible(arg_type, elem_type, CurrentLoc(),
+                               compiler()->getSema())) {
+              return true;
+            }
+          }
+          // Report types.
+          for (const TypeSourceInfo* arg : drop_begin(expr->getArgs())) {
+            QualType arg_type = arg->getType();
+            QualType arg_deref_type = RemoveReference(arg_type);
+            if (elem_type->isPointerType()) {
+              // No full type needed if the pointed-to types are the same.
+              const Type* arg_pointee_type = GetCanonicalType(
+                  arg_deref_type->getPointeeOrArrayElementType());
+              const Type* elem_pointee_type =
+                  GetCanonicalType(elem_type->getPointeeType().getTypePtr());
+              if (arg_pointee_type == elem_pointee_type)
+                continue;
+              ReportTypeUse(CurrentLoc(), arg_type.getTypePtr(),
+                            DerefKind::RemoveRefsAndPtr);
+            } else if (const auto* elem_mem_ptr_type =
+                           elem_type->getAs<MemberPointerType>()) {
+              const Type* elem_qualifier =
+                  elem_mem_ptr_type->getQualifier()->getAsType();
+              if (const auto* arg_mem_ptr_type =
+                      arg_deref_type->getAs<MemberPointerType>()) {
+                const Type* arg_class = GetCanonicalType(
+                    arg_mem_ptr_type->getQualifier()->getAsType());
+                if (arg_class != GetCanonicalType(elem_qualifier)) {
+                  ReportTypeUse(CurrentLoc(), elem_qualifier, DerefKind::None);
+                  return true;
+                }
+              }
+            }
+          }
+          return true;
+        }
+
+        // The remaining cases involve exactly 2 arguments.
+        if (expr->getNumArgs() != 2)
+          return true;
+        QualType lhs_deref_type = RemoveReference(lhs_qual_type);
+        QualType rhs_deref_type = RemoveReference(rhs_qual_type);
+        if (lhs_deref_type->isStructureOrClassType() &&
+            rhs_deref_type->isStructureOrClassType()) {
+          // Direct reference binding cases. See [dcl.init.ref].
+          // Only (maybe, potential) derived-to-base binding cases should be
+          // taken into account.
+          if (GetCanonicalType(lhs_deref_type.getTypePtr()) ==
+              GetCanonicalType(rhs_deref_type.getTypePtr())) {
+            return true;
+          }
+          bool lvalue_bindable = lhs_type->isLValueReferenceType() &&
+                                 rhs_type->isLValueReferenceType();
+          bool rvalue_bindable =
+              RefCanBindToTemp(lhs_type) && rhs_type->isRValueReferenceType();
+          if (!lvalue_bindable && !rvalue_bindable)
+            return true;
+          if (lhs_type->getPointeeType().isAtLeastAsQualifiedAs(
+                  rhs_type->getPointeeType(), compiler()->getASTContext())) {
+            ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
+          }
+        } else if (!lhs_type->isReferenceType() || RefCanBindToTemp(lhs_type)) {
+          // Pointer and pointer-to-member conversions.
+          if (IsDerivedToBasePtrConvertible(rhs_deref_type, lhs_deref_type)) {
+            ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefsAndPtr);
+          } else if (IsBaseToDerivedMemPtrConvertible(
+                         rhs_deref_type.getTypePtr(),
+                         lhs_deref_type.getTypePtr(), compiler()->getSema())) {
+            const auto* lhs_mem_ptr_type =
+                lhs_deref_type->castAs<MemberPointerType>();
+            ReportTypeUse(CurrentLoc(),
+                          lhs_mem_ptr_type->getQualifier()->getAsType(),
+                          DerefKind::None);
+          }
+        }
+        return true;
+      }
       case TypeTrait::BTT_IsLayoutCompatible:
         // C++20 [basic.types.general]p.11: two types cv1 T1 and cv2 T2 are
         // layout-compatible types if T1 and T2 are the same type,
