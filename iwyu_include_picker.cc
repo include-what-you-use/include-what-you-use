@@ -1374,9 +1374,8 @@ vector<string> ExtendMappingFileSearchPath(const vector<string>& search_path,
                                            const string& new_path) {
   CHECK_(IsAbsolutePath(new_path));
 
-  if (std::find(search_path.begin(),
-                search_path.end(),
-                new_path) == search_path.end()) {
+  if (find(search_path.begin(), search_path.end(), new_path) ==
+      search_path.end()) {
     vector<string> extended(search_path);
     extended.push_back(new_path);
     return extended;
