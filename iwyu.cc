@@ -2673,6 +2673,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  bool VisitArrayType(ArrayType* type) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (!compiler()->getLangOpts().CPlusPlus) {
+      const Type* elem_type = type->getElementType().getTypePtr();
+      ReportTypeUse(CurrentLoc(), elem_type, DerefKind::None);
+    }
+    return true;
+  }
+
   //------------------------------------------------------------
   // Visitors of attributes.
 
