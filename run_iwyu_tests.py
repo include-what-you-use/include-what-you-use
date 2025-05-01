@@ -169,6 +169,9 @@ if __name__ == '__main__':
   @GenerateTests(rootdir='tests/driver', pattern='*.c')
   class driver(unittest.TestCase): pass
 
+  @GenerateTests(rootdir='tests/bugs', pattern='*.cc')
+  class bugs(unittest.TestCase): pass
+
   if runner_args.list_tests:
     exit(PrintLoadedTests())
   elif runner_args.list_test_files:
