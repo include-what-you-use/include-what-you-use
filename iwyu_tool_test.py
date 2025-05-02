@@ -430,6 +430,24 @@ class CompilationDBTests(unittest.TestCase):
         self.assertEqual('/c057f113f69311e990bf54a05050d914/foobar/Test.cpp',
                          entry['file'])
 
+    def test_slice_compilation_db(self):
+        file = os.path.realpath(__file__)
+
+        compilation_db = [
+            {
+                "file": file,
+            }
+        ]
+
+        new_db = iwyu_tool.slice_compilation_db(compilation_db, [file], [])
+        self.assertEqual(new_db, compilation_db)
+
+        new_db = iwyu_tool.slice_compilation_db(compilation_db, ["abc.cpp"], [])
+        self.assertEqual(new_db, [])
+
+        new_db = iwyu_tool.slice_compilation_db(compilation_db, [file], [file])
+        self.assertEqual(new_db, [])
+
     def test_unwrap_compile_command(self):
         """ Wrapping compile commands should be unwrapped. """
         compilation_db = {

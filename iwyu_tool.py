@@ -340,13 +340,14 @@ def fixup_compilation_db(compilation_db):
     return compilation_db
 
 
-def slice_compilation_db(compilation_db, selection):
+def slice_compilation_db(compilation_db, selection, exclude):
     """ Return a new compilation database reduced to the paths in selection. """
     if not selection:
         return compilation_db
 
     # Canonicalize selection paths to match compilation database.
     selection = [os.path.realpath(p) for p in selection]
+    exclude = [os.path.realpath(p) for p in exclude]
 
     new_db = []
     for path in selection:
@@ -361,6 +362,14 @@ def slice_compilation_db(compilation_db, selection):
             continue
 
         new_db.extend(found)
+
+    for path in exclude:
+        if not os.path.exists(path):
+            print('warning: excluded path \'%s\' not found on disk.' % path,
+                  file=sys.stderr)
+            continue
+
+        new_db = [e for e in new_db if not is_subpath_of(e['file'], path)]
 
     return new_db
 
@@ -426,7 +435,7 @@ def execute(invocations, verbose, formatter, jobs, max_load_average=0):
     return exit_code
 
 
-def main(compilation_db_path, source_files, verbose, formatter, jobs,
+def main(compilation_db_path, source_files, exclude, verbose, formatter, jobs,
          max_load_average, extra_args):
     """ Entry point. """
 
@@ -450,7 +459,7 @@ def main(compilation_db_path, source_files, verbose, formatter, jobs,
         return 1
 
     compilation_db = fixup_compilation_db(compilation_db)
-    compilation_db = slice_compilation_db(compilation_db, source_files)
+    compilation_db = slice_compilation_db(compilation_db, source_files, exclude)
 
     # Transform compilation db entries into a list of IWYU invocations.
     invocations = [
@@ -506,6 +515,9 @@ def _bootstrap(sys_argv):
                               'is greater than the provided value'))
     parser.add_argument('-p', metavar='<build-path>', required=True,
                         help='Compilation database path', dest='dbpath')
+    parser.add_argument('-e', '--exclude', action='append', default=[],
+                        help=('Do not run IWYU on source files (or directories) '
+                              'below this path.'))
     parser.add_argument('source', nargs='*',
                         help=('Zero or more source files (or directories) to '
                               'run IWYU on. Defaults to all in compilation '
@@ -525,7 +537,7 @@ def _bootstrap(sys_argv):
     if jobs == 0:
         jobs = os.cpu_count() or 1
 
-    return main(args.dbpath, args.source, args.verbose,
+    return main(args.dbpath, args.source, args.exclude, args.verbose,
                 FORMATTERS[args.output_format], jobs, args.load, extra_args)
 
 
