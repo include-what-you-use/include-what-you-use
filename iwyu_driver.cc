@@ -389,8 +389,8 @@ bool ExecuteAction(int argc,
   // FIXME: This is copied from cc1_main.cpp; simplify and eliminate.
 
   // Create a compiler instance to handle the actual work.
-  unique_ptr<CompilerInstance> compiler(new CompilerInstance);
-  compiler->setInvocation(invocation);
+  unique_ptr<CompilerInstance> compiler(
+      new CompilerInstance(std::move(invocation)));
   // It's tempting to reuse the DiagnosticsEngine we created above, but we need
   // to create a new one to get the options produced by the compiler invocation.
   compiler->createDiagnostics(*fs);
