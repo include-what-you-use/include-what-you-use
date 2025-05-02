@@ -450,8 +450,9 @@ static CStdLib DeriveCStdLib() {
   return CStdLib::Glibc;
 }
 
-static CXXStdLib DeriveCXXStdLib(const ToolChain& toolchain) {
-  if (GlobalFlags().no_default_mappings)
+static CXXStdLib DeriveCXXStdLib(const CompilerInstance& compiler,
+                                 const ToolChain& toolchain) {
+  if (GlobalFlags().no_default_mappings || !compiler.getLangOpts().CPlusPlus)
     return CXXStdLib::None;
   if (GlobalFlags().HasExperimentalFlag("clang_mappings"))
     return CXXStdLib::ClangSymbols;
@@ -477,7 +478,7 @@ void InitGlobals(CompilerInstance& compiler, const ToolChain& toolchain) {
 
   RegexDialect regex_dialect = GlobalFlags().regex_dialect;
   CStdLib cstdlib = DeriveCStdLib();
-  CXXStdLib cxxstdlib = DeriveCXXStdLib(toolchain);
+  CXXStdLib cxxstdlib = DeriveCXXStdLib(compiler, toolchain);
   include_picker = new IncludePicker(regex_dialect, cstdlib, cxxstdlib);
 
   function_calls_full_use_cache = new FullUseCache;
