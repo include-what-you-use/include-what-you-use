@@ -13,7 +13,7 @@ defaults:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
 
@@ -24,7 +24,7 @@ jobs:
       - name: Install prerequisites
         run: |
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy$LLVM_TAG main"
+          sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble$LLVM_TAG main"
           sudo apt update
           # Remove any base dist LLVM/Clang installations
           sudo apt remove -y \
