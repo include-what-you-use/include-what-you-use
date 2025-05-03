@@ -1,4 +1,4 @@
-//===--- 169/type.h - test input file for iwyu ----------------------------===//
+//===--- type.h - test input file for iwyu --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
