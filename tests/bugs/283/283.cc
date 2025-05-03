@@ -1,4 +1,4 @@
-//===--- 283/283.cc - test input file for iwyu ----------------------------===//
+//===--- 283.cc - test input file for iwyu --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
