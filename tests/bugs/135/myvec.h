@@ -1,4 +1,4 @@
-//===--- 135/myvec.h - test input file for iwyu ---------------------------===//
+//===--- myvec.h - test input file for iwyu -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

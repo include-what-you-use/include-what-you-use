@@ -1,4 +1,4 @@
-//===--- 135/135.cc - test input file for iwyu ----------------------------===//
+//===--- 135.cc - test input file for iwyu --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
