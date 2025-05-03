@@ -1,4 +1,4 @@
-//===--- BaseClass.h - iwyu test ------------------------------------------===//
+//===--- baseclass.h - iwyu test ------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
