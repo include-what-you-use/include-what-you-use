@@ -9,8 +9,8 @@
 
 // IWYU_XFAIL
 
-#include "fooA.h"
-#include "fooB.h"
+#include "fooa.h"
+#include "foob.h"
 
 int main() {
   auto pFooB{getPointerFooB()};
