@@ -1,4 +1,4 @@
-//===--- NumGetter.h - iwyu test ------------------------------------------===//
+//===--- int_wrapper_foo.h - iwyu test ------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-template <typename T>
-struct IntegerWrapper {};
-
-template <typename T>
-struct NumGetter {
-  int GetNum() {
-    return IntegerWrapper<T>::num;
-  }
+template <>
+struct IntegerWrapper<Foo> {
+  static constexpr int num = Foo::num;
 };
