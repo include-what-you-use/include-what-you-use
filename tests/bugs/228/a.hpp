@@ -1,4 +1,4 @@
-//===--- 228/a.hpp - test input file for iwyu -----------------------------===//
+//===--- a.hpp - test input file for iwyu ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
