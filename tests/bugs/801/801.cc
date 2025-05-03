@@ -13,9 +13,9 @@ struct Foo {
   static constexpr int num = 10;
 };
 
-#include "NumGetter.h"
+#include "num_getter.h"
 
-#include "IntegerWrapperFoo.h"
+#include "int_wrapper_foo.h"
 
 int dummy() {
   NumGetter<Foo> x;
