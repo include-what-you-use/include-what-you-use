@@ -29,7 +29,6 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Redeclarable.h"
-#include "clang/Sema/Sema.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
@@ -41,6 +40,10 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
+#include "clang/Sema/Initialization.h"
+#include "clang/Sema/Ownership.h"
+#include "clang/Sema/Sema.h"
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
@@ -83,10 +86,12 @@ using clang::DependentTemplateName;
 using clang::DependentTemplateSpecializationType;
 using clang::ElaboratedType;
 using clang::ElaboratedTypeKeyword;
+using clang::EnterExpressionEvaluationContext;
 using clang::EnumDecl;
 using clang::EnumType;
 using clang::ExplicitCastExpr;
 using clang::Expr;
+using clang::ExprResult;
 using clang::ExprWithCleanups;
 using clang::FunctionDecl;
 using clang::FunctionTemplateDecl;
@@ -94,6 +99,9 @@ using clang::FunctionTemplateSpecializationInfo;
 using clang::FunctionType;
 using clang::IdentifierInfo;
 using clang::ImplicitCastExpr;
+using clang::InitializationKind;
+using clang::InitializationSequence;
+using clang::InitializedEntity;
 using clang::InjectedClassNameType;
 using clang::LValueReferenceType;
 using clang::MemberExpr;
@@ -102,6 +110,7 @@ using clang::NamedDecl;
 using clang::NamespaceDecl;
 using clang::NestedNameSpecifier;
 using clang::ObjCObjectType;
+using clang::OpaqueValueExpr;
 using clang::OptionalFileEntryRef;
 using clang::OverloadExpr;
 using clang::PointerType;
@@ -1767,6 +1776,31 @@ bool IsBaseToDerivedMemPtrConvertible(const Type* maybe_base_mem_ptr_type,
     return false;
   return derived_mem_type.isAtLeastAsQualifiedAs(base_mem_type,
                                                  base_decl->getASTContext());
+}
+
+bool IsConvertible(QualType from,
+                   QualType to,
+                   SourceLocation conv_loc,
+                   Sema& sema) {
+  // Taken from clang/lib/Sema/SemaExprCXX.cpp (see e.g.
+  // CheckConvertibilityForTypeTraits).
+  if (from->isObjectType() || from->isFunctionType())
+    from = sema.Context.getRValueReferenceType(from);
+  OpaqueValueExpr from_expr{conv_loc, from.getNonLValueExprType(sema.Context),
+                            Expr::getValueKindForType(from)};
+  Expr* from_expr_ptr = &from_expr;
+  EnterExpressionEvaluationContext unevaluated{
+      sema, Sema::ExpressionEvaluationContext::Unevaluated};
+  Sema::SFINAETrap sfinae_trap{sema, true};
+  InitializedEntity to_entity = InitializedEntity::InitializeTemporary(to);
+  InitializationKind init_kind =
+      InitializationKind::CreateCopy(conv_loc, conv_loc);
+  InitializationSequence init{sema, to_entity, init_kind, from_expr_ptr};
+  if (init.Failed())
+    return false;
+
+  ExprResult result = init.Perform(sema, to_entity, init_kind, from_expr_ptr);
+  return !result.isInvalid() && !sfinae_trap.hasErrorOccurred();
 }
 
 // --- Utilities for Stmt.

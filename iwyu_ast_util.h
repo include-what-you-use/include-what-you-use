@@ -902,6 +902,14 @@ bool IsBaseToDerivedMemPtrConvertible(const clang::Type* base_mem_ptr_type,
                                       const clang::Type* derived_mem_ptr_type,
                                       clang::Sema&);
 
+// Checks whether an object of the type 'to' may be copy-initialized from
+// an object of the type 'from'. 'conv_loc' must be valid, otherwise clang may
+// crash on instantiation of a class template specialization for 'from' type.
+bool IsConvertible(clang::QualType from,
+                   clang::QualType to,
+                   clang::SourceLocation conv_loc,
+                   clang::Sema&);
+
 // --- Utilities for Stmt.
 
 // Returns true if the given expr is '&<something>'.
