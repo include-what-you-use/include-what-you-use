@@ -139,6 +139,7 @@
 #include "iwyu_use_flags.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
@@ -200,6 +201,7 @@ using clang::ClassTemplateSpecializationDecl;
 using clang::CleanupAttr;
 using clang::CompilerInstance;
 using clang::ConceptSpecializationExpr;
+using clang::ConstantArrayType;
 using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
@@ -274,6 +276,7 @@ using clang::ValueDecl;
 using clang::VarDecl;
 using clang::driver::ToolChain;
 using llvm::cast;
+using llvm::drop_begin;
 using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
@@ -2175,9 +2178,86 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         [[fallthrough]];
       case TypeTrait::TT_IsConstructible:
       case TypeTrait::TT_IsNothrowConstructible:
+        // Since C++20, these traits may evaluate to 'true' for the case
+        // of array construction. It is better to require types for such cases
+        // even in pre-C++20 mode to avoid UB in the user's code after switching
+        // to a newer standard.
         // Should not be true for the previous traits.
+        if (const ArrayType* array_type = lhs_type->getAsArrayTypeUnsafe()) {
+          // Unsafe version is fine here because the exact element type
+          // qualification is not important ('int' may be initialized from
+          // 'const int').
+          if (const auto* const_array_type =
+                  dyn_cast<ConstantArrayType>(array_type)) {
+            if (const_array_type->getZExtSize() + 1 < expr->getNumArgs())
+              return true;
+          }
+          const QualType elem_type = array_type->getElementType();
+          // The traits always evaluate to 'false' for multidimensional arrays.
+          if (elem_type->isArrayType())
+            return true;
+          // Check that all the args can be acceptable.
+          for (const TypeSourceInfo* arg : drop_begin(expr->getArgs())) {
+            const QualType arg_type = arg->getType();
+            if (arg_type->isVoidType())
+              return true;
+            // Class/union types may have conversion operators or may get them
+            // in the future.
+            if (elem_type->isRecordType())
+              continue;
+            if (RemoveReference(arg_type)->isRecordType())
+              continue;
+            if (!IsConvertible(arg_type, elem_type, CurrentLoc(),
+                               compiler()->getSema())) {
+              return true;
+            }
+          }
+          // The types are acceptable in general. Now, report the types which
+          // definition may affect the result.
+          for (const TypeSourceInfo* arg : drop_begin(expr->getArgs())) {
+            const QualType arg_qual_type = arg->getType();
+            const QualType arg_deref_type = RemoveReference(arg_qual_type);
+            if (arg_deref_type->isPointerType() ||
+                arg_deref_type->isArrayType()) {
+              if (elem_type->isVoidPointerType()) {
+                // All object pointers and arrays are convertible to void*,
+                // the complete pointed-to type is not needed.
+                continue;
+              }
+              if (elem_type->isPointerType()) {
+                // No full type needed if the pointed-to types are the same.
+                const Type* arg_pointee_type = GetCanonicalType(
+                    arg_deref_type->getPointeeOrArrayElementType());
+                const Type* elem_pointee_type =
+                    GetCanonicalType(elem_type->getPointeeType().getTypePtr());
+                if (arg_pointee_type == elem_pointee_type)
+                  continue;
+              }
+            } else if (const auto* elem_mem_ptr_type =
+                           elem_type->getAs<MemberPointerType>()) {
+              const Type* elem_class = GetCanonicalType(
+                  elem_mem_ptr_type->getQualifier()->getAsType());
+              if (const auto* arg_mem_ptr_type =
+                      arg_deref_type->getAs<MemberPointerType>()) {
+                const Type* arg_class = GetCanonicalType(
+                    arg_mem_ptr_type->getQualifier()->getAsType());
+                if (arg_class == elem_class)
+                  continue;
+              }
+              ReportTypeUse(CurrentLoc(), elem_class, DerefKind::None);
+            }
+            const Type* arg_type = arg_qual_type.getTypePtr();
+            // Unions cannot be derived but can have conversion functions.
+            ReportTypeUse(CurrentLoc(), arg_type,
+                          RemovePointersAndReferences(arg_type)->isUnionType()
+                              ? DerefKind::RemoveRefs
+                              : DerefKind::RemoveRefsAndPtr);
+          }
+          return true;
+        }
         if (expr->getNumArgs() > 2) {
-          // References and other non-class types have at most one init expr.
+          // References and other non-class non-array types have at most one
+          // init expr.
           if (!lhs_type->isRecordType())
             return true;
           // Check whether all the args can be acceptable.
