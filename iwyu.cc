@@ -2116,10 +2116,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                           DerefKind::None);
             return true;
           }
-          // Otherwise, report the rhs record type (ReportTypeUse doesn't report
-          // other kinds of types) because they may have a conversion operator
-          // to the lhs type.
-          ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
+          // Otherwise, report the rhs record type because they may have
+          // a conversion operator to the lhs type.
+          if (rhs_deref_type->isRecordType())
+            ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
         }
         return true;
       case TypeTrait::BTT_IsTriviallyAssignable: {
@@ -2247,7 +2247,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           // reported even if it is under the pointer, because an rhs type ctor
           // might take a pointer to its base class (if not a union).
           ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::RemoveRefsAndPtr);
-        } else {
+        } else if (lhs_deref_type->isRecordType()) {
           // In other cases, report the lhs type because it may contain a
           // conversion operator to the rhs type.
           ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::RemoveRefs);
