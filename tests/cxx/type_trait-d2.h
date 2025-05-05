@@ -16,6 +16,7 @@ using ClassNonProviding = Class;
 using DerivedPtrNonProviding = Derived*;
 using DerivedPtrRefNonProviding = Derived*&;
 using DerivedRefNonProviding = Derived&;
+using DerivedArrayNonProviding = Derived[];
 using ClassRefNonProviding = Class&;
 using ClassConstRefNonProviding = const Class&;
 using Union1RefNonProviding = Union1&;

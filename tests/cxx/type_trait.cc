@@ -265,6 +265,52 @@ static_assert(__is_nothrow_convertible(Derived[], Base*));
 // IWYU: Derived needs a declaration
 // IWYU: Derived is...*-i2.h
 // IWYU: Base needs a declaration
+static_assert(__is_convertible(Derived (&)[], Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(Derived (&)[], Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(Derived (&)[5], Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_nothrow_convertible(Derived (&)[5], Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Base needs a declaration
+static_assert(!__is_convertible(volatile Derived (&)[5], Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Base needs a declaration
+static_assert(!__is_nothrow_convertible(volatile Derived (&)[5], Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
+static_assert(__is_convertible(volatile Derived (&)[5], volatile Base*));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_nothrow_convertible(volatile Derived (&)[5],
+                                       // IWYU: Base needs a declaration
+                                       volatile Base*));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_convertible(DerivedArrayNonProviding&, Base*));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_nothrow_convertible(DerivedArrayNonProviding&, Base*));
+// IWYU: Base needs a declaration
+static_assert(!__is_convertible(volatile DerivedArrayNonProviding&, Base*));
+static_assert(!__is_nothrow_convertible(volatile DerivedArrayNonProviding&,
+                                        // IWYU: Base needs a declaration
+                                        Base*));
+// IWYU: Derived needs a declaration
+static_assert(!__is_convertible(Derived (&)[5], int));
+// IWYU: Derived needs a declaration
+static_assert(!__is_nothrow_convertible(Derived (&)[5], int));
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Base needs a declaration
 static_assert(__is_convertible(Derived*, Base* const&));
 // IWYU: Derived needs a declaration
 // IWYU: Derived is...*-i2.h
@@ -513,6 +559,71 @@ static_assert(__is_assignable(Base*&, DerivedPtrRefProviding));
 static_assert(__is_trivially_assignable(Base*&, DerivedPtrRefProviding));
 // IWYU: Base needs a declaration
 static_assert(__is_nothrow_assignable(Base*&, DerivedPtrRefProviding));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_assignable(Base*&, Derived (&)[5]));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_trivially_assignable(Base*&, Derived (&)[5]));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_nothrow_assignable(Base*&, Derived (&)[5]));
+// IWYU: Derived needs a declaration
+static_assert(!__is_assignable(int&, Derived (&)[5]));
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_assignable(int&, Derived (&)[5]));
+// IWYU: Derived needs a declaration
+static_assert(!__is_nothrow_assignable(int&, Derived (&)[5]));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_assignable(Base*&, Derived (&)[]));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_trivially_assignable(Base*&, Derived (&)[]));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_nothrow_assignable(Base*&, Derived (&)[]));
+// IWYU: Derived needs a declaration
+static_assert(!__is_assignable(int&, Derived (&)[]));
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_assignable(int&, Derived (&)[]));
+// IWYU: Derived needs a declaration
+static_assert(!__is_nothrow_assignable(int&, Derived (&)[]));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_assignable(Base*&, const Derived (&)[]));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_assignable(Base*&, const Derived (&)[]));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_nothrow_assignable(Base*&, const Derived (&)[]));
+// IWYU: Base needs a declaration
+static_assert(!__is_assignable(Base*&, const DerivedArrayNonProviding&));
+// IWYU: Base needs a declaration
+static_assert(!__is_trivially_assignable(Base*&,
+                                         const DerivedArrayNonProviding&));
+// IWYU: Base needs a declaration
+static_assert(!__is_nothrow_assignable(Base*&,
+                                       const DerivedArrayNonProviding&));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_assignable(const volatile Base*&,
+                              const DerivedArrayNonProviding&));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_trivially_assignable(const volatile Base*&,
+                                        const DerivedArrayNonProviding&));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*tests/cxx/type_trait-i2.h
+static_assert(__is_nothrow_assignable(const volatile Base*&,
+                                      const DerivedArrayNonProviding&));
 // IWYU: Base needs a declaration
 // IWYU: Derived needs a declaration
 static_assert(!__is_assignable(Base**&, Derived**));
@@ -1179,7 +1290,7 @@ tests/cxx/type_trait.cc should remove these lines:
 
 The full include-list for tests/cxx/type_trait.cc:
 #include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassRefProviding, DerivedPtrProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
-#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedMemPtr, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
+#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedArrayNonProviding, DerivedMemPtr, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
 #include "tests/cxx/type_trait-i1.h"  // for Base, Class, Struct, StructDerivedClass, Union1, Union2
 #include "tests/cxx/type_trait-i2.h"  // for Derived
 
