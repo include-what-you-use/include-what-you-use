@@ -2053,10 +2053,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (expr == nullptr || expr->getNumArgs() < 2)
       return true;
 
-    const Type* lhs_type = expr->getArg(0)->getType().getTypePtr();
+    QualType lhs_qual_type = expr->getArg(0)->getType();
+    const Type* lhs_type = lhs_qual_type.getTypePtr();
+    QualType rhs_qual_type;
     const Type* rhs_type = nullptr;
-    if (expr->getNumArgs() == 2)
-      rhs_type = expr->getArg(1)->getType().getTypePtr();
+    if (expr->getNumArgs() == 2) {
+      rhs_qual_type = expr->getArg(1)->getType();
+      rhs_type = rhs_qual_type.getTypePtr();
+    }
 
     // Most of the binary type traits require the types to be complete types or
     // arrays of unknown bound for compilable code. It means that compilers
@@ -2073,7 +2077,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case TypeTrait::BTT_IsNothrowAssignable:
         // TODO(bolshakov): require complete argument types here when
         // CanForwardDeclareType stops doing it.
-        if (RemoveReference(lhs_type)->isRecordType()) {
+        if (RemoveReference(lhs_qual_type)->isRecordType()) {
           // No assignment from void.
           if (rhs_type->isVoidType())
             return true;
@@ -2092,15 +2096,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           // github.com/include-what-you-use/include-what-you-use/pull/745.
         } else if (IsReferenceToModifiableLValue(lhs_type)) {
           // Scalar types can be assigned to only if they're modifiable lvalues.
-          const Type* lhs_deref_type = RemoveReference(lhs_type);
-          const Type* rhs_deref_type = RemoveReference(rhs_type);
+          const QualType lhs_deref_type = RemoveReference(lhs_qual_type);
+          const QualType rhs_deref_type = RemoveReference(rhs_qual_type);
           // For derived-to-base pointer conversion to be allowed, the derived
           // type should be complete.
           if (IsDerivedToBasePtrConvertible(rhs_deref_type, lhs_deref_type)) {
             ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefsAndPtr);
             return true;
           }
-          if (IsBaseToDerivedMemPtrConvertible(rhs_deref_type, lhs_deref_type,
+          if (IsBaseToDerivedMemPtrConvertible(rhs_deref_type.getTypePtr(),
+                                               lhs_deref_type.getTypePtr(),
                                                compiler()->getSema())) {
             const auto* lhs_mem_ptr_type =
                 lhs_deref_type->castAs<MemberPointerType>();
@@ -2122,25 +2127,27 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // involve a derived-to-base conversion.
         // TODO: check qualifiers. For example,
         // __is_trivially_assignable(volatile Base, Derived&) is always false.
-        const Type* lhs_deref_type = RemoveReference(lhs_type);
+        const QualType lhs_deref_qual_type = RemoveReference(lhs_qual_type);
+        const Type* lhs_deref_type = lhs_deref_qual_type.getTypePtr();
         if (lhs_deref_type->isStructureOrClassType()) {
           // The rhs may be the same or derived class. In both cases, its type
           // info may be needed at least to determine if the defaulted operator=
           // is not deleted.
-          if (RemoveReference(rhs_type)->isStructureOrClassType())
+          if (RemoveReference(rhs_qual_type)->isStructureOrClassType())
             ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
         } else if (lhs_deref_type->isUnionType()) {
           // Unions are specific in that they cannot take part in inheritance,
           // so the rhs may be only the same type to be trivially assignable.
-          if (RemoveReference(rhs_type) == lhs_deref_type)
+          if (RemoveReference(rhs_qual_type).getTypePtr() == lhs_deref_type)
             ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
         } else if (IsReferenceToModifiableLValue(lhs_type)) {
-          const Type* rhs_deref_type = RemoveReference(rhs_type);
-          if (IsDerivedToBasePtrConvertible(rhs_deref_type, lhs_deref_type)) {
+          const QualType rhs_deref_qual_type = RemoveReference(rhs_qual_type);
+          if (IsDerivedToBasePtrConvertible(rhs_deref_qual_type,
+                                            lhs_deref_qual_type)) {
             ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefsAndPtr);
-          } else if (IsBaseToDerivedMemPtrConvertible(rhs_deref_type,
-                                                      lhs_deref_type,
-                                                      compiler()->getSema())) {
+          } else if (IsBaseToDerivedMemPtrConvertible(
+                         rhs_deref_qual_type.getTypePtr(), lhs_deref_type,
+                         compiler()->getSema())) {
             const auto* lhs_mem_ptr_type =
                 lhs_deref_type->castAs<MemberPointerType>();
             ReportTypeUse(CurrentLoc(),
@@ -2163,7 +2170,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         if (!RefCanBindToTemp(lhs_type))
           return true;
         // No temporaries of function type.
-        if (RemoveReference(lhs_type)->isFunctionType())
+        if (RemoveReference(lhs_qual_type)->isFunctionType())
           return true;
         [[fallthrough]];
       case TypeTrait::TT_IsConstructible:
@@ -2189,6 +2196,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           return true;
         }
         swap(lhs_type, rhs_type);
+        swap(lhs_qual_type, rhs_qual_type);
         [[fallthrough]];
       case TypeTrait::BTT_IsConvertible:
       case TypeTrait::BTT_IsConvertibleTo:
@@ -2198,10 +2206,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           return true;
         if (rhs_type->isFunctionType())
           return true;
+        const QualType lhs_deref_type = RemoveReference(lhs_qual_type);
+        const QualType rhs_deref_type = RemoveReference(rhs_qual_type);
         // Only non-reference-related types can involve user-defined conversions
         // (C++17 [dcl.init.ref]).
-        if (GetCanonicalType(RemoveReference(lhs_type)) ==
-            GetCanonicalType(RemoveReference(rhs_type))) {
+        if (GetCanonicalType(lhs_deref_type.getTypePtr()) ==
+            GetCanonicalType(rhs_deref_type.getTypePtr())) {
           return true;
         }
         const bool rhs_can_bind_to_temp = RefCanBindToTemp(rhs_type);
@@ -2214,13 +2224,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // directly, or a reference which can bind to a temporary pointer
         // object.
         if (!rhs_type->isReferenceType() || rhs_can_bind_to_temp) {
-          const Type* lhs_deref_type = RemoveReference(lhs_type);
-          const Type* rhs_deref_type = RemoveReference(rhs_type);
           if (IsDerivedToBasePtrConvertible(lhs_deref_type, rhs_deref_type)) {
             ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::RemoveRefsAndPtr);
             return true;
           }
-          if (IsBaseToDerivedMemPtrConvertible(lhs_deref_type, rhs_deref_type,
+          if (IsBaseToDerivedMemPtrConvertible(lhs_deref_type.getTypePtr(),
+                                               rhs_deref_type.getTypePtr(),
                                                compiler()->getSema())) {
             const auto* rhs_mem_ptr_type =
                 rhs_deref_type->castAs<MemberPointerType>();

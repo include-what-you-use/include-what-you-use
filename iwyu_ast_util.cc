@@ -1544,9 +1544,9 @@ const NamedDecl* TypeToDeclForContent(const Type* type) {
   return TypeToDeclImpl(type, /*as_written=*/false);
 }
 
-const Type* RemoveReference(const Type* type) {
+QualType RemoveReference(QualType type) {
   if (const auto* ref_type = type->getAs<ReferenceType>())
-    return ref_type->getPointeeType().getTypePtr();
+    return ref_type->getPointeeType();
   return type;
 }
 
@@ -1709,8 +1709,8 @@ bool RefCanBindToTemp(const Type* type) {
          !referred_type.isVolatileQualified();
 }
 
-bool IsDerivedToBasePtrConvertible(const Type* derived_ptr_type,
-                                   const Type* base_ptr_type) {
+bool IsDerivedToBasePtrConvertible(QualType derived_ptr_type,
+                                   QualType base_ptr_type) {
   if (!derived_ptr_type->isPointerType() || !base_ptr_type->isPointerType())
     return false;
 
