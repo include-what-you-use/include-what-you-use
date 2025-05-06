@@ -782,7 +782,7 @@ bool InvolvesTypeForWhich(const clang::Type* type,
 bool IsPointerOrReferenceAsWritten(const clang::Type* type);
 
 // This function removes a reference even it is hidden by some type sugar.
-const clang::Type* RemoveReference(const clang::Type*);
+clang::QualType RemoveReference(clang::QualType);
 
 // This function doesn't "see through" type sugar.
 const clang::Type* RemoveReferenceAsWritten(const clang::Type* type);
@@ -887,8 +887,8 @@ bool RefCanBindToTemp(const clang::Type*);
 // Returns true when the arguments are pointer types referring to classes or
 // structs related by direct inheritance. Also checks that their qualifiers
 // allow the conversion.
-bool IsDerivedToBasePtrConvertible(const clang::Type* derived_ptr_type,
-                                   const clang::Type* base_ptr_type);
+bool IsDerivedToBasePtrConvertible(clang::QualType derived_ptr_type,
+                                   clang::QualType base_ptr_type);
 
 // Pointers to members of a class can be implicitly converted to pointers
 // to members of its derived class (looks like the opposite to the conventional
