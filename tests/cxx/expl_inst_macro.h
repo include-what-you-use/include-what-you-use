@@ -15,6 +15,11 @@
 
 /**** IWYU_SUMMARY
 
-(tests/cxx/expl_inst_macro.h has correct #includes/fwd-decls)
+tests/cxx/expl_inst_macro.h should add these lines:
+
+tests/cxx/expl_inst_macro.h should remove these lines:
+- #include <iostream>  // lines XX-XX
+
+The full include-list for tests/cxx/expl_inst_macro.h:
 
 ***** IWYU_SUMMARY */

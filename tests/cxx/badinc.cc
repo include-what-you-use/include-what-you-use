@@ -1140,6 +1140,7 @@ int main() {
   // still detect that operator<< is being used here, and not in the
   // macro-definition file.
   // IWYU: I1_MACRO_LOGGING_CLASS is...*badinc-i1.h
+  // IWYU: I2_OperatorDefinedInI1Class is...*badinc-i2.h
   // IWYU: I2_OperatorDefinedInI1Class::operator<< is...*badinc-i1.h
   I1_MACRO_LOGGING_CLASS << 1;
 
@@ -1391,8 +1392,10 @@ int main() {
   (void)(i1_class_array);
   d1_i1_typedef.a();
   D1_I1_Typedef().a();
+  // IWYU: I4_Function is...*badinc-i4.h
   MACRO_CALLING_I4_FUNCTION;
   // IWYU: MACRO_CALLING_I6_FUNCTION is...*badinc-i1.h
+  // IWYU: I6_Function is...*badinc-i6.h
   MACRO_CALLING_I6_FUNCTION;
   // IWYU: kI1ConstInt is...*badinc-i1.h
   (void)(kI1ConstInt);
@@ -1704,8 +1707,9 @@ int main() {
   // IWYU: I1_Class needs a declaration
   if (I1_Class* i = NULL) i = NULL;
 
-  // Test some macros, including one we shouldn't mark as in-use.
+  // Test some macros, including one we should mark as in-use.
   // IWYU: MACRO_CALLING_I2_FUNCTION is...*badinc-i2.h
+  // IWYU: I2_Function is...*badinc-i2.h
   MACRO_CALLING_I2_FUNCTION;
   // Here are some uses of UNUSED_MACRO that we should not find:
   /*
@@ -1811,6 +1815,8 @@ tests/cxx/badinc.cc should add these lines:
 #include <stddef.h>
 #include <list>
 #include "tests/cxx/badinc-i1.h"
+#include "tests/cxx/badinc-i4.h"
+#include "tests/cxx/badinc-i6.h"
 class D2_Class;
 class D2_ForwardDeclareClass;
 class D2_Subclass;
@@ -1846,6 +1852,8 @@ The full include-list for tests/cxx/badinc.cc:
 #include "tests/cxx/badinc-d1.h"  // for D1CopyClassFn, D1Function, D1_Class, D1_CopyClass, D1_Enum, D1_I1_Typedef, D1_StructPtr, D1_Subclass, D1_TemplateClass, D1_TemplateStructWithDefaultParam, MACRO_CALLING_I4_FUNCTION
 #include "tests/cxx/badinc-d4.h"  // for D4_ClassForOperator, operator<<
 #include "tests/cxx/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_ClassPtr, I1_Enum, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns5, kI1ConstInt, operator==
+#include "tests/cxx/badinc-i4.h"  // for I4_Function
+#include "tests/cxx/badinc-i6.h"  // for I6_Function
 #include "tests/cxx/badinc2.c"
 class D2_Class;
 class D2_ForwardDeclareClass;

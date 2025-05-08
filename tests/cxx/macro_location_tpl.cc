@@ -7,10 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Expands on macro_location test case to also cover template scenarios.  Macro
-// uses are attributed to spelling location, but forward-declarations of primary
-// templates also work as author intent hints for template specializations used
-// inside the macro.
+// Expands on macro_location test case to also cover template scenarios. All
+// macro uses are attributed to expansion location.
 
 // IWYU_ARGS: -I .
 
@@ -40,7 +38,7 @@ tests/cxx/macro_location_tpl.cc should remove these lines:
 - #include "tests/cxx/macro_location_tpl-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/macro_location_tpl.cc:
-#include "tests/cxx/macro_location_tpl-d2.h"  // for ExpansionTemplate, expansion_template
+#include "tests/cxx/macro_location_tpl-d2.h"  // for ExpansionTemplate, SpellingTemplate, expansion_template, spelling_template
 #include "tests/cxx/macro_location_tpl-i1.h"  // for CLASS_TEMPLATE_SPEC_EXPANSION, CLASS_TEMPLATE_SPEC_SPELLING, FUNC_TEMPLATE_SPEC_EXPANSION, FUNC_TEMPLATE_SPEC_SPELLING
 
 ***** IWYU_SUMMARY */
