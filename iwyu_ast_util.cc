@@ -1760,8 +1760,7 @@ bool IsBaseToDerivedMemPtrConvertible(const Type* maybe_base_mem_ptr_type,
   // The unqualified canonical member types should be the same except the known
   // acceptable differences in 'noexcept' specifier of member functions.
   if (base_mem_type->isFunctionProtoType()) {
-    QualType converted{};
-    if (sema.IsFunctionConversion(base_mem_type, derived_mem_type, converted))
+    if (sema.IsFunctionConversion(base_mem_type, derived_mem_type))
       return true;
   }
   if (base_mem_type.getTypePtr() != derived_mem_type.getTypePtr())
