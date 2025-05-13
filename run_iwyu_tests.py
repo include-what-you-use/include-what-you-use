@@ -166,11 +166,14 @@ if __name__ == '__main__':
     iwyu_test_util.SetIwyuPath(additional_args[0])
 
   parser = argparse.ArgumentParser(add_help=False, usage=argparse.SUPPRESS)
+  parser.add_argument('-x', '--extra-suite', dest='extra_suites',
+                      action='append', default=[])
+
   group = parser.add_mutually_exclusive_group()
   group.add_argument('--list', dest='list_tests', action='store_true')
   group.add_argument('--list-test-files', action='store_true')
   group.add_argument('--run-test-file')
-  (runner_args, _) = parser.parse_known_args(unittest_args)
+  (runner_args, unittest_args) = parser.parse_known_args(unittest_args)
 
   if runner_args.run_test_file:
     exit(RunTestFile(runner_args.run_test_file))
@@ -178,6 +181,9 @@ if __name__ == '__main__':
   RegisterTestSuite('c', 'tests/c', patterns=['*.c'])
   RegisterTestSuite('cxx', 'tests/cxx', patterns=['*.cc'])
   RegisterTestSuite('driver', 'tests/driver', patterns=['*.c'])
+
+  for suite in runner_args.extra_suites:
+    RegisterTestSuite(suite, 'tests/' + suite, patterns=['*.c', '*.cc'])
 
   if runner_args.list_tests:
     exit(PrintLoadedTests())
