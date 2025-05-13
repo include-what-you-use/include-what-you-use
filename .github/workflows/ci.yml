@@ -71,6 +71,10 @@ jobs:
           cd ./build
           CTEST_OUTPUT_ON_FAILURE=1 ctest -j 6
 
+      - name: Check if any known bugs were fixed
+        run: |
+          ./run_iwyu_tests.py --extra-suite=bugs bugs -- ./build/bin/include-what-you-use
+
       - name: Test install
         run: |
           cd ./build
