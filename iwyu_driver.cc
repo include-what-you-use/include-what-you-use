@@ -331,8 +331,9 @@ bool ExecuteAction(int argc,
   args.insert(extra_pos, extra_args.begin(), extra_args.end());
 
   IntrusiveRefCntPtr<FileSystem> fs = llvm::vfs::getRealFileSystem();
+  DiagnosticOptions diag_opts;
   IntrusiveRefCntPtr<DiagnosticsEngine> diagnostics =
-      CompilerInstance::createDiagnostics(*fs, new DiagnosticOptions);
+      CompilerInstance::createDiagnostics(*fs, diag_opts);
 
   // The Driver constructor sets the resource dir implicitly based on path,
   // which may then be overwritten by BuildCompilation based on any
