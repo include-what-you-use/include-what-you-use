@@ -64,43 +64,41 @@ def TestIwyuOnRelevantFiles(filename):
   iwyu_test_util.TestIwyuOnRelativeFile(filename, files_to_check, verbose=True)
 
 
-def GenerateTests(rootdir, patterns):
-  def _IsTestInput(name):
+def AddTestMethods(cls, rootdir, patterns):
+  """ Find all test inputs in rootdir matching the globs in patterns, and
+  register a test method on class cls based on the filename.
+  """
+  def IsTestInput(name):
     return any(fnmatch(name, p) for p in patterns)
 
-  def _AddTestFunctions(cls):
-    filenames = []
-    test_files = {}
-    for (dirpath, _, files) in os.walk(rootdir):
-      dirpath = PosixPath(dirpath)  # Normalize path separators.
-      filenames.extend(posixpath.join(dirpath, f) for f in files
-                       if _IsTestInput(f))
-    if not filenames:
-      print('No tests found in %s!' % os.path.abspath(rootdir))
-      return
+  filenames = []
+  test_files = {}
+  for (dirpath, _, files) in os.walk(rootdir):
+    dirpath = PosixPath(dirpath)  # Normalize path separators.
+    filenames.extend(posixpath.join(dirpath, f) for f in files
+                     if IsTestInput(f))
+  if not filenames:
+    print('No tests found in %s!' % os.path.abspath(rootdir))
+    return
 
-    for filename in filenames:
-      all_but_extension = os.path.splitext(filename)[0]
-      basename = os.path.basename(all_but_extension)
-      test_name = re.sub('[^0-9a-zA-Z_]', '_', basename)  # python-clean
-      test_name = 'test_%s' % test_name
+  for filename in filenames:
+    all_but_extension = os.path.splitext(filename)[0]
+    basename = os.path.basename(all_but_extension)
+    test_name = re.sub('[^0-9a-zA-Z_]', '_', basename)  # python-clean
+    test_name = 'test_%s' % test_name
 
-      while hasattr(cls, test_name):   # already have a class with that name
-        test_name += '2'               # just append a suffix :-)
+    while hasattr(cls, test_name):   # already have a class with that name
+      test_name += '2'               # just append a suffix :-)
 
-      setattr(cls, test_name, lambda x, f=filename: TestIwyuOnRelevantFiles(f))
+    setattr(cls, test_name, lambda x, f=filename: TestIwyuOnRelevantFiles(f))
 
-      if iwyu_test_util.IsTestExpectedToFail(filename):
-        test_item = getattr(cls, test_name)
-        unittest.expectedFailure(test_item)
+    if iwyu_test_util.IsTestExpectedToFail(filename):
+      test_item = getattr(cls, test_name)
+      unittest.expectedFailure(test_item)
 
-      test_files[test_name] = filename
+    test_files[test_name] = filename
 
-    setattr(cls, 'test_files', test_files)
-
-    return cls
-
-  return _AddTestFunctions
+  setattr(cls, 'test_files', test_files)
 
 
 def EnumerateLoadedTests():
@@ -148,6 +146,20 @@ def RunTestFile(cc_file):
   return 0
 
 
+def RegisterTestSuite(name, rootdir, patterns):
+  """ Register a test suite for all test inputs in rootdir matching patterns.
+  """
+  # Dynamically create a class type derived from unittest.TestCase.
+  suite_class = type(name, (unittest.TestCase,), {})
+
+  # Dynamically create test methods based on test input files in root dir.
+  AddTestMethods(suite_class, rootdir, patterns)
+
+  # Register the new class with the current module, so unittest dynamic loader
+  # will find it.
+  setattr(sys.modules[__name__], suite_class.__name__, suite_class)
+
+
 if __name__ == '__main__':
   unittest_args, additional_args = Partition(sys.argv, '--')
   if additional_args:
@@ -163,14 +175,9 @@ if __name__ == '__main__':
   if runner_args.run_test_file:
     exit(RunTestFile(runner_args.run_test_file))
 
-  @GenerateTests(rootdir='tests/c', patterns=['*.c'])
-  class c(unittest.TestCase): pass
-
-  @GenerateTests(rootdir='tests/cxx', patterns=['*.cc'])
-  class cxx(unittest.TestCase): pass
-
-  @GenerateTests(rootdir='tests/driver', patterns=['*.c'])
-  class driver(unittest.TestCase): pass
+  RegisterTestSuite('c', 'tests/c', patterns=['*.c'])
+  RegisterTestSuite('cxx', 'tests/cxx', patterns=['*.cc'])
+  RegisterTestSuite('driver', 'tests/driver', patterns=['*.c'])
 
   if runner_args.list_tests:
     exit(PrintLoadedTests())
