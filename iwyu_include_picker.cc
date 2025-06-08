@@ -11,6 +11,7 @@
 
 #include <algorithm>                    // for find
 #include <cstddef>                      // for size_t
+#include <ctime>                        // for time, time_t, etc.
 // not hash_map: it's not as portable and needs hash<string>.
 #include <map>                          // for map, map<>::mapped_type, etc
 #include <memory>
@@ -47,6 +48,8 @@
 using clang::OptionalFileEntryRef;
 using llvm::MemoryBuffer;
 using llvm::SourceMgr;
+using llvm::StringRef;
+using llvm::sys::fs::CD_CreateNew;
 using llvm::yaml::KeyValueNode;
 using llvm::yaml::MappingNode;
 using llvm::yaml::Node;
@@ -1453,7 +1456,81 @@ void PrintMappings(const IncludePicker::IncludeMap& map, const char* name) {
   llvm::errs() << "---\n";
 }
 
+// Mapping export support functions
+string YAMLQuoted(StringRef text) {
+  return "\"" + llvm::yaml::escape(text) + "\"";
+}
+
+string YAMLQuoted(IncludeVisibility vis) {
+  switch (vis) {
+    case kPrivate:
+      return YAMLQuoted("private");
+    case kPublic:
+      return YAMLQuoted("public");
+    case kUnusedVisibility:
+      CHECK_UNREACHABLE_("cannot export unused visibility");
+  }
+  CHECK_UNREACHABLE_("unexpected visibility");
+}
+
+string CurrentTimeString() {
+  time_t now = time(nullptr);
+  char buf[32];
+  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
+  return buf;
+}
+
+void WriteMappings(StringRef directive,
+                   const IncludeMapEntry* entries,
+                   size_t count,
+                   const string& filename) {
+  // Never overwrite existing files.
+  std::error_code error;
+  llvm::raw_fd_ostream out(filename, error, CD_CreateNew);
+  if (error) {
+    llvm::errs() << filename << ": " << error.message() << "\n";
+    return;
+  }
+
+  // Write out YAML mapping format.
+  out << "# Exported from IWYU builtin mappings at " << CurrentTimeString()
+      << "\n";
+  out << "[\n";
+  for (size_t i = 0; i < count; ++i) {
+    const IncludeMapEntry& entry = entries[i];
+    out << "  { " << YAMLQuoted(directive) << ": ["
+        << YAMLQuoted(entry.map_from) << ", "
+        << YAMLQuoted(entry.from_visibility) << ", "
+        << YAMLQuoted(entry.map_to) << ", "
+        << YAMLQuoted(entry.to_visibility)
+        << "] },\n";
+  }
+  out << "]\n";
+}
+
 }  // anonymous namespace
+
+// Write out all built-in mappings to files in dirpath.
+void ExportBuiltinMappings(const string& dirpath) {
+
+// Use a macro to generate filename from mappings array variable name.
+#define WRITE_MAPPINGS_ARRAY(directive, mappings)              \
+  WriteMappings(directive, mappings, IWYU_ARRAYSIZE(mappings), \
+                PathJoin(dirpath, #mappings ".imp"));
+
+  WRITE_MAPPINGS_ARRAY("include", libc_include_map);
+  WRITE_MAPPINGS_ARRAY("include", stdlib_c_include_map);
+  WRITE_MAPPINGS_ARRAY("include", stdlib_cpp_include_map);
+  WRITE_MAPPINGS_ARRAY("include", libstdcpp_include_map);
+  WRITE_MAPPINGS_ARRAY("include", libcxx_include_map);
+
+  WRITE_MAPPINGS_ARRAY("symbol", libc_symbol_map);
+  WRITE_MAPPINGS_ARRAY("symbol", stdlib_cxx_symbol_map);
+  WRITE_MAPPINGS_ARRAY("symbol", libstdcpp_symbol_map);
+  WRITE_MAPPINGS_ARRAY("symbol", libcxx_symbol_map);
+
+#undef WRITE_MAPPINGS_ARRAY
+}
 
 MappedInclude::MappedInclude(const string& q, const string& p)
   : quoted_include(q)
