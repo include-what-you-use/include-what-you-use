@@ -83,6 +83,7 @@ static void PrintHelp(const char* extra_msg) {
          "        multiple glob patterns.\n"
          "   --mapping_file=<filename>: gives iwyu a mapping file.\n"
          "   --no_internal_mappings: do not add iwyu's internal mappings.\n"
+         "   --export_mappings=<dirpath>: writes out all internal mappings.\n"
          "   --pch_in_code: mark the first include in a translation unit as a\n"
          "        precompiled header.  Use --pch_in_code to prevent IWYU from\n"
          "        removing necessary PCH includes.  Though Clang forces PCHs\n"
@@ -248,6 +249,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"debug", required_argument, nullptr, 'd'},
     {"regex", required_argument, nullptr, 'r'},
     {"experimental", required_argument, nullptr, 'p'},
+    {"export_mappings", required_argument, nullptr, 'E'},
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "v:c:m:d:nr";
@@ -339,6 +341,15 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         for (const string& f : exp_flags) {
           llvm::errs() << "Experimental flag enabled: '" << f << "'\n";
         }
+        break;
+      }
+      case 'E': {
+        // Handle --export_mappings immediately. We already depend on
+        // iwyu_include_picker here, and we want to run the export before the
+        // Clang/IWYU driver starts making demands for required inputs, etc.
+        string output_dirpath(optarg);
+        ExportInternalMappings(output_dirpath);
+        exit(EXIT_SUCCESS);
         break;
       }
       case -1:

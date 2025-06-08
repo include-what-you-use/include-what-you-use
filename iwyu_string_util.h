@@ -15,6 +15,7 @@
 
 #include <cctype>
 #include <cstddef>
+#include <ctime>
 #include <string>
 #include <vector>
 
@@ -218,6 +219,12 @@ inline vector<string> SplitOnWhiteSpacePreservingQuotes(
     retval.push_back(str.substr(tokstart));
   }
   return retval;
+}
+
+inline string FormatISO8601(time_t t) {
+  char buf[32];
+  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", gmtime(&t));
+  return string(buf);
 }
 
 }  // namespace include_what_you_use

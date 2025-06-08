@@ -96,6 +96,9 @@ inline bool IsSpecialFilename(llvm::StringRef name) {
 // used on an include line, e.g. lib/mytype.h or stdio.h.
 string AddQuotes(string include_name, bool angled);
 
+// Append path to dirpath.
+string PathJoin(const string& dirpath, const string& relative_path);
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_PATH_UTIL_H_
