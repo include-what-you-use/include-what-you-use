@@ -72,6 +72,9 @@ enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
 enum class CStdLib { None, ClangSymbols, Glibc };
 enum class CXXStdLib { None, ClangSymbols, Libstdcxx, Libcxx };
 
+// Write out all internal mappings to files in dirpath.
+void ExportInternalMappings(const string& dirpath);
+
 // When a symbol or file is mapped to an include, that include is represented
 // by this struct.  It always has a quoted_include and may also have a path
 // (depending on its origin).
