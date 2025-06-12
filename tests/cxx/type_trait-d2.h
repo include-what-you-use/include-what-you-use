@@ -16,6 +16,7 @@ using ClassNonProviding = Class;
 using ClassArray2NonProviding = Class[2];
 using ClassArray3NonProviding = Class[3];
 using BaseNonProviding = Base;
+using DerivedNonProviding = Derived;
 using DerivedPtrNonProviding = Derived*;
 using DerivedPtrRefNonProviding = Derived*&;
 using DerivedRefNonProviding = Derived&;
