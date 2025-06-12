@@ -2235,16 +2235,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
               }
             } else if (const auto* elem_mem_ptr_type =
                            elem_type->getAs<MemberPointerType>()) {
-              const Type* elem_class = GetCanonicalType(
-                  elem_mem_ptr_type->getQualifier()->getAsType());
+              const Type* elem_qualifier =
+                  elem_mem_ptr_type->getQualifier()->getAsType();
               if (const auto* arg_mem_ptr_type =
                       arg_deref_type->getAs<MemberPointerType>()) {
                 const Type* arg_class = GetCanonicalType(
                     arg_mem_ptr_type->getQualifier()->getAsType());
-                if (arg_class == elem_class)
+                if (arg_class == GetCanonicalType(elem_qualifier))
                   continue;
               }
-              ReportTypeUse(CurrentLoc(), elem_class, DerefKind::None);
+              ReportTypeUse(CurrentLoc(), elem_qualifier, DerefKind::None);
             }
             const Type* arg_type = arg_qual_type.getTypePtr();
             // Unions cannot be derived but can have conversion functions.

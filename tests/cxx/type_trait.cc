@@ -1511,6 +1511,18 @@ static_assert(!__is_constructible(int Derived::* [3], int Base::*&));
 // IWYU: Derived needs a declaration
 // IWYU: Derived is...*-i2.h
 static_assert(!__is_nothrow_constructible(int Derived::* [3], int Base::*&));
+// IWYU: Base needs a declaration
+static_assert(!__is_constructible(int DerivedProviding::* [3], int Base::*));
+static_assert(!__is_nothrow_constructible(int DerivedProviding::* [3],
+                                          // IWYU: Base needs a declaration
+                                          int Base::*));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_constructible(int DerivedNonProviding::* [3], int Base::*));
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_nothrow_constructible(int DerivedNonProviding::* [3],
+                                          // IWYU: Base needs a declaration
+                                          int Base::*));
 static_assert(!__is_constructible(int Class::* [3], int Class::*));
 static_assert(!__is_nothrow_constructible(int Class::* [3], int Class::*));
 static_assert(!__is_constructible(int Class::* [3], int Class::*&));
@@ -1563,8 +1575,8 @@ tests/cxx/type_trait.cc should remove these lines:
 - union Union2;  // lines XX-XX
 
 The full include-list for tests/cxx/type_trait.cc:
-#include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassRefProviding, DerivedPtrProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
-#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, BaseNonProviding, ClassArray2NonProviding, ClassArray3NonProviding, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedArrayNonProviding, DerivedMemPtr, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
+#include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassRefProviding, DerivedProviding, DerivedPtrProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
+#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, BaseNonProviding, ClassArray2NonProviding, ClassArray3NonProviding, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedArrayNonProviding, DerivedMemPtr, DerivedNonProviding, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
 #include "tests/cxx/type_trait-i1.h"  // for Base, Class, Struct, StructDerivedClass, Union1, Union2
 #include "tests/cxx/type_trait-i2.h"  // for Derived
 
