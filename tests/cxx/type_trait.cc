@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I .
+// IWYU_ARGS: -I . -Wno-deprecated-builtins
 
 #include "tests/cxx/type_trait-d1.h"
 #include "tests/cxx/type_trait-d2.h"
