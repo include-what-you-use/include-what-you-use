@@ -1561,6 +1561,449 @@ template <typename T>
 struct Tpl {};
 static_assert(!__is_constructible(Class* [5], Tpl<int>*));
 
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class));
+static_assert(!__is_trivially_constructible(Class&));
+static_assert(!__is_trivially_constructible(const Class&));
+static_assert(!__is_trivially_constructible(Class&&));
+static_assert(__is_trivially_constructible(Class*));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class[5]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class, void));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(void, Class));
+static_assert(!__is_trivially_constructible(const Class&, void));
+static_assert(!__is_trivially_constructible(void, const Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class, int));
+// Even with aggregates in C++20 mode, references are not trivially
+// constructible from unrelated types.
+static_assert(!__is_trivially_constructible(const Class&, int));
+static_assert(!__is_trivially_constructible(Class&, int));
+static_assert(!__is_trivially_constructible(int, Class&));
+static_assert(!__is_trivially_constructible(int&&, Class&));
+// Might be 'true' in C++20 mode if Class were:
+// class Class { public: Base* pb; };
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(Class, Derived*));
+// Similarly, Class might be:
+// class Class { public: Base& b; };
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(Class, Derived&));
+// Unions don't take part in inheritance, so the complete Union1 type is not
+// needed even if the traits evaluated to true.
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class, Union1*));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class, Union1&));
+// Similarly, might be 'true' in C++20 mode.
+// IWYU: Union1 is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(Union1, Derived*));
+// IWYU: Union1 is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(Union1, Derived*&));
+// Unions cannot contain reference members, but can contain Base by value.
+// IWYU: Union1 is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(Union1, Derived&));
+// IWYU: Union1 is...*-i1.h
+static_assert(!__is_trivially_constructible(Union1, Union2*));
+// The complete Class type is required despite the trait is guaranteed
+// to be false.
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class, void, void));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class, int, int));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(void, void, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(int, int, Class));
+// Might be true in C++20 mode.
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(Class, int, Derived&));
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(Class, Union1&, Derived*));
+// IWYU: Class is...*-i1.h
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(ClassNonProviding,
+                                            Union1RefNonProviding,
+                                            DerivedPtrRefNonProviding));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(ClassNonProviding,
+                                            Union1RefNonProviding,
+                                            DerivedPtrRefProviding));
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Struct is...*-i1.h
+static_assert(!__is_trivially_constructible(Class, Derived*, int, Struct*));
+// No initialization from void.
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Class, Derived*, void));
+// IWYU: Class is...*-i1.h
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Class, Void, Derived*));
+// Unions cannot have multiple items in the initializer.
+// IWYU: Union1 is...*-i1.h
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Union1, Derived*, int));
+// IWYU: Union1 is...*-i1.h
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Union1NonProviding, Derived*, int));
+// true in C++20 mode.
+// IWYU: Derived is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: StructDerivedClass is...*-i1.h
+static_assert(!__is_trivially_constructible(
+    // IWYU: Base is...*-i1.h
+    Base[3],
+    // IWYU: Derived needs a declaration
+    Derived&,
+    const Struct&,
+    StructDerivedClass&&));
+// IWYU: Derived is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: StructDerivedClass is...*-i1.h
+static_assert(!__is_trivially_constructible(
+    // IWYU: Base is...*-i1.h
+    Base[5],
+    // IWYU: Derived needs a declaration
+    Derived&,
+    const Struct&,
+    StructDerivedClass&&));
+// IWYU: Base is...*-i1.h
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(BaseNonProviding[5],
+                                            DerivedNonProviding&));
+// IWYU: Base is...*-i1.h
+static_assert(!__is_trivially_constructible(BaseNonProviding[5],
+                                            DerivedProviding&));
+// IWYU: Base is...*-i1.h
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(BaseNonProviding[5],
+                                            DerivedRefNonProviding));
+// IWYU: Base is...*-i1.h
+static_assert(!__is_trivially_constructible(BaseNonProviding[5],
+                                            DerivedRefProviding));
+// Array size is too small.
+static_assert(!__is_trivially_constructible(
+    // IWYU: Base is...*-i1.h
+    Base[2],
+    // IWYU: Derived needs a declaration
+    Derived&,
+    const Struct&,
+    StructDerivedClass&&));
+static_assert(!__is_trivially_constructible(
+    // IWYU: Class is...*-i1.h
+    ClassArray2NonProviding,
+    Struct&,
+    Struct&,
+    Struct&));
+// Might be true in C++20 mode if Struct were derived from Class.
+// IWYU: Struct is...*-i1.h
+static_assert(!__is_trivially_constructible(
+    // IWYU: Class is...*-i1.h
+    ClassArray3NonProviding,
+    Struct&,
+    Struct&,
+    Struct&));
+// The wording suggests the possibility of 'true' for arrays of unknown bound
+// despite compilers currently evaluate to 'false'.
+// See https://wg21.link/lwg3486
+// IWYU: Derived is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: StructDerivedClass is...*-i1.h
+static_assert(!__is_trivially_constructible(
+    // TODO: no need of Base type here.
+    // IWYU: Base is...*-i1.h
+    Base[],
+    // IWYU: Derived needs a declaration
+    Derived&,
+    const Struct&,
+    StructDerivedClass&&));
+// 'false' for multidimensional arrays.
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class[5][5], Struct&));
+// No trivial conversion from int to the array element even in the case
+// of aggregate classes.
+// IWYU: Base is...*-i1.h
+static_assert(!__is_trivially_constructible(Base[5], Struct&, int));
+// The same for pointers...
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class[5], Struct&, Struct*));
+/// ... and unions (because Union1 cannot be derived from Class).
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_constructible(Class[5], Struct&, Union1&));
+// Struct and Class cannot be derived from Union1.
+// IWYU: Union1 is...*-i1.h
+static_assert(!__is_trivially_constructible(Union1[2], Struct&, Class&));
+// No trivial conversion from class type to int.
+static_assert(!__is_trivially_constructible(int[2], Class&, Struct&));
+// true in C++20 mode.
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: Struct is...*-i1.h
+static_assert(!__is_trivially_constructible(Base* [5], Derived*, Struct*&));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(Base* [5], DerivedPtrNonProviding));
+// IWYU: Base needs a declaration
+static_assert(!__is_trivially_constructible(Base* [5], DerivedPtrProviding));
+// No implicit conversion from int to pointer.
+// IWYU: Base needs a declaration
+static_assert(!__is_trivially_constructible(Base* [5], Struct*, int));
+// nullptr is convertible to any object pointer type, hence true in C++20 mode.
+// IWYU: Base needs a declaration
+// IWYU: Struct is...*-i1.h
+static_assert(!__is_trivially_constructible(Base* [5],
+                                            decltype(nullptr),
+                                            Struct*));
+// true in C++20 mode, but no full type is needed.
+static_assert(!__is_trivially_constructible(Class* [5], Class*));
+// The complete type is not needed for Base.
+// IWYU: Base needs a declaration
+// IWYU: Struct is...*-i1.h
+static_assert(!__is_trivially_constructible(Base* [5], Base*&&, Struct*));
+// Arrays decay to pointers.
+// IWYU: Base needs a declaration
+// IWYU: Struct is...*-i1.h
+static_assert(!__is_trivially_constructible(Base* [5],
+                                            // IWYU: Base needs a declaration
+                                            Base (&)[3],
+                                            Struct (&)[3]));
+// IWYU: Base needs a declaration
+// IWYU: Struct is...*-i1.h
+static_assert(!__is_trivially_constructible(Base* [5],
+                                            BaseNonProviding (&)[3],
+                                            Struct (&)[3]));
+// All object pointers are convertible to void*, no full type needed.
+static_assert(!__is_trivially_constructible(void* [5], Class*, Struct*));
+static_assert(!__is_trivially_constructible(Void* [5], Class*, Struct*));
+// Class cannot be trivially converted to a pointer.
+static_assert(!__is_trivially_constructible(Struct* [5],
+                                            StructDerivedClass*,
+                                            Class&));
+static_assert(!__is_trivially_constructible(Struct* [5],
+                                            StructDerivedClass*,
+                                            ClassNonProviding&));
+// true in C++20 mode.
+// IWYU: StructDerivedClass is...*-i1.h
+static_assert(!__is_trivially_constructible(int StructDerivedClass::* [5],
+                                            int Struct::*&,
+                                            // IWYU: Base needs a declaration
+                                            int Base::*));
+// true in C++20 mode, but Class full type is not needed.
+static_assert(!__is_trivially_constructible(const int Class::* [5],
+                                            int Class::*&,
+                                            int Class::*));
+// The same.
+static_assert(!__is_trivially_constructible(const int Class::* [5],
+                                            int ClassNonProviding::*));
+// The same.
+static_assert(!__is_trivially_constructible(int ClassNonProviding::* [5],
+                                            int Class::*));
+// The same.
+static_assert(!__is_trivially_constructible(int Class::* [5],
+                                            decltype(nullptr)));
+// nullptr is convertible to a pointer to member.
+// IWYU: StructDerivedClass is...*-i1.h
+static_assert(!__is_trivially_constructible(int StructDerivedClass::* [5],
+                                            decltype(nullptr),
+                                            int Struct::*));
+static_assert(!__is_trivially_constructible(int Class::* [5],
+                                            decltype(nullptr),
+                                            int Class::*));
+// Object pointers are not convertible to member pointers.
+static_assert(!__is_trivially_constructible(int StructDerivedClass::* [5],
+                                            int Struct::*,
+                                            int*));
+// IWYU: Struct is...*-i1.h
+static_assert(!__is_trivially_constructible(int Struct::* [5],
+                                            int Struct::*,
+                                            // IWYU: Base needs a declaration
+                                            int Base::*));
+// Compatible cv-qualification.
+// IWYU: StructDerivedClass is...*-i1.h
+static_assert(!__is_trivially_constructible(const int StructDerivedClass::* [5],
+                                            int Struct::*));
+// Incompatible cv-qualification.
+static_assert(!__is_trivially_constructible(int StructDerivedClass::* [5],
+                                            const int Struct::*));
+// Class cannot be trivially converted to a member pointer, hence
+// StructDerivedClass type info is not needed. Class type is required
+// to be complete.
+static_assert(!__is_trivially_constructible(int StructDerivedClass::* [5],
+                                            int Struct::*,
+                                            // IWYU: Class is...*-i1.h
+                                            Class));
+// true in C++20 mode.
+static_assert(!__is_trivially_constructible(int DerivedProviding::* [3],
+                                            // IWYU: Base needs a declaration
+                                            int Base::*));
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(int DerivedNonProviding::* [3],
+                                            // IWYU: Base needs a declaration
+                                            int Base::*));
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(DerivedMemPtr<int>[3],
+                                            BaseMemPtr<int>));
+static_assert(__is_trivially_constructible(int Class::* [3]));
+// Class cannot be trivially convertible to int.
+static_assert(!__is_trivially_constructible(int[3], Class&));
+// Class* is unrelated to int*.
+static_assert(!__is_trivially_constructible(int* [3], Class*));
+// References cannot have multiple items in the initializer.
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Class&&, Derived*, int));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(const Base&, Derived&, Derived&));
+// Pointers cannot have multiple items in the initializer.
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Base*, Derived*, Derived*));
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(const Class&, Derived*));
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Class&, Derived*));
+static_assert(!__is_trivially_constructible(Class&, const Class&));
+static_assert(__is_trivially_constructible(const Class&, Class&));
+static_assert(__is_trivially_constructible(const Class&&, Class&&));
+static_assert(!__is_trivially_constructible(Class&, Class&&));
+static_assert(!__is_trivially_constructible(Class&&, Class&));
+static_assert(__is_trivially_constructible(ClassNonProviding&, Class&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(Base&, Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(Base&, DerivedRefNonProviding));
+// IWYU: Base needs a declaration
+static_assert(__is_trivially_constructible(Base&, DerivedRefProviding));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__is_trivially_constructible(Base&, Derived));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Base&, const Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(const Base&, Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(const Base&, const Derived&));
+// IWYU: Base needs a declaration
+static_assert(!__is_trivially_constructible(const Base&,
+                                            // IWYU: Derived needs a declaration
+                                            const volatile Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(const volatile Base&,
+                                           // IWYU: Derived needs a declaration
+                                           const Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(Base&&, Derived&&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Base&&, const Derived&&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(const Base&&, Derived&&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(const volatile Base&&, Derived&&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Base&, Derived&&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(const Base&, Derived&&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(const Base&, volatile Derived&&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(const volatile Base&, Derived&&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Base&&, Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Base&&, const Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(const Base&&, Derived&));
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Union1&, Derived&));
+// IWYU: Base needs a declaration
+static_assert(!__is_trivially_constructible(Base&, Union1&));
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(Union1&&, Derived&&));
+// IWYU: Base needs a declaration
+static_assert(!__is_trivially_constructible(Base&&, Union1&&));
+// IWYU: Derived needs a declaration
+static_assert(!__is_trivially_constructible(const Union1&, Derived&&));
+// IWYU: Base needs a declaration
+static_assert(!__is_trivially_constructible(const Base&, Union1&&));
+// IWYU: Base needs a declaration
+// IWYU: Struct is...*-i1.h
+static_assert(__is_trivially_constructible(Base&, Struct&));
+// IWYU: StructDerivedClass is...*-i1.h
+static_assert(__is_trivially_constructible(Struct&&, StructDerivedClass&&));
+static_assert(__is_trivially_constructible(const Class*, Class*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(Base*, Derived*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(const Base*&&, const Derived*&));
+// IWYU: Base needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(Base*, DerivedPtrRefNonProviding));
+// IWYU: Base needs a declaration
+static_assert(__is_trivially_constructible(Base*, DerivedPtrRefProviding));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(int Derived::*, int Base::*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(int Derived::*&&, int Base::*));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(DerivedMemPtr<int>,
+                                           BaseMemPtr<int>));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_constructible(DerivedMemPtr<int>&&,
+                                           BaseMemPtr<int>&));
+
 /**** IWYU_SUMMARY
 
 tests/cxx/type_trait.cc should add these lines:
@@ -1576,7 +2019,7 @@ tests/cxx/type_trait.cc should remove these lines:
 
 The full include-list for tests/cxx/type_trait.cc:
 #include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassRefProviding, DerivedProviding, DerivedPtrProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
-#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, BaseNonProviding, ClassArray2NonProviding, ClassArray3NonProviding, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedArrayNonProviding, DerivedMemPtr, DerivedNonProviding, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
+#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, BaseNonProviding, ClassArray2NonProviding, ClassArray3NonProviding, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedArrayNonProviding, DerivedMemPtr, DerivedNonProviding, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1NonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
 #include "tests/cxx/type_trait-i1.h"  // for Base, Class, Struct, StructDerivedClass, Union1, Union2
 #include "tests/cxx/type_trait-i2.h"  // for Derived
 
