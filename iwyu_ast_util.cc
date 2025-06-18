@@ -11,9 +11,9 @@
 
 #include "iwyu_ast_util.h"
 
-#include <set>                          // for set
-#include <string>                       // for string, operator+, etc
-#include <utility>                      // for pair
+#include <set>      // for set
+#include <string>   // for string, operator+, etc
+#include <utility>  // for pair
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDumper.h"
@@ -168,9 +168,9 @@ namespace include_what_you_use {
 namespace {
 
 void DumpASTNode(llvm::raw_ostream& ostream, const ASTNode* node) {
-  if (const Decl *decl = node->GetAs<Decl>()) {
+  if (const Decl* decl = node->GetAs<Decl>()) {
     ostream << "[" << GetKindName(decl) << "] " << PrintableDecl(decl);
-  } else if (const Stmt *stmt = node->GetAs<Stmt>()) {
+  } else if (const Stmt* stmt = node->GetAs<Stmt>()) {
     ostream << "[" << GetKindName(stmt) << "] " << PrintableStmt(stmt);
   } else if (const TypeLoc* typeloc = node->GetAs<TypeLoc>()) {
     ostream << "[" << GetKindName(*typeloc) << "] "
@@ -257,7 +257,7 @@ bool ASTNode::FillLocationIfKnown(SourceLocation* loc) const {
   using include_what_you_use::GetLocation;
   switch (kind_) {
     case kDeclKind:
-      *loc = GetLocation(as_decl_);   // in iwyu_location_util.h
+      *loc = GetLocation(as_decl_);  // in iwyu_location_util.h
       return true;
     case kStmtKind:
       *loc = GetLocation(as_stmt_);
@@ -317,16 +317,16 @@ bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
     // If we're a constructor, check if we're part of the
     // initializers, which also count as 'the body' of the method.
     if (const CXXConstructorDecl* ctor =
-        ast_node->GetParentAs<CXXConstructorDecl>()) {
-      for (CXXConstructorDecl::init_const_iterator
-               it = ctor->init_begin(); it != ctor->init_end(); ++it) {
+            ast_node->GetParentAs<CXXConstructorDecl>()) {
+      for (CXXConstructorDecl::init_const_iterator it = ctor->init_begin();
+           it != ctor->init_end(); ++it) {
         if (ast_node->ContentIs((*it)->getInit()))
           return true;
       }
       // Now fall through to see if we're the body of the constructor.
     }
     if (const CXXMethodDecl* method_decl =
-        ast_node->GetParentAs<CXXMethodDecl>()) {
+            ast_node->GetParentAs<CXXMethodDecl>()) {
       if (ast_node->ContentIs(method_decl->getBody())) {
         return true;
       }
@@ -398,7 +398,7 @@ bool IsAutocastExpr(const ASTNode* ast_node) {
   return ast_node->template HasAncestorOfType<CallExpr>();
 }
 
-template<typename T>
+template <typename T>
 NestedNameSpecifier* TryGetQualifier(const ASTNode* ast_node) {
   if (ast_node->IsA<T>())
     return ast_node->GetAs<T>()->getQualifier();
@@ -415,21 +415,32 @@ const NestedNameSpecifier* GetQualifier(const ASTNode* ast_node) {
                  tn->getAsQualifiedTemplateName())
       nns = qtn->getQualifier();
   }
-  if (!nns) nns = TryGetQualifier<ElaboratedType>(ast_node);
-  if (!nns) nns = TryGetQualifier<DependentNameType>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<ElaboratedType>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<DependentNameType>(ast_node);
   if (!nns && ast_node->IsA<DependentTemplateSpecializationType>()) {
     const auto* dtst = ast_node->GetAs<DependentTemplateSpecializationType>();
-    nns = dtst->getDependentTemplateName().getQualifier();
+    nns = dtst->getQualifier();
   }
-  if (!nns) nns = TryGetQualifier<UsingDirectiveDecl>(ast_node);
-  if (!nns) nns = TryGetQualifier<EnumDecl>(ast_node);
-  if (!nns) nns = TryGetQualifier<RecordDecl>(ast_node);
-  if (!nns) nns = TryGetQualifier<DeclaratorDecl>(ast_node);
-  if (!nns) nns = TryGetQualifier<FunctionDecl>(ast_node);
-  if (!nns) nns = TryGetQualifier<CXXDependentScopeMemberExpr>(ast_node);
-  if (!nns) nns = TryGetQualifier<DeclRefExpr>(ast_node);
-  if (!nns) nns = TryGetQualifier<DependentScopeDeclRefExpr>(ast_node);
-  if (!nns) nns = TryGetQualifier<MemberExpr>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<UsingDirectiveDecl>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<EnumDecl>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<RecordDecl>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<DeclaratorDecl>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<FunctionDecl>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<CXXDependentScopeMemberExpr>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<DeclRefExpr>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<DependentScopeDeclRefExpr>(ast_node);
+  if (!nns)
+    nns = TryGetQualifier<MemberExpr>(ast_node);
   return nns;
 }
 
@@ -450,7 +461,7 @@ string PrintableLoc(SourceLocation loc) {
   return NormalizeFilePath(loc.printToString(*GlobalSourceManager()));
 }
 
-string PrintableDecl(const Decl* decl, bool terse/*=true*/) {
+string PrintableDecl(const Decl* decl, bool terse /*=true*/) {
   if (!decl)
     return "<null decl>";
 
@@ -503,7 +514,7 @@ string PrintableNestedNameSpecifier(const NestedNameSpecifier* nns) {
 }
 
 string PrintableTemplateName(const TemplateName& tpl_name) {
-  std::string buffer;    // llvm wants regular string, not our versa-string
+  std::string buffer;  // llvm wants regular string, not our versa-string
   raw_string_ostream ostream(buffer);
   tpl_name.print(ostream, DefaultPrintPolicy());
   return ostream.str();
@@ -794,8 +805,8 @@ bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
 bool HasCovariantReturnType(const CXXMethodDecl* method_decl) {
   QualType derived_return_type = method_decl->getReturnType();
 
-  for (CXXMethodDecl::method_iterator
-       it = method_decl->begin_overridden_methods();
+  for (CXXMethodDecl::method_iterator it =
+           method_decl->begin_overridden_methods();
        it != method_decl->end_overridden_methods(); ++it) {
     // There are further constraints on covariant return types as such
     // (e.g. parents must be related, derived override must have return type
@@ -824,19 +835,17 @@ const TagDecl* GetTagDefinition(const Decl* decl) {
     // If we're a templated class that was never instantiated (because
     // we were never "used"), then getDefinition() will return nullptr.
     if (const ClassTemplateSpecializationDecl* spec_decl = DynCastFrom(decl)) {
-      PointerUnion<ClassTemplateDecl*,
-          ClassTemplatePartialSpecializationDecl*>
+      PointerUnion<ClassTemplateDecl*, ClassTemplatePartialSpecializationDecl*>
           specialized_decl = spec_decl->getSpecializedTemplateOrPartial();
-      if (const ClassTemplatePartialSpecializationDecl*
-          partial_spec_decl =
-          specialized_decl.dyn_cast<
-          ClassTemplatePartialSpecializationDecl*>()) {
+      if (const ClassTemplatePartialSpecializationDecl* partial_spec_decl =
+              specialized_decl
+                  .dyn_cast<ClassTemplatePartialSpecializationDecl*>()) {
         // decl would be instantiated from a template partial
         // specialization.
         CHECK_(partial_spec_decl->hasDefinition());
         return partial_spec_decl->getDefinition();
       } else if (const ClassTemplateDecl* tpl_decl =
-                 specialized_decl.dyn_cast<ClassTemplateDecl*>()) {
+                     specialized_decl.dyn_cast<ClassTemplateDecl*>()) {
         // decl would be instantiated from a non-specialized
         // template.
         if (tpl_decl->getTemplatedDecl()->hasDefinition())
@@ -911,7 +920,7 @@ static map<const Type*, const Type*> ResugarTypeComponents(
 static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
     const FunctionDecl* decl, unsigned start_arg) {
   map<const Type*, const Type*> retval;
-  if (!decl)   // can be nullptr if the function call is via a function pointer
+  if (!decl)  // can be nullptr if the function call is via a function pointer
     return retval;
   if (const TemplateArgumentList* tpl_list =
           decl->getTemplateSpecializationArgs()) {
@@ -1009,7 +1018,8 @@ static map<const Type*, const Type*> GetDefaultedArgResugarMap(
 }
 
 TemplateInstantiationData GetTplInstDataForFunction(
-    const FunctionDecl* decl, const Expr* calling_expr,
+    const FunctionDecl* decl,
+    const Expr* calling_expr,
     function<set<const Type*>(const Type*)> provided_getter) {
   map<const Type*, const Type*> resugar_map;
   set<const Type*> provided_types;
@@ -1129,17 +1139,16 @@ TemplateInstantiationData GetTplInstDataForFunction(
 
 const NamedDecl* GetInstantiatedFromDecl(const NamedDecl* class_decl) {
   if (const ClassTemplateSpecializationDecl* tpl_sp_decl =
-      DynCastFrom(class_decl)) {  // an instantiated class template
+          DynCastFrom(class_decl)) {  // an instantiated class template
     PointerUnion<ClassTemplateDecl*, ClassTemplatePartialSpecializationDecl*>
         instantiated_from = tpl_sp_decl->getInstantiatedFrom();
     if (const ClassTemplateDecl* tpl_decl =
-        instantiated_from.dyn_cast<ClassTemplateDecl*>()) {
+            instantiated_from.dyn_cast<ClassTemplateDecl*>()) {
       // class_decl is instantiated from a non-specialized template.
       return tpl_decl;
-    } else if (const ClassTemplatePartialSpecializationDecl*
-               partial_spec_decl =
-               instantiated_from.dyn_cast<
-                   ClassTemplatePartialSpecializationDecl*>()) {
+    } else if (const ClassTemplatePartialSpecializationDecl* partial_spec_decl =
+                   instantiated_from
+                       .dyn_cast<ClassTemplatePartialSpecializationDecl*>()) {
       // class_decl is instantiated from a template partial specialization.
       return partial_spec_decl;
     }
@@ -1297,7 +1306,7 @@ set<const NamedDecl*> GetTagRedecls(const NamedDecl* decl) {
     if (IsFriendDecl(redecl) && redecl != decl)
       continue;
 
-    if (tpl_decl) {   // need to convert back to a ClassTemplateDecl
+    if (tpl_decl) {  // need to convert back to a ClassTemplateDecl
       CHECK_(isa<CXXRecordDecl>(redecl) &&
              cast<CXXRecordDecl>(redecl)->getDescribedClassTemplate());
       const CXXRecordDecl* cxx_redecl = cast<CXXRecordDecl>(redecl);
@@ -1339,7 +1348,7 @@ const NamedDecl* GetNonfriendClassRedecl(const NamedDecl* decl) {
 
   set<const NamedDecl*> all_redecls = GetTagRedecls(decl);
   CHECK_(!all_redecls.empty() && "Uncaught non-class decl");
-  return *all_redecls.begin();    // arbitrary choice
+  return *all_redecls.begin();  // arbitrary choice
 }
 
 bool DeclsAreInSameClass(const Decl* decl1, const Decl* decl2) {
@@ -1473,15 +1482,14 @@ bool IsPointerOrReferenceAsWritten(const Type* type) {
 
 const Type* RemovePointersAndReferencesAsWritten(const Type* type) {
   type = Desugar(type);
-  while (isa<PointerType>(type) ||
-         isa<LValueReferenceType>(type)) {
+  while (isa<PointerType>(type) || isa<LValueReferenceType>(type)) {
     type = type->getPointeeType().getTypePtr();
   }
   return type;
 }
 
 const Type* RemovePointerFromType(const Type* type) {
-  if (!IsPointerOrReferenceAsWritten(type)) {   // ah well, have to desugar
+  if (!IsPointerOrReferenceAsWritten(type)) {  // ah well, have to desugar
     type = type->getUnqualifiedDesugaredType();
   }
   if (!IsPointerOrReferenceAsWritten(type)) {
@@ -1496,8 +1504,8 @@ const Type* RemovePointerFromType(const Type* type) {
 const Type* RemovePointersAndReferences(const Type* type) {
   while (true) {
     const Type* deref_type = RemovePointerFromType(type);
-    if (deref_type == nullptr) // type wasn't a pointer (or reference) type
-      break;                   // removed all pointers
+    if (deref_type == nullptr)  // type wasn't a pointer (or reference) type
+      break;                    // removed all pointers
     type = deref_type;
   }
   return type;
@@ -1533,7 +1541,7 @@ static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
   } else if (const RecordType* record_type = type->getAs<RecordType>()) {
     return record_type->getDecl();
   } else if (const TagType* tag_type = DynCastFrom(type)) {
-    return tag_type->getDecl();    // probably just enums
+    return tag_type->getDecl();  // probably just enums
   } else if (template_decl) {
     // A non-concrete template class, such as 'Myclass<T>'
     return template_decl;
@@ -1610,7 +1618,7 @@ static TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
   // types in its args list, so we start with that.  Note that an
   // explicitly specified type may fulfill multiple template args:
   //   template <typename R, typename A1> struct Foo<R(A1)> { ... }
-  set<unsigned> explicit_args;   // indices into tpl_args we've filled
+  set<unsigned> explicit_args;  // indices into tpl_args we've filled
   SugaredTypeEnumerator type_enumerator;
   set<const Type*> provided_types;
   for (unsigned i = 0; i < written_tpl_args.size(); ++i) {
@@ -1742,7 +1750,7 @@ bool IsDerivedToBasePtrConvertible(QualType derived_ptr_type,
   if (const CXXRecordDecl* derived_decl = derived->getAsCXXRecordDecl()) {
     if (!derived_decl->isDerivedFrom(base_decl))
       return false;
-    return base.isAtLeastAsQualifiedAs(derived, context);
+    return base.isAtLeastAsQualifiedAs(derived);
   }
   return false;
 }
@@ -1757,9 +1765,10 @@ bool IsBaseToDerivedMemPtrConvertible(const Type* maybe_base_mem_ptr_type,
   if (!base_mem_ptr_type || !derived_mem_ptr_type)
     return false;
   const CXXRecordDecl* base_decl =
-      base_mem_ptr_type->getQualifier()->getAsRecordDecl();
+      base_mem_ptr_type->getClass()->getAsCXXRecordDecl();
   const CXXRecordDecl* derived_decl =
-      derived_mem_ptr_type->getQualifier()->getAsRecordDecl();
+      derived_mem_ptr_type->getClass()->getAsCXXRecordDecl();
+
   if (!derived_decl->isDerivedFrom(base_decl))
     return false;
   const QualType base_mem_type =
@@ -1769,13 +1778,14 @@ bool IsBaseToDerivedMemPtrConvertible(const Type* maybe_base_mem_ptr_type,
   // The unqualified canonical member types should be the same except the known
   // acceptable differences in 'noexcept' specifier of member functions.
   if (base_mem_type->isFunctionProtoType()) {
-    if (sema.IsFunctionConversion(base_mem_type, derived_mem_type))
+    clang::QualType dummy;
+    if (sema.IsFunctionConversion(base_mem_type, derived_mem_type, dummy))
       return true;
   }
+
   if (base_mem_type.getTypePtr() != derived_mem_type.getTypePtr())
     return false;
-  return derived_mem_type.isAtLeastAsQualifiedAs(base_mem_type,
-                                                 base_decl->getASTContext());
+  return derived_mem_type.isAtLeastAsQualifiedAs(base_mem_type);
 }
 
 bool IsConvertible(QualType from,
@@ -1827,7 +1837,7 @@ const Type* TypeOfParentIfMethod(const CallExpr* expr) {
     // For class->member(), class_type is a pointer.
     return RemovePointersAndReferencesAsWritten(class_type);
   } else if (const DeclRefExpr* ref_expr = DynCastFrom(callee_expr)) {
-    if (ref_expr->getQualifier()) {    // static methods like C<T>::a()
+    if (ref_expr->getQualifier()) {  // static methods like C<T>::a()
       return ref_expr->getQualifier()->getAsType();
     }
   }
@@ -1841,7 +1851,8 @@ const Expr* GetFirstClassArgument(CallExpr* expr) {
       return expr->getArg(0);
     }
     // Handle non-member functions.
-    CHECK_(callee_decl->getNumParams() == expr->getNumArgs() &&
+    CHECK_(
+        callee_decl->getNumParams() == expr->getNumArgs() &&
         "Require one-to-one match between call arguments and decl parameters");
     int params_count = callee_decl->getNumParams();
     for (int i = 0; i < params_count; i++) {
@@ -1912,7 +1923,8 @@ TemplateArgumentListInfo GetExplicitTplArgs(const Expr* expr) {
     member_expr->copyTemplateArgumentsInto(explicit_tpl_args);
   else if (const OverloadExpr* overload_expr = DynCastFrom(expr))
     overload_expr->copyTemplateArgumentsInto(explicit_tpl_args);
-  else if (const DependentScopeDeclRefExpr* dependent_decl_ref = DynCastFrom(expr))
+  else if (const DependentScopeDeclRefExpr* dependent_decl_ref =
+               DynCastFrom(expr))
     dependent_decl_ref->copyTemplateArgumentsInto(explicit_tpl_args);
   return explicit_tpl_args;
 }

@@ -89,35 +89,34 @@ using std::unique_ptr;
 
 namespace {
 
-std::string GetExecutablePath(const char *Argv0) {
+std::string GetExecutablePath(const char* Argv0) {
   // This just needs to be some symbol in the binary; C++ doesn't
   // allow taking the address of ::main however.
-  void *main_addr = (void*) (intptr_t) GetExecutablePath;
+  void* main_addr = (void*)(intptr_t)GetExecutablePath;
   return llvm::sys::fs::getMainExecutable(Argv0, main_addr);
 }
 
-const char *SaveStringInSet(std::set<std::string> &SavedStrings, StringRef S) {
+const char* SaveStringInSet(std::set<std::string>& SavedStrings, StringRef S) {
   return SavedStrings.insert(S.str()).first->c_str();
 }
 
-void ExpandArgsFromBuf(const char *Arg,
-                       SmallVectorImpl<const char*> &ArgVector,
-                       set<std::string> &SavedStrings) {
-  const char *FName = Arg + 1;
+void ExpandArgsFromBuf(const char* Arg,
+                       SmallVectorImpl<const char*>& ArgVector,
+                       set<std::string>& SavedStrings) {
+  const char* FName = Arg + 1;
   ErrorOr<unique_ptr<MemoryBuffer>> MemBufOrErr = MemoryBuffer::getFile(FName);
   if (!MemBufOrErr) {
     ArgVector.push_back(SaveStringInSet(SavedStrings, Arg));
     return;
   }
 
-  const char *Buf = MemBufOrErr.get()->getBufferStart();
+  const char* Buf = MemBufOrErr.get()->getBufferStart();
   char InQuote = ' ';
   std::string CurArg;
 
-  for (const char *P = Buf; ; ++P) {
+  for (const char* P = Buf;; ++P) {
     if (*P == '\0' || (isspace(*P) && InQuote == ' ')) {
       if (!CurArg.empty()) {
-
         if (CurArg[0] != '@') {
           ArgVector.push_back(SaveStringInSet(SavedStrings, CurArg));
         } else {
@@ -158,11 +157,12 @@ void ExpandArgsFromBuf(const char *Arg,
   }
 }
 
-void ExpandArgv(int argc, const char **argv,
-                SmallVectorImpl<const char*> &ArgVector,
-                set<std::string> &SavedStrings) {
+void ExpandArgv(int argc,
+                const char** argv,
+                SmallVectorImpl<const char*>& ArgVector,
+                set<std::string>& SavedStrings) {
   for (int i = 0; i < argc; ++i) {
-    const char *Arg = argv[i];
+    const char* Arg = argv[i];
     if (Arg[0] != '@') {
       ArgVector.push_back(SaveStringInSet(SavedStrings, std::string(Arg)));
       continue;
@@ -189,9 +189,7 @@ bool HasPreprocessOnlyArgs(ArrayRef<const char*> args) {
 }
 
 bool HasArg(ArrayRef<const char*> args, const char* needle) {
-  return llvm::any_of(args, [&](StringRef arg) {
-    return arg == needle;
-  });
+  return llvm::any_of(args, [&](StringRef arg) { return arg == needle; });
 }
 
 // Print the command prefixed by its action class
@@ -291,23 +289,17 @@ bool ExecuteAction(int argc,
                    const char** argv,
                    ActionFactory make_iwyu_action) {
   // Expand out any response files passed on the command line
-  set<std::string> SavedStrings;
-  SmallVector<const char*, 256> args;
+  std::set<std::string> SavedStrings;
+  llvm::SmallVector<const char*, 256> args;
 
   ExpandArgv(argc, argv, args, SavedStrings);
 
   // Drop -save-temps arguments to avoid multiple compilation jobs.
-  llvm::erase_if(args, [](StringRef arg) {
+  llvm::erase_if(args, [](llvm::StringRef arg) {
     return arg.starts_with("-save-temps") || arg.starts_with("--save-temps");
   });
 
-  // FIXME: This is a hack to try to force the driver to do something we can
-  // recognize. We need to extend the driver library to support this use model
-  // (basically, exactly one input, and the operation mode is hard wired).
-
   std::vector<const char*> extra_args;
-  // Add -fsyntax-only to avoid code generation, unless user asked for
-  // preprocessing-only.
   if (!HasPreprocessOnlyArgs(args)) {
     extra_args.push_back("-fsyntax-only");
     extra_args.push_back("-Qunused-arguments");
@@ -315,8 +307,6 @@ bool ExecuteAction(int argc,
 
   std::string iwyu_executable_path = GetExecutablePath(argv[0]);
   if (!HasArg(args, "-resource-dir")) {
-    // If user didn't specify something explicit, compute a resource dir based
-    // on configured CMake variables.
     std::string resource_dir = ComputeCustomResourceDir(iwyu_executable_path);
     if (!resource_dir.empty()) {
       extra_args.push_back("-resource-dir");
@@ -324,98 +314,82 @@ bool ExecuteAction(int argc,
     }
   }
 
-  // If there is no -- in the args, the extra_pos will be args.end() and insert
-  // will append to the back of the args sequence.
   auto extra_pos =
-      llvm::find_if(args, [](StringRef arg) { return arg == "--"; });
+      llvm::find_if(args, [](llvm::StringRef arg) { return arg == "--"; });
   args.insert(extra_pos, extra_args.begin(), extra_args.end());
 
-  IntrusiveRefCntPtr<FileSystem> fs = llvm::vfs::getRealFileSystem();
-  DiagnosticOptions diag_opts;
-  IntrusiveRefCntPtr<DiagnosticsEngine> diagnostics =
-      CompilerInstance::createDiagnostics(*fs, diag_opts);
+  // Create diagnostics engine for the driver
+  clang::DiagnosticOptions diag_opts;
+  auto diags = clang::CompilerInstance::createDiagnostics(&diag_opts, nullptr);
 
-  // The Driver constructor sets the resource dir implicitly based on path,
-  // which may then be overwritten by BuildCompilation based on any
-  // -resource-dir argument from above.
-  Driver driver(iwyu_executable_path, getDefaultTargetTriple(), *diagnostics);
+  clang::driver::Driver driver(iwyu_executable_path, getDefaultTargetTriple(),
+                               *diags);
   driver.setTitle("include what you use");
 
-  // Build a compilation, get the job list and filter out irrelevant jobs.
-  unique_ptr<Compilation> compilation(driver.BuildCompilation(args));
+  std::unique_ptr<clang::driver::Compilation> compilation(
+      driver.BuildCompilation(args));
   if (!compilation)
     return false;
 
-  // This diagnostic switch is handled and executed inside BuildCompilation.
-  // Exit immediately so we don't print errors.
-  if (HasArg(args, "-print-resource-dir")) {
+  if (HasArg(args, "-print-resource-dir"))
     return false;
-  }
 
-  const JobList& jobs = compilation->getJobs();
-  std::vector<const Command*> filtered_jobs = FilterJobs(jobs);
+  const auto& jobs = compilation->getJobs();
+  auto filtered_jobs = FilterJobs(jobs);
+
   if (filtered_jobs.empty()) {
-    diagnostics->Report(clang::diag::err_fe_expected_compiler_job)
+    diags->Report(clang::diag::err_fe_expected_compiler_job)
         << JobsToString(jobs, "; ");
     return false;
   }
 
-  // If we have more than one job after filtering, there's a good chance
-  // FilterJobs could be improved to prune the extra jobs. Log them at level 2.
   if (filtered_jobs.size() > 1 && ShouldPrint(2)) {
-    auto extra_jobs = ArrayRef<const Command*>(filtered_jobs).drop_front(1);
-    errs() << "warning: ignoring " << extra_jobs.size() << " extra jobs:\n"
-           << JobsToString(extra_jobs, "\n") << "\n";
+    auto extra_jobs =
+        llvm::ArrayRef<const clang::driver::Command*>(filtered_jobs)
+            .drop_front(1);
+    llvm::errs() << "warning: ignoring " << extra_jobs.size()
+                 << " extra jobs:\n"
+                 << JobsToString(extra_jobs, "\n") << "\n";
   }
 
-  // Initialize a compiler invocation object from the clang (-cc1) arguments.
-  const Command& command = *filtered_jobs[0];
-  const ArgStringList& cc_arguments = command.getArguments();
-  std::shared_ptr<CompilerInvocation> invocation(new CompilerInvocation);
-  CompilerInvocation::CreateFromArgs(*invocation, cc_arguments, *diagnostics);
+  const auto& command = *filtered_jobs[0];
+  const auto& cc_arguments = command.getArguments();
+
+  auto invocation = std::make_shared<clang::CompilerInvocation>();
+  clang::CompilerInvocation::CreateFromArgs(*invocation, cc_arguments, *diags);
   invocation->getFrontendOpts().DisableFree = false;
 
-  // Show the invocation, with -v.
   if (invocation->getHeaderSearchOpts().Verbose) {
-    errs() << "clang invocation:\n" << JobsToString(jobs, "\n") << "\n";
+    llvm::errs() << "clang invocation:\n" << JobsToString(jobs, "\n") << "\n";
   }
 
-  // Reject attempts at using precompiled headers.
-  const PreprocessorOptions& opts = invocation->getPreprocessorOpts();
+  const auto& opts = invocation->getPreprocessorOpts();
   if (!opts.ImplicitPCHInclude.empty() || !opts.PCHThroughHeader.empty()) {
-    errs() << "error: include-what-you-use does not support PCH\n";
+    llvm::errs() << "error: include-what-you-use does not support PCH\n";
     return false;
   }
 
-  // FIXME: This is copied from cc1_main.cpp; simplify and eliminate.
+  auto compiler = std::make_unique<clang::CompilerInstance>(
+      std::make_shared<clang::PCHContainerOperations>(), nullptr);
+  compiler->setInvocation(std::move(invocation));
 
-  // Create a compiler instance to handle the actual work.
-  unique_ptr<CompilerInstance> compiler(
-      new CompilerInstance(std::move(invocation)));
-  // It's tempting to reuse the DiagnosticsEngine we created above, but we need
-  // to create a new one to get the options produced by the compiler invocation.
-  compiler->createDiagnostics(*fs);
+  compiler->createDiagnostics(&compiler->getDiagnosticOpts(), nullptr);
 
-  unique_ptr<FrontendAction> action;
+  std::unique_ptr<clang::FrontendAction> action;
   switch (command.getSource().getKind()) {
-    case Action::PreprocessJobClass:
-      // Let Clang create a preprocessing frontend action.
+    case clang::driver::Action::PreprocessJobClass:
       action = CreateFrontendAction(*compiler);
       break;
-
-    case Action::CompileJobClass:
-    case Action::PrecompileJobClass:
-      // Drop compiler job and run IWYU instead.
+    case clang::driver::Action::CompileJobClass:
+    case clang::driver::Action::PrecompileJobClass:
       action = make_iwyu_action(compilation->getDefaultToolChain());
       break;
-
     default:
-      errs() << "error: expected compiler or preprocessor job, found: "
-             << command << "\n";
+      llvm::errs() << "error: expected compiler or preprocessor job, found: "
+                   << command << "\n";
       return false;
   }
 
-  // Run the action.
   return compiler->ExecuteAction(*action);
 }
 
