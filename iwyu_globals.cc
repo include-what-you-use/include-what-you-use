@@ -83,6 +83,7 @@ static void PrintHelp(const char* extra_msg) {
          "        multiple glob patterns.\n"
          "   --mapping_file=<filename>: gives iwyu a mapping file.\n"
          "   --no_default_mappings: do not add iwyu's default mappings.\n"
+         "   --export_mappings=<dirpath>: writes out all builtin mappings.\n"
          "   --pch_in_code: mark the first include in a translation unit as a\n"
          "        precompiled header.  Use --pch_in_code to prevent IWYU from\n"
          "        removing necessary PCH includes.  Though Clang forces PCHs\n"
@@ -199,6 +200,15 @@ OptionsParser::OptionsParser(int argc, char** argv) {
 
   delete [] iwyu_argv;
   delete [] intercepted_argv;
+
+  // Handle --export_mappings. This is a weird place for it, but we already
+  // depend on iwyu_include_picker here, and we want to run the export before
+  // the IWYU driver starts making demands for required commands, etc.
+  string export_path = GlobalFlags().export_mappings_path;
+  if (!export_path.empty()) {
+    ExportBuiltinMappings(export_path);
+    exit(EXIT_SUCCESS);
+  }
 }
 
 OptionsParser::~OptionsParser() {
@@ -220,7 +230,8 @@ CommandlineFlags::CommandlineFlags()
       cxx17ns(false),
       exit_code_error(EXIT_SUCCESS),
       exit_code_always(EXIT_SUCCESS),
-      regex_dialect(RegexDialect::LLVM) {
+      regex_dialect(RegexDialect::LLVM),
+      export_mappings_path() {
   // Always keep Qt .moc includes; its moc compiler does its own IWYU analysis.
   keep.emplace("*.moc");
 }
@@ -247,6 +258,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"debug", required_argument, nullptr, 'd'},
     {"regex", required_argument, nullptr, 'r'},
     {"experimental", required_argument, nullptr, 'p'},
+    {"export_mappings", required_argument, nullptr, 'E'},
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "v:c:m:d:nr";
@@ -338,6 +350,9 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         }
         break;
       }
+      case 'E':
+        export_mappings_path = optarg;
+        break;
       case -1:
         return optind;  // means 'no more input'
       default:

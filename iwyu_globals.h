@@ -112,6 +112,7 @@ struct CommandlineFlags {
   set<string> dbg_flags; // Debug flags.
   set<string> exp_flags;       // Experimental flags.
   RegexDialect regex_dialect;  // Dialect for regular expression processing.
+  string export_mappings_path; // Export all built-in mappings to path and exit.
 };
 
 const CommandlineFlags& GlobalFlags();

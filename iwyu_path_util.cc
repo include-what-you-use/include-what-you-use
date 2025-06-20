@@ -217,4 +217,10 @@ string AddQuotes(string include_name, bool angled) {
   return "\"" + include_name + "\"";
 }
 
+string PathJoin(const string& dirpath, const string& path) {
+  llvm::SmallString<128> res(dirpath);
+  llvm::sys::path::append(res, path);
+  return std::string(res);
+}
+
 }  // namespace include_what_you_use
