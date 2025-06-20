@@ -1,8 +1,0 @@
-# Default include mappings for IWYU with GCC
-[
-  { "ref": "gcc.libc.imp" },
-  { "ref": "gcc.symbols.imp" },
-  { "ref": "gcc.stl.headers.imp" },
-  { "ref": "stl.c.headers.imp" },
-  { "ref": "stl.public.imp" },
-]
