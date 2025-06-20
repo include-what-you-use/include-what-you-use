@@ -188,23 +188,15 @@ built-in mappings for GNU libstdc++ shipped with IWYU. The procedure for
 refreshing built-in mappings is:
 
 ```
-$ mapgen/iwyu-mapgen-libstdcxx.py --lang=imp \
-    /usr/include/c++/11 \
-    /usr/include/x86_64-linux-gnu/c++/11 \
-    > gcc.stl.headers.imp
-
 $ mapgen/iwyu-mapgen-libstdcxx.py --lang=c++ \
     /usr/include/c++/11 \
     /usr/include/x86_64-linux-gnu/c++/11 \
-    > libstdcxx_11.cc
+    > libstdcxx-11.cc
 ```
 
-The external mappings can be generated straight into the `gcc.stl.headers.imp`
-file.
-
-The built-in C++ mappings, however, are generated into a temporary file
-`libstdcxx_11.cc`, and can then be pasted into `iwyu_include_picker.cc` to
-replace the `libstdcpp_include_map` table.
+The C++ mappings declarations are generated into a temporary file,
+`libstdcxx-11.cc`, and can be copy/pasted from there into
+`iwyu_include_picker.cc` to replace the `libstdcpp_include_map` table.
 
 There are two placeholders above:
 
