@@ -66,6 +66,20 @@ jobs:
                 ../
           ninja
 
+      - name: Test mappings export
+        run: |
+          # Ask IWYU to export mappings
+          ./build/bin/include-what-you-use -Xiwyu --export_mappings=./build/mappings
+          # Collect all exported files and print them. Fail if none exist.
+          exported=$(ls -A ./build/mappings/)
+          if [[ -n "$exported" ]]; then
+              echo "exported mapping files:"
+              echo "$exported"
+          else
+              echo "error: no files exported"
+              exit 1
+          fi
+
       - name: Test include-what-you-use
         run: |
           cd ./build
