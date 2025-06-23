@@ -130,7 +130,7 @@ static void PrintHelp(const char* extra_msg) {
          "          ecmascript: slower, but more feature-complete\n"
          "   --experimental=flag[,flag...]: enable experimental features\n"
          "          clang_mappings: use Clang canonical standard library\n"
-         "                          mappings instead of built-in mappings\n"
+         "                          mappings instead of internal mappings\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
          "options without -Xiwyu prefix:\n"
