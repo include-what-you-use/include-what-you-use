@@ -184,8 +184,8 @@ environments and generate external mappings out of whatever header source tree
 they have available.
 
 But one of them, `mapgen/iwyu-mapgen-libstdcxx.py`, is used to generate the
-built-in mappings for GNU libstdc++ shipped with IWYU. The procedure for
-refreshing built-in mappings is:
+internal mappings for GNU libstdc++ shipped with IWYU. The procedure for
+refreshing internal mappings is:
 
 ```
 $ mapgen/iwyu-mapgen-libstdcxx.py --lang=imp \
@@ -202,7 +202,7 @@ $ mapgen/iwyu-mapgen-libstdcxx.py --lang=c++ \
 The external mappings can be generated straight into the `gcc.stl.headers.imp`
 file.
 
-The built-in C++ mappings, however, are generated into a temporary file
+The internal C++ mappings, however, are generated into a temporary file
 `libstdcxx_11.cc`, and can then be pasted into `iwyu_include_picker.cc` to
 replace the `libstdcpp_include_map` table.
 
@@ -220,5 +220,5 @@ private per-target headers, but mapped to plain public headers).
 The generated mappings obviously work best on systems where both libstdc++
 version and target match, but they should port pretty well.
 
-There is no strong policy for updating the built-in mappings, we try to use a
+There is no strong policy for updating the internal mappings, we try to use a
 mainstream target and a middle-aged libstdc++ version.
