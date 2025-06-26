@@ -95,7 +95,7 @@ struct CommandlineFlags {
   bool transitive_includes_only;   // -t: don't add 'new' #includes to files
   int verbose;             // -v: how much information to emit as we parse
   vector<string> mapping_files; // -m: mapping files
-  bool no_default_mappings;     // -n: no default mappings
+  bool no_internal_mappings;    // -n: no internal mappings
   // Truncate output lines to this length. No short option.
   int max_line_length;
   // Policy regarding files included via -include option.  No short option.
