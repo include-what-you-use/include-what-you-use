@@ -275,7 +275,7 @@ comment:
 ```
 // IWYU_ARGS: -I . \
               -std=c++20 \
-              -Xiwyu --no_default_mappings
+              -Xiwyu --no_internal_mappings
 ```
 
 The args are added to the `include-what-you-use` command as-written after line

@@ -1476,11 +1476,10 @@ IncludePicker::IncludePicker(RegexDialect regex_dialect,
                              CXXStdLib cxxstdlib)
     : has_called_finalize_added_include_lines_(false),
       regex_dialect(regex_dialect) {
-  AddDefaultMappings(cstdlib, cxxstdlib);
+  AddInternalMappings(cstdlib, cxxstdlib);
 }
 
-void IncludePicker::AddDefaultMappings(CStdLib cstdlib,
-                                       CXXStdLib cxxstdlib) {
+void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
   using clang::tooling::stdlib::Header;
   using clang::tooling::stdlib::Lang;
   using clang::tooling::stdlib::Symbol;

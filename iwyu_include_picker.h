@@ -200,8 +200,8 @@ class IncludePicker {
   void AddMappingsFromFile(const string& filename,
                            const vector<string>& search_path);
 
-  // Adds all hard-coded default mappings.
-  void AddDefaultMappings(CStdLib cstdlib, CXXStdLib cxxstdlib);
+  // Adds all hard-coded internal mappings.
+  void AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib);
 
   // Adds a mapping from a one header to another, typically
   // from a private to a public quoted include.

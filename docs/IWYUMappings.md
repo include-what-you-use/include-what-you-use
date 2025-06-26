@@ -16,7 +16,7 @@ header pulls in `NULL` one way or another, and we probably shouldn't force
 people to `#include <cstddef>`.
 
 To simplify IWYU deployment and command-line interface, many of these mappings
-are compiled into the executable. These constitute the *default mappings*.
+are compiled into the executable. These constitute the *internal mappings*.
 
 However, many mappings are toolchain- and version-dependent. Symbol homes and
 `#include` dependencies change between releases of GCC and are dramatically
@@ -24,15 +24,15 @@ different for the standard libraries shipped with Microsoft Visual C++. Also,
 mappings such as these are usually necessary for third-party libraries
 (e.g. Boost, Qt) or even project-local symbols and headers as well.
 
-Any mappings outside of the default set can therefore be specified as external
-*mapping files*.
+Any mappings outside of the default internal set can therefore be specified as
+external *mapping files*.
 
 
-## Default mappings ##
+## Internal mappings ##
 
-IWYU's default mappings are hard-coded in `iwyu_include_picker.cc`, and are very
-GCC-centric. There are both symbol- and include mappings for GNU libstdc++ and
-libc.
+IWYU's internal mappings are hard-coded in `iwyu_include_picker.cc`, and are
+very GCC-centric. There are both symbol- and include mappings for GNU libstdc++
+and libc.
 
 
 ## Mapping files ##
@@ -168,10 +168,10 @@ current directory.
 `ref` directives are first looked up relative to the current directory and if
 not found, relative to the referring mapping file.
 
-The default mappings can be turned off (e.g. for baremetal projects like an OS
-kernel) using the `--no_default_mappings` switch:
+The internal mappings can be turned off (e.g. for baremetal projects like an OS
+kernel) using the `--no_internal_mappings` switch:
 
-    $ include-what-you-use -Xiwyu --no_default_mappings \
+    $ include-what-you-use -Xiwyu --no_internal_mappings \
         --mapping_file=kernel_libc.imp kernel/main.c
 
 
