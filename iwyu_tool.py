@@ -342,26 +342,27 @@ def fixup_compilation_db(compilation_db):
 
 def slice_compilation_db(compilation_db, selection, exclude):
     """ Return a new compilation database reduced to the paths in selection. """
-    if not selection:
-        return compilation_db
 
     # Canonicalize selection paths to match compilation database.
     selection = [os.path.realpath(p) for p in selection]
     exclude = [os.path.realpath(p) for p in exclude]
 
-    new_db = []
-    for path in selection:
-        if not os.path.exists(path):
-            print('warning: \'%s\' not found on disk.' % path, file=sys.stderr)
-            continue
+    if not selection:
+        new_db = compilation_db
+    else:
+        new_db = []
+        for path in selection:
+            if not os.path.exists(path):
+                print('warning: \'%s\' not found on disk.' % path, file=sys.stderr)
+                continue
 
-        found = [e for e in compilation_db if is_subpath_of(e['file'], path)]
-        if not found:
-            print('warning: \'%s\' not found in compilation database.' % path,
-                  file=sys.stderr)
-            continue
+            found = [e for e in compilation_db if is_subpath_of(e['file'], path)]
+            if not found:
+                print('warning: \'%s\' not found in compilation database.' % path,
+                    file=sys.stderr)
+                continue
 
-        new_db.extend(found)
+            new_db.extend(found)
 
     for path in exclude:
         if not os.path.exists(path):
