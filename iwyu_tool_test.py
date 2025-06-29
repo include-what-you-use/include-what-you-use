@@ -448,6 +448,12 @@ class CompilationDBTests(unittest.TestCase):
         new_db = iwyu_tool.slice_compilation_db(compilation_db, [file], [file])
         self.assertEqual(new_db, [])
 
+        new_db = iwyu_tool.slice_compilation_db(compilation_db, [], [])
+        self.assertEqual(new_db, compilation_db)
+
+        new_db = iwyu_tool.slice_compilation_db(compilation_db, [], [file])
+        self.assertEqual(new_db, [])
+
     def test_unwrap_compile_command(self):
         """ Wrapping compile commands should be unwrapped. """
         compilation_db = {

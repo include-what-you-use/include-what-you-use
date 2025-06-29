@@ -340,14 +340,13 @@ def fixup_compilation_db(compilation_db):
     return compilation_db
 
 
-def slice_compilation_db(compilation_db, selection, exclude):
+def select_compilation_db(compilation_db, selection):
     """ Return a new compilation database reduced to the paths in selection. """
     if not selection:
         return compilation_db
 
     # Canonicalize selection paths to match compilation database.
     selection = [os.path.realpath(p) for p in selection]
-    exclude = [os.path.realpath(p) for p in exclude]
 
     new_db = []
     for path in selection:
@@ -362,6 +361,16 @@ def slice_compilation_db(compilation_db, selection, exclude):
             continue
 
         new_db.extend(found)
+
+    return new_db
+
+def slice_compilation_db(compilation_db, selection, exclude):
+    """ Return a new compilation database with filtered entries. """
+
+    new_db = select_compilation_db(compilation_db, selection)
+
+    # Canonicalize selection paths to match compilation database.
+    exclude = [os.path.realpath(p) for p in exclude]
 
     for path in exclude:
         if not os.path.exists(path):
