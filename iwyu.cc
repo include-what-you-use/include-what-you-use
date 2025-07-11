@@ -2056,6 +2056,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (expr == nullptr || expr->getNumArgs() < 2)
       return true;
 
+    current_ast_node()->set_in_forward_declare_context(true);
+
+    auto require_complete_arg_types = [expr, this] {
+      for (const TypeSourceInfo* arg : expr->getArgs()) {
+        const Type* type = arg->getType().getTypePtr();
+        if (type->getTypeClass() != Type::IncompleteArray)
+          ReportTypeUse(CurrentLoc(), type, DerefKind::None);
+      }
+    };
+
     QualType lhs_qual_type = expr->getArg(0)->getType();
     const Type* lhs_type = lhs_qual_type.getTypePtr();
     QualType rhs_qual_type;
@@ -2078,8 +2088,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         return true;
       case TypeTrait::BTT_IsAssignable:
       case TypeTrait::BTT_IsNothrowAssignable:
-        // TODO(bolshakov): require complete argument types here when
-        // CanForwardDeclareType stops doing it.
+        require_complete_arg_types();
         if (RemoveReference(lhs_qual_type)->isRecordType()) {
           // No assignment from void.
           if (rhs_type->isVoidType())
@@ -2126,6 +2135,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
         return true;
       case TypeTrait::BTT_IsTriviallyAssignable: {
+        require_complete_arg_types();
         // Trivial assignment doesn't involve any user-defined operators but may
         // involve a derived-to-base conversion.
         // TODO: check qualifiers. For example,
@@ -2164,6 +2174,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case TypeTrait::BTT_ReferenceBindsToTemporary:
       case TypeTrait::BTT_ReferenceConstructsFromTemporary:
       case TypeTrait::BTT_ReferenceConvertsFromTemporary:
+        require_complete_arg_types();
         // Seems like __reference_binds_to_temporary differs from
         // __reference_constructs_from_temporary only when the rhs is an object
         // (i.e. not reference) type reference-compatible to the lhs referred-to
@@ -2178,6 +2189,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         [[fallthrough]];
       case TypeTrait::TT_IsConstructible:
       case TypeTrait::TT_IsNothrowConstructible:
+        require_complete_arg_types();
         // Since C++20, these traits may evaluate to 'true' for the case
         // of array construction. It is better to require types for such cases
         // even in pre-C++20 mode to avoid UB in the user's code after switching
@@ -2253,6 +2265,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                               ? DerefKind::RemoveRefs
                               : DerefKind::RemoveRefsAndPtr);
           }
+          // Explicitly report the element type for the case of array of unknown
+          // bound. Currently, compilers evaluate these traits to 'false'
+          // for them, but the wording of the standard suggests that 'true'
+          // is possible. See https://wg21.link/lwg3486.
+          ReportTypeUse(CurrentLoc(), elem_type.getTypePtr(), DerefKind::None);
           return true;
         }
         if (expr->getNumArgs() > 2) {
@@ -2281,6 +2298,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case TypeTrait::BTT_IsConvertible:
       case TypeTrait::BTT_IsConvertibleTo:
       case TypeTrait::BTT_IsNothrowConvertible: {
+        require_complete_arg_types();
         // No conversion to/from void or to a function type.
         if (lhs_type->isVoidType() || rhs_type->isVoidType())
           return true;
@@ -2335,6 +2353,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         return true;
       }
       case TypeTrait::TT_IsTriviallyConstructible: {
+        require_complete_arg_types();
         if (lhs_type->isRecordType()) {
           // Seems like __is_trivially_constructible may return true only for
           // default and copy construction before C++20. In C++20, apparently
@@ -2389,6 +2408,20 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
               ReportTypeUse(CurrentLoc(), arg_type, DerefKind::RemoveRefs);
             }
             return true;
+          }
+          // The following is needed only to report Union type in cases like
+          // '__is_trivially_constructible(Union[], Union&)'. It should be
+          // removed if LWG 3486 is resolved so that the trait evaluates always
+          // to 'false'.
+          if (elem_type->isUnionType()) {
+            const Type* elem_type_ptr = elem_type.getTypePtr();
+            const Type* elem_canon_type = GetCanonicalType(elem_type_ptr);
+            for (const TypeSourceInfo* arg : drop_begin(expr->getArgs())) {
+              QualType arg_deref = RemoveReference(arg->getType());
+              if (GetCanonicalType(arg_deref.getTypePtr()) != elem_canon_type)
+                return true;
+            }
+            ReportTypeUse(CurrentLoc(), elem_type_ptr, DerefKind::None);
           }
           // Any object pointer is convertible to void*, no full type needed.
           // User-defined conversions are not trivial.
@@ -2483,8 +2516,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // layout-compatible enumerations, or layout-compatible standard-layout
         // class types.
         // No need to analyse pointers or references.
-        // TODO(bolshakov): require complete argument types here when
-        // CanForwardDeclareType stops doing it.
+        require_complete_arg_types();
         return true;
       default:
         for (const TypeSourceInfo* arg : expr->getArgs()) {
