@@ -2151,7 +2151,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         } else if (lhs_deref_type->isUnionType()) {
           // Unions are specific in that they cannot take part in inheritance,
           // so the rhs may be only the same type to be trivially assignable.
-          if (RemoveReference(rhs_qual_type).getTypePtr() == lhs_deref_type)
+          const Type* rhs_deref_canonical =
+              GetCanonicalType(RemoveReference(rhs_qual_type).getTypePtr());
+          if (rhs_deref_canonical == GetCanonicalType(lhs_deref_type))
             ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::RemoveRefs);
         } else if (IsReferenceToModifiableLValue(lhs_type)) {
           const QualType rhs_deref_qual_type = RemoveReference(rhs_qual_type);

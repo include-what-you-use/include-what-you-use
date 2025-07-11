@@ -807,6 +807,18 @@ static_assert(__is_assignable(Union1RefProviding, Union1RefProviding));
 static_assert(__is_trivially_assignable(Union1RefProviding,
                                         Union1RefProviding));
 static_assert(__is_nothrow_assignable(Union1RefProviding, Union1RefProviding));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_assignable(Union1NonProviding&, Union1&));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_trivially_assignable(Union1NonProviding&, Union1&));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_nothrow_assignable(Union1NonProviding&, Union1&));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_assignable(Union1&, Union1NonProviding&));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_trivially_assignable(Union1&, Union1NonProviding&));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_nothrow_assignable(Union1&, Union1NonProviding&));
 static_assert(!__is_assignable(Class&, void));
 static_assert(!__is_trivially_assignable(Class&, void));
 static_assert(!__is_nothrow_assignable(Class&, void));
