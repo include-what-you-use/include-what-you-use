@@ -2520,6 +2520,27 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // No need to analyse pointers or references.
         require_complete_arg_types();
         return true;
+      case TypeTrait::BTT_IsBaseOf:
+      case TypeTrait::BTT_IsPointerInterconvertibleBaseOf:
+        // C++20 [tab:meta.rel]: If Base and Derived are non-union class types
+        // and are not possibly cv-qualified versions of the same type, Derived
+        // shall be a complete type.
+        if (!lhs_type->isStructureOrClassType())
+          return true;
+        if (!rhs_type->isStructureOrClassType())
+          return true;
+        if (GetCanonicalType(lhs_type) != GetCanonicalType(rhs_type))
+          ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::None);
+        return true;
+      case TypeTrait::BTT_IsVirtualBaseOf:
+        // C++2c [tab:meta.rel]: If Base and Derived are non-union class types,
+        // Derived shall be a complete type.
+        if (!lhs_type->isStructureOrClassType())
+          return true;
+        if (!rhs_type->isStructureOrClassType())
+          return true;
+        ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::None);
+        return true;
       default:
         for (const TypeSourceInfo* arg : expr->getArgs()) {
           QualType qual_type = arg->getType();
