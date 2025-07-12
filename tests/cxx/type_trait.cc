@@ -2029,6 +2029,108 @@ static_assert(__is_trivially_constructible(DerivedMemPtr<int>,
 static_assert(__is_trivially_constructible(DerivedMemPtr<int>&&,
                                            BaseMemPtr<int>&));
 
+static_assert(!__is_base_of(int, Class));
+static_assert(!__is_pointer_interconvertible_base_of(int, Class));
+static_assert(!__builtin_is_virtual_base_of(int, Class));
+static_assert(!__is_base_of(Class, int));
+static_assert(!__is_pointer_interconvertible_base_of(Class, int));
+static_assert(!__builtin_is_virtual_base_of(Class, int));
+static_assert(__is_base_of(Class, Class));
+static_assert(__is_pointer_interconvertible_base_of(Class, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__builtin_is_virtual_base_of(Class, Class));
+static_assert(__is_base_of(Class, ClassNonProviding));
+static_assert(__is_pointer_interconvertible_base_of(Class, ClassNonProviding));
+// IWYU: Class is...*-i1.h
+static_assert(!__builtin_is_virtual_base_of(Class, ClassNonProviding));
+static_assert(__is_base_of(ClassNonProviding, Class));
+static_assert(__is_pointer_interconvertible_base_of(ClassNonProviding, Class));
+// IWYU: Class is...*-i1.h
+static_assert(!__builtin_is_virtual_base_of(ClassNonProviding, Class));
+static_assert(__is_base_of(Struct, Struct));
+static_assert(__is_pointer_interconvertible_base_of(Struct, Struct));
+// IWYU: Struct is...*-i1.h
+static_assert(!__builtin_is_virtual_base_of(Struct, Struct));
+static_assert(!__is_base_of(Union1, Union1));
+static_assert(!__is_pointer_interconvertible_base_of(Union1, Union1));
+static_assert(!__builtin_is_virtual_base_of(Union1, Union1));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_base_of(Base, Derived));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__is_pointer_interconvertible_base_of(Base, Derived));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(!__builtin_is_virtual_base_of(Base, Derived));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_base_of(BaseNonProviding, DerivedNonProviding));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_pointer_interconvertible_base_of(BaseNonProviding,
+                                                    DerivedNonProviding));
+// IWYU: Derived is...*-i2.h
+static_assert(!__builtin_is_virtual_base_of(BaseNonProviding,
+                                            DerivedNonProviding));
+static_assert(__is_base_of(BaseNonProviding, DerivedProviding));
+static_assert(__is_pointer_interconvertible_base_of(BaseNonProviding,
+                                                    DerivedProviding));
+static_assert(!__builtin_is_virtual_base_of(BaseNonProviding,
+                                            DerivedProviding));
+// IWYU: Struct is...*-i1.h
+static_assert(!__is_base_of(Class, Struct));
+// IWYU: Struct is...*-i1.h
+static_assert(!__is_pointer_interconvertible_base_of(Class, Struct));
+// IWYU: Struct is...*-i1.h
+static_assert(!__builtin_is_virtual_base_of(Class, Struct));
+static_assert(!__is_base_of(Union1, Struct));
+static_assert(!__is_pointer_interconvertible_base_of(Union1, Struct));
+static_assert(!__builtin_is_virtual_base_of(Union1, Struct));
+static_assert(!__is_base_of(Struct, Union1));
+static_assert(!__is_pointer_interconvertible_base_of(Struct, Union1));
+static_assert(!__builtin_is_virtual_base_of(Struct, Union1));
+static_assert(!__is_base_of(Union1, Union2));
+static_assert(!__is_pointer_interconvertible_base_of(Union1, Union2));
+static_assert(!__builtin_is_virtual_base_of(Union1, Union2));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_base_of(Base&, Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_pointer_interconvertible_base_of(Base&, Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__builtin_is_virtual_base_of(Base&, Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_base_of(Base&, Derived));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_pointer_interconvertible_base_of(Base&, Derived));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__builtin_is_virtual_base_of(Base&, Derived));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_base_of(Base, Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_pointer_interconvertible_base_of(Base, Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__builtin_is_virtual_base_of(Base, Derived&));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_base_of(Base*, Derived*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__is_pointer_interconvertible_base_of(Base*, Derived*));
+// IWYU: Base needs a declaration
+// IWYU: Derived needs a declaration
+static_assert(!__builtin_is_virtual_base_of(Base*, Derived*));
+
 /**** IWYU_SUMMARY
 
 tests/cxx/type_trait.cc should add these lines:
