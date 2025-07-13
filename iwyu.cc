@@ -2541,6 +2541,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           return true;
         ReportTypeUse(CurrentLoc(), rhs_type, DerefKind::None);
         return true;
+      case TypeTrait::BTT_IsDeducible:
+        // BTT_IsDeducible is an implicit trait added by clang for
+        // the associated constraint of an (again, implicit) deduction guide for
+        // the C++20 alias template argument deduction. See C++20
+        // [over.match.class.deduct] or P1814. The wording suggests that
+        // the only possible arguments of this trait are
+        // DeducedTemplateSpecializationType naming the alias template, and
+        // TemplateSpecializationType from the alias template definition.
+        // Because the trait is associated with the alias template definition
+        // location, none of them should be reported, because the alias template
+        // is already there, and the aliased template should be able to be just
+        // fwd-declared by the author.
+        return true;
       default:
         for (const TypeSourceInfo* arg : expr->getArgs()) {
           QualType qual_type = arg->getType();

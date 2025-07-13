@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I . -Wno-deprecated-builtins
+// IWYU_ARGS: -I . -Wno-deprecated-builtins -Wno-c++20-extensions
 
 #include "tests/cxx/type_trait-d1.h"
 #include "tests/cxx/type_trait-d2.h"
@@ -2131,6 +2131,18 @@ static_assert(!__is_pointer_interconvertible_base_of(Base*, Derived*));
 // IWYU: Derived needs a declaration
 static_assert(!__builtin_is_virtual_base_of(Base*, Derived*));
 
+template <typename>
+struct DeducibleTpl;
+
+// Check that the implicit "deducible" trait (introduced due to the alias
+// template argument deduction on tpl_int definition below) does not trigger
+// a requirement of complete DeducibleTpl here.
+template <typename T>
+using NonProvidingAliasTpl = DeducibleTpl<T>;
+
+// IWYU: DeducibleTpl is...*-i1.h
+NonProvidingAliasTpl tpl_int = 1;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/type_trait.cc should add these lines:
@@ -2141,13 +2153,14 @@ tests/cxx/type_trait.cc should remove these lines:
 - class Class;  // lines XX-XX
 - class StructDerivedClass;  // lines XX-XX
 - struct Struct;  // lines XX-XX
+- template <typename> struct DeducibleTpl;  // lines XX-XX+1
 - union Union1;  // lines XX-XX
 - union Union2;  // lines XX-XX
 
 The full include-list for tests/cxx/type_trait.cc:
 #include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassRefProviding, DerivedProviding, DerivedPtrProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
 #include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, BaseNonProviding, ClassArray2NonProviding, ClassArray3NonProviding, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedArrayNonProviding, DerivedMemPtr, DerivedNonProviding, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1NonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
-#include "tests/cxx/type_trait-i1.h"  // for Base, Class, Struct, StructDerivedClass, Union1, Union2
+#include "tests/cxx/type_trait-i1.h"  // for Base, Class, DeducibleTpl, Struct, StructDerivedClass, Union1, Union2
 #include "tests/cxx/type_trait-i2.h"  // for Derived
 
 ***** IWYU_SUMMARY */

@@ -53,4 +53,9 @@ union Union2 {
   Union2& operator=(Union1&) noexcept;
 };
 
+template <typename T>
+struct DeducibleTpl {
+  DeducibleTpl(T);
+};
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPE_TRAIT_I1_H_
