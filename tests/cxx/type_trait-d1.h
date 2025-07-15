@@ -16,6 +16,7 @@ using DerivedProviding = Derived;
 using DerivedPtrProviding = Derived*;
 using DerivedPtrRefProviding = Derived*&;
 using DerivedRefProviding = Derived&;
+using ClassProviding = Class;
 using ClassRefProviding = Class&;
 using ClassConstRefProviding = const Class&;
 using Union1RefProviding = Union1&;
