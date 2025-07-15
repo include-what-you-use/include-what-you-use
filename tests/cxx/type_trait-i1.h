@@ -25,6 +25,8 @@ class Class {
   operator int() const noexcept;
   using FnRefType = void (&&)();
   operator FnRefType() const noexcept;
+
+  int i, j;
 };
 
 union Union1;
