@@ -152,6 +152,7 @@ using clang::UnresolvedLookupExpr;
 using clang::UsingDirectiveDecl;
 using clang::ValueDecl;
 using clang::VarDecl;
+using clang::VarTemplateSpecializationDecl;
 using llvm::ArrayRef;
 using llvm::PointerUnion;
 using llvm::cast;
@@ -764,6 +765,11 @@ bool IsTemplatizedFunctionDecl(const FunctionDecl* decl) {
   return decl && decl->getTemplateSpecializationArgs() != nullptr;
 }
 
+bool IsImplicitInstantiation(const VarDecl* decl) {
+  return decl->getTemplateSpecializationKind() ==
+         clang::TSK_ImplicitInstantiation;
+}
+
 bool HasImplicitConversionCtor(const CXXRecordDecl* cxx_class) {
   // Clang leaves ClassTemplateSpecializationDecl empty for uninstantiated
   // specializations. Hence, replace cxx_class with template definition so that
@@ -926,14 +932,13 @@ static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
   return retval;
 }
 
-static map<const Type*, const Type*>
-GetTplTypeResugarMapForFunctionExplicitTplArgs(
+static map<const Type*, const Type*> GetTplTypeResugarMapForExplicitTplArgs(
     const TemplateArgumentListInfo& explicit_tpl_list) {
   map<const Type*, const Type*> retval;
   for (const TemplateArgumentLoc& loc : explicit_tpl_list.arguments()) {
     if (const Type* arg_type = GetTemplateArgAsType(loc.getArgument())) {
       retval[GetCanonicalType(arg_type)] = arg_type;
-      VERRS(6) << "Adding an explicit template-function type of interest: "
+      VERRS(6) << "Adding an explicit template argument type of interest: "
                << PrintableType(arg_type) << "\n";
     }
   }
@@ -1008,6 +1013,19 @@ static map<const Type*, const Type*> GetDefaultedArgResugarMap(
   return res;
 }
 
+static map<const Type*, const Type*> GetDefaultedArgResugarMap(
+    const VarTemplateSpecializationDecl* decl, const DeclRefExpr* expr) {
+  map<const Type*, const Type*> res;
+  unsigned int num_explicit_args = expr->getNumTemplateArgs();
+  const TemplateArgumentList& args = decl->getTemplateArgs();
+  for (unsigned i = num_explicit_args, ie = args.size(); i < ie; ++i) {
+    const TemplateArgument& arg = args[i];
+    if (arg.getKind() == TemplateArgument::ArgKind::Type)
+      res.emplace(arg.getAsType().getTypePtr(), nullptr);
+  }
+  return res;
+}
+
 TemplateInstantiationData GetTplInstDataForFunction(
     const FunctionDecl* decl, const Expr* calling_expr,
     function<set<const Type*>(const Type*)> provided_getter) {
@@ -1045,8 +1063,7 @@ TemplateInstantiationData GetTplInstDataForFunction(
     const TemplateArgumentListInfo& explicit_tpl_args =
         GetExplicitTplArgs(callee_expr);
     if (explicit_tpl_args.size() > 0) {
-      resugar_map =
-          GetTplTypeResugarMapForFunctionExplicitTplArgs(explicit_tpl_args);
+      resugar_map = GetTplTypeResugarMapForExplicitTplArgs(explicit_tpl_args);
       start_of_implicit_args = explicit_tpl_args.size();
     }
   } else {
@@ -1054,8 +1071,7 @@ TemplateInstantiationData GetTplInstDataForFunction(
     const TemplateArgumentListInfo& explicit_tpl_args =
         GetExplicitTplArgs(calling_expr);
     if (explicit_tpl_args.size() > 0) {
-      resugar_map =
-          GetTplTypeResugarMapForFunctionExplicitTplArgs(explicit_tpl_args);
+      resugar_map = GetTplTypeResugarMapForExplicitTplArgs(explicit_tpl_args);
       resugar_map = ResugarTypeComponents(resugar_map);
       for (const auto [_, sugared_type] : resugar_map)
         InsertAllInto(provided_getter(sugared_type), &provided_types);
@@ -1124,6 +1140,24 @@ TemplateInstantiationData GetTplInstDataForFunction(
       resugar_map);  // add in the decomposition of resugar_map
   for (const auto [_, sugared_type] : resugar_map)
     InsertAllInto(provided_getter(sugared_type), &provided_types);
+  return TemplateInstantiationData{resugar_map, provided_types};
+}
+
+TemplateInstantiationData GetTplInstDataForVariable(
+    const VarTemplateSpecializationDecl* decl,
+    const DeclRefExpr* expr,
+    function<set<const Type*>(const Type*)> provided_getter) {
+  TemplateArgumentListInfo explicit_tpl_args;
+  expr->copyTemplateArgumentsInto(explicit_tpl_args);
+  map<const Type*, const Type*> resugar_map =
+      GetTplTypeResugarMapForExplicitTplArgs(explicit_tpl_args);
+  resugar_map = ResugarTypeComponents(resugar_map);
+  InsertAllInto(GetDefaultedArgResugarMap(decl, expr), &resugar_map);
+
+  set<const Type*> provided_types;
+  for (const auto [_, sugared_type] : resugar_map)
+    InsertAllInto(provided_getter(sugared_type), &provided_types);
+
   return TemplateInstantiationData{resugar_map, provided_types};
 }
 

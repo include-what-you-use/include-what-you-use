@@ -274,6 +274,7 @@ using clang::UsingShadowDecl;
 using clang::UsingType;
 using clang::ValueDecl;
 using clang::VarDecl;
+using clang::VarTemplateSpecializationDecl;
 using clang::driver::ToolChain;
 using llvm::cast;
 using llvm::drop_begin;
@@ -347,8 +348,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // We need to create implicit ctor/dtor nodes, which requires
   // non-const methods on CompilerInstance, so the var can't be const.
   explicit BaseAstVisitor(CompilerInstance* compiler)
-      : compiler_(compiler),
-        current_ast_node_(nullptr) {}
+      : current_ast_node_(nullptr), compiler_(compiler) {
+  }
 
   virtual ~BaseAstVisitor() = default;
 
@@ -867,15 +868,16 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     return compiler_;
   }
 
- private:
-  template <typename T> friend class BaseAstVisitor;
-  CompilerInstance* const compiler_;
-
   // The currently active decl/stmt/type/etc -- that is, the node
   // being currently visited in a Visit*() or Traverse*() method.  The
   // advantage of ASTNode over the object passed in to Visit*() and
   // Traverse*() is ASTNode knows its parent.
   ASTNode* current_ast_node_;
+
+ private:
+  template <typename T>
+  friend class BaseAstVisitor;
+  CompilerInstance* const compiler_;
 };
 
 // ----------------------------------------------------------------------
@@ -3452,6 +3454,8 @@ class InstantiatedTemplateVisitor
   // tpl_type_args_of_interest, which are the types we care about, and
   // usually explicitly written at the call site.
   //
+  // ScanInstantiatedVariable is similar, but it is used for variable templates.
+  //
   // ScanInstantiatedType() is similar, except that it looks through
   // the definition of a class template instead of a statement.
   //
@@ -3484,6 +3488,25 @@ class InstantiatedTemplateVisitor
     set_current_ast_node(const_cast<ASTNode*>(caller_ast_node));
 
     TraverseExpandedTemplateFunctionHelper(fn_decl);
+  }
+
+  void ScanInstantiatedVariable(
+      VarDecl* var_decl,
+      ASTNode* caller_ast_node,
+      const map<const Type*, const Type*>& resugar_map,
+      const set<const Type*>& blocked_types) {
+    Clear();
+    caller_ast_node_ = caller_ast_node;
+    resugar_map_ = resugar_map;
+    blocked_types_ = blocked_types;
+
+    // VarDecl node is put on the AST stack inside
+    // TraverseExpandedTemplateVariableHelper.
+    CHECK_(caller_ast_node->GetAs<Decl>() != var_decl &&
+           "AST node already set");
+    set_current_ast_node(caller_ast_node);
+
+    TraverseExpandedTemplateVariableHelper(var_decl);
   }
 
   // This isn't a Stmt, but sometimes we need to fully instantiate
@@ -3842,10 +3865,9 @@ class InstantiatedTemplateVisitor
     // CanForwardDeclareType function relies on the specific placement of
     // the type node in the AST. An intermediate SubstTemplateTypeParmType could
     // break that logic. However, such cases don't even need to be considered
-    // here, because they are handled in VisitSubstTemplateTypeParmType. But
-    // maybe using HasAncestorOfType, or replacing VisitSubst...Type with
-    // TraverseSubst...Type and Traverse...TypeLoc would be more reliable.
-    if (!current_ast_node()->ParentIsA<SubstTemplateTypeParmType>())
+    // here, because they are handled in VisitSubstTemplateTypeParmType.
+    const ASTNode* node = MostElaboratedAncestor(current_ast_node());
+    if (!node->ParentIsA<SubstTemplateTypeParmType>())
       AnalyzeTemplateTypeParmUse(type);
 
     return Base::VisitRecordType(type);
@@ -3961,6 +3983,18 @@ class InstantiatedTemplateVisitor
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
     ReportTypeUse(caller_loc(), actual_type, DerefKind::None);
     return Base::VisitCXXConstructExpr(expr);
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr* expr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (auto* var_decl = dyn_cast<VarDecl>(expr->getDecl())) {
+      if (!IsImplicitInstantiation(var_decl))
+        return Base::VisitDeclRefExpr(expr);
+      if (!TraverseExpandedTemplateVariableHelper(var_decl))
+        return false;
+    }
+    return Base::VisitDeclRefExpr(expr);
   }
 
   // --- Handler declared in IwyuBaseASTVisitor.
@@ -4097,6 +4131,31 @@ class InstantiatedTemplateVisitor
 
     // We need to iterate over the function.
     return TraverseDecl(const_cast<FunctionDecl*>(fn_decl));
+  }
+
+  bool TraverseExpandedTemplateVariableHelper(VarDecl* decl) {
+    if (!decl || ContainsKey(traversed_decls_, decl))
+      return true;  // avoid recursion and repetition
+    // TODO(bolshakov): is this really needed? BaseAstVisitor::Traverse* methods
+    // already have protection from recursion.
+    traversed_decls_.insert(decl);
+
+    AstFlattenerVisitor nodeset_getter(compiler());
+    // This gets to the decl for the (uninstantiated) template-as-written:
+    VarDecl* decl_as_written = decl->getTemplateInstantiationPattern();
+    if (!decl_as_written)  // TODO(bolshakov): could it be null?
+      return true;
+    nodes_to_ignore_.AddAll(nodeset_getter.GetNodesBelow(decl_as_written));
+
+    // This is not TraverseDecl because clang otherwise skips
+    // VarTemplateSpecializationDecl as an implicit instantiation
+    // (shouldVisitTemplateInstantiations needs overriding). Note that using
+    // TraverseVarDecl instead causes that VarDecl node should be put explicitly
+    // onto the IWYU AST stack.
+
+    ASTNode node(decl);
+    CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+    return TraverseVarDecl(decl);
   }
 
   // Does the actual recursing over data members and type members of
@@ -4826,6 +4885,14 @@ class IwyuAstConsumer
     } else if (!isa<EnumConstantDecl>(expr->getDecl())) {
       ReportDeclUse(CurrentLoc(), expr->getDecl());
     }
+    if (auto* var_decl =
+            dyn_cast<VarTemplateSpecializationDecl>(expr->getDecl())) {
+      if (!IsImplicitInstantiation(var_decl))
+        return Base::VisitDeclRefExpr(expr);
+      TemplateInstantiationData data = GetTplInstData(var_decl, expr);
+      instantiated_template_visitor_.ScanInstantiatedVariable(
+          var_decl, current_ast_node(), data.resugar_map, data.provided_types);
+    }
     return Base::VisitDeclRefExpr(expr);
   }
 
@@ -5135,6 +5202,14 @@ class IwyuAstConsumer
     return GetTplInstDataForFunction(
         decl, calling_expr,
         [this](const Type* type) { return GetProvidedTypeComponents(type); });
+  }
+
+  TemplateInstantiationData GetTplInstData(
+      const VarTemplateSpecializationDecl* decl,
+      const DeclRefExpr* expr) const {
+    return GetTplInstDataForVariable(decl, expr, [this](const Type* type) {
+      return GetProvidedTypeComponents(type);
+    });
   }
 
   pair<bool, const char*> CanBeProvidedTypeComponent(
