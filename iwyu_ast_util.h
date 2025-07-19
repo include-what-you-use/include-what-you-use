@@ -39,6 +39,7 @@ class ClassTemplateDecl;
 class ClassTemplateSpecializationDecl;
 class Decl;
 class DeclContext;
+class DeclRefExpr;
 class Expr;
 class FunctionDecl;
 class NamedDecl;
@@ -51,6 +52,8 @@ class TemplateName;
 class TranslationUnitDecl;
 class TypeDecl;
 class ValueDecl;
+class VarDecl;
+class VarTemplateSpecializationDecl;
 }  // namespace clang
 
 namespace llvm {
@@ -534,6 +537,11 @@ internal::DynCastPtr<T> DynCastFrom(T* ptr) {
 // Returns true if the decl is for a templatized function.
 bool IsTemplatizedFunctionDecl(const clang::FunctionDecl* decl);
 
+// Returns true if the given declaration is an implicitly instantiated variable
+// template specialization, as opposed to explicit instantiations or full
+// specializations.
+bool IsImplicitInstantiation(const clang::VarDecl*);
+
 // Returns true if the given class has at least one implicit
 // conversion constructor.
 bool HasImplicitConversionCtor(const clang::CXXRecordDecl* cxx_class);
@@ -597,6 +605,11 @@ struct TemplateInstantiationData {
 // calling_expr should be a CallExpr, CXXConstructExpr, or DeclRefExpr.
 TemplateInstantiationData GetTplInstDataForFunction(
     const clang::FunctionDecl* decl, const clang::Expr* calling_expr,
+    std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
+
+TemplateInstantiationData GetTplInstDataForVariable(
+    const clang::VarTemplateSpecializationDecl*,
+    const clang::DeclRefExpr*,
     std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
 
 // If class_decl is instantiated from a class template,
