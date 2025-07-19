@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I . -Wno-deprecated-builtins -Wno-c++20-extensions
+// IWYU_ARGS: -I . -Wno-deprecated-builtins -Wno-c++20-extensions \
+//            -fms-extensions
 
 #include "tests/cxx/type_trait-d1.h"
 #include "tests/cxx/type_trait-d2.h"
@@ -21,6 +22,528 @@ union Union2;
 
 using Void = void;
 enum class ScopedEnum {};
+
+constexpr bool complete = __is_complete_type(Class);
+static_assert(!__is_void(Class));
+static_assert(!__is_integral(Class));
+static_assert(!__is_floating_point(Class));
+static_assert(!__is_array(Class));
+static_assert(__is_array(Class[]));
+static_assert(!__is_bounded_array(Class));
+static_assert(__is_bounded_array(Class[5]));
+static_assert(!__is_pointer(Class));
+static_assert(__is_pointer(Class*));
+static_assert(!__is_lvalue_reference(Class));
+static_assert(__is_lvalue_reference(Class&));
+static_assert(!__is_rvalue_reference(Class));
+static_assert(__is_rvalue_reference(Class&&));
+static_assert(!__is_member_function_pointer(Class));
+static_assert(__is_member_function_pointer(int (Class::*)()));
+static_assert(!__is_member_object_pointer(Class));
+static_assert(__is_member_object_pointer(int Class::*));
+static_assert(!__is_enum(Class));
+static_assert(!__is_scoped_enum(Class));
+static_assert(!__is_union(Class));
+static_assert(__is_union(Union1));
+static_assert(__is_class(Class));
+static_assert(!__is_function(Class));
+static_assert(!__is_reference(Class));
+static_assert(__is_reference(Class&));
+static_assert(!__is_arithmetic(Class));
+static_assert(!__is_fundamental(Class));
+static_assert(__is_object(Class));
+static_assert(!__is_scalar(Class));
+static_assert(__is_compound(Class));
+static_assert(!__is_member_pointer(Class));
+static_assert(__is_member_pointer(Struct Class::*));
+static_assert(!__is_const(Class));
+static_assert(__is_const(const Class));
+static_assert(!__is_volatile(Class));
+static_assert(__is_volatile(volatile Class));
+static_assert(!__is_signed(Class));
+static_assert(!__is_unsigned(Class));
+static_assert(!__is_unbounded_array(Class));
+static_assert(__is_unbounded_array(Class[]));
+static_assert(!__is_interface_class(Class));
+// IWYU: Class is...*-i1.h
+static_assert(__builtin_structured_binding_size(Class) == 2);
+// IWYU: Class is...*-i1.h
+static_assert(__builtin_structured_binding_size(ClassNonProviding) == 2);
+static_assert(__builtin_structured_binding_size(ClassProviding) == 2);
+static_assert(__builtin_structured_binding_size(Class[3]) == 3);
+static_assert(__builtin_structured_binding_size(ClassArray3NonProviding) == 3);
+// IWYU: Struct is...*-i1.h
+static_assert(__is_empty(Struct));
+static_assert(!__is_empty(Struct*));
+static_assert(!__is_empty(Struct&));
+static_assert(!__is_empty(Struct[]));
+static_assert(!__is_empty(Struct[5]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_empty(ClassNonProviding));
+static_assert(!__is_empty(ClassProviding));
+static_assert(!__is_empty(Union1));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_polymorphic(Class));
+static_assert(!__is_polymorphic(Class*));
+static_assert(!__is_polymorphic(Class&));
+static_assert(!__is_polymorphic(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_polymorphic(ClassNonProviding));
+static_assert(!__is_polymorphic(ClassProviding));
+static_assert(!__is_polymorphic(Union1));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_abstract(Class));
+static_assert(!__is_abstract(Class*));
+static_assert(!__is_abstract(Class&));
+static_assert(!__is_abstract(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_abstract(ClassNonProviding));
+static_assert(!__is_abstract(ClassProviding));
+static_assert(!__is_abstract(Union1));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_final(Class));
+static_assert(!__is_final(Class*));
+static_assert(!__is_final(Class&));
+static_assert(!__is_final(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_final(ClassNonProviding));
+static_assert(!__is_final(ClassProviding));
+// IWYU: Union1 is...*-i1.h
+static_assert(!__is_final(Union1));
+static_assert(!__is_final(Union1*));
+static_assert(!__is_final(Union1&));
+static_assert(!__is_final(Union1[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_sealed(Class));
+static_assert(!__is_sealed(Class*));
+static_assert(!__is_sealed(Class&));
+static_assert(!__is_sealed(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_sealed(ClassNonProviding));
+static_assert(!__is_sealed(ClassProviding));
+// IWYU: Union1 is...*-i1.h
+static_assert(!__is_sealed(Union1));
+static_assert(!__is_sealed(Union1*));
+static_assert(!__is_sealed(Union1&));
+static_assert(!__is_sealed(Union1[]));
+// IWYU: StructDerivedClass is...*-i1.h
+static_assert(__is_aggregate(StructDerivedClass));
+static_assert(!__is_aggregate(StructDerivedClass*));
+static_assert(!__is_aggregate(StructDerivedClass&));
+static_assert(__is_aggregate(Class[]));
+static_assert(__is_aggregate(Class[5]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_aggregate(ClassNonProviding));
+static_assert(!__is_aggregate(ClassProviding));
+static_assert(__is_aggregate(ClassArray2NonProviding));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_aggregate(Union2));
+static_assert(!__is_aggregate(Union2*));
+static_assert(!__is_aggregate(Union2&));
+static_assert(__is_aggregate(Union1[]));
+// IWYU: Class is...*-i1.h
+static_assert(__builtin_is_implicit_lifetime(Class));
+static_assert(__builtin_is_implicit_lifetime(Class*));
+static_assert(!__builtin_is_implicit_lifetime(Class&));
+static_assert(__builtin_is_implicit_lifetime(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(__builtin_is_implicit_lifetime(ClassNonProviding));
+static_assert(__builtin_is_implicit_lifetime(ClassProviding));
+static_assert(__builtin_is_implicit_lifetime(ClassArray2NonProviding));
+// IWYU: Union1 is...*-i1.h
+static_assert(__builtin_is_implicit_lifetime(Union1));
+static_assert(__builtin_is_implicit_lifetime(Union1*));
+static_assert(!__builtin_is_implicit_lifetime(Union1&));
+static_assert(__builtin_is_implicit_lifetime(Union1[]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_unique_object_representations(Class));
+static_assert(__has_unique_object_representations(Class*));
+static_assert(!__has_unique_object_representations(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__has_unique_object_representations(Class[5]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_unique_object_representations(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_unique_object_representations(Class[][5]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_unique_object_representations(Class[5][5]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_unique_object_representations(ClassNonProviding));
+static_assert(__has_unique_object_representations(ClassProviding));
+// IWYU: Class is...*-i1.h
+static_assert(__has_unique_object_representations(ClassArray2NonProviding));
+// IWYU: Derived is...*-i2.h
+static_assert(!__has_unique_object_representations(DerivedArrayNonProviding));
+// IWYU: Union1 is...*-i1.h
+static_assert(!__has_unique_object_representations(Union1));
+static_assert(!__has_unique_object_representations(Union1&&));
+// IWYU: Union1 is...*-i1.h
+static_assert(!__has_unique_object_representations(Union1[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivial(Class));
+static_assert(__is_trivial(Class*));
+static_assert(!__is_trivial(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivial(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivial(Class[5]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivial(Class[5][6]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivial(Class[][6]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivial(ClassNonProviding));
+static_assert(!__is_trivial(ClassProviding));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivial(ClassArray2NonProviding));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivial(DerivedArrayNonProviding));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_trivial(Union2));
+static_assert(__is_trivial(Union1*));
+static_assert(!__is_trivial(Union1&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_trivial(Union2[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_trivial(Union2[2][3]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_copyable(Class));
+static_assert(__is_trivially_copyable(Class*));
+static_assert(!__is_trivially_copyable(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_copyable(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_copyable(Class[5]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_copyable(Class[5][6]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_copyable(Class[][6]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_copyable(ClassNonProviding));
+static_assert(__is_trivially_copyable(ClassProviding));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_copyable(ClassArray2NonProviding));
+// IWYU: Derived is...*-i2.h
+static_assert(__is_trivially_copyable(DerivedArrayNonProviding));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_trivially_copyable(Union2));
+static_assert(__is_trivially_copyable(Union1*));
+static_assert(!__is_trivially_copyable(Union1&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_trivially_copyable(Union2[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_trivially_copyable(Union2[2][3]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_standard_layout(Class));
+static_assert(__is_standard_layout(Class*));
+static_assert(!__is_standard_layout(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__is_standard_layout(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_standard_layout(Class[5][6]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_standard_layout(Class[][6]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_standard_layout(Union2));
+static_assert(!__is_standard_layout(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_standard_layout(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_pod(Class));
+static_assert(__is_pod(Class*));
+static_assert(!__is_pod(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_pod(Class[][6]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_pod(Union2));
+static_assert(!__is_pod(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_pod(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_literal(Class));
+static_assert(__is_literal(Class*));
+static_assert(__is_literal(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_literal(Class[][6]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_literal(Union2));
+static_assert(__is_literal(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_literal(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_bitwise_cloneable(Class));
+static_assert(__is_bitwise_cloneable(Class*));
+static_assert(__is_bitwise_cloneable(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__is_bitwise_cloneable(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_bitwise_cloneable(Union2));
+static_assert(__is_bitwise_cloneable(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_bitwise_cloneable(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_relocatable(Class));
+static_assert(__is_trivially_relocatable(Class*));
+static_assert(!__is_trivially_relocatable(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_relocatable(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_trivially_relocatable(Union2));
+static_assert(!__is_trivially_relocatable(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__is_trivially_relocatable(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_equality_comparable(Class));
+static_assert(__is_trivially_equality_comparable(Class*));
+static_assert(!__is_trivially_equality_comparable(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__is_trivially_equality_comparable(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(!__is_trivially_equality_comparable(Union2));
+static_assert(!__is_trivially_equality_comparable(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(!__is_trivially_equality_comparable(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(__builtin_is_cpp_trivially_relocatable(Class));
+static_assert(__builtin_is_cpp_trivially_relocatable(Class*));
+static_assert(!__builtin_is_cpp_trivially_relocatable(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__builtin_is_cpp_trivially_relocatable(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__builtin_is_cpp_trivially_relocatable(Union2));
+static_assert(!__builtin_is_cpp_trivially_relocatable(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__builtin_is_cpp_trivially_relocatable(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(__builtin_is_replaceable(Class));
+static_assert(__builtin_is_replaceable(Class*));
+static_assert(!__builtin_is_replaceable(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__builtin_is_replaceable(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__builtin_is_replaceable(Union2));
+static_assert(!__builtin_is_replaceable(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__builtin_is_replaceable(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(__can_pass_in_regs(Class));
+// IWYU: Union1 is...*-i1.h
+static_assert(__can_pass_in_regs(Union1));
+// IWYU: StructDerivedClass is...*-i1.h
+static_assert(__has_nothrow_constructor(StructDerivedClass));
+static_assert(__has_nothrow_constructor(Class*));
+static_assert(!__has_nothrow_constructor(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__has_nothrow_constructor(StructDerivedClass[5]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_nothrow_constructor(Union2));
+static_assert(!__has_nothrow_constructor(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_nothrow_constructor(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_nothrow_copy(Class));
+static_assert(__has_nothrow_copy(Class*));
+static_assert(__has_nothrow_copy(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_copy(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_nothrow_copy(Union2));
+static_assert(__has_nothrow_copy(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_nothrow_copy(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_trivial_constructor(Class));
+static_assert(__has_trivial_constructor(Class*));
+static_assert(!__has_trivial_constructor(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_trivial_constructor(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_trivial_constructor(Union2));
+static_assert(!__has_trivial_constructor(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_trivial_constructor(Union2[1]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_trivial_move_constructor(Class));
+static_assert(__has_trivial_move_constructor(Class*));
+static_assert(!__has_trivial_move_constructor(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__has_trivial_move_constructor(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_trivial_move_constructor(Union2));
+static_assert(!__has_trivial_move_constructor(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_trivial_move_constructor(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_trivial_copy(Class));
+static_assert(__has_trivial_copy(Class*));
+static_assert(__has_trivial_copy(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_trivial_copy(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_trivial_copy(Union2));
+static_assert(__has_trivial_copy(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_trivial_copy(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_trivial_destructor(Class));
+static_assert(__has_trivial_destructor(Class*));
+static_assert(__has_trivial_destructor(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__has_trivial_destructor(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_trivial_destructor(Union2));
+static_assert(__has_trivial_destructor(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_trivial_destructor(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_virtual_destructor(Class));
+static_assert(!__has_virtual_destructor(Class*));
+static_assert(!__has_virtual_destructor(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_virtual_destructor(Class[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(!__has_virtual_destructor(Union2));
+static_assert(!__has_virtual_destructor(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(!__has_virtual_destructor(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_nothrow_assign(Class));
+// IWYU: Class is...*-i1.h
+static_assert(__has_nothrow_assign(ClassNonProviding));
+static_assert(__has_nothrow_assign(ClassProviding));
+static_assert(__has_nothrow_assign(Class*));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_assign(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_assign(ClassRefNonProviding));
+static_assert(!__has_nothrow_assign(ClassRefProviding));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_assign(Class&&));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_assign(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_assign(Class (&)[5]));
+static_assert(!__has_nothrow_assign(Class (&)[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_assign(Class (&&)[5]));
+static_assert(!__has_nothrow_assign(Class (&&)[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_assign(ClassArray3NonProviding&));
+// Reference to an unbounded array type.
+static_assert(!__has_nothrow_assign(DerivedArrayNonProviding&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_nothrow_assign(Union2));
+// IWYU: Union2 is...*-i1.h
+static_assert(!__has_nothrow_assign(Union2&));
+static_assert(__has_nothrow_assign(Union2*));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_nothrow_assign(Union2[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(!__has_nothrow_assign(Union2 (&)[5]));
+static_assert(!__has_nothrow_assign(Union2 (&)[]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_nothrow_move_assign(Class));
+static_assert(__has_nothrow_move_assign(Class*));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_move_assign(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_move_assign(Class&&));
+// IWYU: Class is...*-i1.h
+static_assert(__has_nothrow_move_assign(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_nothrow_move_assign(Class (&)[5]));
+static_assert(!__has_nothrow_move_assign(Class (&)[]));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_nothrow_move_assign(Union2));
+// IWYU: Union2 is...*-i1.h
+static_assert(!__has_nothrow_move_assign(Union2&));
+// IWYU: Union2 is...*-i1.h
+static_assert(__has_nothrow_move_assign(Union2[]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_trivial_assign(Class));
+static_assert(__has_trivial_assign(Class*));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_trivial_assign(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_trivial_assign(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_trivial_assign(Class (&&)[5]));
+static_assert(!__has_trivial_assign(Class (&&)[]));
+// IWYU: Union1 is...*-i1.h
+static_assert(__has_trivial_assign(Union1));
+static_assert(__has_trivial_assign(Union1*));
+// IWYU: Union1 is...*-i1.h
+static_assert(!__has_trivial_assign(Union1&));
+// IWYU: Union1 is...*-i1.h
+static_assert(!__has_trivial_assign(Union1 (&)[5]));
+// IWYU: Class is...*-i1.h
+static_assert(__has_trivial_move_assign(Class));
+static_assert(__has_trivial_move_assign(Class*));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_trivial_move_assign(Class&));
+// IWYU: Class is...*-i1.h
+static_assert(__has_trivial_move_assign(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(!__has_trivial_move_assign(Class (&)[5]));
+static_assert(!__has_trivial_move_assign(Class (&)[]));
+// IWYU: Union1 is...*-i1.h
+static_assert(__has_trivial_move_assign(Union1));
+static_assert(__has_trivial_move_assign(Union1*));
+// IWYU: Union1 is...*-i1.h
+static_assert(!__has_trivial_move_assign(Union1&&));
+// IWYU: Union1 is...*-i1.h
+static_assert(!__has_trivial_move_assign(Union1 (&&)[5]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_destructible(Class));
+// IWYU: Class is...*-i1.h
+static_assert(__is_destructible(ClassNonProviding));
+static_assert(__is_destructible(ClassProviding));
+static_assert(__is_destructible(Class*));
+static_assert(__is_destructible(Class&));
+static_assert(__is_destructible(Class&&));
+static_assert(__is_destructible(ClassRefNonProviding));
+static_assert(!__is_destructible(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_destructible(Class[5]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_destructible(Class[5][6]));
+static_assert(__is_destructible(Class (&)[5]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_destructible(ClassArray3NonProviding));
+// Array of unknown bound.
+static_assert(!__is_destructible(DerivedArrayNonProviding));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_destructible(Union1));
+static_assert(__is_destructible(Union1&));
+static_assert(!__is_destructible(Union1[]));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_destructible(Union1[5]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_destructible(Class));
+static_assert(__is_nothrow_destructible(Class*));
+static_assert(__is_nothrow_destructible(Class&));
+static_assert(!__is_nothrow_destructible(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_nothrow_destructible(Class[5]));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_nothrow_destructible(Union1));
+static_assert(__is_nothrow_destructible(Union1&));
+static_assert(!__is_nothrow_destructible(Union1[]));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_nothrow_destructible(Union1[5]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_destructible(Class));
+static_assert(__is_trivially_destructible(Class*));
+static_assert(__is_trivially_destructible(Class&));
+static_assert(!__is_trivially_destructible(Class[]));
+// IWYU: Class is...*-i1.h
+static_assert(__is_trivially_destructible(Class[5]));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_trivially_destructible(Union1));
+static_assert(__is_trivially_destructible(Union1&));
+static_assert(!__is_trivially_destructible(Union1[]));
+// IWYU: Union1 is...*-i1.h
+static_assert(__is_trivially_destructible(Union1[5]));
 
 static_assert(__is_same(Class, Class));
 static_assert(__is_same(Class&, Class&));
@@ -1585,7 +2108,6 @@ static_assert(!__is_trivially_constructible(Class&&));
 static_assert(__is_trivially_constructible(Class*));
 // IWYU: Class is...*-i1.h
 static_assert(!__is_trivially_constructible(Class[5]));
-// IWYU: Class is...*-i1.h
 static_assert(!__is_trivially_constructible(Class[]));
 // IWYU: Class is...*-i1.h
 static_assert(!__is_trivially_constructible(Class, void));
@@ -2158,7 +2680,7 @@ tests/cxx/type_trait.cc should remove these lines:
 - union Union2;  // lines XX-XX
 
 The full include-list for tests/cxx/type_trait.cc:
-#include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassRefProviding, DerivedProviding, DerivedPtrProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
+#include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassProviding, ClassRefProviding, DerivedProviding, DerivedPtrProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
 #include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, BaseNonProviding, ClassArray2NonProviding, ClassArray3NonProviding, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedArrayNonProviding, DerivedMemPtr, DerivedNonProviding, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1NonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
 #include "tests/cxx/type_trait-i1.h"  // for Base, Class, DeducibleTpl, Struct, StructDerivedClass, Union1, Union2
 #include "tests/cxx/type_trait-i2.h"  // for Derived

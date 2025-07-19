@@ -1421,7 +1421,7 @@ int main() {
   // IWYU: I1_Class is...*badinc-i1.h
   typeid(I1_Class).name();
   // This is an extension for gcc and msvc.
-  // IWYU: I1_Class is...*badinc-i1.h
+  // IWYU: I1_Class needs a declaration
   (void)(__is_enum(I1_Class));
 
   // Check out template iwyu determinations.

@@ -2053,7 +2053,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    if (expr == nullptr || expr->getNumArgs() < 2)
+    if (expr == nullptr)
       return true;
 
     current_ast_node()->set_in_forward_declare_context(true);
@@ -2083,7 +2083,119 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // better for IWYU to require the full type info in such situations. It is
     // important not to suggest a full type when it is decidedly unnecessary
     // for computing the correct value.
+    // See CheckUnaryTypeTraitTypeCompleteness function from
+    // clang/lib/Sema/SemaTypeTraits.cpp for the reference on unary type traits.
     switch (expr->getTrait()) {
+      case TypeTrait::UTT_IsCompleteType:
+      case TypeTrait::UTT_IsVoid:
+      case TypeTrait::UTT_IsIntegral:
+      case TypeTrait::UTT_IsFloatingPoint:
+      case TypeTrait::UTT_IsArray:
+      case TypeTrait::UTT_IsBoundedArray:
+      case TypeTrait::UTT_IsPointer:
+      case TypeTrait::UTT_IsLvalueReference:
+      case TypeTrait::UTT_IsRvalueReference:
+      case TypeTrait::UTT_IsMemberFunctionPointer:
+      case TypeTrait::UTT_IsMemberObjectPointer:
+      case TypeTrait::UTT_IsEnum:
+      case TypeTrait::UTT_IsScopedEnum:
+      case TypeTrait::UTT_IsUnion:
+      case TypeTrait::UTT_IsClass:
+      case TypeTrait::UTT_IsFunction:
+      case TypeTrait::UTT_IsReference:
+      case TypeTrait::UTT_IsArithmetic:
+      case TypeTrait::UTT_IsFundamental:
+      case TypeTrait::UTT_IsObject:
+      case TypeTrait::UTT_IsScalar:
+      case TypeTrait::UTT_IsCompound:
+      case TypeTrait::UTT_IsMemberPointer:
+      case TypeTrait::UTT_IsConst:
+      case TypeTrait::UTT_IsVolatile:
+      case TypeTrait::UTT_IsSigned:
+      case TypeTrait::UTT_IsUnboundedArray:
+      case TypeTrait::UTT_IsUnsigned:
+      case TypeTrait::UTT_IsInterfaceClass:
+        // Interface classes are a MS extension in C++/CLI and C++/CX dialects.
+        // Clang doesn't support them and returns always 'false'. Moreover, MSVC
+        // doesn't allow redeclarations of interface classes without
+        // the 'interface' keyword, so a fwd-decl is really sufficient.
+        return true;
+      case TypeTrait::UTT_StructuredBindingSize:
+        // This trait compiles only for decomposable types, which simplifies
+        // analysis. Constant-size arrays are always decomposable, so
+        // the complete element type is not needed. For class types, it is
+        // probably better to require the complete type despite its
+        // fwd-declaration is sufficient to define the std::tuple_size
+        // specialization in the case of tuple-like classes.
+        if (!lhs_type->isArrayType())
+          ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::None);
+        return true;
+      case TypeTrait::UTT_IsEmpty:
+      case TypeTrait::UTT_IsPolymorphic:
+      case TypeTrait::UTT_IsAbstract:
+        if (lhs_type->isStructureOrClassType())
+          ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::None);
+        return true;
+      case TypeTrait::UTT_IsFinal:
+      case TypeTrait::UTT_IsSealed:
+      case TypeTrait::UTT_IsAggregate:
+      case TypeTrait::UTT_IsImplicitLifetime:
+        if (lhs_type->isRecordType())
+          ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::None);
+        return true;
+      case TypeTrait::UTT_HasUniqueObjectRepresentations:
+      case TypeTrait::UTT_IsTrivial:
+      case TypeTrait::UTT_IsTriviallyCopyable:
+      case TypeTrait::UTT_IsStandardLayout:
+      case TypeTrait::UTT_IsPOD:
+      case TypeTrait::UTT_IsLiteral:
+      case TypeTrait::UTT_IsBitwiseCloneable:
+      case TypeTrait::UTT_IsTriviallyRelocatable:
+      case TypeTrait::UTT_IsTriviallyEqualityComparable:
+      case TypeTrait::UTT_IsCppTriviallyRelocatable:
+      case TypeTrait::UTT_IsReplaceable:
+      case TypeTrait::UTT_CanPassInRegs:
+      case TypeTrait::UTT_HasNothrowConstructor:
+      case TypeTrait::UTT_HasNothrowCopy:
+      case TypeTrait::UTT_HasTrivialDefaultConstructor:
+      case TypeTrait::UTT_HasTrivialMoveConstructor:
+      case TypeTrait::UTT_HasTrivialCopy:
+      case TypeTrait::UTT_HasTrivialDestructor:
+      case TypeTrait::UTT_HasVirtualDestructor:
+        // [tab:meta.unary.prop]: remove_all_extents_t<T> shall be a complete
+        // type or cv void.
+        // It means that the type should be complete even if it is nested inside
+        // an unbounded array and/or an arbitrary number of bounded arrays.
+        // ReportTypeUse currently does such an unwinding.
+        ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::None);
+        return true;
+      case TypeTrait::UTT_HasNothrowAssign:
+      case TypeTrait::UTT_HasNothrowMoveAssign:
+      case TypeTrait::UTT_HasTrivialAssign:
+      case TypeTrait::UTT_HasTrivialMoveAssign:
+        // MSVC requires even the complete referred-to type (because it produces
+        // result as if the reference is absent) except references to unbounded
+        // arrays.
+        if (lhs_type->isReferenceType()) {
+          if (!lhs_type->getPointeeType()->isIncompleteArrayType())
+            ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::RemoveRefs);
+        } else {
+          ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::None);
+        }
+        return true;
+      case TypeTrait::UTT_IsDestructible:
+      case TypeTrait::UTT_IsNothrowDestructible:
+      case TypeTrait::UTT_IsTriviallyDestructible:
+        // For these traits, unbounded array element types are not needed.
+        if (!lhs_type->isIncompleteArrayType())
+          ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::None);
+        return true;
+      case TypeTrait::UTT_IsIntangibleType:
+      case TypeTrait::UTT_IsTypedResourceElementCompatible:
+      case TypeTrait::BTT_IsScalarizedLayoutCompatible:
+        // TODO(bolshakov): these are HLSL traits which will need consideration
+        // if HLSL is supported.
+        return true;
       case TypeTrait::BTT_IsSame:
         return true;
       case TypeTrait::BTT_IsAssignable:
@@ -2294,6 +2406,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           }
           return true;
         }
+        if (expr->getNumArgs() < 2)
+          return true;
         swap(lhs_type, rhs_type);
         swap(lhs_qual_type, rhs_qual_type);
         [[fallthrough]];
