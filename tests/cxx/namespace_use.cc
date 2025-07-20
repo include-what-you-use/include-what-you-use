@@ -17,7 +17,7 @@
 // Purely using the namespace, not any symbols.
 // This could be unused, or being used transitively in namespace lookup.
 // The include suggestion will be the first header that declares the namespace.
-// IWYU: i1_ns is defined in ...*
+// IWYU: i1_ns is...*namespace_use-i1.h
 using namespace i1_ns;
 
 // This namespace gets used for symbols within it.
@@ -25,7 +25,7 @@ using namespace i1_ns;
 using namespace i2_ns;
 
 int main(int, const char**) {
-  // IWYU: i2_ns::GetValue is defined in ...*namespace_use-i2.h
+  // IWYU: i2_ns::GetValue is...*namespace_use-i2.h
   return GetValue();
 }
 

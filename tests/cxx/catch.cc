@@ -14,50 +14,50 @@
 
 int main() {
   try {
-  // IWYU: CatchByValue...*catch-byvalue.h
+  // IWYU: CatchByValue is...*catch-byvalue.h
   } catch (const CatchByValue cbv) {
-    // IWYU: LogException...*catch-logex.h
+    // IWYU: LogException is...*catch-logex.h
     LogException(cbv);
   }
 
   try {
-  // IWYU: CatchByRef needs a declaration...*
-  // IWYU: CatchByRef...*catch-byref.h
+  // IWYU: CatchByRef needs a declaration
+  // IWYU: CatchByRef is...*catch-byref.h
   } catch (const CatchByRef& cbr) {
-    // IWYU: LogException...*catch-logex.h
+    // IWYU: LogException is...*catch-logex.h
     LogException(cbr);
   }
 
   try {
-  // IWYU: CatchByPtr needs a declaration...*
-  // IWYU: CatchByPtr...*catch-byptr.h
+  // IWYU: CatchByPtr needs a declaration
+  // IWYU: CatchByPtr is...*catch-byptr.h
   } catch (const CatchByPtr* cpr) {
-    // IWYU: LogException...*catch-logex.h
+    // IWYU: LogException is...*catch-logex.h
     LogException(*cpr);
   }
 
   // Make sure we see through elaborated types
   try {
-  // IWYU: CatchElab needs a declaration...*
-  // IWYU: CatchElab...*catch-elab.h
+  // IWYU: CatchElab needs a declaration
+  // IWYU: CatchElab is...*catch-elab.h
   } catch (const Namespace::CatchElab&) {
   }
 
   // Make sure we don't crash when there's no type.
   try {
-    // IWYU: Thrown...*catch-thrown.h
+    // IWYU: Thrown is...*catch-thrown.h
     throw Thrown();
   } catch (...) {
-    // IWYU: puts...*stdio.h
+    // IWYU: puts is...*stdio.h
     puts("Unknown exception");
   }
 
-  // IWYU: CatchMacro1 needs a declaration...*
-  // IWYU: CatchMacro1...*catch-macro-1.h
+  // IWYU: CatchMacro1 needs a declaration
+  // IWYU: CatchMacro1 is...*catch-macro-1.h
   CHECK_THROW_1(CatchMacro1);
 
-  // IWYU: CatchMacro2 needs a declaration...*
-  // IWYU: CatchMacro2...*catch-macro-2.h
+  // IWYU: CatchMacro2 needs a declaration
+  // IWYU: CatchMacro2 is...*catch-macro-2.h
   CHECK_THROW_2(CatchMacro2);
 
   return 0;

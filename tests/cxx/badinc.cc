@@ -142,7 +142,7 @@ using i1_ns::I1_NamespaceTemplateFn;
 // IWYU: i1_ns::I1_UnusedNamespaceStruct needs a declaration
 using i1_ns::I1_UnusedNamespaceStruct;
 // TODO(csilvers): mark this using statement as redundant and remove it.
-// IWYU: i1_ns5 is defined in...*which isn't directly #included.
+// IWYU: i1_ns5 is...*badinc-i1.h
 using namespace i1_ns5;
 
 // We do some proper forward-declaring here, and also some unnecessary
@@ -815,11 +815,11 @@ int (*i1_globalfunctionptr2)(void) = &i1_GlobalFunction;
 I2_InlFileClass i2_inlfileclass;
 // IWYU: I2_InlFileTemplateClass is...*badinc-i2-inl.h
 I2_InlFileTemplateClass<int> i2_inlfiletemplateclass;
-// IWYU: I2_Class...*badinc-i2.h
-// IWYU: I2_Class::I2_Class...*badinc-i2-inl.h
+// IWYU: I2_Class is...*badinc-i2.h
+// IWYU: I2_Class::I2_Class is...*badinc-i2-inl.h
 // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
 I2_Class i2_class_with_inl_constructor("calling ctor in badinc-i2-inl.h");
-// IWYU: I2_TemplateClass...*badinc-i2.h
+// IWYU: I2_TemplateClass is...*badinc-i2.h
 // IWYU: I2_TemplateClass::I2_TemplateClass<.*> is...*badinc-i2-inl.h
 // IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
 I2_TemplateClass<int> i2_template_class_with_inl_constructor(4, "inl ctor");
@@ -1051,7 +1051,7 @@ int main() {
   D1_Subclass local_d1_subclass;
   // IWYU: I2_Class needs a declaration
   I2_Class* local_i2_class_ptr = 0;  // ptr-only in this .cc, non-ptr in .h
-  // IWYU: I2_TemplateClass...*badinc-i2.h
+  // IWYU: I2_TemplateClass is...*badinc-i2.h
   // IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
   I2_TemplateClass<int> local_i2_template_class(1);
   // IWYU: I1_PtrDereferenceStruct needs a declaration

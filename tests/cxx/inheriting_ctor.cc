@@ -11,7 +11,7 @@
 
 #include "inheriting_ctor-d1.h"
 
-// IWYU: Derived is defined in .*-i1.h
+// IWYU: Derived is...*inheriting_ctor-i1.h
 void func() { Derived d(1); }
 
 /**** IWYU_SUMMARY

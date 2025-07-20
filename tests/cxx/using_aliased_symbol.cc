@@ -17,15 +17,15 @@
 #include "tests/cxx/using_aliased_symbol-alias.h"
 
 void use_symbol() {
-  // IWYU: ns::symbol is defined in ...*using_aliased_symbol-declare.h", which isn't directly #included.
+  // IWYU: ns::symbol is...*using_aliased_symbol-declare.h
   ns2::symbol();
   // Use of non-providing typedef requires full underlying type info to be
   // provided by the user. Hence, full IndirectClass info is required here.
-  // IWYU: ns::Typedef is defined in ...*using_aliased_symbol-declare.h", which isn't directly #included.
-  // IWYU: IndirectClass is defined in ...*indirect.h", which isn't directly #included.
+  // IWYU: ns::Typedef is...*using_aliased_symbol-declare.h
+  // IWYU: IndirectClass is...*indirect.h
   ns2::Typedef a;
   // Typedef use in a fwd-decl context doesn't require underlying type info.
-  // IWYU: ns::Typedef is defined in ...*using_aliased_symbol-declare.h", which isn't directly #included.
+  // IWYU: ns::Typedef is...*using_aliased_symbol-declare.h
   ns2::Typedef* pa;
 }
 

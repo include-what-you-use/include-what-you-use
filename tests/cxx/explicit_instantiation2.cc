@@ -50,13 +50,13 @@ Template<bool> t1b; // 1b
 // IWYU: Template is...*explicit_instantiation-template.h
 // IWYU: Template is...*template_short.h.*for explicit instantiation
 FullUseArg<
-    // IWYU: Template needs a declaration...*
+    // IWYU: Template needs a declaration
     Template<short>>
     // IWYU: Template is...*explicit_instantiation-template.h
     t3; // 3
 
 FwdDeclUseArg<
-    // IWYU: Template needs a declaration...*
+    // IWYU: Template needs a declaration
     Template<short>>
     t4; // 4
 
@@ -79,7 +79,7 @@ TemplateTemplateArgShortFwd<
 // IWYU: Template is...*explicit_instantiation-template.h
 Template<int> t9; // 9
 
-// IWYU: Template needs a declaration...*
+// IWYU: Template needs a declaration
 template <> class Template<char> {};
 
 TemplateAsDefaultFull<char> t10; // 10
