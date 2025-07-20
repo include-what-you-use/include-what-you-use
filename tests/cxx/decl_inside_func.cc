@@ -23,7 +23,7 @@
 #include "tests/cxx/decl_inside_func-d1.h"
 
 const char* f() {
-  // IWYU: MACRO is ...*decl_inside_func-i1.h
+  // IWYU: MACRO is...*decl_inside_func-i1.h
   return MACRO("bleh").value();
 }
 

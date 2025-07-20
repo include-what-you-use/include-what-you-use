@@ -94,7 +94,7 @@ struct FnreturnStruct {
 };
 
 // IWYU should not print the comment "for fn return type" when the type info is mandatory.
-// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h", which isn't directly #included\.
+// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*#included\.
 decltype(IndirectStruct1::c) FnReturningTypeOfMember();
 
 

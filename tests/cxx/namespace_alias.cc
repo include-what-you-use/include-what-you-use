@@ -15,12 +15,12 @@
 
 // The referenced namespace must be declared. This file doesn't use symbols from
 // the namespace, so a header is explicitly suggested for it.
-// IWYU: ns3::ns4 is defined in...*namespace_alias-i3.h
+// IWYU: ns3::ns4 is...*namespace_alias-i3.h
 namespace ns_alias2 = ns3::ns4;
 
 void Func() {
   // IWYU: ns1::ns2::Function1 is...*namespace_alias-i1.h
-  // IWYU: ns_alias1 is defined in...*namespace_alias-i2.h
+  // IWYU: ns_alias1 is...*namespace_alias-i2.h
   ns_alias1::Function1();
 }
 

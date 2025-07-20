@@ -11,14 +11,14 @@
 
 #include "tests/c/direct.h"
 
-// IWYU: Indirect is defined in...*indirect.h
+// IWYU: Indirect is...*indirect.h
 // IWYU: Indirect needs a declaration
 void array(const struct Indirect array[]);
 
-// IWYU: Indirect is defined in...*indirect.h
+// IWYU: Indirect is...*indirect.h
 typedef struct Indirect (*ArrayPtr)[5];
 
-// IWYU: Indirect is defined in...*indirect.h
+// IWYU: Indirect is...*indirect.h
 extern const struct Indirect extern_array[];
 
 /**** IWYU_SUMMARY

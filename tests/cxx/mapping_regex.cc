@@ -24,7 +24,7 @@
 #include "tests/cxx/direct.h"
 
 void f() {
-  // IWYU: IndirectClass is defined in...*foobar.h
+  // IWYU: IndirectClass is...*foobar.h
   IndirectClass i;
 }
 

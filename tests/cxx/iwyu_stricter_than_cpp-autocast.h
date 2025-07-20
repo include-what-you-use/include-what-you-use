@@ -149,7 +149,7 @@ struct AutocastStruct {
 // IWYU should not print the comment "for autocast" when the type info is
 // mandatory.
 inline void Fn(
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h", which isn't directly #included\.
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*#included\.
     TplDirectStruct7<decltype(IndirectStruct1::c), IndirectStruct2>) {
 }
 

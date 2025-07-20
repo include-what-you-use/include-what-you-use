@@ -142,7 +142,7 @@ CommentPragmasD4 cpd4;
 CommentPragmasI8 cpi8;
 
 // indirect.h is not private and not exported by i2.h.
-// IWYU: IndirectClass is ...*indirect.h
+// IWYU: IndirectClass is...*indirect.h
 IndirectClass ic;
 
 // IWYU: CommentPragmasD8 is...*"some_public_header_file"
