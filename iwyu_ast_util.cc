@@ -53,16 +53,20 @@
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/AST/StmtIterator.h"
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
+// IWYU pragma: no_include <iterator>
+// IWYU pragma: no_include <tuple>
 
 using clang::ASTContext;
 using clang::ASTDumper;
 using clang::ArrayType;
+using clang::AtomicType;
 using clang::BlockPointerType;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
@@ -77,6 +81,7 @@ using clang::CallExpr;
 using clang::ClassTemplateDecl;
 using clang::ClassTemplatePartialSpecializationDecl;
 using clang::ClassTemplateSpecializationDecl;
+using clang::ConstantArrayType;
 using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
@@ -94,6 +99,7 @@ using clang::Expr;
 using clang::ExprResult;
 using clang::ExprWithCleanups;
 using clang::FunctionDecl;
+using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
 using clang::FunctionTemplateSpecializationInfo;
 using clang::FunctionType;
@@ -161,8 +167,11 @@ using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
+using llvm::range_size;
 using llvm::raw_string_ostream;
+using llvm::zip_equal;
 using std::function;
+using std::pair;
 using std::vector;
 
 namespace include_what_you_use {
@@ -221,6 +230,143 @@ static const Type* DesugarAliasTypes(const Type* type) {
 static bool IsImplicitConversionCtor(const CXXConstructorDecl* ctor) {
   return !ctor->isExplicit() && ctor->getNumParams() == 1 &&
          !ctor->isCopyOrMoveConstructor();
+}
+
+// In certain contexts, the type is guaranteed by the language to be complete,
+// e.g. when it is the type of a record field, or an array element type.
+// To prevent redundant suggestion in such cases, full_type_guaranteed parameter
+// is used.
+static bool CouldBeCompatible(
+    QualType lhs,
+    QualType rhs,
+    bool full_type_guaranteed,
+    set<pair<const RecordDecl*, const RecordDecl*>>& handled,
+    set<const Type*> provided_types,
+    function<set<const Type*>(const Type*)> provided_getter,
+    ASTContext& ctx,
+    set<const NamedDecl*>& decls_to_report) {
+  provided_types.merge(provided_getter(rhs.getTypePtr()));
+  provided_types.merge(provided_getter(lhs.getTypePtr()));
+  rhs = rhs.getDesugaredType(ctx);
+  lhs = lhs.getDesugaredType(ctx);
+  if (lhs == rhs)
+    return true;
+  if (lhs.getQualifiers() != rhs.getQualifiers())
+    return false;
+  if (const auto* rhs_record = rhs->getAsRecordDecl()) {
+    if (const auto* lhs_record = lhs->getAsRecordDecl()) {
+      // TODO(bolshakov): handle unnamed structs and unions?
+      if (lhs_record->getIdentifier() != rhs_record->getIdentifier())
+        return false;
+      if (lhs_record->getTagKind() != rhs_record->getTagKind())
+        return false;
+      if (!full_type_guaranteed) {
+        if (!provided_types.count(rhs.getCanonicalType().getTypePtr()))
+          decls_to_report.insert(rhs_record);
+        if (!provided_types.count(lhs.getCanonicalType().getTypePtr()))
+          decls_to_report.insert(lhs_record);
+      }
+
+      // This recursion check has been placed after record type reporting
+      // because it might be not reported at previous occurences due to the type
+      // provision.
+      if (handled.count(pair{lhs_record, rhs_record}))
+        return true;
+      handled.insert(pair{lhs_record, rhs_record});
+
+      if (range_size(lhs_record->fields()) != range_size(rhs_record->fields()))
+        return false;
+      for (auto [lhs_field, rhs_field] :
+           zip_equal(lhs_record->fields(), rhs_record->fields())) {
+        if (lhs_field->getIdentifier() != rhs_field->getIdentifier())
+          return false;
+        // No check for alignment specifiers because if the fields differ only
+        // in them, it is probably just a bug.
+        // The rules are applied to the field types recursively.
+        // Field types are guaranteed to be complete.
+        if (!CouldBeCompatible(lhs_field->getType(), rhs_field->getType(), true,
+                               handled, provided_types, provided_getter, ctx,
+                               decls_to_report)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
+  } else if (const auto* rhs_ptr = rhs->getAs<PointerType>()) {
+    if (const auto* lhs_ptr = lhs->getAs<PointerType>()) {
+      QualType rhs_pointee = rhs_ptr->getPointeeType();
+      QualType lhs_pointee = lhs_ptr->getPointeeType();
+      return CouldBeCompatible(lhs_pointee, rhs_pointee, false, handled,
+                               provided_types, provided_getter, ctx,
+                               decls_to_report);
+    }
+    return false;
+  } else if (const auto* rhs_array = ctx.getAsArrayType(rhs)) {
+    if (const auto* lhs_array = ctx.getAsArrayType(lhs)) {
+      if (const auto* rhs_const_array =
+              dyn_cast<ConstantArrayType>(rhs_array)) {
+        if (const auto* lhs_const_array =
+                dyn_cast<ConstantArrayType>(lhs_array)) {
+          if (lhs_const_array->getZExtSize() != rhs_const_array->getZExtSize())
+            return false;
+        }
+      }
+      // C language requires that an array element type should be complete,
+      // hence full_type_guaranteed = true.
+      return CouldBeCompatible(
+          lhs_array->getElementType(), rhs_array->getElementType(), true,
+          handled, provided_types, provided_getter, ctx, decls_to_report);
+    }
+    return false;
+  } else if (const auto* rhs_func = rhs->getAs<FunctionProtoType>()) {
+    if (const auto* lhs_func = lhs->getAs<FunctionProtoType>()) {
+      if (lhs_func->getNumParams() != rhs_func->getNumParams())
+        return false;
+      for (auto [lhs_param, rhs_param] :
+           zip_equal(lhs_func->param_types(), rhs_func->param_types())) {
+        // Parameter qualifications are ignored.
+        if (!CouldBeCompatible(lhs_param.getUnqualifiedType(),
+                               rhs_param.getUnqualifiedType(), false, handled,
+                               provided_types, provided_getter, ctx,
+                               decls_to_report)) {
+          return false;
+        }
+      }
+      return CouldBeCompatible(
+          lhs_func->getReturnType(), rhs_func->getReturnType(), false, handled,
+          provided_types, provided_getter, ctx, decls_to_report);
+    }
+    return false;
+  } else if (auto* rhs_atomic = rhs->getAs<AtomicType>()) {
+    if (auto* lhs_atomic = lhs->getAs<AtomicType>()) {
+      return CouldBeCompatible(lhs_atomic->getValueType(),
+                               rhs_atomic->getValueType(), full_type_guaranteed,
+                               handled, provided_types, provided_getter, ctx,
+                               decls_to_report);
+    }
+    return false;
+  } else if (auto* rhs_enum = rhs->getAs<EnumType>()) {
+    if (auto* lhs_enum = lhs->getAs<EnumType>()) {
+      // IWYU transforms opaque decls to definitions inside ReportFullSymbolUse.
+      const EnumDecl* rhs_decl = rhs_enum->getOriginalDecl();
+      const EnumDecl* lhs_decl = lhs_enum->getOriginalDecl();
+      // TODO(bolshakov): handle unnamed enums?
+      if (lhs_decl->getIdentifier() != rhs_decl->getIdentifier())
+        return false;
+      // It is probably better not to check the compatibility of the fixed
+      // underlying type because they may become compatible after refactoring.
+      // TODO(bolshakov): could a typedef provide an enumeration?
+      if (rhs_decl->isFixed())
+        decls_to_report.insert(rhs_decl);
+      if (lhs_decl->isFixed())
+        decls_to_report.insert(lhs_decl);
+      return true;
+    }
+    // No 'return false' here because enums are compatible also with their
+    // underlying types.
+  }
+  return ctx.typesAreCompatible(lhs, rhs);
 }
 
 }  // anonymous namespace
@@ -1792,6 +1938,16 @@ bool IsConvertible(QualType from,
 
   ExprResult result = init.Perform(sema, to_entity, init_kind, from_expr_ptr);
   return !result.isInvalid() && !sfinae_trap.hasErrorOccurred();
+}
+
+bool CouldBeCompatible(QualType lhs,
+                       QualType rhs,
+                       function<set<const Type*>(const Type*)> provided_getter,
+                       ASTContext& ctx,
+                       set<const NamedDecl*>& decls_to_report) {
+  set<pair<const RecordDecl*, const RecordDecl*>> handled;
+  return CouldBeCompatible(lhs, rhs, false, handled, {}, provided_getter, ctx,
+                           decls_to_report);
 }
 
 // --- Utilities for Stmt.

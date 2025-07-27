@@ -29,6 +29,7 @@
 #include "llvm/Support/Casting.h"
 
 namespace clang {
+class ASTContext;
 class CXXConstructExpr;
 class CXXConstructorDecl;
 class CXXDeleteExpr;
@@ -928,6 +929,16 @@ bool IsConvertible(clang::QualType from,
                    clang::QualType to,
                    clang::SourceLocation conv_loc,
                    clang::Sema&);
+
+// If the types are probably compatible (see the C23 standard, 6.2.7), returns
+// true and fills decls_to_report with tag type declarations required to exactly
+// determine it, otherwise returns false.
+bool CouldBeCompatible(
+    clang::QualType lhs,
+    clang::QualType rhs,
+    std::function<set<const clang::Type*>(const clang::Type*)> provided_getter,
+    clang::ASTContext&,
+    set<const clang::NamedDecl*>& decls_to_report);
 
 // --- Utilities for Stmt.
 
