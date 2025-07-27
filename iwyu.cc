@@ -2670,15 +2670,38 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // is already there, and the aliased template should be able to be just
         // fwd-declared by the author.
         return true;
-      default:
-        for (const TypeSourceInfo* arg : expr->getArgs()) {
-          QualType qual_type = arg->getType();
-          const Type* type = qual_type.getTypePtr();
-          ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefsAndPtr);
-        }
-
+      case TypeTrait::BTT_TypeCompatible: {
+        // __builtin_types_compatible_p is a C language trait that checks if
+        // the types are compatible. Since C23, two different record types
+        // defined in the same translation unit can be compatible.
+        // Types with different cvr-qualification are incompatible according to
+        // the C standard, but this trait ignores top-level qualifiers.
+        // getUnqualifiedArrayType is used to remove qualifiers from the element
+        // type if the argument is an array type.
+        QualType lhs_unqual_type =
+            compiler()->getASTContext().getUnqualifiedArrayType(lhs_qual_type);
+        QualType rhs_unqual_type =
+            compiler()->getASTContext().getUnqualifiedArrayType(rhs_qual_type);
+        auto provided_getter = [this](const Type* type) {
+          if (const auto* typedef_type = type->getAs<TypedefType>()) {
+            const TypedefNameDecl* decl = typedef_type->getDecl();
+            return GetProvidedTypes(decl->getUnderlyingType().getTypePtr(),
+                                    GetLocation(decl));
+          }
+          return set<const Type*>{};
+        };
+        // ReportTypeUse doesn't report enumerations. But for this trait,
+        // the enum content may be important, hence ReportDeclsUse is used
+        // instead.
+        CompatibilityChecker chkr{provided_getter, compiler()->getASTContext()};
+        if (chkr.CouldBeCompatible(lhs_unqual_type, rhs_unqual_type))
+          ReportDeclsUse(CurrentLoc(), chkr.GetDeclsToReport());
         return true;
+      }
     }
+    VERRS(4) << "Unexpected type trait: " << getTraitName(expr->getTrait())
+             << '\n';
+    return true;
   }
 
   // Mark that we need the full type info for the thing we're taking
