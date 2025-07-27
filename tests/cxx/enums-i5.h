@@ -1,4 +1,4 @@
-//===--- enum-direct.h - test input file for iwyu -------------------------===//
+//===--- enums-i5.h - test input file for iwyu ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,5 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/c/enum-i1.h"
-#include "tests/c/enum-i2.h"
+enum class IndirectEnum5 { A, B, C };
+
+enum IndirectEnum6 : long { A6, B6, C6 };
+
+enum struct IndirectEnum7 : int { A, B, C };

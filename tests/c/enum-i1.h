@@ -1,4 +1,4 @@
-//===--- enum-direct.h - test input file for iwyu -------------------------===//
+//===--- enum-i1.h - test input file for iwyu -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,5 +7,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/c/enum-i1.h"
-#include "tests/c/enum-i2.h"
+enum Enum { A, B, C };

@@ -44,6 +44,17 @@ Struct1::IndirectEnum3 ie3;
 // For unnamed enumeration, enumerators are reported.
 // IWYU: UnnamedEnumItem2 is...*enums-i4.h
 auto ie4 = UnnamedEnumItem2;
+// Test that elaborated types don't replace the full definition for enums with
+// underlying type not fixed, and an opaque declaration for enums with fixed
+// underlying type.
+// IWYU: IndirectEnum1 is...*enums-i1.h
+enum IndirectEnum1* pe1;
+// IWYU: IndirectEnum5 needs a declaration
+enum IndirectEnum5 ie5;
+// IWYU: IndirectEnum6 needs a declaration
+enum IndirectEnum6 ie6;
+// IWYU: IndirectEnum7 needs a declaration
+enum IndirectEnum7 ie7;
 
 // No need even for opaque declaration if enumeration or enumerator isn't named
 // explicitly (the underlying type info should already be present in the
@@ -77,10 +88,13 @@ tests/cxx/enums.cc should add these lines:
 #include "tests/cxx/enums-i2.h"
 #include "tests/cxx/enums-i3.h"
 #include "tests/cxx/enums-i4.h"
+enum IndirectEnum6 : long;
 enum class DirectEnum1;
 enum class DirectEnum2 : int;
 enum class DirectEnum6 : bool;
+enum class IndirectEnum5;
 enum struct DirectEnum3 : unsigned long long;
+enum struct IndirectEnum7 : int;
 namespace ns { enum DirectEnum4 : int; }
 
 tests/cxx/enums.cc should remove these lines:
@@ -92,12 +106,15 @@ The full include-list for tests/cxx/enums.cc:
 #include "tests/cxx/enums-i2.h"  // for IndirectEnum2
 #include "tests/cxx/enums-i3.h"  // for Struct1
 #include "tests/cxx/enums-i4.h"  // for UnnamedEnumItem2
+enum IndirectEnum6 : long;
 enum class DirectEnum1;
 enum class DirectEnum2 : int;
 enum class DirectEnum5 : long;  // lines XX-XX
 enum class DirectEnum6 : bool;
+enum class IndirectEnum5;
 enum class Struct2::Nested;  // lines XX-XX
 enum struct DirectEnum3 : unsigned long long;
+enum struct IndirectEnum7 : int;
 namespace ns { enum DirectEnum4 : int; }
 
 ***** IWYU_SUMMARY */

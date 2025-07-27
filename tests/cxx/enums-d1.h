@@ -11,6 +11,7 @@
 #include "tests/cxx/enums-i2.h"
 #include "tests/cxx/enums-i3.h"
 #include "tests/cxx/enums-i4.h"
+#include "tests/cxx/enums-i5.h"
 
 enum class DirectEnum1 { A, B, C };
 

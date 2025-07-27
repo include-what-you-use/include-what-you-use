@@ -5077,11 +5077,13 @@ class IwyuAstConsumer
       current_ast_node()->set_in_forward_declare_context(true);
       if (compiler()->getLangOpts().CPlusPlus) {
         // In C++, if we're already elaborated ('class Foo x') but not
-        // a qualified name ('class ns::Foo x', 'class Class::Nested x') there's
-        // no need even to forward-declare.
-        // Note that enums are never forward-declarable, so elaborated enums are
-        // already short-circuited in CanForwardDeclareType.
-        if (!IsElaboratedTypeSpecifier(type) || IsQualifiedName(type)) {
+        // a qualified name ('class ns::Foo x', 'class Class::Nested x') or
+        // an enumeration, there's no need even to forward-declare.
+        // Note that enums with not fixed underlying type are never
+        // forward-declarable, hence such elaborated enums are already
+        // short-circuited in CanForwardDeclareType.
+        if (!IsElaboratedTypeSpecifier(type) || IsQualifiedName(type) ||
+            type->isEnumeralType()) {
           // The full definition is reported to support the cases when fwd-decl
           // uses are recategorized to full uses.
           ReportDeclForwardDeclareUse(
@@ -5096,7 +5098,11 @@ class IwyuAstConsumer
         //    void init(struct mystruct* s);
         //      warning: declaration of 'struct mystruct' will not be visible
         //      outside of this function [-Wvisibility]
-        if (current_ast_node()->HasAncestorOfType<ParmVarDecl>()) {
+        //
+        // Elaborated types cannot declare new enumerations, so the full
+        // definition or an opaque-declaration is required.
+        if (current_ast_node()->HasAncestorOfType<ParmVarDecl>() ||
+            type->isEnumeralType()) {
           // The full definition is reported to support the cases when fwd-decl
           // uses are recategorized to full uses.
           ReportDeclForwardDeclareUse(
