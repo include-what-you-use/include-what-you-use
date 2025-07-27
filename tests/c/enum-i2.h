@@ -1,4 +1,4 @@
-//===--- enum-indirect.h - test input file for iwyu -----------------------===//
+//===--- enum-i2.h - test input file for iwyu -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,4 +7,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-enum Enum { A, B, C };
+enum EnumFixed : int { D, E, F };
