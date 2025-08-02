@@ -1206,7 +1206,10 @@ void ProcessForwardDeclare(OneUse* use,
   // the headers, suggest that header, and recategorize as a full use. If we can
   // only find a decl in this file, it must be a self-sufficent decl being used,
   // so we can just let IWYU do its work, and there is no need to recategorize.
-  if (!use->ignore_use() && GlobalFlags().no_fwd_decls) {
+  // Note: --no_fwd_decls_source_only only applies to source files.
+  if (!use->ignore_use() && 
+      (GlobalFlags().no_fwd_decls || 
+       (GlobalFlags().no_fwd_decls_source_only && !IsHeaderFile(GetFilePath(use->use_loc()))))) {
     bool promote_to_full_use = true;
     for (const Decl* decl = use->decl(); decl != nullptr;
          decl = decl->getPreviousDecl()) {

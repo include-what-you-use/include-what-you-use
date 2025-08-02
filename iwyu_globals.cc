@@ -117,6 +117,9 @@ static void PrintHelp(const char* extra_msg) {
          "   --update_comments: update and insert 'why' comments, even if no\n"
          "        #include lines need to be added or removed.\n"
          "   --no_fwd_decls: do not use forward declarations.\n"
+         "   --no_fwd_decls_source_only: do not use forward declarations\n"
+         "        in source files only (header files still allow forward\n"
+         "        declarations).\n"
          "   --verbose=<level>: the higher the level, the more output.\n"
          "   --quoted_includes_first: when sorting includes, place quoted\n"
          "        ones first.\n"
@@ -217,6 +220,7 @@ CommandlineFlags::CommandlineFlags()
       update_comments(false),
       comments_with_namespace(false),
       no_fwd_decls(false),
+      no_fwd_decls_source_only(false),
       quoted_includes_first(false),
       cxx17ns(false),
       exit_code_error(EXIT_SUCCESS),
@@ -242,6 +246,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"no_comments", no_argument, nullptr, 'o'},
     {"update_comments", no_argument, nullptr, 'u'},
     {"no_fwd_decls", no_argument, nullptr, 'f'},
+    {"no_fwd_decls_source_only", no_argument, nullptr, 'g'},
     {"quoted_includes_first", no_argument, nullptr, 'q' },
     {"cxx17ns", no_argument, nullptr, 'C'},
     {"error", optional_argument, nullptr, 'e'},
@@ -278,6 +283,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         }
         break;
       case 'f': no_fwd_decls = true; break;
+      case 'g': no_fwd_decls_source_only = true; break;
       case 'x':
         if (strcmp(optarg, "add") == 0) {
           prefix_header_include_policy = CommandlineFlags::kAdd;
