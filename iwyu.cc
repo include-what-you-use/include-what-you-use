@@ -279,6 +279,7 @@ using clang::driver::ToolChain;
 using llvm::cast;
 using llvm::drop_begin;
 using llvm::dyn_cast;
+using llvm::dyn_cast_if_present;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
@@ -3141,8 +3142,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   bool VisitNestedNameSpecifier(NestedNameSpecifier* nns) {
     // If this is a NamespaceAlias, then mark the alias as used,
     // requiring whichever file(s) declare the alias.
-    if (nns->getKind() == NestedNameSpecifier::NamespaceAlias) {
-      ReportDeclUse(CurrentLoc(), nns->getAsNamespaceAlias());
+    if (const auto* alias =
+            dyn_cast_if_present<NamespaceAliasDecl>(nns->getAsNamespace())) {
+      ReportDeclUse(CurrentLoc(), alias);
     }
 
     if (!Base::VisitNestedNameSpecifier(nns))
