@@ -27,13 +27,13 @@ type_info* pt = nullptr;
 
 tests/cxx/clmode.cc should add these lines:
 #include "tests/cxx/indirect.h"
-class type_info;
+struct type_info;
 
 tests/cxx/clmode.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/clmode.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
-class type_info;
+struct type_info;
 
 ***** IWYU_SUMMARY */
