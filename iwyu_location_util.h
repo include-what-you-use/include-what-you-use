@@ -246,8 +246,15 @@ inline bool IsInSpecialFile(const T& obj) {
   return IsSpecialFile(GetFileEntry(obj));
 }
 
-// Returns true if the given declaration is located in a header file.
-bool IsInHeader(const clang::Decl*);
+// Returns true if file is a header file (defined as not the main source file).
+bool IsHeaderFile(clang::OptionalFileEntryRef file);
+
+// Returns true if the given object is located in a header file.
+template <typename T>
+bool IsInHeader(const T& obj) {
+  clang::OptionalFileEntryRef file = GetFileEntry(obj);
+  return IsHeaderFile(file);
+}
 
 // Returns true if file is a system header.
 bool IsSystemHeader(clang::OptionalFileEntryRef file);
