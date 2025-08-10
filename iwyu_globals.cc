@@ -116,10 +116,9 @@ static void PrintHelp(const char* extra_msg) {
          "   --no_comments: do not add 'why' comments.\n"
          "   --update_comments: update and insert 'why' comments, even if no\n"
          "        #include lines need to be added or removed.\n"
-         "   --no_fwd_decls: do not use forward declarations.\n"
-         "   --no_fwd_decls_source_only: do not use forward declarations\n"
-         "        in source files only (header files still allow forward\n"
-         "        declarations).\n"
+         "   --no_fwd_decls[=policy]: set forward declaration policy.\n"
+         "        everywhere: do not use forward declarations anywhere (default)\n"
+         "        src-only: do not use forward declarations in source files only\n"
          "   --verbose=<level>: the higher the level, the more output.\n"
          "   --quoted_includes_first: when sorting includes, place quoted\n"
          "        ones first.\n"
@@ -219,8 +218,7 @@ CommandlineFlags::CommandlineFlags()
       no_comments(false),
       update_comments(false),
       comments_with_namespace(false),
-      no_fwd_decls(false),
-      no_fwd_decls_source_only(false),
+      no_fwd_decls(NoFwdDecls::Disabled),
       quoted_includes_first(false),
       cxx17ns(false),
       exit_code_error(EXIT_SUCCESS),
@@ -245,8 +243,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"comment_style", required_argument, nullptr, 'i'},
     {"no_comments", no_argument, nullptr, 'o'},
     {"update_comments", no_argument, nullptr, 'u'},
-    {"no_fwd_decls", no_argument, nullptr, 'f'},
-    {"no_fwd_decls_source_only", no_argument, nullptr, 'g'},
+    {"no_fwd_decls", optional_argument, nullptr, 'f'},
     {"quoted_includes_first", no_argument, nullptr, 'q' },
     {"cxx17ns", no_argument, nullptr, 'C'},
     {"error", optional_argument, nullptr, 'e'},
@@ -282,8 +279,19 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
           exit(EXIT_FAILURE);
         }
         break;
-      case 'f': no_fwd_decls = true; break;
-      case 'g': no_fwd_decls_source_only = true; break;
+      case 'f':
+        if (optarg == nullptr) {
+          // --no_fwd_decls without argument defaults to everywhere
+          no_fwd_decls = NoFwdDecls::Everywhere;
+        } else if (strcmp(optarg, "everywhere") == 0) {
+          no_fwd_decls = NoFwdDecls::Everywhere;
+        } else if (strcmp(optarg, "src-only") == 0) {
+          no_fwd_decls = NoFwdDecls::SourcesOnly;
+        } else {
+          PrintHelp("FATAL ERROR: --no_fwd_decls must be 'everywhere' or 'src-only'.");
+          exit(EXIT_FAILURE);
+        }
+        break;
       case 'x':
         if (strcmp(optarg, "add") == 0) {
           prefix_header_include_policy = CommandlineFlags::kAdd;
