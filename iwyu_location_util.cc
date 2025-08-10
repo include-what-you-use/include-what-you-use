@@ -197,14 +197,12 @@ bool IsInScratchSpace(SourceLocation loc) {
   return StartsWith(PrintableLoc(GetSpellingLoc(loc)), "<scratch space>");
 }
 
-bool IsInHeader(const Decl* decl) {
-  OptionalFileEntryRef containing_file = GetFileEntry(decl);
-  if (!containing_file) {
-    // This is a builtin, or something is terribly wrong.
-    // At any rate, we're not in a header.
+bool IsHeaderFile(OptionalFileEntryRef file) {
+  if (!file) {
+    // Not sure what's going on, but we're not in a header.
     return false;
   }
-  return !GlobalSourceManager()->isMainFile(containing_file->getFileEntry());
+  return !GlobalSourceManager()->isMainFile(file->getFileEntry());
 }
 
 bool IsSystemHeader(OptionalFileEntryRef file) {
