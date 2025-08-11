@@ -14,11 +14,12 @@
 
 #include <functional>                   // for function
 #include <map>                          // for map
+#include <optional>
 #include <set>                          // for set
 #include <string>                       // for string
 #include <vector>                       // for vector
 
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -79,6 +80,19 @@ using std::string;
 // we store whether a node is in a 'forward-declarable' context
 // (such as a function parameter), meaning all types seen below
 // that node are legal to fowrard-declare according to c++.
+
+namespace detail {
+template <typename T>
+auto GetNullValue() {
+  return (const T*)nullptr;
+}
+
+template <>
+inline auto GetNullValue<clang::NestedNameSpecifier>() {
+  return clang::NestedNameSpecifier{std::nullopt};
+}
+}  // namespace detail
+
 class ASTNode {
  public:
   // In each case, the caller owns the object, and must guarantee it
@@ -151,6 +165,75 @@ class ASTNode {
   // current node knows its location, returns an invalid SourceLocation.
   clang::SourceLocation GetLocation() const;
 
+  // Returns true if the current node or any ancestor of it contains
+  // the exact same thing as ptr.  One use of this is to check for
+  // recursion.
+  template<typename T> bool StackContainsContent(const T* ptr) const {
+    for (const ASTNode* node = this; node != nullptr; node = node->parent_) {
+      if (node->ContentIs(ptr))
+        return true;
+    }
+    return false;
+  }
+
+  // Generation 0 == you, 1 == parent, etc.
+  template <typename To>
+  auto GetAncestorAs(int generation) const {
+    const ASTNode* target_node = this;
+    for (; generation > 0; --generation) {
+      if (target_node->parent_ == nullptr)
+        return detail::GetNullValue<To>();
+      target_node = target_node->parent_;
+    }
+    // DynCast needs a dummy argument of type To* to help its resolution.
+    const To* dummy = nullptr;
+    return target_node->DynCast<To>(dummy);
+  }
+
+  // Convenience methods.
+
+  template <typename To>
+  auto GetAncestorAs() const {
+    // DynCast needs a dummy argument of type To* to help its resolution.
+    const To* dummy = nullptr;
+    for (const ASTNode* node = this; node != nullptr; node = node->parent_) {
+      if (const auto result = node->DynCast<To>(dummy))
+        return result;
+    }
+    return detail::GetNullValue<To>();
+  }
+
+  template<typename To> bool AncestorIsA(int generation) const {
+    return !!GetAncestorAs<To>(generation);
+  }
+
+  // Returns true if this node or any of its ancestors contains a T*.
+  template<typename T> bool HasAncestorOfType() const {
+    for (const ASTNode* node = this; node != nullptr; node = node->parent_) {
+      if (node->IsA<T>())
+        return true;
+    }
+    return false;
+  }
+
+  template <typename To>
+  auto GetParentAs() const {
+    return GetAncestorAs<To>(1);
+  }
+
+  template<typename To> bool ParentIsA() const {
+    return AncestorIsA<To>(1);
+  }
+
+  template <typename To>
+  auto GetAs() const {
+    return GetAncestorAs<To>(0);
+  }
+
+  template<typename To> bool IsA() const {
+    return AncestorIsA<To>(0);
+  }
+
   // Returns true if this node points to the exact same
   // decl/typeloc/etc as the one you pass in.  For Decl/Stmt/Type, the
   // pointer is canonical (every instance of type X has the same
@@ -178,72 +261,6 @@ class ASTNode {
   // (e.g. TemplateName) as it's non-trivial (Clang doesn't define
   // equality comparison functions for them) and we don't need that
   // yet.
-
-  // Returns true if the current node or any ancestor of it contains
-  // the exact same thing as ptr.  One use of this is to check for
-  // recursion.
-  template<typename T> bool StackContainsContent(const T* ptr) const {
-    for (const ASTNode* node = this; node != nullptr; node = node->parent_) {
-      if (node->ContentIs(ptr))
-        return true;
-    }
-    return false;
-  }
-
-  // Generation 0 == you, 1 == parent, etc.
-  template<typename To> const To* GetAncestorAs(int generation) const {
-    const ASTNode* target_node = this;
-    for (; generation > 0; --generation) {
-      if (target_node->parent_ == nullptr)
-        return nullptr;
-      target_node = target_node->parent_;
-    }
-    // DynCast needs a dummy argument of type To* to help its resolution.
-    const To* dummy = nullptr;
-    return target_node->DynCast<To>(dummy);
-  }
-
-  // Convenience methods.
-
-  template <typename To>
-  const To* GetAncestorAs() const {
-    // DynCast needs a dummy argument of type To* to help its resolution.
-    const To* dummy = nullptr;
-    for (const ASTNode* node = this; node != nullptr; node = node->parent_) {
-      if (const auto result = node->DynCast<To>(dummy))
-        return result;
-    }
-    return nullptr;
-  }
-
-  template<typename To> bool AncestorIsA(int generation) const {
-    return GetAncestorAs<To>(generation) != nullptr;
-  }
-
-  // Returns true if this node or any of its ancestors contains a T*.
-  template<typename T> bool HasAncestorOfType() const {
-    for (const ASTNode* node = this; node != nullptr; node = node->parent_) {
-      if (node->IsA<T>())
-        return true;
-    }
-    return false;
-  }
-
-  template<typename To> const To* GetParentAs() const {
-    return GetAncestorAs<To>(1);
-  }
-
-  template<typename To> bool ParentIsA() const {
-    return AncestorIsA<To>(1);
-  }
-
-  template<typename To> const To* GetAs() const {
-    return GetAncestorAs<To>(0);
-  }
-
-  template<typename To> bool IsA() const {
-    return AncestorIsA<To>(0);
-  }
 
  private:
   enum NodeKind {
@@ -285,15 +302,15 @@ class ASTNode {
       return nullptr;
     return ::llvm::dyn_cast<To>(as_typeloc_);
   }
-  template<typename To> const To* DynCast(
-      const clang::NestedNameSpecifier*) const {
+  template <typename To>
+  To DynCast(const clang::NestedNameSpecifier*) const {
     // Like Type, this will cast to NNS if we're an NNSLoc.  For code
     // that cares to distinguish, it should check for nnslocs first.
     if (kind_ == kNNSLocKind)
       return as_nnsloc_->getNestedNameSpecifier();
     if (kind_ != kNNSKind)
-      return nullptr;
-    return as_nns_;
+      return clang::NestedNameSpecifier{std::nullopt};
+    return *as_nns_;
   }
   template<typename To> const To* DynCast(
       const clang::NestedNameSpecifierLoc*) const {
@@ -409,21 +426,6 @@ class CurrentASTNodeUpdater {
 
 // --- Utilities for ASTNode.
 
-// See if a given ast_node is a 'real' ElaboratedType(Loc).  (An
-// elaboration is 'class Foo myvar' instead of just 'Foo myvar'.)
-// We avoid 'fake' elaborations that are caused because clang also
-// uses ElaboratedType for namespaces ('ns::Foo myvar').
-bool IsElaboratedTypeSpecifier(const ASTNode* ast_node);
-
-// Walk up to parents of the given node so long as each parent is an
-// elaborated type node.
-// Can expand from a node representing 'X' to e.g. 'struct X' or 'mylib::X'.
-const ASTNode* MostElaboratedAncestor(const ASTNode* ast_node);
-
-// See if a given ast_node is a qualified name part of an ElaboratedType
-// node (e.g. 'class ns::Foo x', 'class ::Global x' or 'class Outer::Inner x'.)
-bool IsQualifiedNameNode(const ASTNode* ast_node);
-
 // Return true if the given ast_node is inside a C++ method body.  Do
 // this by walking up the AST tree until you find a CXXMethodDecl,
 // then see if the node just before you reached it is the body.  We
@@ -458,10 +460,6 @@ bool IsCXXConstructExprInNewExpr(const ASTNode* ast_node);
 // call in context of function argument initialization - so called 'autocast'.
 bool IsAutocastExpr(const ASTNode*);
 
-// If ASTNode is of a kind that has a qualifier (something that
-// comes before the ::), return that, else return nullptr.
-const clang::NestedNameSpecifier* GetQualifier(const ASTNode* ast_node);
-
 // Returns the decl-context of the deepest decl in the ast-chain.
 const clang::DeclContext* GetDeclContext(const ASTNode* ast_node);
 
@@ -475,7 +473,7 @@ string PrintableDecl(const clang::Decl* decl, bool terse=true);
 string PrintableStmt(const clang::Stmt* stmt);
 string PrintableType(const clang::Type* type);
 string PrintableTypeLoc(const clang::TypeLoc& typeloc);
-string PrintableNestedNameSpecifier(const clang::NestedNameSpecifier* nns);
+string PrintableNestedNameSpecifier(clang::NestedNameSpecifier nns);
 string PrintableTemplateName(const clang::TemplateName& tpl_name);
 string PrintableTemplateArgument(const clang::TemplateArgument& arg);
 string PrintableTemplateArgumentLoc(const clang::TemplateArgumentLoc& arg);
@@ -737,6 +735,14 @@ bool IsImplicitlyInstantiatedDfn(const clang::FunctionDecl*);
 const clang::CXXMethodDecl* GetFromLeastDerived(const clang::CXXMethodDecl*);
 
 // --- Utilities for Type.
+
+// See if a given type is a 'real' elaborated type.  (An
+// elaboration is 'class Foo myvar' instead of just 'Foo myvar'.)
+bool IsElaboratedTypeSpecifier(const clang::TypeWithKeyword*);
+
+// See if a given type has a nested name specifier (e.g. 'class ns::Foo x',
+// 'class ::Global x' or 'class Outer::Inner x'.)
+bool IsQualifiedName(const clang::Type*);
 
 const clang::Type* GetTypeOf(const clang::Expr* expr);
 // Returns the type of the constructed class.

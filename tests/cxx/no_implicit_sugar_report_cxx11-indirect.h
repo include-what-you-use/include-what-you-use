@@ -10,3 +10,9 @@
 struct TypedefHost {
   typedef int Int;
 };
+
+class Class;
+
+namespace ns {
+using ::Class;
+}

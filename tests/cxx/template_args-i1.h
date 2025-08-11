@@ -11,3 +11,8 @@ template <typename T>
 struct TplInI1 {
   T t;
 };
+
+struct TplHost {
+  template <typename>
+  struct InnerTpl {};
+};

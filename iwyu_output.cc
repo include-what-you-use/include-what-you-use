@@ -49,7 +49,6 @@ using clang::ClassTemplateSpecializationDecl;
 using clang::Decl;
 using clang::DeclContext;
 using clang::DeclarationName;
-using clang::ElaboratedTypeLoc;
 using clang::EnumDecl;
 using clang::FunctionDecl;
 using clang::NamedDecl;
@@ -60,6 +59,7 @@ using clang::RecordDecl;
 using clang::SourceLocation;
 using clang::SourceRange;
 using clang::TagDecl;
+using clang::TagTypeLoc;
 using clang::TemplateDecl;
 using clang::TypeSourceInfo;
 using clang::UsingDecl;
@@ -523,11 +523,11 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
 }
 
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
-    ElaboratedTypeLoc type_loc)
+    TagTypeLoc type_loc)
     : is_desired_(true),
       is_present_(true),
       is_elaborated_type_(true),
-      fwd_decl_(type_loc.getTypePtr()->getOwnedTagDecl()) {
+      fwd_decl_(type_loc.getTypePtr()->getOriginalDecl()) {
   const SourceRange decl_lines = type_loc.getLocalSourceRange();
   start_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
   end_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
@@ -625,8 +625,8 @@ void IwyuFileInfo::AddForwardDeclare(const NamedDecl* fwd_decl,
            << internal::GetQualifiedNameAsString(fwd_decl) << "\n";
 }
 
-void IwyuFileInfo::AddElaboratedType(ElaboratedTypeLoc type_loc) {
-  if (!type_loc.getTypePtr()->getOwnedTagDecl())
+void IwyuFileInfo::AddOwningTagType(TagTypeLoc type_loc) {
+  if (!type_loc.getTypePtr()->isTagOwned())
     return;
   lines_.push_back(OneIncludeOrForwardDeclareLine(type_loc));
   VERRS(6) << "Found owning elaborated type: " << GetFilePath(file_) << ":"
