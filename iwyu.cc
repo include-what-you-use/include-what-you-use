@@ -4023,24 +4023,7 @@ class InstantiatedTemplateVisitor
     if (type->isTypeAlias())
       return TraverseType(type->getAliasedType());
 
-    // Skip the template traversal if this occurrence of the template name is
-    // just a class qualifier for an out of line method, as opposed to an object
-    // instantiation, where the templated code would need to be inspected.
-    //
-    // Class<T,U>::method() {
-    // |-Type---^
-    // |-NNS------^
-    // |-CXXMethodDecl--^
     ASTNode* ast_node = current_ast_node();
-    if (auto nns = ast_node->GetParentAs<NestedNameSpecifier>()) {
-      if (nns.getAsType() == type) {
-        if (const auto* method = ast_node->GetAncestorAs<CXXMethodDecl>(2)) {
-          CHECK_(nns == method->getQualifier());
-          return true;
-        }
-      }
-    }
-
     if (CanForwardDeclareType(ast_node))
       ast_node->set_in_forward_declare_context(true);
     return TraverseDataAndTypeMembersOfClassHelper(type);

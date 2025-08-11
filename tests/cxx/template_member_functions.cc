@@ -175,6 +175,20 @@ void Fn() {
   ExplSpecTpl<IndirectClass> expl_spec;
 }
 
+// Test that the instantiated class template is scanned even if it is just
+// the prefix of a specialized member function.
+
+template <typename T>
+struct TplWithArgField {
+  void Fn();
+  T t;
+};
+
+template <>
+// IWYU: IndirectClass is...*indirect.h
+void TplWithArgField<IndirectClass>::Fn() {
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/template_member_functions.cc should add these lines:
