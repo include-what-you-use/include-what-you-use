@@ -110,6 +110,10 @@ void TestNonAutocastConstruction(const NoAutocastCtor& par) {
   // IWYU: NoAutocastCtor needs a declaration
   // IWYU: NoAutocastCtor is...*implicit_ctor-i2.h
   const NoAutocastCtor& x2 = {3, 4};
+
+  // Test that IWYU finds the definition among redeclarations which contains
+  // the implicit ctor and doesn't require the complete type here.
+  TakeMultipleRedeclStruct(1);
 }
 
 struct NonAggregate {
@@ -133,7 +137,7 @@ tests/cxx/implicit_ctor.cc should add these lines:
 tests/cxx/implicit_ctor.cc should remove these lines:
 
 The full include-list for tests/cxx/implicit_ctor.cc:
-#include "tests/cxx/implicit_ctor-d1.h"  // for ImplicitCtorFn, ImplicitCtorRefFn, InlineImplicitCtorRefFn
+#include "tests/cxx/implicit_ctor-d1.h"  // for ImplicitCtorFn, ImplicitCtorRefFn, InlineImplicitCtorRefFn, TakeMultipleRedeclStruct
 #include "tests/cxx/implicit_ctor-d2.h"  // for NoTrivialCtorDtorNonProvidingAlias, NonProviding
 #include "tests/cxx/implicit_ctor-i2.h"  // for IndirectWithImplicitCtor, NoAutocastCtor, NoTrivialCtorDtor
 

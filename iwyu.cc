@@ -108,6 +108,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
@@ -207,9 +208,7 @@ using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::DecltypeType;
 using clang::DeducedTemplateSpecializationType;
-using clang::ElaboratedType;
 using clang::ElaboratedTypeKeyword;
-using clang::ElaboratedTypeLoc;
 using clang::EnumConstantDecl;
 using clang::EnumDecl;
 using clang::EnumType;
@@ -247,6 +246,7 @@ using clang::Stmt;
 using clang::SubstTemplateTypeParmType;
 using clang::TagDecl;
 using clang::TagType;
+using clang::TagTypeLoc;
 using clang::TemplateArgument;
 using clang::TemplateArgumentList;
 using clang::TemplateArgumentLoc;
@@ -279,7 +279,6 @@ using clang::driver::ToolChain;
 using llvm::cast;
 using llvm::drop_begin;
 using llvm::dyn_cast;
-using llvm::dyn_cast_if_present;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
@@ -413,7 +412,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     return Base::TraverseStmt(stmt);
   }
 
-  bool TraverseType(QualType qualtype) {
+  bool TraverseType(QualType qualtype, bool traverse_qualifier = true) {
     if (qualtype.isNull())
       return true;
     const Type* type = qualtype.getTypePtr();
@@ -425,7 +424,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       errs() << AnnotatedName(GetKindName(type)) << PrintablePtr(type)
              << PrintableType(type) << "\n";
     }
-    return Base::TraverseType(qualtype);
+    return Base::TraverseType(qualtype, traverse_qualifier);
   }
 
   // RecursiveASTVisitor has a hybrid type-visiting system: it will
@@ -437,7 +436,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // is we need two versions of all the Traverse*Type routines.  (We
   // don't need two versions the Visit*Type routines, since the
   // default behavior of Visit*TypeLoc is to just call Visit*Type.)
-  bool TraverseTypeLoc(TypeLoc typeloc) {
+  bool TraverseTypeLoc(TypeLoc typeloc, bool traverse_qualifier = true) {
     // QualifiedTypeLoc is a bit of a special case in the typeloc
     // system, off to the side.  We don't care about qualifier
     // positions, so avoid the need for special-casing by just
@@ -455,17 +454,17 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       errs() << AnnotatedName(GetKindName(typeloc)) << PrintableTypeLoc(typeloc)
              << "\n";
     }
-    return Base::TraverseTypeLoc(typeloc);
+    return Base::TraverseTypeLoc(typeloc, traverse_qualifier);
   }
 
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier* nns) {
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier nns) {
     if (!nns)
       return true;
-    ASTNode node(nns);
+    ASTNode node(&nns);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     if (ShouldPrintSymbolFromCurrentFile()) {
       errs() << AnnotatedName("NestedNameSpecifier")
-             << PrintablePtr(nns) << PrintableNestedNameSpecifier(nns) << "\n";
+             << PrintableNestedNameSpecifier(nns) << "\n";
     }
     if (!this->getDerived().VisitNestedNameSpecifier(nns))
       return false;
@@ -473,14 +472,14 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc nns_loc) {
-    NestedNameSpecifier* nns = nns_loc.getNestedNameSpecifier();
+    NestedNameSpecifier nns = nns_loc.getNestedNameSpecifier();
     if (!nns)
       return true;
     ASTNode node(&nns_loc);
     CurrentASTNodeUpdater canu(&current_ast_node_, &node);
     if (ShouldPrintSymbolFromCurrentFile()) {
       errs() << AnnotatedName("NestedNameSpecifier")
-             << PrintablePtr(nns) << PrintableNestedNameSpecifier(nns) << "\n";
+             << PrintableNestedNameSpecifier(nns) << "\n";
     }
     // TODO(csilvers): have VisitNestedNameSpecifierLoc instead.
     if (!this->getDerived().VisitNestedNameSpecifier(nns))
@@ -531,7 +530,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
 
   // We have a few Visit methods that RecursiveASTVisitor does not. Provide
   // empty default implementations.
-  bool VisitNestedNameSpecifier(NestedNameSpecifier*) {
+  bool VisitNestedNameSpecifier(NestedNameSpecifier) {
     return true;
   }
 
@@ -849,8 +848,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       // If fn_decl has a class-name before it -- 'MyClass::method' --
       // it's a method pointer.
       const Type* parent_type = nullptr;
-      if (expr->getQualifier() && expr->getQualifier()->getAsType())
-        parent_type = expr->getQualifier()->getAsType();
+      if (expr->getQualifier().getKind() == NestedNameSpecifier::Kind::Type)
+        parent_type = expr->getQualifier().getAsType();
       if (!this->getDerived().TraverseFunctionIfInstantiatedTpl(
               fn_decl, parent_type, expr))
         return false;
@@ -1033,7 +1032,7 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
     return true;
   }
 
-  bool VisitNestedNameSpecifier(NestedNameSpecifier*) {
+  bool VisitNestedNameSpecifier(NestedNameSpecifier) {
     AddCurrentAstNodeAsPointer();
     return true;
   }
@@ -2239,7 +2238,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
             // TODO(bolshakov): check whether the type is provided by member
             // pointer type alias, probably?
             ReportTypeUse(CurrentLoc(),
-                          lhs_mem_ptr_type->getQualifier()->getAsType(),
+                          lhs_mem_ptr_type->getQualifier().getAsType(),
                           DerefKind::None);
             return true;
           }
@@ -2281,7 +2280,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
             const auto* lhs_mem_ptr_type =
                 lhs_deref_type->castAs<MemberPointerType>();
             ReportTypeUse(CurrentLoc(),
-                          lhs_mem_ptr_type->getQualifier()->getAsType(),
+                          lhs_mem_ptr_type->getQualifier().getAsType(),
                           DerefKind::None);
           }
           // Don't care about user-defined conversions.
@@ -2365,11 +2364,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
             } else if (const auto* elem_mem_ptr_type =
                            elem_type->getAs<MemberPointerType>()) {
               const Type* elem_qualifier =
-                  elem_mem_ptr_type->getQualifier()->getAsType();
+                  elem_mem_ptr_type->getQualifier().getAsType();
               if (const auto* arg_mem_ptr_type =
                       arg_deref_type->getAs<MemberPointerType>()) {
                 const Type* arg_class = GetCanonicalType(
-                    arg_mem_ptr_type->getQualifier()->getAsType());
+                    arg_mem_ptr_type->getQualifier().getAsType());
                 if (arg_class == GetCanonicalType(elem_qualifier))
                   continue;
               }
@@ -2451,7 +2450,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
             const auto* rhs_mem_ptr_type =
                 rhs_deref_type->castAs<MemberPointerType>();
             ReportTypeUse(CurrentLoc(),
-                          rhs_mem_ptr_type->getQualifier()->getAsType(),
+                          rhs_mem_ptr_type->getQualifier().getAsType(),
                           DerefKind::None);
             return true;
           }
@@ -2574,11 +2573,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
             } else if (const auto* elem_mem_ptr_type =
                            elem_type->getAs<MemberPointerType>()) {
               const Type* elem_qualifier =
-                  elem_mem_ptr_type->getQualifier()->getAsType();
+                  elem_mem_ptr_type->getQualifier().getAsType();
               if (const auto* arg_mem_ptr_type =
                       arg_deref_type->getAs<MemberPointerType>()) {
                 const Type* arg_class = GetCanonicalType(
-                    arg_mem_ptr_type->getQualifier()->getAsType());
+                    arg_mem_ptr_type->getQualifier().getAsType());
                 if (arg_class != GetCanonicalType(elem_qualifier)) {
                   ReportTypeUse(CurrentLoc(), elem_qualifier, DerefKind::None);
                   return true;
@@ -2623,7 +2622,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
             const auto* lhs_mem_ptr_type =
                 lhs_deref_type->castAs<MemberPointerType>();
             ReportTypeUse(CurrentLoc(),
-                          lhs_mem_ptr_type->getQualifier()->getAsType(),
+                          lhs_mem_ptr_type->getQualifier().getAsType(),
                           DerefKind::None);
           }
         }
@@ -3139,12 +3138,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   //------------------------------------------------------------
   // Visitors defined by BaseAstVisitor.
 
-  bool VisitNestedNameSpecifier(NestedNameSpecifier* nns) {
+  bool VisitNestedNameSpecifier(NestedNameSpecifier nns) {
     // If this is a NamespaceAlias, then mark the alias as used,
     // requiring whichever file(s) declare the alias.
-    if (const auto* alias =
-            dyn_cast_if_present<NamespaceAliasDecl>(nns->getAsNamespace())) {
-      ReportDeclUse(CurrentLoc(), alias);
+    if (nns.getKind() == NestedNameSpecifier::Kind::Namespace) {
+      if (const auto* alias = dyn_cast<NamespaceAliasDecl>(
+              nns.getAsNamespaceAndPrefix().Namespace)) {
+        ReportDeclUse(CurrentLoc(), alias);
+      }
     }
 
     if (!Base::VisitNestedNameSpecifier(nns))
@@ -3220,9 +3221,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // run the following commented-out code (left here for reference):
     //if (ast_node->GetAs<TemplateSpecializationType>()->isDependentType())
     //  return false;
-
-    // Read past elaborations like 'class' keyword or namespaces.
-    ast_node = MostElaboratedAncestor(ast_node);
 
     while (ast_node->ParentIsA<ArrayType>() || ast_node->ParentIsA<ParenType>())
       ast_node = ast_node->parent();
@@ -3395,8 +3393,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // typedef (that is, 'typedef MyTypedef OtherTypdef'), then the
       // user -- the other typedef -- is never responsible for the
       // underlying type.  Instead, users of that typedef are.
-      const ASTNode* ast_node = MostElaboratedAncestor(current_ast_node());
-      if (!ast_node->ParentIsA<TypedefNameDecl>()) {
+      if (!current_ast_node()->template ParentIsA<TypedefNameDecl>()) {
         const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
         const Type* type = typedef_decl->getUnderlyingType().getTypePtr();
         const set<const Type*>& provided_with_typedef =
@@ -3456,13 +3453,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // When the alias is from template (like 'Type' in
     // 'Tpl<Providing>::Type'), the type may be provided with template
     // argument and should not be reported. 'ReportTypeUse' performs that
-    // analysis when passing 'ElaboratedType' into it.
-    if (const auto* elaborated =
-            current_ast_node()->template GetParentAs<ElaboratedType>()) {
-      ReportTypeUse(CurrentLoc(), elaborated, DerefKind::None);
-    } else {
-      ReportTypeUse(CurrentLoc(), type, DerefKind::None);
-    }
+    // analysis when passing elaborated type into it.
+    ReportTypeUse(CurrentLoc(), type, DerefKind::None);
   }
 
   void ReportWithAdditionalBlockedTypes(
@@ -3655,7 +3647,7 @@ class InstantiatedTemplateVisitor
     }
 
     TraverseTemplateSpecializationType(
-        const_cast<TemplateSpecializationType*>(type));
+        const_cast<TemplateSpecializationType*>(type), false);
   }
 
   void ScanInstantiatedClass(ClassTemplateSpecializationDecl* decl,
@@ -3882,8 +3874,8 @@ class InstantiatedTemplateVisitor
     // |-NNS------^
     // |-CXXMethodDecl--^
     ASTNode* ast_node = current_ast_node();
-    if (const auto* nns = ast_node->GetParentAs<NestedNameSpecifier>()) {
-      if (nns->getAsType() == type) {
+    if (auto nns = ast_node->GetParentAs<NestedNameSpecifier>()) {
+      if (nns.getAsType() == type) {
         if (const auto* method = ast_node->GetAncestorAs<CXXMethodDecl>(2)) {
           CHECK_(nns == method->getQualifier());
           return true;
@@ -3896,15 +3888,17 @@ class InstantiatedTemplateVisitor
     return TraverseDataAndTypeMembersOfClassHelper(type);
   }
 
-  bool TraverseTemplateSpecializationType(TemplateSpecializationType* type) {
-    if (!Base::TraverseTemplateSpecializationType(type))
+  bool TraverseTemplateSpecializationType(TemplateSpecializationType* type,
+                                          bool traverse_qualifier) {
+    if (!Base::TraverseTemplateSpecializationType(type, traverse_qualifier))
       return false;
     return TraverseTemplateSpecializationTypeHelper(type);
   }
 
   bool TraverseTemplateSpecializationTypeLoc(
-      TemplateSpecializationTypeLoc typeloc) {
-    if (!Base::TraverseTemplateSpecializationTypeLoc(typeloc))
+      TemplateSpecializationTypeLoc typeloc, bool traverse_qualifier) {
+    if (!Base::TraverseTemplateSpecializationTypeLoc(typeloc,
+                                                     traverse_qualifier))
       return false;
     return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
   }
@@ -3923,7 +3917,7 @@ class InstantiatedTemplateVisitor
     VERRS(6) << "AnalyzeTemplateTypeParmUse: type = " << PrintableType(type)
              << ", actual_type = " << PrintableType(actual_type) << '\n';
 
-    if (CanForwardDeclareType(MostElaboratedAncestor(current_ast_node()))) {
+    if (CanForwardDeclareType(current_ast_node())) {
       // Non-full uses will already have been reported when they were used as
       // template arguments, so nothing to do here.
       return;
@@ -3982,8 +3976,7 @@ class InstantiatedTemplateVisitor
     // the type node in the AST. An intermediate SubstTemplateTypeParmType could
     // break that logic. However, such cases don't even need to be considered
     // here, because they are handled in VisitSubstTemplateTypeParmType.
-    const ASTNode* node = MostElaboratedAncestor(current_ast_node());
-    if (!node->ParentIsA<SubstTemplateTypeParmType>())
+    if (!current_ast_node()->ParentIsA<SubstTemplateTypeParmType>())
       AnalyzeTemplateTypeParmUse(type);
 
     return Base::VisitRecordType(type);
@@ -5025,21 +5018,23 @@ class IwyuAstConsumer
   // Avoid reporting any type sugar in an implicit code. It is assumed that
   // TraverseType isn't called for explicitly written types. TraverseTypeLoc
   // uses an additional check.
-  bool TraverseType(QualType type) {
+  bool TraverseType(QualType type, bool /*traverse_qualifier*/ = true) {
     if (type.isNull())
       return true;
     const Type* desugared = Desugar(type.getTypePtr());
-    return Base::TraverseType(QualType{desugared, 0});
+    // Type prefixes should be handled only where explicitly written.
+    return Base::TraverseType(QualType{desugared, 0}, false);
   }
 
-  bool TraverseTypeLoc(TypeLoc typeloc) {
+  bool TraverseTypeLoc(TypeLoc typeloc, bool traverse_qualifier = true) {
     if (typeloc.isNull())
       return true;
     if (current_ast_node()->GetAncestorAs<Decl>()->isImplicit()) {
       const Type* desugared = Desugar(typeloc.getTypePtr());
-      return Base::TraverseType(QualType{desugared, 0});
+      // Type prefixes should be handled only where explicitly written.
+      return Base::TraverseType(QualType{desugared, 0}, false);
     }
-    return Base::TraverseTypeLoc(typeloc);
+    return Base::TraverseTypeLoc(typeloc, traverse_qualifier);
   }
 
   bool VisitTypedefType(TypedefType* type) {
@@ -5055,13 +5050,13 @@ class IwyuAstConsumer
       return true;
 
     if (CanForwardDeclareType(current_ast_node())) {
-      ReportDeclForwardDeclareUse(CurrentLoc(), type->getFoundDecl());
+      ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
     } else {
-      ReportDeclUse(CurrentLoc(), type->getFoundDecl());
+      ReportDeclUse(CurrentLoc(), type->getDecl());
 
       // If UsingType refers to a typedef, report the underlying type of that
       // typedef if needed (which is determined in ReportTypeUse).
-      const Type* underlying_type = type->getUnderlyingType().getTypePtr();
+      const Type* underlying_type = type->desugar().getTypePtr();
       if (isa<TypedefType>(underlying_type))
         ReportTypeUse(CurrentLoc(), underlying_type, DerefKind::None);
     }
@@ -5086,9 +5081,12 @@ class IwyuAstConsumer
         // no need even to forward-declare.
         // Note that enums are never forward-declarable, so elaborated enums are
         // already short-circuited in CanForwardDeclareType.
-        const ASTNode* parent = current_ast_node()->parent();
-        if (!IsElaboratedTypeSpecifier(parent) || IsQualifiedNameNode(parent))
-          ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
+        if (!IsElaboratedTypeSpecifier(type) || IsQualifiedName(type)) {
+          // The full definition is reported to support the cases when fwd-decl
+          // uses are recategorized to full uses.
+          ReportDeclForwardDeclareUse(
+              CurrentLoc(), type->getOriginalDecl()->getDefinitionOrSelf());
+        }
       } else {
         // In C, all struct references are elaborated, so we really never need
         // to forward-declare. But there's one case where an elaborated struct
@@ -5098,14 +5096,18 @@ class IwyuAstConsumer
         //    void init(struct mystruct* s);
         //      warning: declaration of 'struct mystruct' will not be visible
         //      outside of this function [-Wvisibility]
-        if (current_ast_node()->HasAncestorOfType<ParmVarDecl>())
-          ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
+        if (current_ast_node()->HasAncestorOfType<ParmVarDecl>()) {
+          // The full definition is reported to support the cases when fwd-decl
+          // uses are recategorized to full uses.
+          ReportDeclForwardDeclareUse(
+              CurrentLoc(), type->getOriginalDecl()->getDefinitionOrSelf());
+        }
       }
       return Base::VisitTagType(type);
     }
 
     // OK, seems to be a use that requires the full type.
-    ReportDeclUse(CurrentLoc(), type->getDecl(), comment);
+    ReportDeclUse(CurrentLoc(), type->getOriginalDecl(), comment);
     return Base::VisitTagType(type);
   }
 
@@ -5135,13 +5137,13 @@ class IwyuAstConsumer
     return Base::VisitTemplateSpecializationType(type);
   }
 
-  bool VisitElaboratedTypeLoc(ElaboratedTypeLoc type_loc) {
+  bool VisitTagTypeLoc(TagTypeLoc type_loc) {
     if (type_loc.getTypePtr()->getKeyword() != ElaboratedTypeKeyword::None) {
       preprocessor_info()
           .FileInfoFor(CurrentFileEntry())
-          ->AddElaboratedType(type_loc);
+          ->AddOwningTagType(type_loc);
     }
-    return Base::VisitElaboratedTypeLoc(type_loc);
+    return Base::VisitTagTypeLoc(type_loc);
   }
 
   // --- Visitors defined by BaseASTVisitor (not RecursiveASTVisitor).
@@ -5238,14 +5240,13 @@ class IwyuAstConsumer
     set<const Type*> res;
     if (!type)
       return res;
-    if (const auto* elaborated = dyn_cast<ElaboratedType>(type)) {
-      const NestedNameSpecifier* nns = elaborated->getQualifier();
-      while (nns) {
-        if (const Type* host = nns->getAsType())
-          InsertAllInto(GetTplInstData(host).provided_types, &res);
-        nns = nns->getPrefix();
-      }
+    NestedNameSpecifier nns = type->getPrefix();
+    while (nns.getKind() == NestedNameSpecifier::Kind::Type) {
+      const Type* host = nns.getAsType();
+      InsertAllInto(GetTplInstData(host).provided_types, &res);
+      nns = host->getPrefix();
     }
+
     if (const auto* tpl_spec = type->getAs<TemplateSpecializationType>()) {
       if (tpl_spec->isTypeAlias())
         InsertAllInto(GetTplInstData(tpl_spec).provided_types, &res);

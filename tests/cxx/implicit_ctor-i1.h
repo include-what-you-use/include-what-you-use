@@ -7,4 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+struct MultipleRedeclStruct;
+
 #include "tests/cxx/implicit_ctor-i2.h"
+
+struct MultipleRedeclStruct;
