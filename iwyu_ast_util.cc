@@ -25,6 +25,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -84,7 +85,6 @@ using clang::DependentNameType;
 using clang::DependentScopeDeclRefExpr;
 using clang::DependentTemplateName;
 using clang::DependentTemplateSpecializationType;
-using clang::ElaboratedType;
 using clang::ElaboratedTypeKeyword;
 using clang::EnterExpressionEvaluationContext;
 using clang::EnumDecl;
@@ -145,6 +145,7 @@ using clang::Type;
 using clang::TypeAliasTemplateDecl;
 using clang::TypeDecl;
 using clang::TypeLoc;
+using clang::TypeWithKeyword;
 using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryOperator;
@@ -178,8 +179,7 @@ void DumpASTNode(llvm::raw_ostream& ostream, const ASTNode* node) {
             << PrintableTypeLoc(*typeloc);
   } else if (const Type* type = node->GetAs<Type>()) {  // +typeloc
     ostream << "[" << GetKindName(type) << "] " << PrintableType(type);
-  } else if (const NestedNameSpecifier* nns =
-                 node->GetAs<NestedNameSpecifier>()) {
+  } else if (NestedNameSpecifier nns = node->GetAs<NestedNameSpecifier>()) {
     ostream << "[NestedNameSpecifier] " << PrintableNestedNameSpecifier(nns);
   } else if (const TemplateName* tpl_name = node->GetAs<TemplateName>()) {
     ostream << "[TemplateName] " << PrintableTemplateName(*tpl_name);
@@ -283,31 +283,6 @@ bool ASTNode::FillLocationIfKnown(SourceLocation* loc) const {
 
 // --- Utilities for ASTNode.
 
-bool IsElaboratedTypeSpecifier(const ASTNode* ast_node) {
-  if (ast_node == nullptr)
-    return false;
-  const ElaboratedType* elaborated_type = ast_node->GetAs<ElaboratedType>();
-  return elaborated_type &&
-         elaborated_type->getKeyword() != ElaboratedTypeKeyword::None;
-}
-
-const ASTNode* MostElaboratedAncestor(const ASTNode* ast_node) {
-  // Read past elaborations like 'class' keyword or namespaces.
-  while (ast_node->ParentIsA<ElaboratedType>()) {
-    ast_node = ast_node->parent();
-  }
-  return ast_node;
-}
-
-bool IsQualifiedNameNode(const ASTNode* ast_node) {
-  if (ast_node == nullptr)
-    return false;
-  const ElaboratedType* elaborated_type = ast_node->GetAs<ElaboratedType>();
-  if (elaborated_type == nullptr)
-    return false;
-  return elaborated_type->getQualifier() != nullptr;
-}
-
 bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
   // If we're a destructor, we're definitely part of a method body;
   // destructors don't have any other parts to them.  This case is
@@ -399,41 +374,6 @@ bool IsAutocastExpr(const ASTNode* ast_node) {
   return ast_node->template HasAncestorOfType<CallExpr>();
 }
 
-template<typename T>
-NestedNameSpecifier* TryGetQualifier(const ASTNode* ast_node) {
-  if (ast_node->IsA<T>())
-    return ast_node->GetAs<T>()->getQualifier();
-  return nullptr;
-}
-
-const NestedNameSpecifier* GetQualifier(const ASTNode* ast_node) {
-  const NestedNameSpecifier* nns = nullptr;
-  if (ast_node->IsA<TemplateName>()) {
-    const TemplateName* tn = ast_node->GetAs<TemplateName>();
-    if (const DependentTemplateName* dtn = tn->getAsDependentTemplateName())
-      nns = dtn->getQualifier();
-    else if (const QualifiedTemplateName* qtn =
-                 tn->getAsQualifiedTemplateName())
-      nns = qtn->getQualifier();
-  }
-  if (!nns) nns = TryGetQualifier<ElaboratedType>(ast_node);
-  if (!nns) nns = TryGetQualifier<DependentNameType>(ast_node);
-  if (!nns && ast_node->IsA<DependentTemplateSpecializationType>()) {
-    const auto* dtst = ast_node->GetAs<DependentTemplateSpecializationType>();
-    nns = dtst->getDependentTemplateName().getQualifier();
-  }
-  if (!nns) nns = TryGetQualifier<UsingDirectiveDecl>(ast_node);
-  if (!nns) nns = TryGetQualifier<EnumDecl>(ast_node);
-  if (!nns) nns = TryGetQualifier<RecordDecl>(ast_node);
-  if (!nns) nns = TryGetQualifier<DeclaratorDecl>(ast_node);
-  if (!nns) nns = TryGetQualifier<FunctionDecl>(ast_node);
-  if (!nns) nns = TryGetQualifier<CXXDependentScopeMemberExpr>(ast_node);
-  if (!nns) nns = TryGetQualifier<DeclRefExpr>(ast_node);
-  if (!nns) nns = TryGetQualifier<DependentScopeDeclRefExpr>(ast_node);
-  if (!nns) nns = TryGetQualifier<MemberExpr>(ast_node);
-  return nns;
-}
-
 const DeclContext* GetDeclContext(const ASTNode* ast_node) {
   for (; ast_node != nullptr; ast_node = ast_node->parent()) {
     if (ast_node->IsA<Decl>())
@@ -493,13 +433,13 @@ string PrintableTypeLoc(const TypeLoc& typeloc) {
   return PrintableType(typeloc.getTypePtr());
 }
 
-string PrintableNestedNameSpecifier(const NestedNameSpecifier* nns) {
+string PrintableNestedNameSpecifier(NestedNameSpecifier nns) {
   if (!nns)
     return "<null nns>";
 
   std::string buffer;  // llvm wants regular string, not our versa-string
   raw_string_ostream ostream(buffer);
-  nns->print(ostream, DefaultPrintPolicy());
+  nns.print(ostream, DefaultPrintPolicy());
   return ostream.str();
 }
 
@@ -623,22 +563,25 @@ class SugaredTypeEnumerator
   }
 
   // --- Methods on RecursiveASTVisitor
-  bool TraverseType(QualType type) {
+  // TODO(bolshakov): traverse_qualifier could/should probably be false. Types
+  // from prefixes don't take part in template argument deduction. Moreover,
+  // they should be complete anyway.
+  bool TraverseType(QualType type, bool traverse_qualifier = true) {
     if (type.isNull())
-      return Base::TraverseType(type);
-    return TraverseTypeHelper(type);
+      return Base::TraverseType(type, traverse_qualifier);
+    return TraverseTypeHelper(type, traverse_qualifier);
   }
 
-  bool TraverseTypeLoc(TypeLoc type_loc) {
+  bool TraverseTypeLoc(TypeLoc type_loc, bool traverse_qualifier = true) {
     if (!type_loc)
-      return Base::TraverseTypeLoc(type_loc);
-    return TraverseTypeHelper(type_loc.getType());
+      return Base::TraverseTypeLoc(type_loc, traverse_qualifier);
+    return TraverseTypeHelper(type_loc.getType(), traverse_qualifier);
   }
 
  private:
   typedef RecursiveASTVisitor<SugaredTypeEnumerator> Base;
 
-  bool TraverseTypeHelper(QualType qual_type) {
+  bool TraverseTypeHelper(QualType qual_type, bool traverse_qualifier) {
     CHECK_(!qual_type.isNull());
 
     const Type* desugared_until_alias_or_tpl = Desugar(qual_type.getTypePtr());
@@ -651,7 +594,7 @@ class SugaredTypeEnumerator
     // TODO(bolshakov): it doesn't always work properly. For example, both A and
     // TypedefForA would be inserted in seen_types_ for Tpl<A, TypedefForA>,
     // leading to indeterminate resugar_map construction.
-    return Base::TraverseType(QualType(desugared, 0));
+    return Base::TraverseType(QualType(desugared, 0), traverse_qualifier);
   }
 
   set<const Type*> seen_types_;
@@ -670,22 +613,22 @@ class TypeEnumeratorWithoutSubstituted
   }
 
   // --- Methods on RecursiveASTVisitor
-  bool TraverseType(QualType type) {
+  bool TraverseType(QualType type, bool traverse_qualifier = true) {
     if (type.isNull())
-      return Base::TraverseType(type);
-    return TraverseTypeHelper(type);
+      return Base::TraverseType(type, traverse_qualifier);
+    return TraverseTypeHelper(type, traverse_qualifier);
   }
 
-  bool TraverseTypeLoc(TypeLoc type_loc) {
+  bool TraverseTypeLoc(TypeLoc type_loc, bool traverse_qualifier = true) {
     if (!type_loc)
-      return Base::TraverseTypeLoc(type_loc);
-    return TraverseTypeHelper(type_loc.getType());
+      return Base::TraverseTypeLoc(type_loc, traverse_qualifier);
+    return TraverseTypeHelper(type_loc.getType(), traverse_qualifier);
   }
 
  private:
   typedef RecursiveASTVisitor<TypeEnumeratorWithoutSubstituted> Base;
 
-  bool TraverseTypeHelper(QualType qual_type) {
+  bool TraverseTypeHelper(QualType qual_type, bool traverse_qualifier) {
     CHECK_(!qual_type.isNull());
     const Type* type = qual_type.getTypePtr();
     if (IsSubstTemplateTypeParmType(type))
@@ -693,7 +636,7 @@ class TypeEnumeratorWithoutSubstituted
 
     seen_types_.insert(Desugar(type));
 
-    return Base::TraverseType(qual_type);
+    return Base::TraverseType(qual_type, traverse_qualifier);
   }
 
   set<const Type*> seen_types_;
@@ -712,22 +655,22 @@ class CanonicalTypeEnumerator
   }
 
   // --- Methods on RecursiveASTVisitor
-  bool TraverseType(QualType type) {
+  bool TraverseType(QualType type, bool traverse_qualifier = true) {
     if (type.isNull())
-      return Base::TraverseType(type);
-    return TraverseTypeHelper(type);
+      return Base::TraverseType(type, traverse_qualifier);
+    return TraverseTypeHelper(type, traverse_qualifier);
   }
 
-  bool TraverseTypeLoc(TypeLoc type_loc) {
+  bool TraverseTypeLoc(TypeLoc type_loc, bool traverse_qualifier = true) {
     if (!type_loc)
-      return Base::TraverseTypeLoc(type_loc);
-    return TraverseTypeHelper(type_loc.getType());
+      return Base::TraverseTypeLoc(type_loc, traverse_qualifier);
+    return TraverseTypeHelper(type_loc.getType(), traverse_qualifier);
   }
 
  private:
   typedef RecursiveASTVisitor<CanonicalTypeEnumerator> Base;
 
-  bool TraverseTypeHelper(QualType qual_type) {
+  bool TraverseTypeHelper(QualType qual_type, bool traverse_qualifier) {
     CHECK_(!qual_type.isNull());
 
     const Type* type = qual_type.getTypePtr();
@@ -735,7 +678,7 @@ class CanonicalTypeEnumerator
 
     const Type* desugared = DesugarAliasTypes(type);
     // Add desugared type components.
-    return Base::TraverseType(QualType(desugared, 0));
+    return Base::TraverseType(QualType(desugared, 0), traverse_qualifier);
   }
 
   set<const Type*> seen_types_;
@@ -1274,7 +1217,7 @@ bool IsForwardDecl(const NamedDecl* decl) {
 // qualifier) or it's actually living inside another class.
 bool IsNestedClass(const TagDecl* decl) {
   if (decl->getQualifier() &&
-      decl->getQualifier()->getKind() == NestedNameSpecifier::TypeSpec) {
+      decl->getQualifier().getKind() == NestedNameSpecifier::Kind::Type) {
     return true;
   }
   return isa<RecordDecl>(decl->getDeclContext());
@@ -1413,6 +1356,18 @@ const CXXMethodDecl* GetFromLeastDerived(const CXXMethodDecl* decl) {
 }
 
 // --- Utilities for Type.
+
+bool IsElaboratedTypeSpecifier(const TypeWithKeyword* type) {
+  if (type == nullptr)
+    return false;
+  return type->getKeyword() != ElaboratedTypeKeyword::None;
+}
+
+bool IsQualifiedName(const Type* type) {
+  if (type == nullptr)
+    return false;
+  return type->getPrefix().getKind() != NestedNameSpecifier::Kind::Null;
+}
 
 const Type* GetTypeOf(const Expr* expr) {
   if (const auto* decl_ref_expr = dyn_cast<DeclRefExpr>(expr))
@@ -1559,15 +1514,17 @@ static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
     return typedef_type->getDecl();
   } else if (const InjectedClassNameType* icn_type =
                  type->getAs<InjectedClassNameType>()) {
-    return icn_type->getDecl();
+    // TODO(bolshakov): is getDefinitionOrSelf() needed here? Is this branch
+    // useful at all?
+    return icn_type->getOriginalDecl()->getDefinitionOrSelf();
   } else if (as_written && template_decl &&
              isa<TypeAliasTemplateDecl>(template_decl)) {
     // A template type alias
     return template_decl;
   } else if (const RecordType* record_type = type->getAs<RecordType>()) {
-    return record_type->getDecl();
+    return record_type->getOriginalDecl()->getDefinitionOrSelf();
   } else if (const TagType* tag_type = DynCastFrom(type)) {
-    return tag_type->getDecl();    // probably just enums
+    return tag_type->getOriginalDecl();  // probably just enums
   } else if (template_decl) {
     // A non-concrete template class, such as 'Myclass<T>'
     return template_decl;
@@ -1723,7 +1680,7 @@ TemplateInstantiationData GetTplInstDataForClass(
 }
 
 bool CanBeOpaqueDeclared(const EnumType* type) {
-  return type->getDecl()->isFixed();
+  return type->getOriginalDecl()->isFixed();
 }
 
 vector<const Type*> GetCanonicalArgComponents(
@@ -1791,9 +1748,9 @@ bool IsBaseToDerivedMemPtrConvertible(const Type* maybe_base_mem_ptr_type,
   if (!base_mem_ptr_type || !derived_mem_ptr_type)
     return false;
   const CXXRecordDecl* base_decl =
-      base_mem_ptr_type->getQualifier()->getAsRecordDecl();
+      base_mem_ptr_type->getQualifier().getAsRecordDecl();
   const CXXRecordDecl* derived_decl =
-      derived_mem_ptr_type->getQualifier()->getAsRecordDecl();
+      derived_mem_ptr_type->getQualifier().getAsRecordDecl();
   if (!derived_decl->isDerivedFrom(base_decl))
     return false;
   const QualType base_mem_type =
@@ -1861,8 +1818,9 @@ const Type* TypeOfParentIfMethod(const CallExpr* expr) {
     // For class->member(), class_type is a pointer.
     return RemovePointersAndReferencesAsWritten(class_type);
   } else if (const DeclRefExpr* ref_expr = DynCastFrom(callee_expr)) {
-    if (ref_expr->getQualifier()) {    // static methods like C<T>::a()
-      return ref_expr->getQualifier()->getAsType();
+    if (ref_expr->getQualifier().getKind() ==
+        NestedNameSpecifier::Kind::Type) {  // static methods like C<T>::a()
+      return ref_expr->getQualifier().getAsType();
     }
   }
   return nullptr;

@@ -21,3 +21,8 @@ using ::IndirectClass;
 }  // namespace ns
 
 struct Struct {};
+
+template <typename>
+struct OuterTpl {
+  struct Inner {};
+};

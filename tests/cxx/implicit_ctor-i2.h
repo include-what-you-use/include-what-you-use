@@ -21,3 +21,7 @@ struct NoTrivialCtorDtor {
   NoTrivialCtorDtor();
   ~NoTrivialCtorDtor();
 };
+
+struct MultipleRedeclStruct {
+  MultipleRedeclStruct(int);
+};

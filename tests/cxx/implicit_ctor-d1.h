@@ -44,6 +44,11 @@ int NoAutocastFn(
     // IWYU: IndirectClass needs a declaration
     IndirectClass);
 
+// Test that IWYU finds the definition among redeclarations which contains
+// an implicit ctor and requires the complete type here.
+// IWYU: MultipleRedeclStruct is...*implicit_ctor-i2.h.*for autocast
+void TakeMultipleRedeclStruct(MultipleRedeclStruct);
+
 /**** IWYU_SUMMARY
 
 tests/cxx/implicit_ctor-d1.h should add these lines:
@@ -55,7 +60,7 @@ tests/cxx/implicit_ctor-d1.h should remove these lines:
 - #include "tests/cxx/implicit_ctor-i1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/implicit_ctor-d1.h:
-#include "tests/cxx/implicit_ctor-i2.h"  // for IndirectWithImplicitCtor
+#include "tests/cxx/implicit_ctor-i2.h"  // for IndirectWithImplicitCtor, MultipleRedeclStruct
 class IndirectClass;
 
 ***** IWYU_SUMMARY */

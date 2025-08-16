@@ -10,3 +10,7 @@
 #include "tests/cxx/no_implicit_sugar_report_cxx11-indirect.h"
 
 TypedefHost::Int GetInt();
+
+class Class {};
+
+ns::Class GetClassFromUsing();

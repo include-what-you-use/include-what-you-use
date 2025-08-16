@@ -256,6 +256,13 @@ void TestParameterPack() {
   TplFnWithParameterPack();
 }
 
+// IWYU: TplHost needs a declaration
+// IWYU: TplHost is...*-i1.h
+TplHost::InnerTpl<TplHost> inner_tpl;
+// Test that IWYU doesn't scan the prefix of the template specialization type.
+// No need of TplHost there because it was reported where explicitly written.
+constexpr auto inner_tpl_size = sizeof(inner_tpl);
+
 // ---------------------------------------------------------------
 
 /**** IWYU_SUMMARY
@@ -271,7 +278,7 @@ The full include-list for tests/cxx/template_args.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/template_args-d1.h"  // for ProvidingAlias
 #include "tests/cxx/template_args-d2.h"  // for NonProvidingAlias, NonProvidingFunctionAlias1, NonProvidingFunctionAlias2
-#include "tests/cxx/template_args-i1.h"  // for TplInI1
+#include "tests/cxx/template_args-i1.h"  // for TplHost, TplInI1
 template <typename F> struct FunctionStruct;  // lines XX-XX
 
 ***** IWYU_SUMMARY */

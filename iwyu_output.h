@@ -33,7 +33,7 @@
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
 
 namespace clang {
-class ElaboratedTypeLoc;
+class TagTypeLoc;
 class UsingDecl;
 }  // namespace clang
 
@@ -151,7 +151,7 @@ class OneUse {
 class OneIncludeOrForwardDeclareLine {
  public:
   explicit OneIncludeOrForwardDeclareLine(const clang::NamedDecl* fwd_decl);
-  explicit OneIncludeOrForwardDeclareLine(clang::ElaboratedTypeLoc);
+  explicit OneIncludeOrForwardDeclareLine(clang::TagTypeLoc);
   OneIncludeOrForwardDeclareLine(clang::OptionalFileEntryRef included_file,
                                  const string& quoted_include, int linenum);
 
@@ -278,7 +278,7 @@ class IwyuFileInfo {
   // the fwd-decl be removed, even if we don't see any uses of it.
   void AddForwardDeclare(const clang::NamedDecl* fwd_decl,
                          bool definitely_keep_fwd_decl);
-  void AddElaboratedType(clang::ElaboratedTypeLoc);
+  void AddOwningTagType(clang::TagTypeLoc);
 
   void AddUsingDecl(const clang::UsingDecl* using_decl);
 

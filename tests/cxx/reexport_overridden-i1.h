@@ -31,4 +31,5 @@ class Base {
   virtual void TakeTemplate(IndirectTemplate<IndirectClass>);
   virtual void TakeAliasedTemplatePtr(TemplatePtrAlias);
   virtual void TakePulledInOtherNSInDerived(IndirectClass);
+  virtual OuterTpl<IndirectClass>::Inner GetNestedInTpl();
 };

@@ -70,6 +70,11 @@ class Derived1 : public Base {
   // should not.
   // IWYU: ns::IndirectClass is...*reexport_overridden-i3.h.*for using decl
   void TakePulledInOtherNSInDerived(ns::IndirectClass) override;
+
+  // IWYU should not suggest IndirectClass fwd-declaration here.
+  // TODO: OuterTpl is not needed as well.
+  // IWYU: OuterTpl is...*reexport_overridden-i3.h
+  OuterTpl<IndirectClass>::Inner GetNestedInTpl() override;
 };
 
 class Derived2 : public Derived1 {
@@ -94,5 +99,5 @@ tests/cxx/reexport_overridden-d1.h should remove these lines:
 
 The full include-list for tests/cxx/reexport_overridden-d1.h:
 #include "tests/cxx/reexport_overridden-i1.h"  // for Base
-#include "tests/cxx/reexport_overridden-i3.h"  // for Alias, FwdRetType, IndirectClass, Struct, TemplatePtrAlias
+#include "tests/cxx/reexport_overridden-i3.h"  // for Alias, FwdRetType, IndirectClass, OuterTpl, Struct, TemplatePtrAlias
 ***** IWYU_SUMMARY */
