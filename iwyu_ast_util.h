@@ -17,6 +17,7 @@
 #include <optional>
 #include <set>                          // for set
 #include <string>                       // for string
+#include <utility>
 #include <vector>                       // for vector
 
 #include "clang/AST/NestedNameSpecifierBase.h"
@@ -46,6 +47,7 @@ class Expr;
 class FunctionDecl;
 class NamedDecl;
 class NamespaceDecl;
+class RecordDecl;
 class Sema;
 class Stmt;
 class TagDecl;
@@ -930,15 +932,37 @@ bool IsConvertible(clang::QualType from,
                    clang::SourceLocation conv_loc,
                    clang::Sema&);
 
-// If the types are probably compatible (see the C23 standard, 6.2.7), returns
-// true and fills decls_to_report with tag type declarations required to exactly
-// determine it, otherwise returns false.
-bool CouldBeCompatible(
-    clang::QualType lhs,
-    clang::QualType rhs,
-    std::function<set<const clang::Type*>(const clang::Type*)> provided_getter,
-    clang::ASTContext&,
-    set<const clang::NamedDecl*>& decls_to_report);
+class CompatibilityChecker {
+ public:
+  CompatibilityChecker(
+      std::function<set<const clang::Type*>(const clang::Type*)>
+          provided_getter,
+      clang::ASTContext& ctx)
+      : provided_getter_{provided_getter}, ctx_{ctx} {
+  }
+
+  // If the types are probably compatible (see the C23 standard, 6.2.7), returns
+  // true and fills decls_to_report_, otherwise returns false.
+  bool CouldBeCompatible(clang::QualType, clang::QualType);
+
+  // If the previous call to CouldBeCompatible returned true, this returns tag
+  // type declarations required to exactly determine type compatibility.
+  const set<const clang::NamedDecl*>& GetDeclsToReport() const {
+    return decls_to_report_;
+  }
+
+ private:
+  bool CouldBeCompatible(clang::QualType lhs,
+                         clang::QualType rhs,
+                         bool full_type_guaranteed,
+                         set<const clang::Type*> provided_types);
+
+  std::function<set<const clang::Type*>(const clang::Type*)> provided_getter_;
+  clang::ASTContext& ctx_;
+
+  set<const clang::NamedDecl*> decls_to_report_;
+  set<std::pair<const clang::RecordDecl*, const clang::RecordDecl*>> handled_;
+};
 
 // --- Utilities for Stmt.
 

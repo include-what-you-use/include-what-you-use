@@ -2693,11 +2693,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // ReportTypeUse doesn't report enumerations. But for this trait,
         // the enum content may be important, hence ReportDeclsUse is used
         // instead.
-        set<const NamedDecl*> decls_to_report;
-        if (CouldBeCompatible(lhs_unqual_type, rhs_unqual_type, provided_getter,
-                              compiler()->getASTContext(), decls_to_report)) {
-          ReportDeclsUse(CurrentLoc(), decls_to_report);
-        }
+        CompatibilityChecker chkr{provided_getter, compiler()->getASTContext()};
+        if (chkr.CouldBeCompatible(lhs_unqual_type, rhs_unqual_type))
+          ReportDeclsUse(CurrentLoc(), chkr.GetDeclsToReport());
         return true;
       }
     }
