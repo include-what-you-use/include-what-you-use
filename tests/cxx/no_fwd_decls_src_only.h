@@ -1,4 +1,4 @@
-//===--- no_fwd_decls_src_only.h - test input file for iwyu ----------------------===//
+//===--- no_fwd_decls_src_only.h - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
