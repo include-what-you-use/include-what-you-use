@@ -1209,7 +1209,7 @@ void ProcessForwardDeclare(OneUse* use,
   // Note: --no_fwd_decls=src-only only applies to source files.
   if (!use->ignore_use() && 
       (GlobalFlags().no_fwd_decls == NoFwdDecls::Everywhere || 
-       (GlobalFlags().no_fwd_decls == NoFwdDecls::SourcesOnly && !IsHeaderFile(GetFilePath(use->use_loc()))))) {
+       (GlobalFlags().no_fwd_decls == NoFwdDecls::SourcesOnly && !IsInHeader(use->use_loc())))) {
     bool promote_to_full_use = true;
     for (const Decl* decl = use->decl(); decl != nullptr;
          decl = decl->getPreviousDecl()) {
