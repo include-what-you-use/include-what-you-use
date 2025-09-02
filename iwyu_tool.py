@@ -63,8 +63,9 @@ def clang_formatter(output, style, logLevel):
         match = CORRECT_RE.match(line)
         if match:
             if logLevel is LogLevel.NOTE:
-                formatted.append('%s:1:1: note: #includes/fwd-decls are correct' %
-                                match.groups(1))
+                formatted.append(
+                    '%s:1:1: note: #includes/fwd-decls are correct' %
+                    match.groups(1))
             continue
         match = SHOULD_ADD_RE.match(line)
         if match:
@@ -109,9 +110,12 @@ class LogLevel(Enum):
 DEFAULT_FORMAT = 'iwyu'
 FORMATTERS = {
     'iwyu': lambda output: output,
-    'clang': lambda output: clang_formatter(output, style="error", logLevel=LogLevel.NOTE),
-    'clang-warning': lambda output: clang_formatter(output, style="warning", logLevel=LogLevel.NOTE),
-    'clang-warning-without-note': lambda output: clang_formatter(output, style="warning", logLevel=LogLevel.WARNING),
+    'clang': lambda output: clang_formatter(
+        output, style="error", logLevel=LogLevel.NOTE),
+    'clang-warning': lambda output: clang_formatter(
+        output, style="warning", logLevel=LogLevel.NOTE),
+    'clang-warning-without-note': lambda output: clang_formatter(
+        output, style="warning", logLevel=LogLevel.WARNING),
 }
 
 
