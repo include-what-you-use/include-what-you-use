@@ -40,6 +40,7 @@ import argparse
 import tempfile
 import subprocess
 
+from enum import Enum
 
 CORRECT_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 SHOULD_ADD_RE = re.compile(r'^(.*?) should add these lines:$')
@@ -53,7 +54,7 @@ LINES_RE = re.compile(r'^- (.*?)  // lines ([0-9]+)-[0-9]+$')
 GENERAL, ADD, REMOVE, LIST = range(4)
 
 
-def clang_formatter(output, style):
+def clang_formatter(output, style, logLevel):
     """ Process iwyu's output into something clang-like. """
     formatted = []
 
@@ -61,8 +62,9 @@ def clang_formatter(output, style):
     for line in output.splitlines():
         match = CORRECT_RE.match(line)
         if match:
-            formatted.append('%s:1:1: note: #includes/fwd-decls are correct' %
-                             match.groups(1))
+            if logLevel is LogLevel.NOTE:
+                formatted.append('%s:1:1: note: #includes/fwd-decls are correct' %
+                                match.groups(1))
             continue
         match = SHOULD_ADD_RE.match(line)
         if match:
@@ -100,12 +102,16 @@ def clang_formatter(output, style):
 
     return os.linesep.join(formatted)
 
+class LogLevel(Enum):
+    NOTE = 1
+    WARNING = 2
 
 DEFAULT_FORMAT = 'iwyu'
 FORMATTERS = {
     'iwyu': lambda output: output,
-    'clang': lambda output: clang_formatter(output, style="error"),
-    'clang-warning': lambda output: clang_formatter(output, style="warning"),
+    'clang': lambda output: clang_formatter(output, style="error", logLevel=LogLevel.NOTE),
+    'clang-warning': lambda output: clang_formatter(output, style="warning", logLevel=LogLevel.NOTE),
+    'clang-warning-without-note': lambda output: clang_formatter(output, style="warning", logLevel=LogLevel.WARNING),
 }
 
 
