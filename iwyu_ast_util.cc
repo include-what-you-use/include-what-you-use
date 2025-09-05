@@ -391,6 +391,10 @@ const DeclContext* GetDeclContext(const ASTNode* ast_node) {
   return nullptr;
 }
 
+bool InImplicitCode(const ASTNode* ast_node) {
+  return ast_node->GetAncestorAs<Decl>()->isImplicit();
+}
+
 //------------------------------------------------------------
 // Helper functions for working with raw Clang AST nodes.
 
