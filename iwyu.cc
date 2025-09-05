@@ -3102,7 +3102,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // If we are forward-declarable, so are our template arguments.
     if (CanForwardDeclareType(current_ast_node())) {
-      ReportDeclForwardDeclareUse(CurrentLoc(), decl);
+      if (!current_ast_node()->template GetAncestorAs<Decl>()->isImplicit())
+        ReportDeclForwardDeclareUse(CurrentLoc(), decl);
       current_ast_node()->set_in_forward_declare_context(true);
     } else {
       if (type->isTypeAlias())
@@ -5098,6 +5099,10 @@ class IwyuAstConsumer
     // needed: just forward-declare.
     if (CanForwardDeclareType(current_ast_node()) && !is_provided) {
       current_ast_node()->set_in_forward_declare_context(true);
+
+      if (current_ast_node()->GetAncestorAs<Decl>()->isImplicit())
+        return Base::VisitTagType(type);
+
       if (compiler()->getLangOpts().CPlusPlus) {
         // In C++, if we're already elaborated ('class Foo x') but not
         // a qualified name ('class ns::Foo x', 'class Class::Nested x') or

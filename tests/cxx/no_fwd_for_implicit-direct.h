@@ -1,4 +1,4 @@
-//===--- fn.h - iwyu test -------------------------------------------------===//
+//===--- no_fwd_for_implicit-direct.h - test input file for iwyu ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
