@@ -468,6 +468,8 @@ bool IsAutocastExpr(const ASTNode*);
 // Returns the decl-context of the deepest decl in the ast-chain.
 const clang::DeclContext* GetDeclContext(const ASTNode* ast_node);
 
+bool InImplicitCode(const ASTNode*);
+
 //------------------------------------------------------------
 // Helper functions for working with raw Clang AST nodes.
 
