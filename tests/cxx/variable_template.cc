@@ -7,13 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I . -Wno-undefined-var-template
+// IWYU_ARGS: -I . -Wno-undefined-var-template \
+//            -Xiwyu --check_also="tests/cxx/*-i1.h"
 
 // Tests variable templates.
 
 #include "tests/cxx/direct.h"
 #include "tests/cxx/variable_template-d1.h"
 
+class DeclaredInCC;
 class IndirectClass;
 
 using NonProvidingRefAlias = IndirectClass&;
@@ -173,6 +175,8 @@ void Fn() {
   TplFnUsingVarTpl<IndirectClass>();
   TplFnUsingGetIntIndirectly<IndirectClass>();
   TplFnNoImplInstNeeded<IndirectClass>();
+  // IWYU: UseVarTplInHeader is...*-i1.h
+  UseVarTplInHeader<DeclaredInCC>();
 }
 
 /**** IWYU_SUMMARY
@@ -188,6 +192,7 @@ tests/cxx/variable_template.cc should remove these lines:
 
 The full include-list for tests/cxx/variable_template.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
-#include "tests/cxx/variable_template-i1.h"  // for GetInt, ProvidingRefAlias, both_args_used_def_provided, full_use_def_arg_provided
+#include "tests/cxx/variable_template-i1.h"  // for GetInt, ProvidingRefAlias, UseVarTplInHeader, both_args_used_def_provided, full_use_def_arg_provided
+class DeclaredInCC;  // lines XX-XX
 
 ***** IWYU_SUMMARY */
