@@ -22,3 +22,18 @@ int both_args_used_def_provided = [] {
 using ProvidingRefAlias = IndirectClass&;
 
 int GetInt();
+
+template <typename>
+int var_tpl_in_header;
+
+template <typename T>
+void UseVarTplInHeader() {
+  // IWYU should not suggest a forward-declaration of DeclaredInCC here.
+  (void)var_tpl_in_header<T>;
+}
+
+/**** IWYU_SUMMARY
+
+(tests/cxx/variable_template-i1.h has correct #includes/fwd-decls)
+
+***** IWYU_SUMMARY */
