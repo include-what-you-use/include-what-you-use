@@ -54,7 +54,7 @@ LINES_RE = re.compile(r'^- (.*?)  // lines ([0-9]+)-[0-9]+$')
 GENERAL, ADD, REMOVE, LIST = range(4)
 
 
-def clang_formatter(output, style, logLevel):
+def clang_formatter(output, style, log_level):
     """ Process iwyu's output into something clang-like. """
     formatted = []
 
@@ -62,7 +62,7 @@ def clang_formatter(output, style, logLevel):
     for line in output.splitlines():
         match = CORRECT_RE.match(line)
         if match:
-            if logLevel is LogLevel.NOTE:
+            if log_level is LogLevel.NOTE:
                 formatted.append(
                     '%s:1:1: note: #includes/fwd-decls are correct' %
                     match.groups(1))
@@ -111,11 +111,11 @@ DEFAULT_FORMAT = 'iwyu'
 FORMATTERS = {
     'iwyu': lambda output: output,
     'clang': lambda output: clang_formatter(
-        output, style="error", logLevel=LogLevel.NOTE),
+        output, style="error", log_level=LogLevel.NOTE),
     'clang-warning': lambda output: clang_formatter(
-        output, style="warning", logLevel=LogLevel.NOTE),
+        output, style="warning", log_level=LogLevel.NOTE),
     'clang-warning-without-note': lambda output: clang_formatter(
-        output, style="warning", logLevel=LogLevel.WARNING),
+        output, style="warning", log_level=LogLevel.WARNING),
 }
 
 
