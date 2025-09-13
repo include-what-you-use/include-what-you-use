@@ -61,8 +61,7 @@ def clang_formatter(output, style):
     for line in output.splitlines():
         match = CORRECT_RE.match(line)
         if match:
-            formatted.append('%s:1:1: note: #includes/fwd-decls are correct' %
-                             match.groups(1))
+            #  See PR#1806 for more info
             continue
         match = SHOULD_ADD_RE.match(line)
         if match:
