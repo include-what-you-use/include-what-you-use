@@ -89,7 +89,6 @@ using clang::DeclaratorDecl;
 using clang::DependentNameType;
 using clang::DependentScopeDeclRefExpr;
 using clang::DependentTemplateName;
-using clang::DependentTemplateSpecializationType;
 using clang::ElaboratedTypeKeyword;
 using clang::EnterExpressionEvaluationContext;
 using clang::EnumDecl;
