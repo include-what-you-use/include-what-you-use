@@ -394,7 +394,7 @@ bool ExecuteAction(int argc,
       new CompilerInstance(std::move(invocation)));
   // It's tempting to reuse the DiagnosticsEngine we created above, but we need
   // to create a new one to get the options produced by the compiler invocation.
-  compiler->createDiagnostics(*fs);
+  compiler->createDiagnostics();
 
   unique_ptr<FrontendAction> action;
   switch (command.getSource().getKind()) {
