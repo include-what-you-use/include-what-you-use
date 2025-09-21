@@ -116,6 +116,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangOptions.h"
@@ -150,7 +151,6 @@
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/AST/Redeclarable.h"
 // IWYU pragma: no_include "clang/AST/StmtIterator.h"
-// IWYU pragma: no_include "clang/AST/UnresolvedSet.h"
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
 // IWYU pragma: no_include "clang/Lex/PPCallbacks.h"
 // IWYU pragma: no_include "llvm/ADT/iterator.h"
@@ -268,6 +268,7 @@ using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryExprOrTypeTraitExpr;
 using clang::UnresolvedLookupExpr;
+using clang::UnresolvedSet;
 using clang::UsingDecl;
 using clang::UsingDirectiveDecl;
 using clang::UsingShadowDecl;
@@ -2696,6 +2697,23 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         CompatibilityChecker chkr{provided_getter, compiler()->getASTContext()};
         if (chkr.CouldBeCompatible(lhs_unqual_type, rhs_unqual_type))
           ReportDeclsUse(CurrentLoc(), chkr.GetDeclsToReport());
+        return true;
+      }
+      case TypeTrait::BTT_LtSynthesisesFromSpaceship:
+      case TypeTrait::BTT_LeSynthesisesFromSpaceship:
+      case TypeTrait::BTT_GtSynthesisesFromSpaceship:
+      case TypeTrait::BTT_GeSynthesisesFromSpaceship: {
+        require_complete_arg_types();
+
+        UnresolvedSet<16> spaceship_decls;
+        Sema& sema = compiler()->getSema();
+        sema.LookupBinOp(sema.TUScope, CurrentLoc(), clang::BO_Cmp,
+                         spaceship_decls);
+        for (const NamedDecl* decl : spaceship_decls) {
+          VERRS(0) << "Found spaceship @ " << PrintableLoc(GetLocation(decl))
+                   << ": " << PrintableDecl(decl) << "\n";
+          ReportDeclUse(CurrentLoc(), decl);
+        }
         return true;
       }
     }
