@@ -25,6 +25,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "iwyu_port.h"  // for CHECK_
 #include "iwyu_use_flags.h"
 #include "llvm/Support/Casting.h"
@@ -971,6 +972,12 @@ class CompatibilityChecker {
   set<const clang::NamedDecl*> decls_to_report_;
   set<std::pair<const clang::RecordDecl*, const clang::RecordDecl*>> handled_;
 };
+
+// Returns the value kind (category) corresponding to the given type as for
+// the result of a call to a function with that type as its return type, i.e.
+// PRValue for nonreference types, LValue for lvalue references and XValue for
+// rvalue references.
+clang::ExprValueKind GetValueCategory(const clang::Type*);
 
 // --- Utilities for Stmt.
 

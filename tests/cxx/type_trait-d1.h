@@ -20,5 +20,6 @@ using ClassProviding = Class;
 using ClassRefProviding = Class&;
 using ClassConstRefProviding = const Class&;
 using Union1RefProviding = Union1&;
+using With3WayCompRefProviding = With3WayComp&;
 
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPE_TRAIT_D1_H_

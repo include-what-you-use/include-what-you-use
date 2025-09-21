@@ -116,6 +116,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangOptions.h"
@@ -126,6 +127,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Ownership.h"
 #include "clang/Sema/Sema.h"
 #include "iwyu_ast_util.h"
 #include "iwyu_cache.h"
@@ -150,7 +152,6 @@
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/AST/Redeclarable.h"
 // IWYU pragma: no_include "clang/AST/StmtIterator.h"
-// IWYU pragma: no_include "clang/AST/UnresolvedSet.h"
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
 // IWYU pragma: no_include "clang/Lex/PPCallbacks.h"
 // IWYU pragma: no_include "llvm/ADT/iterator.h"
@@ -180,6 +181,7 @@ using clang::ArraySubscriptExpr;
 using clang::ArrayType;
 using clang::Attr;
 using clang::BinaryOperator;
+using clang::BinaryOperatorKind;
 using clang::CXXBaseSpecifier;
 using clang::CXXBindTemporaryExpr;
 using clang::CXXCatchStmt;
@@ -213,6 +215,7 @@ using clang::EnumConstantDecl;
 using clang::EnumDecl;
 using clang::EnumType;
 using clang::Expr;
+using clang::ExprResult;
 using clang::FriendDecl;
 using clang::FriendTemplateDecl;
 using clang::FunctionDecl;
@@ -227,6 +230,7 @@ using clang::NamedDecl;
 using clang::NamespaceAliasDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
+using clang::OpaqueValueExpr;
 using clang::OptionalFileEntryRef;
 using clang::PPCallbacks;
 using clang::ParenType;
@@ -239,6 +243,7 @@ using clang::RecordDecl;
 using clang::RecordType;
 using clang::RecursiveASTVisitor;
 using clang::ReferenceType;
+using clang::CXXRewrittenBinaryOperator;
 using clang::Sema;
 using clang::SourceLocation;
 using clang::SourceManager;
@@ -268,6 +273,7 @@ using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryExprOrTypeTraitExpr;
 using clang::UnresolvedLookupExpr;
+using clang::UnresolvedSet;
 using clang::UsingDecl;
 using clang::UsingDirectiveDecl;
 using clang::UsingShadowDecl;
@@ -2696,6 +2702,84 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         CompatibilityChecker chkr{provided_getter, compiler()->getASTContext()};
         if (chkr.CouldBeCompatible(lhs_unqual_type, rhs_unqual_type))
           ReportDeclsUse(CurrentLoc(), chkr.GetDeclsToReport());
+        return true;
+      }
+      case TypeTrait::BTT_LtSynthesisesFromSpaceship:
+      case TypeTrait::BTT_GtSynthesisesFromSpaceship:
+      case TypeTrait::BTT_LeSynthesisesFromSpaceship:
+      case TypeTrait::BTT_GeSynthesisesFromSpaceship: {
+        if (lhs_type->isVoidType() || rhs_type->isVoidType())
+          return true;
+
+        const Type* tag_type = nullptr;
+        const Type* second_type = nullptr;
+        if (isa<TagType>(RemoveReference(rhs_qual_type))) {
+          tag_type = rhs_type;
+          second_type = lhs_type;
+        } else if (isa<TagType>(RemoveReference(lhs_qual_type))) {
+          tag_type = lhs_type;
+          second_type = rhs_type;
+        } else {
+          // At least one type should be a tag type for operator<=>
+          // to be overloadable.
+          return true;
+        }
+        // Report arg types even when the selected operator is a non-member
+        // function at least because there may be some user-defined conversions.
+        ReportTypeUse(CurrentLoc(), tag_type, DerefKind::RemoveRefs);
+        // If the second type is a pointer, there may be present
+        // a derived-to-base conversion to match the operator arg type.
+        ReportTypeUse(CurrentLoc(), second_type,
+                      RemovePointersAndReferences(second_type)->isUnionType()
+                          ? DerefKind::RemoveRefs
+                          : DerefKind::RemoveRefsAndPtr);
+
+        OpaqueValueExpr lhs(CurrentLoc(), lhs_qual_type.getNonReferenceType(),
+                            GetValueCategory(lhs_type));
+        OpaqueValueExpr rhs(CurrentLoc(), rhs_qual_type.getNonReferenceType(),
+                            GetValueCategory(rhs_type));
+
+        auto op_kind = [expr] {
+          switch (expr->getTrait()) {
+            case TypeTrait::BTT_LtSynthesisesFromSpaceship:
+              return BinaryOperatorKind::BO_LT;
+            case TypeTrait::BTT_LeSynthesisesFromSpaceship:
+              return BinaryOperatorKind::BO_LE;
+            case TypeTrait::BTT_GtSynthesisesFromSpaceship:
+              return BinaryOperatorKind::BO_GT;
+            case TypeTrait::BTT_GeSynthesisesFromSpaceship:
+              return BinaryOperatorKind::BO_GE;
+            default:
+              CHECK_UNREACHABLE_(
+                  "Unexpected 'synthesises_from_spaceship' trait kind");
+          }
+        }();
+
+        // TODO(bolshakov): enter unevaluated context?
+
+        Sema& sema = compiler()->getSema();
+        UnresolvedSet<16> functions;
+        sema.LookupBinOp(sema.TUScope, CurrentLoc(), op_kind, functions);
+
+        // TODO(bolshakov): ForValidityCheck=true is probably not necessary.
+        Sema::SFINAETrap sfinae_trap(sema, /*ForValidityCheck=*/true);
+        ExprResult result = sema.CreateOverloadedBinOp(CurrentLoc(), op_kind,
+                                                       functions, &lhs, &rhs);
+        // TODO(bolshakov): can sfinae_trap.hasErrorOccurred() be true when
+        // the result is usable in some case other than non-public member
+        // operators?
+        if (!result.isUsable() || sfinae_trap.hasErrorOccurred())
+          return true;
+        if (const auto* op_expr = dyn_cast<CXXOperatorCallExpr>(result.get())) {
+          if (const NamedDecl* op_func = op_expr->getDirectCallee())
+            ReportDeclUse(CurrentLoc(), op_func);
+        } else if (const auto* rewritten =
+                       dyn_cast<CXXRewrittenBinaryOperator>(result.get())) {
+          const auto* op_expr = cast<CXXOperatorCallExpr>(
+              rewritten->getDecomposedForm().InnerBinOp);
+          ReportDeclUse(CurrentLoc(), op_expr->getDirectCallee());
+        }
+
         return true;
       }
     }

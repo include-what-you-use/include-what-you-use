@@ -96,6 +96,7 @@ using clang::EnumType;
 using clang::ExplicitCastExpr;
 using clang::Expr;
 using clang::ExprResult;
+using clang::ExprValueKind;
 using clang::ExprWithCleanups;
 using clang::FunctionDecl;
 using clang::FunctionProtoType;
@@ -1950,6 +1951,12 @@ bool CompatibilityChecker::CouldBeCompatible(QualType lhs,
     // underlying types.
   }
   return ctx_.typesAreCompatible(lhs, rhs);
+}
+
+ExprValueKind GetValueCategory(const Type* type) {
+  return type->isLValueReferenceType()   ? ExprValueKind::VK_LValue
+         : type->isRValueReferenceType() ? ExprValueKind::VK_XValue
+                                         : ExprValueKind::VK_PRValue;
 }
 
 // --- Utilities for Stmt.
