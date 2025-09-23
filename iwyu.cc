@@ -1715,7 +1715,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (decl->getKind() == Decl::Function) {
         const FunctionDecl* redecl = decl;
         while ((redecl = redecl->getPreviousDecl()))
-          ReportDeclUse(CurrentLoc(), redecl, nullptr, UF_DefinitionUse);
+          ReportDeclUse(CurrentLoc(), redecl, nullptr, UF_RedeclUse);
       }
     } else {
       // Make all our types forward-declarable.
@@ -1735,7 +1735,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       while ((redecl = redecl->getPreviousDecl())) {
         if (!redecl->hasExternalStorage())
           continue;
-        ReportDeclUse(CurrentLoc(), redecl, nullptr, UF_DefinitionUse);
+        ReportDeclUse(CurrentLoc(), redecl, nullptr, UF_RedeclUse);
       }
     }
     return true;
@@ -4972,6 +4972,28 @@ class IwyuAstConsumer
       return false;
 
     return HandleAliasedClassMethods(decl);
+  }
+
+  bool VisitFunctionDecl(FunctionDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    // If a function declaration specifies default arguments but not for
+    // the last parameters, like this:
+    // void Fn(int = 0, int);
+    // there should be (a) prior declaration(s) that specifies default argument
+    // values for the last parameters.
+    for (unsigned i = 1, ie = decl->getNumParams(); i < ie; ++i) {
+      if (IsDefArgSpecified(i - 1, decl) && !IsDefArgSpecified(i, decl)) {
+        // There should be a fn redecl specifying the i-th param default value.
+        for (const FunctionDecl* redecl : decl->redecls()) {
+          if (IsDefArgSpecified(i, redecl)) {
+            ReportDeclUse(CurrentLoc(), redecl, nullptr, UF_RedeclUse);
+            return Base::VisitFunctionDecl(decl);
+          }
+        }
+      }
+    }
+    return Base::VisitFunctionDecl(decl);
   }
 
   // Avoid forward-declaration warnings for types which _should_ be already
