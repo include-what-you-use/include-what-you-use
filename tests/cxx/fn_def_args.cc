@@ -1,4 +1,4 @@
-//===--- no_def_arg_call_site.cc - test input file for iwyu ---------------===//
+//===--- fn_def_args.cc - test input file for iwyu ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/no_def_arg_call_site-d1.h" -I .
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/fn_def_args-d1.h" -I .
 
-// Tests that IWYU doesn't report default function arguments when analyzing call
-// site.
+// Tests handling function default arguments. In particular, tests that IWYU
+// doesn't report them when analyzing call site.
 
-#include "tests/cxx/no_def_arg_call_site-d1.h"
+#include "tests/cxx/fn_def_args-d1.h"
 
 template <typename T>
 void TplFn() {
@@ -26,6 +26,6 @@ void Fn() {
 
 /**** IWYU_SUMMARY
 
-(tests/cxx/no_def_arg_call_site.cc has correct #includes/fwd-decls)
+(tests/cxx/fn_def_args.cc has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */

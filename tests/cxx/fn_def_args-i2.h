@@ -1,4 +1,4 @@
-//===--- no_def_arg_call_site-i2.h - test input file for iwyu -------------===//
+//===--- fn_def_args-i2.h - test input file for iwyu ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
