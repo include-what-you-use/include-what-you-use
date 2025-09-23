@@ -118,6 +118,7 @@ using clang::ObjCObjectType;
 using clang::OpaqueValueExpr;
 using clang::OptionalFileEntryRef;
 using clang::OverloadExpr;
+using clang::ParmVarDecl;
 using clang::PointerType;
 using clang::PrintingPolicy;
 using clang::QualType;
@@ -1365,6 +1366,18 @@ const CXXMethodDecl* GetFromLeastDerived(const CXXMethodDecl* decl) {
   while (decl->size_overridden_methods())
     decl = *decl->begin_overridden_methods();
   return decl;
+}
+
+bool IsDefArgSpecified(unsigned i, const FunctionDecl* func) {
+  const ParmVarDecl* param = func->getParamDecl(i);
+  if (!param->hasDefaultArg())
+    return false;
+  // Clang marks a parameter as having default argument even if that argument
+  // is specified in another function redeclaration, so check source locations
+  // to determine if the argument is written explicitly in the current decl.
+  SourceLocation def_arg_loc = param->getDefaultArg()->getExprLoc();
+  return GlobalSourceManager()->isPointWithin(def_arg_loc, func->getBeginLoc(),
+                                              func->getEndLoc());
 }
 
 // --- Utilities for Type.
