@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// We're not supposed to define anything in std, but we do anyway for this test.
-
 namespace __gnu_cxx {
 class SystemClass { };
 }
