@@ -714,9 +714,19 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return false;
     if (CanIgnoreCurrentASTNode())
       return true;
-    return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
-                                                 TypeOfParentIfMethod(expr),
-                                                 expr);
+    FunctionDecl* func = expr->getDirectCallee();
+    if (!func)
+      return true;
+    // If the call makes use of default arguments, select exactly that
+    // redeclaration which specifies the first default argument used.
+    for (unsigned i = 0, ie = expr->getNumArgs(); i < ie; ++i) {
+      if (isa<CXXDefaultArgExpr>(expr->getArg(i))) {
+        func = GetRedeclSpecifyingDefArg(i, func);
+        break;
+      }
+    }
+    return this->getDerived().HandleFunctionCall(
+        func, TypeOfParentIfMethod(expr), expr);
   }
 
   bool TraverseCXXMemberCallExpr(CXXMemberCallExpr* expr) {
@@ -801,6 +811,18 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     const Type* parent_type = expr->getAllocatedType().getTypePtrOrNull();
     // 'new' calls operator new in addition to the ctor of the new-ed type.
     if (FunctionDecl* operator_new = expr->getOperatorNew()) {
+      // If the placement-new call makes use of default arguments, select
+      // exactly that redecl which specifies the first default argument used.
+      for (unsigned i = 0, ie = expr->getNumPlacementArgs(); i < ie; ++i) {
+        if (isa<CXXDefaultArgExpr>(expr->getPlacementArg(i))) {
+          // The 1st parameter is the size of the allocated type, there is not
+          // any corresponding argument.
+          CHECK_(i + 1 < operator_new->getNumParams());
+          operator_new = GetRedeclSpecifyingDefArg(i + 1, operator_new);
+          break;
+        }
+      }
+
       // If operator new is a method, it must (by the semantics of
       // per-class operator new) be a method on the class we're newing.
       const Type* op_parent = nullptr;
@@ -846,11 +868,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
 
     if (FunctionDecl* fn_decl = DynCastFrom(expr->getDecl())) {
-      if (const auto* call_expr =  // Skip intermediate ImplicitCastExpr node.
-          current_ast_node_->GetAncestorAs<CallExpr>(2)) {
-        if (call_expr->getDirectCallee() == fn_decl)
-          return true;
-      }
+      if (IsCallExprFunRef(current_ast_node_))
+        return true;
       // If fn_decl has a class-name before it -- 'MyClass::method' --
       // it's a method pointer.
       const Type* parent_type = nullptr;
@@ -1538,7 +1557,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   virtual void ReportDeclUse(SourceLocation used_loc,
                              const NamedDecl* used_decl,
                              const char* comment = nullptr,
-                             UseFlags extra_use_flags = 0) {
+                             UseFlags extra_use_flags = 0,
+                             bool report_using_decl_only = false) {
     const NamedDecl* target_decl = used_decl;
 
     // Sometimes a shadow decl comes between us and the 'real' decl.
@@ -1559,8 +1579,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     OptionalFileEntryRef used_in = GetFileEntry(used_loc);
 
-    preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, target_decl, use_flags, comment);
+    if (!report_using_decl_only) {
+      preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
+          used_loc, target_decl, use_flags, comment);
+    }
 
     // Sometimes using a decl drags in a few other uses as well:
 
@@ -3869,9 +3891,11 @@ class InstantiatedTemplateVisitor
   // provide" the decl, by #including the file that defines the decl
   // (if templates call other templates, we have to find the right
   // template).
-  void ReportDeclUse(SourceLocation used_loc, const NamedDecl* decl,
+  void ReportDeclUse(SourceLocation used_loc,
+                     const NamedDecl* decl,
                      const char* comment = nullptr,
-                     UseFlags extra_use_flags = 0) override {
+                     UseFlags extra_use_flags = 0,
+                     bool report_using_decl_only = false) override {
     const SourceLocation actual_used_loc = GetLocOfTemplateThatProvides(decl);
     // Report use only if template doesn't itself provide the declaration.
     if (!actual_used_loc.isValid() ||
@@ -3880,7 +3904,8 @@ class InstantiatedTemplateVisitor
       // report, so they can update their cache entries.
       for (CacheStoringScope* storer : cache_storers_)
         storer->NoteReportedDecl(decl);
-      Base::ReportDeclUse(caller_loc(), decl, comment, extra_use_flags);
+      Base::ReportDeclUse(caller_loc(), decl, comment, extra_use_flags,
+                          report_using_decl_only);
     }
   }
 
@@ -5119,10 +5144,15 @@ class IwyuAstConsumer
     // Special case for UsingShadowDecl to track UsingDecls correctly. The
     // actual decl will be reported by obtaining it from the UsingShadowDecl
     // once we've tracked the UsingDecl use.
+    // Called functions are handled in TraverseCallExpr, but not
+    // using-declarations introducing them.
     if (const UsingShadowDecl* found_decl = DynCastFrom(expr->getFoundDecl())) {
-      ReportDeclUse(CurrentLoc(), found_decl);
+      ReportDeclUse(
+          CurrentLoc(), found_decl, nullptr, 0,
+          /*report_using_decl_only=*/IsCallExprFunRef(current_ast_node()));
     } else if (!isa<EnumConstantDecl>(expr->getDecl())) {
-      ReportDeclUse(CurrentLoc(), expr->getDecl());
+      if (!IsCallExprFunRef(current_ast_node()))
+        ReportDeclUse(CurrentLoc(), expr->getDecl());
     }
     if (auto* var_decl =
             dyn_cast<VarTemplateSpecializationDecl>(expr->getDecl())) {
