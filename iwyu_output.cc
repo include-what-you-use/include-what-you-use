@@ -169,6 +169,17 @@ std::string PrintableUnderlyingType(const EnumDecl* enum_decl) {
   return std::string();
 }
 
+static bool FnDeclHasDefArg(const NamedDecl* decl) {
+  const auto* fn_decl = dyn_cast<FunctionDecl>(decl);
+  if (!fn_decl)
+    return false;
+  for (unsigned i = 0, ie = fn_decl->getNumParams(); i < ie; ++i) {
+    if (IsDefArgSpecified(i, fn_decl))
+      return true;
+  }
+  return false;
+}
+
 }  // anonymous namespace
 
 FakeNamedDecl::FakeNamedDecl(const string& kind_name, const string& qual_name,
@@ -1303,7 +1314,16 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
       all_redecls.insert(use->decl());  // for classes, just consider the dfn
     else
       all_redecls = GetNonTagRedecls(use->decl());
+
+    // If the declaration is a function declaration with default arguments, then
+    // any redeclaration specifying some more default arguments goes because it
+    // requires presence of redeclarations specifying the last arguments. But it
+    // may not be replaced with a declaration not specifying any default args.
+    bool use_with_def_arg = FnDeclHasDefArg(use->decl());
+
     for (const NamedDecl* redecl : all_redecls) {
+      if (use_with_def_arg && !FnDeclHasDefArg(redecl))
+        continue;
       if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
         VERRS(6) << "Ignoring use of " << use->symbol_name() << " ("
                  << use->PrintableUseLoc() << "): definition is present: "

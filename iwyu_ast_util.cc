@@ -396,6 +396,18 @@ bool InImplicitCode(const ASTNode* ast_node) {
   return ast_node->GetAncestorAs<Decl>()->isImplicit();
 }
 
+bool IsCallExprFunRef(const ASTNode* node) {
+  const auto* ref_expr = node->GetAs<DeclRefExpr>();
+  if (const auto* fn_decl = dyn_cast<FunctionDecl>(ref_expr->getDecl())) {
+    if (const auto* call_expr =  // Skip intermediate ImplicitCastExpr node.
+        node->GetAncestorAs<CallExpr>(2)) {
+      if (call_expr->getDirectCallee() == fn_decl)
+        return true;
+    }
+  }
+  return false;
+}
+
 //------------------------------------------------------------
 // Helper functions for working with raw Clang AST nodes.
 
@@ -1373,12 +1385,24 @@ bool IsDefArgSpecified(unsigned i, const FunctionDecl* func) {
   const ParmVarDecl* param = func->getParamDecl(i);
   if (!param->hasDefaultArg())
     return false;
+  if (param->hasUninstantiatedDefaultArg()) {
+    // Some more correct handling can be added if necessary.
+    return false;
+  }
   // Clang marks a parameter as having default argument even if that argument
   // is specified in another function redeclaration, so check source locations
   // to determine if the argument is written explicitly in the current decl.
   SourceLocation def_arg_loc = param->getDefaultArg()->getExprLoc();
   return GlobalSourceManager()->isPointWithin(def_arg_loc, func->getBeginLoc(),
                                               func->getEndLoc());
+}
+
+FunctionDecl* GetRedeclSpecifyingDefArg(unsigned i, FunctionDecl* func) {
+  for (FunctionDecl* redecl : func->redecls()) {
+    if (IsDefArgSpecified(i, redecl))
+      return redecl;
+  }
+  CHECK_UNREACHABLE_("There should be a redecl specifying the default arg");
 }
 
 // --- Utilities for Type.
