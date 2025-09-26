@@ -1,4 +1,4 @@
-//===--- fn_def_args-i1.h - test input file for iwyu ----------------------===//
+//===--- fn_def_args-i3.h - test input file for iwyu ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/cxx/fn_def_args-i2.h"
+#include "fn_def_args-i2.h"
 
-void FnWithSmearedDefArgs2(int = 0, int);
-void FnWithSmearedDefArgs3(int, int = 0, int);
+namespace ns {
+using ::FnWithSmearedDefArgs2;
+}
