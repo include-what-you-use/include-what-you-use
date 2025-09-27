@@ -17,7 +17,7 @@ typedef unsigned UseFlags;
 
 const UseFlags UF_None = 0;
 const UseFlags UF_InCxxMethodBody = 1;       // use is inside a C++ method body
-const UseFlags UF_DefinitionUse = 2;         // use is itself a definition
+const UseFlags UF_RedeclUse = 2;             // use is due to some redeclaration
 const UseFlags UF_ExplicitInstantiation = 4; // use targets an explicit instantiation
 }
 

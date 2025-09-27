@@ -741,6 +741,10 @@ bool IsImplicitlyInstantiatedDfn(const clang::FunctionDecl*);
 // argument.
 const clang::CXXMethodDecl* GetFromLeastDerived(const clang::CXXMethodDecl*);
 
+// Returns true if the given function declaration explicitly specifies a default
+// argument value for the i-th parameter.
+bool IsDefArgSpecified(unsigned i, const clang::FunctionDecl*);
+
 // --- Utilities for Type.
 
 // See if a given type is a 'real' elaborated type.  (An

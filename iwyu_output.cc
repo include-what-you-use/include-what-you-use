@@ -669,7 +669,7 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
     const NamedDecl* report_decl;
     SourceLocation report_decl_loc;
 
-    if ((flags & (UF_DefinitionUse | UF_ExplicitInstantiation)) == 0) {
+    if ((flags & (UF_RedeclUse | UF_ExplicitInstantiation)) == 0) {
       // Since we need the full symbol, we need the decl's definition-site too.
       // Also, by default we canonicalize the location, using GetLocation.
       report_decl = GetDefinitionAsWritten(decl);
@@ -1296,9 +1296,8 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
   // those types, iwyu *does* care about the definition vs declaration.
   // All this is moot for decl uses triggered by definitions, all their redecls
   // are separately registered as uses so that a definition anchors all its
-  // declarations.
-  if (!(use->flags() & UF_DefinitionUse) &&
-      !is_builtin_function_with_mappings) {
+  // declarations (UF_RedeclUse case).
+  if (!(use->flags() & UF_RedeclUse) && !is_builtin_function_with_mappings) {
     set<const NamedDecl*> all_redecls;
     if (isa<TagDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
       all_redecls.insert(use->decl());  // for classes, just consider the dfn
