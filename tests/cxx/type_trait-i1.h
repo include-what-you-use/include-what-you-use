@@ -60,4 +60,24 @@ struct DeducibleTpl {
   DeducibleTpl(T);
 };
 
+enum class Enum { A, B, C };
+
+struct With3WayComp;
+int operator<=>(const With3WayComp&, const Class&);
+int operator<=>(const Struct&, const With3WayComp&);
+bool operator<(const Struct&, const With3WayComp&);
+bool operator>(const Struct&, const With3WayComp&);
+bool operator<=(const Struct&, const With3WayComp&);
+bool operator>=(const Struct&, const With3WayComp&);
+bool operator<(const With3WayComp&, const Struct&);
+bool operator>(const With3WayComp&, const Struct&);
+bool operator<=(const With3WayComp&, const Struct&);
+bool operator>=(const With3WayComp&, const Struct&);
+class LValueUsesNonMemberOp;
+int operator<=>(int, LValueUsesNonMemberOp&);
+class RValueUsesNonMemberOp;
+int operator<=>(int, RValueUsesNonMemberOp&&);
+int operator<=>(Enum, Base*);
+int operator<=>(Base&, Base&);
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPE_TRAIT_I1_H_

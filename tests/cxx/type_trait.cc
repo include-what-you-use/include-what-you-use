@@ -15,6 +15,7 @@
 // To avoid lots of "needs a declaration" warnings.
 class Class;
 class StructDerivedClass;
+class With3WayComp;
 struct Struct;
 union Union1;
 union Union2;
@@ -2658,6 +2659,295 @@ using NonProvidingAliasTpl = DeducibleTpl<T>;
 // IWYU: DeducibleTpl is...*-i1.h
 NonProvidingAliasTpl tpl_int = 1;
 
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayComp, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_gt_synthesises_from_spaceship(With3WayComp, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_le_synthesises_from_spaceship(With3WayComp, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_ge_synthesises_from_spaceship(With3WayComp, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(int, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_gt_synthesises_from_spaceship(int, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_le_synthesises_from_spaceship(int, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_ge_synthesises_from_spaceship(int, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayComp&, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_gt_synthesises_from_spaceship(With3WayComp&, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_le_synthesises_from_spaceship(With3WayComp&, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_ge_synthesises_from_spaceship(With3WayComp&, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(int, With3WayComp&));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_gt_synthesises_from_spaceship(int, With3WayComp&));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_le_synthesises_from_spaceship(int, With3WayComp&));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_ge_synthesises_from_spaceship(int, With3WayComp&));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayComp&&, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_gt_synthesises_from_spaceship(With3WayComp&&, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_le_synthesises_from_spaceship(With3WayComp&&, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_ge_synthesises_from_spaceship(With3WayComp&&, int));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(int, With3WayComp&&));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_gt_synthesises_from_spaceship(int, With3WayComp&&));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_le_synthesises_from_spaceship(int, With3WayComp&&));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_ge_synthesises_from_spaceship(int, With3WayComp&&));
+static_assert(!__builtin_lt_synthesises_from_spaceship(With3WayComp*, int));
+static_assert(!__builtin_gt_synthesises_from_spaceship(With3WayComp*, int));
+static_assert(!__builtin_le_synthesises_from_spaceship(With3WayComp*, int));
+static_assert(!__builtin_ge_synthesises_from_spaceship(With3WayComp*, int));
+static_assert(!__builtin_lt_synthesises_from_spaceship(int, With3WayComp*));
+static_assert(!__builtin_gt_synthesises_from_spaceship(int, With3WayComp*));
+static_assert(!__builtin_le_synthesises_from_spaceship(int, With3WayComp*));
+static_assert(!__builtin_ge_synthesises_from_spaceship(int, With3WayComp*));
+// No comparisons with void.
+static_assert(!__builtin_lt_synthesises_from_spaceship(With3WayComp, void));
+static_assert(!__builtin_gt_synthesises_from_spaceship(With3WayComp, void));
+static_assert(!__builtin_le_synthesises_from_spaceship(With3WayComp, void));
+static_assert(!__builtin_ge_synthesises_from_spaceship(With3WayComp, void));
+static_assert(!__builtin_lt_synthesises_from_spaceship(void, With3WayComp));
+static_assert(!__builtin_gt_synthesises_from_spaceship(void, With3WayComp));
+static_assert(!__builtin_le_synthesises_from_spaceship(void, With3WayComp));
+static_assert(!__builtin_ge_synthesises_from_spaceship(void, With3WayComp));
+// With3WayComp has no comparison operator with int*, but might have.
+// IWYU: With3WayComp is...*-i2.h
+static_assert(!__builtin_lt_synthesises_from_spaceship(With3WayComp&, int*));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(!__builtin_gt_synthesises_from_spaceship(With3WayComp&, int*));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(!__builtin_le_synthesises_from_spaceship(With3WayComp&, int*));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(!__builtin_ge_synthesises_from_spaceship(With3WayComp&, int*));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(!__builtin_lt_synthesises_from_spaceship(int*, With3WayComp&));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(!__builtin_gt_synthesises_from_spaceship(int*, With3WayComp&));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(!__builtin_le_synthesises_from_spaceship(int*, With3WayComp&));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(!__builtin_ge_synthesises_from_spaceship(int*, With3WayComp&));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Class is...*-i1.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayComp, Class));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Class is...*-i1.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_gt_synthesises_from_spaceship(With3WayComp, Class));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Class is...*-i1.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_le_synthesises_from_spaceship(With3WayComp, Class));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Class is...*-i1.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_ge_synthesises_from_spaceship(With3WayComp, Class));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Class is...*-i1.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(Class, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Class is...*-i1.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_gt_synthesises_from_spaceship(Class, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Class is...*-i1.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_le_synthesises_from_spaceship(Class, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Class is...*-i1.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_ge_synthesises_from_spaceship(Class, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: operator< is...*-i1.h
+static_assert(!__builtin_lt_synthesises_from_spaceship(With3WayComp, Struct));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: operator> is...*-i1.h
+static_assert(!__builtin_gt_synthesises_from_spaceship(With3WayComp, Struct));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: operator<= is...*-i1.h
+static_assert(!__builtin_le_synthesises_from_spaceship(With3WayComp, Struct));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: operator>= is...*-i1.h
+static_assert(!__builtin_ge_synthesises_from_spaceship(With3WayComp, Struct));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: operator< is...*-i1.h
+static_assert(!__builtin_lt_synthesises_from_spaceship(Struct, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: operator> is...*-i1.h
+static_assert(!__builtin_gt_synthesises_from_spaceship(Struct, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: operator<= is...*-i1.h
+static_assert(!__builtin_le_synthesises_from_spaceship(Struct, With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Struct is...*-i1.h
+// IWYU: operator>= is...*-i1.h
+static_assert(!__builtin_ge_synthesises_from_spaceship(Struct, With3WayComp));
+
+class LValueUsesNonMemberOp {};
+class RValueUsesNonMemberOp {};
+
+static_assert(!__builtin_lt_synthesises_from_spaceship(int,
+                                                       LValueUsesNonMemberOp));
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(int,
+                                                      LValueUsesNonMemberOp&));
+static_assert(
+    !__builtin_lt_synthesises_from_spaceship(int, LValueUsesNonMemberOp&&));
+static_assert(!__builtin_lt_synthesises_from_spaceship(LValueUsesNonMemberOp,
+                                                       int));
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(LValueUsesNonMemberOp&,
+                                                      int));
+static_assert(!__builtin_lt_synthesises_from_spaceship(LValueUsesNonMemberOp&&,
+                                                       int));
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(int,
+                                                      RValueUsesNonMemberOp));
+static_assert(!__builtin_lt_synthesises_from_spaceship(int,
+                                                       RValueUsesNonMemberOp&));
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(int,
+                                                      RValueUsesNonMemberOp&&));
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(RValueUsesNonMemberOp,
+                                                      int));
+static_assert(!__builtin_lt_synthesises_from_spaceship(RValueUsesNonMemberOp&,
+                                                       int));
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(RValueUsesNonMemberOp&&,
+                                                      int));
+// The complete Derived type is required for Derived* to Base* conversion.
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayComp, Derived*));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(Derived*, With3WayComp));
+// Array-to-pointer conversions.
+static_assert(
+    // IWYU: With3WayComp is...*-i2.h
+    // IWYU: Derived is...*-i2.h
+    __builtin_lt_synthesises_from_spaceship(With3WayComp,
+                                            // IWYU: Derived needs a declaration
+                                            Derived[5]));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(Derived[5],
+                                                      With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayComp, Derived[]));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(Derived[], With3WayComp));
+static_assert(
+    // IWYU: With3WayComp is...*-i2.h
+    // IWYU: Derived is...*-i2.h
+    __builtin_lt_synthesises_from_spaceship(With3WayComp&,
+                                            // IWYU: Derived needs a declaration
+                                            Derived (&)[]));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(Derived (&)[],
+                                                      With3WayComp&));
+// IWYU: Derived is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayCompRefProviding,
+                                                      DerivedPtrNonProviding));
+// IWYU: Derived is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(
+    DerivedPtrNonProviding, With3WayCompRefProviding));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(
+    With3WayCompRefNonProviding, DerivedPtrProviding));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(
+    DerivedPtrProviding, With3WayCompRefNonProviding));
+// No operator<=> for arrays.
+static_assert(!__builtin_lt_synthesises_from_spaceship(With3WayComp[5], int));
+static_assert(!__builtin_lt_synthesises_from_spaceship(int, With3WayComp[5]));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayComp, int* [5]));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(int* [5], With3WayComp));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayComp, int**));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(int**, With3WayComp));
+// IWYU: Enum needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(Enum, Derived*));
+// IWYU: Enum needs a declaration
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(Derived*, Enum));
+// Unions cannot have base classes, hence no full Union1 type is needed.
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayComp, Union1*));
+// IWYU: With3WayComp is...*-i2.h
+static_assert(__builtin_lt_synthesises_from_spaceship(Union1*, With3WayComp));
+// An implicit conversion sequence Union1 -> double -> int works here.
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Union1 is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayComp, Union1&&));
+// IWYU: With3WayComp is...*-i2.h
+// IWYU: Union1 is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(Union1&&, With3WayComp));
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayCompRefProviding,
+                                                      Union1RefProviding));
+static_assert(__builtin_lt_synthesises_from_spaceship(
+    Union1RefProviding, With3WayCompRefProviding));
+// IWYU: Union1 is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(With3WayCompRefProviding,
+                                                      Union1RefNonProviding));
+// IWYU: Union1 is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(
+    Union1RefNonProviding, With3WayCompRefProviding));
+// Both arg types should be reported due to the derived-to-base conversions.
+// IWYU: Struct is...*-i1.h
+// IWYU: Derived needs a declaration
+// IWYU: Derived is...*-i2.h
+// IWYU: operator<=> is...*-i1.h
+static_assert(__builtin_lt_synthesises_from_spaceship(Struct&, Derived&));
+
+// Test that IWYU doesn't crash on a trait with dependent type.
+template <class T>
+void TplFn(const T&)
+  requires(__builtin_lt_synthesises_from_spaceship(T, int))
+{
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/type_trait.cc should add these lines:
@@ -2667,15 +2957,16 @@ tests/cxx/type_trait.cc should add these lines:
 tests/cxx/type_trait.cc should remove these lines:
 - class Class;  // lines XX-XX
 - class StructDerivedClass;  // lines XX-XX
+- class With3WayComp;  // lines XX-XX
 - struct Struct;  // lines XX-XX
 - template <typename> struct DeducibleTpl;  // lines XX-XX+1
 - union Union1;  // lines XX-XX
 - union Union2;  // lines XX-XX
 
 The full include-list for tests/cxx/type_trait.cc:
-#include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassProviding, ClassRefProviding, DerivedProviding, DerivedPtrProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding
-#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, BaseNonProviding, ClassArray2NonProviding, ClassArray3NonProviding, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedArrayNonProviding, DerivedMemPtr, DerivedNonProviding, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1NonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr
-#include "tests/cxx/type_trait-i1.h"  // for Base, Class, DeducibleTpl, Struct, StructDerivedClass, Union1, Union2
-#include "tests/cxx/type_trait-i2.h"  // for Derived
+#include "tests/cxx/type_trait-d1.h"  // for ClassConstRefProviding, ClassProviding, ClassRefProviding, DerivedProviding, DerivedPtrProviding, DerivedPtrRefProviding, DerivedRefProviding, Union1RefProviding, With3WayCompRefProviding
+#include "tests/cxx/type_trait-d2.h"  // for BaseMemPtr, BaseNonProviding, ClassArray2NonProviding, ClassArray3NonProviding, ClassConstRefNonProviding, ClassNonProviding, ClassRefNonProviding, DerivedArrayNonProviding, DerivedMemPtr, DerivedNonProviding, DerivedPtrNonProviding, DerivedPtrRefNonProviding, DerivedRefNonProviding, Union1NonProviding, Union1PtrRefNonProviding, Union1RefNonProviding, UnionMemPtr, With3WayCompRefNonProviding
+#include "tests/cxx/type_trait-i1.h"  // for Base, Class, DeducibleTpl, Enum (ptr only), Struct, StructDerivedClass, Union1, Union2, operator<, operator<=, operator<=>, operator>, operator>=
+#include "tests/cxx/type_trait-i2.h"  // for Derived, With3WayComp
 
 ***** IWYU_SUMMARY */

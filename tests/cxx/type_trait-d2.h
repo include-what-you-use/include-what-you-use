@@ -10,6 +10,7 @@
 class Base;
 class Derived;
 class Class;
+class With3WayComp;
 union Union1;
 
 using ClassNonProviding = Class;
@@ -26,6 +27,7 @@ using ClassConstRefNonProviding = const Class&;
 using Union1NonProviding = Union1;
 using Union1RefNonProviding = Union1&;
 using Union1PtrRefNonProviding = Union1*&;
+using With3WayCompRefNonProviding = With3WayComp&;
 
 template <typename T>
 using BaseMemPtr = T Base::*;
