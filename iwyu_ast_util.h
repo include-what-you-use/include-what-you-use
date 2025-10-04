@@ -471,6 +471,10 @@ const clang::DeclContext* GetDeclContext(const ASTNode* ast_node);
 
 bool InImplicitCode(const ASTNode*);
 
+// Returns true if the given ASTNode refers to a function declaration from
+// a call expression. Expects that the given node is DeclRefExpr.
+bool IsCallExprFunRef(const ASTNode*);
+
 //------------------------------------------------------------
 // Helper functions for working with raw Clang AST nodes.
 
@@ -745,6 +749,11 @@ const clang::CXXMethodDecl* GetFromLeastDerived(const clang::CXXMethodDecl*);
 // Returns true if the given function declaration explicitly specifies a default
 // argument value for the i-th parameter.
 bool IsDefArgSpecified(unsigned i, const clang::FunctionDecl*);
+
+// Returns the redeclaration specifying default argument for the i-th parameter.
+// Expects that there is one.
+clang::FunctionDecl* GetRedeclSpecifyingDefArg(unsigned i,
+                                               clang::FunctionDecl*);
 
 // --- Utilities for Type.
 

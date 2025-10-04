@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "tests/cxx/fn_def_args-i1.h"
+#include "tests/cxx/fn_def_args-i3.h"
+#include <cstddef>
 
 struct Struct {
   // IWYU: GetInt is...*fn_def_args-i2.h
@@ -21,6 +23,9 @@ void FnWithSmearedDefArgs(int = 0, int);
 // is added.
 void FnWithSmearedDefArgs(int, int);
 
+// IWYU: operator new is...*fn_def_args-i2.h
+void* operator new(std::size_t, int, int = 0, int);
+
 /**** IWYU_SUMMARY
 
 tests/cxx/fn_def_args-d1.h should add these lines:
@@ -28,8 +33,10 @@ tests/cxx/fn_def_args-d1.h should add these lines:
 
 tests/cxx/fn_def_args-d1.h should remove these lines:
 - #include "tests/cxx/fn_def_args-i1.h"  // lines XX-XX
+- #include "tests/cxx/fn_def_args-i3.h"  // lines XX-XX
 
 The full include-list for tests/cxx/fn_def_args-d1.h:
-#include "tests/cxx/fn_def_args-i2.h"  // for FnWithSmearedDefArgs, GetInt
+#include <cstddef>  // for size_t
+#include "tests/cxx/fn_def_args-i2.h"  // for FnWithSmearedDefArgs, GetInt, operator new
 
 ***** IWYU_SUMMARY */
