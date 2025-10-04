@@ -2704,10 +2704,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           ReportDeclsUse(CurrentLoc(), chkr.GetDeclsToReport());
         return true;
       }
-      case TypeTrait::BTT_LtSynthesisesFromSpaceship:
-      case TypeTrait::BTT_GtSynthesisesFromSpaceship:
-      case TypeTrait::BTT_LeSynthesisesFromSpaceship:
-      case TypeTrait::BTT_GeSynthesisesFromSpaceship: {
+      case TypeTrait::BTT_LtSynthesizesFromSpaceship:
+      case TypeTrait::BTT_GtSynthesizesFromSpaceship:
+      case TypeTrait::BTT_LeSynthesizesFromSpaceship:
+      case TypeTrait::BTT_GeSynthesizesFromSpaceship: {
         if (lhs_type->isVoidType() || rhs_type->isVoidType())
           return true;
 
@@ -2741,13 +2741,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
         auto op_kind = [expr] {
           switch (expr->getTrait()) {
-            case TypeTrait::BTT_LtSynthesisesFromSpaceship:
+            case TypeTrait::BTT_LtSynthesizesFromSpaceship:
               return BinaryOperatorKind::BO_LT;
-            case TypeTrait::BTT_LeSynthesisesFromSpaceship:
+            case TypeTrait::BTT_LeSynthesizesFromSpaceship:
               return BinaryOperatorKind::BO_LE;
-            case TypeTrait::BTT_GtSynthesisesFromSpaceship:
+            case TypeTrait::BTT_GtSynthesizesFromSpaceship:
               return BinaryOperatorKind::BO_GT;
-            case TypeTrait::BTT_GeSynthesisesFromSpaceship:
+            case TypeTrait::BTT_GeSynthesizesFromSpaceship:
               return BinaryOperatorKind::BO_GE;
             default:
               CHECK_UNREACHABLE_(
