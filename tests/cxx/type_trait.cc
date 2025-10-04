@@ -142,16 +142,16 @@ static_assert(!__is_aggregate(Union2*));
 static_assert(!__is_aggregate(Union2&));
 static_assert(__is_aggregate(Union1[]));
 // IWYU: Class is...*-i1.h
-static_assert(__builtin_is_implicit_lifetime(Class));
+static_assert(!__builtin_is_implicit_lifetime(Class));
 static_assert(__builtin_is_implicit_lifetime(Class*));
 static_assert(!__builtin_is_implicit_lifetime(Class&));
 static_assert(__builtin_is_implicit_lifetime(Class[]));
 // IWYU: Class is...*-i1.h
-static_assert(__builtin_is_implicit_lifetime(ClassNonProviding));
-static_assert(__builtin_is_implicit_lifetime(ClassProviding));
+static_assert(!__builtin_is_implicit_lifetime(ClassNonProviding));
+static_assert(!__builtin_is_implicit_lifetime(ClassProviding));
 static_assert(__builtin_is_implicit_lifetime(ClassArray2NonProviding));
 // IWYU: Union1 is...*-i1.h
-static_assert(__builtin_is_implicit_lifetime(Union1));
+static_assert(!__builtin_is_implicit_lifetime(Union1));
 static_assert(__builtin_is_implicit_lifetime(Union1*));
 static_assert(!__builtin_is_implicit_lifetime(Union1&));
 static_assert(__builtin_is_implicit_lifetime(Union1[]));
