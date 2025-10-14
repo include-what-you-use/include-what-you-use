@@ -116,6 +116,7 @@ using clang::MemberPointerType;
 using clang::NamedDecl;
 using clang::NamespaceDecl;
 using clang::NestedNameSpecifier;
+using clang::NonTypeTemplateParmDecl;
 using clang::ObjCObjectType;
 using clang::OpaqueValueExpr;
 using clang::OptionalFileEntryRef;
@@ -147,6 +148,7 @@ using clang::TemplateName;
 using clang::TemplateParameterList;
 using clang::TemplateSpecializationKind;
 using clang::TemplateSpecializationType;
+using clang::TemplateTemplateParmDecl;
 using clang::TemplateTypeParmDecl;
 using clang::TranslationUnitDecl;
 using clang::Type;
@@ -1396,6 +1398,31 @@ bool IsDefArgSpecified(unsigned i, const FunctionDecl* func) {
   SourceLocation def_arg_loc = param->getDefaultArg()->getExprLoc();
   return GlobalSourceManager()->isPointWithin(def_arg_loc, func->getBeginLoc(),
                                               func->getEndLoc());
+}
+
+bool IsDefTplArgInherited(const NamedDecl* tpl_param) {
+  if (const auto* type_param = dyn_cast<TemplateTypeParmDecl>(tpl_param))
+    return type_param->defaultArgumentWasInherited();
+  if (const auto* nttp = dyn_cast<NonTypeTemplateParmDecl>(tpl_param))
+    return nttp->defaultArgumentWasInherited();
+  if (const auto* tpl_tpl_param = dyn_cast<TemplateTemplateParmDecl>(tpl_param))
+    return tpl_tpl_param->defaultArgumentWasInherited();
+  CHECK_UNREACHABLE_("Not a template parameter");
+}
+
+bool IsDefTplArgSpecified(const NamedDecl* tpl_param) {
+  if (const auto* type_param = dyn_cast<TemplateTypeParmDecl>(tpl_param)) {
+    return type_param->hasDefaultArgument() &&
+           !type_param->defaultArgumentWasInherited();
+  }
+  if (const auto* nttp = dyn_cast<NonTypeTemplateParmDecl>(tpl_param))
+    return nttp->hasDefaultArgument() && !nttp->defaultArgumentWasInherited();
+  if (const auto* tpl_tpl_param =
+          dyn_cast<TemplateTemplateParmDecl>(tpl_param)) {
+    return tpl_tpl_param->hasDefaultArgument() &&
+           !tpl_tpl_param->defaultArgumentWasInherited();
+  }
+  CHECK_UNREACHABLE_("Not a template parameter");
 }
 
 FunctionDecl* GetRedeclSpecifyingDefArg(unsigned i, FunctionDecl* func) {

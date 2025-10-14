@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/cxx/default_tpl_arg-d1.h"
 #include "tests/cxx/indirect.h"
 
 // Use of this function template instantiated with the default argument doesn't
@@ -35,3 +36,21 @@ template <typename T = IndirectClass>
 void FnWithProvidedDefaultTplArgAndDefaultCallArg3(T = {}) {
   T t;
 }
+
+template <int, int = 0, int>
+// IWYU: AliasTpl5 is...*default_tpl_arg-i1.h
+using AliasTpl5 = int;
+
+/**** IWYU_SUMMARY
+
+tests/cxx/default_tpl_arg-d2.h should add these lines:
+#include "tests/cxx/default_tpl_arg-i1.h"
+
+tests/cxx/default_tpl_arg-d2.h should remove these lines:
+- #include "tests/cxx/default_tpl_arg-d1.h"  // lines XX-XX
+
+The full include-list for tests/cxx/default_tpl_arg-d2.h:
+#include "tests/cxx/default_tpl_arg-i1.h"  // for AliasTpl5
+#include "tests/cxx/indirect.h"  // for IndirectClass
+
+***** IWYU_SUMMARY */
