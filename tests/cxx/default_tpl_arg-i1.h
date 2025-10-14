@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_DEFAULT_TPL_ARG_I1_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_DEFAULT_TPL_ARG_I1_H_
+
 template <typename T>
 struct UninstantiatedTpl {
   T t;
@@ -30,3 +33,38 @@ void FnWithNonProvidedDefaultTplArgAndDefaultCallArg(T* = nullptr) {
 }
 
 using NonProvidingAlias = IndirectClass;
+
+template <typename, typename = int>
+class ClassTpl;
+
+template <typename, typename = int>
+class ClassTplWithDefinition;
+
+template <typename, typename = int>
+extern int VarTpl;
+
+template <typename, typename = int>
+using AliasTpl1 = int;
+
+template <typename, typename = int>
+void FnTpl();
+
+template <int, int = 0>
+using AliasTpl2 = int;
+
+template <int>
+class SomeTpl;
+
+template <template <int> typename, template <int> typename = SomeTpl>
+using AliasTpl3 = int;
+
+template <typename, int = 0>
+using AliasTpl4 = int;
+
+template <int, int, int = 0>
+using AliasTpl5 = int;
+
+template <int, int>
+using AliasTpl6 = int;
+
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_DEFAULT_TPL_ARG_I1_H_

@@ -242,6 +242,7 @@ using clang::QualifiedTypeLoc;
 using clang::RecordDecl;
 using clang::RecordType;
 using clang::RecursiveASTVisitor;
+using clang::RedeclarableTemplateDecl;
 using clang::ReferenceType;
 using clang::CXXRewrittenBinaryOperator;
 using clang::Sema;
@@ -257,6 +258,7 @@ using clang::TemplateArgumentList;
 using clang::TemplateArgumentLoc;
 using clang::TemplateDecl;
 using clang::TemplateName;
+using clang::TemplateParameterList;
 using clang::TemplateSpecializationType;
 using clang::TemplateSpecializationTypeLoc;
 using clang::TemplateTypeParmDecl;
@@ -5136,6 +5138,32 @@ class IwyuAstConsumer
     // Full type info suggestions are blocked in CanBeProvidedTypeComponent.
 
     return Base::TraverseCXXMethodDecl(method_decl);
+  }
+
+  bool VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    // Similar to default function args, default template args require redecls
+    // specifying the last ones to be present. This is true for class templates,
+    // variable templates, alias templates, but not for function templates.
+    if (isa<FunctionTemplateDecl>(decl))
+      return Base::VisitRedeclarableTemplateDecl(decl);
+    const TemplateParameterList* params = decl->getTemplateParameters();
+    for (unsigned i = 1, ie = params->size(); i < ie; ++i) {
+      if (IsDefTplArgInherited(params->getParam(i)) &&
+          IsDefTplArgSpecified(params->getParam(i - 1))) {
+        // Find the redeclaration specifying default arg for the i-th parameter.
+        for (const RedeclarableTemplateDecl* redecl : decl->redecls()) {
+          const TemplateParameterList* redecl_params =
+              redecl->getTemplateParameters();
+          if (IsDefTplArgSpecified(redecl_params->getParam(i))) {
+            ReportDeclUse(CurrentLoc(), redecl, nullptr, UF_RedeclUse);
+            return Base::VisitRedeclarableTemplateDecl(decl);
+          }
+        }
+      }
+    }
+    return Base::VisitRedeclarableTemplateDecl(decl);
   }
 
   // --- Visitors of types derived from Stmt.

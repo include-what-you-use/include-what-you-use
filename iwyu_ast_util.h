@@ -755,6 +755,17 @@ bool IsDefArgSpecified(unsigned i, const clang::FunctionDecl*);
 clang::FunctionDecl* GetRedeclSpecifyingDefArg(unsigned i,
                                                clang::FunctionDecl*);
 
+// Returns true if the given template parameter declaration does not specify
+// a default argument explicitly but inherits it from some of the previous
+// template declarations. Expects that the given NamedDecl is actually
+// a template parameter declaration.
+bool IsDefTplArgInherited(const clang::NamedDecl* tpl_param);
+
+// Returns true if the given template parameter declaration specifies a default
+// argument explicitly. Expects that the given NamedDecl is actually a template
+// parameter declaration.
+bool IsDefTplArgSpecified(const clang::NamedDecl* tpl_param);
+
 // --- Utilities for Type.
 
 // See if a given type is a 'real' elaborated type.  (An
