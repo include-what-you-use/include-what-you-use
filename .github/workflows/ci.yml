@@ -42,8 +42,8 @@ jobs:
         run: |
           LLVM_MAJOR=$(ls -1d /usr/lib/llvm-* | sort -n | tail -n1 | sed 's/.*llvm-//')
           LLVM_PREFIX=$(llvm-config-$LLVM_MAJOR --prefix)
-          echo "LLVM_MAJOR=${LLVM_MAJOR}" >> $GITHUB_ENV
-          echo "LLVM_PREFIX=${LLVM_PREFIX}" >> $GITHUB_ENV
+          echo "LLVM_MAJOR=${LLVM_MAJOR}" | tee -a $GITHUB_ENV
+          echo "LLVM_PREFIX=${LLVM_PREFIX}" | tee -a $GITHUB_ENV
 
       - name: Check out branch
         uses: actions/checkout@v4
@@ -53,7 +53,7 @@ jobs:
           # Disable CMake target checks.
           # sudo ./iwyu-fixup-llvm-target-checks.bash "$LLVM_PREFIX"
 
-      - name: Build include-what-you-use
+      - name: Build include-what-you-use with LLVM ${{ env.LLVM_MAJOR }}
         run: |
           mkdir build
           cd ./build
