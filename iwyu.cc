@@ -3541,14 +3541,17 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const auto* template_spec_type =
             type->getAs<TemplateSpecializationType>()) {
       if (template_spec_type->isTypeAlias()) {
+        const Type* type = template_spec_type->getAliasedType().getTypePtr();
         const NamedDecl* decl = TypeToDeclAsWritten(template_spec_type);
         if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
           InsertAllInto(
               GetAliasTemplateProvidedTypes(template_spec_type, al_tpl_decl),
               &blocked_types);
-          const Type* type = template_spec_type->getAliasedType().getTypePtr();
-          ReportTypeUseInternal(used_loc, type, blocked_types, deref_kind);
         }
+        // Builtin templates like __type_pack_element<0, Class*> are marked as
+        // type alias substitutions, but have no associated alias template
+        // decl, so report either way.
+        ReportTypeUseInternal(used_loc, type, blocked_types, deref_kind);
         return;
       }
     }
