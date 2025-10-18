@@ -68,6 +68,7 @@ using clang::ASTDumper;
 using clang::ArrayType;
 using clang::AtomicType;
 using clang::BlockPointerType;
+using clang::BuiltinTemplateDecl;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
 using clang::CXXDefaultArgExpr;
@@ -1544,7 +1545,7 @@ static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
     // useful at all?
     return icn_type->getOriginalDecl()->getDefinitionOrSelf();
   } else if (as_written && template_decl &&
-             isa<TypeAliasTemplateDecl>(template_decl)) {
+             isa<TypeAliasTemplateDecl, BuiltinTemplateDecl>(template_decl)) {
     // A template type alias
     return template_decl;
   } else if (const RecordType* record_type = type->getAs<RecordType>()) {
