@@ -7,6 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Upstream Clang had a broken __builtin_is_implicit_lifetime for a period, but
+// was fixed here: https://github.com/llvm/llvm-project/pull/162612. The patch
+// has not yet made it into the Ubuntu packages we use for CI, so mark this test
+// as XFAIL so we can keep working, but still be notified when it's fixed
+// upstream.
+
+// IWYU_XFAIL
+
 // IWYU_ARGS: -I . -std=c++20 -Wno-deprecated-builtins -fms-extensions
 
 #include "tests/cxx/type_trait-d1.h"
