@@ -1384,18 +1384,7 @@ const CXXMethodDecl* GetFromLeastDerived(const CXXMethodDecl* decl) {
 
 bool IsDefArgSpecified(unsigned i, const FunctionDecl* func) {
   const ParmVarDecl* param = func->getParamDecl(i);
-  if (!param->hasDefaultArg())
-    return false;
-  if (param->hasUninstantiatedDefaultArg()) {
-    // Some more correct handling can be added if necessary.
-    return false;
-  }
-  // Clang marks a parameter as having default argument even if that argument
-  // is specified in another function redeclaration, so check source locations
-  // to determine if the argument is written explicitly in the current decl.
-  SourceLocation def_arg_loc = param->getDefaultArg()->getExprLoc();
-  return GlobalSourceManager()->isPointWithin(def_arg_loc, func->getBeginLoc(),
-                                              func->getEndLoc());
+  return param->hasDefaultArg() && !param->hasInheritedDefaultArg();
 }
 
 FunctionDecl* GetRedeclSpecifyingDefArg(unsigned i, FunctionDecl* func) {
