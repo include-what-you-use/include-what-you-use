@@ -19,6 +19,7 @@ void FnWithSmearedDefArgs2(int, int = 0);
 void FnWithSmearedDefArgs3(int, int, int);
 void FnWithSmearedDefArgs3(int, int, int = 0);
 void FnWithDefArg(int = 0);
+void FnWithDefArg2(int, int = 0);
 
 void* operator new(std::size_t, int, int, int = 0);
 

@@ -22,6 +22,7 @@ void FnWithSmearedDefArgs(int = 0, int);
 // No need to report any redeclaration here because no default argument
 // is added.
 void FnWithSmearedDefArgs(int, int);
+void FnWithDefArg2(int, int);
 
 // IWYU: operator new is...*fn_def_args-i2.h
 void* operator new(std::size_t, int, int = 0, int);
