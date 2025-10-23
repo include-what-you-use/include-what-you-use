@@ -10,6 +10,11 @@
 #ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_DEFAULT_TPL_ARG_I1_H_
 #define INCLUDE_WHAT_YOU_USE_TESTS_CXX_DEFAULT_TPL_ARG_I1_H_
 
+// The order of includes is important: it is assumed that clang selects the last
+// declaration during lookup.
+#include "tests/cxx/default_tpl_arg-i2.h"
+#include "tests/cxx/default_tpl_arg-i3.h"
+
 template <typename T>
 struct UninstantiatedTpl {
   T t;
@@ -72,5 +77,20 @@ class SpecializedClassTpl {};
 
 template <typename = int>
 class ClassTplNoDefinition;
+
+template <typename = int, typename>
+class ClassTpl2;
+
+template <typename = int>
+class ClassTplWithDefinition2;
+
+template <typename>
+class ClassTpl4;
+
+template <typename = int>
+class ClassTpl4;
+
+template <typename = int, typename>
+using AliasTpl7 = int;
 
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_DEFAULT_TPL_ARG_I1_H_

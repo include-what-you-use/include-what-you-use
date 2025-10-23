@@ -1516,15 +1516,20 @@ void CalculateIwyuForForwardDeclareUse(
   CHECK_(tag_decl && "Non-tag types should have been handled already");
 
   vector<const NamedDecl*> dfns;
-  if (const NamedDecl* dfn = GetTagDefinition(use->decl()))
-    dfns.push_back(dfn);
-  if (tpl_decl) {
-    // Specializations may be considered like definitions here because they also
-    // require the primary template declaration to be present.
-    for (const ClassTemplateSpecializationDecl* spec :
-         tpl_decl->specializations()) {
-      if (const NamedDecl* dfn = GetTagDefinition(spec))
-        dfns.push_back(dfn);
+  // A definition in any of desired headers makes the forward-declaration
+  // redundant, but not when the fwd-decl specifies a default template argument.
+  bool has_def_arg = tpl_decl && HasDefaultTemplateParameters(tpl_decl);
+  if (!has_def_arg) {
+    if (const NamedDecl* dfn = GetTagDefinition(use->decl()))
+      dfns.push_back(dfn);
+    if (tpl_decl) {
+      // Specializations may be considered like definitions here because they
+      // also require the primary template declaration to be present.
+      for (const ClassTemplateSpecializationDecl* spec :
+           tpl_decl->specializations()) {
+        if (const NamedDecl* dfn = GetTagDefinition(spec))
+          dfns.push_back(dfn);
+      }
     }
   }
   // If this tag type is defined in one of the desired_includes, mark that

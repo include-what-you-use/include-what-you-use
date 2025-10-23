@@ -130,6 +130,7 @@ using clang::RecordDecl;
 using clang::RecordType;
 using clang::RecursiveASTVisitor;
 using clang::Redeclarable;
+using clang::RedeclarableTemplateDecl;
 using clang::ReferenceType;
 using clang::Sema;
 using clang::SourceLocation;
@@ -234,6 +235,15 @@ static const Type* DesugarAliasTypes(const Type* type) {
 static bool IsImplicitConversionCtor(const CXXConstructorDecl* ctor) {
   return !ctor->isExplicit() && ctor->getNumParams() == 1 &&
          !ctor->isCopyOrMoveConstructor();
+}
+
+static const RedeclarableTemplateDecl* GetRedeclNotSpecifyingAnyDefArg(
+    const RedeclarableTemplateDecl* decl) {
+  for (const RedeclarableTemplateDecl* redecl : decl->redecls()) {
+    if (none_of(*redecl->getTemplateParameters(), IsDefTplArgSpecified))
+      return redecl;
+  }
+  return nullptr;
 }
 
 }  // anonymous namespace
@@ -1254,7 +1264,7 @@ bool IsNestedClass(const TagDecl* decl) {
 
 bool HasDefaultTemplateParameters(const TemplateDecl* decl) {
   TemplateParameterList* tpl_params = decl->getTemplateParameters();
-  return tpl_params->getMinRequiredArguments() < tpl_params->size();
+  return any_of(*tpl_params, IsDefTplArgSpecified);
 }
 
 template <class T>
@@ -1420,6 +1430,34 @@ FunctionDecl* GetRedeclSpecifyingDefArg(unsigned i, FunctionDecl* func) {
       return redecl;
   }
   CHECK_UNREACHABLE_("There should be a redecl specifying the default arg");
+}
+
+const TemplateDecl* GetRedeclSpecifyingDefArg(unsigned i,
+                                              const TemplateDecl* decl) {
+  const auto* redeclarable = dyn_cast<RedeclarableTemplateDecl>(decl);
+  // If this template isn't redeclarable, then the given declaration should
+  // specify default arguments, if any.
+  if (!redeclarable)
+    return decl;
+  for (const RedeclarableTemplateDecl* redecl : redeclarable->redecls()) {
+    const TemplateParameterList* params = redecl->getTemplateParameters();
+    if (IsDefTplArgSpecified(params->getParam(i)))
+      return redecl;
+  }
+  CHECK_UNREACHABLE_("There should be a redecl specifying the default arg");
+}
+
+const NamedDecl* GetIndependentRedecl(const NamedDecl* decl) {
+  const auto* redeclarable = dyn_cast<RedeclarableTemplateDecl>(decl);
+  if (!redeclarable)
+    return decl;
+  if (const TemplateDecl* found = GetRedeclNotSpecifyingAnyDefArg(redeclarable))
+    return found;
+  // If there is no redeclaration without any explicitly written default
+  // arguments, return the one specifying the last argument because it doesn't
+  // depend on any other redeclaration.
+  unsigned last_param_idx = redeclarable->getTemplateParameters()->size() - 1;
+  return GetRedeclSpecifyingDefArg(last_param_idx, redeclarable);
 }
 
 // --- Utilities for Type.
