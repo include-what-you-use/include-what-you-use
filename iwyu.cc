@@ -3205,10 +3205,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     // If we are forward-declarable, so are our template arguments.
     if (CanForwardDeclareType(current_ast_node())) {
-      if (!InImplicitCode(current_ast_node())) {
-        const NamedDecl* decl = type->getTemplateName().getAsTemplateDecl();
-        ReportDeclForwardDeclareUse(CurrentLoc(), decl);
-      }
       current_ast_node()->set_in_forward_declare_context(true);
     } else {
       if (type->isTypeAlias())
@@ -5318,12 +5314,28 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())
       return true;
 
+    bool can_fwd_decl = CanForwardDeclareType(current_ast_node());
     // If we're not in a forward-declare context, use of a template
     // specialization requires having the full type information.
-    if (!CanForwardDeclareType(current_ast_node()) || type->isTypeAlias()) {
+    if (!can_fwd_decl || type->isTypeAlias()) {
       const TemplateInstantiationData data = GetTplInstData(type);
       instantiated_template_visitor_.ScanInstantiatedType(
           current_ast_node(), data.resugar_map, data.provided_types);
+    }
+
+    if (!InImplicitCode(current_ast_node())) {
+      const TemplateDecl* tpl = type->getTemplateName().getAsTemplateDecl();
+      size_t num_written_args = type->template_arguments().size();
+      if (num_written_args < tpl->getTemplateParameters()->size()) {
+        // If the type as-written makes use of default arguments, select exactly
+        // that redeclaration which specifies the first default argument used.
+        ReportDeclForwardDeclareUse(
+            CurrentLoc(), GetRedeclSpecifyingDefArg(num_written_args, tpl));
+      } else if (can_fwd_decl || type->isTypeAlias()) {
+        // TODO: instead of GetIndependentRedecl call, figure out how to print
+        // a fwd-decl without default arguments if there isn't any.
+        ReportDeclForwardDeclareUse(CurrentLoc(), GetIndependentRedecl(tpl));
+      }
     }
 
     const auto [is_provided, comment] =
@@ -5331,7 +5343,7 @@ class IwyuAstConsumer
     // Don't call ReportTypeUse here, because scanning of template instantiation
     // internals should be avoided: it is allowed not to provide some of
     // template args.
-    if (is_provided || type->isTypeAlias())
+    if (is_provided)
       ReportDeclUse(CurrentLoc(), TypeToDeclAsWritten(type), comment);
 
     return Base::VisitTemplateSpecializationType(type);

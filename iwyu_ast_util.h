@@ -755,6 +755,16 @@ bool IsDefArgSpecified(unsigned i, const clang::FunctionDecl*);
 clang::FunctionDecl* GetRedeclSpecifyingDefArg(unsigned i,
                                                clang::FunctionDecl*);
 
+// Returns the redeclaration specifying default template argument for the i-th
+// parameter. Expects that there is one.
+const clang::TemplateDecl* GetRedeclSpecifyingDefArg(
+    unsigned i, const clang::TemplateDecl*);
+
+// Returns a redeclaration that doesn't depend on any other redeclaration, i.e.
+// the one that doesn't specify any default template argument if there is one,
+// otherwise returns the declaration specifying the last default argument.
+const clang::NamedDecl* GetIndependentRedecl(const clang::NamedDecl*);
+
 // Returns true if the given template parameter declaration does not specify
 // a default argument explicitly but inherits it from some of the previous
 // template declarations. Expects that the given NamedDecl is actually
