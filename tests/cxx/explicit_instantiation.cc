@@ -15,6 +15,13 @@
 #include "tests/cxx/explicit_instantiation-template_direct.h"
 #include "tests/cxx/explicit_instantiation-template2.h"
 
+// The explicit instantiation of a specialization only needs a declaration
+// of the base template.
+template <>
+// IWYU: Template needs a declaration
+class Template<char*> {};
+extern template class Template<char*>;
+
 // Test that all explicit instantiations variants of the base template
 // require the full type:
 
@@ -34,8 +41,8 @@ template class Template<double>;
 
 
 // The explicit instantiation of a specialization only needs a declaration
-// of the base template
-// IWYU: Template needs a declaration
+// of the base template, but it should already be present because there are
+// other Template specializations defined in this file above.
 template<> class Template<char> {};
 extern template class Template<char>;
 
