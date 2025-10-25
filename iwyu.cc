@@ -5282,7 +5282,7 @@ class IwyuAstConsumer
           // The full definition is reported to support the cases when fwd-decl
           // uses are recategorized to full uses.
           ReportDeclForwardDeclareUse(
-              CurrentLoc(), type->getOriginalDecl()->getDefinitionOrSelf());
+              CurrentLoc(), type->getDecl()->getDefinitionOrSelf());
         }
       } else {
         // In C, all struct references are elaborated, so we really never need
@@ -5301,14 +5301,14 @@ class IwyuAstConsumer
           // The full definition is reported to support the cases when fwd-decl
           // uses are recategorized to full uses.
           ReportDeclForwardDeclareUse(
-              CurrentLoc(), type->getOriginalDecl()->getDefinitionOrSelf());
+              CurrentLoc(), type->getDecl()->getDefinitionOrSelf());
         }
       }
       return Base::VisitTagType(type);
     }
 
     // OK, seems to be a use that requires the full type.
-    ReportDeclUse(CurrentLoc(), type->getOriginalDecl(), comment);
+    ReportDeclUse(CurrentLoc(), type->getDecl(), comment);
     return Base::VisitTagType(type);
   }
 
