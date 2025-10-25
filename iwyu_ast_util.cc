@@ -1583,15 +1583,15 @@ static const NamedDecl* TypeToDeclImpl(const Type* type, bool as_written) {
                  type->getAs<InjectedClassNameType>()) {
     // TODO(bolshakov): is getDefinitionOrSelf() needed here? Is this branch
     // useful at all?
-    return icn_type->getOriginalDecl()->getDefinitionOrSelf();
+    return icn_type->getDecl()->getDefinitionOrSelf();
   } else if (as_written && template_decl &&
              isa<TypeAliasTemplateDecl, BuiltinTemplateDecl>(template_decl)) {
     // A template type alias
     return template_decl;
   } else if (const RecordType* record_type = type->getAs<RecordType>()) {
-    return record_type->getOriginalDecl()->getDefinitionOrSelf();
+    return record_type->getDecl()->getDefinitionOrSelf();
   } else if (const TagType* tag_type = DynCastFrom(type)) {
-    return tag_type->getOriginalDecl();  // probably just enums
+    return tag_type->getDecl();  // probably just enums
   } else if (template_decl) {
     // A non-concrete template class, such as 'Myclass<T>'
     return template_decl;
@@ -1747,7 +1747,7 @@ TemplateInstantiationData GetTplInstDataForClass(
 }
 
 bool CanBeOpaqueDeclared(const EnumType* type) {
-  return type->getOriginalDecl()->isFixed();
+  return type->getDecl()->isFixed();
 }
 
 vector<const Type*> GetCanonicalArgComponents(
@@ -1974,8 +1974,8 @@ bool CompatibilityChecker::CouldBeCompatible(QualType lhs,
   } else if (const auto* rhs_enum = rhs->getAs<EnumType>()) {
     if (const auto* lhs_enum = lhs->getAs<EnumType>()) {
       // IWYU transforms opaque decls to definitions inside ReportFullSymbolUse.
-      const EnumDecl* rhs_decl = rhs_enum->getOriginalDecl();
-      const EnumDecl* lhs_decl = lhs_enum->getOriginalDecl();
+      const EnumDecl* rhs_decl = rhs_enum->getDecl();
+      const EnumDecl* lhs_decl = lhs_enum->getDecl();
       // TODO(bolshakov): handle unnamed enums?
       if (lhs_decl->getIdentifier() != rhs_decl->getIdentifier())
         return false;

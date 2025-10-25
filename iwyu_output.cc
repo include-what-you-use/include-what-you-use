@@ -538,7 +538,7 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
     : is_desired_(true),
       is_present_(true),
       is_elaborated_type_(true),
-      fwd_decl_(type_loc.getTypePtr()->getOriginalDecl()) {
+      fwd_decl_(type_loc.getTypePtr()->getDecl()) {
   const SourceRange decl_lines = type_loc.getLocalSourceRange();
   start_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getBegin()));
   end_linenum_ = GetLineNumber(GetInstantiationLoc(decl_lines.getEnd()));
