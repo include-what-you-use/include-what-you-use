@@ -3203,21 +3203,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
       return true;
 
-    // If not a full explicit specialization, report the original template
-    // or a partial specialization from which the specialization is instantiated
-    // (and don't report explicit instantiations here).
-    const NamedDecl* decl = GetInstantiatedFromDecl(TypeToDeclAsWritten(type));
-
     // If we are forward-declarable, so are our template arguments.
     if (CanForwardDeclareType(current_ast_node())) {
-      if (!InImplicitCode(current_ast_node()))
+      if (!InImplicitCode(current_ast_node())) {
+        const NamedDecl* decl = type->getTemplateName().getAsTemplateDecl();
         ReportDeclForwardDeclareUse(CurrentLoc(), decl);
+      }
       current_ast_node()->set_in_forward_declare_context(true);
     } else {
       if (type->isTypeAlias())
         ReportWrittenTypeAlias(type);
       else
-        ReportDeclUse(CurrentLoc(), decl);
+        ReportDeclUse(CurrentLoc(), TypeToDeclAsWritten(type));
     }
 
     return true;
@@ -5124,11 +5121,13 @@ class IwyuAstConsumer
     set<const Decl*> fwd_blocked = blocked_for_fwd_decl_;
     auto add_canonical_components = [&fwd_blocked](QualType part) {
       for (const Type* type : GetCanonicalComponentsOfType(part.getTypePtr())) {
-        // For templates, use GetInstantiatedFromDecl so as to match
-        // what VisitTemplateSpecializationType does.
-        const Decl* decl = GetInstantiatedFromDecl(TypeToDeclAsWritten(type));
-        if (decl)
+        if (const Decl* decl = TypeToDeclAsWritten(type)) {
+          // For templates, retrieve primary template declaration so as to match
+          // what VisitTemplateSpecializationType does.
+          if (const auto* spc = dyn_cast<ClassTemplateSpecializationDecl>(decl))
+            decl = spc->getSpecializedTemplate();
           fwd_blocked.insert(decl->getCanonicalDecl());
+        }
       }
     };
     add_canonical_components(method_decl->getReturnType());

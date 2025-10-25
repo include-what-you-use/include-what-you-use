@@ -62,6 +62,7 @@ class Derived1 : public Base {
   void TakeAliasedInBaseParam(IndirectClass) override;
 
   void TakeTemplate(IndirectTemplate<IndirectClass>) override;
+  void TakeSpecializedTemplate(IndirectTemplate<int>&) override;
 
   // IWYU: TemplatePtrAlias is...*reexport_overridden-i3.h
   void TakeAliasedTemplatePtr(TemplatePtrAlias) override;

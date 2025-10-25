@@ -77,12 +77,24 @@ void Derived1::TakeNoConvParam(Alias arg) {
 void Derived1::TakeTemplate(IndirectTemplate<IndirectClass>) {
 }
 
+void Derived1::TakeSpecializedTemplate(IndirectTemplate<int>& r) {
+  // No need to forward-declare IndirectTemplate.
+  IndirectTemplate<int>& r2 = r;
+}
+
 // IWYU: TemplatePtrAlias is...*reexport_overridden-i3.h
 void Derived1::TakeAliasedTemplatePtr(TemplatePtrAlias p1) {
   // No need to forward-declare IndirectTemplate or IndirectClass.
   IndirectTemplate<IndirectClass>* p2 = p1;
   IndirectClass* p = nullptr;
 }
+
+// This explicit specialization definition is not fully used, therefore may be
+// placed at the very bottom so as not to mess the analysis with the presence
+// of a definition providing the class template declaration.
+template <>
+// IWYU: IndirectTemplate needs a declaration
+class IndirectTemplate<int> {};
 
 void Fn() {
   // Test that IWYU uses the most basic method declarations for

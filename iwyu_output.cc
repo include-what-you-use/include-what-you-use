@@ -1512,27 +1512,38 @@ void CalculateIwyuForForwardDeclareUse(
     tag_decl = tpl_decl->getTemplatedDecl();
   CHECK_(tag_decl && "Non-tag types should have been handled already");
 
+  vector<const NamedDecl*> dfns;
+  if (const NamedDecl* dfn = GetTagDefinition(use->decl()))
+    dfns.push_back(dfn);
+  if (tpl_decl) {
+    // Specializations may be considered like definitions here because they also
+    // require the primary template declaration to be present.
+    for (const ClassTemplateSpecializationDecl* spec :
+         tpl_decl->specializations()) {
+      if (const NamedDecl* dfn = GetTagDefinition(spec))
+        dfns.push_back(dfn);
+    }
+  }
   // If this tag type is defined in one of the desired_includes, mark that
   // fact.  Also if it's defined in one of the actual_includes.
-  bool dfn_is_in_desired_includes = false;
-  bool dfn_is_in_actual_includes = false;
-
-  const NamedDecl* dfn = GetTagDefinition(use->decl());
-  if (dfn) {
+  const NamedDecl* dfn_from_desired_includes = nullptr;
+  const NamedDecl* dfn_from_actual_includes = nullptr;
+  for (const NamedDecl* dfn : dfns) {
     vector<string> headers =
         GlobalIncludePicker().GetCandidateHeadersForFilepathIncludedFrom(
             GetFilePath(dfn), GetFilePath(use->use_loc()));
     for (const string& header : headers) {
       if (ContainsKey(desired_includes, header))
-        dfn_is_in_desired_includes = true;
+        dfn_from_desired_includes = dfn;
       if (ContainsKey(actual_includes, header))
-        dfn_is_in_actual_includes = true;
+        dfn_from_actual_includes = dfn;
     }
     // We ourself are always a 'desired' and 'actual' include (though
     // only if the definition is visible from the use location).
-    if (DeclIsVisibleToUseInSameFile(dfn, *use)) {
-      dfn_is_in_desired_includes = true;
-      dfn_is_in_actual_includes = true;
+    if (IsBeforeInSameFile(dfn, use->use_loc())) {
+      dfn_from_desired_includes = dfn;
+      dfn_from_actual_includes = dfn;
+      break;
     }
   }
 
@@ -1559,13 +1570,13 @@ void CalculateIwyuForForwardDeclareUse(
 
   // (D1) Mark that the fwd-declare is satisfied by dfn in desired include.
   const NamedDecl* providing_decl = nullptr;
-  if (dfn_is_in_desired_includes) {
-    providing_decl = dfn;
+  if (dfn_from_desired_includes) {
+    providing_decl = dfn_from_desired_includes;
     VERRS(6) << "Noting fwd-decl use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << ") is satisfied by dfn in "
              << PrintableLoc(GetLocation(providing_decl)) << "\n";
     // Mark that this use is another reason we want this header.
-    const string file = GetFilePath(dfn);
+    const string file = GetFilePath(providing_decl);
     const string quoted_hdr = ConvertToQuotedInclude(file);
     use->set_suggested_header(quoted_hdr);
   } else if (same_file_decl) {
@@ -1594,10 +1605,10 @@ void CalculateIwyuForForwardDeclareUse(
   }
 
   // (D2) Mark iwyu violation unless defined in a current #include.
-  if (dfn_is_in_actual_includes) {
+  if (dfn_from_actual_includes) {
     VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): have definition at "
-             << PrintableLoc(GetLocation(dfn)) << "\n";
+             << PrintableLoc(GetLocation(dfn_from_actual_includes)) << "\n";
   } else if (same_file_decl) {
     VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): have earlier fwd-decl at "

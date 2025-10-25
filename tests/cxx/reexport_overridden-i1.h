@@ -29,6 +29,7 @@ class Base {
   virtual void TakeNoConvParam(IndirectClass);
   virtual void TakeAliasedInBaseParam(Alias);
   virtual void TakeTemplate(IndirectTemplate<IndirectClass>);
+  virtual void TakeSpecializedTemplate(IndirectTemplate<int>&);
   virtual void TakeAliasedTemplatePtr(TemplatePtrAlias);
   virtual void TakePulledInOtherNSInDerived(IndirectClass);
   virtual OuterTpl<IndirectClass>::Inner GetNestedInTpl();
