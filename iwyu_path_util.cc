@@ -90,8 +90,7 @@ string Basename(StringRef path) {
 
 string GetCanonicalName(string file_path) {
   // Clang special filenames are already canonical.
-  // <stdin> is not a special filename, but it's canonical too.
-  if (IsSpecialFilename(file_path) || file_path == "<stdin>")
+  if (IsSpecialFilename(file_path))
     return file_path;
 
   // All known special filenames which look like quoted-includes are handled
@@ -223,6 +222,12 @@ string AddQuotes(string include_name, bool angled) {
       return "<" + include_name + ">";
   }
   return "\"" + include_name + "\"";
+}
+
+bool IsSpecialFilename(StringRef name) {
+  return (name == "<built-in>" || name == "<command line>" ||
+          name == "<scratch space>" || name == "<inline asm>" ||
+          name == "<stdin>");
 }
 
 string PathJoin(StringRef dirpath, StringRef relative_path) {

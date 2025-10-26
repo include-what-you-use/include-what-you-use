@@ -310,7 +310,7 @@ OneUse::OneUse(const string& symbol_name, OptionalFileEntryRef dfn_file,
       is_iwyu_violation_(false) {
   CHECK_(dfn_file && "OneUse: dfn_file must be set");
   CHECK_(!decl_filepath_.empty() && "OneUse: dfn_file must have a name");
-  CHECK_(decl_filepath_ == "<stdin>" || !IsQuotedInclude(decl_filepath_))
+  CHECK_(IsSpecialFilename(decl_filepath_) || !IsQuotedInclude(decl_filepath_))
       << ": OneUse: dfn_file must have a real name, was: " << decl_filepath_;
 }
 
