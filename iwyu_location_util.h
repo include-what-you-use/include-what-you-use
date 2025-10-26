@@ -51,7 +51,6 @@
 #include "clang/Lex/Token.h"
 #include "iwyu_globals.h"
 #include "iwyu_path_util.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 class Decl;
@@ -83,11 +82,11 @@ bool IsInScratchSpace(clang::SourceLocation loc);
 
 // Resolve canonical file path from various file entry types.
 inline string GetFilePath(clang::OptionalFileEntryRef file) {
-  return (!file ? "<built-in>" : NormalizeFilePath(file->getName().str()));
+  return (!file ? "<built-in>" : NormalizeFilePath(file->getName()));
 }
 
 inline string GetFilePath(clang::FileEntryRef file) {
-  return NormalizeFilePath(file.getName().str());
+  return NormalizeFilePath(file.getName());
 }
 
 //------------------------------------------------------------
