@@ -1657,7 +1657,7 @@ void CalculateIwyuForFullUse(OneUse* use,
   // iwyu will say 'replace the #include of y.h with an #include of
   // x.cc,' which the code below will then strip.  The end result is
   // z.cc will not #include anything, and will fail to compile.
-  if (!IsHeaderFile(use->suggested_header()) &&
+  if (!IsQuotedHeaderFilename(use->suggested_header()) &&
       !ContainsKey(actual_includes, use->suggested_header())) {
     VERRS(6) << "Ignoring use of " << use->symbol_name()
              << " (" << use->PrintableUseLoc() << "): #including .cc\n";
@@ -1726,10 +1726,10 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
       quoted_file_, direct_includes(), associated_desired_includes, uses);
 
   // (C4) Remove .cc files from desired-includes unless they're in actual-inc.
-  for (const string& header_name : desired_set_cover) {
-    if (IsHeaderFile(header_name) ||
-        ContainsKey(direct_includes(), header_name))
-      desired_includes_.insert(header_name);
+  for (const string& quoted_include : desired_set_cover) {
+    if (IsQuotedHeaderFilename(quoted_include) ||
+        ContainsKey(direct_includes(), quoted_include))
+      desired_includes_.insert(quoted_include);
   }
   desired_includes_have_been_calculated_ = true;
 
