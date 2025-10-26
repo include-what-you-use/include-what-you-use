@@ -20,28 +20,28 @@
 #include <vector>
 
 #include "iwyu_port.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace include_what_you_use {
 
+using llvm::StringRef;
 using std::string;
 using std::vector;
 
 // Returns true if str starts with prefix.
-inline bool StartsWith(const string& str, const string& prefix) {
-  return str.substr(0, prefix.length()) == prefix;
+inline bool StartsWith(StringRef str, StringRef prefix) {
+  return str.starts_with(prefix);
 }
 
 // Returns true if str ends with suffix.
-inline bool EndsWith(const string& str, const string& suffix) {
-  if (suffix.length() > str.length())
-    return false;
-  return str.substr(str.length() - suffix.length()) == suffix;
+inline bool EndsWith(StringRef str, StringRef suffix) {
+  return str.ends_with(suffix);
 }
 
 // If *str starts with prefix, removes the prefix and returns true.
-inline bool StripLeft(string* str, const string& prefix) {
+inline bool StripLeft(string* str, StringRef prefix) {
   if (StartsWith(*str, prefix)) {
-    *str = str->substr(prefix.length());
+    *str = str->substr(prefix.size());
     return true;
   }
 
@@ -49,10 +49,9 @@ inline bool StripLeft(string* str, const string& prefix) {
 }
 
 // If *str ends with suffix, removes the suffix and returns true.
-inline bool StripRight(string* str, const string& suffix) {
-  if (str->length() >= suffix.length() &&
-      str->substr(str->length() - suffix.length()) == suffix) {
-    *str = str->substr(0, str->length() - suffix.length());
+inline bool StripRight(string* str, StringRef suffix) {
+  if (EndsWith(*str, suffix)) {
+    *str = str->substr(0, str->size() - suffix.size());
     return true;
   }
 
@@ -63,9 +62,9 @@ inline bool StripRight(string* str, const string& suffix) {
 // Return str unchanged if it fits within width.
 // Return empty string if width is too short to fit anything meaningful.
 // Otherwise return str truncated to width chars.
-inline string Ellipsize(const string& str, size_t width) {
-  if (str.length() <= width)
-    return str;
+inline string Ellipsize(StringRef str, size_t width) {
+  if (str.size() <= width)
+    return str.str();
 
   // If we truncate strings too short, we'll end up with nonsense abbreviations
   // like '...', 'T...' or 'Ty...' so make sure we have at least three chars
@@ -73,19 +72,19 @@ inline string Ellipsize(const string& str, size_t width) {
   if (width < 6)
     return string();
 
-  return str.substr(0, width - 3) + "...";
+  return str.substr(0, width - 3).str() + "...";
 }
 
 // Finds the first occurrence of substr in *str and removes from *str
 // everything before the occurrence and the occurrence itself.  For
 // example, string s = "What a hat!"; StripPast(&s, "hat"); will make s
 // " a hat!".
-inline bool StripPast(string* str, const string& substr) {
+inline bool StripPast(string* str, StringRef substr) {
   const size_t pos = str->find(substr);
   if (pos == string::npos)
     return false;
 
-  *str = str->substr(pos + substr.length());
+  *str = str->substr(pos + substr.size());
   return true;
 }
 
@@ -93,7 +92,7 @@ inline bool StripPast(string* str, const string& substr) {
 // everything after the occurrence and the occurrence itself.  For
 // example, string s = "What a hat!"; DropFrom(&s, "hat"); will make s
 // "W".
-inline bool DropFrom(string* str, const string& substr) {
+inline bool DropFrom(string* str, StringRef substr) {
   const size_t pos = str->find(substr);
   if (pos == string::npos)
     return false;
@@ -133,40 +132,39 @@ inline void StripWhiteSpace(string* str) {
   StripWhiteSpaceRight(str);
 }
 
-inline void ReplaceAll(std::string* str, const std::string& from,
-                       const std::string& to) {
+inline void ReplaceAll(std::string* str, StringRef from, StringRef to) {
   for (size_t pos = str->find(from); pos != std::string::npos;
-       pos = str->find(from, pos + to.length())) {
-    str->replace(pos, from.length(), to);
+       pos = str->find(from, pos + to.size())) {
+    str->replace(pos, from.size(), to);
   }
 }
 
 // This is the same as split() in Python.  If max_segs is 0, there's
 // no limit on the number of the generated segments.
 inline vector<string> Split(
-    string str, const string& divider, size_t max_segs) {
+    string str, StringRef divider, size_t max_segs) {
   CHECK_(!divider.empty());
   vector<string> retval;
   size_t pos;
   // If max_segs is 0, the first part of the condition will always be true.
   while (retval.size() + 1 != max_segs &&
          (pos = str.find(divider)) != string::npos) {
-    retval.push_back(str.substr(0, pos));
-    str = str.substr(pos + divider.length());
+    retval.emplace_back(str.substr(0, pos));
+    str = str.substr(pos + divider.size());
   }
-  retval.push_back(str);
+  retval.emplace_back(str);
   return retval;
 }
 
 // Like Split, but using a divider of arbitrary whitespace.
 // Whitespace at the beginning and end is ignored.
-inline vector<string> SplitOnWhiteSpace(const string& str, size_t max_segs) {
+inline vector<string> SplitOnWhiteSpace(StringRef str, size_t max_segs) {
   vector<string> retval;
   size_t tokstart = string::npos;
   for (size_t pos = 0; pos < str.size(); ++pos) {
     if (isspace(str[pos])) {
       if (tokstart != string::npos) {
-        retval.push_back(str.substr(tokstart, pos - tokstart));
+        retval.emplace_back(str.substr(tokstart, pos - tokstart).str());
         if (retval.size() == max_segs) {
           return retval;
         }
@@ -179,22 +177,22 @@ inline vector<string> SplitOnWhiteSpace(const string& str, size_t max_segs) {
     }
   }
   if (tokstart != string::npos) {
-    retval.push_back(str.substr(tokstart));
+    retval.emplace_back(str.substr(tokstart).str());
   }
   return retval;
 }
 
 // Like SplitOnWhiteSpace, but double-quoted and bracketed strings are
 // preserved. No error checking with respect to closing quotes is done.
-inline vector<string> SplitOnWhiteSpacePreservingQuotes(
-    const string& str, size_t max_segs) {
+inline vector<string> SplitOnWhiteSpacePreservingQuotes(StringRef str,
+                                                        size_t max_segs) {
   vector<string> retval;
   size_t tokstart = string::npos;
   char closing_quote = '\0';
   for (size_t pos = 0; pos < str.size(); ++pos) {
     if (isspace(str[pos])) {
       if (tokstart != string::npos && closing_quote == '\0') {
-        retval.push_back(str.substr(tokstart, pos - tokstart));
+        retval.emplace_back(str.substr(tokstart, pos - tokstart).str());
         if (retval.size() == max_segs) {
           return retval;
         }
@@ -216,7 +214,7 @@ inline vector<string> SplitOnWhiteSpacePreservingQuotes(
     }
   }
   if (tokstart != string::npos) {
-    retval.push_back(str.substr(tokstart));
+    retval.emplace_back(str.substr(tokstart).str());
   }
   return retval;
 }
