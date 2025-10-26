@@ -56,10 +56,10 @@ const vector<HeaderSearchPath>& HeaderSearchPaths() {
 }
 
 bool IsHeaderFilename(StringRef path) {
+  CHECK_(!IsQuotedInclude(path));
+
   if (IsSpecialFilename(path))
     return false;
-
-  CHECK_(!IsQuotedInclude(path));
 
   // Some headers don't have an extension (e.g. <string>), or have an
   // unusual one (the compiler doesn't care), so it's safer to
@@ -72,10 +72,11 @@ bool IsHeaderFilename(StringRef path) {
 }
 
 bool IsQuotedHeaderFilename(StringRef quoted_include) {
+  CHECK_(IsQuotedInclude(quoted_include));
+
   if (IsSpecialFilename(quoted_include))
     return false;
 
-  CHECK_(IsQuotedInclude(quoted_include));
   StringRef path = quoted_include.substr(1, quoted_include.size() - 2);
   return IsHeaderFilename(path);
 }
@@ -89,13 +90,12 @@ string Basename(StringRef path) {
 }
 
 string GetCanonicalName(string file_path) {
+  // Canonical names can only be plain file paths.
+  CHECK_(!IsQuotedInclude(file_path));
+
   // Clang special filenames are already canonical.
   if (IsSpecialFilename(file_path))
     return file_path;
-
-  // All known special filenames which look like quoted-includes are handled
-  // above. Reject anything else that looks like a quoted-include.
-  CHECK_(!IsQuotedInclude(file_path));
 
   file_path = NormalizeFilePath(file_path);
 
@@ -211,10 +211,13 @@ string ConvertToQuotedInclude(StringRef filepath,
 }
 
 bool IsQuotedInclude(StringRef s) {
-  if (s.size() < 2)
+  if (s.size() < 3)
     return false;
-  return ((StartsWith(s, "<") && EndsWith(s, ">")) ||
-          (StartsWith(s, "\"") && EndsWith(s, "\"")));
+
+  if (s.front() == '<' && s.back() == '>')
+    return !IsSpecialFilename(s);
+
+  return (s.front() == '"' && s.back() == '"');
 }
 
 string AddQuotes(string include_name, bool angled) {
