@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <ctime>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "iwyu_port.h"
@@ -152,7 +153,7 @@ inline vector<string> Split(
     retval.emplace_back(str.substr(0, pos));
     str = str.substr(pos + divider.size());
   }
-  retval.emplace_back(str);
+  retval.emplace_back(std::move(str));
   return retval;
 }
 
