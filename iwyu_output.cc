@@ -1115,9 +1115,12 @@ void ProcessForwardDeclare(OneUse* use,
     tag_decl = tpl_decl->getTemplatedDecl();
 
   // (A2) If it has default template parameters, recategorize as a full use.
-  // Suppress this if there's no definition for this class (so can't full-use).
+  // Do this even if the used decl is a fwd-decl so that IWYU doesn't insert
+  // another fwd-decl specifying the same default argument. But keep the use
+  // kind when the forward-declaration is in the same file so as not to suggest
+  // removing the forward-declaration as unused.
   if (tpl_decl && HasDefaultTemplateParameters(tpl_decl) &&
-      GetTagDefinition(tpl_decl) != nullptr) {
+      GetFileEntry(use->use_loc()) != GetFileEntry(use->decl())) {
     VERRS(6) << "Moving " << use->symbol_name()
              << " from fwd-decl use to full use: has default template param"
              << " (" << use->PrintableUseLoc() << ")\n";

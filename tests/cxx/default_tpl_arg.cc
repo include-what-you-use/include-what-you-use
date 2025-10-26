@@ -108,6 +108,9 @@ template <>
 // IWYU: SpecializedClassTpl is...*default_tpl_arg-i1.h
 class SpecializedClassTpl<int> {};
 
+// IWYU: ClassTplNoDefinition is...*default_tpl_arg-i1.h
+ClassTplNoDefinition<>* p_class_tpl_no_def;
+
 void Fn() {
   // IWYU: FnWithNonProvidedDefaultTplArg is...*default_tpl_arg-i1.h
   // IWYU: IndirectClass is...*indirect.h
@@ -158,7 +161,7 @@ tests/cxx/default_tpl_arg.cc should remove these lines:
 
 The full include-list for tests/cxx/default_tpl_arg.cc:
 #include "tests/cxx/default_tpl_arg-d2.h"  // for AliasTpl5, FnWithProvidedDefaultTplArg, FnWithProvidedDefaultTplArgAndDefaultCallArg1, FnWithProvidedDefaultTplArgAndDefaultCallArg2, FnWithProvidedDefaultTplArgAndDefaultCallArg3
-#include "tests/cxx/default_tpl_arg-i1.h"  // for AliasTpl1, AliasTpl2, AliasTpl3, AliasTpl4, ClassTpl, ClassTplWithDefinition, FnWithNonProvidedDefaultTplArg, FnWithNonProvidedDefaultTplArgAndDefaultCallArg, NonProvidingAlias, SomeTpl, SpecializedClassTpl, UninstantiatedTpl, VarTpl
+#include "tests/cxx/default_tpl_arg-i1.h"  // for AliasTpl1, AliasTpl2, AliasTpl3, AliasTpl4, ClassTpl, ClassTplNoDefinition, ClassTplWithDefinition, FnWithNonProvidedDefaultTplArg, FnWithNonProvidedDefaultTplArgAndDefaultCallArg, NonProvidingAlias, SomeTpl, SpecializedClassTpl, UninstantiatedTpl, VarTpl
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 template <typename = int, typename> class ClassTpl;  // lines XX-XX+2
 
