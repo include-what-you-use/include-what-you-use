@@ -1539,8 +1539,8 @@ MappedInclude::MappedInclude(const string& q, const string& p)
   : quoted_include(q)
   , path(p)
 {
-  CHECK_(IsQuotedInclude(quoted_include)) <<
-    "Must be quoted include, was: " << quoted_include;
+  CHECK_(IsSpecialFilename(quoted_include) || IsQuotedInclude(quoted_include))
+      << "Must be special or quoted include, was: " << quoted_include;
 }
 
 bool MappedInclude::HasAbsoluteQuotedInclude() const {
