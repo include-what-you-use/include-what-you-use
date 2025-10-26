@@ -15,6 +15,7 @@
 #include "iwyu_port.h"
 #include "iwyu_string_util.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -61,14 +62,16 @@ bool IsHeaderFilename(StringRef path) {
   if (IsSpecialFilename(path))
     return false;
 
-  // Some headers don't have an extension (e.g. <string>), or have an
-  // unusual one (the compiler doesn't care), so it's safer to
-  // enumerate non-header extensions instead.
-  for (const char* source_extension : source_extensions) {
-    if (path.ends_with(source_extension))
-      return false;
+  // Some headers don't have an extension (e.g. <string>).
+  StringRef ext = llvm::sys::path::extension(path);
+  if (ext.empty()) {
+    return true;
   }
-  return true;
+
+  // Some may have an unusual extension (the compiler doesn't care), so it's
+  // safer to check that it's none of non-header extensions instead.
+  return llvm::none_of(source_extensions,
+                       [&](const char* src_ext) { return ext == src_ext; });
 }
 
 bool IsQuotedHeaderFilename(StringRef quoted_include) {
