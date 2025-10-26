@@ -87,17 +87,14 @@ string ConvertToQuotedInclude(StringRef filepath,
 // Returns true if the string is a quoted include.
 bool IsQuotedInclude(StringRef s);
 
-// Returns true if argument is one of the special filenames used by Clang for
-// implicit buffers ("<built-in>", "<command-line>", etc).
-inline bool IsSpecialFilename(StringRef name) {
-  return (name == "<built-in>" || name == "<command line>" ||
-          name == "<scratch space>" || name == "<inline asm>");
-}
-
 // Returns include name enclosed in double quotes or angle quotes, depending on
 // the angled flag. An include name is the unquoted relative name that would be
 // used on an include line, e.g. lib/mytype.h or stdio.h.
 string AddQuotes(string include_name, bool angled);
+
+// Returns true if argument is one of the special filenames used by Clang for
+// implicit buffers ("<built-in>", "<command-line>", etc).
+bool IsSpecialFilename(StringRef name);
 
 // Append path to dirpath.
 string PathJoin(StringRef dirpath, StringRef relative_path);
