@@ -36,9 +36,11 @@ struct HeaderSearchPath {
 void SetHeaderSearchPaths(const vector<HeaderSearchPath>& search_paths);
 const vector<HeaderSearchPath>& HeaderSearchPaths();
 
-// Returns true if 'path' is a path of a (possibly enclosed in double
-// quotes or <>) C++ header file.
-bool IsHeaderFile(StringRef path);
+// Returns true if 'path' is a path of a C++ header file.
+bool IsHeaderFilename(StringRef path);
+
+// Returns true if 'quoted_include' contains a path of a C++ header file.
+bool IsQuotedHeaderFilename(StringRef quoted_include);
 
 // If the path has a slash, return the part after the last slash,
 // else return the input path.

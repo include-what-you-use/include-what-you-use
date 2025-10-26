@@ -55,20 +55,29 @@ const vector<HeaderSearchPath>& HeaderSearchPaths() {
   return *header_search_paths;
 }
 
-bool IsHeaderFile(StringRef path) {
-  if (EndsWith(path, "\"") || EndsWith(path, ">"))
-    path = path.substr(0, path.size() - 1);
+bool IsHeaderFilename(StringRef path) {
+  if (IsSpecialFilename(path))
+    return false;
+
+  CHECK_(!IsQuotedInclude(path));
 
   // Some headers don't have an extension (e.g. <string>), or have an
   // unusual one (the compiler doesn't care), so it's safer to
   // enumerate non-header extensions instead.
-  //  for (size_t i = 0; i < llvm::array_lengthof(source_extensions); ++i) {
   for (const char* source_extension : source_extensions) {
-    if (EndsWith(path, source_extension))
+    if (path.ends_with(source_extension))
       return false;
   }
-
   return true;
+}
+
+bool IsQuotedHeaderFilename(StringRef quoted_include) {
+  if (IsSpecialFilename(quoted_include))
+    return false;
+
+  CHECK_(IsQuotedInclude(quoted_include));
+  StringRef path = quoted_include.substr(1, quoted_include.size() - 2);
+  return IsHeaderFilename(path);
 }
 
 string Basename(StringRef path) {

@@ -507,9 +507,9 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     }
 
   // We also always keep #includes of .c files: iwyu doesn't touch those.
-  // TODO(csilvers): instead of IsHeaderFile, check if the file has
+  // TODO(csilvers): instead of IsHeaderFilename, check if the file has
   // any "non-inlined" definitions.
-  } else if (!IsHeaderFile(GetFilePath(includee))) {
+  } else if (!IsHeaderFilename(GetFilePath(includee))) {
     protect_reason = ".cc include";
 
   // If the includee is marked as pch-in-code, it can never be removed.
