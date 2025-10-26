@@ -199,10 +199,10 @@ bool IsInScratchSpace(SourceLocation loc) {
 
 bool IsHeaderFile(OptionalFileEntryRef file) {
   if (!file) {
-    // Not sure what's going on, but we're not in a header.
+    // A null file is considered <built-in> -- not a header.
     return false;
   }
-  return !GlobalSourceManager()->isMainFile(file->getFileEntry());
+  return IsHeaderFilename(file->getName());
 }
 
 bool IsSystemHeader(OptionalFileEntryRef file) {
