@@ -180,6 +180,7 @@ using clang::ASTFrontendAction;
 using clang::ArraySubscriptExpr;
 using clang::ArrayType;
 using clang::Attr;
+using clang::AutoTypeLoc;
 using clang::BinaryOperator;
 using clang::BinaryOperatorKind;
 using clang::CXXBaseSpecifier;
@@ -3170,6 +3171,24 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   //------------------------------------------------------------
   // Visitors of types derived from Type.
+
+  // IWYU generally handles types explicitly written in the source. Other types
+  // are reported from VisitCXXConstructExpr and other contexts where the type
+  // should be complete. Hence, it is assumed that type visitors are not called
+  // for underlying types of sugar types. It is true for e.g. typedef types,
+  // using types, but the default version of TraverseAutoTypeLoc does call
+  // TraverseType for the underlying type despite it is not explicitly written.
+  // This overloaded version is needed to avoid that call.
+  bool TraverseAutoTypeLoc(AutoTypeLoc typeloc, bool /*traverse_qualifier*/) {
+    if (typeloc.isConstrained()) {
+      if (!this->getDerived().TraverseConceptReference(
+              typeloc.getConceptReference())) {
+        return false;
+      }
+    }
+    // WalkUpFromAutoTypeLoc may be inserted here if necessary.
+    return true;
+  }
 
   bool VisitType(Type* type) {
     // In VisitFunctionDecl(), we say all children of function
