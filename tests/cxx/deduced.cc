@@ -16,6 +16,11 @@
 // IWYU: IndirectClass needs a declaration
 IndirectClass& GetRef();
 
+template <typename T>
+void TplFnNotRequiringFullType(T& t) {
+  [&ref_capture = t] {}();
+}
+
 // IWYU: IndirectClass needs a declaration
 void Fn(IndirectClass& i) {
   auto&& fwd_ref = i;
@@ -26,11 +31,14 @@ void Fn(IndirectClass& i) {
   auto param_copy = i;
   auto& param_ref1 = i;
   decltype(auto) param_ref2 = i;
+  [&ref_capture = i] {}();
 
   // IWYU: IndirectClass is...*indirect.h
   auto value = GetRef();
   auto& ref1 = GetRef();
   decltype(auto) ref2 = GetRef();
+
+  TplFnNotRequiringFullType(i);
 }
 
 /**** IWYU_SUMMARY
