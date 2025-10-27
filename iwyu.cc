@@ -97,6 +97,7 @@
 #include <utility>                      // for pair
 #include <vector>                       // for vector, swap
 
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -106,7 +107,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/OperationKinds.h"
@@ -203,7 +203,7 @@ using clang::CastExpr;
 using clang::ClassTemplateSpecializationDecl;
 using clang::CleanupAttr;
 using clang::CompilerInstance;
-using clang::ConceptSpecializationExpr;
+using clang::ConceptReference;
 using clang::ConstantArrayType;
 using clang::Decl;
 using clang::DeclContext;
@@ -5191,12 +5191,12 @@ class IwyuAstConsumer
     return Base::VisitDeclRefExpr(expr);
   }
 
-  bool VisitConceptSpecializationExpr(ConceptSpecializationExpr* expr) {
+  bool VisitConceptReference(ConceptReference* concept_ref) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    ReportDeclUse(CurrentLoc(), expr->getNamedConcept());
+    ReportDeclUse(CurrentLoc(), concept_ref->getNamedConcept());
     // TODO(bolshakov): analyze type parameter usage.
-    return Base::VisitConceptSpecializationExpr(expr);
+    return Base::VisitConceptReference(concept_ref);
   }
 
   // --- Visitors of types derived from Type.

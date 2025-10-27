@@ -16,6 +16,9 @@
 // IWYU: Concept is...*concept-indirect.h
 constexpr bool b = Concept<int>;
 
+// IWYU: Concept is...*concept-indirect.h
+Concept auto i = 1;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/concept.cc should add these lines:
