@@ -465,7 +465,7 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
     SourceLocation includer_loc, OptionalFileEntryRef includee,
     const string& include_name_as_written) {
   OptionalFileEntryRef includer = GetFileEntry(includer_loc);
-  if (IsSpecialFile(includer))
+  if (IsSpecialFileOrStdin(includer))
     return;
 
   string protect_reason;
@@ -575,7 +575,7 @@ void IwyuPreprocessorInfo::FinalizeProtectedIncludes() {
 void IwyuPreprocessorInfo::AddDirectInclude(
     SourceLocation includer_loc, OptionalFileEntryRef includee,
     const string& include_name_as_written) {
-  if (IsSpecialFile(includee))
+  if (IsSpecialFileOrStdin(includee))
     return;
 
   // For files we're going to be reporting IWYU errors for, we need

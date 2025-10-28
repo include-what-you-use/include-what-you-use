@@ -59,7 +59,7 @@ const vector<HeaderSearchPath>& HeaderSearchPaths() {
 bool IsHeaderFilename(StringRef path) {
   CHECK_(!IsQuotedInclude(path));
 
-  if (IsSpecialFilename(path))
+  if (IsSpecialFilenameOrStdin(path))
     return false;
 
   // Some headers don't have an extension (e.g. <string>).
@@ -77,7 +77,7 @@ bool IsHeaderFilename(StringRef path) {
 bool IsQuotedHeaderFilename(StringRef quoted_include) {
   CHECK_(IsQuotedInclude(quoted_include));
 
-  if (IsSpecialFilename(quoted_include))
+  if (IsSpecialFilenameOrStdin(quoted_include))
     return false;
 
   StringRef path = quoted_include.substr(1, quoted_include.size() - 2);
@@ -97,7 +97,7 @@ string GetCanonicalName(string file_path) {
   CHECK_(!IsQuotedInclude(file_path));
 
   // Clang special filenames are already canonical.
-  if (IsSpecialFilename(file_path))
+  if (IsSpecialFilenameOrStdin(file_path))
     return file_path;
 
   file_path = NormalizeFilePath(file_path);
@@ -218,7 +218,7 @@ bool IsQuotedInclude(StringRef s) {
     return false;
 
   if (s.front() == '<' && s.back() == '>')
-    return !IsSpecialFilename(s);
+    return !IsSpecialFilenameOrStdin(s);
 
   return (s.front() == '"' && s.back() == '"');
 }
@@ -232,8 +232,11 @@ string AddQuotes(string include_name, bool angled) {
 
 bool IsSpecialFilename(StringRef name) {
   return (name == "<built-in>" || name == "<command line>" ||
-          name == "<scratch space>" || name == "<inline asm>" ||
-          name == "<stdin>");
+          name == "<scratch space>" || name == "<inline asm>");
+}
+
+bool IsSpecialFilenameOrStdin(StringRef name) {
+  return name == "<stdin>" || IsSpecialFilename(name);
 }
 
 string PathJoin(StringRef dirpath, StringRef relative_path) {

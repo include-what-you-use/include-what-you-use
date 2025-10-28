@@ -237,12 +237,26 @@ inline bool IsSpecialFile(clang::OptionalFileEntryRef file) {
   return IsSpecialFilename(file->getName());
 }
 
+// Returns true if argument is one of the special files or the semi-special file
+// "<stdin>". A null value is considered the same as "<built-in>".
+inline bool IsSpecialFileOrStdin(clang::OptionalFileEntryRef file) {
+  if (!file)
+    return true;
+  return IsSpecialFilenameOrStdin(file->getName());
+}
+
 // Returns true if obj is in a special file, as defined above.
 // Note that it also returns true for objects at invalid locations, as they
 // resolve to a null file.
 template <typename T>
 inline bool IsInSpecialFile(const T& obj) {
   return IsSpecialFile(GetFileEntry(obj));
+}
+
+// Returns true if obj is in a special file or stdin, as defined above.
+template <typename T>
+inline bool IsInSpecialFileOrStdin(const T& obj) {
+  return IsSpecialFileOrStdin(GetFileEntry(obj));
 }
 
 // Returns true if file is a header file (defined as not the main source file).
