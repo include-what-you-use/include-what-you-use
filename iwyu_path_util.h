@@ -96,6 +96,10 @@ string AddQuotes(string include_name, bool angled);
 // implicit buffers ("<built-in>", "<command-line>", etc).
 bool IsSpecialFilename(StringRef name);
 
+// Returns true if argument is one of the special filenames or the semi-special
+// "<stdin>" used by Clang for inputs read from stdin.
+bool IsSpecialFilenameOrStdin(StringRef name);
+
 // Append path to dirpath.
 string PathJoin(StringRef dirpath, StringRef relative_path);
 

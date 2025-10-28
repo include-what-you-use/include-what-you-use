@@ -86,6 +86,10 @@ jobs:
           cd ./build
           CTEST_OUTPUT_ON_FAILURE=1 ctest -j 6
 
+      - name: Test include-what-you-use (stdin)
+        run: |
+          ./iwyu-run-stdin-tests.bash ./build/bin/include-what-you-use
+
       - name: Check if any known bugs were fixed
         run: |
           ./run_iwyu_tests.py --extra-suite=bugs bugs -- ./build/bin/include-what-you-use
