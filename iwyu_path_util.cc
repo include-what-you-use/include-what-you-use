@@ -186,7 +186,7 @@ string ConvertToQuotedInclude(StringRef filepath,
   // includer_path must be given as an absolute path.
   CHECK_(includer_path.empty() || IsAbsolutePath(includer_path));
 
-  if (filepath == "<built-in>")
+  if (IsSpecialFilenameOrStdin(filepath))
     return filepath.str();
 
   // Get path into same format as header search paths: Absolute and normalized.
