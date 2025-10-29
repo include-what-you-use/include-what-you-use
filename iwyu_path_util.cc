@@ -183,6 +183,7 @@ bool StripPathPrefix(string* path, StringRef prefix_path) {
 // quoted include, such as <stdio.h>.
 string ConvertToQuotedInclude(StringRef filepath,
                               StringRef includer_path) {
+  CHECK_(!IsQuotedInclude(filepath));
   // includer_path must be given as an absolute path.
   CHECK_(includer_path.empty() || IsAbsolutePath(includer_path));
 

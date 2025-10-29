@@ -320,15 +320,15 @@ OneUse::OneUse(OptionalFileEntryRef included_file, const string& quoted_include)
       short_symbol_name_(),
       decl_(nullptr),
       decl_file_(included_file),
-      decl_filepath_(quoted_include),
+      decl_filepath_(GetFilePath(included_file)),
       use_loc_(SourceLocation()),
       use_kind_(kFullUse),
       use_flags_(UF_None),
       ignore_use_(false),
       is_iwyu_violation_(false) {
-  CHECK_(IsQuotedInclude(decl_filepath_))
+  CHECK_(IsQuotedInclude(quoted_include))
       << "OneUse: bad quoted_include: " << quoted_include;
-  suggested_header_ = decl_filepath_;
+  suggested_header_ = quoted_include;
 }
 
 void OneUse::reset_decl(const NamedDecl* decl) {
