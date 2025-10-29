@@ -33,6 +33,9 @@ void Fn() {
 
   // Test use in instantiated template.
   Template<decltype(Struct::typedefed), Struct> tpl;
+
+  // Test use in a lambda capture.
+  [i = s.typedefed] {}();
 }
 
 /**** IWYU_SUMMARY

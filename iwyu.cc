@@ -5246,7 +5246,8 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())
       return true;
     // TypedefType::getDecl() returns the place where the typedef is defined.
-    ReportDeclUse(CurrentLoc(), type->getDecl());
+    if (!InImplicitCode(current_ast_node()))
+      ReportDeclUse(CurrentLoc(), type->getDecl());
     return Base::VisitTypedefType(type);
   }
 
