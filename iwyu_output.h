@@ -73,6 +73,9 @@ class OneUse {
   const string& symbol_name() const {
     return symbol_name_;
   }
+  bool has_symbol_name() const {
+    return !symbol_name_.empty();
+  }
   const string& short_symbol_name() const {
     return short_symbol_name_;
   }
