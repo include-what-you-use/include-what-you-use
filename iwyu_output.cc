@@ -1713,7 +1713,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
       internal::ProcessFullUse(&use, preprocessor_info_, *uses);
   }
   for (OneUse& use : *uses) {
-    if (use.is_full_use() && !use.decl() && use.has_symbol_name())
+    if (use.is_full_use() && !use.decl())
       internal::ProcessSymbolUse(&use, preprocessor_info_);
   }
 
