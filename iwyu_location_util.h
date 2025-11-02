@@ -192,6 +192,9 @@ const string GetFilePath(const T& obj) {
   return GetFilePath(GetFileEntry(obj));
 }
 
+// Return the first source location inside file, if available.
+clang::SourceLocation GetFileStartLoc(clang::OptionalFileEntryRef file);
+
 //------------------------------------------------------------
 // Some utility, location-based routines.
 

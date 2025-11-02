@@ -68,7 +68,8 @@ class OneUse {
   // This constructor is used to track include file uses. See
   // ReportIncludeFileUse for details.
   OneUse(clang::OptionalFileEntryRef included_file,
-         const string& quoted_include);
+         const string& quoted_include,
+         clang::SourceLocation include_loc);
 
   const string& symbol_name() const {
     return symbol_name_;
@@ -323,6 +324,11 @@ class IwyuFileInfo {
   // Input is the include-line as desired: '<string.h>' or '"ads/foo.h"'.
   void ReportIncludeFileUse(clang::OptionalFileEntryRef included_file,
                             const string& quoted_include);
+
+  // Same as above, but include location if we have it available.
+  void ReportIncludeFileUse(clang::OptionalFileEntryRef included_file,
+                            const string& quoted_include,
+                            clang::SourceLocation include_loc);
 
   // This is used when we see a file we want to keep not due to symbol-use
   // reasons.  For example, it can be #included with an "IWYU pragma: keep"

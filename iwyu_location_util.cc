@@ -193,6 +193,12 @@ SourceLocation GetLocation(const TemplateArgumentLoc* argloc) {
   return argloc->getLocation();
 }
 
+SourceLocation GetFileStartLoc(OptionalFileEntryRef file) {
+  if (!file)
+    return SourceLocation();
+  return GlobalSourceManager()->translateFileLineCol(*file, 1, 1);
+}
+
 bool IsInScratchSpace(SourceLocation loc) {
   return StartsWith(PrintableLoc(GetSpellingLoc(loc)), "<scratch space>");
 }
@@ -206,10 +212,8 @@ bool IsHeaderFile(OptionalFileEntryRef file) {
 }
 
 bool IsSystemHeader(OptionalFileEntryRef file) {
-  const SourceManager* sm = GlobalSourceManager();
-  FileID file_id = sm->translateFile(*file);
-  SourceLocation loc = sm->getLocForStartOfFile(file_id);
-  return sm->isInSystemHeader(loc);
+  SourceLocation loc = GetFileStartLoc(file);
+  return GlobalSourceManager()->isInSystemHeader(loc);
 }
 
 }  // namespace include_what_you_use
