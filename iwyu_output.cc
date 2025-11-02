@@ -315,13 +315,15 @@ OneUse::OneUse(const string& symbol_name, OptionalFileEntryRef dfn_file,
       << decl_filepath_;
 }
 
-OneUse::OneUse(OptionalFileEntryRef included_file, const string& quoted_include)
+OneUse::OneUse(OptionalFileEntryRef included_file,
+               const string& quoted_include,
+               clang::SourceLocation include_loc)
     : symbol_name_(),
       short_symbol_name_(),
       decl_(nullptr),
       decl_file_(included_file),
       decl_filepath_(GetFilePath(included_file)),
-      use_loc_(SourceLocation()),
+      use_loc_(include_loc),
       use_kind_(kFullUse),
       use_flags_(UF_None),
       ignore_use_(false),
@@ -673,6 +675,16 @@ static void LogSymbolUse(const string& prefix, const OneUse& use) {
            << " at " << use.PrintableUseLoc() << "\n";
 }
 
+static void LogIncludeFileUse(const string& prefix, const OneUse& use) {
+  CHECK_(!use.decl());
+  CHECK_(use.symbol_name().empty());
+  CHECK_(use.has_suggested_header());
+
+  VERRS(6) << prefix << " " << use.suggested_header() << " (from "
+           << use.decl_filepath() << ")"
+           << " at " << use.PrintableUseLoc() << "\n";
+}
+
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
                                        const NamedDecl* decl,
                                        UseFlags flags,
@@ -719,9 +731,16 @@ void IwyuFileInfo::ReportDefinedMacroUse(OptionalFileEntryRef used_in) {
 }
 
 void IwyuFileInfo::ReportIncludeFileUse(OptionalFileEntryRef included_file,
+                                        const string& quoted_include,
+                                        SourceLocation include_loc) {
+  symbol_uses_.push_back(OneUse(included_file, quoted_include, include_loc));
+  LogIncludeFileUse("Marked use of include-file", symbol_uses_.back());
+}
+
+void IwyuFileInfo::ReportIncludeFileUse(OptionalFileEntryRef included_file,
                                         const string& quoted_include) {
-  symbol_uses_.push_back(OneUse(included_file, quoted_include));
-  LogSymbolUse("Marked use of include-file", symbol_uses_.back());
+  ReportIncludeFileUse(included_file, quoted_include,
+                       GetFileStartLoc(file_entry()));
 }
 
 void IwyuFileInfo::ReportKnownDesiredFile(OptionalFileEntryRef included_file) {

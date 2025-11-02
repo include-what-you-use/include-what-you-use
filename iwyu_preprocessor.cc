@@ -523,8 +523,8 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
 
   if (!protect_reason.empty()) {
     CHECK_(ContainsKey(iwyu_file_info_map_, includer));
-    GetFromFileInfoMap(includer)->ReportIncludeFileUse(includee,
-                                                       include_name_as_written);
+    GetFromFileInfoMap(includer)->ReportIncludeFileUse(
+        includee, include_name_as_written, includer_loc);
     ERRSYM(includer) << "Marked dep: " << GetFilePath(includer)
                      << " needs to keep " << include_name_as_written
                      << " (reason: " << protect_reason << ")\n";
