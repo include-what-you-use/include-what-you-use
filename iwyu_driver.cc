@@ -194,6 +194,12 @@ bool HasArg(ArrayRef<const char*> args, const char* needle) {
   });
 }
 
+bool HasArgPrefix(ArrayRef<const char*> args, const char* prefix) {
+  return llvm::any_of(args, [&](StringRef arg) {
+    return arg.starts_with(prefix);
+  });
+}
+
 // Print the command prefixed by its action class
 raw_ostream& operator<<(raw_ostream& s, const Command& job) {
   s << "(" << job.getSource().getClassName() << ")";
@@ -314,7 +320,7 @@ bool ExecuteAction(int argc,
   }
 
   std::string iwyu_executable_path = GetExecutablePath(argv[0]);
-  if (!HasArg(args, "-resource-dir")) {
+  if (!HasArg(args, "-resource-dir") && !HasArgPrefix(args, "-resource-dir=")) {
     // If user didn't specify something explicit, compute a resource dir based
     // on configured CMake variables.
     std::string resource_dir = ComputeCustomResourceDir(iwyu_executable_path);
