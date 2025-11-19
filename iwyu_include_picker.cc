@@ -302,8 +302,13 @@ const IncludeMapEntry libc_symbol_map[] = {
   { "offsetof", kPrivate, "<stddef.h>", kPublic },
 };
 
-// Common kludges for C++ standard libraries
 const IncludeMapEntry stdlib_cxx_symbol_map[] = {
+#include "std_symbol_map.inc"  // IWYU pragma: keep
+
+  { "std::size_t", kPrivate, "<cstdio>", kPublic },
+
+  // Common kludges for C++ standard libraries
+
   // Almost all STL types take an allocator, but they
   // almost always use the default value.  Usually we detect that
   // and don't try to do IWYU, but sometimes it passes through.
@@ -324,12 +329,6 @@ const IncludeMapEntry stdlib_cxx_symbol_map[] = {
   // basic_ostream and basic_istream have this as a default template
   // argument, and sometimes it bleeds through when clang desugars the
   // string/ostream/istream type.
-  { "std::char_traits", kPrivate, "<string>", kPublic },
-  { "std::char_traits<char>", kPrivate, "<string>", kPublic },
-  { "std::char_traits<char8_t>", kPrivate, "<string>", kPublic },
-  { "std::char_traits<char16_t>", kPrivate, "<string>", kPublic },
-  { "std::char_traits<char32_t>", kPrivate, "<string>", kPublic },
-  { "std::char_traits<wchar_t>", kPrivate, "<string>", kPublic },
   { "std::char_traits", kPrivate, "<ostream>", kPublic },
   { "std::char_traits<char>", kPrivate, "<ostream>", kPublic },
   { "std::char_traits<char8_t>", kPrivate, "<ostream>", kPublic },
@@ -342,26 +341,6 @@ const IncludeMapEntry stdlib_cxx_symbol_map[] = {
   { "std::char_traits<char16_t>", kPrivate, "<istream>", kPublic },
   { "std::char_traits<char32_t>", kPrivate, "<istream>", kPublic },
   { "std::char_traits<wchar_t>", kPrivate, "<istream>", kPublic },
-
-  // std::ptrdiff_t is often an architecture specific definition, force the
-  // canonical location.
-  { "std::ptrdiff_t", kPrivate, "<cstddef>", kPublic },
-
-  { "std::size_t", kPrivate, "<cstddef>", kPublic },  // 'canonical' location for std::size_t
-  { "std::size_t", kPrivate, "<cstdio>", kPublic },
-  { "std::size_t", kPrivate, "<cstdlib>", kPublic },
-  { "std::size_t", kPrivate, "<cstring>", kPublic },
-  { "std::size_t", kPrivate, "<ctime>", kPublic },
-  { "std::size_t", kPrivate, "<cuchar>", kPublic },
-  { "std::size_t", kPrivate, "<cwchar>", kPublic },
-};
-
-// Symbol -> include mappings for GNU libstdc++
-const IncludeMapEntry libstdcpp_symbol_map[] = {
-  // std::declval is defined in <type_traits>, but provided by <utility>
-  { "std::declval", kPrivate, "<utility>", kPublic },
-  // std::nullptr_t is defined in <bits/c++config.h>, but provided by <cstddef>
-  {"std::nullptr_t", kPrivate, "<cstddef>", kPublic},
 };
 
 const IncludeMapEntry libc_include_map[] = {
@@ -1181,13 +1160,6 @@ const IncludeMapEntry libstdcpp_include_map[] = {
   { "<ext/pb_ds/detail/unordered_iterator/point_iterator.hpp>", kPrivate, "<ext/pb_ds/detail/list_update_map_/lu_map_.hpp>", kPrivate },
 };
 
-const IncludeMapEntry libcxx_symbol_map[] = {
-    {"std::nullptr_t", kPrivate, "<cstddef>", kPublic},
-
-    // For older MacOS libc++ (13.0.0), on macOS Ventura (13.2.1)
-    {"std::string", kPrivate, "<string>", kPublic},
-};
-
 const IncludeMapEntry libcxx_include_map[] = {
     {"<__tree>", kPrivate, "<set>", kPublic},
     {"<__tree>", kPrivate, "<map>", kPublic},
@@ -1569,8 +1541,6 @@ void ExportInternalMappings(const string& dirpath) {
 
   WRITE_MAPPINGS_ARRAY("symbol", libc_symbol_map);
   WRITE_MAPPINGS_ARRAY("symbol", stdlib_cxx_symbol_map);
-  WRITE_MAPPINGS_ARRAY("symbol", libstdcpp_symbol_map);
-  WRITE_MAPPINGS_ARRAY("symbol", libcxx_symbol_map);
 
 #undef WRITE_MAPPINGS_ARRAY
 }
@@ -1621,12 +1591,9 @@ void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
   }
 
   if (cxxstdlib == CXXStdLib::Libstdcxx) {
-    AddSymbolMappings(libstdcpp_symbol_map,
-                      IWYU_ARRAYSIZE(libstdcpp_symbol_map));
     AddIncludeMappings(libstdcpp_include_map,
                        IWYU_ARRAYSIZE(libstdcpp_include_map));
   } else if (cxxstdlib == CXXStdLib::Libcxx) {
-    AddSymbolMappings(libcxx_symbol_map, IWYU_ARRAYSIZE(libcxx_symbol_map));
     AddIncludeMappings(libcxx_include_map, IWYU_ARRAYSIZE(libcxx_include_map));
   } else if (cxxstdlib == CXXStdLib::ClangSymbols) {
     // Get canonical C++ standard library mappings from clang tooling

@@ -273,3 +273,18 @@ version and target match, but they should port pretty well.
 
 There is no strong policy for updating the internal mappings, we try to use a
 mainstream target and a middle-aged libstdc++ version.
+
+Another one, `mapgen/iwyu-mapgen-std-symbol.py`, is used to generate
+`std_symbol_map.inc` file containing the C++ standard library symbol mapping.
+That file is automatically included into `iwyu_include_picker.cc` by
+a `#include` directive. To regenerate it, you should have a C++ standard LaTeX
+source downloaded. You can obtain it by executing
+
+    git clone https://github.com/cplusplus/draft.git
+
+in any convenient directory. Then run the following command from
+include-what-you-use directory:
+
+```
+$ mapgen/iwyu-mapgen-std-symbol.py path_to_draft/source > std_symbol_map.inc
+```
