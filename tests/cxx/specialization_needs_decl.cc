@@ -26,7 +26,7 @@ template<> struct TplStruct<float>;
 
 // IWYU: Template needs a declaration
 int f(Template<int>& t) {
-  // IWYU: Template is...*specialization_needs_decl-i1.h
+  // IWYU: Template<int> is...*specialization_needs_decl-i1.h
   return t.x;
 }
 

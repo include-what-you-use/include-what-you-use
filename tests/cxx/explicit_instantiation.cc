@@ -106,7 +106,7 @@ template class ClassWithUsingMethod2<IndirectClass>;
 // the tool.
 // IWYU: TplWithDefArg is...*explicit_instantiation-template.h
 TplWithDefArg<int>* p = nullptr;
-// IWYU: TplWithDefArg is...*explicit_instantiation-template.h
+// IWYU: TplWithDefArg<int, :0> is...*explicit_instantiation-template.h
 extern template class TplWithDefArg<int>;
 
 template <typename>
