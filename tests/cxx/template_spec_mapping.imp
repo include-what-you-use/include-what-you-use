@@ -1,0 +1,24 @@
+[
+  { "symbol": ["Tpl", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
+  { "symbol": ["Tpl<int, 1, OtherTpl>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+  { "symbol": ["Tpl<:0 *, :1, :2>", "private", "\"tests/cxx/template_spec_mapping-i4.h\"", "public"] },
+
+  { "symbol": ["TplWithDefArg", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
+  { "symbol": ["TplWithDefArg<int *, char>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+  { "symbol": ["TplWithDefArg<:0, char>", "private", "\"tests/cxx/template_spec_mapping-i4.h\"", "public"] },
+
+  { "symbol": ["TplWithDeducibleNTTP", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
+  { "symbol": ["TplWithDeducibleNTTP<1, 1>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+  { "symbol": ["TplWithDeducibleNTTP<1, 1L>", "private", "\"tests/cxx/template_spec_mapping-i4.h\"", "public"] },
+
+  { "symbol": ["TplSpecDistinguishedByIndices", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
+  { "symbol": ["TplSpecDistinguishedByIndices<:0, :1, 5>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+  { "symbol": ["TplSpecDistinguishedByIndices<:0, :0, 5>", "private", "\"tests/cxx/template_spec_mapping-i4.h\"", "public"] },
+
+  { "symbol": ["TplParamPack1", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
+  { "symbol": ["TplParamPack1<int, :0, :1...>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+  { "symbol": ["TplParamPack1<:0 *...>", "private", "\"tests/cxx/template_spec_mapping-i4.h\"", "public"] },
+
+  { "symbol": ["TplParamPack2", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
+  { "symbol": ["TplParamPack2<int, :0, :1...>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+]

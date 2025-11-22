@@ -103,7 +103,7 @@ void TestTypedefs() {
   TplDoesNotForwardDeclareAndIncludes tdnfdai(10);
   // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   TplDoesEverythingRight tdor(11);
-  // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  // IWYU: TplIndirectStruct2<float> is...*iwyu_stricter_than_cpp-i2.h
   TplDoesEverythingRightAgain tdora(12);
 
   // But if we're in a forward-declare context, we don't require the
@@ -187,7 +187,7 @@ void TestTypeAliases() {
   TplDoesNotForwardDeclareAndIncludesAl tdnfdai(10);
   // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   TplDoesEverythingRightAl tdor(11);
-  // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  // IWYU: TplIndirectStruct2<float> is...*iwyu_stricter_than_cpp-i2.h
   TplDoesEverythingRightAgainAl tdora(12);
 
   // But if we're in a forward-declare context, we don't require the
@@ -388,7 +388,7 @@ void TestFunctionReturn() {
   const TplIndirectStruct2<int>& tis2 = TplDoesEverythingRightFn();
 
   // IWYU: TplIndirectStruct2 needs a declaration
-  // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  // IWYU: TplIndirectStruct2<float> is...*iwyu_stricter_than_cpp-i2.h
   const TplIndirectStruct2<float>& tis2b = TplDoesEverythingRightAgainFn();
 
   // -- With user-defined types as template parameters.

@@ -11,6 +11,8 @@
 
 #include "iwyu_ast_util.h"
 
+#include <cstddef>
+#include <regex>
 #include <set>                          // for set
 #include <string>                       // for string, operator+, etc
 #include <utility>                      // for pair
@@ -177,6 +179,8 @@ using llvm::raw_string_ostream;
 using llvm::zip_equal;
 using std::function;
 using std::pair;
+using std::regex;
+using std::regex_replace;
 using std::vector;
 
 namespace include_what_you_use {
@@ -533,7 +537,43 @@ string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl) {
       named_decl->getASTContext().getPrintingPolicy();
   printing_policy.SuppressUnwrittenScope = true;
   named_decl->printQualifiedName(ostream, printing_policy);
-  return ostream.str();
+
+  if (const auto* spec =
+          dyn_cast<ClassTemplateSpecializationDecl>(named_decl)) {
+    if (spec->isExplicitSpecialization()) {
+      ostream << '<';
+      const TemplateArgumentList& args = spec->getTemplateArgs();
+      const TemplateParameterList* params =
+          spec->getSpecializedTemplate()->getTemplateParameters();
+      for (unsigned i = 0, ie = args.size(); i < ie; ++i) {
+        if (i > 0)
+          ostream << ", ";
+        bool include_type = TemplateParameterList::shouldIncludeTypeForArgument(
+            printing_policy, params, i);
+        const TemplateArgument& arg = args.get(i);
+        // Clang embraces arguments corresponding to a parameter pack in angle
+        // brackets, so cannot use the default 'print' for them.
+        if (arg.getKind() == TemplateArgument::Pack) {
+          ArrayRef<TemplateArgument> pack_args = arg.getPackAsArray();
+          for (size_t j = 0, je = pack_args.size(); j < je; ++j) {
+            if (j > 0)
+              ostream << ", ";
+            pack_args[j].print(printing_policy, ostream, include_type);
+          }
+        } else {
+          args.get(i).print(printing_policy, ostream, include_type);
+        }
+      }
+      ostream << '>';
+
+      // Replace clang placeholders in partial specialization arguments with :N,
+      // where N is the parameter index (depth is ignored for now).
+      static regex tpl_param{"(?:type|value|template)-parameter-\\d+-(\\d+)"};
+      retval = regex_replace(retval, tpl_param, ":$1");
+    }
+  }
+
+  return retval;
 }
 
 // --- Utilities for Template Arguments.

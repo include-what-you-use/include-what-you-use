@@ -208,7 +208,7 @@ typedef I2_Class Cc_I2_Class_Typedef;
 // but '#include' is required as a common rule, as long as I1_Struct
 // isn't forward-declared.
 // IWYU: I1_Struct is...*badinc-i1.h
-// IWYU: OperateOn is...*badinc-i1.h
+// IWYU: OperateOn<I1_Struct> is...*badinc-i1.h
 typedef H_TemplateStruct<I1_Struct> Cc_H_TemplateStruct_I1Class_Typedef;
 
 // IWYU: kI1ConstInt is...*badinc-i1.h
@@ -1323,13 +1323,13 @@ int main() {
   d1_class.a();
   (void)(cc_struct.b);
   (void)(cc_subclass.a());
-  // IWYU: OperateOn is...*badinc-i1.h
+  // IWYU: OperateOn<I1_Struct> is...*badinc-i1.h
   h_template_struct.a();
   // This tests a bug in clang where an implicit template instantiation
   // of a partial specialization gave the wrong location information.
   // In this case, OperateOn<I1_TemplateClass<T> > is in badinc-i1.h,
   // which is what we should report, *not* the OperateOn<T> in badinc.h.
-  // IWYU: OperateOn is...*badinc-i1.h
+  // IWYU: OperateOn<I1_TemplateClass<:0, :0>> is...*badinc-i1.h
   h_template_struct_tplclass_arg.a();
   h_scoped_ptr.get();
   // Not an iwyu violation, since we never use the dereferenced type.

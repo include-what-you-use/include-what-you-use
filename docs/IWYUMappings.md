@@ -132,6 +132,42 @@ syntax in the first entry. Track the [following
 bug](https://github.com/include-what-you-use/include-what-you-use/issues/233)
 for updates.
 
+#### Template specializations ####
+
+A bare template name in a symbol mapping corresponds to the primary template,
+i.e. any use of its implicit specialization (and not any implicit specialization
+of its partial specialization) matches the mapping. To map an explicit or
+partial specialization, append the template argument list to the template name.
+Note that, currently, IWYU expects a specific format of template argument lists.
+For example, a list consisting of a pointer to `int` should be written as
+`<int *>` and not as e.g. `<int*>`. When in doubt, run IWYU with verbosity level
+6 on some code using the specialization, and look for a string like `Marked
+full-info use of decl template-name<...> (from ...` to see how IWYU spells
+the template arguments.
+
+To denote a partial specialization, you should replace all the template
+parameters in the template argument list with `:N`, where `N` is the parameter
+number, starting from 0. Note that it is the number of the partial
+specialization template parameter, not of any primary template parameter. For
+example, for such a code:
+
+    template <typename, typename, int>
+    class Tpl;
+
+    template <typename T1, typename T2>
+    class Tpl<T1, T2, 5> {};
+
+    template <typename T>
+    class Tpl<T, T, 5> {};
+
+the first partial specialization can be referred to in a mapping file as
+`Tpl<:0, :1, 5>`, and the second one as `Tpl<:0, :0, 5>`. IWYU does not
+currently have a proper support for mappings of partial specializations
+of templates being members of other templates.
+
+At present, only class template specializations are supported, not function
+or variable ones.
+
 
 ### Mapping refs ###
 

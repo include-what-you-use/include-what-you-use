@@ -325,8 +325,23 @@ const IncludeMapEntry stdlib_cxx_symbol_map[] = {
   // argument, and sometimes it bleeds through when clang desugars the
   // string/ostream/istream type.
   { "std::char_traits", kPrivate, "<string>", kPublic },
+  { "std::char_traits<char>", kPrivate, "<string>", kPublic },
+  { "std::char_traits<char8_t>", kPrivate, "<string>", kPublic },
+  { "std::char_traits<char16_t>", kPrivate, "<string>", kPublic },
+  { "std::char_traits<char32_t>", kPrivate, "<string>", kPublic },
+  { "std::char_traits<wchar_t>", kPrivate, "<string>", kPublic },
   { "std::char_traits", kPrivate, "<ostream>", kPublic },
+  { "std::char_traits<char>", kPrivate, "<ostream>", kPublic },
+  { "std::char_traits<char8_t>", kPrivate, "<ostream>", kPublic },
+  { "std::char_traits<char16_t>", kPrivate, "<ostream>", kPublic },
+  { "std::char_traits<char32_t>", kPrivate, "<ostream>", kPublic },
+  { "std::char_traits<wchar_t>", kPrivate, "<ostream>", kPublic },
   { "std::char_traits", kPrivate, "<istream>", kPublic },
+  { "std::char_traits<char>", kPrivate, "<istream>", kPublic },
+  { "std::char_traits<char8_t>", kPrivate, "<istream>", kPublic },
+  { "std::char_traits<char16_t>", kPrivate, "<istream>", kPublic },
+  { "std::char_traits<char32_t>", kPrivate, "<istream>", kPublic },
+  { "std::char_traits<wchar_t>", kPrivate, "<istream>", kPublic },
 
   // std::ptrdiff_t is often an architecture specific definition, force the
   // canonical location.
