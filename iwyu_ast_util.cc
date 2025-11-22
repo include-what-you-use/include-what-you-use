@@ -11,6 +11,7 @@
 
 #include "iwyu_ast_util.h"
 
+#include <regex>
 #include <set>                          // for set
 #include <string>                       // for string, operator+, etc
 #include <utility>                      // for pair
@@ -177,6 +178,8 @@ using llvm::raw_string_ostream;
 using llvm::zip_equal;
 using std::function;
 using std::pair;
+using std::regex;
+using std::regex_replace;
 using std::vector;
 
 namespace include_what_you_use {
@@ -533,7 +536,29 @@ string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl) {
       named_decl->getASTContext().getPrintingPolicy();
   printing_policy.SuppressUnwrittenScope = true;
   named_decl->printQualifiedName(ostream, printing_policy);
-  return ostream.str();
+
+  if (const auto* spec =
+          dyn_cast<ClassTemplateSpecializationDecl>(named_decl)) {
+    if (spec->isExplicitSpecialization()) {
+      ostream << '<';
+      const TemplateArgumentList& args = spec->getTemplateArgs();
+      const TemplateParameterList* params =
+          spec->getSpecializedTemplate()->getTemplateParameters();
+      for (unsigned i = 0, ie = args.size(); i < ie; ++i) {
+        if (i > 0)
+          ostream << ", ";
+        bool include_type = TemplateParameterList::shouldIncludeTypeForArgument(
+            printing_policy, params, i);
+        args.get(i).print(printing_policy, ostream, include_type);
+      }
+      ostream << '>';
+
+      regex tpl_param{"(type|value|template)-parameter-\\d+-\\d+"};
+      retval = regex_replace(retval, tpl_param, "?");
+    }
+  }
+
+  return retval;
 }
 
 // --- Utilities for Template Arguments.

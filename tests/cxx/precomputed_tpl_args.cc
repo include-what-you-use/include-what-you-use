@@ -43,7 +43,7 @@ std::set<IndirectClass> ic_set;
 // This class provides a specialization of less that we should see.
 // IWYU: SpecializationClass needs a declaration
 // IWYU: SpecializationClass is...*precomputed_tpl_args-i1.h
-// IWYU: std::less is...*precomputed_tpl_args-i1.h
+// IWYU: std::less<SpecializationClass> is...*precomputed_tpl_args-i1.h
 std::set<SpecializationClass> sc_set;
 
 // This class provides a specialization of less that we should see,
