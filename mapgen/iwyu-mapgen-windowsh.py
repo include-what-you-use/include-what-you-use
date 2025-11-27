@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-##===--- iwyu-mapgen-windowsh.py -------------------------------------------===##
+##===--- iwyu-mapgen-windowsh.py ------------------------------------------===##
 #
 #                     The LLVM Compiler Infrastructure
 #
@@ -34,8 +34,8 @@ def parse_include_names(headerpath: Path) -> Generator[str]:
     Parse the header file at headerpath and return all include names.
 
     This excludes headers that are guarded by the WIN32_LEAN_AND_MEAN macro,
-    it's generally recommended that users should include those manually, so we don't
-    want to map them to <Windows.h>.
+    it's generally recommended that users should include those manually, so we
+    don't want to map them to <Windows.h>.
     """
 
     if_count = 0
@@ -76,23 +76,26 @@ def find_file_in(include_path: Path, filename: str) -> Path | None:
 
 
 def fill_descendant_includes_of(include_root: Path, header_name: str) -> None:
-    """Recursively find all includes of `header_name` and add them to the `accum_includes` set."""
-    accum_includes.add(header_name)
+    """Recursively find all includes of `header_name`.
+
+    Found includes are added into the `accum_includes` set.
+    """
     file = find_file_in(include_root, header_name)
     if file is None:
         return
+    accum_includes.add(header_name)
 
     for include in parse_include_names(file):
         if include not in accum_includes:
             fill_descendant_includes_of(include_root, include)
 
 
-def find_newest_kit_version(version_tuples: list[list[str]]) -> str:
+def find_latest_version(version_tuples: list[list[str]]) -> str:
     """Find the newest Windows Kits version from a list of available tuples.
 
-    Windows Kits versioning follow a `<major.minor>.<build id>.<revision>` pattern,
-    starting from Windows 8, the `<major.minor>` part is always `10.0`.
-    We pick the newest one based on the build id.
+    Windows Kits versioning follows a `<major.minor>.<build id>.<revision>`
+    pattern, starting from Windows 8, the `<major.minor>` part is always `10.0`.
+    So we pick the newest one based on the build id.
     """
     version_tuples.sort(key=lambda entry: entry[2], reverse=True)
 
@@ -123,23 +126,25 @@ def generate_imp_lines(include_names: list[str]) -> Generator[str]:
 def main(windows_kits_path: Path) -> int:
     """Entry point."""
 
-    include_location = windows_kits_path / "10" / "Include"
+    include_path = windows_kits_path / "10" / "Include"
+
+    if not include_path.exists():
+        print(f"error: '{include_path}' is not a valid Windows Kits directory")
 
     available_versions: list[list[str]] = [
         entry.name.split(".", 4)
-        for entry in include_location.iterdir()
+        for entry in include_path.iterdir()
         if entry.name.startswith("10")
     ]
+    kit_root = include_path / find_latest_version(available_versions)
 
-    kit_include_root = include_location / find_newest_kit_version(available_versions)
-
-    if not kit_include_root.exists() or not find_file_in(kit_include_root, "Windows.h"):
+    if not kit_root.exists() or not find_file_in(kit_root, "Windows.h"):
         print(
-            f"Include root '{kit_include_root}' does not exist or does not contain Windows.h"
+            f"error: '{kit_root}' does not exist or does not contain Windows.h",
         )
         return 1
 
-    fill_descendant_includes_of(kit_include_root, "Windows.h")
+    fill_descendant_includes_of(kit_root, "Windows.h")
     accum_includes.remove("Windows.h")
 
     print("[")
@@ -155,7 +160,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "windows_kits_path",
-        help="Path to the 'Windows Kits' directory (e.g. C:\\Program Files (x86)\\Windows Kits\\)",
+        help="Path to the 'Windows Kits' directory "
+        "(e.g. C:\\Program Files (x86)\\Windows Kits\\)",
     )
     args = parser.parse_args()
     sys.exit(main(Path(args.windows_kits_path)))
