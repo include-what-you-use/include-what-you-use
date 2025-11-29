@@ -21,9 +21,11 @@ import argparse
 from pathlib import Path
 from collections.abc import Generator
 
+IF_RE = re.compile(r"#\s*if")
+ENDIF_RE = re.compile(r"#\s*endif")
+LEAN_AND_MEAN_RE = re.compile(r"#\s*ifndef\s+WIN32_LEAN_AND_MEAN")
 
-LEAN_AND_MEAN_RE = re.compile(r"#ifndef*\s+WIN32_LEAN_AND_MEAN")
-INCLUDE_RE = re.compile(r"#include\s+<(.+)>")
+INCLUDE_RE = re.compile(r"#\s*include\s+<(.+)>")
 
 
 # Standard C Library headers as of C23
@@ -80,7 +82,7 @@ def parse_include_names(headerpath: Path) -> Generator[str]:
 
     with headerpath.open("r", encoding="utf-8") as fobj:
         for line in fobj.readlines():
-            if line.startswith("#if"):
+            if IF_RE.search(line) is not None:
                 # Check if we entered a WIN32_LEAN_AND_MEAN block
                 lean_mean_match = LEAN_AND_MEAN_RE.search(line)
                 if lean_mean_match is not None:
@@ -89,7 +91,7 @@ def parse_include_names(headerpath: Path) -> Generator[str]:
                 if_count += 1
                 continue
 
-            if line.startswith("#endif"):
+            if ENDIF_RE.search(line) is not None:
                 if_count -= 1
 
                 # Check if we escaped a WIN32_LEAN_AND_MEAN block
