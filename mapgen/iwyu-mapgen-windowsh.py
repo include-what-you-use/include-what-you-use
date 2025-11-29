@@ -26,6 +26,43 @@ LEAN_AND_MEAN_RE = re.compile(r"#ifndef*\s+WIN32_LEAN_AND_MEAN")
 INCLUDE_RE = re.compile(r"#include\s+<(.+)>")
 
 
+# Standard C Library headers as of C23
+STDLIB_EXCLUSIONS = [
+    "assert.h",
+    "complex.h",
+    "ctype.h",
+    "errno.h",
+    "fenv.h",
+    "float.h",
+    "inttypes.h",
+    "iso646.h",
+    "limits.h",
+    "locale.h",
+    "math.h",
+    "setjmp.h",
+    "signal.h",
+    "stdalign.h",
+    "stdarg.h",
+    "stdatomic.h",
+    "stdbit.h",
+    "stdbool.h",
+    "stdckdint.h",
+    "stddef.h",
+    "stdint.h",
+    "stdio.h",
+    "stdlib.h",
+    "stdmchar.h",
+    "stdnoreturn.h",
+    "string.h",
+    "tgmath.h",
+    "threads.h",
+    "time.h",
+    "uchar.h",
+    "wchar.h",
+    "wctype.h",
+]
+
+
 accum_includes: set[str] = set()
 
 
@@ -63,7 +100,10 @@ def parse_include_names(headerpath: Path) -> Generator[str]:
 
             if lean_mean_idx is None:
                 include_match = INCLUDE_RE.search(line)
-                if include_match is not None:
+                if (
+                    include_match is not None
+                    and include_match.group(1) not in STDLIB_EXCLUSIONS
+                ):
                     yield include_match.group(1)
 
 
