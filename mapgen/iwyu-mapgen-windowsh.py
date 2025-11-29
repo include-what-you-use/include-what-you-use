@@ -186,6 +186,7 @@ def main(windows_kits_path: Path) -> int:
 
     fill_descendant_includes_of(kit_root, "Windows.h")
     accum_includes.remove("Windows.h")
+    accum_includes.remove("windows.h")
 
     print("[")
     print(",\n".join(generate_imp_lines(sorted(accum_includes))))

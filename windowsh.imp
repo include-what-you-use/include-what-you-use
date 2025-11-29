@@ -127,7 +127,6 @@
   {"include": ["<wincon.h>", "private", "<Windows.h>", "public"]},
   {"include": ["<wincontypes.h>", "private", "<Windows.h>", "public"]},
   {"include": ["<windef.h>", "private", "<Windows.h>", "public"]},
-  {"include": ["<windows.h>", "private", "<Windows.h>", "public"]},
   {"include": ["<winerror.h>", "private", "<Windows.h>", "public"]},
   {"include": ["<wingdi.h>", "private", "<Windows.h>", "public"]},
   {"include": ["<winnetwk.h>", "private", "<Windows.h>", "public"]},
