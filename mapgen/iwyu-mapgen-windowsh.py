@@ -23,7 +23,8 @@ from collections.abc import Generator
 
 IF_RE = re.compile(r"#\s*if")
 ENDIF_RE = re.compile(r"#\s*endif")
-LEAN_AND_MEAN_RE = re.compile(r"#\s*ifndef\s+WIN32_LEAN_AND_MEAN")
+LEAN_AND_MEAN1_RE = re.compile(r"#\s*ifndef\s+WIN32_LEAN_AND_MEAN")
+LEAN_AND_MEAN2_RE = re.compile(r"#\s*if\s+!defined\s*\(WIN32_LEAN_AND_MEAN\)")
 
 INCLUDE_RE = re.compile(r"#\s*include\s+<(.+)>")
 
@@ -84,8 +85,10 @@ def parse_include_names(headerpath: Path) -> Generator[str]:
         for line in fobj.readlines():
             if IF_RE.search(line) is not None:
                 # Check if we entered a WIN32_LEAN_AND_MEAN block
-                lean_mean_match = LEAN_AND_MEAN_RE.search(line)
-                if lean_mean_match is not None:
+                if (
+                    LEAN_AND_MEAN1_RE.search(line) is not None
+                    or LEAN_AND_MEAN2_RE.search(line) is not None
+                ):
                     lean_mean_idx = if_count
 
                 if_count += 1
