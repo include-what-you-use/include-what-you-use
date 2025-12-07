@@ -80,6 +80,7 @@ TemplateTemplateArgShortFwd<
 Template<int> t9; // 9
 
 // IWYU: Template needs a declaration
+// IWYU: Template<char> needs a declaration
 template <> class Template<char> {};
 
 TemplateAsDefaultFull<char> t10; // 10

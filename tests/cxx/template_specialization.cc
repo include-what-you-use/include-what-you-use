@@ -17,7 +17,7 @@
 
 template<typename T> class Foo;
 
-// IWYU: Foo is...*template_specialization-i2.h
+// IWYU: Foo<int> is...*template_specialization-i2.h
 Foo<int> foo;
 // Even though Foo<int> has a specialization, it doesn't matter
 // because forward-declaring is ok.

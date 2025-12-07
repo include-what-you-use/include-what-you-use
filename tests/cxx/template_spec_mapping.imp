@@ -1,0 +1,13 @@
+[
+  { "symbol": ["Tpl", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
+  { "symbol": ["Tpl<int, 1, OtherTpl>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+  { "symbol": ["Tpl<? *, ?, ?>", "private", "\"tests/cxx/template_spec_mapping-i4.h\"", "public"] },
+
+  { "symbol": ["TplWithDefArg", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
+  { "symbol": ["TplWithDefArg<int *, char>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+  { "symbol": ["TplWithDefArg<?, char>", "private", "\"tests/cxx/template_spec_mapping-i4.h\"", "public"] },
+
+  { "symbol": ["TplWithDeducibleNTTP", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
+  { "symbol": ["TplWithDeducibleNTTP<1, 1>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+  { "symbol": ["TplWithDeducibleNTTP<1, 1L>", "private", "\"tests/cxx/template_spec_mapping-i4.h\"", "public"] },
+]
