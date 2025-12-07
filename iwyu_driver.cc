@@ -36,6 +36,7 @@
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Options/OptionUtils.h"
 #include "iwyu_port.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -64,6 +65,7 @@ using clang::CompilerInvocation;
 using clang::DiagnosticOptions;
 using clang::DiagnosticsEngine;
 using clang::FrontendAction;
+using clang::GetResourcesPath;
 using clang::PreprocessorOptions;
 using clang::driver::Action;
 using clang::driver::Command;
@@ -272,7 +274,7 @@ static std::string ComputeCustomResourceDir(StringRef iwyu_executable_path) {
     // 2. Only IWYU_RESOURCE_BINARY_PATH specified, pass it to Driver to run it
     // through the default algorithm (with CLANG_RESOURCE_DIR in clang-20 and
     // later).
-    return Driver::GetResourcesPath(iwyu_resource_binary_path);
+    return GetResourcesPath(iwyu_resource_binary_path);
   }
 
   CHECK_(!iwyu_resource_dir.empty());
