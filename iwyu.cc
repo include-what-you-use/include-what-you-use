@@ -1913,6 +1913,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_HLSLVectorTruncation:
       case clang::CK_HLSLElementwiseCast:
       case clang::CK_HLSLAggregateSplatCast:
+      case clang::CK_HLSLMatrixTruncation:
         break;
 
       // Ignore non-ptr-to-ptr casts.
