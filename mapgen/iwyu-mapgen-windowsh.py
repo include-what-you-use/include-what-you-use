@@ -66,9 +66,6 @@ STDLIB_EXCLUSIONS = [
 ]
 
 
-accum_includes: set[str] = set()
-
-
 def parse_include_names(headerpath: Path) -> Generator[str]:
     """
     Parse the header file at headerpath and return all include names.
@@ -120,7 +117,11 @@ def find_file_in(include_path: Path, filename: str) -> Path | None:
     return None
 
 
-def fill_descendant_includes_of(include_root: Path, header_name: str) -> None:
+def fill_descendant_includes_of(
+    into_set: set[str],
+    include_root: Path,
+    header_name: str,
+) -> None:
     """Recursively find all includes of `header_name`.
 
     Found includes are added into the `accum_includes` set.
@@ -128,23 +129,11 @@ def fill_descendant_includes_of(include_root: Path, header_name: str) -> None:
     file = find_file_in(include_root, header_name)
     if file is None:
         return
-    accum_includes.add(header_name)
+    into_set.add(header_name)
 
     for include in parse_include_names(file):
-        if include not in accum_includes:
-            fill_descendant_includes_of(include_root, include)
-
-
-def find_latest_version(version_tuples: list[list[str]]) -> str:
-    """Find the newest Windows Kits version from a list of available tuples.
-
-    Windows Kits versioning follows a `<major.minor>.<build id>.<revision>`
-    pattern, starting from Windows 8, the `<major.minor>` part is always `10.0`.
-    So we pick the newest one based on the build id.
-    """
-    version_tuples.sort(key=lambda entry: entry[2], reverse=True)
-
-    return ".".join(version_tuples[0])
+        if include not in into_set:
+            fill_descendant_includes_of(into_set, include_root, include)
 
 
 def generate_imp_lines(include_names: list[str]) -> Generator[str]:
@@ -161,35 +150,23 @@ def generate_imp_lines(include_names: list[str]) -> Generator[str]:
     def jsonline(mapping, indent):
         return (indent * " ") + json.dumps(mapping)
 
-    for name in sorted(include_names):
-        # Regex-escape period and build a regex matching both "" and <>.
+    for name in include_names:
         map_from = f"<{name}>"
         mapping = {"include": [map_from, "private", "<Windows.h>", "public"]}
         yield jsonline(mapping, indent=2)
 
 
-def main(windows_kits_path: Path) -> int:
+def main(kit_path: Path) -> int:
     """Entry point."""
 
-    include_path = windows_kits_path / "10" / "Include"
-
-    if not include_path.exists():
-        print(f"error: '{include_path}' is not a valid Windows Kits directory")
-
-    available_versions: list[list[str]] = [
-        entry.name.split(".", 4)
-        for entry in include_path.iterdir()
-        if entry.name.startswith("10")
-    ]
-    kit_root = include_path / find_latest_version(available_versions)
-
-    if not kit_root.exists() or not find_file_in(kit_root, "Windows.h"):
+    if not kit_path.exists() or not find_file_in(kit_path, "Windows.h"):
         print(
-            f"error: '{kit_root}' does not exist or does not contain Windows.h",
+            f"error: '{kit_path}' does not exist or does not contain Windows.h",
         )
         return 1
 
-    fill_descendant_includes_of(kit_root, "Windows.h")
+    accum_includes: set[str] = set()
+    fill_descendant_includes_of(accum_includes, kit_path, "Windows.h")
     accum_includes.remove("Windows.h")
     accum_includes.remove("windows.h")
 
@@ -205,9 +182,9 @@ if __name__ == "__main__":
         description="Generate IWYU mappings for the Win32 API."
     )
     parser.add_argument(
-        "windows_kits_path",
-        help="Path to the 'Windows Kits' directory "
-        "(e.g. C:\\Program Files (x86)\\Windows Kits\\)",
+        "windows_kit_path",
+        help="Path to a specific Windows Kits version"
+        " (e.g. C:\\Program Files (x86)\\Windows Kits\\10\\Include\\<version>)",
     )
     args = parser.parse_args()
-    sys.exit(main(Path(args.windows_kits_path)))
+    sys.exit(main(Path(args.windows_kit_path)))
