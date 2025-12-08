@@ -29,8 +29,8 @@ LEAN_AND_MEAN2_RE = re.compile(r"#\s*if\s+!defined\s*\(WIN32_LEAN_AND_MEAN\)")
 INCLUDE_RE = re.compile(r"#\s*include\s+<(.+)>")
 
 
-# Standard C Library headers as of C23
-STDLIB_EXCLUSIONS = [
+HEADER_EXCLUSIONS = [
+    # Standard C Library headers as of C23
     "assert.h",
     "complex.h",
     "ctype.h",
@@ -63,6 +63,14 @@ STDLIB_EXCLUSIONS = [
     "uchar.h",
     "wchar.h",
     "wctype.h",
+    # Textual headers
+    "packon.h",
+    "packoff.h",
+    "pshpack1.h",
+    "pshpack2.h",
+    "pshpack4.h",
+    "pshpack8.h",
+    "poppack.h",
 ]
 
 
@@ -82,10 +90,8 @@ def parse_include_names(headerpath: Path) -> Generator[str]:
         for line in fobj.readlines():
             if IF_RE.search(line) is not None:
                 # Check if we entered a WIN32_LEAN_AND_MEAN block
-                if (
-                    LEAN_AND_MEAN1_RE.search(line) is not None
-                    or LEAN_AND_MEAN2_RE.search(line) is not None
-                ):
+                if LEAN_AND_MEAN1_RE.search(line) is not None \
+                   or LEAN_AND_MEAN2_RE.search(line) is not None:
                     lean_mean_idx = if_count
 
                 if_count += 1
@@ -102,10 +108,8 @@ def parse_include_names(headerpath: Path) -> Generator[str]:
 
             if lean_mean_idx is None:
                 include_match = INCLUDE_RE.search(line)
-                if (
-                    include_match is not None
-                    and include_match.group(1) not in STDLIB_EXCLUSIONS
-                ):
+                if include_match is not None \
+                   and include_match.group(1) not in HEADER_EXCLUSIONS:
                     yield include_match.group(1)
 
 
@@ -167,8 +171,8 @@ def main(kit_path: Path) -> int:
 
     accum_includes: set[str] = set()
     fill_descendant_includes_of(accum_includes, kit_path, "Windows.h")
-    accum_includes.remove("Windows.h")
-    accum_includes.remove("windows.h")
+    accum_includes.discard("Windows.h")
+    accum_includes.discard("windows.h")
 
     print("[")
     print(",\n".join(generate_imp_lines(sorted(accum_includes))))
