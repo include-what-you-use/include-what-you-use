@@ -71,6 +71,9 @@ HEADER_EXCLUSIONS = [
     "pshpack4.h",
     "pshpack8.h",
     "poppack.h",
+    # MinGW32 headers
+    "_mingw.h",
+    "_mingw_unicode.h",
 ]
 
 
@@ -114,7 +117,7 @@ def parse_include_names(headerpath: Path) -> Generator[str]:
 
 
 def find_file_in(include_path: Path, filename: str) -> Path | None:
-    found = list(include_path.rglob(filename))
+    found = list(include_path.rglob(filename, case_sensitive=False))
     if found:
         return found[0]
 
