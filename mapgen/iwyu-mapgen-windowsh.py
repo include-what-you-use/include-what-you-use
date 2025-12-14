@@ -71,9 +71,8 @@ HEADER_EXCLUSIONS = [
     "pshpack4.h",
     "pshpack8.h",
     "poppack.h",
-    # MinGW32 headers
-    "_mingw.h",
-    "_mingw_unicode.h",
+    # Intrinsics headers
+    "intrin.h",
 ]
 
 
