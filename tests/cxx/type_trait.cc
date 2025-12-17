@@ -315,17 +315,6 @@ static_assert(!__builtin_is_cpp_trivially_relocatable(Union2&));
 // IWYU: Union2 is...*-i1.h
 static_assert(__builtin_is_cpp_trivially_relocatable(Union2[]));
 // IWYU: Class is...*-i1.h
-static_assert(__builtin_is_replaceable(Class));
-static_assert(__builtin_is_replaceable(Class*));
-static_assert(!__builtin_is_replaceable(Class&));
-// IWYU: Class is...*-i1.h
-static_assert(__builtin_is_replaceable(Class[]));
-// IWYU: Union2 is...*-i1.h
-static_assert(__builtin_is_replaceable(Union2));
-static_assert(!__builtin_is_replaceable(Union2&));
-// IWYU: Union2 is...*-i1.h
-static_assert(__builtin_is_replaceable(Union2[]));
-// IWYU: Class is...*-i1.h
 static_assert(__can_pass_in_regs(Class));
 // IWYU: Union1 is...*-i1.h
 static_assert(__can_pass_in_regs(Union1));

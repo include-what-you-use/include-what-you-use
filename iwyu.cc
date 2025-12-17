@@ -2187,7 +2187,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case TypeTrait::UTT_IsTriviallyRelocatable:
       case TypeTrait::UTT_IsTriviallyEqualityComparable:
       case TypeTrait::UTT_IsCppTriviallyRelocatable:
-      case TypeTrait::UTT_IsReplaceable:
       case TypeTrait::UTT_CanPassInRegs:
       case TypeTrait::UTT_HasNothrowConstructor:
       case TypeTrait::UTT_HasNothrowCopy:
