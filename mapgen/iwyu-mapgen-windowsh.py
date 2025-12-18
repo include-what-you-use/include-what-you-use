@@ -77,8 +77,7 @@ HEADER_EXCLUSIONS = [
 
 
 def parse_include_names(headerpath: Path) -> Generator[str]:
-    """
-    Parse the header file at headerpath and return all include names.
+    """Parse the header file at headerpath and return all include names.
 
     This excludes headers that are guarded by the WIN32_LEAN_AND_MEAN macro,
     it's generally recommended that users should include those manually, so we
@@ -130,7 +129,7 @@ def fill_descendant_includes_of(
 ) -> None:
     """Recursively find all includes of `header_name`.
 
-    Found includes are added into the `accum_includes` set.
+    Found includes are added into the `into_set` set.
     """
     file = find_file_in(include_root, header_name)
     if file is None:
