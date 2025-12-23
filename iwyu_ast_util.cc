@@ -11,7 +11,6 @@
 
 #include "iwyu_ast_util.h"
 
-#include <cstddef>
 #include <regex>
 #include <set>                          // for set
 #include <string>                       // for string, operator+, etc
@@ -56,6 +55,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 
@@ -166,8 +166,11 @@ using clang::UnresolvedLookupExpr;
 using clang::UsingDirectiveDecl;
 using clang::ValueDecl;
 using clang::VarDecl;
+using clang::VarTemplateDecl;
+using clang::VarTemplatePartialSpecializationDecl;
 using clang::VarTemplateSpecializationDecl;
 using llvm::ArrayRef;
+using llvm::ListSeparator;
 using llvm::PointerUnion;
 using llvm::cast;
 using llvm::dyn_cast;
@@ -175,6 +178,7 @@ using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
 using llvm::range_size;
+using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using llvm::zip_equal;
 using std::function;
@@ -187,7 +191,7 @@ namespace include_what_you_use {
 
 namespace {
 
-void DumpASTNode(llvm::raw_ostream& ostream, const ASTNode* node) {
+void DumpASTNode(raw_ostream& ostream, const ASTNode* node) {
   if (const Decl *decl = node->GetAs<Decl>()) {
     ostream << "[" << GetKindName(decl) << "] " << PrintableDecl(decl);
   } else if (const Stmt *stmt = node->GetAs<Stmt>()) {
@@ -248,6 +252,36 @@ static const RedeclarableTemplateDecl* GetRedeclNotSpecifyingAnyDefArg(
       return redecl;
   }
   return nullptr;
+}
+
+template <typename T>
+static void PrintExplicitSpecTplArgs(const T* spec,
+                                     const PrintingPolicy& printing_policy,
+                                     raw_ostream& ostream) {
+  if (spec->isExplicitSpecialization()) {
+    ostream << '<';
+    const TemplateArgumentList& args = spec->getTemplateArgs();
+    const TemplateParameterList* params =
+        spec->getSpecializedTemplate()->getTemplateParameters();
+    ListSeparator LS;  // ', ' by default.
+    for (unsigned i = 0, ie = args.size(); i < ie; ++i) {
+      bool include_type = TemplateParameterList::shouldIncludeTypeForArgument(
+          printing_policy, params, i);
+      const TemplateArgument& arg = args.get(i);
+      // Clang encloses arguments corresponding to a parameter pack in angle
+      // brackets, so cannot use the default 'print' for them.
+      if (arg.getKind() == TemplateArgument::Pack) {
+        for (TemplateArgument pack_arg : arg.getPackAsArray()) {
+          ostream << LS;
+          pack_arg.print(printing_policy, ostream, include_type);
+        }
+      } else {
+        ostream << LS;
+        args.get(i).print(printing_policy, ostream, include_type);
+      }
+    }
+    ostream << '>';
+  }
 }
 
 }  // anonymous namespace
@@ -538,40 +572,18 @@ string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl) {
   printing_policy.SuppressUnwrittenScope = true;
   named_decl->printQualifiedName(ostream, printing_policy);
 
-  if (const auto* spec =
+  if (const auto* cls_spec =
           dyn_cast<ClassTemplateSpecializationDecl>(named_decl)) {
-    if (spec->isExplicitSpecialization()) {
-      ostream << '<';
-      const TemplateArgumentList& args = spec->getTemplateArgs();
-      const TemplateParameterList* params =
-          spec->getSpecializedTemplate()->getTemplateParameters();
-      for (unsigned i = 0, ie = args.size(); i < ie; ++i) {
-        if (i > 0)
-          ostream << ", ";
-        bool include_type = TemplateParameterList::shouldIncludeTypeForArgument(
-            printing_policy, params, i);
-        const TemplateArgument& arg = args.get(i);
-        // Clang embraces arguments corresponding to a parameter pack in angle
-        // brackets, so cannot use the default 'print' for them.
-        if (arg.getKind() == TemplateArgument::Pack) {
-          ArrayRef<TemplateArgument> pack_args = arg.getPackAsArray();
-          for (size_t j = 0, je = pack_args.size(); j < je; ++j) {
-            if (j > 0)
-              ostream << ", ";
-            pack_args[j].print(printing_policy, ostream, include_type);
-          }
-        } else {
-          args.get(i).print(printing_policy, ostream, include_type);
-        }
-      }
-      ostream << '>';
-
-      // Replace clang placeholders in partial specialization arguments with :N,
-      // where N is the parameter index (depth is ignored for now).
-      static regex tpl_param{"(?:type|value|template)-parameter-\\d+-(\\d+)"};
-      retval = regex_replace(retval, tpl_param, ":$1");
-    }
+    PrintExplicitSpecTplArgs(cls_spec, printing_policy, ostream);
+  } else if (const auto* var_spec =
+                 dyn_cast<VarTemplateSpecializationDecl>(named_decl)) {
+    PrintExplicitSpecTplArgs(var_spec, printing_policy, ostream);
   }
+
+  // Replace clang placeholders in partial specialization arguments with :N,
+  // where N is the parameter index (depth is ignored for now).
+  static regex tpl_param{"(?:type|value|template)-parameter-\\d+-(\\d+)"};
+  retval = regex_replace(retval, tpl_param, ":$1");
 
   return retval;
 }
@@ -1183,34 +1195,43 @@ TemplateInstantiationData GetTplInstDataForVariable(
   return TemplateInstantiationData{resugar_map, provided_types};
 }
 
-const NamedDecl* GetInstantiatedFromDecl(const NamedDecl* class_decl) {
-  if (const ClassTemplateSpecializationDecl* tpl_sp_decl =
-      DynCastFrom(class_decl)) {  // an instantiated class template
+const NamedDecl* GetInstantiatedFromDecl(const NamedDecl* decl) {
+  if (const auto* tpl_sp_decl = dyn_cast<ClassTemplateSpecializationDecl>(
+          decl)) {  // an instantiated class template
     PointerUnion<ClassTemplateDecl*, ClassTemplatePartialSpecializationDecl*>
         instantiated_from = tpl_sp_decl->getInstantiatedFrom();
-    if (const ClassTemplateDecl* tpl_decl =
-        instantiated_from.dyn_cast<ClassTemplateDecl*>()) {
-      // class_decl is instantiated from a non-specialized template.
+    if (const auto* tpl_decl =
+            instantiated_from.dyn_cast<ClassTemplateDecl*>()) {
+      // decl is instantiated from a non-specialized template.
       return tpl_decl;
-    } else if (const ClassTemplatePartialSpecializationDecl*
-               partial_spec_decl =
-               instantiated_from.dyn_cast<
-                   ClassTemplatePartialSpecializationDecl*>()) {
-      // class_decl is instantiated from a template partial specialization.
+    } else if (const auto* partial_spec_decl =
+                   instantiated_from
+                       .dyn_cast<ClassTemplatePartialSpecializationDecl*>()) {
+      // decl is instantiated from a template partial specialization.
       return partial_spec_decl;
     }
   }
-  // class_decl is not instantiated from a template.
-  return class_decl;
+  if (const auto* tpl_sp_decl = dyn_cast<VarTemplateSpecializationDecl>(decl)) {
+    // An instantiated variable template.
+    PointerUnion<VarTemplateDecl*, VarTemplatePartialSpecializationDecl*>
+        instantiated_from = tpl_sp_decl->getInstantiatedFrom();
+    if (const auto* tpl_decl = instantiated_from.dyn_cast<VarTemplateDecl*>()) {
+      // decl is instantiated from a non-specialized template.
+      return tpl_decl;
+    } else if (const auto* partial_spec_decl =
+                   instantiated_from
+                       .dyn_cast<VarTemplatePartialSpecializationDecl*>()) {
+      // decl is instantiated from a template partial specialization.
+      return partial_spec_decl;
+    }
+  }
+  // decl is not instantiated from a class or a variable template.
+  return decl;
 }
 
 const NamedDecl* GetDefinitionAsWritten(const NamedDecl* decl) {
   // First, get to decl-as-written.
-  if (const CXXRecordDecl* class_decl = DynCastFrom(decl)) {
-    decl = GetInstantiatedFromDecl(class_decl);
-    if (const ClassTemplateDecl* tpl_decl = DynCastFrom(decl))
-      decl = tpl_decl->getTemplatedDecl();  // convert back to CXXRecordDecl
-  } else if (const FunctionDecl* func_decl = DynCastFrom(decl)) {
+  if (const auto* func_decl = dyn_cast<FunctionDecl>(decl)) {
     // If we're instantiated from a template, use the template pattern as the
     // decl-as-written.
     // But avoid friend declarations in templates, something happened in Clang
@@ -1219,17 +1240,25 @@ const NamedDecl* GetDefinitionAsWritten(const NamedDecl* decl) {
     const FunctionDecl* tp_decl = func_decl->getTemplateInstantiationPattern();
     if (tp_decl && tp_decl->getFriendObjectKind() == Decl::FOK_None)
       decl = tp_decl;
+  } else {
+    decl = GetInstantiatedFromDecl(decl);
+    if (const auto* tpl_decl = dyn_cast<ClassTemplateDecl>(decl))
+      decl = tpl_decl->getTemplatedDecl();  // convert back to CXXRecordDecl
+    // TODO(bolshakov): getTemplatedDecl() for VarTemplateDecls?
   }
   // Then, get to definition.
   if (const NamedDecl* class_dfn = GetTagDefinition(decl)) {
     return class_dfn;
-  } else if (const FunctionDecl* fn_decl = DynCastFrom(decl)) {
+  } else if (const auto* fn_decl = dyn_cast<FunctionDecl>(decl)) {
     for (FunctionDecl::redecl_iterator it = fn_decl->redecls_begin();
          it != fn_decl->redecls_end(); ++it) {
       if ((*it)->isThisDeclarationADefinition())
         return *it;
     }
   }
+  // For variables, any 'extern' redeclaration is probably sufficient for IWYU
+  // purposes. However, obtaining the definition can be added if needed.
+
   // Couldn't find a definition, just return the original declaration.
   return decl;
 }

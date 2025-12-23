@@ -165,8 +165,8 @@ the first partial specialization can be referred to in a mapping file as
 currently have a proper support for mappings of partial specializations
 of templates being members of other templates.
 
-At present, only class template specializations are supported, not function
-or variable ones.
+At present, only class and variable template specializations are supported, not
+function template ones.
 
 
 ### Mapping refs ###
