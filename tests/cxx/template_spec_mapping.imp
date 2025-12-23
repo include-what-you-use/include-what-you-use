@@ -21,4 +21,8 @@
 
   { "symbol": ["TplParamPack2", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
   { "symbol": ["TplParamPack2<int, :0, :1...>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+
+  { "symbol": ["var_tpl", "private", "\"tests/cxx/template_spec_mapping-i2.h\"", "public"] },
+  { "symbol": ["var_tpl<char>", "private", "\"tests/cxx/template_spec_mapping-i3.h\"", "public"] },
+  { "symbol": ["var_tpl<:0 *>", "private", "\"tests/cxx/template_spec_mapping-i4.h\"", "public"] },
 ]

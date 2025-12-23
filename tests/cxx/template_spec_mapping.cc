@@ -63,6 +63,13 @@ TplParamPack2<double, char, float> tpp21;
 // IWYU: TplParamPack2<int, :0, :1...> is...*-i3.h
 TplParamPack2<int, char, float> tpp22;
 
+// IWYU: var_tpl is...*-i2.h
+static_assert(var_tpl<int> == 1);
+// IWYU: var_tpl<char> is...*-i3.h
+static_assert(var_tpl<char> == 2);
+// IWYU: var_tpl<:0 \*> is...*-i4.h
+static_assert(var_tpl<int*> == 3);
+
 /**** IWYU_SUMMARY
 
 tests/cxx/template_spec_mapping.cc should add these lines:
@@ -76,8 +83,8 @@ tests/cxx/template_spec_mapping.cc should remove these lines:
 
 The full include-list for tests/cxx/template_spec_mapping.cc:
 #include "tests/cxx/template_spec_mapping-i1.h"  // for OtherTpl
-#include "tests/cxx/template_spec_mapping-i2.h"  // for Tpl, TplParamPack1, TplParamPack2, TplSpecDistinguishedByIndices, TplWithDeducibleNTTP, TplWithDefArg
-#include "tests/cxx/template_spec_mapping-i3.h"  // for Tpl, TplParamPack1, TplParamPack2, TplSpecDistinguishedByIndices, TplWithDeducibleNTTP, TplWithDefArg
-#include "tests/cxx/template_spec_mapping-i4.h"  // for Tpl, TplParamPack1, TplSpecDistinguishedByIndices, TplWithDeducibleNTTP, TplWithDefArg
+#include "tests/cxx/template_spec_mapping-i2.h"  // for Tpl, TplParamPack1, TplParamPack2, TplSpecDistinguishedByIndices, TplWithDeducibleNTTP, TplWithDefArg, var_tpl
+#include "tests/cxx/template_spec_mapping-i3.h"  // for Tpl, TplParamPack1, TplParamPack2, TplSpecDistinguishedByIndices, TplWithDeducibleNTTP, TplWithDefArg, var_tpl
+#include "tests/cxx/template_spec_mapping-i4.h"  // for Tpl, TplParamPack1, TplSpecDistinguishedByIndices, TplWithDeducibleNTTP, TplWithDefArg, var_tpl
 
 ***** IWYU_SUMMARY */

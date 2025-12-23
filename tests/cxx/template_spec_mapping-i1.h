@@ -61,3 +61,12 @@ class TplParamPack2 {};
 
 template <typename T, typename... Args>
 class TplParamPack2<int, T, Args...> {};
+
+template <typename>
+constexpr int var_tpl = 1;
+
+template <>
+inline constexpr int var_tpl<char> = 2;
+
+template <typename T>
+constexpr int var_tpl<T*> = 3;
