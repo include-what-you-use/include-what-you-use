@@ -1189,14 +1189,14 @@ const IncludeMapEntry libcxx_symbol_map[] = {
 };
 
 const IncludeMapEntry libcxx_include_map[] = {
-    {"<__mutex_base>", kPrivate, "<mutex>", kPublic},
     {"<__tree>", kPrivate, "<set>", kPublic},
     {"<__tree>", kPrivate, "<map>", kPublic},
 
     // For the following entries:
-    // cd llvm-project/libcxx/include ; find -type d -name "__*" | sort | sed -e 's#./__\(.*\)#  { "@<__\1/.*>", kPrivate, "<\1>", kPublic },#'
+    // cd llvm-project/libcxx/include ; find . -type d -name "__*" | grep -v cxx03 | LC_ALL=C sort | sed -e 's#./__\(.*\)#    {"@<__\1/.*>", kPrivate, "<\1>", kPublic},#'
     //
-    // tweak locale_dir entry, and comment out debug_utils, fwd, pstl, support
+    // tweak `locale_dir` entry (to `<locale>`)
+    // comment out `configuration`, `debug_utils`, `fwd`, `pstl`, `support`
     {"@<__algorithm/.*>", kPrivate, "<algorithm>", kPublic},
     {"@<__atomic/.*>", kPrivate, "<atomic>", kPublic},
     {"@<__bit/.*>", kPrivate, "<bit>", kPublic},
@@ -1205,22 +1205,29 @@ const IncludeMapEntry libcxx_include_map[] = {
     {"@<__compare/.*>", kPrivate, "<compare>", kPublic},
     {"@<__concepts/.*>", kPrivate, "<concepts>", kPublic},
     {"@<__condition_variable/.*>", kPrivate, "<condition_variable>", kPublic},
+    //{"@<__configuration/.*>", kPrivate, "<configuration>", kPublic},
     {"@<__coroutine/.*>", kPrivate, "<coroutine>", kPublic},
+    {"@<__cstddef/.*>", kPrivate, "<cstddef>", kPublic},
     //{ "@<__debug_utils/.*>", kPrivate, "<debug_utils>", kPublic },
     {"@<__exception/.*>", kPrivate, "<exception>", kPublic},
     {"@<__expected/.*>", kPrivate, "<expected>", kPublic},
     {"@<__filesystem/.*>", kPrivate, "<filesystem>", kPublic},
+    {"@<__flat_map/.*>", kPrivate, "<flat_map>", kPublic},
+    {"@<__flat_set/.*>", kPrivate, "<flat_set>", kPublic},
     {"@<__format/.*>", kPrivate, "<format>", kPublic},
     {"@<__functional/.*>", kPrivate, "<functional>", kPublic},
     //{ "@<__fwd/.*>", kPrivate, "<fwd>", kPublic },
     {"@<__ios/.*>", kPrivate, "<ios>", kPublic},
     {"@<__iterator/.*>", kPrivate, "<iterator>", kPublic},
     {"@<__locale_dir/.*>", kPrivate, "<locale>", kPublic},
+    {"@<__math/.*>", kPrivate, "<math>", kPublic},
     {"@<__mdspan/.*>", kPrivate, "<mdspan>", kPublic},
     {"@<__memory/.*>", kPrivate, "<memory>", kPublic},
     {"@<__memory_resource/.*>", kPrivate, "<memory_resource>", kPublic},
     {"@<__mutex/.*>", kPrivate, "<mutex>", kPublic},
+    {"@<__new/.*>", kPrivate, "<new>", kPublic},
     {"@<__numeric/.*>", kPrivate, "<numeric>", kPublic},
+    {"@<__ostream/.*>", kPrivate, "<ostream>", kPublic},
     //{"@<__pstl/.*>", kPrivate, "<pstl>", kPublic},
     {"@<__random/.*>", kPrivate, "<random>", kPublic},
     {"@<__ranges/.*>", kPrivate, "<ranges>", kPublic},
@@ -1233,36 +1240,54 @@ const IncludeMapEntry libcxx_include_map[] = {
     {"@<__type_traits/.*>", kPrivate, "<type_traits>", kPublic},
     {"@<__utility/.*>", kPrivate, "<utility>", kPublic},
     {"@<__variant/.*>", kPrivate, "<variant>", kPublic},
+    {"@<__vector/.*>", kPrivate, "<vector>", kPublic},
 
 
     // For the following entries:
-    // cd llvm-project/libcxx/include ; find __fwd -type f -name "*.h" | sort | sed -E 's#__fwd/(.*).h#  { "<__fwd/\1.h>", kPrivate, "<\1>", kPublic },# ; s#<(fstream|ios|istream|ostream|sstream|streambuf)>#<iosfwd>#'
+    // cd llvm-project/libcxx/include ; find __fwd -type f -name "*.h" | LC_ALL=C sort | sed -E 's#__fwd/(.*).h#    {"<__fwd/\1.h>", kPrivate, "<\1>", kPublic},# ; s#<(fstream|ios|istream|ostream|sstream|streambuf)>#<iosfwd>#'
     //
-    // tweak hash, pair, subrange entries, and comment out bit_reference, get
+    // tweak `pair` entry (to `<utility>`)
+    // tweak `subrange` entry (to `<ranges>`),
+    // comment out `bit_reference`, `byte`, `get`
     {"<__fwd/array.h>", kPrivate, "<array>", kPublic},
     //{"<__fwd/bit_reference.h>", kPrivate, "<bit_reference>", kPublic},
+    //{"<__fwd/byte.h>", kPrivate, "<byte>", kPublic},
+    {"<__fwd/complex.h>", kPrivate, "<complex>", kPublic},
+    {"<__fwd/deque.h>", kPrivate, "<deque>", kPublic},
+    {"<__fwd/format.h>", kPrivate, "<format>", kPublic},
     {"<__fwd/fstream.h>", kPrivate, "<iosfwd>", kPublic},
+    {"<__fwd/functional.h>", kPrivate, "<functional>", kPublic},
     //{"<__fwd/get.h>", kPrivate, "<get>", kPublic},
-    {"<__fwd/hash.h>", kPrivate, "<functional>", kPublic},
     {"<__fwd/ios.h>", kPrivate, "<iosfwd>", kPublic},
     {"<__fwd/istream.h>", kPrivate, "<iosfwd>", kPublic},
     {"<__fwd/mdspan.h>", kPrivate, "<mdspan>", kPublic},
+    {"<__fwd/memory.h>", kPrivate, "<memory>", kPublic},
     {"<__fwd/memory_resource.h>", kPrivate, "<memory_resource>", kPublic},
     {"<__fwd/ostream.h>", kPrivate, "<iosfwd>", kPublic},
     {"<__fwd/pair.h>", kPrivate, "<utility>", kPublic},
+    {"<__fwd/queue.h>", kPrivate, "<queue>", kPublic},
     {"<__fwd/span.h>", kPrivate, "<span>", kPublic},
     {"<__fwd/sstream.h>", kPrivate, "<iosfwd>", kPublic},
+    {"<__fwd/stack.h>", kPrivate, "<stack>", kPublic},
     {"<__fwd/streambuf.h>", kPrivate, "<iosfwd>", kPublic},
     {"<__fwd/string.h>", kPrivate, "<string>", kPublic},
     {"<__fwd/string_view.h>", kPrivate, "<string_view>", kPublic},
     {"<__fwd/subrange.h>", kPrivate, "<ranges>", kPublic},
     {"<__fwd/tuple.h>", kPrivate, "<tuple>", kPublic},
+    {"<__fwd/variant.h>", kPrivate, "<variant>", kPublic},
+    {"<__fwd/vector.h>", kPrivate, "<vector>", kPublic},
 
     // For older MacOS libc++ (13.0.0), on macOS Ventura (13.2.1)
     {"<__functional_base>", kPrivate, "<functional>", kPublic},
 
     // For older libc++ (16.x)
     {"@<__tuple_dir/.*>", kPrivate, "<tuple>", kPublic},
+    {"<__mutex_base>", kPrivate, "<mutex>", kPublic},
+    // For older libc++ (18.x)
+    {"<__fwd/hash.h>", kPrivate, "<functional>", kPublic},
+    // For older libc++ (21.x)
+    {"<__fwd/map.h>", kPrivate, "<map>", kPublic},
+    {"<__fwd/set.h>", kPrivate, "<set>", kPublic},
 };
 
 // Returns true if str is a valid quoted filepath pattern (i.e. either
