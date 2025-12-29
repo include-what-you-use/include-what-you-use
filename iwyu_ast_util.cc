@@ -263,7 +263,7 @@ static void PrintExplicitSpecTplArgs(const T* spec,
     const TemplateArgumentList& args = spec->getTemplateArgs();
     const TemplateParameterList* params =
         spec->getSpecializedTemplate()->getTemplateParameters();
-    ListSeparator LS;  // ', ' by default.
+    ListSeparator sep;  // ', ' by default.
     for (unsigned i = 0, ie = args.size(); i < ie; ++i) {
       bool include_type = TemplateParameterList::shouldIncludeTypeForArgument(
           printing_policy, params, i);
@@ -272,11 +272,11 @@ static void PrintExplicitSpecTplArgs(const T* spec,
       // brackets, so cannot use the default 'print' for them.
       if (arg.getKind() == TemplateArgument::Pack) {
         for (TemplateArgument pack_arg : arg.getPackAsArray()) {
-          ostream << LS;
+          ostream << sep;
           pack_arg.print(printing_policy, ostream, include_type);
         }
       } else {
-        ostream << LS;
+        ostream << sep;
         args.get(i).print(printing_policy, ostream, include_type);
       }
     }
