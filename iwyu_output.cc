@@ -481,11 +481,16 @@ string MungedForwardDeclareLineForNontemplates(const TagDecl* decl) {
 // forward-declare the template, e.g.
 //     "namespace ns { template <typename T> class Foo; }".
 string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
+  // Temporarily remove any complete definition from the decl, to erase some
+  // noise from the printed declaration.
+  TagDecl* tag_decl = dyn_cast<TagDecl>(decl->getTemplatedDecl());
+  ScopedRemoveDefinition guard(tag_decl);
+
   // DeclPrinter prints the class name just as we like it (with default args and
   // everything) -- with logic that doesn't exist elsewhere in clang that I can
-  // see. Unfortunately, it also prints the full class body. So, as a hack, we
-  // postprocess the printed decl and then cut off everything after the template
-  // name. We also have to replace the name with the fully qualified name.
+  // see. So, as a hack, we postprocess the printed decl and then cut off
+  // everything after the template name. We also have to replace the name with
+  // the fully qualified name.
   // TODO(csilvers): prepend namespaces instead.
   std::string line;
   raw_string_ostream ostream(line);
@@ -497,13 +502,12 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   decl->print(ostream, policy);
   ostream.flush();
 
-  // Remove "final" specifier, it isn't allowed for forward declarations.
-  ReplaceAll(&line, " final ", " ");
-
-  // Get rid of the superclasses, if any (this will nix the body too).
-  DropFrom(&line, " :");
-  // Get rid of the template body, if any (true if no superclasses).
-  DropFrom(&line, " {");
+  // Remove any trailing "final" specifier, it isn't allowed for forward
+  // declarations. Clear any remaining whitespace as well, so the name stripping
+  // below is less sensitive to spurious whitespace from Clang.
+  StripWhiteSpaceRight(&line);
+  StripRight(&line, " final");
+  StripWhiteSpaceRight(&line);
 
   // The template name is now the last word on the line. Replace it by its
   // fully-qualified form.
