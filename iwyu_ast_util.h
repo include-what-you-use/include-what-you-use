@@ -20,6 +20,7 @@
 #include <utility>
 #include <vector>                       // for vector
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -47,19 +48,10 @@ class Decl;
 class DeclContext;
 class DeclRefExpr;
 class Expr;
-class FunctionDecl;
-class NamedDecl;
-class NamespaceDecl;
-class RecordDecl;
 class Sema;
 class Stmt;
-class TagDecl;
 class TemplateDecl;
 class TemplateName;
-class TranslationUnitDecl;
-class TypeDecl;
-class ValueDecl;
-class VarDecl;
 class VarTemplateSpecializationDecl;
 }  // namespace clang
 
@@ -428,6 +420,32 @@ class CurrentASTNodeUpdater {
  private:
   ASTNode* const old_current_node_value_;
   const ValueSaver<ASTNode*> node_saver_;
+};
+
+// A scope guard to set IsCompleteDefinition to false, and reset it to whatever
+// value it had before on unwind. This is useful when printing declarations, to
+// trick the DeclPrinter into printing less.
+// Does nothing for null inputs, so can be used with dyn_cast[_or_null] with any
+// Decl, but will only have any effect for actual TagDecls.
+class ScopedRemoveDefinition {
+ public:
+  explicit ScopedRemoveDefinition(clang::TagDecl* decl)
+      : decl_(decl), oldval_(false) {
+    if (decl_) {
+      oldval_ = decl_->isCompleteDefinition();
+      decl_->setCompleteDefinition(false);
+    }
+  }
+
+  ~ScopedRemoveDefinition() {
+    if (decl_) {
+      decl_->setCompleteDefinition(oldval_);
+    }
+  }
+
+ private:
+  clang::TagDecl* decl_;
+  bool oldval_;
 };
 
 // --- Utilities for ASTNode.
