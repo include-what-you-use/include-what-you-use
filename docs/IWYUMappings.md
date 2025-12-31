@@ -132,6 +132,22 @@ syntax in the first entry. Track the [following
 bug](https://github.com/include-what-you-use/include-what-you-use/issues/233)
 for updates.
 
+#### Overloaded functions ####
+
+Function parameter types may be specified in a mapping in order to distinguish
+between different overloads, like this:
+
+    { "symbol": ["Fn(int, char)", "private", "\"overload1.h\"", "public"] },
+    { "symbol": ["Fn(int *)", "private", "\"overload2.h\"", "public"] },
+    { "symbol": ["Fn", "private", "\"other_overloads.h\"", "public"] },
+
+If there isn't any corresponding overload in the mapping, a mapping entry
+specifying no parameters is used as a fallback (`other_overloads.h`
+in the aforementioned example), if any. Note that IWYU expects a specific format
+of parameter lists. In complex cases, run IWYU with logging verbosity level 6
+and look for a string `Marked full-info use of decl function-name(`
+in the output to find out the exact spelling.
+
 #### Template specializations ####
 
 A bare template name in a symbol mapping corresponds to the primary template,

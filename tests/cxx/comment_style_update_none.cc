@@ -14,7 +14,7 @@
 #include "tests/cxx/comment_style-d1.h" // for foo, bar
 
 int main() {
-  // IWYU: Bar::foo is...*"tests/cxx/comment_style-i2.h"
+  // IWYU: Bar::foo(int) is...*"tests/cxx/comment_style-i2.h"
   Bar::foo(123);
   Foo::bar(456);
   return 0;

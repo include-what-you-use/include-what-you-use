@@ -41,7 +41,7 @@ int main() {
   // no diagnostic expected.
   int x = twice(4);
 
-  // IWYU: quad is...*associated_skipped-i1.h
+  // IWYU: quad(int) is...*associated_skipped-i1.h
   return quad(2);
 }
 

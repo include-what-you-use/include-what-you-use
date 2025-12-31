@@ -58,7 +58,7 @@ int both_args_used_def_non_provided = [] {
 }();
 
 template <typename>
-// IWYU: GetInt is...*-i1.h
+// IWYU: GetInt() is...*-i1.h
 int refers_to_fn_in_init = GetInt();
 
 template <typename T>
@@ -85,7 +85,7 @@ int full_use_in_partial_spec;
 template <typename T>
 int full_use_in_partial_spec<T*> = [] {
   T t;
-  // IWYU: GetInt is...*-i1.h
+  // IWYU: GetInt() is...*-i1.h
   return GetInt();
 }();
 
@@ -175,7 +175,7 @@ void Fn() {
   TplFnUsingVarTpl<IndirectClass>();
   TplFnUsingGetIntIndirectly<IndirectClass>();
   TplFnNoImplInstNeeded<IndirectClass>();
-  // IWYU: UseVarTplInHeader is...*-i1.h
+  // IWYU: UseVarTplInHeader() is...*-i1.h
   UseVarTplInHeader<DeclaredInCC>();
 }
 

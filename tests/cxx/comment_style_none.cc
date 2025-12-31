@@ -15,7 +15,7 @@
 
 int main() {
   Foo::bar(1);
-  // IWYU: Bar::foo is...*"tests/cxx/comment_style-i2.h"
+  // IWYU: Bar::foo(int) is...*"tests/cxx/comment_style-i2.h"
   Bar::foo(2);
   return 0;
 }

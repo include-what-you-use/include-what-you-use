@@ -54,45 +54,45 @@ void NonMemberFunctions() {
   // Assignment of function pointer to function and template instantiation.
   // IWYU: Class needs a declaration
   // IWYU: Enum is...*funcptrs-i1.h
-  // IWYU: Function is...*funcptrs-i1.h
+  // IWYU: Function(Class *) is...*funcptrs-i1.h
   Enum (*fptr)(Class*) = &Function;
 
   // IWYU: Class needs a declaration
   // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
-  // IWYU: FunctionTemplate is...*funcptrs-i1.h
+  // IWYU: FunctionTemplate(Class *) is...*funcptrs-i1.h
   int (*template_fptr)(Class*) = &FunctionTemplate<Retval>;
 
   // Call with function pointer to function and template instantiation.
-  // IWYU: Function is...*funcptrs-i1.h
+  // IWYU: Function(Class *) is...*funcptrs-i1.h
   FunctionThatTakesFptr(Function);
 
   // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
-  // IWYU: FunctionTemplate is...*funcptrs-i1.h
+  // IWYU: FunctionTemplate(Class *) is...*funcptrs-i1.h
   FunctionThatTakesFptr(FunctionTemplate<Retval>);
 
   // Naked function pointer expressions
-  // IWYU: Function is...*funcptrs-i1.h
+  // IWYU: Function(Class *) is...*funcptrs-i1.h
   &Function;
 
   // IWYU: Retval needs a declaration
   // IWYU: Retval is...*funcptrs-i1.h
-  // IWYU: FunctionTemplate is...*funcptrs-i1.h
+  // IWYU: FunctionTemplate(Class *) is...*funcptrs-i1.h
   &FunctionTemplate<Retval>;
 
   // Full return type info is needed neither for non-templated function...
-  // IWYU: FunctionReturningRecordType is...*funcptrs-i1.h
+  // IWYU: FunctionReturningRecordType() is...*funcptrs-i1.h
   &FunctionReturningRecordType;
   // ... nor for function template implicit instantiation without definition...
-  // IWYU: FunctionTemplate2 is...*funcptrs-i1.h
+  // IWYU: FunctionTemplate2() is...*funcptrs-i1.h
   &FunctionTemplate2<char>;
   // ... nor for function template explicit specialization or instantiation
   // references.
-  // IWYU: FunctionTemplate2 is...*funcptrs-i1.h
+  // IWYU: FunctionTemplate2() is...*funcptrs-i1.h
   &FunctionTemplate2<int>;
 
-  // IWYU: FunctionTemplateWithoutDef is...*funcptrs-i1.h
+  // IWYU: FunctionTemplateWithoutDef() is...*funcptrs-i1.h
   // IWYU: Class needs a declaration
   // IWYU: Class is...*funcptrs-i1.h
   &FunctionTemplateWithoutDef<Class>;

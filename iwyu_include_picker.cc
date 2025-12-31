@@ -21,7 +21,10 @@
 #include <utility>                      // for pair, make_pair
 #include <vector>                       // for vector, vector<>::iterator
 
+#include "clang/AST/Decl.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "iwyu_ast_util.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
 #include "iwyu_port.h"
@@ -45,6 +48,7 @@
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include <iterator>
 
+using clang::NamedDecl;
 using clang::OptionalFileEntryRef;
 using llvm::MemoryBuffer;
 using llvm::SourceMgr;
@@ -2033,6 +2037,27 @@ vector<string> IncludePicker::GetMappedPublicHeaders(
   // If the symbol has a special mapping, use it, otherwise map its file.
   vector<string> symbol_headers =
       GetCandidateHeadersForSymbolUsedFrom(symbol_name, use_path);
+  if (!symbol_headers.empty())
+    return symbol_headers;
+  return GetCandidateHeadersForFilepathIncludedFrom(decl_filepath, use_path);
+}
+
+vector<string> IncludePicker::GetMappedPublicHeaders(
+    const NamedDecl* decl,
+    const string& use_path,
+    const string& decl_filepath) const {
+  // If decl has a special mapping, use it, otherwise map its file.
+  vector<string> symbol_headers;
+  if (decl->getLangOpts().CPlusPlus) {
+    symbol_headers = GetCandidateHeadersForSymbolUsedFrom(
+        GetWrittenQualifiedNameAsString(decl, /*with_fn_args=*/true), use_path);
+    if (!symbol_headers.empty())
+      return symbol_headers;
+  }
+  // If there is no entry with explicitly written function argument types, try
+  // to fall back to the bare function name.
+  symbol_headers = GetCandidateHeadersForSymbolUsedFrom(
+      GetWrittenQualifiedNameAsString(decl, /*with_fn_args=*/false), use_path);
   if (!symbol_headers.empty())
     return symbol_headers;
   return GetCandidateHeadersForFilepathIncludedFrom(decl_filepath, use_path);

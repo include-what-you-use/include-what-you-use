@@ -17,7 +17,7 @@
 #include "tests/cxx/using_aliased_symbol-alias.h"
 
 void use_symbol() {
-  // IWYU: ns::symbol is...*using_aliased_symbol-declare.h
+  // IWYU: ns::symbol() is...*using_aliased_symbol-declare.h
   ns2::symbol();
   // Use of non-providing typedef requires full underlying type info to be
   // provided by the user. Hence, full IndirectClass info is required here.

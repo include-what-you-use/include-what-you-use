@@ -19,7 +19,7 @@
 namespace ns_alias2 = ns3::ns4;
 
 void Func() {
-  // IWYU: ns1::ns2::Function1 is...*namespace_alias-i1.h
+  // IWYU: ns1::ns2::Function1() is...*namespace_alias-i1.h
   // IWYU: ns_alias1 is...*namespace_alias-i2.h
   ns_alias1::Function1();
 }
