@@ -25,7 +25,7 @@ using namespace i1_ns;
 using namespace i2_ns;
 
 int main(int, const char**) {
-  // IWYU: i2_ns::GetValue is...*namespace_use-i2.h
+  // IWYU: i2_ns::GetValue() is...*namespace_use-i2.h
   return GetValue();
 }
 

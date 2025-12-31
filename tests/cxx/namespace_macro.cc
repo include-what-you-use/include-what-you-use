@@ -12,7 +12,7 @@
 // IWYU_ARGS: -I . -DMYNS=myns
 
 int main() {
-  // IWYU: myns::foo is...*namespace_macro-indirect.h
+  // IWYU: myns::foo() is...*namespace_macro-indirect.h
   MYNS::foo();
 
   return 0;

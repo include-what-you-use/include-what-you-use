@@ -23,7 +23,7 @@ void PlacementNewBuiltinType() {
   // Make sure we only report a use of <new> because of placement new, not
   // ordinary new-expressions.
   int* newed_int = new int;
-  // IWYU: operator new is...*<new>
+  // IWYU: operator new(unsigned long, void *) is...*<new>
   new (newed_int) int(4);
 
   delete newed_int;
@@ -36,7 +36,7 @@ void PlacementNewUserType() {
   IndirectClass* icptr = new IndirectClass;
 
   // IWYU: IndirectClass is...*indirect.h
-  // IWYU: operator new is...*<new>
+  // IWYU: operator new(unsigned long, void *) is...*<new>
   new (icptr) IndirectClass;
 
   // IWYU: IndirectClass is...*indirect.h
@@ -45,7 +45,7 @@ void PlacementNewUserType() {
 
 // Placement new in macro, use is attributed to the macro.
 static char global_buffer[256];
-// IWYU: operator new is...*<new>
+// IWYU: operator new(unsigned long, void *) is...*<new>
 #define CONSTRUCT_GLOBAL(T) new (global_buffer) T;
 
 void PlacementNewInMacro() {
@@ -85,7 +85,7 @@ void PlacementNewOfTemplate() {
       // IWYU: IndirectClass needs a declaration
       // IWYU: IndirectClass is...*indirect.h
       // IWYU: ClassTemplate is...*placement_new-i1.h
-      // IWYU: operator new is...*<new>
+      // IWYU: operator new(unsigned long, void *) is...*<new>
       new (template_storage) ClassTemplate<IndirectClass, IndirectClass>();
 
   // Make sure we handle it right when we explicitly call the dtor, as well.

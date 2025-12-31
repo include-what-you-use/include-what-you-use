@@ -16,7 +16,7 @@ int main() {
   try {
   // IWYU: CatchByValue is...*catch-byvalue.h
   } catch (const CatchByValue cbv) {
-    // IWYU: LogException is...*catch-logex.h
+    // IWYU: LogException(const :0 &) is...*catch-logex.h
     LogException(cbv);
   }
 
@@ -24,7 +24,7 @@ int main() {
   // IWYU: CatchByRef needs a declaration
   // IWYU: CatchByRef is...*catch-byref.h
   } catch (const CatchByRef& cbr) {
-    // IWYU: LogException is...*catch-logex.h
+    // IWYU: LogException(const :0 &) is...*catch-logex.h
     LogException(cbr);
   }
 
@@ -32,7 +32,7 @@ int main() {
   // IWYU: CatchByPtr needs a declaration
   // IWYU: CatchByPtr is...*catch-byptr.h
   } catch (const CatchByPtr* cpr) {
-    // IWYU: LogException is...*catch-logex.h
+    // IWYU: LogException(const :0 &) is...*catch-logex.h
     LogException(*cpr);
   }
 
@@ -48,7 +48,7 @@ int main() {
     // IWYU: Thrown is...*catch-thrown.h
     throw Thrown();
   } catch (...) {
-    // IWYU: puts is...*stdio.h
+    // IWYU: puts(const char *) is...*stdio.h
     puts("Unknown exception");
   }
 

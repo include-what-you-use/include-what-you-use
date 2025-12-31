@@ -49,9 +49,9 @@ GuardedInclude5 g5;
 #undef TYPE
 
 int main() {
-  // IWYU: f is...*macro_defined_by_includer-i3.h
+  // IWYU: f(int) is...*macro_defined_by_includer-i3.h
   f(3);
-  // IWYU: f is...*macro_defined_by_includer-i3.h
+  // IWYU: f(char) is...*macro_defined_by_includer-i3.h
   f('a');
 }
 
