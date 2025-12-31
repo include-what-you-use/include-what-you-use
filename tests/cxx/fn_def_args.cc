@@ -14,7 +14,7 @@
 
 #include "tests/cxx/fn_def_args-d1.h"
 
-// IWYU: FnWithSmearedDefArgs3 is...*-i1.h
+// IWYU: FnWithSmearedDefArgs3(int, int, int) is...*-i1.h
 void FnWithSmearedDefArgs3(int = 0, int, int);
 void FnWithDefArg(int);
 
@@ -27,19 +27,19 @@ void Fn() {
   TplFn<Struct>();
   Struct::FnWithDefArg();
 
-  // IWYU: FnWithSmearedDefArgs is...*-i2.h
+  // IWYU: FnWithSmearedDefArgs(int, int) is...*-i2.h
   FnWithSmearedDefArgs(1);
   FnWithSmearedDefArgs();
 
-  // IWYU: FnWithSmearedDefArgs2 is...*-i2.h
+  // IWYU: FnWithSmearedDefArgs2(int, int) is...*-i2.h
   FnWithSmearedDefArgs2(1);
-  // IWYU: FnWithSmearedDefArgs2 is...*-i1.h
+  // IWYU: FnWithSmearedDefArgs2(int, int) is...*-i1.h
   FnWithSmearedDefArgs2();
 
-  // IWYU: FnWithSmearedDefArgs2 is...*-i2.h
+  // IWYU: FnWithSmearedDefArgs2(int, int) is...*-i2.h
   // IWYU: ns::FnWithSmearedDefArgs2 is...*-i3.h...*for using decl
   ns::FnWithSmearedDefArgs2(1);
-  // IWYU: FnWithSmearedDefArgs2 is...*-i1.h
+  // IWYU: FnWithSmearedDefArgs2(int, int) is...*-i1.h
   // IWYU: ns::FnWithSmearedDefArgs2 is...*-i3.h...*for using decl
   ns::FnWithSmearedDefArgs2();
 
@@ -49,12 +49,12 @@ void Fn() {
   FnWithSmearedDefArgs3(1, 1);
   FnWithSmearedDefArgs3(1, 1, 1);
 
-  // IWYU: FnWithDefArg is...*-i2.h
+  // IWYU: FnWithDefArg(int) is...*-i2.h
   FnWithDefArg();
   // An appropriate redeclaration is present in this file.
   FnWithDefArg(1);
 
-  // IWYU: operator new is...*-i2.h
+  // IWYU: operator new(unsigned long, int, int, int) is...*-i2.h
   new (1, 1) int;
   new (1) int;
 }

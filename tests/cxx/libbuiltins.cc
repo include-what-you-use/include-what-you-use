@@ -16,7 +16,7 @@
 #include "tests/cxx/libbuiltins-direct.h"
 
 float kapow(float x) {
-  // IWYU: std::pow is...*cmath
+  // IWYU: std::pow(float, float) is...*cmath
   return std::pow(x, 2.0F);
 }
 

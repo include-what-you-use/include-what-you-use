@@ -190,10 +190,10 @@ AliasTpl1<int> i5;
 AliasTpl1<int, int> i6;
 
 void Fn() {
-  // IWYU: FnWithNonProvidedDefaultTplArg is...*default_tpl_arg-i1.h
+  // IWYU: FnWithNonProvidedDefaultTplArg() is...*default_tpl_arg-i1.h
   // IWYU: IndirectClass is...*indirect.h
   (void)&FnWithNonProvidedDefaultTplArg<>;
-  // IWYU: FnWithNonProvidedDefaultTplArg is...*default_tpl_arg-i1.h
+  // IWYU: FnWithNonProvidedDefaultTplArg() is...*default_tpl_arg-i1.h
   // IWYU: IndirectClass is...*indirect.h
   FnWithNonProvidedDefaultTplArg();
 
@@ -206,16 +206,16 @@ void Fn() {
   // IWYU: NonProvidingAlias is...*default_tpl_arg-i1.h
   NonProvidingAlias* n = 0;
 
-  // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg is...*default_tpl_arg-i1.h
+  // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg(:0 *) is...*default_tpl_arg-i1.h
   // IWYU: IndirectClass is...*indirect.h
   FnWithNonProvidedDefaultTplArgAndDefaultCallArg();
   FnWithProvidedDefaultTplArgAndDefaultCallArg1();
 
-  // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg is...*default_tpl_arg-i1.h
+  // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg(:0 *) is...*default_tpl_arg-i1.h
   FnWithNonProvidedDefaultTplArgAndDefaultCallArg(p);
   FnWithProvidedDefaultTplArgAndDefaultCallArg1(p);
 
-  // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg is...*default_tpl_arg-i1.h
+  // IWYU: FnWithNonProvidedDefaultTplArgAndDefaultCallArg(:0 *) is...*default_tpl_arg-i1.h
   // IWYU: IndirectClass is...*indirect.h
   FnWithNonProvidedDefaultTplArgAndDefaultCallArg(n);
   // IWYU: IndirectClass is...*indirect.h

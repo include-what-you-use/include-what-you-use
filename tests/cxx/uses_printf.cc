@@ -12,7 +12,7 @@
 #include "tests/cxx/uses_printf-d1.h"
 
 void hello() {
-  // IWYU: printf is...*<stdio.h>
+  // IWYU: printf(const char *, ...) is...*<stdio.h>
   printf("Hello, world!\n");
 }
 

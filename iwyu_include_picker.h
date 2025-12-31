@@ -56,6 +56,10 @@
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include <iterator>
 
+namespace clang {
+class NamedDecl;
+}
+
 namespace include_what_you_use {
 
 using std::map;
@@ -193,6 +197,9 @@ class IncludePicker {
   // Returns the headers which the symbol is mapped to. If none, returns
   // the headers which decl_filepath is mapped to.
   vector<string> GetMappedPublicHeaders(const string& symbol_name,
+                                        const string& use_path,
+                                        const string& decl_filepath) const;
+  vector<string> GetMappedPublicHeaders(const clang::NamedDecl* decl,
                                         const string& use_path,
                                         const string& decl_filepath) const;
 

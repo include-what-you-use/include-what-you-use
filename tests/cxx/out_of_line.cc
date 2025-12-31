@@ -32,7 +32,7 @@ void Class<T, U>::MethodStaticOut() {
 
 template <>
 void Class<int, int>::MethodOut() {
-  // IWYU: Dependent is...*out_of_line-dep-int.h
+  // IWYU: Dependent(int) is...*out_of_line-dep-int.h
   Dependent(Type());
 }
 
@@ -40,12 +40,12 @@ int main()
 {
     //Inline template method
     Class<int> c;
-    // IWYU: Dependent is...*out_of_line-dep-int.h
+    // IWYU: Dependent(int) is...*out_of_line-dep-int.h
     c.MethodIn();
 
     //Out-of-line template method
     Class<int> c2;
-    // IWYU: Dependent is...*out_of_line-dep-int.h
+    // IWYU: Dependent(int) is...*out_of_line-dep-int.h
     c2.MethodOut();
 
     //A explicit specialization of MethodOut(). It does not
@@ -55,15 +55,15 @@ int main()
     c3.MethodOut();
 
     //Inline static method
-    // IWYU: Dependent is...*out_of_line-dep-int.h
+    // IWYU: Dependent(int) is...*out_of_line-dep-int.h
     Class<int>::MethodStaticIn();
 
     //Out-of-line static method
-    // IWYU: Dependent is...*out_of_line-dep-int.h
+    // IWYU: Dependent(int) is...*out_of_line-dep-int.h
     Class<int>::MethodStaticOut();
 
-    // IWYU: GetClassWithOutOfLineDtor is...*out_of_line-dtor-class.h
-    // IWYU: ClassWithOutOfLineDtor::~ClassWithOutOfLineDtor is...*out_of_line-dtor.h
+    // IWYU: GetClassWithOutOfLineDtor() is...*out_of_line-dtor-class.h
+    // IWYU: ClassWithOutOfLineDtor::~ClassWithOutOfLineDtor() is...*out_of_line-dtor.h
     GetClassWithOutOfLineDtor();
 }
 

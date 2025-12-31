@@ -219,7 +219,7 @@ string GetQualifiedNameAsString(const NamedDecl* named_decl) {
   if (const FakeNamedDecl* fake = FakeNamedDeclIfItIsOne(named_decl)) {
     return fake->qual_name();
   }
-  return GetWrittenQualifiedNameAsString(named_decl);
+  return GetWrittenQualifiedNameAsString(named_decl, /*with_fn_args=*/true);
 }
 
 // Name we put in the comments next to an #include.
@@ -356,8 +356,13 @@ void OneUse::SetPublicHeaders() {
   // We should never need to deal with public headers if we already know
   // who we map to.
   CHECK_(suggested_header_.empty() && "Should not need a public header here");
-  public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
-      symbol_name_, GetFilePath(use_loc_), decl_filepath());
+  if (decl_) {
+    public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
+        decl_, GetFilePath(use_loc_), decl_filepath());
+  } else {
+    public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
+        symbol_name_, GetFilePath(use_loc_), decl_filepath());
+  }
   if (public_headers_.empty())
     public_headers_.push_back(ConvertToQuotedInclude(decl_filepath()));
 }
@@ -1278,8 +1283,13 @@ void ProcessForwardDeclare(OneUse* use,
 }
 
 // Returns true if the given symbol has a mapping defined to a file.
-static bool HasMapping(const string& symbol) {
-  return !GlobalIncludePicker().GetCandidateHeadersForSymbol(symbol).empty();
+static bool HasMapping(const NamedDecl* decl) {
+  const IncludePicker& picker = GlobalIncludePicker();
+  string with_fn_args = GetWrittenQualifiedNameAsString(decl, true);
+  if (!picker.GetCandidateHeadersForSymbol(with_fn_args).empty())
+    return true;
+  string without_fn_args = GetWrittenQualifiedNameAsString(decl, false);
+  return !picker.GetCandidateHeadersForSymbol(without_fn_args).empty();
 }
 
 void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
@@ -1305,7 +1315,7 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
   bool is_builtin_function = IsBuiltinFunction(use->decl());
 
   bool is_builtin_function_with_mappings =
-      is_builtin_function && HasMapping(use->symbol_name());
+      is_builtin_function && HasMapping(use->decl());
 
   // (B2) If the definition is after the use, re-point to a prior decl.
   // If iwyu followed the language precisely, this wouldn't be
@@ -2378,8 +2388,7 @@ bool IsDirectlyIncluded(const NamedDecl* decl, const IwyuFileInfo& includer) {
   // the specified public headers for it, so check their presence.
   const vector<string> mapped_headers =
       GlobalIncludePicker().GetMappedPublicHeaders(
-          GetWrittenQualifiedNameAsString(decl),
-          GetFilePath(includer.file_entry()), GetFilePath(decl));
+          decl, GetFilePath(includer.file_entry()), GetFilePath(decl));
   if (!mapped_headers.empty()) {
     auto pred = [&direct_includes =
                      includer.direct_includes()](const string& header) {

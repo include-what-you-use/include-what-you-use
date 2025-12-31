@@ -24,9 +24,9 @@ struct B {};
 
 int main() {
   TplFn1<int>();
-  // IWYU: OverloadedFn is...*overload_expr-i2.h
+  // IWYU: OverloadedFn(A) is...*overload_expr-i2.h
   TplFn3<A>();
-  // IWYU: OverloadedFn2 is...*overload_expr-i2.h
+  // IWYU: ns::OverloadedFn2(ns::B) is...*overload_expr-i2.h
   TplFn4<ns::B>();
 }
 

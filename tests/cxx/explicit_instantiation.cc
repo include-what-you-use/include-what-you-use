@@ -111,7 +111,7 @@ extern template class TplWithDefArg<int>;
 
 template <typename>
 class TplUsingNondependentDecl {
-  // IWYU: getInt is...*explicit_instantiation-template.h
+  // IWYU: getInt() is...*explicit_instantiation-template.h
   static constexpr int i = getInt();
 };
 
