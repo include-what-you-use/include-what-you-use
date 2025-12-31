@@ -60,7 +60,7 @@ template <typename T> H_ScopedPtr<T> H_MakeScopedPtr(T* p) {
 
 // This is for the implicit constructor and implicit destructor:
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 class H_Pimpl {
  private:
   H_ScopedPtr<Cc_Class> cc_impl_;
@@ -70,7 +70,7 @@ class H_Pimpl {
 
 // These are for the implicit destructor:
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 // IWYU: I2_Struct is...*badinc-i2.h
 class H_Pimpl_ExplicitCtor {
  public:
@@ -158,7 +158,7 @@ class H_Class {
   void UsedInBadincH() { DefinedInBadincCc(); }
   H_NestedStruct h_nested_struct;
   ~H_Class() {
-    // IWYU: printf is...*<stdio.h>
+    // IWYU: printf(const char *, ...) is...*<stdio.h>
     printf("%d/%d/%d/%d/%d\n", b(), c(), d(), e(), ee_);
   }
   // IWYU: I2_Enum is...*badinc-i2.h
@@ -198,7 +198,7 @@ class H_TemplateClass {
   int f(I2_Enum i2_enum);
   void uses_i2class() {
     // IWYU: I2_Class is...*badinc-i2.h
-    // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+    // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
     I2_Class i2_class;
     (void)i2_class;
   }
@@ -291,9 +291,9 @@ typedef std::set<I2_Enum> H_I2Enum_Set;
 typedef std::vector<I2_Class> H_I2Class_Vector_Unused;
 // IWYU: I2_TemplateClass needs a declaration
 // IWYU: I2_TemplateClass is...*badinc-i2.h
-// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}>({{.*}}) is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::InlFileTemplateClassFn() is...*badinc-i2-inl.h
 // IWYU: I2_Enum is...*badinc-i2.h
 typedef I2_TemplateClass<I2_Enum> H_TemplateTypedef;
 
@@ -323,11 +323,11 @@ I2_Enum H_Function_I2(I2_Class* c);
 template<typename A> int H_TemplateFunction(A a) {
   typedef A value_type;   // Should not cause an iwyu violation
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::I2_Class is...*badinc-i2-inl.h
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
-  // IWYU: I2_Class::InlFileFn is...*badinc-i2-inl.h
-  // IWYU: I2_Class::InlFileTemplateFn is...*badinc-i2-inl.h
-  // IWYU: I2_Class::InlFileStaticFn is...*badinc-i2-inl.h
+  // IWYU: I2_Class::I2_Class({{.*}}) is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
+  // IWYU: I2_Class::InlFileFn() is...*badinc-i2-inl.h
+  // IWYU: I2_Class::InlFileTemplateFn() is...*badinc-i2-inl.h
+  // IWYU: I2_Class::InlFileStaticFn() is...*badinc-i2-inl.h
   typedef I2_Class i2_type;
   // IWYU: I2_Class needs a declaration
   I2_Class* i2_class;
@@ -361,14 +361,14 @@ typedef I2_Struct H_NamespaceTypedef;
 // The vars.  Just a few.
 H_Enum h_h_enum;
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 I2_Class h_i2_class;
 H_TemplateClass<D3_Enum> h_d3_template_class(D31);
 // IWYU: I2_Enum is...*badinc-i2.h
 H_TemplateClass<I2_Enum> h_i2_template_class(I22);
 // TODO(csilvers): this should be attributed to the .h, since it comes
 // via a default template argument.
-// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
 H_TemplateTemplateClass<> h_templatetemlpate_class;
 H_TemplateTemplateClass<H_TemplateClass> h_i2_templatetemlpate_class;
 

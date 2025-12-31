@@ -283,6 +283,20 @@ static void PrintExplicitSpecTplArgs(const T* spec,
   }
 }
 
+static void PrintFnArgs(const FunctionDecl* decl,
+                        const PrintingPolicy& printing_policy,
+                        raw_ostream& ostream) {
+  ostream << '(';
+  ListSeparator sep;  // ', ' by default.
+  for (const ParmVarDecl* param : decl->parameters()) {
+    ostream << sep;
+    param->getType().getUnqualifiedType().print(ostream, printing_policy);
+  }
+  if (decl->isVariadic())
+    ostream << sep << "...";
+  ostream << ')';
+}
+
 }  // anonymous namespace
 
 //------------------------------------------------------------
@@ -563,7 +577,8 @@ void PrintStmt(const Stmt* stmt) {
   dumper.Visit(stmt);
 }
 
-string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl) {
+string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl,
+                                       bool with_fn_args) {
   std::string retval;
   llvm::raw_string_ostream ostream(retval);
   PrintingPolicy printing_policy =
@@ -578,6 +593,11 @@ string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl) {
   } else if (const auto* var_spec =
                  dyn_cast<VarTemplateSpecializationDecl>(named_decl)) {
     PrintExplicitSpecTplArgs(var_spec, printing_policy, ostream);
+  }
+
+  if (with_fn_args) {
+    if (const auto* fn_decl = dyn_cast<FunctionDecl>(named_decl))
+      PrintFnArgs(fn_decl, printing_policy, ostream);
   }
 
   // Replace clang placeholders in partial specialization arguments with :N,
