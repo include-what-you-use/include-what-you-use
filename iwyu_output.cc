@@ -500,7 +500,6 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   PrintingPolicy policy = decl->getASTContext().getPrintingPolicy();
   policy.PolishForDeclaration = true;
   decl->print(ostream, policy);
-  ostream.flush();
 
   // Remove any trailing "final" specifier, it isn't allowed for forward
   // declarations. Clear any remaining whitespace as well, so the name stripping
