@@ -28,13 +28,13 @@ ns1::StructInNamespace* s2;
 // Derived class types.
 DerivedClass* dc1;
 
-// Class types with explicit and implicit attributes (attrs should not be
-// included in fwd decl).
+// Class types with different kinds of attributes (no attrs should be included
+// in fwd decl).
 ClassWithStdAttr* ac1;
 ClassWithGNUAttr* ac2;
-// alignas can be included, but doesn't have to.
 ClassWithAlignAs* ac3;
-ClassWithFinal* ac4;
+ClassWithAlignAsExpr* ac4;
+ClassWithFinal* ac5;
 
 // Simple templates.
 Template<int>* t1;
@@ -43,15 +43,13 @@ ns1::TemplateInNamespace<char>* t2;
 // Derived templates
 DerivedTemplate<int>* dt1;
 
-// Templates with explicit and implicit attributes (attrs should not be included
-// in fwd decl).
+// Templates with different kinds of attributes (no attrs should be included in
+// fwd decl).
 TemplateWithStdAttr<int>* at1;
 TemplateWithGNUAttr<int>* at2;
-// alignas can be included, but doesn't have to.
-// TODO: make this consistent between tag types and templates; we currently
-// print alignas for templates. Should probably not.
 TemplateWithAlignAs<int>* at3;
-TemplateWithFinal<int>* at4;
+TemplateWithAlignAsExpr<int>* at4;
+TemplateWithFinal<int>* at5;
 
 // Templates with requires constraints.
 TemplateWithSimpleAdHocRequires<void**>* rt1;
@@ -67,6 +65,7 @@ TemplateWithRequiresClause<int>* rt3;
 tests/cxx/fwd_decl_print.cc should add these lines:
 class Class;
 class ClassWithAlignAs;
+class ClassWithAlignAsExpr;
 class ClassWithFinal;
 class ClassWithGNUAttr;
 class ClassWithStdAttr;
@@ -79,10 +78,11 @@ namespace ns1 { template <class T> class TemplateInNamespace; }
 struct Struct;
 template <class T> class DerivedTemplate;
 template <class T> class Template;
+template <class T> class TemplateWithAlignAs;
+template <class T> class TemplateWithAlignAsExpr;
 template <class T> class TemplateWithFinal;
 template <class T> class TemplateWithGNUAttr;
 template <class T> class TemplateWithStdAttr;
-template <class T> class alignas(8)  TemplateWithAlignAs;
 template <typename T> requires Addable<T> class TemplateWithRequiresClause;
 template <typename T> requires requires (T a) { a; } class TemplateWithSimpleAdHocRequires;
 template <typename T> requires requires (T a) { sizeof(decltype(*a)) > 6 ? true : false; a - a; &a; } class TemplateWithComplexAdHocRequires;
@@ -94,6 +94,7 @@ tests/cxx/fwd_decl_print.cc should remove these lines:
 The full include-list for tests/cxx/fwd_decl_print.cc:
 class Class;
 class ClassWithAlignAs;
+class ClassWithAlignAsExpr;
 class ClassWithFinal;
 class ClassWithGNUAttr;
 class ClassWithStdAttr;
@@ -106,10 +107,11 @@ namespace ns1 { template <class T> class TemplateInNamespace; }
 struct Struct;
 template <class T> class DerivedTemplate;
 template <class T> class Template;
+template <class T> class TemplateWithAlignAs;
+template <class T> class TemplateWithAlignAsExpr;
 template <class T> class TemplateWithFinal;
 template <class T> class TemplateWithGNUAttr;
 template <class T> class TemplateWithStdAttr;
-template <class T> class alignas(8)  TemplateWithAlignAs;
 template <typename T> requires Addable<T> class TemplateWithRequiresClause;
 template <typename T> requires requires (T a) { a; } class TemplateWithSimpleAdHocRequires;
 template <typename T> requires requires (T a) { sizeof(decltype(*a)) > 6 ? true : false; a - a; &a; } class TemplateWithComplexAdHocRequires;

@@ -26,6 +26,7 @@ class DerivedClass : public Class {};
 class [[nodiscard]] ClassWithStdAttr {};
 class __attribute__((warn_unused_result)) ClassWithGNUAttr {};
 
-// Class types with implicit attributes.
+// Class types with keyword attributes.
 class alignas(8) ClassWithAlignAs {};
+class alignas(alignof(bool)) ClassWithAlignAsExpr {};
 class ClassWithFinal final {};

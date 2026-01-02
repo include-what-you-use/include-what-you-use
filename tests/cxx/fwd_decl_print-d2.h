@@ -30,9 +30,12 @@ class [[nodiscard]] TemplateWithStdAttr {};
 template <class T>
 class __attribute__((warn_unused_result)) TemplateWithGNUAttr {};
 
-// Templates with implicit attributes.
+// Templates with keyword attributes.
 template <class T>
 class alignas(8) TemplateWithAlignAs {};
+
+template <class T>
+class alignas(alignof(T)) TemplateWithAlignAsExpr {};
 
 template <class T>
 class TemplateWithFinal final {};

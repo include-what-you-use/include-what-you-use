@@ -14,6 +14,7 @@
 #include <iterator>                     // for inserter
 #include <list>
 #include <map>                          // for _Rb_tree_const_iterator, etc
+#include <regex>
 #include <utility>                      // for pair, make_pair, operator>
 #include <vector>                       // for vector, vector<>::iterator, etc
 
@@ -72,6 +73,8 @@ using llvm::raw_string_ostream;
 using std::map;
 using std::multimap;
 using std::pair;
+using std::regex;
+using std::regex_replace;
 using std::sort;
 using std::to_string;
 using std::vector;
@@ -483,15 +486,12 @@ string MungedForwardDeclareLineForNontemplates(const TagDecl* decl) {
 string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   // Temporarily remove any complete definition from the decl, to erase some
   // noise from the printed declaration.
-  TagDecl* tag_decl = dyn_cast<TagDecl>(decl->getTemplatedDecl());
-  ScopedRemoveDefinition guard(tag_decl);
+  ScopedRemoveDefinition guard(dyn_cast<TagDecl>(decl->getTemplatedDecl()));
 
-  // DeclPrinter prints the class name just as we like it (with default args and
-  // everything) -- with logic that doesn't exist elsewhere in clang that I can
-  // see. So, as a hack, we postprocess the printed decl and then cut off
-  // everything after the template name. We also have to replace the name with
-  // the fully qualified name.
-  // TODO(csilvers): prepend namespaces instead.
+  // Clang's DeclPrinter prints the class name just as we like it (with default
+  // args, requires clauses and everything) -- with logic that doesn't exist
+  // elsewhere in Clang that I can see. So, as a hack, we postprocess the
+  // printed decl to strip off keyword attributes and the template name.
   std::string line;
   raw_string_ostream ostream(line);
 
@@ -501,20 +501,37 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   policy.PolishForDeclaration = true;
   decl->print(ostream, policy);
 
-  // Remove any trailing "final" specifier, it isn't allowed for forward
-  // declarations. Clear any remaining whitespace as well, so the name stripping
-  // below is less sensitive to spurious whitespace from Clang.
-  StripWhiteSpaceRight(&line);
-  StripRight(&line, " final");
-  StripWhiteSpaceRight(&line);
+  // Note that line is not a user-formatted C++ declaration at this point, but
+  // rather on the exact form printed by Clang, so it's safe to make certain
+  // assumptions about format.
 
-  // The template name is now the last word on the line. Replace it by its
-  // fully-qualified form.
-  const string::size_type name = line.rfind(' ');
-  CHECK_(name != string::npos && "Unexpected printable template-type");
+  // Can remove this after https://github.com/llvm/llvm-project/pull/174197.
+  line = CollapseRepeated(line, ' ');
 
-  line = line.substr(0, name);
+  // Remove any class property specifiers. The final keyword is not allowed on
+  // forward-decls. An alignas(x) specifier must match earlier declarations, so
+  // forward-decls become more resistant to change without it.
+  //
+  // TODO: If 'alignas(...)' is followed by a closing paren later in the line,
+  // this will munch up everything until then. I have not been able to come up
+  // with a valid C++ example with this shape, e.g.
+  //
+  //   template<class T> alignas(8) class C (oopsie)
+  //                              ^^^^^^^^^^^^^^^^^
+  //                                   DANGER!
+  //
+  // See if we can get Clang to remove the attrs to get rid of this regex hack.
+  static regex specifiers(R"( (alignas\(.*\)|final$))");
+  line = regex_replace(line, specifiers, "");
 
+  // The template name is now the last word on the line. Drop it.
+  const string::size_type namepos = line.rfind(' ');
+  CHECK_(namepos != string::npos && "Unexpected printable template-type");
+  line = line.substr(0, namepos);
+
+  // Now we have something like 'template<class T, class U> ... class'. Rely on
+  // PrintForwardDeclare to wrap that in the right namespaces and append the
+  // template name.
   return PrintForwardDeclare(decl, line, GlobalFlags().cxx17ns);
 }
 
