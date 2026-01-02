@@ -51,7 +51,7 @@ requires requires(T a) {
 }
 class TemplateWithComplexAdHocRequires {};
 
-// Use Addable from fwd_decl_print-d3.h
+// Use Addable from fwd_decl_print-i1.h
 template <typename T>
 requires Addable<T>
 class TemplateWithRequiresClause {};
