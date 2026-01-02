@@ -226,6 +226,20 @@ inline string FormatISO8601(time_t t) {
   return string(buf);
 }
 
+// Collapses series of neighboring equal characters into one.
+inline string CollapseRepeated(StringRef str, char needle) {
+  string collapsed;
+  collapsed.reserve(str.size());
+
+  char prev_c = 0;
+  for (char c : str) {
+    if (c != needle || c != prev_c)
+      collapsed += c;
+    prev_c = c;
+  }
+  return collapsed;
+}
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
