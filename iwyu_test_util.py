@@ -252,12 +252,8 @@ def _GetExpectedDiagnosticRegexes(spec_loc_to_line):
     line = spec_loc_to_line[loc]
     m = _EXPECTED_DIAGNOSTICS_RE.match(line.strip())
     assert m is not None, "Input should contain only matching lines."
-    regex = m.group(1)
-    if not regex:
-      # Allow the regex to be omitted if we are uninterested in the
-      # diagnostic message.
-      regex = r'.*'
-    regexes.append(re.compile(regex))
+    pattern = _ParseMatchPattern(m.group(1))
+    regexes.append(re.compile(pattern))
     # Do we have a spec on the next line?
     path, line_num = loc
     next_line_loc = path, line_num + 1
@@ -266,6 +262,34 @@ def _GetExpectedDiagnosticRegexes(spec_loc_to_line):
       regexes = []
 
   return expected_diagnostic_regexes
+
+
+def _ParseMatchPattern(pattern):
+  """ Parses an IWYU diagnostic assertion and returns a regex string. """
+  if not pattern:
+    # Allow the pattern to be omitted if we are uninterested in the
+    # diagnostic message.
+    return '.*'
+
+  # First normalize the conventional ...* pattern to {{.*}}.
+  pattern = pattern.replace('...*', '{{.*}}')
+
+  # Then interleave literal string segments with regex segments, inspired by
+  # FileCheck. For example, a string like 'f(int *, ...) is {{.*}} x.h' will be
+  # translated into a single regular expression with the literal parts suitably
+  # escaped: 'f\(int\ \*,\ \.\.\.\)\ is\ .*\ x\.h'.
+  parts = []
+  for part in re.split('({{.+?}})', pattern):
+    if part.startswith('{{') and part.endswith('}}'):
+      # Embedded regex, clean it up and use as-is.
+      part = part.strip('{}')
+      if '|' in part:
+        part = '(' + part + ')'
+    else:
+      # Literal string, regex-escape it.
+      part = re.escape(part)
+    parts.append(part)
+  return ''.join(parts)
 
 
 def _GetActualDiagnostics(actual_output):

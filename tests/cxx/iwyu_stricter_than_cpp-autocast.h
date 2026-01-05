@@ -26,10 +26,10 @@ struct IndirectStruct2;
 
 void FnValues(
     // Requires the full type because it does not obey rule (1)
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     IndirectStruct1 ic1,
     // This also does not obey rule (1): it's -d1 that does the fwd-declaring.
-    // IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     struct IndirectStructForwardDeclaredInD1 icfdid1,
     // Requires the full type because it does not obey rule (2)
     DirectStruct1 dc1,
@@ -39,17 +39,17 @@ void FnValues(
     IndirectStruct2 ic2);
 
 void FnRefs(
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const IndirectStruct1& ic1,
-    // IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const struct IndirectStructForwardDeclaredInD1& icfdid1,
     const DirectStruct3& dc1, const struct DirectStruct4& dc2,
     const IndirectStruct2& ic2);
 
 inline void HeaderDefinedFnRefs(
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const IndirectStruct1& ic1,
-    // IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const struct IndirectStructForwardDeclaredInD1& icfdid1,
     const DirectStruct5& dc1, const struct DirectStruct6& dc2,
     const IndirectStruct2& ic2) {
@@ -64,30 +64,30 @@ struct TplIndirectStruct2;
 
 void TplFnValues(
     // IWYU: TplIndirectStruct1 needs a declaration
-    // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     TplIndirectStruct1<char> ic1,
     // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
-    // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     struct TplIndirectStructForwardDeclaredInD1<char> icfdid1,
     TplDirectStruct1<char> dc1, struct TplDirectStruct2<char> dc2,
     TplIndirectStruct2<char> ic2);
 
 void TplFnRefs(
     // IWYU: TplIndirectStruct1 needs a declaration
-    // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const TplIndirectStruct1<char>& ic1,
     // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
-    // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const struct TplIndirectStructForwardDeclaredInD1<char>& icfdid1,
     const TplDirectStruct3<char>& dc1, const struct TplDirectStruct4<char>& dc2,
     const TplIndirectStruct2<char>& ic2);
 
 inline void HeaderDefinedTplFnRefs(
     // IWYU: TplIndirectStruct1 needs a declaration
-    // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const TplIndirectStruct1<char>& ic1,
     // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
-    // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const struct TplIndirectStructForwardDeclaredInD1<char>& icfdid1,
     const TplDirectStruct5<char>& dc1, const struct TplDirectStruct6<char>& dc2,
     const TplIndirectStruct2<char>& ic2) {
@@ -100,34 +100,34 @@ template <typename TFullTypeUsed, typename TForwardDeclarable>
 struct TplIndirectStruct3;
 
 void TplFnValues(
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     TplIndirectStruct3<IndirectStruct1, IndirectStruct2>
         only_argument_type_provided,
     TplIndirectStruct3<IndirectStruct2, IndirectStruct2> all_forward_declared,
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     TplDirectStruct7<IndirectStruct1, IndirectStruct2>
         all_needed_types_provided,
     TplDirectStruct7<IndirectStruct2, IndirectStruct2> only_template_provided);
 
 void TplFnRefs(
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const TplIndirectStruct3<IndirectStruct1, IndirectStruct2>&
         only_argument_type_provided,
     const TplIndirectStruct3<IndirectStruct2, IndirectStruct2>&
         all_forward_declared,
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const TplDirectStruct7<IndirectStruct1, IndirectStruct2>&
         all_needed_types_provided,
     const TplDirectStruct7<IndirectStruct2, IndirectStruct2>&
         only_template_provided);
 
 inline void HeaderDefinedTplFnRefs(
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const TplIndirectStruct3<IndirectStruct1, IndirectStruct2>&
         only_argument_type_provided,
     const TplIndirectStruct3<IndirectStruct2, IndirectStruct2>&
         all_forward_declared,
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for autocast
     const TplDirectStruct7<IndirectStruct1, IndirectStruct2>&
         all_needed_types_provided,
     const TplDirectStruct7<IndirectStruct2, IndirectStruct2>&
@@ -149,20 +149,20 @@ struct AutocastStruct {
 // IWYU should not print the comment "for autocast" when the type info is
 // mandatory.
 inline void Fn(
-    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*#included\.
+    // IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*#included.
     TplDirectStruct7<decltype(IndirectStruct1::c), IndirectStruct2>) {
 }
 
 // Test that IWYU finds constructors even if they are not instantiated.
 
 // IWYU: NonInstantiated needs a declaration
-// IWYU: NonInstantiated is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+// IWYU: NonInstantiated is...*iwyu_stricter_than_cpp-i1.h...*for autocast
 void Fn(NonInstantiated<char>);
 
 // IWYU: NoAutocastForSpec needs a declaration
 void Fn(NoAutocastForSpec<char>);
 
-// TODO: IWYU: AutocastInPartialSpec is...*iwyu_stricter_than_cpp-i1.h.*for autocast
+// TODO: IWYU: AutocastInPartialSpec is...*iwyu_stricter_than_cpp-i1.h...*for autocast
 // IWYU: AutocastInPartialSpec needs a declaration
 void Fn(AutocastInPartialSpec<char*>);
 

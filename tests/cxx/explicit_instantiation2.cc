@@ -36,7 +36,7 @@
 
 
 // IWYU: Template is...*explicit_instantiation-template.h
-// IWYU: Template is...*template_bool.h.*for explicit instantiation
+// IWYU: Template is...*template_bool.h...*for explicit instantiation
 Template<bool> t1a; // 1a
 
 // IWYU: Template is...*explicit_instantiation-template.h
@@ -48,7 +48,7 @@ template class Template<bool>;  // 2
 Template<bool> t1b; // 1b
 
 // IWYU: Template is...*explicit_instantiation-template.h
-// IWYU: Template is...*template_short.h.*for explicit instantiation
+// IWYU: Template is...*template_short.h...*for explicit instantiation
 FullUseArg<
     // IWYU: Template needs a declaration
     Template<short>>
@@ -61,11 +61,11 @@ FwdDeclUseArg<
     t4; // 4
 
 // IWYU: Template is...*explicit_instantiation-template.h
-// IWYU: Template is...*template_short.h.*for explicit instantiation
+// IWYU: Template is...*template_short.h...*for explicit instantiation
 TemplateAsDefaultFull<> t5; // 5
 TemplateAsDefaultFwd<> t6; // 6
 
-// IWYU: Template is...*template_short.h.*for explicit instantiation
+// IWYU: Template is...*template_short.h...*for explicit instantiation
 TemplateTemplateArgShortFull<
     // IWYU: Template is...*explicit_instantiation-template.h
     Template>

@@ -291,8 +291,8 @@ typedef std::set<I2_Enum> H_I2Enum_Set;
 typedef std::vector<I2_Class> H_I2Class_Vector_Unused;
 // IWYU: I2_TemplateClass needs a declaration
 // IWYU: I2_TemplateClass is...*badinc-i2.h
-// IWYU: I2_TemplateClass::I2_TemplateClass<.*> is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
 // IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
 // IWYU: I2_Enum is...*badinc-i2.h
 typedef I2_TemplateClass<I2_Enum> H_TemplateTypedef;
@@ -368,7 +368,7 @@ H_TemplateClass<D3_Enum> h_d3_template_class(D31);
 H_TemplateClass<I2_Enum> h_i2_template_class(I22);
 // TODO(csilvers): this should be attributed to the .h, since it comes
 // via a default template argument.
-// IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
 H_TemplateTemplateClass<> h_templatetemlpate_class;
 H_TemplateTemplateClass<H_TemplateClass> h_i2_templatetemlpate_class;
 

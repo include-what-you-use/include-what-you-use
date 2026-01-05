@@ -24,12 +24,12 @@ extern template class Template<int>;
 // Use of an explicit instantiation for which there is both a declaration and
 // definition in the include closure should prefer a declaration.
 // IWYU: Template is...*expl_inst_select-i1.h
-// IWYU: Template is...*expl_inst_select-i2.h.*for explicit instantiation
+// IWYU: Template is...*expl_inst_select-i2.h...*for explicit instantiation
 Template<short> ts;
 
 // Use of an explicit instantiation for which there is only a definition.
 // IWYU: Template is...*expl_inst_select-i1.h
-// IWYU: Template is...*expl_inst_select-i3.h.*for explicit instantiation
+// IWYU: Template is...*expl_inst_select-i3.h...*for explicit instantiation
 Template<double> td;
 
 // No 'for explicit instantiation' diagnostic for use of an instantiation
