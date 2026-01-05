@@ -37,10 +37,10 @@ void Fn() {
   FnWithSmearedDefArgs2();
 
   // IWYU: FnWithSmearedDefArgs2 is...*-i2.h
-  // IWYU: ns::FnWithSmearedDefArgs2 is...*-i3.h.*for using decl
+  // IWYU: ns::FnWithSmearedDefArgs2 is...*-i3.h...*for using decl
   ns::FnWithSmearedDefArgs2(1);
   // IWYU: FnWithSmearedDefArgs2 is...*-i1.h
-  // IWYU: ns::FnWithSmearedDefArgs2 is...*-i3.h.*for using decl
+  // IWYU: ns::FnWithSmearedDefArgs2 is...*-i3.h...*for using decl
   ns::FnWithSmearedDefArgs2();
 
   // An appropriate redeclaration is present in this file.

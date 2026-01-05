@@ -19,11 +19,11 @@
 // --- Return values of functions.
 
 // Requires the full type because it does not obey rule (1)
-// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
+// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for fn return type
 IndirectStruct1 DoesNotForwardDeclareFn();
 
 // This also does not obey rule (1): it's -d1 that does the fwd-declaring.
-// IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
+// IWYU: IndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h...*for fn return type
 struct IndirectStructForwardDeclaredInD1 DoesNotForwardDeclareProperlyFn();
 
 // Requires the full type because it does not obey rule (2)
@@ -40,7 +40,7 @@ IndirectStruct2 DoesEverythingRightFn();
 // --- Now do it all again, with templates!
 
 // IWYU: TplIndirectStruct1 needs a declaration
-// IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
+// IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for fn return type
 TplIndirectStruct1<int> TplDoesNotForwardDeclareFn();
 
 // A bit of an asymmetry with the non-tpl case: 'struct
@@ -48,7 +48,7 @@ TplIndirectStruct1<int> TplDoesNotForwardDeclareFn();
 // forward-declared because it's elaborated, but template types need
 // to be forward-declared even when they're elaborated.
 // IWYU: TplIndirectStructForwardDeclaredInD1 needs a declaration
-// IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
+// IWYU: TplIndirectStructForwardDeclaredInD1 is...*iwyu_stricter_than_cpp-i1.h...*for fn return type
 struct TplIndirectStructForwardDeclaredInD1<int>
 TplDoesNotForwardDeclareProperlyFn();
 
@@ -70,13 +70,13 @@ TplIndirectStruct2<float> TplDoesEverythingRightAgainFn();
 template <typename TFullTypeUsed, typename TForwardDeclarable>
 struct TplIndirectStruct3;
 
-// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
+// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for fn return type
 TplIndirectStruct3<IndirectStruct1, IndirectStruct2>
 TplOnlyArgumentTypeProvidedFn();
 
 TplIndirectStruct3<IndirectStruct2, IndirectStruct2> TplAllForwardDeclaredFn();
 
-// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
+// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*for fn return type
 TplDirectStruct7<IndirectStruct1, IndirectStruct2>
 TplAllNeededTypesProvidedFn();
 
@@ -94,7 +94,7 @@ struct FnreturnStruct {
 };
 
 // IWYU should not print the comment "for fn return type" when the type info is mandatory.
-// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*#included\.
+// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h...*#included.
 decltype(IndirectStruct1::c) FnReturningTypeOfMember();
 
 

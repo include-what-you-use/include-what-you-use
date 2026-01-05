@@ -19,7 +19,7 @@ Tpl<char, 2, OtherTpl> t1;
 // IWYU: Tpl<int, 1, OtherTpl> is...*-i3.h
 Tpl<int, 1, OtherTpl> t2;
 // IWYU: OtherTpl is...*-i1.h
-// IWYU: Tpl<:0 \*, :1, :2> is...*-i4.h
+// IWYU: Tpl<:0 *, :1, :2> is...*-i4.h
 Tpl<int*, 1, OtherTpl> t3;
 
 // IWYU: TplWithDefArg is...*-i2.h
@@ -27,7 +27,7 @@ TplWithDefArg<int, int> twda1;
 // TODO: reporting the primary template due to the presence of a default
 // argument is redundant here.
 // IWYU: TplWithDefArg is...*-i2.h
-// IWYU: TplWithDefArg<int \*, char> is...*-i3.h
+// IWYU: TplWithDefArg<int *, char> is...*-i3.h
 TplWithDefArg<int*> twda3;
 // IWYU: TplWithDefArg is...*-i2.h
 // IWYU: TplWithDefArg<:0, char> is...*-i4.h
@@ -55,7 +55,7 @@ TplParamPack1<int, char> tpp12;
 TplParamPack1<int, char, float> tpp13;
 // IWYU: TplParamPack1<int, :0, :1...> is...*-i3.h
 TplParamPack1<int, char, float, double> tpp14;
-// IWYU: TplParamPack1<:0 \*...> is...*-i4.h
+// IWYU: TplParamPack1<:0 *...> is...*-i4.h
 TplParamPack1<int*, char*> tpp15;
 
 // IWYU: TplParamPack2 is...*-i2.h
@@ -67,7 +67,7 @@ TplParamPack2<int, char, float> tpp22;
 static_assert(var_tpl<int> == 1);
 // IWYU: var_tpl<char> is...*-i3.h
 static_assert(var_tpl<char> == 2);
-// IWYU: var_tpl<:0 \*> is...*-i4.h
+// IWYU: var_tpl<:0 *> is...*-i4.h
 static_assert(var_tpl<int*> == 3);
 
 /**** IWYU_SUMMARY

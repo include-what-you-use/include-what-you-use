@@ -34,7 +34,7 @@ class Derived1 : public Base {
 
   // The using-declaration should be reported but the forward-declaration
   // should not.
-  // IWYU: ns::FwdRetType is...*reexport_overridden-i3.h.*for using decl
+  // IWYU: ns::FwdRetType is...*reexport_overridden-i3.h...*for using decl
   ns::FwdRetType ReturnPulledInOtherNSInDerived() override;
 
   // Unused argument available from Base.
@@ -69,7 +69,7 @@ class Derived1 : public Base {
 
   // The using-declaration should be reported but the forward-declaration
   // should not.
-  // IWYU: ns::IndirectClass is...*reexport_overridden-i3.h.*for using decl
+  // IWYU: ns::IndirectClass is...*reexport_overridden-i3.h...*for using decl
   void TakePulledInOtherNSInDerived(ns::IndirectClass) override;
 
   // IWYU should not suggest IndirectClass fwd-declaration here.

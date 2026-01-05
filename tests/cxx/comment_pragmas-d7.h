@@ -26,7 +26,7 @@
 #include "tests/cxx/indirect.h"  // IWYU pragma: keep
 // IWYU pragma: end_exports
 
-// IWYU: Unknown or malformed pragma \(foo\)
+// IWYU: Unknown or malformed pragma (foo)
 // IWYU pragma: foo
 
 // IWYU: Suggested include must be a quoted header

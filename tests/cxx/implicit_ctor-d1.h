@@ -14,15 +14,15 @@
 // reference to it.  This is because the class has an implicit
 // constructor.
 
-// IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h.*for autocast
+// IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h...*for autocast
 int ImplicitCtorFn(IndirectWithImplicitCtor);
 
-// IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h.*for autocast
+// IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h...*for autocast
 int ImplicitCtorRefFn(const IndirectWithImplicitCtor&);
 
 // Reporting types for "autocast" for header-defined functions still makes sense
 // as opposed to function definitions in source files.
-// IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h.*for autocast
+// IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h...*for autocast
 inline int InlineImplicitCtorRefFn(const IndirectWithImplicitCtor&) {
   return 1;
 }
@@ -46,7 +46,7 @@ int NoAutocastFn(
 
 // Test that IWYU finds the definition among redeclarations which contains
 // an implicit ctor and requires the complete type here.
-// IWYU: MultipleRedeclStruct is...*implicit_ctor-i2.h.*for autocast
+// IWYU: MultipleRedeclStruct is...*implicit_ctor-i2.h...*for autocast
 void TakeMultipleRedeclStruct(MultipleRedeclStruct);
 
 /**** IWYU_SUMMARY
