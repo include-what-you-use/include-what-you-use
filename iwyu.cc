@@ -86,6 +86,7 @@
 //     case it is.  For example, if foo.cc desires bar.h, but can
 //     already get it via foo.h, IWYU won't recommend foo.cc to
 //     #include bar.h, unless it already does so.
+#include "iwyu.h"
 
 #include <cstdio>
 #include <cstdlib>                      // for atoi, exit
@@ -125,13 +126,11 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Sema.h"
 #include "iwyu_ast_util.h"
 #include "iwyu_cache.h"
-#include "iwyu_driver.h"
 #include "iwyu_globals.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
@@ -146,8 +145,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/TargetSelect.h"
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/AST/Redeclarable.h"
@@ -176,7 +173,6 @@ namespace include_what_you_use {
 // $ grep "using clang":: iwyu.cc | cut -b14- | tr -d ";" | while read t; do grep -q "[^:]$t" iwyu.cc || echo $t; done
 using clang::ASTConsumer;
 using clang::ASTContext;
-using clang::ASTFrontendAction;
 using clang::ArraySubscriptExpr;
 using clang::ArrayType;
 using clang::Attr;
@@ -5615,64 +5611,25 @@ class IwyuAstConsumer
   InstantiatedTemplateVisitor instantiated_template_visitor_;
 };  // class IwyuAstConsumer
 
-// We use an ASTFrontendAction to hook up IWYU with Clang.
-class IwyuAction : public ASTFrontendAction {
- public:
-  IwyuAction() = delete;
+// IWYU frontend action impl.
+IwyuAction::IwyuAction(const ToolChain& toolchain) : toolchain_(toolchain) {
+}
 
-  explicit IwyuAction(const ToolChain& toolchain) : toolchain(toolchain) {
-  }
+std::unique_ptr<ASTConsumer> IwyuAction::CreateASTConsumer(
+    CompilerInstance& compiler, StringRef) {
+  // Do this first thing after getting our hands on initialized
+  // CompilerInstance and ToolChain objects.
+  InitGlobals(compiler, toolchain_);
 
- protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(
-      CompilerInstance& compiler,  // NOLINT
-      llvm::StringRef /* dummy */) override {
-    // Do this first thing after getting our hands on initialized
-    // CompilerInstance and ToolChain objects.
-    InitGlobals(compiler, toolchain);
+  Preprocessor& preprocessor = compiler.getPreprocessor();
+  auto* const preprocessor_consumer = new IwyuPreprocessorInfo(preprocessor);
+  preprocessor.addPPCallbacks(
+      std::unique_ptr<PPCallbacks>(preprocessor_consumer));
+  preprocessor.addCommentHandler(preprocessor_consumer);
 
-    Preprocessor& preprocessor = compiler.getPreprocessor();
-    auto* const preprocessor_consumer = new IwyuPreprocessorInfo(preprocessor);
-    preprocessor.addPPCallbacks(
-        std::unique_ptr<PPCallbacks>(preprocessor_consumer));
-    preprocessor.addCommentHandler(preprocessor_consumer);
-
-    auto* const visitor_state =
-        new VisitorState(&compiler, *preprocessor_consumer);
-    return std::unique_ptr<IwyuAstConsumer>(new IwyuAstConsumer(visitor_state));
-  }
-
- private:
-  // ToolChain is not copyable, but it's owned by Compilation which has the same
-  // lifetime as CompilerInstance, so it should be alive for as long as we are.
-  const ToolChain& toolchain;
-};
+  auto* const visitor_state =
+      new VisitorState(&compiler, *preprocessor_consumer);
+  return std::unique_ptr<IwyuAstConsumer>(new IwyuAstConsumer(visitor_state));
+}
 
 } // namespace include_what_you_use
-
-int main(int argc, char **argv) {
-  using clang::driver::ToolChain;
-  using include_what_you_use::ExecuteAction;
-  using include_what_you_use::IwyuAction;
-  using include_what_you_use::OptionsParser;
-
-  llvm::llvm_shutdown_obj scoped_shutdown;
-
-  // X86 target is required to parse Microsoft inline assembly, so we hope it's
-  // part of all targets. Clang parser will complain otherwise.
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmParsers();
-
-  // The command line should look like
-  //   path/to/iwyu -Xiwyu --verbose=4 [-Xiwyu --other_iwyu_flag]... \
-  //       CLANG_FLAGS... foo.cc
-  OptionsParser options_parser(argc, argv);
-  if (!ExecuteAction(options_parser.clang_argc(), options_parser.clang_argv(),
-                     [](const ToolChain& toolchain) {
-                       return std::make_unique<IwyuAction>(toolchain);
-                     })) {
-    return EXIT_FAILURE;
-  }
-  return EXIT_SUCCESS;
-}

@@ -134,6 +134,7 @@ add_llvm_executable(include-what-you-use
   iwyu_include_picker.cc
   iwyu_lexer_utils.cc
   iwyu_location_util.cc
+  iwyu_main.cc
   iwyu_output.cc
   iwyu_path_util.cc
   iwyu_port.cc
