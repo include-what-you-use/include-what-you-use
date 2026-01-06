@@ -189,20 +189,20 @@ typedef I1_Class Cc_typedef_array[kI1ConstInt];
 // IWYU: I1_TemplateClass is...*badinc-i1.h...*#included.
 // IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 typedef I1_TemplateClass<I1_TemplateClass<I1_Class,I2_Class> > Cc_tpl_typedef;
 // TODO(csilvers): it would be nice to be able to take this line out and
 // still have the above tests pass:
 // TODO(bolshakov): figure out how to determine at the use site that a typedef
 // provides not only the types but also the member functions.
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 Cc_tpl_typedef cc_tpl_typedef;
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::I2_Class is...*badinc-i2-inl.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
-// IWYU: I2_Class::InlFileFn is...*badinc-i2-inl.h
-// IWYU: I2_Class::InlFileTemplateFn is...*badinc-i2-inl.h
-// IWYU: I2_Class::InlFileStaticFn is...*badinc-i2-inl.h
+// IWYU: I2_Class::I2_Class({{.*}}) is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
+// IWYU: I2_Class::InlFileFn({{.*}}) is...*badinc-i2-inl.h
+// IWYU: I2_Class::InlFileTemplateFn({{.*}}) is...*badinc-i2-inl.h
+// IWYU: I2_Class::InlFileStaticFn({{.*}}) is...*badinc-i2-inl.h
 typedef I2_Class Cc_I2_Class_Typedef;
 // I1_Struct isn't really used by any possible operation with H_TemplateStruct,
 // but '#include' is required as a common rule, as long as I1_Struct
@@ -231,7 +231,7 @@ template<class T> class Cc_TypenameTemplateStruct {
 // Needs full type information for CC_Subclass's (implicit) dtor of scoped_ptr.
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_ThisClassIsOnlySubclassed is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 class Cc_Subclass : public I2_ThisClassIsOnlySubclassed {
  public:
   // IWYU: I1_MemberPtr is...*badinc-i1.h
@@ -260,7 +260,7 @@ class MultipleInheritanceSubclass : public I2_ThisClassIsOnlySubclassed,
   // IWYU: I2_Struct is...*badinc-i2.h
   // IWYU: I2_MACRO is...*badinc-i2.h
   MultipleInheritanceSubclass() : I2_Class(I2_Struct().a + I2_MACRO) { }
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   ~MultipleInheritanceSubclass() { }
 };
 
@@ -306,7 +306,7 @@ const I2_Class& Cc_Function(
     // IWYU: I1_Class is...*badinc-i1.h
     I1_Class) {
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   static I2_Class retval;   // something we can safely return a reference to
   return retval;
 }
@@ -393,7 +393,7 @@ class Cc_DeclareOnlyClass {
 // The implicit constructor for i1tc uses I2_Class.
 // IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 struct Cc_ImplicitConstructorStruct {
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   // IWYU: I1_Class needs a declaration
@@ -404,12 +404,12 @@ struct Cc_ImplicitConstructorStruct {
 
 // The implicit destructor for i1tc uses I2_Class.
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 struct Cc_ImplicitInitializerStruct {
   // The implicit initializer of i1tc creates an I2_Class in the I1_TC ctor
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   Cc_ImplicitInitializerStruct() {}
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   // IWYU: I1_Class needs a declaration
@@ -420,7 +420,7 @@ struct Cc_ImplicitInitializerStruct {
 
 // The implicit destructor for sp uses I2_Class.
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 struct Cc_ImplicitDestructorStruct {
   Cc_ImplicitDestructorStruct() : sp() { }
   // IWYU: I2_Class needs a declaration
@@ -458,7 +458,7 @@ class H_Class::H_Class_UnusedSubdecl {};
 void H_Class::DefinedInBadincCc() {}
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Struct is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 H_Pimpl_ExplicitCtorDtor::~H_Pimpl_ExplicitCtorDtor() {}
 
 template<typename FOO> FOO H_TemplateClass<FOO>::h_template_foo_static_;
@@ -494,24 +494,24 @@ int I2_Class::CcFileFn() { return 1; }
 template<typename FOO> int I2_TemplateClass<FOO>::CcFileFn() {
   // IWYU: I2_TemplateClass is...*badinc-i2.h
   // IWYU: I2_TemplateClass needs a declaration
-  // IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
+  // IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}>({{.*}}) is...*badinc-i2-inl.h
   I2_TemplateClass<int>* ptr = new I2_TemplateClass<int>(42, "hi");  // NewExpr
 
   // IWYU: I2_TemplateClass is...*badinc-i2.h
-  // IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
-  // IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
+  // IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}>({{.*}}) is...*badinc-i2-inl.h
+  // IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
   I2_TemplateClass<int> x(42, "hi");  // CXXConstructExpr
   (void)x;
 
-  // IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
+  // IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
   // IWYU: I2_TemplateClass is...*badinc-i2.h
   delete ptr;  // CXXDeleteExpr
 
-  // IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
+  // IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
   // IWYU: I2_TemplateClass is...*badinc-i2.h
   delete this;  // CXXDeleteExpr
 
-  // IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
+  // IWYU: I2_TemplateClass::InlFileTemplateClassFn() is...*badinc-i2-inl.h
   // IWYU: I2_TemplateClass is...*badinc-i2.h
   return InlFileTemplateClassFn();  // CXXMemberCallExpr
 }
@@ -578,15 +578,15 @@ H_TemplateStruct<I1_Struct, Cc_Struct> h_template_struct2;
 H_TemplateStruct<I1_TemplateClass<int> > h_template_struct_tplclass_arg;
 // TODO(csilvers): this should be attributed to the .h, since it comes
 // via a default template argument.
-// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
 H_TemplateTemplateClass<> h_templatetemplateclass;
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class needs a declaration
-// IWYU: I2_TemplateFn is...*badinc-i2.h
+// IWYU: I2_TemplateFn({{.*}}) is...*badinc-i2.h
 H_FunctionPtr h_functionpointer = I2_TemplateFn<I2_Class*>;
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class needs a declaration
-// IWYU: I2_TemplateFn is...*badinc-i2.h
+// IWYU: I2_TemplateFn({{.*}}) is...*badinc-i2.h
 H_FunctionPtr h_functionpointer_amp = &((I2_TemplateFn<I2_Class*>));
 H_FunctionPtr &h_functionpointer_ref = h_functionpointer;
 // IWYU: H_Class::H_Class_DefinedInI1 is...*badinc-i1.h
@@ -723,7 +723,7 @@ I1_TemplateClass<std::vector<I1_Class>*> i1_nested_templateclass_ptr2(NULL);
 // IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I2_Class needs a declaration
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 I1_TemplateSubclass<I1_Class, I2_Class> i1_template_subclass;
 // IWYU: I1_Enum is...*badinc-i1.h
 // IWYU: std::vector is...*<vector>
@@ -791,24 +791,24 @@ I1_ManyPtrStruct ***i1_manyptrstruct_ptr_ptr_ptr;
 // IWYU: I1_ClassPtr is...*badinc-i1.h
 I1_ClassPtr i1_classptr;
 // IWYU: I1_FunctionPtr is...*badinc-i1.h
-// IWYU: I1_Function is...*badinc-i1.h
+// IWYU: I1_Function({{.*}}) is...*badinc-i1.h
 I1_FunctionPtr i1_functionptr = I1_Function;
 // IWYU: I1_FunctionPtr is...*badinc-i1.h
 I1_FunctionPtr *i1_functionptr_ptr = &i1_functionptr;
 // IWYU: I1_ForwardDeclareClass needs a declaration
 I1_ForwardDeclareClass* i1_forwarddeclareptr;
-// IWYU: I1_Function is...*badinc-i1.h
+// IWYU: I1_Function({{.*}}) is...*badinc-i1.h
 int i1_function_value = I1_Function(0);
 
 // Two different uses of an indirect global.  The first is a function call
 // which is exposed in the compiler-generated function for global
 // constructors/destructors.  The second is similar, but it requires no
 // call since its a simple initialization.
-// IWYU: i1_GlobalFunction is...*badinc-i1.h
+// IWYU: i1_GlobalFunction({{.*}}) is...*badinc-i1.h
 int i1_globalfunctionval = i1_GlobalFunction();
-// IWYU: i1_GlobalFunction is...*badinc-i1.h
+// IWYU: i1_GlobalFunction({{.*}}) is...*badinc-i1.h
 int (*i1_globalfunctionptr)(void) = i1_GlobalFunction;
-// IWYU: i1_GlobalFunction is...*badinc-i1.h
+// IWYU: i1_GlobalFunction({{.*}}) is...*badinc-i1.h
 int (*i1_globalfunctionptr2)(void) = &i1_GlobalFunction;
 
 // IWYU: I2_InlFileClass is...*badinc-i2-inl.h
@@ -816,12 +816,12 @@ I2_InlFileClass i2_inlfileclass;
 // IWYU: I2_InlFileTemplateClass is...*badinc-i2-inl.h
 I2_InlFileTemplateClass<int> i2_inlfiletemplateclass;
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::I2_Class is...*badinc-i2-inl.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I2_Class::I2_Class({{.*}}) is...*badinc-i2-inl.h
+// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 I2_Class i2_class_with_inl_constructor("calling ctor in badinc-i2-inl.h");
 // IWYU: I2_TemplateClass is...*badinc-i2.h
-// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}>({{.*}}) is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
 I2_TemplateClass<int> i2_template_class_with_inl_constructor(4, "inl ctor");
 // We don't need a fwd-decl of I2_TypedefOnly_Class; we get that via badinc.h
 // IWYU: I1_Class needs a declaration
@@ -935,16 +935,16 @@ template class I1_TemplateClass<I1_ClassPtr>;
 int i2_tpl_class_a = i2_template_class_with_inl_constructor.a();
 // IWYU: I2_TemplateClass needs a declaration
 // IWYU: I2_TemplateClass is...*badinc-i2.h
-// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}>({{.*}}) is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::InlFileTemplateClassFn({{.*}}) is...*badinc-i2-inl.h
 typedef I2_TemplateClass<int> Cc_typedef_implicit_instantiation;
 // Make sure we can do the same typedef multiple times.
 // IWYU: I2_TemplateClass needs a declaration
 // IWYU: I2_TemplateClass is...*badinc-i2.h
-// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}>({{.*}}) is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass::InlFileTemplateClassFn({{.*}}) is...*badinc-i2-inl.h
 typedef I2_TemplateClass<int> Cc_typedef_implicit_instantiation2;
 // IWYU: I1_ClassPtr is...*badinc-i1.h
 // IWYU: I1_TemplateClass is...*badinc-i1.h
@@ -1052,7 +1052,7 @@ int main() {
   // IWYU: I2_Class needs a declaration
   I2_Class* local_i2_class_ptr = 0;  // ptr-only in this .cc, non-ptr in .h
   // IWYU: I2_TemplateClass is...*badinc-i2.h
-  // IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}> is...*badinc-i2-inl.h
+  // IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
   I2_TemplateClass<int> local_i2_template_class(1);
   // IWYU: I1_PtrDereferenceStruct needs a declaration
   const I1_PtrDereferenceStruct* const local_i1_ptrdereference_struct = 0;
@@ -1088,10 +1088,10 @@ int main() {
   x = cc_ns_alias::i1_subns::i1_int_global4sub;
 
   // Reference all the local variables, to avoid not-used errors.
-  // IWYU: fprintf is...*<stdio.h>
+  // IWYU: fprintf({{.*}}) is...*<stdio.h>
   // IWYU: stdout is...*<stdio.h>
   fprintf(stdout, "%d", local_cc_struct.a);  // test a global in stdio.h too
-  // IWYU: printf is...*<stdio.h>
+  // IWYU: printf({{.*}}) is...*<stdio.h>
   printf("%d", local_cc_struct.a);
   (void)Cc_typedef(4);
   // Not an iwyu violation, because Cc_typedef is responsible for its members.
@@ -1123,24 +1123,24 @@ int main() {
   // Hence it is reported because the template-defining file doesn't include
   // the function-defining file directly. In the second two cases, we can't know
   // the file required until now (when the templated function is instantiated).
-  // IWYU: I1_OverloadedFunction is...*badinc-i1.h
+  // IWYU: I1_OverloadedFunction(int) is...*badinc-i1.h
   CallOverloadedFunctionSameFile(5);
-  // IWYU: I1_OverloadedFunction is...*badinc-i1.h
+  // IWYU: I1_OverloadedFunction(float) is...*badinc-i1.h
   CallOverloadedFunctionSameFile(5.0f);
-  // IWYU: I1_And_I2_OverloadedFunction is...*badinc-i1.h
+  // IWYU: I1_And_I2_OverloadedFunction(int) is...*badinc-i1.h
   CallOverloadedFunctionDifferentFiles(5);
-  // IWYU: I1_And_I2_OverloadedFunction is...*badinc-i2.h
+  // IWYU: I1_And_I2_OverloadedFunction(float) is...*badinc-i2.h
   CallOverloadedFunctionDifferentFiles(5.0f);
   // Again, it is reported because the template defining file doesn't include
   // the function defining file directly.
-  // IWYU: i1_ns::I1_NamespaceTemplateFn is...*badinc-i1.h
+  // IWYU: i1_ns::I1_NamespaceTemplateFn(:0) is...*badinc-i1.h
   CallOverloadWithUsingShadowDecl(5);
 
   // Calling operator<< when the first argument is a macro.  We should
   // still detect that operator<< is being used here, and not in the
   // macro-definition file.
   // IWYU: I1_MACRO_LOGGING_CLASS is...*badinc-i1.h
-  // IWYU: I2_OperatorDefinedInI1Class::operator<< is...*badinc-i1.h
+  // IWYU: I2_OperatorDefinedInI1Class::operator<<(int) is...*badinc-i1.h
   I1_MACRO_LOGGING_CLASS << 1;
 
   // Calling a template method can cause the template arg to be non-fwd-decl.
@@ -1152,7 +1152,7 @@ int main() {
   // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
   // IWYU: I2_Class needs a declaration
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   i1_template_method_only_class.c<I2_Class>();
   // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
   // IWYU: I2_Class needs a declaration
@@ -1297,16 +1297,16 @@ int main() {
   // IWYU: I2_Union needs a declaration
   I2_Union& ctor_cast_union = ctor_cast_union_nonref;
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   I2_Class i2_class_from_struct = ctor_cast_struct;   // ctor takes a reference
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   // IWYU: I2_Union is...*badinc-i2.h
   I2_Class i2_class_from_union = ctor_cast_union;   // ctor takes a value
 
   // User-defined casts need the full from-type (to call its operator totype()).
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_UnionFunction is...*badinc-i2.h
+  // IWYU: I2_UnionFunction({{.*}}) is...*badinc-i2.h
   I2_UnionFunction(*local_i2_class_ptr);
 
   // Even dereferencing doesn't require the full type.
@@ -1347,26 +1347,26 @@ int main() {
   // IWYU: I1_Class is...*badinc-i1.h
   I1_Class::s();
   // IWYU: I2_Struct is...*badinc-i2.h
-  // IWYU: I2_Function is...*badinc-i2.h
+  // IWYU: I2_Function({{.*}}) is...*badinc-i2.h
   (void)(I2_Function(local_i2_class_ptr).b);
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::InlFileFn is...*badinc-i2-inl.h
+  // IWYU: I2_Class::InlFileFn() is...*badinc-i2-inl.h
   local_i2_class_ptr->InlFileFn();
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::InlFileStaticFn is...*badinc-i2-inl.h
+  // IWYU: I2_Class::InlFileStaticFn() is...*badinc-i2-inl.h
   local_i2_class_ptr->InlFileStaticFn();
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::InlFileStaticFn is...*badinc-i2-inl.h
+  // IWYU: I2_Class::InlFileStaticFn() is...*badinc-i2-inl.h
   I2_Class::InlFileStaticFn();
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::InlFileTemplateFn is...*badinc-i2-inl.h
+  // IWYU: I2_Class::InlFileTemplateFn() is...*badinc-i2-inl.h
   local_i2_class_ptr->InlFileTemplateFn<int>();
   // IWYU: I2_Class is...*badinc-i2.h
   local_i2_class_ptr->AnotherTranslationUnitFn();
   // IWYU: I2_Class is...*badinc-i2.h
   local_i2_class_ptr->CcFileFn();
   // IWYU: I2_TemplateClass is...*badinc-i2.h
-  // IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
+  // IWYU: I2_TemplateClass::InlFileTemplateClassFn() is...*badinc-i2-inl.h
   local_i2_template_class.InlFileTemplateClassFn();
   // IWYU: I2_TemplateClass is...*badinc-i2.h
   local_i2_template_class.a();
@@ -1374,14 +1374,14 @@ int main() {
   // IntendsToProvide.  The file defining this template method *should* be
   // providing badinc-i2-inl.h, but isn't (iwyu will suggest we add it).
   // So we don't detect that file as responsible for these symbols, and not us.
-  // IWYU: I2_TemplateClass::InlFileTemplateClassFn is...*badinc-i2-inl.h
+  // IWYU: I2_TemplateClass::InlFileTemplateClassFn({{.*}}) is...*badinc-i2-inl.h
   // IWYU: I2_TemplateClass is...*badinc-i2.h
   local_i2_template_class.CcFileFn();
-  // IWYU: InlFileNonMemberFn is...*badinc-i2-inl.h
+  // IWYU: InlFileNonMemberFn() is...*badinc-i2-inl.h
   InlFileNonMemberFn();
-  // IWYU: InlFileNonMemberTemplateFn is...*badinc-i2-inl.h
+  // IWYU: InlFileNonMemberTemplateFn() is...*badinc-i2-inl.h
   InlFileNonMemberTemplateFn<float>();
-  // IWYU: InlFileNonMemberTemplateFn is...*badinc-i2-inl.h
+  // IWYU: InlFileNonMemberTemplateFn() is...*badinc-i2-inl.h
   InlFileNonMemberTemplateFn<int>();  // a specialization
   // IWYU: inlfile_var is...*badinc-i2-inl.h
   (void)(inlfile_var);
@@ -1442,10 +1442,10 @@ int main() {
   // IWYU: I1_const_ptr is...*badinc-i1.h
   local_i1_const_ptr.indirect_del();
   // This calls *ptr_, but in a non-member function.
-  // IWYU: operator== is...*badinc-i1.h
+  // IWYU: operator==(I1_const_ptr<:0> &, const :0 &) is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
   (void)(local_i1_const_ptr == i1_class);
-  // IWYU: operator== is...*badinc-i1.h
+  // IWYU: operator==(const :0 &, I1_const_ptr<:0> &) is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
   (void)(i1_class == local_i1_const_ptr);
   // Also check the default (implicit) operator=
@@ -1566,17 +1566,17 @@ int main() {
   I1_Class* i1_class_tpl_ctor = new I1_Class(&i1_namespace_class, 1);
 
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   // IWYU: I1_Struct is...*badinc-i1.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   delete newed_i1_template_class;
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   // IWYU: I1_Struct is...*badinc-i1.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   delete[] newed_i1_template_class_array;
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   // IWYU: I1_Struct is...*badinc-i1.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   delete newed_i1_template_class_ctor;
@@ -1584,10 +1584,10 @@ int main() {
   delete i1_class_tpl_ctor;
   // Check that we discover constructor/destructor locations as well.
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::I2_Class({{.*}}) is...*badinc-i2-inl.h
   local_i2_class_ptr = new I2_Class("inl.h constructor");
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   delete local_i2_class_ptr;
   // Make sure we do this check even when it's via a template parameter.
   // (We need full type info for i1_templateclass because we never
@@ -1596,7 +1596,7 @@ int main() {
   // IWYU: I1_Enum is...*badinc-i1.h
   // IWYU: I2_Class needs a declaration
   I1_TemplateClass<I1_Enum, I2_Class>* local_i1_template_class_for_inl = NULL;
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   // IWYU: I2_Class is...*badinc-i2.h
   local_i1_template_class_for_inl->new_delete_bar();
@@ -1620,7 +1620,7 @@ int main() {
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: i1_ns::I1_NamespaceClass is...*badinc-i1.h
   (void)I1_Class(&i1_namespace_class, 1);
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   // IWYU: I1_Struct needs a declaration
   // IWYU: I1_Struct is...*badinc-i1.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
@@ -1628,7 +1628,7 @@ int main() {
   // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I1_Union is...*badinc-i1.h
   I1_TemplateClass<I2_Class, I1_Struct> local_i1_templateclass(i1_union);
-  // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+  // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   // IWYU: I1_Struct needs a declaration
   // IWYU: I1_Struct is...*badinc-i1.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
@@ -1714,10 +1714,10 @@ int main() {
   (void)("#include \\\"UNUSED_MACRO\"");
 
   // Test if and while.
-  // IWYU: I1_Function is...*badinc-i1.h
+  // IWYU: I1_Function({{.*}}) is...*badinc-i1.h
   if (I1_Function(0)) {        // returns an I1Enum
     // IWYU: I2_Struct is...*badinc-i2.h
-    // IWYU: I2_Function is...*badinc-i2.h
+    // IWYU: I2_Function({{.*}}) is...*badinc-i2.h
     while (I2_Function(0)) ;   // returns a I2_Struct, converted to a bool
   }
 
@@ -1755,18 +1755,18 @@ int main() {
   h_templateclass2.h_nested_struct.static_tplnested(I22);
   // This should not cause warnings for the i2_class destructor
   h_templateclass2.uses_i2class();
-  // IWYU: I1_TemplateFunction is...*badinc-i1.h
+  // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
   I1_TemplateFunction(i1_class_ptr);
-  // IWYU: I1_TemplateFunction is...*badinc-i1.h
+  // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
   // IWYU: I1_Class needs a declaration
   I1_TemplateFunction<I1_Class*>(i1_class_ptr);
   // Try again, but with a typedef
   Cc_typedef cc_typedef;
-  // IWYU: I1_TemplateFunction is...*badinc-i1.h
+  // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
   I1_TemplateFunction(cc_typedef);
-  // IWYU: I1_TemplateFunction is...*badinc-i1.h
+  // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
   I1_TemplateFunction<Cc_typedef>(cc_typedef);
-  // IWYU: I1_TemplateFunction is...*badinc-i1.h
+  // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
   I1_TemplateFunction<Cc_typedef>(i1_class);
 
   // IWYU: I1_Class is...*badinc-i1.h

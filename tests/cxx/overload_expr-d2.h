@@ -14,7 +14,7 @@
 
 template <typename T>
 T TplFn2() {
-  // IWYU: ns::add is...*overload_expr-int.h
+  // IWYU: ns::add({{.*}}) is...*overload_expr-int.h
   return ns::add(T{}, T{});
 }
 
@@ -29,7 +29,7 @@ template <typename T>
 void TplFn4() {
   // All the overloads which are visible without ADL are in a single file, hence
   // report it here even if not included directly.
-  // IWYU: OverloadedFn2 is...*overload_expr-i4.h
+  // IWYU: OverloadedFn2({{.*}}) is...*overload_expr-i4.h
   OverloadedFn2(T{});
 }
 
