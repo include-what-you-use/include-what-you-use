@@ -265,6 +265,32 @@ if (MSVC)
   )
 endif()
 
+# Add unittest target.
+add_llvm_executable(iwyu-unittests
+  unittests/iwyu_unittest_main.cc
+)
+
+target_include_directories(iwyu-unittests PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(iwyu-unittests PRIVATE
+  iwyu
+  iwyu-gtest
+)
+
+enable_testing()
+add_test(NAME iwyu-unittests
+  COMMAND $<TARGET_FILE:iwyu-unittests>
+)
+
+# Expose a custom run-unittests target in the generated buildsystem.
+add_custom_target(run-unittests
+  DEPENDS iwyu-unittests
+  COMMAND $<TARGET_FILE:iwyu-unittests>
+  USES_TERMINAL
+)
+
 # Install programs.
 include(GNUInstallDirs)
 install(TARGETS
@@ -295,8 +321,6 @@ endif()
 find_package(Python3 COMPONENTS Interpreter)
 if (Python3_Interpreter_FOUND)
   # Map the various IWYU test scripts to CTest tests.
-  enable_testing()
-
   function(iwyu_add_test name file)
     add_test(NAME ${name}
       COMMAND ${Python3_EXECUTABLE} run_iwyu_tests.py --run-test-file=${file}
