@@ -424,7 +424,8 @@ static vector<HeaderSearchPath> NormalizeHeaderSearchPaths(
     const map<string, HeaderSearchPath::Type>& include_dirs_map) {
   vector<HeaderSearchPath> include_dirs;
   for (const auto& entry : include_dirs_map) {
-    include_dirs.push_back(HeaderSearchPath(entry.first, entry.second));
+    string path = NormalizeDirPath(MakeAbsolutePath(entry.first));
+    include_dirs.push_back(HeaderSearchPath(path, entry.second));
   }
 
   sort(include_dirs.begin(), include_dirs.end(), &SortByDescendingLength);
@@ -439,7 +440,7 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
   for (auto it = header_search->system_dir_begin();
        it != header_search->system_dir_end(); ++it) {
     if (OptionalDirectoryEntryRef entry = it->getDirRef()) {
-      const string path = NormalizeDirPath(MakeAbsolutePath(entry->getName().str()));
+      const string path = entry->getName().str();
       search_path_map[path] = HeaderSearchPath::kSystemPath;
     }
   }
@@ -449,7 +450,7 @@ static vector<HeaderSearchPath> ComputeHeaderSearchPaths(
       // search_dir_begin()/end() includes both system and user paths.
       // If it's a system path, it's already in the map, so everything
       // new is a user path.  The insert only 'takes' for new entries.
-      const string path = NormalizeDirPath(MakeAbsolutePath(entry->getName().str()));
+      const string path = entry->getName().str();
       search_path_map.insert(make_pair(path, HeaderSearchPath::kUserPath));
     }
   }
