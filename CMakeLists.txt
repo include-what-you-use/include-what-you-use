@@ -124,7 +124,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
 )
 
-add_llvm_executable(include-what-you-use
+add_library(iwyu
   iwyu.cc
   iwyu_ast_util.cc
   iwyu_cache.cc
@@ -134,13 +134,20 @@ add_llvm_executable(include-what-you-use
   iwyu_include_picker.cc
   iwyu_lexer_utils.cc
   iwyu_location_util.cc
-  iwyu_main.cc
   iwyu_output.cc
   iwyu_path_util.cc
   iwyu_port.cc
   iwyu_preprocessor.cc
   iwyu_regex.cc
   iwyu_verrs.cc
+)
+
+add_llvm_executable(include-what-you-use
+  iwyu_main.cc
+)
+
+target_link_libraries(include-what-you-use PRIVATE
+  iwyu
 )
 
 # Add a dependency on clang-resource-headers if it exists, to ensure the builtin
@@ -151,7 +158,7 @@ if (TARGET clang-resource-headers)
 endif()
 
 # LLVM requires C++17, so follow suit.
-set_target_properties(include-what-you-use PROPERTIES
+set_target_properties(iwyu include-what-you-use PROPERTIES
   CXX_STANDARD_REQUIRED ON
   CXX_STANDARD 17
   CXX_EXTENSIONS OFF
@@ -159,25 +166,25 @@ set_target_properties(include-what-you-use PROPERTIES
 
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 
-target_compile_definitions(include-what-you-use PRIVATE
+target_compile_definitions(iwyu PUBLIC
   ${LLVM_DEFINITIONS_LIST}
   IWYU_GIT_REV="${iwyu_git_rev}"
   IWYU_RESOURCE_BINARY_PATH="${iwyu_resource_binary_path}"
   IWYU_RESOURCE_DIR="${iwyu_resource_dir}"
 )
-target_include_directories(include-what-you-use PRIVATE
+target_include_directories(iwyu PUBLIC
   ${iwyu_include_dirs}
 )
 
 if (MINGW)
-  target_compile_options(include-what-you-use PRIVATE
+  target_compile_options(iwyu PUBLIC
     # Work around 'too many sections' error with MINGW/GCC.
     -Wa,-mbig-obj
   )
 endif()
 
 if (MSVC)
-  target_compile_options(include-what-you-use PRIVATE
+  target_compile_options(iwyu PUBLIC
     # Suppress ''destructor'' : destructor never returns, potential memory leak.
     /wd4722
     # Disable exceptions in MSVC STL.
@@ -189,9 +196,9 @@ endif()
 
 # Link dynamically or statically depending on user preference.
 if (IWYU_LINK_CLANG_DYLIB)
-  target_link_libraries(include-what-you-use PRIVATE clang-cpp)
+  target_link_libraries(iwyu PUBLIC clang-cpp)
 else()
-  target_link_libraries(include-what-you-use PRIVATE
+  target_link_libraries(iwyu PUBLIC
     clangBasic
     clangLex
     clangAST
@@ -216,7 +223,7 @@ endif()
 
 # Add platform-specific link dependencies.
 if (WIN32)
-  target_link_libraries(include-what-you-use PRIVATE
+  target_link_libraries(iwyu PUBLIC
     shlwapi  # for PathMatchSpecA
   )
 endif()
