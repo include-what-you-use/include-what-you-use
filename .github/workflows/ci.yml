@@ -102,6 +102,7 @@ jobs:
       - name: Check license headers
         run: |
           git ls-tree --full-tree --name-only -r HEAD | \
+              grep -v "^vendor/" | \
               xargs ./iwyu-check-license-header.py
 
       - name: IWYU dogfood

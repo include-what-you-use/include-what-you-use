@@ -232,6 +232,39 @@ if (WIN32)
   )
 endif()
 
+# Build vendored gtest library
+add_library(iwyu-gtest
+  vendor/googletest/src/gtest-all.cc
+)
+
+target_include_directories(iwyu-gtest
+  PUBLIC
+  vendor/googletest/include
+  PRIVATE
+  vendor/googletest
+)
+
+# gtest: Disable -Wcovered-switch-default if compiler supports it.
+include(CheckCompilerFlag)
+check_compiler_flag(CXX
+  -Wcovered-switch-default
+  iwyu_cxx_supports_covered_switch_default)
+
+if (iwyu_cxx_supports_covered_switch_default)
+  target_compile_options(iwyu-gtest
+    PRIVATE
+    -Wno-covered-switch-default
+  )
+endif()
+
+# gtest: Use portable exception semantics for MSVC.
+if (MSVC)
+  target_compile_options(iwyu-gtest
+    PUBLIC
+    /EHsc
+  )
+endif()
+
 # Install programs.
 include(GNUInstallDirs)
 install(TARGETS
