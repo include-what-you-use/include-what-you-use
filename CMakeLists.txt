@@ -41,6 +41,17 @@ endif()
 message(STATUS
   "IWYU: configuring for LLVM ${LLVM_VERSION} from ${iwyu_llvm_dir}")
 
+# Set common C++ properties (LLVM requires C++17), unless the user knows better.
+if (NOT DEFINED CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+if (NOT DEFINED CMAKE_CXX_STANDARD_REQUIRED)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+endif()
+if (NOT DEFINED CMAKE_CXX_EXTENSIONS)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+endif()
+
 # The good default is given by the llvm toolchain installation itself, but still
 # in case both static and shared libraries are available, allow to override that
 # default.
@@ -156,13 +167,6 @@ target_link_libraries(include-what-you-use PRIVATE
 if (TARGET clang-resource-headers)
   add_dependencies(include-what-you-use clang-resource-headers)
 endif()
-
-# LLVM requires C++17, so follow suit.
-set_target_properties(iwyu include-what-you-use PROPERTIES
-  CXX_STANDARD_REQUIRED ON
-  CXX_STANDARD 17
-  CXX_EXTENSIONS OFF
-)
 
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 
