@@ -7,33 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-// Tests for the iwyu_lexer_utils module. In addition, provides sample
-// code for using Clang's Lexer.
+// Tests for the iwyu_lexer_utils module.
 
 #include "iwyu_lexer_utils.h"
 
-#include <cstdio>
 #include <cstring>
 #include <string>
-#include <vector>
 
-#include "base/logging.h"
-#include "iwyu_globals.h"
-#include "testing/base/public/gunit.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Lex/Lexer.h"
-#include "clang/Lex/Token.h"
+#include "gtest/gtest.h"
+#include "iwyu_globals.h"
 
-using clang::LangOptions;
-using clang::Lexer;
+namespace include_what_you_use {
 using clang::SourceLocation;
-using clang::SourceRange;
-using clang::Token;
-
-namespace iwyu = include_what_you_use;
-using iwyu::CharacterDataGetterInterface;
+using std::string;
 
 namespace {
 
@@ -41,19 +28,18 @@ namespace {
 // non-trivial SourceLocations.
 SourceLocation CreateSourceLocationFromOffset(SourceLocation begin_loc,
                                               unsigned offset) {
-  return SourceLocation::getFromRawEncoding(begin_loc.getRawEncoding()
-                                            + offset);
+  return SourceLocation::getFromRawEncoding(begin_loc.getRawEncoding() +
+                                            offset);
 }
 
 class StringCharacterDataGetter : public CharacterDataGetterInterface {
  public:
-  StringCharacterDataGetter(const string& str)
-      : str_("unused" + str) {
+  StringCharacterDataGetter(const string& str) : str_("unused" + str) {
   }
 
-  virtual const char* GetCharacterData(SourceLocation loc) const {
+  virtual const char* GetCharacterData(SourceLocation loc) const override {
     unsigned offset = loc.getRawEncoding();
-    CHECK_LE(offset, str_.size());
+    assert(offset <= str_.size());
     return str_.c_str() + offset;
   }
 
@@ -184,17 +170,15 @@ TEST(GetIncludeNameAsWritten, SystemInclude) {
   StringCharacterDataGetter data_getter(text);
   SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation inc_loc = CreateSourceLocationFromOffset(begin_loc, 9);
-  EXPECT_EQ("<stdio.h>",
-            GetIncludeNameAsWritten(inc_loc, data_getter));
+  EXPECT_EQ("<stdio.h>", GetIncludeNameAsWritten(inc_loc, data_getter));
 }
 
-TEST(GetIncludeNameAsWritten, NonsysytemInclude) {
+TEST(GetIncludeNameAsWritten, NonsystemInclude) {
   const char text[] = "#include \"ads/util.h\"\n";
   StringCharacterDataGetter data_getter(text);
   SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation inc_loc = CreateSourceLocationFromOffset(begin_loc, 9);
-  EXPECT_EQ("\"ads/util.h\"",
-            GetIncludeNameAsWritten(inc_loc, data_getter));
+  EXPECT_EQ("\"ads/util.h\"", GetIncludeNameAsWritten(inc_loc, data_getter));
 }
 
 TEST(GetIncludeNameAsWritten, WithComments) {
@@ -202,15 +186,8 @@ TEST(GetIncludeNameAsWritten, WithComments) {
   StringCharacterDataGetter data_getter(text);
   SourceLocation begin_loc = data_getter.BeginningOfString();
   SourceLocation inc_loc = CreateSourceLocationFromOffset(begin_loc, 9);
-  EXPECT_EQ("<stdio.h>",
-            GetIncludeNameAsWritten(inc_loc, data_getter));
+  EXPECT_EQ("<stdio.h>", GetIncludeNameAsWritten(inc_loc, data_getter));
 }
 
 }  // namespace
-
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  include_what_you_use::InitGlobalsAndFlagsForTesting();
-  return RUN_ALL_TESTS();
-}
+}  // namespace include_what_you_use
