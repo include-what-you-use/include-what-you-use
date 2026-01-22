@@ -33,6 +33,11 @@ template<typename T> void FnWithReference(const T& t) {
   (void)dummy;
 }
 
+template <typename T>
+void FnWithForwardingReference(T&& t) {
+  (void)sizeof(t);
+}
+
 template<typename T> struct TplClass {
   T t;
 };
@@ -51,6 +56,9 @@ int main() {
   // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   FnWithReference(ic);
   FnWithReference(ic_ptr);
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
+  FnWithForwardingReference(ic);
+  FnWithForwardingReference(ic_ptr);
 
   // Do it again, to make sure that the template cache is working properly.
   // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
@@ -61,6 +69,9 @@ int main() {
   // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   FnWithReference(ic);
   FnWithReference(ic_ptr);
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
+  FnWithForwardingReference(ic);
+  FnWithForwardingReference(ic_ptr);
 
   // Now try again, but with a typedef.
   // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
@@ -76,6 +87,8 @@ int main() {
   FnWithPtr(lc_ptr2);
   FnWithReference(lc);
   FnWithReference(lc_ptr);
+  FnWithForwardingReference(lc);
+  FnWithForwardingReference(lc_ptr);
 
   // And try again, but with namespaces.  This makes sure we don't
   // get tripped up by ElaboratedType's.
@@ -92,6 +105,9 @@ int main() {
   // IWYU: ns::NsClass is...*derived_function_tpl_args-i1.h
   FnWithReference(ns_ic);
   FnWithReference(ns_ic_ptr);
+  // IWYU: ns::NsClass is...*derived_function_tpl_args-i1.h
+  FnWithForwardingReference(ns_ic);
+  FnWithForwardingReference(ns_ic_ptr);
 
   // Handle the case where the sugaring is due to default template args.
   // IWYU: IndirectTplClass is...*derived_function_tpl_args-i1.h
@@ -109,6 +125,9 @@ int main() {
   // IWYU: IndirectTplClass is...*derived_function_tpl_args-i1.h
   FnWithReference(itc);
   FnWithReference(itc_ptr);
+  // IWYU: IndirectTplClass is...*derived_function_tpl_args-i1.h
+  FnWithForwardingReference(itc);
+  FnWithForwardingReference(itc_ptr);
 
   // If we have the args explicitly, we're responsible for them.
   // IWYU: IndirectTplClass is...*derived_function_tpl_args-i1.h
@@ -127,6 +146,9 @@ int main() {
   // IWYU: IndirectTplClass is...*derived_function_tpl_args-i1.h
   FnWithReference(itc2);
   FnWithReference(itc2_ptr);
+  // IWYU: IndirectTplClass is...*derived_function_tpl_args-i1.h
+  FnWithForwardingReference(itc2);
+  FnWithForwardingReference(itc2_ptr);
 
   // If we specify explicit template args, those should override everything.
   FnWithPtr<LocalClass>(ic_ptr);

@@ -963,7 +963,7 @@ static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
       }
     }
   }
-  return retval;
+  return ResugarTypeComponents(retval);
 }
 
 static map<const Type*, const Type*> GetTplTypeResugarMapForExplicitTplArgs(
