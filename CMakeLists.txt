@@ -135,7 +135,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
 )
 
-add_library(iwyu
+add_llvm_library(iwyu
   iwyu.cc
   iwyu_ast_util.cc
   iwyu_cache.cc
