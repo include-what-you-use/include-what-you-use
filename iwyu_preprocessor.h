@@ -258,8 +258,9 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // Determine if the comment is a pragma, and if so, process it.
   void HandlePragmaComment(clang::SourceRange comment_range);
 
-  // Process @headername directives in a file.
-  void ProcessHeadernameDirectivesInFile(clang::SourceLocation file_beginning);
+  // Process @headername directives in a file include as include_name.
+  void ProcessHeadernameDirectivesInFile(const string& include_name,
+                                         clang::SourceLocation file_beginning);
 
   // Checks whether it's OK to use the given macro defined in file defined_in.
   void ReportMacroUse(const string& name,
