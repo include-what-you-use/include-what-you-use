@@ -17,7 +17,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Token.h"
 #include "iwyu_ast_util.h"
@@ -362,12 +361,23 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
 }
 
 void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
-    SourceLocation file_beginning) {
+    const string& quoted_private_include, SourceLocation file_beginning) {
+  if (quoted_private_include.empty()) {
+    return;
+  }
+
   SourceLocation current_loc = file_beginning;
   OptionalFileEntryRef file = GetFileEntry(current_loc);
   if (!file) {
     return;
   }
+
+  // Make sure we have a mappable name.
+  CHECK_(IsQuotedInclude(quoted_private_include))
+      << ": " << quoted_private_include;
+
+  // Quote @headername headers based on the current file's system-headerness.
+  bool is_angled = IsSystemHeader(file);
 
   while (true) {
     // Find any headername directive after a file directive. This is a Doxygen
@@ -392,20 +402,6 @@ void IwyuPreprocessorInfo::ProcessHeadernameDirectivesInFile(
     }
     after_text = after_text.substr(0, close_brace_pos);
     vector<string> public_includes = Split(after_text, ",", 0);
-
-    // Lookup the current filename as a quoted include.
-    bool is_angled = IsSystemHeader(file);
-    string include_name = preprocessor_.getHeaderSearchInfo()
-                              .getIncludeNameForHeader(*file)
-                              .str();
-    if (include_name.empty()) {
-      // Sometimes the preprocessor state can't resolve the include name; don't
-      // map empty names in that case.
-      // TODO: figure out a bullet-proof way to get include name from file.
-      Warn(file_beginning, "no private include name for @headername mapping");
-      return;
-    }
-    string quoted_private_include = AddQuotes(include_name, is_angled);
 
     // Generate mappings from the private to all public names.
     for (string& public_include : public_includes) {
@@ -851,7 +847,7 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   if (IsSpecialFile(new_file))
     return;
 
-  ProcessHeadernameDirectivesInFile(file_beginning);
+  ProcessHeadernameDirectivesInFile(include_name_as_written, file_beginning);
 
   // The first non-special file entered is the main file.
   if (main_file_ == nullptr)
