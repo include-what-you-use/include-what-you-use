@@ -9,7 +9,8 @@
 
 #include "tests/cxx/indirect.h"
 
-template <typename T> struct TplUsingInDtor;
+template <typename T>
+struct TplUsingInDtor;
 
 // This provides IndirectClass template argument.
 using ProvidingTplUsingInDtor = TplUsingInDtor<IndirectClass>;
