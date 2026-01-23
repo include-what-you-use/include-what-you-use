@@ -3619,6 +3619,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     ReportWithAdditionalBlockedTypes(return_type,
                                      GetProvidedTypesForFnReturn(callee));
+
+    const NamedDecl* decl = TypeToDeclAsWritten(GetCanonicalType(return_type));
+    if (const auto* record_decl = dyn_cast_or_null<CXXRecordDecl>(decl)) {
+      if (CXXDestructorDecl* dtor_decl = record_decl->getDestructor())
+        this->TraverseImplicitDestructorCall(dtor_decl, return_type);
+    }
   }
 
   void HandleAutocastOnCallSite(CXXConstructExpr* expr) {

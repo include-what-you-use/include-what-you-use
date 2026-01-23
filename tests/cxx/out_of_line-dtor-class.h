@@ -1,4 +1,4 @@
-//===--- foob.h - iwyu test -----------------------------------------------===//
+//===--- out_of_line-dtor-class.h - test input file for iwyu --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FOOB_H
-#define FOOB_H
-
-class fooB {
- public:
-  int fooBVar;
+struct ClassWithOutOfLineDtor {
+  ~ClassWithOutOfLineDtor();
 };
-#endif
+
+ClassWithOutOfLineDtor GetClassWithOutOfLineDtor();

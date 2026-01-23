@@ -11,5 +11,6 @@
 
 #include "out_of_line-dep-int.h"
 #include "out_of_line-dep-char.h"
+#include "out_of_line-dtor.h"
 
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_OUT_OF_LINE_DEP_H_

@@ -1,4 +1,4 @@
-//===--- fooa.h - iwyu test -----------------------------------------------===//
+//===--- out_of_line-dtor.h - test input file for iwyu --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <memory>
-class fooB;
+#include "out_of_line-dtor-class.h"
 
-std::unique_ptr<fooB> getPointerFooB() {
-  return std::make_unique<fooB>();
-}
+inline ClassWithOutOfLineDtor::~ClassWithOutOfLineDtor() {}

@@ -12,6 +12,7 @@
 // Tests scanning class template member functions.
 
 #include "tests/cxx/direct.h"
+#include "tests/cxx/template_member_functions-direct.h"
 
 template <typename T>
 struct Tpl {
@@ -48,6 +49,30 @@ void FnUsingNestedTpl() {
   Outer<Tpl<T>> o;
 }
 
+TplUsingInDtor<IndirectClass> GetTplUsingInDtor();
+ProvidingTplUsingInDtor GetProvidingTplUsingInDtor();
+NonProvidingTplUsingInDtor GetNonProvidingTplUsingInDtor();
+
+template <typename T>
+TplUsingInDtor<T> TplGetTplUsingInDtor1() {
+  return TplUsingInDtor<T>();
+}
+
+template <typename T>
+TplUsingInDtor<T> TplGetTplUsingInDtor2() {
+  return TplUsingInDtor<T>{};
+}
+
+template <typename T>
+TplUsingInDtor<T> TplGetTplUsingInDtor3() {
+  return {};
+}
+
+template <typename T = IndirectClass>
+TplUsingInDtor<T> TplGetTplUsingInDtorDefArgNonProviding() {
+  return TplUsingInDtor<T>();
+}
+
 void Fn() {
   // IWYU: IndirectClass is...*indirect.h
   NonProviding::StaticFn();
@@ -56,6 +81,28 @@ void Fn() {
   // IndirectClass is not fully used here. For this test case, it is important
   // that StaticFn is used in the translation unit so as to be instantiated.
   FnUsingNestedTpl<IndirectClass>();
+
+  // IWYU: IndirectClass is...*indirect.h
+  (void)TplUsingInDtor<IndirectClass>();
+  // TODO: IWYU: IndirectClass is...*indirect.h
+  (void)TplUsingInDtor<IndirectClass>{};
+
+  // IWYU: IndirectClass is...*indirect.h
+  GetTplUsingInDtor();
+  GetProvidingTplUsingInDtor();
+  // IWYU: IndirectClass is...*indirect.h
+  GetNonProvidingTplUsingInDtor();
+
+  // IWYU: IndirectClass is...*indirect.h
+  TplGetTplUsingInDtor1<IndirectClass>();
+  // TODO: IWYU: IndirectClass is...*indirect.h
+  TplGetTplUsingInDtor2<IndirectClass>();
+  // TODO: IWYU: IndirectClass is...*indirect.h
+  TplGetTplUsingInDtor3<IndirectClass>();
+
+  // IWYU: IndirectClass is...*indirect.h
+  TplGetTplUsingInDtorDefArgNonProviding();
+  TplGetTplUsingInDtorDefArgProviding();
 }
 
 /**** IWYU_SUMMARY
@@ -69,5 +116,6 @@ tests/cxx/template_member_functions.cc should remove these lines:
 
 The full include-list for tests/cxx/template_member_functions.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/template_member_functions-direct.h"  // for ProvidingTplUsingInDtor, TplGetTplUsingInDtorDefArgProviding
 
 ***** IWYU_SUMMARY */
