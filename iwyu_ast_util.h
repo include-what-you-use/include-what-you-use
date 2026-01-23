@@ -31,8 +31,6 @@
 #include "iwyu_use_flags.h"
 #include "llvm/Support/Casting.h"
 
-// IWYU pragma: no_include <iterator>
-
 namespace clang {
 class ASTContext;
 class CXXConstructExpr;

@@ -62,7 +62,6 @@
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/AST/StmtIterator.h"
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
-// IWYU pragma: no_include <iterator>
 // IWYU pragma: no_include <tuple>
 
 using clang::ASTContext;
