@@ -9,4 +9,5 @@
 
 #include "out_of_line-dtor-class.h"
 
-inline ClassWithOutOfLineDtor::~ClassWithOutOfLineDtor() {}
+inline ClassWithOutOfLineDtor::~ClassWithOutOfLineDtor() {
+}
