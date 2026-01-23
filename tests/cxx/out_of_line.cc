@@ -36,7 +36,6 @@ void Class<int, int>::MethodOut() {
   Dependent(Type());
 }
 
-
 int main()
 {
     //Inline template method
@@ -62,17 +61,25 @@ int main()
     //Out-of-line static method
     // IWYU: Dependent is...*out_of_line-dep-int.h
     Class<int>::MethodStaticOut();
+
+    // IWYU: GetClassWithOutOfLineDtor is...*out_of_line-dtor-class.h
+    // IWYU: ClassWithOutOfLineDtor::~ClassWithOutOfLineDtor is...*out_of_line-dtor.h
+    GetClassWithOutOfLineDtor();
 }
 
 /**** IWYU_SUMMARY
 
 tests/cxx/out_of_line.cc should add these lines:
 #include "out_of_line-dep-int.h"
+#include "out_of_line-dtor-class.h"
+#include "out_of_line-dtor.h"
 
 tests/cxx/out_of_line.cc should remove these lines:
 - #include "out_of_line-dep.h"  // lines XX-XX
 
 The full include-list for tests/cxx/out_of_line.cc:
 #include "out_of_line-dep-int.h"  // for Dependent
+#include "out_of_line-dtor-class.h"  // for GetClassWithOutOfLineDtor
+#include "out_of_line-dtor.h"  // for ClassWithOutOfLineDtor::~ClassWithOutOfLineDtor
 
 ***** IWYU_SUMMARY */
