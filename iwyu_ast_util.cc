@@ -569,6 +569,7 @@ string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl) {
   PrintingPolicy printing_policy =
       named_decl->getASTContext().getPrintingPolicy();
   printing_policy.SuppressUnwrittenScope = true;
+  printing_policy.PrintAsCanonical = true;
   named_decl->printQualifiedName(ostream, printing_policy);
 
   if (const auto* cls_spec =

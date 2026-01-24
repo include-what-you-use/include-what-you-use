@@ -21,6 +21,9 @@ Tpl<int, 1, OtherTpl> t2;
 // IWYU: OtherTpl is...*-i1.h
 // IWYU: Tpl<:0 *, :1, :2> is...*-i4.h
 Tpl<int*, 1, OtherTpl> t3;
+// IWYU: OtherTpl is...*-i1.h
+// IWYU: Tpl<:0[:1], :2, OtherTpl> is...*-i5.h
+Tpl<int[5], 7, OtherTpl> t4;
 
 // IWYU: TplWithDefArg is...*-i2.h
 TplWithDefArg<int, int> twda1;
@@ -77,6 +80,7 @@ tests/cxx/template_spec_mapping.cc should add these lines:
 #include "tests/cxx/template_spec_mapping-i2.h"
 #include "tests/cxx/template_spec_mapping-i3.h"
 #include "tests/cxx/template_spec_mapping-i4.h"
+#include "tests/cxx/template_spec_mapping-i5.h"
 
 tests/cxx/template_spec_mapping.cc should remove these lines:
 - #include "tests/cxx/template_spec_mapping-d1.h"  // lines XX-XX
@@ -86,5 +90,6 @@ The full include-list for tests/cxx/template_spec_mapping.cc:
 #include "tests/cxx/template_spec_mapping-i2.h"  // for Tpl, TplParamPack1, TplParamPack2, TplSpecDistinguishedByIndices, TplWithDeducibleNTTP, TplWithDefArg, var_tpl
 #include "tests/cxx/template_spec_mapping-i3.h"  // for Tpl, TplParamPack1, TplParamPack2, TplSpecDistinguishedByIndices, TplWithDeducibleNTTP, TplWithDefArg, var_tpl
 #include "tests/cxx/template_spec_mapping-i4.h"  // for Tpl, TplParamPack1, TplSpecDistinguishedByIndices, TplWithDeducibleNTTP, TplWithDefArg, var_tpl
+#include "tests/cxx/template_spec_mapping-i5.h"  // for Tpl
 
 ***** IWYU_SUMMARY */
