@@ -21,36 +21,38 @@ using std::vector;
 
 namespace {
 
-#define TEST_OPERATION(op, in, expected_out) \
-  {                                          \
-    string str = in;                         \
-    op(&str);                                \
-    EXPECT_EQ(string(expected_out), str);    \
+// Helper macro to test whitespace strip functions on the form:
+// void op(string* s);
+#define TEST_STRIP_WHITESPACE_OP(expected, op, in) \
+  {                                                \
+    string str = in;                               \
+    op(&str);                                      \
+    EXPECT_EQ(string(expected), str);              \
   }
 
 TEST(IwyuStringUtilTest, StripWhiteSpaceLeft) {
-  TEST_OPERATION(StripWhiteSpaceLeft, "", "");
-  TEST_OPERATION(StripWhiteSpaceLeft, " ", "");
-  TEST_OPERATION(StripWhiteSpaceLeft, "abc", "abc");
-  TEST_OPERATION(StripWhiteSpaceLeft, " abc", "abc");
-  TEST_OPERATION(StripWhiteSpaceLeft, " abc ", "abc ");
+  TEST_STRIP_WHITESPACE_OP("", StripWhiteSpaceLeft, "");
+  TEST_STRIP_WHITESPACE_OP("", StripWhiteSpaceLeft, " ");
+  TEST_STRIP_WHITESPACE_OP("abc", StripWhiteSpaceLeft, "abc");
+  TEST_STRIP_WHITESPACE_OP("abc", StripWhiteSpaceLeft, " abc");
+  TEST_STRIP_WHITESPACE_OP("abc ", StripWhiteSpaceLeft, " abc ");
 }
 
 TEST(IwyuStringUtilTest, StripWhiteSpaceRight) {
-  TEST_OPERATION(StripWhiteSpaceRight, "", "");
-  TEST_OPERATION(StripWhiteSpaceRight, " ", "");
-  TEST_OPERATION(StripWhiteSpaceRight, "abc", "abc");
-  TEST_OPERATION(StripWhiteSpaceRight, "abc ", "abc");
-  TEST_OPERATION(StripWhiteSpaceRight, " abc ", " abc");
+  TEST_STRIP_WHITESPACE_OP("", StripWhiteSpaceRight, "");
+  TEST_STRIP_WHITESPACE_OP("", StripWhiteSpaceRight, " ");
+  TEST_STRIP_WHITESPACE_OP("abc", StripWhiteSpaceRight, "abc");
+  TEST_STRIP_WHITESPACE_OP("abc", StripWhiteSpaceRight, "abc ");
+  TEST_STRIP_WHITESPACE_OP(" abc", StripWhiteSpaceRight, " abc ");
 }
 
 TEST(IwyuStringUtilTest, StripWhiteSpace) {
-  TEST_OPERATION(StripWhiteSpace, "", "");
-  TEST_OPERATION(StripWhiteSpace, " ", "");
-  TEST_OPERATION(StripWhiteSpace, "abc", "abc");
-  TEST_OPERATION(StripWhiteSpace, " abc", "abc");
-  TEST_OPERATION(StripWhiteSpace, "abc ", "abc");
-  TEST_OPERATION(StripWhiteSpace, " abc ", "abc");
+  TEST_STRIP_WHITESPACE_OP("", StripWhiteSpace, "");
+  TEST_STRIP_WHITESPACE_OP("", StripWhiteSpace, " ");
+  TEST_STRIP_WHITESPACE_OP("abc", StripWhiteSpace, "abc");
+  TEST_STRIP_WHITESPACE_OP("abc", StripWhiteSpace, " abc");
+  TEST_STRIP_WHITESPACE_OP("abc", StripWhiteSpace, "abc ");
+  TEST_STRIP_WHITESPACE_OP("abc", StripWhiteSpace, " abc ");
 }
 
 TEST(IwyuStringUtilTest, SplitOnWhiteSpace) {
