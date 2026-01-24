@@ -19,6 +19,9 @@ class Tpl<int, 1, OtherTpl> {};
 template <typename T, int I, template <int> typename Other>
 class Tpl<T*, I, Other> {};
 
+template <typename T, int I, int K>
+class Tpl<T[I], K, OtherTpl> {};
+
 template <typename, typename = char>
 class TplWithDefArg {};
 
