@@ -63,49 +63,11 @@ template <size_t kCount> string VectorDiff(const string (&expected)[kCount],
   EXPECT_EQ("", VectorDiff(expected, actual));  \
 } while (0)
 
-
-TEST(GetCanonicalName, StripsKnownSuffixes) {
-  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.cxx"));
-  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.cpp"));
-  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.cc"));
-  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.h"));
-  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo-inl.h"));
-  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo_unittest.cc"));
-  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo_regtest.cc"));
-  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo_test.cc"));
-  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.c"));
-  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo-inl_unittest.cc"));
-  EXPECT_EQ("my/path/foo_mytest", GetCanonicalName("my/path/foo_mytest.cc"));
-}
-
-TEST(GetCanonicalName, StripsQuotes) {
-  EXPECT_EQ("set", GetCanonicalName("<set>"));
-  EXPECT_EQ("bits/stl_set", GetCanonicalName("<bits/stl_set.h>"));
-  EXPECT_EQ("my/path/foo", GetCanonicalName("\"my/path/foo-inl.h\""));
-}
-
-TEST(GetCanonicalName, MapsInternalToPublic) {
-  EXPECT_EQ("my/public/foo", GetCanonicalName("my/internal/foo.cc"));
-  EXPECT_EQ("my/public/foo", GetCanonicalName("my/public/foo.cc"));
-  EXPECT_EQ("my/public/foo", GetCanonicalName("my/internal/foo.h"));
-  EXPECT_EQ("my/public/foo", GetCanonicalName("my/public/foo.h"));
-  EXPECT_EQ("internal/foo", GetCanonicalName("internal/foo"));
-  EXPECT_EQ("path/internal_impl", GetCanonicalName("path/internal_impl.cc"));
-}
-
 TEST(IsSystemIncludeFile, Basic) {
   EXPECT_FALSE(IsSystemIncludeFile("foo.h"));
   EXPECT_TRUE(IsSystemIncludeFile("/usr/include/string.h"));
   EXPECT_TRUE(IsSystemIncludeFile("/usr/include/c++/4.3/bits/stl_vector.h"));
 }
-
-TEST(ConvertToQuotedInclude, Basic) {
-  EXPECT_EQ("\"foo.h\"", ConvertToQuotedInclude("foo.h"));
-  EXPECT_EQ("<string.h>", ConvertToQuotedInclude("/usr/include/string.h"));
-  EXPECT_EQ("<bits/stl_vector.h>",
-            ConvertToQuotedInclude("/usr/include/c++/4.3/bits/stl_vector.h"));
-}
-
 
 TEST(DynamicMapping, DoesMapping) {
   IncludePicker p;

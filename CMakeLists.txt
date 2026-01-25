@@ -268,6 +268,7 @@ endif()
 # Add unittest target.
 add_llvm_executable(iwyu-unittests
   unittests/iwyu_lexer_utils_test.cc
+  unittests/iwyu_path_util_test.cc
   unittests/iwyu_string_util_test.cc
   unittests/iwyu_unittest_main.cc
 )
