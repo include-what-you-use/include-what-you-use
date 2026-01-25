@@ -89,19 +89,6 @@ inline bool StripPast(string* str, StringRef substr) {
   return true;
 }
 
-// Finds the first occurrence of substr in *str and removes from *str
-// everything after the occurrence and the occurrence itself.  For
-// example, string s = "What a hat!"; DropFrom(&s, "hat"); will make s
-// "W".
-inline bool DropFrom(string* str, StringRef substr) {
-  const size_t pos = str->find(substr);
-  if (pos == string::npos)
-    return false;
-
-  *str = str->substr(0, pos);
-  return true;
-}
-
 // Removes leading whitespace.
 inline void StripWhiteSpaceLeft(string* str) {
   for (string::size_type i = 0; i < str->size(); ++i) {
@@ -131,13 +118,6 @@ inline void StripWhiteSpaceRight(string* str) {
 inline void StripWhiteSpace(string* str) {
   StripWhiteSpaceLeft(str);
   StripWhiteSpaceRight(str);
-}
-
-inline void ReplaceAll(std::string* str, StringRef from, StringRef to) {
-  for (size_t pos = str->find(from); pos != std::string::npos;
-       pos = str->find(from, pos + to.size())) {
-    str->replace(pos, from.size(), to);
-  }
 }
 
 // This is the same as split() in Python.  If max_segs is 0, there's
