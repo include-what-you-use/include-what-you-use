@@ -284,8 +284,8 @@ add_test(NAME iwyu-unittests
   COMMAND $<TARGET_FILE:iwyu-unittests>
 )
 
-# Expose a custom run-unittests target in the generated buildsystem.
-add_custom_target(run-unittests
+# Expose a custom run target in the generated buildsystem.
+add_custom_target(iwyu-run-unittests
   DEPENDS iwyu-unittests
   COMMAND $<TARGET_FILE:iwyu-unittests>
   USES_TERMINAL
