@@ -17,7 +17,7 @@
 #include "tests/cxx/overloaded_class-d1.h"
 
 int main() {
-  // IWYU: MyFunc is...*overloaded_class-i1.h
+  // IWYU: MyFunc() is...*overloaded_class-i1.h
   MyFunc<int>();
 }
 

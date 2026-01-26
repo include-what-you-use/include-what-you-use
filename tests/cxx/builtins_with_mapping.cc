@@ -19,10 +19,10 @@
 // have two test cases:
 
 // First test case for a builtin which was already used in a header we included
-// IWYU: __builtin_expect is...*builtins_with_mapping-d2.h
+// IWYU: __builtin_expect({{.*}}) is...*builtins_with_mapping-d2.h
 int j = __builtin_expect(i, 0);
 // Second test case for a first use of a builtin
-// IWYU: __builtin_strlen is...*builtins_with_mapping-d3.h
+// IWYU: __builtin_strlen({{.*}}) is...*builtins_with_mapping-d3.h
 int k = __builtin_strlen("");
 
 /**** IWYU_SUMMARY

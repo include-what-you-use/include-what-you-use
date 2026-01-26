@@ -15,7 +15,7 @@
 
 int main() {
   Foo::bar(1);
-  // IWYU: Bar::foo is...*"tests/cxx/comment_style-i2.h"
+  // IWYU: Bar::foo(int) is...*"tests/cxx/comment_style-i2.h"
   Bar::foo(2);
   return 0;
 }
@@ -27,6 +27,6 @@ tests/cxx/comment_style_long.cc should add these lines:
 tests/cxx/comment_style_long.cc should remove these lines:
 
 The full include-list for tests/cxx/comment_style_long.cc:
-#include "tests/cxx/comment_style-d1.h"  // for Foo::bar
-#include "tests/cxx/comment_style-i2.h"  // for Bar::foo
+#include "tests/cxx/comment_style-d1.h"  // for Foo::bar(int)
+#include "tests/cxx/comment_style-i2.h"  // for Bar::foo(int)
 ***** IWYU_SUMMARY */

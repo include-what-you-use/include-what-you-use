@@ -515,7 +515,8 @@ void PrintStmt(const clang::Stmt* stmt);
 // anonymous and inline namespaces.  Always consider using
 // GetWrittenQualifiedNameAsString instead of
 // NamedDecl::getQualifiedNameAsString.
-string GetWrittenQualifiedNameAsString(const clang::NamedDecl* named_decl);
+string GetWrittenQualifiedNameAsString(const clang::NamedDecl* named_decl,
+                                       bool with_fn_args);
 
 // --- Type conversion utilities.
 

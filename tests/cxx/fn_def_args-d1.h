@@ -12,11 +12,11 @@
 #include <cstddef>
 
 struct Struct {
-  // IWYU: GetInt is...*fn_def_args-i2.h
+  // IWYU: GetInt() is...*fn_def_args-i2.h
   static void FnWithDefArg(int = GetInt());
 };
 
-// IWYU: FnWithSmearedDefArgs is...*fn_def_args-i2.h
+// IWYU: FnWithSmearedDefArgs(int, int) is...*fn_def_args-i2.h
 void FnWithSmearedDefArgs(int = 0, int);
 
 // No need to report any redeclaration here because no default argument
@@ -24,7 +24,7 @@ void FnWithSmearedDefArgs(int = 0, int);
 void FnWithSmearedDefArgs(int, int);
 void FnWithDefArg2(int, int);
 
-// IWYU: operator new is...*fn_def_args-i2.h
+// IWYU: operator new(unsigned long, int, int, int) is...*fn_def_args-i2.h
 void* operator new(std::size_t, int, int = 0, int);
 
 /**** IWYU_SUMMARY

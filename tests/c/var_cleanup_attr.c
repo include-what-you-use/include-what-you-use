@@ -15,7 +15,7 @@
 #include "tests/c/var_cleanup_attr-d1.h"
 
 void Foo(void) {
-  // IWYU: Free is...*var_cleanup_attr-i1.h
+  // IWYU: Free(void *) is...*var_cleanup_attr-i1.h
   __attribute__((__cleanup__(Free))) char* x = 0;
 }
 

@@ -2732,67 +2732,67 @@ static_assert(!__builtin_le_synthesizes_from_spaceship(int*, With3WayComp&));
 static_assert(!__builtin_ge_synthesizes_from_spaceship(int*, With3WayComp&));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Class is...*-i1.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(With3WayComp, Class));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Class is...*-i1.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_gt_synthesizes_from_spaceship(With3WayComp, Class));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Class is...*-i1.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_le_synthesizes_from_spaceship(With3WayComp, Class));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Class is...*-i1.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_ge_synthesizes_from_spaceship(With3WayComp, Class));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Class is...*-i1.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(Class, With3WayComp));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Class is...*-i1.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_gt_synthesizes_from_spaceship(Class, With3WayComp));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Class is...*-i1.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_le_synthesizes_from_spaceship(Class, With3WayComp));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Class is...*-i1.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_ge_synthesizes_from_spaceship(Class, With3WayComp));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Struct is...*-i1.h
-// IWYU: operator< is...*-i1.h
+// IWYU: operator<({{.*}}) is...*-i1.h
 static_assert(!__builtin_lt_synthesizes_from_spaceship(With3WayComp, Struct));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Struct is...*-i1.h
-// IWYU: operator> is...*-i1.h
+// IWYU: operator>({{.*}}) is...*-i1.h
 static_assert(!__builtin_gt_synthesizes_from_spaceship(With3WayComp, Struct));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Struct is...*-i1.h
-// IWYU: operator<= is...*-i1.h
+// IWYU: operator<=({{.*}}) is...*-i1.h
 static_assert(!__builtin_le_synthesizes_from_spaceship(With3WayComp, Struct));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Struct is...*-i1.h
-// IWYU: operator>= is...*-i1.h
+// IWYU: operator>=({{.*}}) is...*-i1.h
 static_assert(!__builtin_ge_synthesizes_from_spaceship(With3WayComp, Struct));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Struct is...*-i1.h
-// IWYU: operator< is...*-i1.h
+// IWYU: operator<({{.*}}) is...*-i1.h
 static_assert(!__builtin_lt_synthesizes_from_spaceship(Struct, With3WayComp));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Struct is...*-i1.h
-// IWYU: operator> is...*-i1.h
+// IWYU: operator>({{.*}}) is...*-i1.h
 static_assert(!__builtin_gt_synthesizes_from_spaceship(Struct, With3WayComp));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Struct is...*-i1.h
-// IWYU: operator<= is...*-i1.h
+// IWYU: operator<=({{.*}}) is...*-i1.h
 static_assert(!__builtin_le_synthesizes_from_spaceship(Struct, With3WayComp));
 // IWYU: With3WayComp is...*-i2.h
 // IWYU: Struct is...*-i1.h
-// IWYU: operator>= is...*-i1.h
+// IWYU: operator>=({{.*}}) is...*-i1.h
 static_assert(!__builtin_ge_synthesizes_from_spaceship(Struct, With3WayComp));
 
 class LValueUsesNonMemberOp {};
@@ -2800,32 +2800,32 @@ class RValueUsesNonMemberOp {};
 
 static_assert(!__builtin_lt_synthesizes_from_spaceship(int,
                                                        LValueUsesNonMemberOp));
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(int,
                                                       LValueUsesNonMemberOp&));
 static_assert(
     !__builtin_lt_synthesizes_from_spaceship(int, LValueUsesNonMemberOp&&));
 static_assert(!__builtin_lt_synthesizes_from_spaceship(LValueUsesNonMemberOp,
                                                        int));
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(LValueUsesNonMemberOp&,
                                                       int));
 static_assert(!__builtin_lt_synthesizes_from_spaceship(LValueUsesNonMemberOp&&,
                                                        int));
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(int,
                                                       RValueUsesNonMemberOp));
 static_assert(!__builtin_lt_synthesizes_from_spaceship(int,
                                                        RValueUsesNonMemberOp&));
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(int,
                                                       RValueUsesNonMemberOp&&));
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(RValueUsesNonMemberOp,
                                                       int));
 static_assert(!__builtin_lt_synthesizes_from_spaceship(RValueUsesNonMemberOp&,
                                                        int));
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(RValueUsesNonMemberOp&&,
                                                       int));
 // The complete Derived type is required for Derived* to Base* conversion.
@@ -2894,12 +2894,12 @@ static_assert(__builtin_lt_synthesizes_from_spaceship(int**, With3WayComp));
 // IWYU: Enum needs a declaration
 // IWYU: Derived needs a declaration
 // IWYU: Derived is...*-i2.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(Enum, Derived*));
 // IWYU: Enum needs a declaration
 // IWYU: Derived needs a declaration
 // IWYU: Derived is...*-i2.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(Derived*, Enum));
 // Unions cannot have base classes, hence no full Union1 type is needed.
 // IWYU: With3WayComp is...*-i2.h
@@ -2927,7 +2927,7 @@ static_assert(__builtin_lt_synthesizes_from_spaceship(
 // IWYU: Struct is...*-i1.h
 // IWYU: Derived needs a declaration
 // IWYU: Derived is...*-i2.h
-// IWYU: operator<=> is...*-i1.h
+// IWYU: operator<=>({{.*}}) is...*-i1.h
 static_assert(__builtin_lt_synthesizes_from_spaceship(Struct&, Derived&));
 
 // Test that IWYU doesn't crash on a trait with dependent type.
