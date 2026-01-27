@@ -161,6 +161,7 @@ using clang::TypeWithKeyword;
 using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryOperator;
+using clang::UnaryTransformType;
 using clang::UnresolvedLookupExpr;
 using clang::UsingDirectiveDecl;
 using clang::ValueDecl;
@@ -722,6 +723,15 @@ class TypeEnumeratorWithoutSubstituted
   bool TraverseTypeHelper(QualType qual_type, bool traverse_qualifier) {
     CHECK_(!qual_type.isNull());
     const Type* type = qual_type.getTypePtr();
+
+    // A UnaryTransformType, such as __add_pointer or __remove_extent, desugars
+    // by default to its canonical type which, in particular, may cause skipping
+    // SubstTemplateTypeParmType. Take its base (input) type instead, assuming
+    // that UnaryTransformType does not introduce any new tag type unrelated
+    // to the types from the base.
+    if (const auto* unary_transform_type = dyn_cast<UnaryTransformType>(type))
+      type = unary_transform_type->getBaseType().getTypePtr();
+
     if (IsSubstTemplateTypeParmType(type))
       return true;
 

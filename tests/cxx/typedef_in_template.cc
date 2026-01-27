@@ -196,6 +196,66 @@ void ArgumentTypeProvision() {
 // IWYU: IndirectClass is...*indirect.h
 constexpr auto s3 = sizeof(Identity<IndirectClass>::SugaredType);
 
+// Test handling some of builtin unary transforms in dependent typedefs.
+
+template <typename T>
+struct UnaryTransformTypes {
+  using AddPointer = __add_pointer(T);
+  using RemoveAllExtents = __remove_all_extents(T);
+  using RemovePointer = __remove_pointer(T);
+  using RemoveReference = __remove_reference_t(T);
+  using Identity = __remove_reference_t(T&);
+  // IWYU: Pair needs a declaration
+  // IWYU: Pair is...*typedef_in_template-i2.h
+  // IWYU: Class1 is...*typedef_in_template-i1.h
+  using PairAlias1 = __remove_pointer(Pair<Class1, T>*);
+  // IWYU: Pair needs a declaration
+  // IWYU: Pair is...*typedef_in_template-i2.h
+  // IWYU: Class1 is...*typedef_in_template-i1.h
+  using PairAlias2 = __remove_pointer(Pair<Class1, T>);
+};
+
+struct NonDependentUnaryTransformTypes {
+  // IWYU: IndirectClass is...*indirect.h
+  using RemoveAllExtents = __remove_all_extents(IndirectClass[2][3]);
+  // IWYU: IndirectClass is...*indirect.h
+  using RemovePointer = __remove_pointer(IndirectClass*);
+  // IWYU: IndirectClass is...*indirect.h
+  using RemoveReference = __remove_reference_t(IndirectClass&);
+  // IWYU: IndirectClass is...*indirect.h
+  using DummyRemoveReference = __remove_reference_t(IndirectClass);
+};
+
+void TestUnaryTransformTypes() {
+  // IWYU: IndirectClass needs a declaration
+  UnaryTransformTypes<IndirectClass>::AddPointer p = nullptr;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(*p);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(UnaryTransformTypes<IndirectClass[2][3]>::RemoveAllExtents);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(UnaryTransformTypes<IndirectClass*>::RemovePointer);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(UnaryTransformTypes<IndirectClass&>::RemoveReference);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(UnaryTransformTypes<IndirectClass>::Identity);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(UnaryTransformTypes<IndirectClass>::PairAlias1);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(UnaryTransformTypes<IndirectClass>::PairAlias2);
+
+  (void)sizeof(NonDependentUnaryTransformTypes::RemoveAllExtents);
+  (void)sizeof(NonDependentUnaryTransformTypes::RemovePointer);
+  (void)sizeof(NonDependentUnaryTransformTypes::RemoveReference);
+  (void)sizeof(NonDependentUnaryTransformTypes::DummyRemoveReference);
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/typedef_in_template.cc should add these lines:
