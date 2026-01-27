@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -stdlib=libc++
+// IWYU_ARGS: -stdlib=libstdc++
 // IWYU_XFAIL
 
 #include "1250.h"
