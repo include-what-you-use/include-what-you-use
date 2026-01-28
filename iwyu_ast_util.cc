@@ -1771,15 +1771,20 @@ static TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
   // Pull the template arguments out of the specialization type. If this is
   // a ClassTemplateSpecializationDecl specifically, we want to
   // get the arguments therefrom to correctly handle default arguments.
-  llvm::ArrayRef<TemplateArgument> tpl_args = written_tpl_args;
-  unsigned num_args = tpl_args.size();
+  vector<TemplateArgument> tpl_args = written_tpl_args;
 
   if (cls_tpl_decl) {
     const TemplateArgumentList& tpl_arg_list =
         cls_tpl_decl->getTemplateInstantiationArgs();
     tpl_args = tpl_arg_list.asArray();
-    num_args = tpl_arg_list.size();
+
+    CHECK_(!tpl_args.empty());
+    TemplateArgument last = tpl_args.back();
+    if (last.getKind() == TemplateArgument::Pack) {
+      tpl_args.insert(tpl_args.end(), last.pack_begin(), last.pack_end());
+    }
   }
+  unsigned num_args = tpl_args.size();
 
   // TemplateSpecializationType only includes explicitly specified
   // types in its args list, so we start with that.  Note that an

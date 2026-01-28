@@ -256,6 +256,15 @@ void TestParameterPack() {
   TplFnWithParameterPack();
 }
 
+template <typename... Args>
+struct TplStructWithParameterPack : Args... {};
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: TplInI1 needs a declaration
+// IWYU: TplInI1 is...*-i1.h
+TplStructWithParameterPack<IndirectClass, TplInI1<int>> tswpp;
+
 // IWYU: TplHost needs a declaration
 // IWYU: TplHost is...*-i1.h
 TplHost::InnerTpl<TplHost> inner_tpl;
