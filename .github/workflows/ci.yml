@@ -30,13 +30,15 @@ jobs:
           sudo apt remove -y \
                "libclang*" \
                "clang*" \
-               "llvm*"
+               "llvm*" \
+               "libc++*"
           # Reinstall tagged versions
           sudo apt install -y \
                ninja-build \
                llvm$LLVM_TAG-dev \
                libclang$LLVM_TAG-dev \
-               clang$LLVM_TAG
+               clang$LLVM_TAG \
+               libc++$LLVM_TAG-dev
 
       - name: Capture LLVM major version and install prefix
         run: |
