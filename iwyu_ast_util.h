@@ -792,6 +792,8 @@ bool IsDefTplArgInherited(const clang::NamedDecl* tpl_param);
 // parameter declaration.
 bool IsDefTplArgSpecified(const clang::NamedDecl* tpl_param);
 
+unsigned GetTplParamNumberWithoutPack(const clang::TemplateDecl*);
+
 // --- Utilities for Type.
 
 // See if a given type is a 'real' elaborated type.  (An

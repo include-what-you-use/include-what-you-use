@@ -5348,7 +5348,7 @@ class IwyuAstConsumer
     if (!InImplicitCode(current_ast_node())) {
       const TemplateDecl* tpl = type->getTemplateName().getAsTemplateDecl();
       size_t num_written_args = type->template_arguments().size();
-      if (num_written_args < tpl->getTemplateParameters()->size()) {
+      if (num_written_args < GetTplParamNumberWithoutPack(tpl)) {
         // If the type as-written makes use of default arguments, select exactly
         // that redeclaration which specifies the first default argument used.
         ReportDeclForwardDeclareUse(

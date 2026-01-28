@@ -57,6 +57,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 
 // TODO: Clean out pragmas as IWYU improves.
@@ -1535,8 +1536,15 @@ const NamedDecl* GetIndependentRedecl(const NamedDecl* decl) {
   // If there is no redeclaration without any explicitly written default
   // arguments, return the one specifying the last argument because it doesn't
   // depend on any other redeclaration.
-  unsigned last_param_idx = redeclarable->getTemplateParameters()->size() - 1;
+  unsigned last_param_idx = GetTplParamNumberWithoutPack(redeclarable) - 1;
   return GetRedeclSpecifyingDefArg(last_param_idx, redeclarable);
+}
+
+unsigned GetTplParamNumberWithoutPack(const TemplateDecl* tpl) {
+  const TemplateParameterList* params = tpl->getTemplateParameters();
+  unsigned size = params->size();
+  CHECK_(size > 0);
+  return params->hasParameterPack() ? size - 1 : size;
 }
 
 // --- Utilities for Type.
@@ -1771,15 +1779,22 @@ static TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
   // Pull the template arguments out of the specialization type. If this is
   // a ClassTemplateSpecializationDecl specifically, we want to
   // get the arguments therefrom to correctly handle default arguments.
-  llvm::ArrayRef<TemplateArgument> tpl_args = written_tpl_args;
-  unsigned num_args = tpl_args.size();
+  vector<TemplateArgument> tpl_args = written_tpl_args;
 
   if (cls_tpl_decl) {
     const TemplateArgumentList& tpl_arg_list =
         cls_tpl_decl->getTemplateInstantiationArgs();
     tpl_args = tpl_arg_list.asArray();
-    num_args = tpl_arg_list.size();
+
+    CHECK_(!tpl_args.empty());
+    // Make a copy because a reference may be invalidated later.
+    TemplateArgument last = tpl_args.back();
+    if (last.getKind() == TemplateArgument::Pack) {
+      tpl_args.pop_back();
+      tpl_args.insert(tpl_args.end(), last.pack_begin(), last.pack_end());
+    }
   }
+  unsigned num_args = tpl_args.size();
 
   // TemplateSpecializationType only includes explicitly specified
   // types in its args list, so we start with that.  Note that an
