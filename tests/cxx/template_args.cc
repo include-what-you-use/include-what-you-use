@@ -256,6 +256,76 @@ void TestParameterPack() {
   TplFnWithParameterPack();
 }
 
+// Test handling class template parameter packs.
+
+template <typename... Args>
+struct TplStructWithParameterPack1 : Args... {};
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: TplInI1 needs a declaration
+// IWYU: TplInI1 is...*-i1.h
+TplStructWithParameterPack1<IndirectClass, TplInI1<int>> tswpp11;
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+TplStructWithParameterPack1<IndirectClass> tswpp12;
+
+// Test that IWYU doesn't crash.
+TplStructWithParameterPack1<> tswpp13;
+
+template <typename T, typename... Args>
+struct TplStructWithParameterPack2 : T, Args... {};
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectTemplate needs a declaration
+// IWYU: IndirectTemplate is...*indirect.h
+// IWYU: TplInI1 needs a declaration
+// IWYU: TplInI1 is...*-i1.h
+TplStructWithParameterPack2<IndirectClass, IndirectTemplate<int>, TplInI1<int>>
+    // IWYU: IndirectClass is...*indirect.h
+    // IWYU: IndirectTemplate is...*indirect.h
+    // IWYU: TplInI1 is...*-i1.h
+    tswpp21;
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectTemplate needs a declaration
+// IWYU: IndirectTemplate is...*indirect.h
+TplStructWithParameterPack2<IndirectClass, IndirectTemplate<int>> tswpp22;
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+TplStructWithParameterPack2<IndirectClass> tswpp23;
+
+// IWYU: IndirectClass is...*indirect.h
+template <typename T = IndirectClass, typename... Args>
+struct TplStructWithParameterPackAndDefArg : T, Args... {};
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectTemplate needs a declaration
+// IWYU: IndirectTemplate is...*indirect.h
+TplStructWithParameterPackAndDefArg<IndirectClass, IndirectTemplate<int>>
+    // IWYU: IndirectClass is...*indirect.h
+    // IWYU: IndirectTemplate is...*indirect.h
+    tswppda1;
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+TplStructWithParameterPackAndDefArg<IndirectClass> tswppda2;
+
+// Test that IWYU doesn't crash. There should be only one redecl of
+// TplStructWithParameterPackAndDefArg to test it correctly.
+// IWYU: IndirectClass needs a declaration
+TplStructWithParameterPackAndDefArg<IndirectClass>* ptswppda2;
+
+// TODO: probably, no need of IndirectClass here, because it is reported
+// at template declaration.
+// IWYU: IndirectClass is...*indirect.h
+TplStructWithParameterPackAndDefArg<> tswppda3;
+
 // IWYU: TplHost needs a declaration
 // IWYU: TplHost is...*-i1.h
 TplHost::InnerTpl<TplHost> inner_tpl;
@@ -275,7 +345,7 @@ tests/cxx/template_args.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/template_args.cc:
-#include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 #include "tests/cxx/template_args-d1.h"  // for ProvidingAlias
 #include "tests/cxx/template_args-d2.h"  // for NonProvidingAlias, NonProvidingFunctionAlias1, NonProvidingFunctionAlias2
 #include "tests/cxx/template_args-i1.h"  // for TplHost, TplInI1
