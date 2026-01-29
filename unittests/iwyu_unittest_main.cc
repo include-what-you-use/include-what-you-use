@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 #if defined(_WIN32)
+#define NOMINMAX
 #include <windows.h>
 #if defined(_MSC_VER)
 #include <crtdbg.h>
