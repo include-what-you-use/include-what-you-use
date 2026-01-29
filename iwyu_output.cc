@@ -14,7 +14,6 @@
 #include <iterator>                     // for inserter
 #include <list>
 #include <map>                          // for _Rb_tree_const_iterator, etc
-#include <regex>
 #include <utility>                      // for pair, make_pair, operator>
 #include <vector>                       // for vector, vector<>::iterator, etc
 
@@ -73,8 +72,6 @@ using llvm::raw_string_ostream;
 using std::map;
 using std::multimap;
 using std::pair;
-using std::regex;
-using std::regex_replace;
 using std::sort;
 using std::to_string;
 using std::vector;
@@ -499,31 +496,12 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   // attributes.
   PrintingPolicy policy = decl->getASTContext().getPrintingPolicy();
   policy.PolishForDeclaration = true;
+  policy.SuppressDeclAttributes = true;
   decl->print(ostream, policy);
 
   // Note that line is not a user-formatted C++ declaration at this point, but
   // rather on the exact form printed by Clang, so it's safe to make certain
   // assumptions about format.
-
-  // Can remove this after https://github.com/llvm/llvm-project/pull/174197.
-  line = CollapseRepeated(line, ' ');
-
-  // Remove any class property specifiers. The final keyword is not allowed on
-  // forward-decls. An alignas(x) specifier must match earlier declarations, so
-  // forward-decls become more resistant to change without it.
-  //
-  // TODO: If 'alignas(...)' is followed by a closing paren later in the line,
-  // this will munch up everything until then. I have not been able to come up
-  // with a valid C++ example with this shape, e.g.
-  //
-  //   template<class T> alignas(8) class C (oopsie)
-  //                              ^^^^^^^^^^^^^^^^^
-  //                                   DANGER!
-  //
-  // See if we can get Clang to remove the attrs to get rid of this regex hack.
-  static regex specifiers(R"( (alignas\(.*\)|final$))");
-  line = regex_replace(line, specifiers, "");
-
   // The template name is now the last word on the line. Drop it.
   const string::size_type namepos = line.rfind(' ');
   CHECK_(namepos != string::npos && "Unexpected printable template-type");
