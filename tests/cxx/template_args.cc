@@ -246,14 +246,49 @@ IndirectClass& i = TplParamRetType<IndirectClass&>();
 
 // ---------------------------------------------------------------
 
-// Test that IWYU doesn't crash on function template type parameter packs.
-
 template <typename...>
 void TplFnWithParameterPack() {
 }
 
-void TestParameterPack() {
+template <typename... Args>
+void TplFnWithParameterPackUsingArgs1(Args&&... args) {
+  // Capturing by copy requires complete type.
+  [args...] {}();
+}
+
+template <typename... Args, typename T>
+void TplFnWithParameterPackUsingArgs2(T t, Args&&... args) {
+  [t, args...] {}();
+}
+
+template <typename... Args>
+void TplFnWithParameterPackNonUsingArgs(Args&&... args) {
+  [&args...] {}();
+}
+
+// IWYU: IndirectClass needs a declaration
+void TestParameterPack(IndirectClass& ic,
+                       // IWYU: IndirectTemplate needs a declaration
+                       IndirectTemplate<int>& it,
+                       // IWYU: TplInI1 needs a declaration
+                       TplInI1<int>&& ti1) {
+  // Test that IWYU doesn't crash on function template type parameter packs.
   TplFnWithParameterPack();
+  // IWYU: IndirectClass is...*indirect.h
+  TplFnWithParameterPackUsingArgs1(ic);
+  // IWYU: IndirectClass is...*indirect.h
+  // IWYU: IndirectTemplate is...*indirect.h
+  TplFnWithParameterPackUsingArgs1(ic, it);
+  // IWYU: IndirectClass is...*indirect.h
+  TplFnWithParameterPackUsingArgs2(ic);
+  // IWYU: IndirectClass is...*indirect.h
+  // IWYU: IndirectTemplate is...*indirect.h
+  TplFnWithParameterPackUsingArgs2(ic, it);
+  // IWYU: IndirectClass is...*indirect.h
+  // IWYU: IndirectTemplate is...*indirect.h
+  // IWYU: TplInI1 is...*-i1.h
+  TplFnWithParameterPackUsingArgs2(ic, it, ti1);
+  TplFnWithParameterPackNonUsingArgs(ic, it);
 }
 
 // Test handling class template parameter packs.

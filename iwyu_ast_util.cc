@@ -964,13 +964,22 @@ static map<const Type*, const Type*> GetTplTypeResugarMapForFunctionNoCallExpr(
   map<const Type*, const Type*> retval;
   if (!decl)   // can be nullptr if the function call is via a function pointer
     return retval;
+  auto add_type_to_map = [&retval](const Type* arg_type) {
+    retval[GetCanonicalType(arg_type)] = arg_type;
+    VERRS(6) << "Adding an implicit tpl-function type of interest: "
+             << PrintableType(arg_type) << "\n";
+  };
   if (const TemplateArgumentList* tpl_list =
           decl->getTemplateSpecializationArgs()) {
     for (unsigned i = start_arg; i < tpl_list->size(); ++i) {
-      if (const Type* arg_type = GetTemplateArgAsType(tpl_list->get(i))) {
-        retval[GetCanonicalType(arg_type)] = arg_type;
-        VERRS(6) << "Adding an implicit tpl-function type of interest: "
-                 << PrintableType(arg_type) << "\n";
+      const TemplateArgument& arg = tpl_list->get(i);
+      if (const Type* arg_type = GetTemplateArgAsType(arg)) {
+        add_type_to_map(arg_type);
+      } else if (arg.getKind() == TemplateArgument::Pack) {
+        for (const TemplateArgument& pack_arg : arg.pack_elements()) {
+          if (const Type* pack_arg_type = GetTemplateArgAsType(pack_arg))
+            add_type_to_map(pack_arg_type);
+        }
       }
     }
   }
