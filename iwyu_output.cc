@@ -505,9 +505,6 @@ string MungedForwardDeclareLineForTemplates(const TemplateDecl* decl) {
   // rather on the exact form printed by Clang, so it's safe to make certain
   // assumptions about format.
 
-  // Can remove this after https://github.com/llvm/llvm-project/pull/174197.
-  line = CollapseRepeated(line, ' ');
-
   // Remove any class property specifiers. The final keyword is not allowed on
   // forward-decls. An alignas(x) specifier must match earlier declarations, so
   // forward-decls become more resistant to change without it.
