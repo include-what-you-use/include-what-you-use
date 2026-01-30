@@ -13,6 +13,7 @@
 #include <set>
 #include <string>
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"

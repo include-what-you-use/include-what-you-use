@@ -2181,7 +2181,9 @@ const Type* TypeOfParentIfMethod(const CallExpr* expr) {
   // DeclRefExpr if we're a static class method or an overloaded operator.
   const Expr* callee_expr = expr->getCallee()->IgnoreParenCasts();
   if (const MemberExpr* member_expr = DynCastFrom(callee_expr)) {
-    const Type* class_type = GetTypeOf(member_expr->getBase());
+    // TODO(bolshakov): IgnoreParenImpCasts instead of IgnoreImpCasts?
+    const Type* class_type =
+        GetTypeOf(member_expr->getBase()->IgnoreImpCasts());
     // For class->member(), class_type is a pointer.
     return RemovePointersAndReferencesAsWritten(class_type);
   } else if (const DeclRefExpr* ref_expr = DynCastFrom(callee_expr)) {
