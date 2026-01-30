@@ -19,6 +19,21 @@ struct Tpl {
   static void StaticFn() {
     T t;
   }
+
+  void Fn() {
+    T t;
+  }
+
+  void operator*() {
+    T t;
+  }
+};
+
+template <typename T1, typename T2>
+struct DerivedFromTpl : Tpl<T1> {
+  void UseT2() {
+    T2 t;
+  }
 };
 
 template <typename T>
@@ -103,6 +118,24 @@ void Fn() {
   // IWYU: IndirectClass is...*indirect.h
   TplGetTplUsingInDtorDefArgNonProviding();
   TplGetTplUsingInDtorDefArgProviding();
+
+  // IWYU: IndirectTemplate needs a declaration
+  DerivedFromTpl<IndirectClass, IndirectTemplate<int>> dft;
+  // IWYU: IndirectClass is...*indirect.h
+  dft.Fn();
+  // IWYU: IndirectClass is...*indirect.h
+  (dft).Fn();
+  extern Tpl<IndirectClass>& tpl;
+  // Test that IWYU doesn't ignore explicit type casts.
+  // IWYU: IndirectTemplate needs a declaration
+  // IWYU: IndirectTemplate is...*indirect.h
+  static_cast<DerivedFromTpl<IndirectClass, IndirectTemplate<int>>&>(tpl)
+      .UseT2();
+
+  // IWYU: IndirectClass is...*indirect.h
+  *dft;
+  // IWYU: IndirectClass is...*indirect.h
+  *(dft);
 }
 
 /**** IWYU_SUMMARY
@@ -115,7 +148,7 @@ tests/cxx/template_member_functions.cc should remove these lines:
 - class IndirectClass;  // lines XX-XX
 
 The full include-list for tests/cxx/template_member_functions.cc:
-#include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 #include "tests/cxx/template_member_functions-direct.h"  // for ProvidingTplUsingInDtor, TplGetTplUsingInDtorDefArgProviding
 
 ***** IWYU_SUMMARY */

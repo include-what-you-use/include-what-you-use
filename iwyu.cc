@@ -753,7 +753,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // first one that's a class, and associate the function with that.
     if (!parent_type) {
       if (const Expr* first_argument = GetFirstClassArgument(expr))
-        parent_type = GetTypeOf(first_argument);
+        parent_type = GetTypeOf(first_argument->IgnoreImpCasts());
+      // TODO(bolshakov): IgnoreParenImpCasts instead of IgnoreImpCasts?
     }
     return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
                                                  parent_type, expr);
