@@ -50,5 +50,26 @@ TEST(ConvertToQuotedInclude, Basic) {
             ConvertToQuotedInclude("/usr/include/c++/4.3/bits/stl_vector.h"));
 }
 
+TEST(IsQuotedHeaderFilename, Basic) {
+  // Nominal cases.
+  EXPECT_TRUE(IsQuotedHeaderFilename("\"foo.h\""));
+  EXPECT_TRUE(IsQuotedHeaderFilename("\"bar/foo.h\""));
+  EXPECT_TRUE(IsQuotedHeaderFilename("\"foo.inl\""));
+  EXPECT_TRUE(IsQuotedHeaderFilename("\"foo.def\""));
+
+  EXPECT_TRUE(IsQuotedHeaderFilename("<string.h>"));
+  EXPECT_TRUE(IsQuotedHeaderFilename("<bits/stl_vector.h>"));
+  EXPECT_TRUE(IsQuotedHeaderFilename("<string>"));
+
+  // A bit unusual, but considered headers.
+  EXPECT_TRUE(IsQuotedHeaderFilename("\"foo\""));
+  EXPECT_TRUE(IsQuotedHeaderFilename("<foo.xyz>"));
+
+  // Negative cases.
+  EXPECT_FALSE(IsQuotedHeaderFilename("\"foo.c\""));
+  EXPECT_FALSE(IsQuotedHeaderFilename("\"bar/foo.cc\""));
+  EXPECT_FALSE(IsQuotedHeaderFilename("<source.cpp>"));
+}
+
 }  // namespace
 }  // namespace include_what_you_use

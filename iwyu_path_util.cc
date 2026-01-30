@@ -77,9 +77,6 @@ bool IsHeaderFilename(StringRef path) {
 bool IsQuotedHeaderFilename(StringRef quoted_include) {
   CHECK_(IsQuotedInclude(quoted_include));
 
-  if (IsSpecialFilenameOrStdin(quoted_include))
-    return false;
-
   StringRef path = quoted_include.substr(1, quoted_include.size() - 2);
   return IsHeaderFilename(path);
 }
