@@ -462,6 +462,7 @@ const IncludeMapEntry libc_include_map[] = {
   { "<bits/types.h>", kPrivate, "<sys/types.h>", kPublic },
   { "<bits/types/siginfo_t.h>", kPrivate, "<signal.h>", kPublic },
   { "<bits/types/siginfo_t.h>", kPrivate, "<sys/wait.h>", kPublic },
+  { "<bits/types/struct_sched_param.h>", kPrivate, "<sched.h>", kPublic },
   { "<bits/uio.h>", kPrivate, "<sys/uio.h>", kPublic },
   { "<bits/unistd.h>", kPrivate, "<unistd.h>", kPublic },
   { "<bits/ustat.h>", kPrivate, "<sys/ustat.h>", kPrivate },
