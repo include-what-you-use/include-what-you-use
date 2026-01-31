@@ -44,6 +44,14 @@ using AliasTpl5 = int;
 // IWYU: ClassTpl2 is...*default_tpl_arg-i1.h
 ClassTpl2<>& GetClassTpl2Ref();
 
+template <typename T = IndirectClass>
+class TplProvidingDefArg {
+  T t;
+};
+
+template <typename T = IndirectClass>
+struct DerivedTplProvidingDefArg : TplProvidingDefArg<T> {};
+
 /**** IWYU_SUMMARY
 
 tests/cxx/default_tpl_arg-d2.h should add these lines:
