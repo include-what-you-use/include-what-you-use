@@ -19,13 +19,11 @@
 #include "tests/cxx/default_template_arg_other_file-d2.h"
 
 int main() {
-  // TODO(csilvers): IWYU: OperateOn is...*default_template_arg_other_file-i2.h
   // IWYU: MyClass needs a declaration
   TemplateStruct<MyClass> ts;
   // IWYU: OperateOn<MyClass> is...*default_template_arg_other_file-i2.h
   ts.a();
 
-  // TODO(csilvers): IWYU: OperateOn is...*default_template_arg_other_file-i2.h
   // IWYU: TplClass needs a declaration
   // IWYU: MyClass needs a declaration
   TemplateStruct<TplClass<MyClass> > ts2;
