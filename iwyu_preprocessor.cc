@@ -992,7 +992,13 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
       continue;
     intends_to_provide_map_[file].insert(file);  // Everyone provides itself!
     if (picker.IsPublic(file)) {
-      AddAllIncludesAsFileEntries(file, &intends_to_provide_map_[file]);
+      // It is assumed that every external library header (public or private)
+      // provides all its transitively included headers.
+      for (OptionalFileEntryRef included_file_or_self :
+           transitive_include_map_.at(file)) {
+        InsertAllInto(transitive_include_map_.at(included_file_or_self),
+                      &intends_to_provide_map_[included_file_or_self]);
+      }
     } else {
       const set<OptionalFileEntryRef>& direct_includes =
           fileinfo.second.direct_includes_as_fileentries();
@@ -1032,6 +1038,8 @@ void IwyuPreprocessorInfo::PopulateIntendsToProvideMap() {
   //   a templated function or class in i1.h, you see the need for
   //   symbol Foo which isn't a template argument, don't worry about
   //   it.'  Double check whether that's true.
+  // TODO(bolshakov): is it still needed after making private includes providing
+  // all their transitively included headers?
   for (const auto& header_map : private_headers_behind) {
     OptionalFileEntryRef public_header = header_map.first;
     for (OptionalFileEntryRef private_header : header_map.second) {
@@ -1072,8 +1080,9 @@ void IwyuPreprocessorInfo::HandlePreprocessingDone() {
   }
   MutableGlobalIncludePicker()->FinalizeAddedIncludes();
   FinalizeProtectedIncludes();
-  PopulateIntendsToProvideMap();
+  // PopulateIntendsToProvideMap uses results of PopulateTransitiveIncludeMap.
   PopulateTransitiveIncludeMap();
+  PopulateIntendsToProvideMap();
 }
 
 bool IwyuPreprocessorInfo::BelongsToMainCompilationUnit(
