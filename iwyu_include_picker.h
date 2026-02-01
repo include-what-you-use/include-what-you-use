@@ -281,12 +281,12 @@ class IncludePicker {
 
   // A map of all quoted-includes to whether they're public or private.
   // Files whose visibility cannot be determined by this map nor the one
-  // below are assumed public.
+  // below may be assumed public (see GetVisibility usage).
   VisibilityMap include_visibility_map_;
 
   // A map of paths to whether they're public or private.
   // Files whose visibility cannot be determined by this map nor the one
-  // above are assumed public.
+  // above may be assumed public (see GetVisibility usage).
   // The include_visibility_map_ takes priority over this one.
   VisibilityMap path_visibility_map_;
 
