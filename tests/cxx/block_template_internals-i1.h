@@ -13,3 +13,6 @@ template <typename T>
 int TplFn(T t) {
   return InternalFn(t);
 }
+
+template <typename>
+class BaseTpl {};

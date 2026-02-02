@@ -8,3 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "tests/cxx/block_template_internals-i1.h"
+
+template <typename T1, typename T2>
+class DerivedTpl : public BaseTpl<T1> {};

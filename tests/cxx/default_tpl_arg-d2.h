@@ -52,6 +52,9 @@ class TplProvidingDefArg {
 template <typename T = IndirectClass>
 struct DerivedTplProvidingDefArg : TplProvidingDefArg<T> {};
 
+template <typename T1, typename T2 = IndirectTemplate<T1>>
+class DerivedFromProvidedDefArg : public T2 {};
+
 /**** IWYU_SUMMARY
 
 tests/cxx/default_tpl_arg-d2.h should add these lines:
@@ -62,6 +65,6 @@ tests/cxx/default_tpl_arg-d2.h should remove these lines:
 
 The full include-list for tests/cxx/default_tpl_arg-d2.h:
 #include "tests/cxx/default_tpl_arg-i1.h"  // for AliasTpl5, ClassTpl2
-#include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 
 ***** IWYU_SUMMARY */
