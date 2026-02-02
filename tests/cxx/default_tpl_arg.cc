@@ -251,6 +251,7 @@ void Fn() {
   DerivedTplProvidingDefArg<IndirectClass> dtpda2;
   // IWYU: IndirectClass is...*indirect.h
   dtpda2 + dtpda2;
+  DerivedFromProvidedDefArg<int> dfpda;
 }
 
 /**** IWYU_SUMMARY
@@ -268,7 +269,7 @@ tests/cxx/default_tpl_arg.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/default_tpl_arg.cc:
-#include "tests/cxx/default_tpl_arg-d2.h"  // for AliasTpl5, DerivedTplProvidingDefArg, FnWithProvidedDefaultTplArg, FnWithProvidedDefaultTplArgAndDefaultCallArg1, FnWithProvidedDefaultTplArgAndDefaultCallArg2, FnWithProvidedDefaultTplArgAndDefaultCallArg3, GetClassTpl2Ref, TplProvidingDefArg
+#include "tests/cxx/default_tpl_arg-d2.h"  // for AliasTpl5, DerivedFromProvidedDefArg, DerivedTplProvidingDefArg, FnWithProvidedDefaultTplArg, FnWithProvidedDefaultTplArgAndDefaultCallArg1, FnWithProvidedDefaultTplArgAndDefaultCallArg2, FnWithProvidedDefaultTplArgAndDefaultCallArg3, GetClassTpl2Ref, TplProvidingDefArg
 #include "tests/cxx/default_tpl_arg-i1.h"  // for AliasTpl1, AliasTpl2, AliasTpl3, AliasTpl4, AliasTpl7, ClassTpl, ClassTpl2, ClassTplNoDefinition, ClassTplWithDefinition, ClassTplWithDefinition2, FnWithNonProvidedDefaultTplArg, FnWithNonProvidedDefaultTplArgAndDefaultCallArg, NonProvidingAlias, SomeTpl, SpecializedClassTpl, UninstantiatedTpl, VarTpl
 #include "tests/cxx/default_tpl_arg-i2.h"  // for AliasTpl7, ClassTpl2, ClassTplWithDefinition2, ClassTplWithDefinition3, ClassTplWithDefinition7
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
