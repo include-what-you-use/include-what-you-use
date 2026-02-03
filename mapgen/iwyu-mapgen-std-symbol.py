@@ -29,6 +29,17 @@ TEMPLATE_KWD = 'template'
 OPERATOR_KWD = 'operator'
 DECLTYPE_KWD = 'decltype'
 USING_KWD = 'using'
+CONST_KWD = 'const'
+VOLATILE_KWD = 'volatile'
+COMBINABLE_TYPE_SPECIFIERS = (
+    'signed',
+    'unsigned',
+    'char',
+    'short',
+    'long',
+    'int',
+    'double',
+)
 DEFINE = 'define'
 TEXMACRO = re.compile(r'''@
                       \\\w+         # Macro name with a preceding backslash.
@@ -48,6 +59,7 @@ SYNOPSIS = re.compile(
     (?P<code>.*?)
     \\end\{codeblock''',
     re.DOTALL | re.VERBOSE)
+FP_PLACEHOLDER = r'@\placeholder{floating-point-type}@'
 
 OUTPUT_HEADER = \
 'C++ standard library mapping, produced with mapgen/iwyu-mapgen-std-symbol.py.'
@@ -98,6 +110,10 @@ CANONICAL_HEADERS = {
     'std::tuple_element': 'tuple',
     'std::tuple_size': 'tuple',
     'std::size_t': 'cstddef',
+# AFAIU, <cstdlib> should be preferred over <cmath> for these:
+    'std::abs(int)': 'cstdlib',
+    'std::abs(long)': 'cstdlib',
+    'std::abs(long long)': 'cstdlib',
 }
 
 class ValueSaver:
@@ -129,7 +145,7 @@ class Parser:
         while self.__cur_pos < len(self.__text):
             self.parse_top_level()
         self.found_names = [name for name in self.found_names if name not in \
-            (OVERLOADED_FUNCS | DUPLICATED_CLASSES)]
+            DUPLICATED_CLASSES]
 
     def parse_top_level(self):
         self.skip_spaces()
@@ -322,8 +338,19 @@ class Parser:
             self.add_identifier_from_ns(id)
             return self.skip_till_semicolon()
         if t[cp] == '(':            # Function.
-            self.add_identifier_from_ns(id)
-            return self.skip_function()
+            if self.get_identifier_with_ns(id) in OVERLOADED_FUNCS:
+                id += self.parse_fn_parameters()
+                assert '\\' not in id or FP_PLACEHOLDER in id
+                self.skip_fn_body()
+            else:
+                self.skip_function()
+
+            if FP_PLACEHOLDER in id:
+                for t in ('float', 'double', 'long double'):
+                    self.add_identifier_from_ns(id.replace(FP_PLACEHOLDER, t))
+            else:
+                self.add_identifier_from_ns(id)
+            return
         if t.startswith('[[', cp):      # Attribute.
             self.__cur_pos = t.find(']]', cp + 2) + 2
             return self.act_on_identifier_or_kwd()
@@ -343,7 +370,7 @@ class Parser:
         assert t.startswith(OPERATOR_KWD, self.__cur_pos)
         self.__cur_pos += len(OPERATOR_KWD)
 
-        # Ignore operators for a while like other overloaded functions.
+        # Ignore operators for a while.
 
         #end = t.find('(', self.__cur_pos)
         #op = t[self.__cur_pos : end].strip()
@@ -366,6 +393,7 @@ class Parser:
     def act_on_template_params(self):
         assert self.__text[self.__cur_pos] == '<'
         self.__cur_pos += 1
+        self.read_qualified_id()    # Skip 'typename' or NTTP type-specifier.
         self.act_on_tpl_param_id_or_kwd()
 
     def act_on_tpl_param_id_or_kwd(self):
@@ -378,7 +406,8 @@ class Parser:
         self.skip_spaces()
         cp = self.__cur_pos
         if t[cp] == ',' or t[cp] == '=' or t[cp] == '>':
-            self.__tpl_params.append(id)
+            if id:
+                self.__tpl_params.append(id)
             self.skip_till_comma_or_right_bracket()
             if t[self.__cur_pos] == ',':
                 self.__cur_pos += 1             # Consume it.
@@ -448,23 +477,11 @@ class Parser:
             end_tpl_args = self.__cur_pos
             tpl_args = self.__text[start_tpl_args:end_tpl_args]
 
-            # Replace template parameters with ':N' (for partial
-            # specializations).
-            for i, param in enumerate(self.__tpl_params):
-                tpl_args = re.sub(rf'\b{param}\b', f':{i}', tpl_args)
-
             # Replace multiple space symbols with probably intervening comments
             # with a single one.
             tpl_args = re.sub(r'\s+(//.*\n\s*)*', ' ', tpl_args)
 
-            # Look up names and qualify them with missing namespaces. Exclude
-            # names that are preceded by '::' (they are already qualified).
-            p = re.compile(r'(?<!::)\b\w+\b')
-            m = p.search(tpl_args)
-            while m:
-                arg_id = self.look_up(m.group(0))
-                tpl_args = tpl_args[:m.start()] + arg_id + tpl_args[m.end():]
-                m = p.search(tpl_args, m.start() + len(arg_id))
+            tpl_args = self.qualify_names(tpl_args)
 
             # Format pointer, reference, and function types as IWYU expects
             # (i.e., add a space).
@@ -472,7 +489,23 @@ class Parser:
 
             id += tpl_args
             self.skip_spaces()
+
+        # Replace template parameters with ':N' (for partial specialization
+        # arguments and function parameters).
+        for i, param in enumerate(self.__tpl_params):
+            id = re.sub(rf'\b{param}\b', f':{i}', id)
         return id
+
+    def qualify_names(self, inp):
+        """ Looks up names and qualifies them with missing namespaces. Excludes
+            names that are preceded by '::' (they are already qualified). """
+        p = re.compile(r'(?<!::)\b\w+\b')
+        m = p.search(inp)
+        while m:
+            arg_id = self.look_up(m.group(0))
+            inp = inp[:m.start()] + arg_id + inp[m.end():]
+            m = p.search(inp, m.start() + len(arg_id))
+        return inp
 
     def look_up(self, name):
         l = len(self.__namespace_stack)
@@ -483,11 +516,115 @@ class Parser:
                 return id
         return name
 
-    def skip_function(self):
+    def parse_fn_parameters(self):
         t = self.__text
         assert t[self.__cur_pos] == '('
-        self.skip_braced_text('(', ')')
+        res = '('
+        self.__cur_pos += 1
         self.skip_spaces()
+        while t[self.__cur_pos] != ')':
+            res += self.parse_param_decl()
+        res += ')'
+        return self.qualify_names(res)
+
+    def parse_param_decl(self):
+        t = self.__text
+        if t.startswith('...', self.__cur_pos):
+            self.__cur_pos += 3
+            self.skip_spaces()
+            return '...'
+        res = self.parse_decl_spec_seq()
+        res += self.parse_declarator()
+        if t[self.__cur_pos] == ',':
+            self.__cur_pos += 1
+            self.skip_spaces()
+            res += ', '
+        return res
+
+    def parse_decl_spec_seq(self):
+        res = self.read_cv_qualifiers()
+        id = self.read_qualified_id()
+        if id == 'typename':
+            id = self.read_qualified_id()  # Skip 'typename' keyword.
+        res += id
+        prev = id
+        while id in COMBINABLE_TYPE_SPECIFIERS:
+            # It is acceptable if this consumes declarator-id: it is ignored.
+            id = self.read_identifier()
+            self.skip_spaces()
+            # 'long int' should be spelled as just 'long'.
+            if id in COMBINABLE_TYPE_SPECIFIERS and id != 'int':
+                res += ' ' + id
+                prev = id
+        # 'unsigned' should be spelled as 'unsigned int'.
+        if prev == 'unsigned':
+            res += ' int'
+        return res
+
+    def read_cv_qualifiers(self):
+        t = self.__text
+        res = ''
+        if t.startswith(CONST_KWD, self.__cur_pos):
+            res += CONST_KWD + ' '
+            self.__cur_pos += len(CONST_KWD)
+            self.skip_spaces()
+        if t.startswith(VOLATILE_KWD, self.__cur_pos):
+            res += VOLATILE_KWD + ' '
+            self.__cur_pos += len(VOLATILE_KWD)
+            self.skip_spaces()
+        # 'const' after 'volatile' is not supported yet.
+        assert not t.startswith(CONST_KWD, self.__cur_pos)
+        return res
+
+    def parse_declarator(self):
+        t = self.__text
+        res = ''
+        ptr_operator_present = False
+        while t[self.__cur_pos] in '*&':
+            if len(res) == 0:
+                res += ' '
+            res += t[self.__cur_pos]
+            self.__cur_pos += 1
+            self.skip_spaces()
+            res += self.read_cv_qualifiers()
+            ptr_operator_present = True
+        return res + self.parse_noptr_declarator(ptr_operator_present)
+
+    def parse_noptr_declarator(self, after_ptr):
+        """ Parses noptr-declarator or noptr-abstract-declarator.
+            'after_ptr' means "after ptr-operator" in the sense described
+            in the standard, including references. """
+        t = self.__text
+        res = ''
+        if t[self.__cur_pos] == '(':
+            self.__cur_pos += 1
+            self.skip_spaces()
+            assert t[self.__cur_pos] in '*&'  # The only cases supported now.
+            if not after_ptr:
+                res += ' '
+            res += '(' + self.parse_declarator()[1:]  # Strip the whitespace.
+            assert t[self.__cur_pos] == ')'
+            res += ')'
+            self.__cur_pos += 1
+        else:
+            self.read_identifier()  # Ignore declarator-id.
+        self.skip_spaces()
+
+        while t[self.__cur_pos] not in ',)':
+            if t[self.__cur_pos] == '[':
+                res += '['
+                self.__cur_pos += 1
+                res += self.read_unqualified_id()  # Probably just an NTTP name.
+                assert t[self.__cur_pos] == ']'
+                res += ']'
+                self.__cur_pos += 1
+            else:
+                assert False  # Other cases are not supported yet.
+            self.skip_spaces()
+        return res
+
+    def skip_fn_body(self):
+        t = self.__text
         while t[self.__cur_pos] not in '{;':
             self.__cur_pos += 1
         if t[self.__cur_pos] == ';':
@@ -495,9 +632,13 @@ class Parser:
         elif t[self.__cur_pos] == '{':
             self.skip_braced_text('{', '}')
 
+    def skip_function(self):
+        assert self.__text[self.__cur_pos] == '('
+        self.skip_braced_text('(', ')')
+        self.skip_fn_body()
+
     def add_identifier_from_ns(self, id):
-        if self.__namespace_stack:
-            id = '::'.join(self.__namespace_stack) + f'::{id}'
+        id = self.get_identifier_with_ns(id)
         if '\\' in id:
             # Avoid names containing TeX commands.
             return
@@ -505,6 +646,11 @@ class Parser:
             # Work around a bug in the standard text.
             id = ERRONEOUS_SYMBOLS.get(id, id)
             self.found_names.append(id)
+
+    def get_identifier_with_ns(self, id):
+        if self.__namespace_stack:
+            id = '::'.join(self.__namespace_stack) + f'::{id}'
+        return id
 
 def process_synopsis(syn):
     p = Parser(syn)
