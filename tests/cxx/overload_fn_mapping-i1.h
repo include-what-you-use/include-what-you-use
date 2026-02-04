@@ -14,6 +14,8 @@ namespace ns {
 class Class {};
 
 using ::B;
+
+void Fn();
 }  // namespace ns
 
 using ConstLong = const long;
@@ -46,6 +48,11 @@ int FnTakesAll(int);
 namespace ns {
 int FnFromNs();
 int FnFromNs(Class);
+
+inline namespace inl {
+class C {};
+int FnFromNs(const C&);
+}  // namespace inl
 }  // namespace ns
 
 bool operator==(const A&, const A&);

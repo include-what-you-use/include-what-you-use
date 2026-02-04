@@ -79,6 +79,14 @@ void User() {
   // IWYU: ns::Class is...*-i1.h
   // IWYU: ns::FnFromNs(ns::Class) is...*-i3.h
   ns::FnFromNs(ns::Class{});
+  // IWYU: ns::C is...*-i1.h
+  ns::C c;
+  // IWYU: ns::FnFromNs(const ns::C &) is...*-i4.h
+  FnFromNs(c);
+  // IWYU: ns::FnFromNs(const ns::C &) is...*-i4.h
+  ns::FnFromNs(c);
+  // IWYU: ns::FnFromNs(const ns::C &) is...*-i4.h
+  ns::inl::FnFromNs(c);
 
   // IWYU: A is...*-i1.h
   A a1, a2;
@@ -144,7 +152,7 @@ tests/cxx/overload_fn_mapping.cc should remove these lines:
 - #include "tests/cxx/overload_fn_mapping-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/overload_fn_mapping.cc:
-#include "tests/cxx/overload_fn_mapping-i1.h"  // for A, B, Class, Tpl
+#include "tests/cxx/overload_fn_mapping-i1.h"  // for A, B, C, Class, Tpl
 #include "tests/cxx/overload_fn_mapping-i10.h"  // for Fn
 #include "tests/cxx/overload_fn_mapping-i11.h"  // for Fn
 #include "tests/cxx/overload_fn_mapping-i12.h"  // for Fn
@@ -160,7 +168,7 @@ The full include-list for tests/cxx/overload_fn_mapping.cc:
 #include "tests/cxx/overload_fn_mapping-i21.h"  // for Fn
 #include "tests/cxx/overload_fn_mapping-i22.h"  // for Fn
 #include "tests/cxx/overload_fn_mapping-i3.h"  // for Fn, FnFromNs, FnTakesAll, TplFn, operator==
-#include "tests/cxx/overload_fn_mapping-i4.h"  // for Fn, TplFn, operator==
+#include "tests/cxx/overload_fn_mapping-i4.h"  // for Fn, FnFromNs, TplFn, operator==
 #include "tests/cxx/overload_fn_mapping-i5.h"  // for Fn, TplFn, operator==
 #include "tests/cxx/overload_fn_mapping-i6.h"  // for Fn
 #include "tests/cxx/overload_fn_mapping-i7.h"  // for Fn

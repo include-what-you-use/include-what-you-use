@@ -26,6 +26,7 @@
 
   { "symbol": ["ns::FnFromNs", "private", "\"tests/cxx/overload_fn_mapping-i2.h\"", "public"] },
   { "symbol": ["ns::FnFromNs(ns::Class)", "private", "\"tests/cxx/overload_fn_mapping-i3.h\"", "public"] },
+  { "symbol": ["ns::FnFromNs(const ns::C &)", "private", "\"tests/cxx/overload_fn_mapping-i4.h\"", "public"] },
 
   { "symbol": ["operator==(const A &, const A &)", "private", "\"tests/cxx/overload_fn_mapping-i2.h\"", "public"] },
   { "symbol": ["operator==(const B &, const B &)", "private", "\"tests/cxx/overload_fn_mapping-i3.h\"", "public"] },

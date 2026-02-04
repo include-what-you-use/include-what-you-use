@@ -55,6 +55,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -181,6 +182,7 @@ using llvm::isa;
 using llvm::range_size;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
+using llvm::to_underlying;
 using llvm::zip_equal;
 using std::function;
 using std::pair;
@@ -587,6 +589,8 @@ string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl,
       named_decl->getASTContext().getPrintingPolicy();
   printing_policy.SuppressUnwrittenScope = true;
   printing_policy.PrintAsCanonical = true;
+  printing_policy.SuppressInlineNamespace =
+      to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::All);
   named_decl->printQualifiedName(ostream, printing_policy);
 
   if (const auto* cls_spec =
