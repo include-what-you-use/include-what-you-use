@@ -29,6 +29,7 @@ TEMPLATE_KWD = 'template'
 OPERATOR_KWD = 'operator'
 DECLTYPE_KWD = 'decltype'
 USING_KWD = 'using'
+TYPENAME_KWD = 'typename'
 CONST_KWD = 'const'
 VOLATILE_KWD = 'volatile'
 COMBINABLE_TYPE_SPECIFIERS = (
@@ -50,6 +51,7 @@ TEXMACRO = re.compile(r'''@
 DEFNLIBXNAME = re.compile(r'@\\defnlibxname\{(\w*)\}')
 LIBGLOBAL = re.compile(r'@\\libglobal\{(\w*)\}')
 LIBMEMBER = re.compile(r'@\\libmember\{(\w*)\}')
+ITCORR = r'@\itcorr@'
 SYNOPSIS = re.compile(
     r'''Header\ \\tcode\{<(?P<headername>\w+)>\}
     \\?                     # An extra '\' is present in <iterator> synopsis.
@@ -60,6 +62,10 @@ SYNOPSIS = re.compile(
     \\end\{codeblock''',
     re.DOTALL | re.VERBOSE)
 FP_PLACEHOLDER = r'@\placeholder{floating-point-type}@'
+# Pattern for matching parameter declaration clauses of string literal
+# operators. They should contain a pointer to some char type and std::size_t
+# parameters.
+STR_LIT_OP_PARAMS = re.compile('const w?char.*size_t');
 
 OUTPUT_HEADER = \
 'C++ standard library mapping, produced with mapgen/iwyu-mapgen-std-symbol.py.'
@@ -98,9 +104,20 @@ DUPLICATED_CLASSES = {
     'std::tuple',
 }
 
-ERRONEOUS_SYMBOLS = dict((
-    ('std::formatter<std::chrono::hh_mm_ss<duration<:0, :1>>, :2>',
-     'std::formatter<std::chrono::hh_mm_ss<std::chrono::duration<:0, :1>>, :2>'),
+# Type aliases whose underlying type is not specified in the standard cannot
+# be used in a portable mapping.
+UNSPEC_ALIASES = (
+    'std::iter_difference_t',
+)
+
+QUAL_MAP = dict((
+    ('duration', 'std::chrono::duration'),
+    ('basic_ostream', 'std::basic_ostream'),
+    ('basic_istream', 'std::basic_istream'),
+    ('ostream','std::basic_ostream<char, std::char_traits<char>>'),
+    ('iterator_traits', 'std::iterator_traits'),
+    ('basic_string','std::basic_string'),
+    ('nullptr_t','std::nullptr_t'),
 ))
 
 # For some symbols defined in different headers, a "canonical" header should be
@@ -115,6 +132,12 @@ CANONICAL_HEADERS = {
     'std::abs(long)': 'cstdlib',
     'std::abs(long long)': 'cstdlib',
 }
+
+def contains_unspec_alias(inp):
+    for alias in UNSPEC_ALIASES:
+        if re.search(f'{alias}\\b', inp):
+            return True
+    return False
 
 class ValueSaver:
     def __init__(self, sequence):
@@ -193,6 +216,10 @@ class Parser:
         if t.startswith('//', self.__cur_pos):
             # A comment. Skip it.
             self.skip_till_eol()
+            self.skip_spaces()
+        elif t.startswith(ITCORR, self.__cur_pos):
+            # AFAIU, \itcorr macro just inserts some spacing.
+            self.__cur_pos += len(ITCORR)
             self.skip_spaces()
 
     def skip_till_eol(self):
@@ -370,14 +397,29 @@ class Parser:
         assert t.startswith(OPERATOR_KWD, self.__cur_pos)
         self.__cur_pos += len(OPERATOR_KWD)
 
-        # Ignore operators for a while.
-
-        #end = t.find('(', self.__cur_pos)
-        #op = t[self.__cur_pos : end].strip()
-        #id = OPERATOR_KWD + ((' ' + op) if op[0].isalpha() else op)
-        #self.add_identifier_from_ns(id)
-
-        self.skip_till_semicolon()
+        end = t.find('(', self.__cur_pos)
+        op = t[self.__cur_pos : end].strip()
+        self.__cur_pos = end
+        if 'new' in op or 'delete' in op:
+            # These should not be mapped because users can override them.
+            self.skip_function()
+            return
+        assert not op[0].isalpha()
+        id = OPERATOR_KWD + op
+        # All operators from 'chrono' namespace are in '<chrono>' header.
+        if self.__namespace_stack[-1] != 'chrono':
+            params = self.parse_fn_parameters()
+            # Parameters of string literal operators cannot be used
+            # in the mapping due to 'size_t' alias, but they don't have to: it
+            # is sufficient to specify parameters for all other 'operator""s'
+            # overloads. The remaining overloads for 'operator""s' are in
+            # '<string>', and for 'operator""sv' are in '<string_view>'.
+            if not r'operator""s' in id or not STR_LIT_OP_PARAMS.search(params):
+                id += params
+        assert '\\' not in id
+        self.skip_fn_body()
+        if not contains_unspec_alias(id):
+            self.add_identifier_from_ns(id)
 
     def act_on_template(self):
         assert self.__text.startswith(TEMPLATE_KWD, self.__cur_pos)
@@ -487,6 +529,11 @@ class Parser:
             # (i.e., add a space).
             tpl_args = re.sub(r'(\w)([\*&(])', r'\1 \2', tpl_args)
 
+            # Insert a whitespace after comma if there isn't any.
+            tpl_args = re.sub(r',(?=\S)', ', ', tpl_args)
+
+            tpl_args = tpl_args.replace(TYPENAME_KWD + ' ', '')
+
             id += tpl_args
             self.skip_spaces()
 
@@ -494,6 +541,9 @@ class Parser:
         # arguments and function parameters).
         for i, param in enumerate(self.__tpl_params):
             id = re.sub(rf'\b{param}\b', f':{i}', id)
+
+        if id == 'coroutine_handle<>':
+            id = 'coroutine_handle<void>'
         return id
 
     def qualify_names(self, inp):
@@ -505,6 +555,10 @@ class Parser:
             arg_id = self.look_up(m.group(0))
             inp = inp[:m.start()] + arg_id + inp[m.end():]
             m = p.search(inp, m.start() + len(arg_id))
+        # Replace some unqualified (without leading '::') names with desugared
+        # qualified forms.
+        for name, repl in QUAL_MAP.items():
+            inp = re.sub(fr'(?<!::)\b{name}\b', repl, inp)
         return inp
 
     def look_up(self, name):
@@ -544,7 +598,7 @@ class Parser:
     def parse_decl_spec_seq(self):
         res = self.read_cv_qualifiers()
         id = self.read_qualified_id()
-        if id == 'typename':
+        if id == TYPENAME_KWD:
             id = self.read_qualified_id()  # Skip 'typename' keyword.
         res += id
         prev = id
@@ -643,8 +697,6 @@ class Parser:
             # Avoid names containing TeX commands.
             return
         if id not in self.found_names:
-            # Work around a bug in the standard text.
-            id = ERRONEOUS_SYMBOLS.get(id, id)
             self.found_names.append(id)
 
     def get_identifier_with_ns(self, id):
