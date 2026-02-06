@@ -3815,11 +3815,11 @@ class InstantiatedTemplateVisitor
     }
 
     if (const auto* tpl_spec_type = type->getAs<TemplateSpecializationType>()) {
-      TraverseTemplateSpecializationType(
-          const_cast<TemplateSpecializationType*>(tpl_spec_type), false);
+      TraverseTemplateSpecializationTypeHelper(tpl_spec_type);
     } else if (const auto* record_type = type->getAs<RecordType>()) {
       TraverseRecordTypeHelper(record_type);
     }
+    ReportExplicitInstantiations(type);
   }
 
   void ScanInstantiatedClass(ClassTemplateSpecializationDecl* decl,
@@ -4027,6 +4027,7 @@ class InstantiatedTemplateVisitor
     const Decl* decl = TypeToDeclAsWritten(type);
     ASTNode new_node{decl};
     CurrentASTNodeUpdater canu{&current_ast_node_, &new_node};
+    current_ast_node_->set_in_forward_declare_context(true);
     if (ShouldPrintSymbolFromCurrentFile()) {
       errs() << AnnotatedName(GetKindName(decl)) << PrintablePtr(decl)
              << PrintableDecl(decl) << "\n";
