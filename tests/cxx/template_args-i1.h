@@ -18,3 +18,7 @@ struct TplHost {
 };
 
 class Class {};
+
+constexpr int GetInt() {
+  return 1;
+}
