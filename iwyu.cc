@@ -5487,11 +5487,8 @@ class IwyuAstConsumer
 
     TemplateInstantiationData data = GetTplInstData(callee, calling_expr);
 
-    if (parent_type) {    // means we're a method of a class
-      const TemplateInstantiationData class_data = GetTplInstData(parent_type);
-      InsertAllInto(class_data.resugar_map, &data.resugar_map);
-      InsertAllInto(class_data.provided_types, &data.provided_types);
-    }
+    if (parent_type)  // means we're a method of a class
+      InsertInto(GetTplInstData(parent_type), &data);
 
     if (IsAutocastExpr(current_ast_node())) {
       const set<const Type*> provided_for_autocast =

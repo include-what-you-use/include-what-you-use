@@ -595,6 +595,10 @@ struct TemplateInstantiationData {
   set<const clang::Type*> provided_types;
 };
 
+// Merges source into target. Assumes that target is a valid non-null pointer.
+void InsertInto(const TemplateInstantiationData& source,
+                TemplateInstantiationData* target);
+
 // One can't have partial template specialization or default template
 // args for function templates, but they're complicated in their own
 // way: they can have deduced template arguments (deduced from the

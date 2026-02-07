@@ -1104,6 +1104,13 @@ static map<const Type*, const Type*> GetDefaultedArgResugarMap(
   return res;
 }
 
+void InsertInto(const TemplateInstantiationData& source,
+                TemplateInstantiationData* target) {
+  CHECK_(target);
+  InsertAllInto(source.resugar_map, &target->resugar_map);
+  InsertAllInto(source.provided_types, &target->provided_types);
+}
+
 TemplateInstantiationData GetTplInstDataForFunction(
     const FunctionDecl* decl, const Expr* calling_expr,
     function<set<const Type*>(const Type*)> provided_getter) {
