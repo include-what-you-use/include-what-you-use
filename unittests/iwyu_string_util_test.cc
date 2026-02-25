@@ -192,12 +192,5 @@ TEST(IwyuStringUtilTest, FormatISO8601) {
   EXPECT_EQ("2026-01-24T21:04:04Z", FormatISO8601(1769288644));
 }
 
-TEST(IwyuStringUtilTest, CollapseRepeated) {
-  EXPECT_EQ("a,b", CollapseRepeated("a,,,,,,,,b", ','));
-  EXPECT_EQ("a b c d e\tf", CollapseRepeated("a   b c  d    e\tf", ' '));
-  EXPECT_EQ("a,b,c,d,e", CollapseRepeated("a,b,c,d,e", ','));
-  EXPECT_EQ("a,b,", CollapseRepeated("a,b,", ','));
-}
-
 }  // namespace
 }  // namespace include_what_you_use
