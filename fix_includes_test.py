@@ -4515,6 +4515,68 @@ The full include-list for simple:
     self.flags.quoted_includes_first = True
     self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
 
+  def testMainReturnsZeroWhenNothingToFixDryRun(self):
+    """Test that main returns 0 when --dry_run is passed and no fixes needed."""
+    infile = """\
+#include <stdio.h>
+
+int main() { return 0; }
+"""
+    iwyu_output = "(nofixes.cc has correct #includes/fwd-decls)\n"
+    self.RegisterFileContents({'nofixes.cc': infile})
+    fix_includes.sys.stdin = StringIO(iwyu_output)
+    self.assertEqual(0, fix_includes.main(['fix_includes', '--dry_run']))
+
+  def testMainReturnsNumberOfFixedFilesDryRun(self):
+    """Test that main returns the number of files that need fixes in dry run."""
+    infile1 = """\
+#include <notused1.h>
+
+int a() { return 0; }
+"""
+    infile2 = """\
+#include <notused2.h>
+
+int b() { return 0; }
+"""
+    infile3 = """\
+#include <notused3.h>
+
+int c() { return 0; }
+"""
+    iwyu_output = """\
+file1.cc should add these lines:
+
+file1.cc should remove these lines:
+- #include <notused1.h>  // lines 1-1
+
+The full include-list for file1.cc:
+---
+
+file2.cc should add these lines:
+
+file2.cc should remove these lines:
+- #include <notused2.h>  // lines 1-1
+
+The full include-list for file2.cc:
+---
+
+file3.cc should add these lines:
+
+file3.cc should remove these lines:
+- #include <notused3.h>  // lines 1-1
+
+The full include-list for file3.cc:
+---
+"""
+    self.RegisterFileContents({
+        'file1.cc': infile1,
+        'file2.cc': infile2,
+        'file3.cc': infile3,
+    })
+    fix_includes.sys.stdin = StringIO(iwyu_output)
+    self.assertEqual(3, fix_includes.main(['fix_includes', '--dry_run']))
+
 
 class FileInfoTest(unittest.TestCase):
   """ Unit test for file info detection """
