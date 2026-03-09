@@ -2484,14 +2484,17 @@ def main(argv):
   if flags.update_comments:
     flags.comments = True
 
+  exit_code = 0
   if flags.sort_only:
     if not files_to_modify:
       sys.exit('FATAL ERROR: -s flag requires a list of filenames')
     SortIncludesInFiles(files_to_modify, flags)
   else:
-    ProcessIWYUOutput(sys.stdin, files_to_modify, flags, cwd=os.getcwd())
+    process_ret = ProcessIWYUOutput(sys.stdin, files_to_modify, flags, cwd=os.getcwd())
+    if flags.dry_run:
+      exit_code = min(process_ret, 100)
 
-  return 0
+  return exit_code
 
 
 if __name__ == '__main__':
