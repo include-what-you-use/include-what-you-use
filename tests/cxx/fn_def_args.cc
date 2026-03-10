@@ -57,6 +57,21 @@ void Fn() {
   // IWYU: operator new(unsigned long, int, int, int) is...*-i2.h
   new (1, 1) int;
   new (1) int;
+
+  // The definition from '-i1.h' should (probably) already provide '-i2.h'
+  // for the default argument.
+  // IWYU: FnTplWithDefArg(int) is...*-i1.h
+  FnTplWithDefArg<char>();
+  // IWYU: FnTplWithDefArg(int) is...*-i1.h
+  FnTplWithDefArg<char>(1);
+  // IWYU: FnTplWithDefArg(int) is...*-i1.h
+  FnTplWithDefArg<float>();
+  // IWYU: FnTplWithDefArg(int) is...*-i1.h
+  FnTplWithDefArg<float>(1);
+  // IWYU: operator new(unsigned long, :0, int) is...*-i1.h
+  new ('a', 1) int;
+  // IWYU: operator new(unsigned long, :0, int) is...*-i1.h
+  new ('a') int;
 }
 
 /**** IWYU_SUMMARY
@@ -70,7 +85,7 @@ tests/cxx/fn_def_args.cc should remove these lines:
 
 The full include-list for tests/cxx/fn_def_args.cc:
 #include "tests/cxx/fn_def_args-d1.h"  // for FnWithSmearedDefArgs, Struct, operator new
-#include "tests/cxx/fn_def_args-i1.h"  // for FnWithSmearedDefArgs2, FnWithSmearedDefArgs3
+#include "tests/cxx/fn_def_args-i1.h"  // for FnTplWithDefArg, FnWithSmearedDefArgs2, FnWithSmearedDefArgs3, operator new
 #include "tests/cxx/fn_def_args-i2.h"  // for FnWithDefArg, FnWithSmearedDefArgs, FnWithSmearedDefArgs2, operator new
 #include "tests/cxx/fn_def_args-i3.h"  // for FnWithSmearedDefArgs2
 

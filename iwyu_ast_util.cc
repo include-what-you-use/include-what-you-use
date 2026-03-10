@@ -1538,6 +1538,8 @@ bool IsDefTplArgSpecified(const NamedDecl* tpl_param) {
 }
 
 FunctionDecl* GetRedeclSpecifyingDefArg(unsigned i, FunctionDecl* func) {
+  if (func->isFunctionTemplateSpecialization())
+    return func;
   for (FunctionDecl* redecl : func->redecls()) {
     if (IsDefArgSpecified(i, redecl))
       return redecl;

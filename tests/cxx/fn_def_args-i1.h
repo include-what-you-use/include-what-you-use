@@ -11,3 +11,15 @@
 
 void FnWithSmearedDefArgs2(int = 0, int);
 void FnWithSmearedDefArgs3(int, int = 0, int);
+
+template <typename T>
+void FnTplWithDefArg(int) {
+}
+template <>
+void FnTplWithDefArg<float>(int) {
+}
+
+template <typename T>
+void* operator new(std::size_t, T, int) noexcept {
+  return nullptr;
+}
