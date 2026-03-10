@@ -768,7 +768,9 @@ const clang::CXXMethodDecl* GetFromLeastDerived(const clang::CXXMethodDecl*);
 bool IsDefArgSpecified(unsigned i, const clang::FunctionDecl*);
 
 // Returns the redeclaration specifying default argument for the i-th parameter.
-// Expects that there is one.
+// Expects that there is one. For function template specializations, this
+// returns the given decl because default function argumens should be specified
+// in the first template declaration and not in any specialization redecl.
 clang::FunctionDecl* GetRedeclSpecifyingDefArg(unsigned i,
                                                clang::FunctionDecl*);
 

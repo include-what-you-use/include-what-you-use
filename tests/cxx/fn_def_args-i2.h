@@ -23,4 +23,10 @@ void FnWithDefArg2(int, int = 0);
 
 void* operator new(std::size_t, int, int, int = 0);
 
+template <typename T>
+void FnTplWithDefArg(int = 0);
+
+template <typename T>
+void* operator new(std::size_t, T, int = 0) noexcept;
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_FN_DEF_ARGS_I2_H_
