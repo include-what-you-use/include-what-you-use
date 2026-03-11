@@ -257,6 +257,13 @@ if (iwyu_cxx_supports_covered_switch_default)
   )
 endif()
 
+# gtest: Disable use of cxxabi.h, which can cause conflict between libc++abi and
+# libsupc++. See https://github.com/llvm/llvm-project/issues/121300.
+target_compile_options(iwyu-gtest
+  PUBLIC
+  -DGTEST_HAS_CXXABI_H_=0
+)
+
 # gtest: Use portable exception semantics for MSVC.
 if (MSVC)
   target_compile_options(iwyu-gtest
