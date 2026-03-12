@@ -35,7 +35,7 @@ jobs:
                jq
 
       - name: Download PR comments payloads
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
