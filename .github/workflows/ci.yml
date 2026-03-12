@@ -48,7 +48,7 @@ jobs:
           echo "LLVM_PREFIX=${LLVM_PREFIX}" | tee -a $GITHUB_ENV
 
       - name: Check out branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Work around broken packaging
         run: |
@@ -125,7 +125,7 @@ jobs:
 
       - name: Upload PR comment payload
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pr-comments
           path: ./pr-comments
