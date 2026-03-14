@@ -16,3 +16,5 @@ struct TplHost {
   template <typename>
   struct InnerTpl {};
 };
+
+class Class {};

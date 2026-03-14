@@ -5386,7 +5386,8 @@ class IwyuAstConsumer
     // If we're not in a forward-declare context, use of a template
     // specialization requires having the full type information.
     if (!can_fwd_decl || type->isTypeAlias()) {
-      const TemplateInstantiationData data = GetTplInstData(type);
+      TemplateInstantiationData data = GetTplInstData(type);
+      InsertAllInto(GetProvidedTypeComponents(type), &data.provided_types);
       instantiated_template_visitor_.ScanInstantiatedType(
           current_ast_node(), data.resugar_map, data.provided_types);
     }

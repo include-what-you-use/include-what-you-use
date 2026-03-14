@@ -32,3 +32,11 @@ using NonProvidingFunctionAlias2 = IndirectClass(int);
 
 template <int>
 using NonProvidingPtrAlias = IndirectClass*;
+
+template <typename T>
+struct Host;
+
+using HostNonProvidingAlias = Host<IndirectClass>;
+
+template <typename>
+using HostNonProvidingAliasTpl = Host<IndirectClass>;
