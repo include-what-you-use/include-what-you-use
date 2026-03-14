@@ -33,12 +33,20 @@ void Fn() {
   (void)std::get<int>(pair2);
   // IWYU: std::get(const std::pair<:1, :0> &) is...*<utility>
   (void)std::get<char>(pair2);
+  // TODO: no need to report 'pair' here.
+  // IWYU: std::pair is...*<utility>
+  // IWYU: std::operator==(const std::pair<:0, :1> &, const std::pair<:2, :3> &) is...*<utility>
+  (void)(*p == pair2);
 
   // IWYU: std::array is...*<array>
   extern const std::array<int, 7> std_arr;
   // IWYU: std::get(const std::array<:1, :2> &&) is...*<array>
   // IWYU: std::move(:0 &&) is...*<utility>
   (void)std::get<1>(std::move(std_arr));
+  // TODO: no need to report 'array' here.
+  // IWYU: std::array is...*<array>
+  // IWYU: std::operator==(const std::array<:0, :1> &, const std::array<:0, :1> &) is...*<array>
+  (void)(std_arr == std_arr);
 
   int arr1[5] = {}, arr2[5] = {}, i1 = 0, i2 = 0;
   // IWYU: std::move(:0, :0, :1) is...*<algorithm>
@@ -81,10 +89,10 @@ tests/cxx/std_symbol_mapping.cc should remove these lines:
 
 The full include-list for tests/cxx/std_symbol_mapping.cc:
 #include <algorithm>  // for move
-#include <array>  // for array, get
+#include <array>  // for array, get, operator==
 #include <cmath>  // for pow
 #include <functional>  // for function, swap
-#include <utility>  // for get, move, pair, swap
+#include <utility>  // for get, move, operator==, pair, swap
 #include <valarray>  // for pow, valarray
 
 ***** IWYU_SUMMARY */
