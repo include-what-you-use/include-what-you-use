@@ -135,7 +135,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
 )
 
-add_llvm_library(iwyu
+add_llvm_library(iwyu BUILDTREE_ONLY
   iwyu.cc
   iwyu_ast_util.cc
   iwyu_cache.cc
@@ -233,7 +233,7 @@ if (WIN32)
 endif()
 
 # Build vendored gtest library
-add_llvm_library(iwyu-gtest
+add_llvm_library(iwyu-gtest BUILDTREE_ONLY
   vendor/googletest/src/gtest-all.cc
 )
 
