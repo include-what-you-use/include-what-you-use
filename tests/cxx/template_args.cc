@@ -391,6 +391,116 @@ UsingDereferenced<NonProvidingPtrAlias<1>> udnppa;
 
 // ---------------------------------------------------------------
 
+class Class;
+
+template <typename T>
+struct Host {
+  template <typename>
+  struct Nested1 {
+    T t;
+  };
+
+  template <typename U>
+  struct Nested2 {
+    U u;
+  };
+
+  struct Intermediate1 {
+    template <typename>
+    struct Nested {
+      T t;
+    };
+  };
+
+  template <typename U>
+  struct Level1 {
+    template <typename>
+    struct Level2 {
+      T t;
+      U u;
+    };
+  };
+
+  typedef Level1<Class> Level1NonProviding;
+  template <typename>
+  using Level1NonProvidingAlTpl = Level1<Class>;
+};
+
+// IWYU: IndirectClass is...*indirect.h
+using HostProvidingAlias = Host<IndirectClass>;
+
+template <typename>
+// IWYU: IndirectClass is...*indirect.h
+using HostProvidingAliasTpl = Host<IndirectClass>;
+
+using NestedWithClass = Host<Class>::Intermediate1;
+
+template <typename T>
+using AliasTplToTypedef = typename Host<T>::Level1NonProviding;
+
+void TestMultiLevelArgs() {
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(Host<IndirectClass>::Nested1<int>);
+  // IWYU: IndirectClass needs a declaration
+  Host<IndirectClass>::Nested1<int>* nested11;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(*nested11);
+
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(Host<int>::Nested2<IndirectClass>);
+  // IWYU: IndirectClass needs a declaration
+  Host<int>::Nested2<IndirectClass>* nested2;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(*nested2);
+
+  // IWYU: IndirectClass needs a declaration
+  Host<IndirectClass>::Intermediate1::Nested<int>* inner_nested;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(*inner_nested);
+
+  // IWYU: IndirectClass needs a declaration
+  Host<int>::Level1<IndirectClass>::Level2<int>* level2;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(*level2);
+
+  HostProvidingAlias::Nested1<int> hpan1;
+  // IWYU: IndirectClass is...*indirect.h
+  HostNonProvidingAlias::Nested1<int> hnpan1;
+
+  HostProvidingAliasTpl<int>::Nested1<int> hpatn1;
+  // IWYU: IndirectClass is...*indirect.h
+  HostNonProvidingAliasTpl<int>::Nested1<int> hnpatn1;
+
+  // IWYU: Class is...*-i1.h
+  (void)sizeof(NestedWithClass::Nested<int>);
+  NestedWithClass::Nested<int>* nested12;
+  // IWYU: Class is...*-i1.h
+  (void)sizeof(*nested12);
+
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: Class is...*-i1.h
+  // IWYU: IndirectClass is...*indirect.h
+  Host<IndirectClass>::Level1NonProviding::Level2<int> inner_nested2;
+  // IWYU: IndirectClass needs a declaration
+  Host<IndirectClass>::Level1NonProviding::Level2<int>* p_inner_nested2;
+  // IWYU: Class is...*-i1.h
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(*p_inner_nested2);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: Class is...*-i1.h
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(Host<IndirectClass>::Level1NonProvidingAlTpl<int>::Level2<int>);
+
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: Class is...*-i1.h
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(AliasTplToTypedef<IndirectClass>::Level2<int>);
+}
+
+// ---------------------------------------------------------------
+
 /**** IWYU_SUMMARY
 
 tests/cxx/template_args.cc should add these lines:
@@ -399,12 +509,13 @@ tests/cxx/template_args.cc should add these lines:
 
 tests/cxx/template_args.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
+- class Class;  // lines XX-XX
 
 The full include-list for tests/cxx/template_args.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 #include "tests/cxx/template_args-d1.h"  // for ProvidingAlias
-#include "tests/cxx/template_args-d2.h"  // for NonProvidingAlias, NonProvidingFunctionAlias1, NonProvidingFunctionAlias2, NonProvidingPtrAlias
-#include "tests/cxx/template_args-i1.h"  // for TplHost, TplInI1
+#include "tests/cxx/template_args-d2.h"  // for HostNonProvidingAlias, HostNonProvidingAliasTpl, NonProvidingAlias, NonProvidingFunctionAlias1, NonProvidingFunctionAlias2, NonProvidingPtrAlias
+#include "tests/cxx/template_args-i1.h"  // for Class, TplHost, TplInI1
 template <typename F> struct FunctionStruct;  // lines XX-XX
 
 ***** IWYU_SUMMARY */

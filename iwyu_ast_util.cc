@@ -1888,13 +1888,41 @@ TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
     const clang::Type* type,
     std::function<set<const clang::Type*>(const clang::Type*)>
         provided_getter) {
-  const auto* tpl_spec_type = type->getAs<TemplateSpecializationType>();
-  if (!tpl_spec_type)
-    return TemplateInstantiationData{};
-  const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
-  const auto* cls_tpl_decl = dyn_cast<ClassTemplateSpecializationDecl>(decl);
-  return GetTplInstDataForClassNoComponentTypes(
-      tpl_spec_type->template_arguments(), cls_tpl_decl, provided_getter);
+  TemplateInstantiationData res;
+  // Collect type template arguments from all the parts of a probably qualified
+  // name (like Level1<Arg1>::Level2<Arg2>::Level3<Arg3>).
+  const Type* part = type;
+  while (part) {
+    if (const auto* typedef_type = part->getAs<TypedefType>()) {
+      // Underlying types of aliases may in turn be qualified or unqualified
+      // template specialization types.
+      const Type* underlying = typedef_type->desugar().getTypePtr();
+      InsertInto(
+          GetTplInstDataForClassNoComponentTypes(underlying, provided_getter),
+          &res);
+    }
+
+    if (const auto* tpl_spec_type = part->getAs<TemplateSpecializationType>()) {
+      const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
+      const auto* cls_tpl_decl =
+          dyn_cast<ClassTemplateSpecializationDecl>(decl);
+      TemplateInstantiationData data = GetTplInstDataForClassNoComponentTypes(
+          tpl_spec_type->template_arguments(), cls_tpl_decl, provided_getter);
+      InsertInto(data, &res);
+
+      if (tpl_spec_type->isTypeAlias()) {
+        const Type* underlying = tpl_spec_type->desugar().getTypePtr();
+        InsertInto(
+            GetTplInstDataForClassNoComponentTypes(underlying, provided_getter),
+            &res);
+      }
+    }
+
+    NestedNameSpecifier nns = part->getPrefix();
+    part = nns.getKind() == NestedNameSpecifier::Kind::Type ? nns.getAsType()
+                                                            : nullptr;
+  }
+  return res;
 }
 
 TemplateInstantiationData GetTplInstDataForClass(
