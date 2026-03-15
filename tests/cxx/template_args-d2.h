@@ -29,3 +29,6 @@ using NonProvidingAlias = ns_in_d2::NonProvidingTypedef;
 
 using NonProvidingFunctionAlias1 = int(IndirectClass&);
 using NonProvidingFunctionAlias2 = IndirectClass(int);
+
+template <int>
+using NonProvidingPtrAlias = IndirectClass*;
