@@ -3434,6 +3434,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return retval;
   }
 
+  set<const Type*> GetAliasTemplateProvidedTypes(
+      const TemplateSpecializationType* type,
+      const TypeAliasTemplateDecl* al_tpl_decl) const {
+    const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
+    set<const Type*> res = GetProvidedTypes(type->getAliasedType().getTypePtr(),
+                                            GetLocation(al_decl));
+    RemoveAllFrom(GetCanonicalArgComponents(type), &res);
+    return res;
+  }
+
   set<const Type*> blocked_types_;
   set<const Decl*> blocked_for_fwd_decl_;
 
@@ -3471,16 +3481,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // be reported.
   bool SourceOrTargetTypeIsProvided(const ASTNode* construct_expr_node) const =
       delete;
-
-  set<const Type*> GetAliasTemplateProvidedTypes(
-      const TemplateSpecializationType* type,
-      const TypeAliasTemplateDecl* al_tpl_decl) const {
-    const TypeAliasDecl* al_decl = al_tpl_decl->getTemplatedDecl();
-    set<const Type*> res = GetProvidedTypes(type->getAliasedType().getTypePtr(),
-                                            GetLocation(al_decl));
-    RemoveAllFrom(GetCanonicalArgComponents(type), &res);
-    return res;
-  }
 
   void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
                              set<const Type*> blocked_types,
@@ -5487,8 +5487,11 @@ class IwyuAstConsumer
 
     TemplateInstantiationData data = GetTplInstData(callee, calling_expr);
 
-    if (parent_type)  // means we're a method of a class
+    if (parent_type) {  // means we're a method of a class
       InsertInto(GetTplInstData(parent_type), &data);
+      InsertAllInto(GetProvidedTypeComponents(parent_type),
+                    &data.provided_types);
+    }
 
     if (IsAutocastExpr(current_ast_node())) {
       const set<const Type*> provided_for_autocast =
@@ -5521,6 +5524,7 @@ class IwyuAstConsumer
     while (nns.getKind() == NestedNameSpecifier::Kind::Type) {
       const Type* host = nns.getAsType();
       InsertAllInto(GetTplInstData(host).provided_types, &res);
+      InsertAllInto(GetProvidedTypeComponents(host), &res);
       nns = host->getPrefix();
     }
 
@@ -5565,15 +5569,20 @@ class IwyuAstConsumer
  private:
   set<const Type*> GetProvidedTypeComponents(const Type* type) const {
     set<const Type*> res;
-    const Type* desugared_until_typedef = Desugar(type);
+    const Type* desugared_until_typedef_or_tpl = Desugar(type);
     if (const auto* typedef_type =
-            dyn_cast_or_null<TypedefType>(desugared_until_typedef)) {
+            dyn_cast_or_null<TypedefType>(desugared_until_typedef_or_tpl)) {
       const TypedefNameDecl* decl = typedef_type->getDecl();
       res = GetProvidedTypes(decl->getUnderlyingType().getTypePtr(),
                              GetLocation(decl));
-      InsertAllInto(GetProvidedByTplArg(desugared_until_typedef), &res);
+    } else if (const auto* tpl_spec =
+                   dyn_cast_or_null<TemplateSpecializationType>(
+                       desugared_until_typedef_or_tpl)) {
+      const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec);
+      if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl))
+        res = GetAliasTemplateProvidedTypes(tpl_spec, al_tpl_decl);
     }
-    // TODO(bolshakov): handle alias templates.
+    InsertAllInto(GetProvidedByTplArg(desugared_until_typedef_or_tpl), &res);
     return res;
   }
 

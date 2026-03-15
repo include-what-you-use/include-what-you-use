@@ -370,6 +370,27 @@ constexpr auto inner_tpl_size = sizeof(inner_tpl);
 
 // ---------------------------------------------------------------
 
+// Test provision of types by alias template declaration for template
+// instantiation scan. The class template uses dereferenced parameter type so
+// that there is no directly corresponding argument type for resugar_map, and
+// the type provision info should be obtained by GetProvidedTypeComponents.
+
+template <int>
+// IWYU: IndirectClass is...*indirect.h
+using ProvidingPtrAlias = IndirectClass*;
+
+template <typename T>
+struct UsingDereferenced {
+  T ptr;
+  static constexpr auto s = sizeof(*ptr);
+};
+
+UsingDereferenced<ProvidingPtrAlias<1>> udppa;
+// IWYU: IndirectClass is...*indirect.h
+UsingDereferenced<NonProvidingPtrAlias<1>> udnppa;
+
+// ---------------------------------------------------------------
+
 /**** IWYU_SUMMARY
 
 tests/cxx/template_args.cc should add these lines:
@@ -382,7 +403,7 @@ tests/cxx/template_args.cc should remove these lines:
 The full include-list for tests/cxx/template_args.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 #include "tests/cxx/template_args-d1.h"  // for ProvidingAlias
-#include "tests/cxx/template_args-d2.h"  // for NonProvidingAlias, NonProvidingFunctionAlias1, NonProvidingFunctionAlias2
+#include "tests/cxx/template_args-d2.h"  // for NonProvidingAlias, NonProvidingFunctionAlias1, NonProvidingFunctionAlias2, NonProvidingPtrAlias
 #include "tests/cxx/template_args-i1.h"  // for TplHost, TplInI1
 template <typename F> struct FunctionStruct;  // lines XX-XX
 

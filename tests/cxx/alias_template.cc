@@ -90,6 +90,21 @@ struct TplWithUsingArgInternals {
 // IWYU: IndirectClass is...*indirect.h
 TplWithUsingArgInternals<IndirectClass> twuai;
 
+template <typename T>
+void TakeByCopyInTplFn(T);
+
+void TestProvisionByTplArg() {
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  Identity<IndirectClass> iic;
+  // IWYU: IndirectClass is...*indirect.h
+  TakeByCopyInTplFn(iic);
+
+  Identity<Providing> ip;
+  // Test collecting provided types for SourceOrTargetTypeIsProvided function.
+  TakeByCopyInTplFn(ip);
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/alias_template.cc should add these lines:
