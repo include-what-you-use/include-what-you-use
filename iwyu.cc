@@ -5571,7 +5571,7 @@ class IwyuAstConsumer
       const TypedefNameDecl* decl = typedef_type->getDecl();
       res = GetProvidedTypes(decl->getUnderlyingType().getTypePtr(),
                              GetLocation(decl));
-      InsertAllInto(GetProvidedByTplArg(type), &res);
+      InsertAllInto(GetProvidedByTplArg(desugared_until_typedef), &res);
     }
     // TODO(bolshakov): handle alias templates.
     return res;
