@@ -146,6 +146,16 @@ using Providing = IndirectClass;
 // IWYU: IndirectClass is...*indirect.h
 using ProvidingNested = Identity<IndirectClass>;
 
+struct ConstructionFromIndirectClass {
+  // IWYU: IndirectClass needs a declaration
+  ConstructionFromIndirectClass(IndirectClass);
+};
+
+struct AggregateContainingIndirectClass {
+  // IWYU: IndirectClass is...*indirect.h
+  IndirectClass ic;
+};
+
 void ArgumentTypeProvision() {
   Identity<Providing>::Type p1;
   (void)sizeof(p1);
@@ -155,6 +165,8 @@ void ArgumentTypeProvision() {
   p2->Method();
   decltype(p1) decltype_provided;
   (void)sizeof(decltype_provided);
+  ConstructionFromIndirectClass cficp{decltype_provided};
+  AggregateContainingIndirectClass acicp{decltype_provided};
 
   // IWYU: NonProviding is...*typedef_in_template-i1.h
   // IWYU: IndirectClass is...*indirect.h
@@ -173,6 +185,12 @@ void ArgumentTypeProvision() {
   decltype(n1) decltype_not_provided;
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(decltype_not_provided);
+  // IWYU: IndirectClass is...*indirect.h
+  ConstructionFromIndirectClass cficnp{decltype_not_provided};
+  // TODO: probably, IndirectClass should not be reported here because it is
+  // provided by AggregateContainingIndirectClass definition.
+  // IWYU: IndirectClass is...*indirect.h
+  AggregateContainingIndirectClass acicnp{decltype_not_provided};
 
   Identity<Providing>::Inner::Type p3;
 
