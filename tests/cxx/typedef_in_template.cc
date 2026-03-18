@@ -153,6 +153,8 @@ void ArgumentTypeProvision() {
   Identity<Providing>::Type* p2 = nullptr;
   (void)sizeof(*p2);
   p2->Method();
+  decltype(p1) decltype_provided;
+  (void)sizeof(decltype_provided);
 
   // IWYU: NonProviding is...*typedef_in_template-i1.h
   // IWYU: IndirectClass is...*indirect.h
@@ -167,6 +169,10 @@ void ArgumentTypeProvision() {
   (void)sizeof(*n2);
   // IWYU: IndirectClass is...*indirect.h
   n2->Method();
+  // IWYU: IndirectClass is...*indirect.h
+  decltype(n1) decltype_not_provided;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(decltype_not_provided);
 
   Identity<Providing>::Inner::Type p3;
 

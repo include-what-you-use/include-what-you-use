@@ -3485,10 +3485,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   void ReportTypeUseInternal(SourceLocation used_loc, const Type* type,
                              set<const Type*> blocked_types,
                              DerefKind deref_kind) {
-    InsertAllInto(this->getDerived().GetProvidedByTplArg(type), &blocked_types);
     // It is important not to lose info about type aliases while desugaring
     // and dereferencing here, because they are handled further.
     type = Desugar(type);
+    InsertAllInto(this->getDerived().GetProvidedByTplArg(type), &blocked_types);
     if (deref_kind == DerefKind::RemoveRefs ||
         deref_kind == DerefKind::RemoveRefsAndPtr) {
       if (const auto* ref_type = dyn_cast_or_null<ReferenceType>(type)) {
