@@ -13,6 +13,9 @@ typedef decltype(sizeof(int)) size_t;
 template <typename, typename>
 struct pair;
 
+template <typename T1, typename T2, typename U1, typename U2>
+bool operator==(const pair<T1, T2>&, const pair<U1, U2>&);
+
 template <typename>
 class function;
 template <typename Ret, typename... Args>
@@ -20,6 +23,9 @@ class function<Ret(Args...)>;
 
 template <typename T, size_t N>
 struct array;
+
+template <typename T, size_t N>
+bool operator==(const array<T, N>&, const array<T, N>&);
 
 template <size_t I, typename T1, typename T2>
 void get(pair<T1, T2>&) noexcept;
