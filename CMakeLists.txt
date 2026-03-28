@@ -96,7 +96,7 @@ elseif (IWYU_RESOURCE_RELATIVE_TO STREQUAL "iwyu")
   # Leave bin path empty so IWYU can resolve its own path at runtime.
   set(iwyu_resource_binary_path "")
 else()
-  message(FATAL_ERROR "Invalid IWYU_RESOURCE_RELATIVE_TO value: "
+  message(FATAL_ERROR "IWYU: invalid IWYU_RESOURCE_RELATIVE_TO value: "
     "'${IWYU_RESOURCE_RELATIVE_TO}'. Must be 'iwyu' or 'clang'.")
 endif()
 
@@ -110,7 +110,7 @@ else()
 endif()
 
 message(STATUS
-  "IWYU: Resource dir will be computed at runtime with IWYU_RESOURCE_DIR="
+  "IWYU: resource dir will be computed at runtime with IWYU_RESOURCE_DIR="
   "'${iwyu_resource_dir}' relative to '${IWYU_RESOURCE_RELATIVE_TO}'")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -124,7 +124,7 @@ if (GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 else()
-  message(WARNING "IWYU Git version not found, DO NOT release from this tree!")
+  message(WARNING "IWYU: no Git revision found, DO NOT release from this tree!")
 endif()
 
 set(LLVM_LINK_COMPONENTS
