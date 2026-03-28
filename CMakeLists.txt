@@ -135,7 +135,8 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
 )
 
-add_llvm_library(iwyu BUILDTREE_ONLY
+add_library(iwyu
+  OBJECT
   iwyu.cc
   iwyu_ast_util.cc
   iwyu_cache.cc
@@ -152,6 +153,7 @@ add_llvm_library(iwyu BUILDTREE_ONLY
   iwyu_regex.cc
   iwyu_verrs.cc
 )
+llvm_update_compile_flags(iwyu)
 
 add_llvm_executable(include-what-you-use
   iwyu_main.cc
@@ -233,9 +235,11 @@ if (WIN32)
 endif()
 
 # Build vendored gtest library
-add_llvm_library(iwyu-gtest BUILDTREE_ONLY
+add_library(iwyu-gtest
+  OBJECT
   vendor/googletest/src/gtest-all.cc
 )
+llvm_update_compile_flags(iwyu-gtest)
 
 target_include_directories(iwyu-gtest
   PUBLIC
