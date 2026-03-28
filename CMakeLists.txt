@@ -60,6 +60,11 @@ option(IWYU_LINK_CLANG_DYLIB
   ${CLANG_LINK_CLANG_DYLIB}
 )
 
+option(IWYU_USE_SYSTEM_GTEST
+  "Use system gtest instead of bundled version"
+  off
+)
+
 # IWYU needs to know where to find Clang builtin headers (stddef.h, stdint.h,
 # etc). The builtin headers are shipped in the Clang resource directory.
 # You can configure IWYU's resource directory lookup using two options:
@@ -236,47 +241,57 @@ if (TARGET clang-resource-headers)
   add_dependencies(include-what-you-use clang-resource-headers)
 endif()
 
-# Build vendored gtest library.
-add_library(iwyu-gtest
-  OBJECT
-  vendor/googletest/src/gtest-all.cc
-)
-llvm_update_compile_flags(iwyu-gtest)
+if (IWYU_USE_SYSTEM_GTEST)
+  message(STATUS "IWYU: using system gtest")
+  find_package(GTest CONFIG REQUIRED)
 
-target_include_directories(iwyu-gtest
-  PUBLIC
-  vendor/googletest/include
-  PRIVATE
-  vendor/googletest
-)
+  # Make it available under the expected name.
+  add_library(iwyu-gtest ALIAS GTest::gtest)
+else()
+  message(STATUS "IWYU: using bundled gtest")
 
-# gtest: Disable -Wcovered-switch-default if compiler supports it.
-include(CheckCompilerFlag)
-check_compiler_flag(CXX
-  -Wcovered-switch-default
-  iwyu_cxx_supports_covered_switch_default)
-
-if (iwyu_cxx_supports_covered_switch_default)
-  target_compile_options(iwyu-gtest
-    PRIVATE
-    -Wno-covered-switch-default
+  # Build vendored gtest library.
+  add_library(iwyu-gtest
+    OBJECT
+    vendor/googletest/src/gtest-all.cc
   )
-endif()
+  llvm_update_compile_flags(iwyu-gtest)
 
-# gtest: Disable use of cxxabi.h, which can cause conflict between libc++abi and
-# libsupc++. See https://github.com/llvm/llvm-project/issues/121300.
-target_compile_options(iwyu-gtest
-  PUBLIC
-  -DGTEST_HAS_CXXABI_H_=0
-)
+  target_include_directories(iwyu-gtest
+    PUBLIC
+    vendor/googletest/include
+    PRIVATE
+    vendor/googletest
+  )
 
-# gtest: Use portable exception semantics for MSVC.
-if (MSVC)
+  # gtest: Disable -Wcovered-switch-default if compiler supports it.
+  include(CheckCompilerFlag)
+  check_compiler_flag(CXX
+    -Wcovered-switch-default
+    iwyu_cxx_supports_covered_switch_default)
+
+  if (iwyu_cxx_supports_covered_switch_default)
+    target_compile_options(iwyu-gtest
+      PRIVATE
+      -Wno-covered-switch-default
+    )
+  endif()
+
+  # gtest: Disable use of cxxabi.h, which can cause conflict between libc++abi and
+  # libsupc++. See https://github.com/llvm/llvm-project/issues/121300.
   target_compile_options(iwyu-gtest
     PUBLIC
-    /EHsc
+    -DGTEST_HAS_CXXABI_H_=0
   )
-endif()
+
+  # gtest: Use portable exception semantics for MSVC.
+  if (MSVC)
+    target_compile_options(iwyu-gtest
+      PUBLIC
+      /EHsc
+    )
+  endif()
+endif(IWYU_USE_SYSTEM_GTEST)
 
 # Add unittest target.
 add_llvm_executable(iwyu-unittests
