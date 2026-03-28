@@ -135,6 +135,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
 )
 
+# Group IWYU sources into a library target so we can use them for unittests.
 add_library(iwyu
   OBJECT
   iwyu.cc
@@ -154,21 +155,6 @@ add_library(iwyu
   iwyu_verrs.cc
 )
 llvm_update_compile_flags(iwyu)
-
-add_llvm_executable(include-what-you-use
-  iwyu_main.cc
-)
-
-target_link_libraries(include-what-you-use PRIVATE
-  iwyu
-)
-
-# Add a dependency on clang-resource-headers if it exists, to ensure the builtin
-# headers are available where Clang/IWYU expects them after build.
-# This should only have any effect in non-standalone builds.
-if (TARGET clang-resource-headers)
-  add_dependencies(include-what-you-use clang-resource-headers)
-endif()
 
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 
@@ -234,7 +220,23 @@ if (WIN32)
   )
 endif()
 
-# Build vendored gtest library
+# Add main IWYU executable target.
+add_llvm_executable(include-what-you-use
+  iwyu_main.cc
+)
+
+target_link_libraries(include-what-you-use PRIVATE
+  iwyu
+)
+
+# Add a dependency on clang-resource-headers if it exists, to ensure the builtin
+# headers are available where Clang/IWYU expects them after build.
+# This should only have any effect in non-standalone builds.
+if (TARGET clang-resource-headers)
+  add_dependencies(include-what-you-use clang-resource-headers)
+endif()
+
+# Build vendored gtest library.
 add_library(iwyu-gtest
   OBJECT
   vendor/googletest/src/gtest-all.cc
