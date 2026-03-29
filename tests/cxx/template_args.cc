@@ -424,6 +424,13 @@ struct Host {
   typedef Level1<Class> Level1NonProviding;
   template <typename>
   using Level1NonProvidingAlTpl = Level1<Class>;
+
+  template <typename>
+  struct UsesInMethod {
+    static void Fn() {
+      T t;
+    }
+  };
 };
 
 // IWYU: IndirectClass is...*indirect.h
@@ -497,6 +504,17 @@ void TestMultiLevelArgs() {
   // IWYU: Class is...*-i1.h
   // IWYU: IndirectClass is...*indirect.h
   (void)sizeof(AliasTplToTypedef<IndirectClass>::Level2<int>);
+
+  Host<Class>::Intermediate1 intermediate1;
+  // IWYU: Class is...*-i1.h
+  decltype(intermediate1)::Nested<int> inner_nested3;
+  using Intermediate1AliasNonProviding = decltype(intermediate1);
+  // IWYU: Class is...*-i1.h
+  Intermediate1AliasNonProviding::Nested<int> inner_nested4;
+  // IWYU: IndirectClass needs a declaration
+  Host<IndirectClass>::UsesInMethod<int> uim;
+  // IWYU: IndirectClass is...*indirect.h
+  decltype(uim)::Fn();
 }
 
 // ---------------------------------------------------------------

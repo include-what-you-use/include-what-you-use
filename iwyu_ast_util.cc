@@ -1891,7 +1891,7 @@ TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
   TemplateInstantiationData res;
   // Collect type template arguments from all the parts of a probably qualified
   // name (like Level1<Arg1>::Level2<Arg2>::Level3<Arg3>).
-  const Type* part = type;
+  const Type* part = Desugar(type);
   while (part) {
     if (const auto* typedef_type = part->getAs<TypedefType>()) {
       // Underlying types of aliases may in turn be qualified or unqualified
@@ -1919,8 +1919,9 @@ TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
     }
 
     NestedNameSpecifier nns = part->getPrefix();
-    part = nns.getKind() == NestedNameSpecifier::Kind::Type ? nns.getAsType()
-                                                            : nullptr;
+    part = nns.getKind() == NestedNameSpecifier::Kind::Type
+               ? Desugar(nns.getAsType())
+               : nullptr;
   }
   return res;
 }
