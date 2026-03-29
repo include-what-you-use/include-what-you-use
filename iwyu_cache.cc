@@ -73,6 +73,8 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
     fulluse_types.insert({"std::forward_list", "std::list", "std::vector"});
 
   const NamedDecl* tpl_decl = TypeToDeclAsWritten(tpl_type);
+  if (!tpl_decl)  // This probably means that the template name is dependent.
+    return map<const Type*, const Type*>();
   if (!ContainsKey(fulluse_types, GetWrittenQualifiedNameAsString(
                                       tpl_decl, /*with_fn_args=*/false)))
     return map<const Type*, const Type*>();
