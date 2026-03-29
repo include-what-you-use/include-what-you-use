@@ -1281,6 +1281,8 @@ const NamedDecl* GetInstantiatedFromDecl(const NamedDecl* decl) {
 }
 
 const NamedDecl* GetDefinitionAsWritten(const NamedDecl* decl) {
+  if (!decl)
+    return nullptr;
   // First, get to decl-as-written.
   if (const auto* func_decl = dyn_cast<FunctionDecl>(decl)) {
     // If we're instantiated from a template, use the template pattern as the
@@ -1903,12 +1905,13 @@ TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
     }
 
     if (const auto* tpl_spec_type = part->getAs<TemplateSpecializationType>()) {
-      const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
-      const auto* cls_tpl_decl =
-          dyn_cast<ClassTemplateSpecializationDecl>(decl);
-      TemplateInstantiationData data = GetTplInstDataForClassNoComponentTypes(
-          tpl_spec_type->template_arguments(), cls_tpl_decl, provided_getter);
-      InsertInto(data, &res);
+      if (const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type)) {
+        const auto* cls_tpl_decl =
+            dyn_cast<ClassTemplateSpecializationDecl>(decl);
+        TemplateInstantiationData data = GetTplInstDataForClassNoComponentTypes(
+            tpl_spec_type->template_arguments(), cls_tpl_decl, provided_getter);
+        InsertInto(data, &res);
+      }
 
       if (tpl_spec_type->isTypeAlias()) {
         const Type* underlying = tpl_spec_type->desugar().getTypePtr();

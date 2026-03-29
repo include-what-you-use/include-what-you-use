@@ -5382,6 +5382,10 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())
       return true;
 
+    const TemplateDecl* tpl = type->getTemplateName().getAsTemplateDecl();
+    if (!tpl)  // This occurs when the template name is dependent.
+      return true;
+
     bool can_fwd_decl = CanForwardDeclareType(current_ast_node());
     // If we're not in a forward-declare context, use of a template
     // specialization requires having the full type information.
@@ -5393,7 +5397,6 @@ class IwyuAstConsumer
     }
 
     if (!InImplicitCode(current_ast_node())) {
-      const TemplateDecl* tpl = type->getTemplateName().getAsTemplateDecl();
       size_t num_written_args = type->template_arguments().size();
       if (num_written_args < GetTplParamNumberWithoutPack(tpl)) {
         // If the type as-written makes use of default arguments, select exactly
