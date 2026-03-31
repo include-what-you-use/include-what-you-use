@@ -40,3 +40,11 @@ using HostNonProvidingAlias = Host<IndirectClass>;
 
 template <typename>
 using HostNonProvidingAliasTpl = Host<IndirectClass>;
+
+using IndirectClassNonProviding = IndirectClass;
+
+template <typename>
+struct TplWithMethodWithoutDef;
+
+using TplWithMethodWithoutDefNonProviding =
+    TplWithMethodWithoutDef<IndirectClass>;

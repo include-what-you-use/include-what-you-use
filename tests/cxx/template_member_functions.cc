@@ -83,6 +83,11 @@ TplUsingInDtor<T> TplGetTplUsingInDtor3() {
   return {};
 }
 
+template <typename T>
+TplUsingInDtor<T> TplGetTplUsingInDtor4() {
+  throw 0;
+}
+
 template <typename T = IndirectClass>
 TplUsingInDtor<T> TplGetTplUsingInDtorDefArgNonProviding() {
   return TplUsingInDtor<T>();
@@ -104,16 +109,19 @@ void Fn() {
 
   // IWYU: IndirectClass is...*indirect.h
   GetTplUsingInDtor();
+  GetTplUsingInDtorProviding();
   GetProvidingTplUsingInDtor();
   // IWYU: IndirectClass is...*indirect.h
   GetNonProvidingTplUsingInDtor();
 
   // IWYU: IndirectClass is...*indirect.h
   TplGetTplUsingInDtor1<IndirectClass>();
-  // TODO: IWYU: IndirectClass is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
   TplGetTplUsingInDtor2<IndirectClass>();
-  // TODO: IWYU: IndirectClass is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
   TplGetTplUsingInDtor3<IndirectClass>();
+  // IWYU: IndirectClass is...*indirect.h
+  TplGetTplUsingInDtor4<IndirectClass>();
 
   // IWYU: IndirectClass is...*indirect.h
   TplGetTplUsingInDtorDefArgNonProviding();
@@ -149,6 +157,6 @@ tests/cxx/template_member_functions.cc should remove these lines:
 
 The full include-list for tests/cxx/template_member_functions.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
-#include "tests/cxx/template_member_functions-direct.h"  // for ProvidingTplUsingInDtor, TplGetTplUsingInDtorDefArgProviding
+#include "tests/cxx/template_member_functions-direct.h"  // for GetTplUsingInDtorProviding, ProvidingTplUsingInDtor, TplGetTplUsingInDtorDefArgProviding
 
 ***** IWYU_SUMMARY */

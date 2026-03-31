@@ -758,10 +758,6 @@ bool DeclsAreInSameClass(const clang::Decl* decl1, const clang::Decl* decl2);
 // Returns true if the given decl/name is a builtin function
 bool IsBuiltinFunction(const clang::NamedDecl* decl);
 
-// Returns true if the function decl is an implicitly instantiated definition
-// (in particular, not just a declaration).
-bool IsImplicitlyInstantiatedDfn(const clang::FunctionDecl*);
-
 // If the given method overrides base class methods, returns the overridden
 // method declaration from the least derived class, otherwise returns the given
 // argument.

@@ -16,6 +16,9 @@
 #include "tests/cxx/template_args-d1.h"
 #include "tests/cxx/template_args-d2.h"
 
+// IWYU: IndirectClass is...*indirect.h
+using IndirectClassProviding = IndirectClass;
+
 // ---------------------------------------------------------------
 
 // IWYU: IndirectClass needs a declaration
@@ -243,6 +246,34 @@ T TplParamRetType() {
 
 // IWYU: IndirectClass needs a declaration
 IndirectClass& i = TplParamRetType<IndirectClass&>();
+
+template <typename T>
+T TplParamRetTypeNoDef();
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+auto&& i2 = TplParamRetTypeNoDef<IndirectClass>();
+auto&& i3 = TplParamRetTypeNoDef<IndirectClassProviding>();
+// IWYU: IndirectClass is...*indirect.h
+auto&& i4 = TplParamRetTypeNoDef<IndirectClassNonProviding>();
+
+template <typename T>
+struct TplWithMethodWithoutDef {
+  static T GetT();
+};
+
+// IWYU: IndirectClass is...*indirect.h
+using TplWithMethodWithoutDefProviding = TplWithMethodWithoutDef<IndirectClass>;
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+auto&& i5 = TplWithMethodWithoutDef<IndirectClass>::GetT();
+auto&& i6 = TplWithMethodWithoutDef<IndirectClassProviding>::GetT();
+// IWYU: IndirectClass is...*indirect.h
+auto&& i7 = TplWithMethodWithoutDef<IndirectClassNonProviding>::GetT();
+auto&& i8 = TplWithMethodWithoutDefProviding::GetT();
+// IWYU: IndirectClass is...*indirect.h
+auto&& i9 = TplWithMethodWithoutDefNonProviding::GetT();
 
 // ---------------------------------------------------------------
 
@@ -532,7 +563,7 @@ tests/cxx/template_args.cc should remove these lines:
 The full include-list for tests/cxx/template_args.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 #include "tests/cxx/template_args-d1.h"  // for ProvidingAlias
-#include "tests/cxx/template_args-d2.h"  // for HostNonProvidingAlias, HostNonProvidingAliasTpl, NonProvidingAlias, NonProvidingFunctionAlias1, NonProvidingFunctionAlias2, NonProvidingPtrAlias
+#include "tests/cxx/template_args-d2.h"  // for HostNonProvidingAlias, HostNonProvidingAliasTpl, IndirectClassNonProviding, NonProvidingAlias, NonProvidingFunctionAlias1, NonProvidingFunctionAlias2, NonProvidingPtrAlias, TplWithMethodWithoutDefNonProviding
 #include "tests/cxx/template_args-i1.h"  // for Class, TplHost, TplInI1
 template <typename F> struct FunctionStruct;  // lines XX-XX
 
