@@ -19,3 +19,5 @@ template <typename T = IndirectClass>
 TplUsingInDtor<T> TplGetTplUsingInDtorDefArgProviding() {
   return TplUsingInDtor<T>();
 }
+
+TplUsingInDtor<IndirectClass> GetTplUsingInDtorProviding();

@@ -3133,8 +3133,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
 
-    if (!IsImplicitlyInstantiatedDfn(callee) && !IsTemplatizedType(parent_type))
-      HandleFnReturnOnCallSite(callee);
+    HandleFnReturnOnCallSite(callee, parent_type, calling_expr);
 
     // We may have already been checked in a previous
     // VisitUnresolvedLookupExpr() call.  Don't check again in that case.
@@ -3475,6 +3474,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // 'Tpl<Providing>::Type'.
   set<const Type*> GetProvidedByTplArg(const Type*) = delete;
 
+  set<const Type*> GetProvidedByTplArg(const FunctionDecl*,
+                                       const Type* parent_type,
+                                       const Expr* calling_expr) = delete;
+
   // Returns 'true' if either argument or "destination" (currently, function
   // argument type if it is an argument construction) of 'CXXConstructExpr'
   // provides the constructed type. In that case, the type should not
@@ -3612,7 +3615,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     ReportTypeUse(CurrentLoc(), type, DerefKind::None);
   }
 
-  void HandleFnReturnOnCallSite(const FunctionDecl* callee) {
+  void HandleFnReturnOnCallSite(const FunctionDecl* callee,
+                                const Type* parent_type,
+                                const Expr* calling_expr) {
     // Usually the function-author is responsible for providing the
     // full type information for the return type of the function, but
     // in cases where it's not, we have to take responsibility.
@@ -3621,8 +3626,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (IsPointerOrReferenceAsWritten(return_type))
       return;
 
-    ReportWithAdditionalBlockedTypes(return_type,
-                                     GetProvidedTypesForFnReturn(callee));
+    set<const Type*> new_blocked_types = this->getDerived().GetProvidedByTplArg(
+        callee, parent_type, calling_expr);
+    InsertAllInto(GetProvidedTypesForFnReturn(callee), &new_blocked_types);
+    InsertAllInto(blocked_types_, &new_blocked_types);
+
+    ValueSaver<set<const Type*>> s(&blocked_types_, new_blocked_types);
+
+    ReportTypeUse(CurrentLoc(), return_type, DerefKind::None);
 
     const NamedDecl* decl = TypeToDeclAsWritten(GetCanonicalType(return_type));
     if (const auto* record_decl = dyn_cast_or_null<CXXRecordDecl>(decl)) {
@@ -4298,6 +4309,12 @@ class InstantiatedTemplateVisitor
   set<const Type*> GetProvidedByTplArg(const Type*) {
     // Already inside template instantiation analysis. Types provided
     // by template arguments should be in 'blocked_types_' set.
+    return set<const Type*>{};
+  }
+
+  set<const Type*> GetProvidedByTplArg(const FunctionDecl*,
+                                       const Type*,
+                                       const Expr*) {
     return set<const Type*>{};
   }
 
@@ -5468,6 +5485,7 @@ class IwyuAstConsumer
       data.provided_types.insert(provided_for_autocast.begin(),
                                  provided_for_autocast.end());
     }
+    InsertAllInto(blocked_types_, &data.provided_types);
     instantiated_template_visitor_.ScanInstantiatedFunction(
         callee, current_ast_node(), data.resugar_map, data.provided_types);
     return true;
@@ -5502,6 +5520,17 @@ class IwyuAstConsumer
         InsertAllInto(GetTplInstData(tpl_spec).provided_types, &res);
     }
     return res;
+  }
+
+  set<const Type*> GetProvidedByTplArg(const FunctionDecl* callee,
+                                       const Type* parent_type,
+                                       const Expr* calling_expr) {
+    set<const Type*> ret = GetTplInstData(callee, calling_expr).provided_types;
+    if (parent_type) {
+      InsertAllInto(GetTplInstData(parent_type).provided_types, &ret);
+      InsertAllInto(GetProvidedTypeComponents(parent_type), &ret);
+    }
+    return ret;
   }
 
   bool SourceOrTargetTypeIsProvided(const ASTNode* construct_expr_node) const {

@@ -105,7 +105,6 @@ using clang::ExprWithCleanups;
 using clang::FunctionDecl;
 using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
-using clang::FunctionTemplateSpecializationInfo;
 using clang::FunctionType;
 using clang::IdentifierInfo;
 using clang::ImplicitCastExpr;
@@ -1498,16 +1497,6 @@ bool IsBuiltinFunction(const NamedDecl* decl) {
     }
   }
   return false;
-}
-
-bool IsImplicitlyInstantiatedDfn(const FunctionDecl* decl) {
-  const FunctionTemplateSpecializationInfo* tpl_spec_info =
-      decl->getTemplateSpecializationInfo();
-  if (!tpl_spec_info)
-    return false;  // Not a template specialization.
-  return decl->isThisDeclarationADefinition() &&
-         tpl_spec_info->getTemplateSpecializationKind() ==
-             clang::TSK_ImplicitInstantiation;
 }
 
 const CXXMethodDecl* GetFromLeastDerived(const CXXMethodDecl* decl) {
