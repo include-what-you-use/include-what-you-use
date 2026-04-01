@@ -3852,29 +3852,12 @@ class InstantiatedTemplateVisitor
 
     switch (ignore_kind) {
       case IgnoreKind::ForUse:
-        if (!IsKnownTemplateParam(type))
-          return true;
-        break;
+        return !IsKnownTemplateParam(type);
       case IgnoreKind::ForExpansion:
-        if (!InvolvesKnownTemplateParam(type))
-          return true;
-        break;
+        return !InvolvesKnownTemplateParam(type);
     }
 
-    // If we're a default template argument, we should ignore the type
-    // if the template author intend-to-provide it, but otherwise we
-    // should not ignore it -- the caller is responsible for the type.
-    // This captures cases like hash_set<Foo>, where the caller is
-    // responsible for defining hash<Foo>.
-    // IsProvidedByTemplate handles the case we
-    // have a templated class that #includes "foo.h" and has a
-    // scoped_ptr<Foo>: we say the templated class provides Foo, even
-    // though it's scoped_ptr.h that's actually trying to call
-    // Foo::Foo and ::~Foo.
-    // TODO(csilvers): this isn't ideal: ideally we'd want
-    // 'TheInstantiatedTemplateForWhichTypeWasADefaultTemplateArgumentIntendsToProvide',
-    // but clang doesn't store that information.
-    return IsDefaultTemplateParameter(type) && IsProvidedByTemplate(type);
+    CHECK_UNREACHABLE_("Unexpected IgnoreKind.");
   }
 
   bool IsTypeInteresting(const Type* type) const {
@@ -4363,24 +4346,6 @@ class InstantiatedTemplateVisitor
 
   bool IsProvidedByTemplate(const NamedDecl* decl) const {
     return GetLocOfTemplateThatProvides(decl).isValid();
-  }
-  bool IsProvidedByTemplate(const Type* type) const {
-    type = Desugar(type);
-    type = RemovePointersAndReferences(type);  // get down to the decl
-    if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
-      decl = GetDefinitionAsWritten(decl);
-      return GetLocOfTemplateThatProvides(decl).isValid();
-    }
-    return true;   // we always provide non-decl types like int, etc.
-  }
-
-  // For a SubstTemplateTypeParmType, says whether it corresponds to a
-  // default template parameter (one not explicitly specified when the
-  // class was instantiated) or not.  We store this in resugar_map by
-  // having the value be nullptr.
-  bool IsDefaultTemplateParameter(const Type* type) const {
-    type = GetCanonicalType(type);
-    return ContainsKeyValue(resugar_map_, type, static_cast<Type*>(nullptr));
   }
 
   // clang desugars template types, so Foo<MyTypedef>() gets turned
@@ -5590,33 +5555,66 @@ class IwyuAstConsumer
     return res;
   }
 
+  void CollectProvidedByDefaultTplArg(SourceLocation template_loc,
+                                      TemplateInstantiationData* data) const {
+    for (auto [canonical, sugared] : data->resugar_map) {
+      if (!sugared) {  // This designates a default argument.
+        if (const NamedDecl* decl =
+                GetDefinitionAsWritten(TypeToDeclAsWritten(canonical))) {
+          if (preprocessor_info().PublicHeaderIntendsToProvide(
+                  GetFileEntry(template_loc),
+                  GetFileEntry(decl->getLocation())))
+            data->provided_types.insert(canonical);
+        }
+      }
+    }
+  }
+
   TemplateInstantiationData GetTplInstData(const Type* type) const {
-    return GetTplInstDataForClass(type, [this](const Type* type) {
-      return GetProvidedTypeComponents(type);
-    });
+    TemplateInstantiationData ret = GetTplInstDataForClass(
+        type,
+        [this](const Type* type) { return GetProvidedTypeComponents(type); });
+    // TODO(bolshakov): is using GetDefinitionAsWritten here always correct?
+    // Couldn't files containing other declarations (like primary template
+    // redeclarations or explicit specializations or instantiations) provide
+    // definitions for default args?
+    if (const Decl* defn = GetDefinitionAsWritten(TypeToDeclAsWritten(type)))
+      CollectProvidedByDefaultTplArg(defn->getLocation(), &ret);
+    return ret;
   }
 
   TemplateInstantiationData GetTplInstData(
       llvm::ArrayRef<TemplateArgument> args,
       const ClassTemplateSpecializationDecl* decl) const {
-    return GetTplInstDataForClass(args, decl, [this](const Type* type) {
-      return GetProvidedTypeComponents(type);
-    });
+    TemplateInstantiationData ret = GetTplInstDataForClass(
+        args, decl,
+        [this](const Type* type) { return GetProvidedTypeComponents(type); });
+    // Currently, this function is used only for explicit instantiation
+    // handling. GetDefinitionAsWritten returns the template definition
+    // for them, and it should be present.
+    CHECK_(IsExplicitInstantiation(decl));
+    CollectProvidedByDefaultTplArg(GetDefinitionAsWritten(decl)->getLocation(),
+                                   &ret);
+    return ret;
   }
 
   TemplateInstantiationData GetTplInstData(const FunctionDecl* decl,
                                            const Expr* calling_expr) const {
-    return GetTplInstDataForFunction(
+    TemplateInstantiationData ret = GetTplInstDataForFunction(
         decl, calling_expr,
         [this](const Type* type) { return GetProvidedTypeComponents(type); });
+    CollectProvidedByDefaultTplArg(decl->getLocation(), &ret);
+    return ret;
   }
 
   TemplateInstantiationData GetTplInstData(
       const VarTemplateSpecializationDecl* decl,
       const DeclRefExpr* expr) const {
-    return GetTplInstDataForVariable(decl, expr, [this](const Type* type) {
-      return GetProvidedTypeComponents(type);
-    });
+    TemplateInstantiationData ret = GetTplInstDataForVariable(
+        decl, expr,
+        [this](const Type* type) { return GetProvidedTypeComponents(type); });
+    CollectProvidedByDefaultTplArg(decl->getLocation(), &ret);
+    return ret;
   }
 
   pair<bool, const char*> CanBeProvidedTypeComponent(

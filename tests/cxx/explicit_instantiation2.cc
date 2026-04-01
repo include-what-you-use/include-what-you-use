@@ -22,6 +22,8 @@
 // 3: Full use in a template, provided as an explicit parameter.
 // 5: Full use in a template, provided as an default parameter.
 // 7: Full use in a template, provided as a template template parameter.
+// 11: Explicit instantiation of a provided default template argument when
+//     the explicit instantiation itself is not provided.
 //
 // Negative scenarios, where the dependent template specialization is not
 // required, or it does not provide an explicit instantiation:
@@ -31,9 +33,6 @@
 // 8: Fwd-decl use in a template, provided as a template template parameter.
 // 9: Implicit instantiation of Template<int>
 // 10: Specialization of Template<T>
-// 11: Explicit instantiation with a dependent instantiation declaration, but
-//     provided by the template helper itself.
-
 
 // IWYU: Template is...*explicit_instantiation-template.h
 // IWYU: Template is...*template_bool.h...*for explicit instantiation
@@ -85,6 +84,7 @@ template <> class Template<char> {};
 
 TemplateAsDefaultFull<char> t10; // 10
 
+// IWYU: ProvidedTemplate is...*template_short.h...*for explicit instantiation
 TemplateAsDefaultFullProvided<> t11; // 11
 
 /**** IWYU_SUMMARY
@@ -102,6 +102,6 @@ The full include-list for tests/cxx/explicit_instantiation2.cc:
 #include "tests/cxx/explicit_instantiation-template.h"  // for Template
 #include "tests/cxx/explicit_instantiation2-template_bool.h"  // for Template
 #include "tests/cxx/explicit_instantiation2-template_helpers.h"  // for FullUseArg, FwdDeclUseArg, TemplateAsDefaultFull, TemplateAsDefaultFullProvided, TemplateAsDefaultFwd, TemplateTemplateArgShortFull, TemplateTemplateArgShortFwd
-#include "tests/cxx/explicit_instantiation2-template_short.h"  // for Template
+#include "tests/cxx/explicit_instantiation2-template_short.h"  // for ProvidedTemplate, Template
 
 ***** IWYU_SUMMARY */
