@@ -12,4 +12,9 @@
 
 #include "tests/cxx/typedef_in_template-i1.h"
 
+template <typename T = Class1>
+struct TplProvidingDefArg {
+  using ArgType = T;
+};
+
 #endif // INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_IN_TEMPLATE_D1_H_

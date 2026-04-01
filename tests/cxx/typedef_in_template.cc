@@ -214,6 +214,8 @@ void ArgumentTypeProvision() {
   // IWYU: NonProvidingNested is...*typedef_in_template-i1.h
   // IWYU: IndirectClass is...*indirect.h
   NonProvidingNested::Type nnt;
+
+  TplProvidingDefArg<>::ArgType tpdaat;
 }
 
 // IWYU: IndirectClass needs a declaration
@@ -289,11 +291,11 @@ tests/cxx/typedef_in_template.cc should add these lines:
 
 tests/cxx/typedef_in_template.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
-- #include "tests/cxx/typedef_in_template-d1.h"  // lines XX-XX
 - #include "tests/cxx/typedef_in_template-d2.h"  // lines XX-XX
 
 The full include-list for tests/cxx/typedef_in_template.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/typedef_in_template-d1.h"  // for TplProvidingDefArg
 #include "tests/cxx/typedef_in_template-i1.h"  // for Class1, NonProviding, NonProvidingNested
 #include "tests/cxx/typedef_in_template-i2.h"  // for Class2, Pair
 
