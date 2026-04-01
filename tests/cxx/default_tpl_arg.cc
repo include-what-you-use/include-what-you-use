@@ -195,6 +195,18 @@ TplProvidingDefArg<T> operator+(const TplProvidingDefArg<T>&,
   return {};
 }
 
+// This explicit instantiation declaration doesn't provide the default argument
+// by itself because indirect.h is not included in this file directly.
+extern template class TplProvidingDefArg2<>;
+
+template <typename T>
+class TplProvidingDefArg3;
+
+// Test picking the correct redeclaration to determine if the default argument
+// is provided on handling explicit instantiation declaration. IWYU should not
+// report IndirectClass here.
+extern template class TplProvidingDefArg3<>;
+
 void Fn() {
   // IWYU: FnWithNonProvidedDefaultTplArg() is...*default_tpl_arg-i1.h
   // IWYU: IndirectClass is...*indirect.h
@@ -252,6 +264,17 @@ void Fn() {
   // IWYU: IndirectClass is...*indirect.h
   dtpda2 + dtpda2;
   DerivedFromProvidedDefArg<int> dfpda;
+
+  // Test that the default argument is considered as provided by the template
+  // definition despite it is not provided by the explicit instantiation.
+  TplProvidingDefArg2<> tpda21;
+  // Test picking the correct redecl to determine if the def arg is provided.
+  TplProvidingDefArg3<> tpda31;
+  // Note that it is not clear if IndirectClass should be considered as provided
+  // for TplProvidingDefArg4 because the redeclaration specifying the default
+  // argument doesn't provide it (but the template definition does).
+  // IWYU: TplProvidingDefArg4 is...*default_tpl_arg-i1.h
+  TplProvidingDefArg4<> tpda41;
 }
 
 /**** IWYU_SUMMARY
@@ -267,10 +290,11 @@ template <typename> class ClassTplWithDefinition5;
 tests/cxx/default_tpl_arg.cc should remove these lines:
 - #include "tests/cxx/default_tpl_arg-d1.h"  // lines XX-XX
 - #include "tests/cxx/direct.h"  // lines XX-XX
+- template <typename T> class TplProvidingDefArg3;  // lines XX-XX+1
 
 The full include-list for tests/cxx/default_tpl_arg.cc:
-#include "tests/cxx/default_tpl_arg-d2.h"  // for AliasTpl5, DerivedFromProvidedDefArg, DerivedTplProvidingDefArg, FnWithProvidedDefaultTplArg, FnWithProvidedDefaultTplArgAndDefaultCallArg1, FnWithProvidedDefaultTplArgAndDefaultCallArg2, FnWithProvidedDefaultTplArgAndDefaultCallArg3, GetClassTpl2Ref, TplProvidingDefArg
-#include "tests/cxx/default_tpl_arg-i1.h"  // for AliasTpl1, AliasTpl2, AliasTpl3, AliasTpl4, AliasTpl7, ClassTpl, ClassTpl2, ClassTplNoDefinition, ClassTplWithDefinition, ClassTplWithDefinition2, FnWithNonProvidedDefaultTplArg, FnWithNonProvidedDefaultTplArgAndDefaultCallArg, NonProvidingAlias, SomeTpl, SpecializedClassTpl, UninstantiatedTpl, VarTpl
+#include "tests/cxx/default_tpl_arg-d2.h"  // for AliasTpl5, DerivedFromProvidedDefArg, DerivedTplProvidingDefArg, FnWithProvidedDefaultTplArg, FnWithProvidedDefaultTplArgAndDefaultCallArg1, FnWithProvidedDefaultTplArgAndDefaultCallArg2, FnWithProvidedDefaultTplArgAndDefaultCallArg3, GetClassTpl2Ref, TplProvidingDefArg, TplProvidingDefArg2, TplProvidingDefArg3, TplProvidingDefArg4
+#include "tests/cxx/default_tpl_arg-i1.h"  // for AliasTpl1, AliasTpl2, AliasTpl3, AliasTpl4, AliasTpl7, ClassTpl, ClassTpl2, ClassTplNoDefinition, ClassTplWithDefinition, ClassTplWithDefinition2, FnWithNonProvidedDefaultTplArg, FnWithNonProvidedDefaultTplArgAndDefaultCallArg, NonProvidingAlias, SomeTpl, SpecializedClassTpl, TplProvidingDefArg4, UninstantiatedTpl, VarTpl
 #include "tests/cxx/default_tpl_arg-i2.h"  // for AliasTpl7, ClassTpl2, ClassTplWithDefinition2, ClassTplWithDefinition3, ClassTplWithDefinition7
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 template <typename = int, typename> class ClassTpl;  // lines XX-XX+2

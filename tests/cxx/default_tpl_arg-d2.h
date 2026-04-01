@@ -55,6 +55,21 @@ struct DerivedTplProvidingDefArg : TplProvidingDefArg<T> {};
 template <typename T1, typename T2 = IndirectTemplate<T1>>
 class DerivedFromProvidedDefArg : public T2 {};
 
+template <typename T = IndirectClass>
+class TplProvidingDefArg2 {
+  T t;
+};
+
+template <typename T = IndirectClass>
+class TplProvidingDefArg3 {
+  T t;
+};
+
+template <typename T>
+class TplProvidingDefArg4 {
+  T t;
+};
+
 /**** IWYU_SUMMARY
 
 tests/cxx/default_tpl_arg-d2.h should add these lines:
