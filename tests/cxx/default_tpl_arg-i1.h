@@ -93,4 +93,10 @@ class ClassTpl4;
 template <typename = int, typename>
 using AliasTpl7 = int;
 
+template <typename T>
+class TplProvidingDefArg3;
+
+template <typename T = IndirectClass>
+class TplProvidingDefArg4;
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_DEFAULT_TPL_ARG_I1_H_

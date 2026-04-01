@@ -118,6 +118,11 @@ class TplUsingNondependentDecl {
 // No reporting getInt here.
 template class TplUsingNondependentDecl<void>;
 
+// IWYU: TplWithNotProvidedDefArg is...*explicit_instantiation-template.h
+// IWYU: IndirectClass is...*indirect.h
+extern template class TplWithNotProvidedDefArg<>;
+extern template class TplWithProvidedDefArg<>;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/explicit_instantiation.cc should add these lines:
@@ -129,8 +134,8 @@ tests/cxx/explicit_instantiation.cc should remove these lines:
 
 The full include-list for tests/cxx/explicit_instantiation.cc:
 #include "tests/cxx/explicit_instantiation-spec.h"  // for Template
-#include "tests/cxx/explicit_instantiation-template.h"  // for ClassWithMethodUsingPtr, ClassWithUsingMethod, Template, TplWithDefArg, getInt
-#include "tests/cxx/explicit_instantiation-template2.h"  // for ClassWithUsingMethod2
+#include "tests/cxx/explicit_instantiation-template.h"  // for ClassWithMethodUsingPtr, ClassWithUsingMethod, Template, TplWithDefArg, TplWithNotProvidedDefArg, getInt
+#include "tests/cxx/explicit_instantiation-template2.h"  // for ClassWithUsingMethod2, TplWithProvidedDefArg
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 
 ***** IWYU_SUMMARY */
