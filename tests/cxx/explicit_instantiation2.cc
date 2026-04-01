@@ -22,13 +22,13 @@
 // 3: Full use in a template, provided as an explicit parameter.
 // 5: Full use in a template, provided as an default parameter.
 // 7: Full use in a template, provided as a template template parameter.
-// 8: Fwd-decl use in a template, provided as a template template parameter.
 //
 // Negative scenarios, where the dependent template specialization is not
 // required, or it does not provide an explicit instantiation:
 // 2: Explicit instantiation definition.
 // 4: Fwd-decl use in a template, provided as an explicit parameter.
 // 6: Fwd-decl use in a template, provided as a default parameter.
+// 8: Fwd-decl use in a template, provided as a template template parameter.
 // 9: Implicit instantiation of Template<int>
 // 10: Specialization of Template<T>
 // 11: Explicit instantiation with a dependent instantiation declaration, but
