@@ -166,8 +166,6 @@ void Fn() {
   // IWYU: IndirectClass is...*indirect.h
   twiesicii.Fn();
 
-  // TODO: IndirectClass need not be reported here.
-  // IWYU: IndirectClass is...*indirect.h
   IndirectMethod<IndirectClass>::Intermediate intermediate;
   // IWYU: IndirectClass is...*indirect.h
   intermediate.Method();

@@ -403,6 +403,7 @@ struct Cc_ImplicitConstructorStruct {
 };
 
 // The implicit destructor for i1tc uses I2_Class.
+// IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
 struct Cc_ImplicitInitializerStruct {

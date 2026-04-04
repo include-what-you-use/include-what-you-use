@@ -1247,23 +1247,15 @@ TemplateInstantiationData GetTplInstDataForVariable(
 }
 
 const NamedDecl* GetInstantiatedFromDecl(const NamedDecl* decl) {
-  if (const auto* tpl_sp_decl = dyn_cast<ClassTemplateSpecializationDecl>(
-          decl)) {  // an instantiated class template
-    PointerUnion<ClassTemplateDecl*, ClassTemplatePartialSpecializationDecl*>
-        instantiated_from = tpl_sp_decl->getInstantiatedFrom();
-    if (const auto* tpl_decl =
-            instantiated_from.dyn_cast<ClassTemplateDecl*>()) {
-      // decl is instantiated from a non-specialized template.
-      return tpl_decl;
-    } else if (const auto* partial_spec_decl =
-                   instantiated_from
-                       .dyn_cast<ClassTemplatePartialSpecializationDecl*>()) {
-      // decl is instantiated from a template partial specialization.
-      return partial_spec_decl;
+  if (const auto* record_decl = dyn_cast<CXXRecordDecl>(decl)) {
+    if (const CXXRecordDecl* pattern =
+            record_decl->getTemplateInstantiationPattern()) {
+      return pattern;
     }
-  }
-  if (const auto* tpl_sp_decl = dyn_cast<VarTemplateSpecializationDecl>(decl)) {
+  } else if (const auto* tpl_sp_decl =
+                 dyn_cast<VarTemplateSpecializationDecl>(decl)) {
     // An instantiated variable template.
+    // TODO(bolshakov): getTemplateInstantiationPattern() instead of this code?
     PointerUnion<VarTemplateDecl*, VarTemplatePartialSpecializationDecl*>
         instantiated_from = tpl_sp_decl->getInstantiatedFrom();
     if (const auto* tpl_decl = instantiated_from.dyn_cast<VarTemplateDecl*>()) {
@@ -1295,9 +1287,6 @@ const NamedDecl* GetDefinitionAsWritten(const NamedDecl* decl) {
       decl = tp_decl;
   } else {
     decl = GetInstantiatedFromDecl(decl);
-    if (const auto* tpl_decl = dyn_cast<ClassTemplateDecl>(decl))
-      decl = tpl_decl->getTemplatedDecl();  // convert back to CXXRecordDecl
-    // TODO(bolshakov): getTemplatedDecl() for VarTemplateDecls?
   }
   // Then, get to definition.
   if (const NamedDecl* class_dfn = GetTagDefinition(decl)) {

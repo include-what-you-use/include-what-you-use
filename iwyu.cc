@@ -240,6 +240,7 @@ using clang::QualType;
 using clang::QualifiedTypeLoc;
 using clang::RecordDecl;
 using clang::RecordType;
+using clang::RecordTypeLoc;
 using clang::RecursiveASTVisitor;
 using clang::RedeclarableTemplateDecl;
 using clang::ReferenceType;
@@ -3465,9 +3466,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // void fn(const S<Class>& s) { // Forward declarations are sufficient here.
   //   (void)s.t; // Full 'Class' type is needed due to template instantiation.
   // }
-  void ReportTplSpecComponentTypes(const TemplateSpecializationType*,
-                                   const set<const Type*>& blocked_types) =
-      delete;
+  void ReportTplSpecComponentTypes(
+      const Type*, const set<const Type*>& blocked_types) = delete;
 
   // Figures out if the type is provided by template specialization argument
   // e.g. when being 'using Type = TemplateArgument;' referred to as
@@ -3582,11 +3582,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     type = MapPrivateTypeToPublicType(type);
     // For the below, we want to be careful to call *our*
     // ReportDeclUse(), not any of the ones in subclasses.
-    if (const auto* template_spec_type =
-            dyn_cast<TemplateSpecializationType>(Desugar(type))) {
-      this->getDerived().ReportTplSpecComponentTypes(template_spec_type,
-                                                     blocked_types);
-    }
+    if (IsTemplatizedType(type))
+      this->getDerived().ReportTplSpecComponentTypes(type, blocked_types);
     // Don't place 'blocked_types' check before 'ReportTplSpecComponentTypes'
     // because template may be provided (i. e. blocked) but its arguments may be
     // not.
@@ -3797,9 +3794,8 @@ class InstantiatedTemplateVisitor
     // on a TraverseDecl call to push the decl to the top of the AST stack.
     set_current_ast_node(caller_ast_node);
 
-    const TemplateSpecializationType* type =
-        caller_ast_node->GetAs<TemplateSpecializationType>();
-    CHECK_(type != nullptr && "Not a template specialization");
+    const auto* type = caller_ast_node->GetAs<Type>();
+    CHECK_(type != nullptr && "Not a type");
 
     // As in TraverseExpandedTemplateFunctionHelper, we ignore all AST nodes
     // that will be reported when we traverse the uninstantiated type.
@@ -3810,8 +3806,12 @@ class InstantiatedTemplateVisitor
           const_cast<NamedDecl*>(type_decl_as_written));
     }
 
-    TraverseTemplateSpecializationType(
-        const_cast<TemplateSpecializationType*>(type), false);
+    if (const auto* tpl_spec_type = type->getAs<TemplateSpecializationType>()) {
+      TraverseTemplateSpecializationType(
+          const_cast<TemplateSpecializationType*>(tpl_spec_type), false);
+    } else if (const auto* record_type = type->getAs<RecordType>()) {
+      TraverseRecordTypeHelper(record_type);
+    }
   }
 
   void ScanInstantiatedClass(ClassTemplateSpecializationDecl* decl,
@@ -4051,6 +4051,27 @@ class InstantiatedTemplateVisitor
                                                      traverse_qualifier))
       return false;
     return TraverseTemplateSpecializationTypeHelper(typeloc.getTypePtr());
+  }
+
+  bool TraverseRecordTypeHelper(const RecordType* type) {
+    // The same check for SubstTemplateTypeParmType as in VisitRecordType.
+    if (current_ast_node()->ParentIsA<SubstTemplateTypeParmType>())
+      return true;
+    if (!IsTemplatizedType(type) || CanForwardDeclareType(current_ast_node()))
+      return true;
+    return TraverseDataAndTypeMembersOfClassHelper(type);
+  }
+
+  bool TraverseRecordType(RecordType* type, bool traverse_qualifier) {
+    if (!Base::TraverseRecordType(type, traverse_qualifier))
+      return false;
+    return TraverseRecordTypeHelper(type);
+  }
+
+  bool TraverseRecordTypeLoc(RecordTypeLoc typeloc, bool traverse_qualifier) {
+    if (!Base::TraverseRecordTypeLoc(typeloc, traverse_qualifier))
+      return false;
+    return TraverseRecordTypeHelper(typeloc.getTypePtr());
   }
 
   // This helper is called on every use of a template argument type in an
@@ -4300,7 +4321,7 @@ class InstantiatedTemplateVisitor
 
   // --- Handler declared in IwyuBaseASTVisitor.
 
-  void ReportTplSpecComponentTypes(const TemplateSpecializationType* type,
+  void ReportTplSpecComponentTypes(const Type* type,
                                    const set<const Type*>& /*blocked_types*/) {
     // TODO(bolshakov): should 'blocked_types' argument be considered here?
     TraverseDataAndTypeMembersOfClassHelper(type);
@@ -4451,8 +4472,7 @@ class InstantiatedTemplateVisitor
   // the instantiated class.  Unlike
   // TraverseClassTemplateSpecializationDecl() in the base class, it
   // does *not* traverse the methods.
-  bool TraverseDataAndTypeMembersOfClassHelper(
-      const TemplateSpecializationType* type) {
+  bool TraverseDataAndTypeMembersOfClassHelper(const Type* type) {
     if (!type)
       return true;
 
@@ -4477,7 +4497,7 @@ class InstantiatedTemplateVisitor
     }
 
     const NamedDecl* named_decl = TypeToDeclAsWritten(type);
-    const ClassTemplateSpecializationDecl* class_decl = DynCastFrom(named_decl);
+    const auto* class_decl = dyn_cast<CXXRecordDecl>(named_decl);
 
     // Bail out if we are not a proper class
     if (class_decl == nullptr) {
@@ -4502,7 +4522,7 @@ class InstantiatedTemplateVisitor
   }
 
   bool TraverseDataAndTypeMembersOfClassHelper(
-      const ClassTemplateSpecializationDecl* class_decl) {
+      const CXXRecordDecl* class_decl) {
     // If we have cached the reporting done for this decl before,
     // report again (but with the new caller_loc this time).
     // Otherwise, for all reporting done in the rest of this scope,
@@ -4524,7 +4544,7 @@ class InstantiatedTemplateVisitor
 
     for (DeclContext::decl_iterator it = class_decl->decls_begin();
          it != class_decl->decls_end(); ++it) {
-      if (isa<CXXMethodDecl>(*it) || isa<FunctionTemplateDecl>(*it))
+      if (isa<CXXMethodDecl, FunctionTemplateDecl, CXXRecordDecl>(*it))
         continue;
       if (!TraverseDecl(*it))
         return false;
@@ -4575,18 +4595,16 @@ class InstantiatedTemplateVisitor
   // TraverseDataAndTypeMembersOfClassHelper for some types (mostly
   // STL types).  This way we don't even need to traverse them once.
   // Returns true iff we did appropriate reporting for this type.
-  bool ReplayClassMemberUsesFromPrecomputedList(
-      const TemplateSpecializationType* tpl_type) {
+  bool ReplayClassMemberUsesFromPrecomputedList(const Type* type) {
     if (current_ast_node() && current_ast_node()->in_forward_declare_context())
       return true;   // never depend on any types if a fwd-decl
 
-    const NamedDecl* tpl_decl = TypeToDeclAsWritten(tpl_type);
+    const NamedDecl* tpl_decl = TypeToDeclAsWritten(type);
 
     // This says how the template-args are used by this hard-coded type
     // (a set<>, or map<>, or ...), to avoid having to recurse into them.
     const map<const Type*, const Type*>& resugar_map_for_precomputed_type =
-        FullUseCache::GetPrecomputedResugarMap(tpl_type,
-                                               compiler()->getLangOpts());
+        FullUseCache::GetPrecomputedResugarMap(type, compiler()->getLangOpts());
     // But we need to reconcile that with the types-of-interest, as
     // stored in resugar_map_.  To do this, we take only those entries
     // from resugar_map_for_precomputed_type that are also present in
@@ -5293,8 +5311,15 @@ class IwyuAstConsumer
       // If UsingType refers to a typedef, report the underlying type of that
       // typedef if needed (which is determined in ReportTypeUse).
       const Type* underlying_type = type->desugar().getTypePtr();
-      if (isa<TypedefType>(underlying_type))
+      if (isa<TypedefType>(underlying_type)) {
         ReportTypeUse(CurrentLoc(), underlying_type, DerefKind::None);
+      } else if (IsTemplatizedType(underlying_type)) {
+        TemplateInstantiationData data = GetTplInstData(underlying_type);
+        // TODO(bolshakov): add tests on the next line (if it actually works).
+        InsertAllInto(GetProvidedTypeComponents(type), &data.provided_types);
+        instantiated_template_visitor_.ScanInstantiatedType(
+            current_ast_node(), data.resugar_map, data.provided_types);
+      }
     }
 
     return Base::VisitUsingType(type);
@@ -5354,6 +5379,12 @@ class IwyuAstConsumer
 
     // OK, seems to be a use that requires the full type.
     ReportDeclUse(CurrentLoc(), type->getDecl(), comment);
+    if (IsTemplatizedType(type)) {
+      TemplateInstantiationData data = GetTplInstData(type);
+      InsertAllInto(GetProvidedTypeComponents(type), &data.provided_types);
+      instantiated_template_visitor_.ScanInstantiatedType(
+          current_ast_node(), data.resugar_map, data.provided_types);
+    }
     return Base::VisitTagType(type);
   }
 
@@ -5493,7 +5524,7 @@ class IwyuAstConsumer
 
   // --- Handler declared in IwyuBaseASTVisitor.
 
-  void ReportTplSpecComponentTypes(const TemplateSpecializationType* type,
+  void ReportTplSpecComponentTypes(const Type* type,
                                    const set<const Type*>& blocked_types) {
     TemplateInstantiationData data = GetTplInstData(type);
     ASTNode node(type);

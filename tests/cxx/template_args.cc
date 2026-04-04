@@ -462,6 +462,20 @@ struct Host {
       T t;
     }
   };
+
+  struct NestedNonTemplate {
+    T t;
+  };
+
+  static void UseNestedNonTemplate() {
+    (void)sizeof(NestedNonTemplate);
+  }
+};
+
+// IWYU: IndirectClass needs a declaration
+struct Derived : Host<IndirectClass> {
+  // IWYU: IndirectClass needs a declaration
+  using Host<IndirectClass>::NestedNonTemplate;
 };
 
 // IWYU: IndirectClass is...*indirect.h
@@ -546,6 +560,46 @@ void TestMultiLevelArgs() {
   Host<IndirectClass>::UsesInMethod<int> uim;
   // IWYU: IndirectClass is...*indirect.h
   decltype(uim)::Fn();
+
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(Host<IndirectClass>::NestedNonTemplate);
+  (void)sizeof(HostProvidingAlias::NestedNonTemplate);
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(HostNonProvidingAlias::NestedNonTemplate);
+  // IWYU: IndirectClass needs a declaration
+  Host<IndirectClass>::NestedNonTemplate* nnt;
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(*nnt);
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  Host<IndirectClass>::UseNestedNonTemplate();
+  // Test using-type.
+  // IWYU: IndirectClass is...*indirect.h
+  (void)sizeof(Derived::NestedNonTemplate);
+}
+
+// ---------------------------------------------------------------
+
+struct ContainsIndirectClass {
+  // IWYU: IndirectClass is...*indirect.h
+  IndirectClass ic;
+};
+
+template <typename>
+class ContainsIndirectClassIndirectly {
+  ContainsIndirectClass cic;
+};
+
+void TestNonTemplatesInsideTemplate() {
+  // IndirectClass definition should not be reported here because
+  // ContainsIndirectClass should already provide it.
+  // IWYU: IndirectClass needs a declaration
+  (void)sizeof(ContainsIndirectClassIndirectly<IndirectClass>);
+  // TODO: IndirectClass definition should not be reported here.
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  ContainsIndirectClassIndirectly<IndirectClass> ciciic;
 }
 
 // ---------------------------------------------------------------
