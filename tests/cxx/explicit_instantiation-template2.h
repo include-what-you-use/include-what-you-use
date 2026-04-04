@@ -11,10 +11,18 @@
 
 template <typename T>
 class ClassWithUsingMethod2 {
+ public:
   void Fn() {
     T t;
   }
+
+  void OutOfLineMethod();
 };
+
+template <typename T>
+void ClassWithUsingMethod2<T>::OutOfLineMethod() {
+  T t;
+}
 
 template <typename T = IndirectClass>
 class TplWithProvidedDefArg {

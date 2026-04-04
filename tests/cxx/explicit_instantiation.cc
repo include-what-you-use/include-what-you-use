@@ -123,6 +123,20 @@ template class TplUsingNondependentDecl<void>;
 extern template class TplWithNotProvidedDefArg<>;
 extern template class TplWithProvidedDefArg<>;
 
+// IWYU: IndirectTemplate needs a declaration
+extern template class ClassWithUsingMethod2<IndirectTemplate<int>>;
+
+void Fn() {
+  // Test that reporting for the out-of-line method is blocked due to
+  // the presence of ClassWithUsingMethod2 explicit instantiation declaration
+  // above, but not for the inline method Fn.
+  // IWYU: IndirectTemplate needs a declaration
+  ClassWithUsingMethod2<IndirectTemplate<int>> cwum2iti;
+  // IWYU: IndirectTemplate is...*indirect.h
+  cwum2iti.Fn();
+  cwum2iti.OutOfLineMethod();
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/explicit_instantiation.cc should add these lines:
