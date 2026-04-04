@@ -93,6 +93,24 @@ TplUsingInDtor<T> TplGetTplUsingInDtorDefArgNonProviding() {
   return TplUsingInDtor<T>();
 }
 
+template <typename T>
+struct IndirectMethod {
+  struct Intermediate {
+    void Method() {
+      T t;
+    }
+  };
+};
+
+template <typename>
+class ExplSpecTpl;
+
+template <>
+class ExplSpecTpl<IndirectClass> {
+  // IWYU: IndirectClass is...*indirect.h
+  IndirectClass ic;
+};
+
 void Fn() {
   // IWYU: IndirectClass is...*indirect.h
   NonProviding::StaticFn();
@@ -147,6 +165,16 @@ void Fn() {
 
   // IWYU: IndirectClass is...*indirect.h
   twiesicii.Fn();
+
+  // TODO: IndirectClass need not be reported here.
+  // IWYU: IndirectClass is...*indirect.h
+  IndirectMethod<IndirectClass>::Intermediate intermediate;
+  // IWYU: IndirectClass is...*indirect.h
+  intermediate.Method();
+
+  // Reporting IndirectClass here would be redundant because the explicit
+  // specialization definition should already provide it for its field.
+  ExplSpecTpl<IndirectClass> expl_spec;
 }
 
 /**** IWYU_SUMMARY
@@ -161,5 +189,6 @@ tests/cxx/template_member_functions.cc should remove these lines:
 The full include-list for tests/cxx/template_member_functions.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 #include "tests/cxx/template_member_functions-direct.h"  // for GetTplUsingInDtorProviding, ProvidingTplUsingInDtor, TplGetTplUsingInDtorDefArgProviding, twiesicii
+template <typename> class ExplSpecTpl;  // lines XX-XX+1
 
 ***** IWYU_SUMMARY */
