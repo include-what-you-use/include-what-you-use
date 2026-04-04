@@ -144,6 +144,9 @@ void Fn() {
   *dft;
   // IWYU: IndirectClass is...*indirect.h
   *(dft);
+
+  // IWYU: IndirectClass is...*indirect.h
+  twiesicii.Fn();
 }
 
 /**** IWYU_SUMMARY
@@ -157,6 +160,6 @@ tests/cxx/template_member_functions.cc should remove these lines:
 
 The full include-list for tests/cxx/template_member_functions.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
-#include "tests/cxx/template_member_functions-direct.h"  // for GetTplUsingInDtorProviding, ProvidingTplUsingInDtor, TplGetTplUsingInDtorDefArgProviding
+#include "tests/cxx/template_member_functions-direct.h"  // for GetTplUsingInDtorProviding, ProvidingTplUsingInDtor, TplGetTplUsingInDtorDefArgProviding, twiesicii
 
 ***** IWYU_SUMMARY */
