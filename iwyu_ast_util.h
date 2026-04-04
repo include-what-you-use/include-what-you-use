@@ -853,7 +853,8 @@ set<const clang::Type*> GetCanonicalComponentsOfType(const clang::Type* type);
 set<const clang::Type*> GetComponentsOfTypeWithoutSubstituted(
     const clang::Type*);
 
-// Returns true if the type has any template arguments.
+// Returns true if the type refers to an instantiated template specialization
+// or to its member class, but not to some (pure) explicit specialization.
 bool IsTemplatizedType(const clang::Type* type);
 
 // Returns true if any type involved (recursively examining template
