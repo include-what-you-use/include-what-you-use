@@ -657,8 +657,8 @@ TemplateInstantiationData GetTplInstDataForVariable(
     std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
 
 // If class_decl is instantiated from a class template,
-// returns the decl for that template; otherwise returns class_decl.
-// As an example, consider this code:
+// returns the CXXRecordDecl describing that template; otherwise returns
+// class_decl. As an example, consider this code:
 //    template<class T> class Foo { ... };   // template decl
 //    template<> class Foo<int> { ... };     // explicit specialization
 //    template class Foo<char>;              // note: no body specified
