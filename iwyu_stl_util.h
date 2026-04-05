@@ -120,6 +120,13 @@ set<T> Union(const set<T>& lhs, const set<T>& rhs) {
   return retval;
 }
 
+// Returns the union of any number of sets.
+template <typename T, typename... Sets>
+set<T> Union(set<T> first, Sets... rest) {
+  InsertAllInto(Union(rest...), &first);
+  return first;
+}
+
 // Returns a vector v with all duplicates removed, but order otherwise
 // maintained.
 template <typename T>
