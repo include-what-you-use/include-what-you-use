@@ -393,12 +393,25 @@ template<typename T> class ValueSaver {
   }
   // The one-arg version just uses the current value as newval.
   explicit ValueSaver(T* p) : ptr_(p), oldval_(*ptr_) { }
+  // Move constructor for factory methods.
+  ValueSaver(ValueSaver&& rhs)
+      : ptr_(rhs.ptr_), oldval_(std::move(rhs.oldval_)) {
+    rhs.reset();
+  }
+  ValueSaver(const ValueSaver&) = delete;
 
-  ~ValueSaver() { *ptr_ = oldval_; }
+  ~ValueSaver() {
+    if (ptr_)
+      *ptr_ = oldval_;
+  }
+
+  void reset() {
+    ptr_ = nullptr;
+  }
 
  private:
   T* const ptr_;
-  const T oldval_;
+  T oldval_;
 };
 
 // An object of this type updates current_ast_node_ to be the given
