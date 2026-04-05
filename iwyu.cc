@@ -3443,6 +3443,22 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return res;
   }
 
+  template <typename... Sets>
+  ValueSaver<set<const Type*>> ScopedAdditionalBlockedTypes(
+      Sets&&... additional_blocked_types) {
+    set<const Type*> new_blocked_types =
+        Union(blocked_types_, std::forward<Sets>(additional_blocked_types)...);
+    return {&blocked_types_, new_blocked_types};
+  }
+
+  template <typename... Sets>
+  ValueSaver<set<const Decl*>> ScopedAdditionalBlockedForFwdDecl(
+      Sets&&... additional_blocked_decls) {
+    set<const Decl*> new_blocked_decls = Union(
+        blocked_for_fwd_decl_, std::forward<Sets>(additional_blocked_decls)...);
+    return {&blocked_for_fwd_decl_, new_blocked_decls};
+  }
+
   set<const Type*> blocked_types_;
   set<const Decl*> blocked_for_fwd_decl_;
 
@@ -3607,14 +3623,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     ReportTypeUse(CurrentLoc(), type, DerefKind::None);
   }
 
-  void ReportWithAdditionalBlockedTypes(
-      const Type* type, const set<const Type*>& additional_blocked_types) {
-    set<const Type*> new_blocked_types = additional_blocked_types;
-    new_blocked_types.insert(blocked_types_.begin(), blocked_types_.end());
-    ValueSaver<set<const Type*>> s(&blocked_types_, new_blocked_types);
-    ReportTypeUse(CurrentLoc(), type, DerefKind::None);
-  }
-
   void HandleFnReturnOnCallSite(const FunctionDecl* callee,
                                 const Type* parent_type,
                                 const Expr* calling_expr) {
@@ -3626,12 +3634,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (IsPointerOrReferenceAsWritten(return_type))
       return;
 
-    set<const Type*> new_blocked_types = this->getDerived().GetProvidedByTplArg(
-        callee, parent_type, calling_expr);
-    InsertAllInto(GetProvidedTypesForFnReturn(callee), &new_blocked_types);
-    InsertAllInto(blocked_types_, &new_blocked_types);
-
-    ValueSaver<set<const Type*>> s(&blocked_types_, new_blocked_types);
+    ValueSaver<set<const Type*>> blocked_types_guard =
+        ScopedAdditionalBlockedTypes(this->getDerived().GetProvidedByTplArg(
+                                         callee, parent_type, calling_expr),
+                                     GetProvidedTypesForFnReturn(callee));
 
     ReportTypeUse(CurrentLoc(), return_type, DerefKind::None);
 
@@ -3651,8 +3657,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // iwyu requirement, in which case we're responsible for the
     // casted-to type.  See IwyuBaseASTVisitor::CanBeProvidedTypeComponent.
     const Type* type = expr->getType().getTypePtr();
-    ReportWithAdditionalBlockedTypes(
-        type, GetProvidedTypesForAutocast(current_ast_node()));
+    ValueSaver<set<const Type*>> blocked_types_guard =
+        ScopedAdditionalBlockedTypes(
+            GetProvidedTypesForAutocast(current_ast_node()));
+    ReportTypeUse(CurrentLoc(), type, DerefKind::None);
   }
 
   void HandleNonAutocastConstruction(clang::CXXConstructExpr* expr) {
@@ -5178,9 +5186,10 @@ class IwyuAstConsumer
     add_canonical_components(method_decl->getReturnType());
     for (const ParmVarDecl* param : method_decl->parameters())
       add_canonical_components(param->getType());
-    ValueSaver<set<const Decl*>> s{&blocked_for_fwd_decl_, fwd_blocked};
-    // Full type info suggestions are blocked in CanBeProvidedTypeComponent.
 
+    ValueSaver<set<const Decl*>> blocked_fwd_decl_guard =
+        ScopedAdditionalBlockedForFwdDecl(fwd_blocked);
+    // Full type info suggestions are blocked in CanBeProvidedTypeComponent.
     return Base::TraverseCXXMethodDecl(method_decl);
   }
 
