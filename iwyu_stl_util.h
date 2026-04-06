@@ -110,18 +110,12 @@ void Extend(TargetContainer* target, const SourceContainer& source) {
   target->insert(target->end(), source.begin(), source.end());
 }
 
-// Returns the union of the two given sets.
-template <typename T>
-set<T> Union(const set<T>& lhs, const set<T>& rhs) {
-  set<T> retval(lhs);
-  InsertAllInto(rhs, &retval);
-  return retval;
-}
-
-// Returns the union of any number of sets.
+// Returns the union of a number of sets.
 template <typename T, typename... Sets>
 set<T> Union(set<T> first, Sets... rest) {
-  InsertAllInto(Union(rest...), &first);
+  // A fold expression to apply first.merge over all pack elements, successively
+  // merging them into first.
+  (first.merge(rest), ...);
   return first;
 }
 
