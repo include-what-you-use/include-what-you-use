@@ -23,9 +23,6 @@
 #include "iwyu_port.h"  // for CHECK_
 #include "iwyu_stl_util.h"
 
-// TODO: Clean out pragmas as IWYU improves.
-// IWYU pragma: no_include <iterator>
-
 namespace clang {
 class LangOptions;
 class NamedDecl;

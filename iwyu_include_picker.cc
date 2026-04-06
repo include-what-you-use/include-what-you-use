@@ -45,9 +45,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 
-// TODO: Clean out pragmas as IWYU improves.
-// IWYU pragma: no_include <iterator>
-
 using clang::NamedDecl;
 using clang::OptionalFileEntryRef;
 using llvm::MemoryBuffer;

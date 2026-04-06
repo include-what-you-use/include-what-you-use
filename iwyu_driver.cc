@@ -55,8 +55,6 @@
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/Basic/DiagnosticFrontendInterface.inc"
-// IWYU pragma: no_include "clang/Basic/LLVM.h"
-// IWYU pragma: no_include "llvm/ADT/iterator.h"
 
 namespace include_what_you_use {
 
