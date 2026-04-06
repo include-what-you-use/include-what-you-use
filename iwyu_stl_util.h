@@ -12,9 +12,7 @@
 #ifndef INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 #define INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_
 
-// TODO: IWYU can't see the use of std::find in uninstantiated template.
-#include <algorithm>  // IWYU pragma: keep
-
+#include <algorithm>                    // for find
 #include <map>                          // for map, multimap
 #include <set>                          // for set
 #include <vector>                       // for vector
