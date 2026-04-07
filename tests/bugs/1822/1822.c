@@ -18,6 +18,6 @@ void foo(void) {
 
 /**** IWYU_SUMMARY
 
-(tests/bugs/1822/1822.cc has correct #includes/fwd-decls)
+(tests/bugs/1822/1822.c has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */

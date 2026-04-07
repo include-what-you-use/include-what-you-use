@@ -20,6 +20,6 @@ int main() {
 
 /**** IWYU_SUMMARY
 
-(tests/bugs/1122b/1122b.cc has correct #includes/fwd-decls)
+(tests/bugs/1122/1122b.cc has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */
