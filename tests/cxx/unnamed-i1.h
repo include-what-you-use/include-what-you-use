@@ -1,4 +1,4 @@
-//===--- direct.h - iwyu test ---------------------------------------------===//
+//===--- unnamed-i1.h - iwyu test -----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,6 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "indirect.h"
-
-extern typeof(var_indirect) var_direct;
+struct {
+  int i;
+} var_of_unnamed_type;
