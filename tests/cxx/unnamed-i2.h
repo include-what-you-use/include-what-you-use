@@ -1,4 +1,4 @@
-//===--- indirect.h - iwyu test -------------------------------------------===//
+//===--- unnamed-i2.h - iwyu test -----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,4 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-extern struct { int i; } var_indirect;
+#include "tests/cxx/unnamed-i1.h"
+
+static decltype(var_of_unnamed_type) deduced_var;
