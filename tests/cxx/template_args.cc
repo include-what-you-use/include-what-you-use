@@ -596,9 +596,7 @@ void TestNonTemplatesInsideTemplate() {
   // ContainsIndirectClass should already provide it.
   // IWYU: IndirectClass needs a declaration
   (void)sizeof(ContainsIndirectClassIndirectly<IndirectClass>);
-  // TODO: IndirectClass definition should not be reported here.
   // IWYU: IndirectClass needs a declaration
-  // IWYU: IndirectClass is...*indirect.h
   ContainsIndirectClassIndirectly<IndirectClass> ciciic;
 }
 

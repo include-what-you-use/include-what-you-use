@@ -3987,9 +3987,11 @@ class InstantiatedTemplateVisitor
   }
 
   bool TraverseFunctionIfInstantiatedTpl(FunctionDecl* callee,
-                                         const Type* /*parent_type*/,
+                                         const Type* parent_type,
                                          const Expr* /*calling_expr*/) {
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
+      return true;
+    if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type))
       return true;
     return TraverseExpandedTemplateFunctionHelper(callee);
   }
