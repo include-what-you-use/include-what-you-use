@@ -18,13 +18,13 @@ void f() {
 
 /**** IWYU_SUMMARY
 
-tests/bugs/1370/1370.c should add these lines:
+tests/bugs/1428/1428.cc should add these lines:
 #include <ctime>
 
-tests/bugs/1370/1370.c should remove these lines:
+tests/bugs/1428/1428.cc should remove these lines:
 #include <time.h>  // lines XX-XX
 
-The full include-list for tests/bugs/1370/1370.c:
+The full include-list for tests/bugs/1428/1428.cc:
 #include <ctime>  // for time
 
 ***** IWYU_SUMMARY */
