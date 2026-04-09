@@ -19,3 +19,6 @@ struct TplIndirectStruct3 {
   static constexpr auto s = sizeof(T1);
   T2* t2;
 };
+
+template <typename, typename>
+struct TplDirectStruct7;

@@ -27,6 +27,10 @@ inline int InlineImplicitCtorRefFn(const IndirectWithImplicitCtor&) {
   return 1;
 }
 
+// IWYU: ImplicitCtorInPartial needs a declaration
+// IWYU: ImplicitCtorInPartial<:0 *> is...*implicit_ctor-i2.h...*for autocast
+int ImplicitCtorInPartialFn(ImplicitCtorInPartial<char*>);
+
 // Test parameter type uses that do not require special handling for "autocast".
 int NoAutocastFn(
     // A subtle c++ point: forward-declaring is ok for nonconst, because
@@ -60,7 +64,7 @@ tests/cxx/implicit_ctor-d1.h should remove these lines:
 - #include "tests/cxx/implicit_ctor-i1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/implicit_ctor-d1.h:
-#include "tests/cxx/implicit_ctor-i2.h"  // for IndirectWithImplicitCtor, MultipleRedeclStruct
+#include "tests/cxx/implicit_ctor-i2.h"  // for ImplicitCtorInPartial, IndirectWithImplicitCtor, MultipleRedeclStruct
 class IndirectClass;
 
 ***** IWYU_SUMMARY */

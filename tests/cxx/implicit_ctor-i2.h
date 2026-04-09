@@ -25,3 +25,12 @@ struct NoTrivialCtorDtor {
 struct MultipleRedeclStruct {
   MultipleRedeclStruct(int);
 };
+
+template <typename T>
+struct ImplicitCtorInPartial;
+
+template <typename T>
+struct ImplicitCtorInPartial<T*> {
+  ImplicitCtorInPartial(int) {
+  }
+};
