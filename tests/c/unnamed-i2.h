@@ -1,4 +1,4 @@
-//===--- 1789.c - iwyu test -----------------------------------------------===//
+//===--- unnamed-i2.h - iwyu test -----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,16 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_XFAIL
+#include "tests/c/unnamed-i1.h"
 
-#include "direct.h"
-
-int main() {
-    return var_direct.i;
-}
-
-/**** IWYU_SUMMARY
-
-(tests/bugs/1789/1789.c has correct #includes/fwd-decls)
-
-***** IWYU_SUMMARY */
+extern typeof(var_of_unnamed_type) deduced_var;
