@@ -55,6 +55,8 @@ int e = LocalFn(5);
 // hence no reporting.
 int f = InlineImplicitCtorRefFn(6);
 
+int g = ImplicitCtorInPartialFn(7);
+
 // Make sure we are responsible for the conversion when it's not for a
 // function call.
 // IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h
@@ -137,7 +139,7 @@ tests/cxx/implicit_ctor.cc should add these lines:
 tests/cxx/implicit_ctor.cc should remove these lines:
 
 The full include-list for tests/cxx/implicit_ctor.cc:
-#include "tests/cxx/implicit_ctor-d1.h"  // for ImplicitCtorFn, ImplicitCtorRefFn, InlineImplicitCtorRefFn, TakeMultipleRedeclStruct
+#include "tests/cxx/implicit_ctor-d1.h"  // for ImplicitCtorFn, ImplicitCtorInPartialFn, ImplicitCtorRefFn, InlineImplicitCtorRefFn, TakeMultipleRedeclStruct
 #include "tests/cxx/implicit_ctor-d2.h"  // for NoTrivialCtorDtorNonProvidingAlias, NonProviding
 #include "tests/cxx/implicit_ctor-i2.h"  // for IndirectWithImplicitCtor, NoAutocastCtor, NoTrivialCtorDtor
 

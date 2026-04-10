@@ -90,7 +90,6 @@
 
 #include <cstdio>
 #include <cstdlib>                      // for atoi, exit
-#include <functional>
 #include <map>                          // for map, swap, etc
 #include <memory>                       // for unique_ptr
 #include <set>                          // for set, set<>::iterator, swap
