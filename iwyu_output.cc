@@ -915,7 +915,6 @@ set<string> CalculateMinimalIncludes(
   // - Includes in direct_includes that are also already in
   //   desired_headers.
   // - Includes in desired_headers.
-  // - Includes in direct_includes.
   // Picking in this order minimizes the number of #includes we add,
   // while allowing us to remove #includes if need be.
   for (OneUse& use : *uses) {
@@ -957,15 +956,6 @@ set<string> CalculateMinimalIncludes(
         use.set_suggested_header(choice);
         desired_headers.insert(use.suggested_header());
         LogIncludeMapping("#include already needed", use);
-      }
-    }
-    for (const string& choice : public_headers) {
-      if (use.has_suggested_header())
-        break;
-      if (ContainsKey(direct_includes, choice)) {
-        use.set_suggested_header(choice);
-        desired_headers.insert(use.suggested_header());
-        LogIncludeMapping("#include already present", use);
       }
     }
   }

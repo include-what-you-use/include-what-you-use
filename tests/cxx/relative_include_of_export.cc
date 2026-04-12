@@ -13,6 +13,7 @@
 #include "export_near.h"
 
 IndirectClass x;
+ClassFromExportNear cfen;
 
 /**** IWYU_SUMMARY
 

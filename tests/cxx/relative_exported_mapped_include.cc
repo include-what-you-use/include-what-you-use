@@ -18,6 +18,7 @@
 #include "relative_exported_mapped_include-d1.h"
 
 MappedToExportedHeader x;
+ClassFromD1 cfd1;
 
 /**** IWYU_SUMMARY
 
