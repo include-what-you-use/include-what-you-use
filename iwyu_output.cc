@@ -373,6 +373,7 @@ void OneUse::SetPublicHeaders() {
   if (use_kind_ == UseKind::FwdDecl) {
     public_headers_ = GlobalIncludePicker().GetCandidateHeadersForSymbolFwdDecl(
         symbol_name_, GetFilePath(use_loc_));
+    SetCanonicalHeaders();
     return;
   }
 
@@ -385,6 +386,15 @@ void OneUse::SetPublicHeaders() {
   }
   if (public_headers_.empty())
     public_headers_.push_back(ConvertToQuotedInclude(decl_filepath()));
+  SetCanonicalHeaders();
+}
+
+void OneUse::SetCanonicalHeaders() {
+  if (public_headers_.empty())
+    return;
+  canonical_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
+      public_headers_[0], GetFilePath(use_loc_));
+  canonical_headers_.insert(canonical_headers_.begin(), public_headers_[0]);
 }
 
 const vector<string>& OneUse::public_headers() {
@@ -394,6 +404,10 @@ const vector<string>& OneUse::public_headers() {
         << "Full uses should always have at least one hdr";
   }
   return public_headers_;
+}
+
+const vector<string>& OneUse::canonical_headers() {
+  return canonical_headers_;
 }
 
 bool OneUse::PublicHeadersContain(const string& elt) {
@@ -945,8 +959,7 @@ set<string> CalculateMinimalIncludes(
   //   that are not going away, since they should be calculated already).
   // - Includes in direct_includes that are also already in
   //   desired_headers.
-  // - Includes in desired_headers.
-  // - Includes in direct_includes.
+  // - Canonical headers in direct_includes.
   // Picking in this order minimizes the number of #includes we add,
   // while allowing us to remove #includes if need be.
   for (OneUse& use : *uses) {
@@ -981,6 +994,22 @@ set<string> CalculateMinimalIncludes(
         LogIncludeMapping("#include already present and needed", use);
       }
     }
+    for (const string& choice : use.canonical_headers()) {
+      if (use.has_suggested_header())
+        break;
+      if (ContainsKey(direct_includes, choice)) {
+        use.set_suggested_header(choice);
+        desired_headers.insert(use.suggested_header());
+        LogIncludeMapping("#include already present", use);
+      }
+    }
+  }
+
+  // Clean out unmapped uses that are satisfied by desired_headers.
+  for (OneUse& use : *uses) {
+    if (!use.NeedsSuggestedHeader())
+      continue;
+    const vector<string>& public_headers = use.public_headers();
     for (const string& choice : public_headers) {
       if (use.has_suggested_header())
         break;
@@ -988,15 +1017,6 @@ set<string> CalculateMinimalIncludes(
         use.set_suggested_header(choice);
         desired_headers.insert(use.suggested_header());
         LogIncludeMapping("#include already needed", use);
-      }
-    }
-    for (const string& choice : public_headers) {
-      if (use.has_suggested_header())
-        break;
-      if (ContainsKey(direct_includes, choice)) {
-        use.set_suggested_header(choice);
-        desired_headers.insert(use.suggested_header());
-        LogIncludeMapping("#include already present", use);
       }
     }
   }
@@ -1025,6 +1045,16 @@ set<string> CalculateMinimalIncludes(
         ++header_counts[choice].first;  // increment total count
         if (choice == use->public_headers()[0])
           ++header_counts[choice].second;  // increment first-in-list count
+      }
+    }
+    // IWYU should not suggest headers which aren't canonical for at least one
+    // symbol used in a file. Only the first mapped header should be considered,
+    // headers having include-mapping to it are not desirable. Clean up the map.
+    for (auto it = header_counts.begin(); it != header_counts.end();) {
+      if (it->second.second == 0) {
+        it = header_counts.erase(it);
+      } else {
+        ++it;
       }
     }
     pair<string, pair<int, int>> best = *header_counts.begin();
