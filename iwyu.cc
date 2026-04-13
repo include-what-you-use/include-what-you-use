@@ -5083,6 +5083,16 @@ class IwyuAstConsumer
     return Base::VisitClassTemplateSpecializationDecl(decl);
   }
 
+  bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (decl->isExplicitSpecialization())
+      ReportDeclUse(CurrentLoc(), decl->getSpecializedTemplate());
+    // TODO(bolshakov): handle explicit instantiations. Looks like clang doesn't
+    // store all of the explicit instantiation redeclarations in the AST.
+    return Base::VisitVarTemplateSpecializationDecl(decl);
+  }
+
   // Track use of namespace in using directive decl
   // a.h:
   //   namespace a { ... };
@@ -5181,6 +5191,21 @@ class IwyuAstConsumer
         }
       }
     }
+    if (decl->getTemplateSpecializationKind() ==
+        clang::TSK_ExplicitSpecialization) {
+      if (const FunctionTemplateDecl* tpl_decl = decl->getPrimaryTemplate()) {
+        // Report the most recent redeclaration prior to the specialization
+        // (because if there is one in the specialization file, there is no need
+        // to include any other). 'getMostRecentDecl()' returns the last redecl
+        // in the TU which may appear _after_ the specialization.
+        tpl_decl = tpl_decl->getMostRecentDecl();
+        while (IsBeforeInTranslationUnit(decl, tpl_decl))
+          tpl_decl = tpl_decl->getPreviousDecl();
+        ReportDeclUse(CurrentLoc(), tpl_decl);
+      }
+    }
+    // TODO(bolshakov): handle explicit instantiations. Looks like clang doesn't
+    // store all of the explicit instantiation redeclarations in the AST.
     return Base::VisitFunctionDecl(decl);
   }
 
