@@ -16,3 +16,24 @@ struct Template;
 
 // Specialization for int
 template<> struct Template<int> { int x; };
+
+template <typename>
+void TplFn1() {
+}
+
+template <typename>
+void TplFn2() {
+}
+
+template <typename>
+void TplFn3() {
+}
+
+template <typename>
+int var_tpl1;
+
+template <typename>
+int var_tpl2;
+
+template <typename>
+int var_tpl3;
