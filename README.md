@@ -380,13 +380,3 @@ Current IWYU pragmas are described in [IWYUPragmas](docs/IWYUPragmas.md).
 
 See our [FAQ](./docs/IWYUFAQ.md) for longer-form Q&A.
 
-
-## Contributing ##
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on submitting patches.
-Ideas and directions can also be discussed on the
-[IWYU mailing list](https://groups.google.com/g/include-what-you-use).
-
-## License ##
-
-IWYU is distributed under the [University of Illinois/NCSA Open Source License](LICENSE.TXT).
