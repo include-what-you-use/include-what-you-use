@@ -8,7 +8,7 @@ Coding and testing guidelines are available in the [IWYU Coding Style](docs/IWYU
 
 Use GitHub's [pull request system](https://github.com/include-what-you-use/include-what-you-use/pulls) to submit change requests to the `include-what-you-use/include-what-you-use` repo.
 
-It's usually a good idea to run ideas by the [IWYU mailing list](http://groups.google.com/group/include-what-you-use) to get general agreement on directions before you start hacking.
+It's usually a good idea to run ideas by the [IWYU mailing list](https://groups.google.com/g/include-what-you-use) to get general agreement on directions before you start hacking.
 
 ## Running the tests ##
 

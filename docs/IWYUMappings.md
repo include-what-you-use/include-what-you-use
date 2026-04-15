@@ -56,7 +56,7 @@ and data varies between the directives, see below.
 Note that you can mix directives of different kinds within the same mapping
 file.
 
-The `.imp` format looks like [JSON](http://json.org/), but IWYU actually uses
+The `.imp` format looks like [JSON](https://www.json.org/), but IWYU actually uses
 LLVM's [YAML](https://yaml.org/) parser to interpret the mapping files, which
 technically allows a richer syntax. We try to use a minimum of YAML features to
 get basic functionality (trailing comma syntax, `#` comments), but please be
@@ -198,9 +198,9 @@ For example;
 
 The rationale for the `ref` directive was to make it easier to compose
 project-specific mappings from a set of library-oriented mapping files. For
-example, IWYU might ship with mapping files for [Boost](http://www.boost.org),
+example, IWYU might ship with mapping files for [Boost](https://www.boost.org),
 the SCL, various C standard libraries, the Windows API, the [Poco
-Library](http://pocoproject.org), etc. Depending on what your specific project
+Library](https://pocoproject.org), etc. Depending on what your specific project
 uses, you could easily create an aggregate mapping file with refs to the
 relevant mappings.
 

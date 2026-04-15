@@ -98,7 +98,7 @@ mentioned above, that come with `#include` lines.  (A future version of IWYU may
 mitigate this problem.)  And if a class changes -- for instance, it adds a new
 default template argument -- you need to change many callsites, not just one.
 It is also easier to accidentally violate the [One Definition
-Rule](http://en.wikipedia.org/wiki/One_Definition_Rule) when all you expose is
+Rule](https://en.wikipedia.org/wiki/One_Definition_Rule) when all you expose is
 the name of a class (via a forward declare) rather than the full definition (via
 an `#include`).
 
