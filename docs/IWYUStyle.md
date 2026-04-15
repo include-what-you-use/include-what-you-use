@@ -302,4 +302,4 @@ If any prerequisite fails the test will be skipped.
 [1]: https://google.github.io/styleguide/cppguide.html
 [2]: https://llvm.org/docs/CodingStandards.html
 [3]: https://google.github.io/styleguide/pyguide.html
-[4]: https://www.python.org/dev/peps/pep-0008
+[4]: https://peps.python.org/pep-0008/
