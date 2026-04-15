@@ -17,7 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 // Count of statically allocated array.
-#define IWYU_ARRAYSIZE(arr) sizeof(arr) / sizeof(*arr)
+#define IWYU_ARRAYSIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 namespace include_what_you_use {
 
