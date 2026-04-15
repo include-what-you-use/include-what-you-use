@@ -438,8 +438,8 @@ def execute(invocations, verbose, formatter, jobs, max_load_average=0):
         pending.extend(i.start(verbose) for i in invocations[:capacity])
         invocations = invocations[capacity:]
 
-        # Yield CPU.
-        time.sleep(0.0001)
+        # Yield CPU between job polls.
+        time.sleep(0.1)
     return exit_code
 
 
