@@ -389,4 +389,4 @@ Ideas and directions can also be discussed on the
 
 ## License ##
 
-IWYU is distributed under the [LLVM Release License](LICENSE.TXT).
+IWYU is distributed under the [University of Illinois/NCSA Open Source License](LICENSE.TXT).
