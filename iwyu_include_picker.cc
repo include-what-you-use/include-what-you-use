@@ -1227,6 +1227,7 @@ const IncludeMapEntry libcxx_include_map[] = {
     // cd llvm-project/libcxx/include ; find . -type d -name "__*" | grep -v cxx03 | LC_ALL=C sort | sed -e 's#./__\(.*\)#    {"@<__\1/.*>", kPrivate, "<\1>", kPublic},#'
     //
     // tweak `locale_dir` entry (to `<locale>`)
+    // tweak `math` entry (to `<cmath>`)
     // comment out `configuration`, `debug_utils`, `fwd`, `pstl`, `support`
     {"@<__algorithm/.*>", kPrivate, "<algorithm>", kPublic},
     {"@<__atomic/.*>", kPrivate, "<atomic>", kPublic},
@@ -1251,7 +1252,7 @@ const IncludeMapEntry libcxx_include_map[] = {
     {"@<__ios/.*>", kPrivate, "<ios>", kPublic},
     {"@<__iterator/.*>", kPrivate, "<iterator>", kPublic},
     {"@<__locale_dir/.*>", kPrivate, "<locale>", kPublic},
-    {"@<__math/.*>", kPrivate, "<math>", kPublic},
+    {"@<__math/.*>", kPrivate, "<cmath>", kPublic},
     {"@<__mdspan/.*>", kPrivate, "<mdspan>", kPublic},
     {"@<__memory/.*>", kPrivate, "<memory>", kPublic},
     {"@<__memory_resource/.*>", kPrivate, "<memory_resource>", kPublic},
