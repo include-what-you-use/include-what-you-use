@@ -152,18 +152,6 @@ EXCLUDED_HEADERS = {
 # one of the standard integer types.
 ALIAS_TO_AVOID = 'intmax_t'
 
-# A half of overloads from <print> take the unspecified 'FILE*' type as
-# an argument. A workaround used here is to specify <print> as a header
-# corresponding to the fallback mapping (i.e. without parameter types specified)
-# of these functions.
-HANDWRITTEN_MAPPING = {
-    'std': 'print',
-    'std::print': 'print',
-    'std::println': 'print',
-    'std::vprint_unicode': 'print',
-    'std::vprint_nonunicode': 'print',
-}
-
 def contains_unspec_alias(inp):
     for alias in UNSPEC_ALIASES:
         if re.search(f'{alias}\\b', inp):
@@ -763,8 +751,6 @@ def print_content(std_source_path, lang):
         with open(path, 'r') as f:
             for symbol, headername in process_tex_file(f.read()):
                 headers_by_symbol.setdefault(symbol, []).append(headername)
-    for symbol, headername in HANDWRITTEN_MAPPING.items():
-        headers_by_symbol.setdefault(symbol, []).append(headername)
 
     for symbol, headernames in sorted(headers_by_symbol.items()):
         canonical_header = CANONICAL_HEADERS.get(symbol)
