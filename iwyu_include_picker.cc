@@ -360,8 +360,6 @@ const IncludeMapEntry libc_symbol_map[] = {
 const IncludeMapEntry stdlib_cxx_symbol_map[] = {
 #include "std_symbol_map.inc"  // IWYU pragma: keep
 
-  { "std::size_t", kPrivate, "<cstdio>", kPublic },
-
   // Common kludges for C++ standard libraries
 
   // Almost all STL types take an allocator, but they

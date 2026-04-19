@@ -133,6 +133,37 @@ CANONICAL_HEADERS = {
     'std::abs(long long)': 'cstdlib',
 }
 
+# Skip these until <iosfwd> can be handled correctly.
+EXCLUDED_HEADERS = {
+    'iosfwd',
+    'ios',
+    'streambuf',
+    'istream',
+    'ostream',
+    'sstream',
+    'spanstream',
+    'fstream',
+    'syncstream',
+    'print',
+}
+
+# The underlying type of this is not specified. Moreover, the corresponding
+# overloads of 'std::abs' and 'std::div' don't even exist if it coincides with
+# one of the standard integer types.
+ALIAS_TO_AVOID = 'intmax_t'
+
+# A half of overloads from <print> take the unspecified 'FILE*' type as
+# an argument. A workaround used here is to specify <print> as a header
+# corresponding to the fallback mapping (i.e. without parameter types specified)
+# of these functions.
+HANDWRITTEN_MAPPING = {
+    'std': 'print',
+    'std::print': 'print',
+    'std::println': 'print',
+    'std::vprint_unicode': 'print',
+    'std::vprint_nonunicode': 'print',
+}
+
 def contains_unspec_alias(inp):
     for alias in UNSPEC_ALIASES:
         if re.search(f'{alias}\\b', inp):
@@ -375,7 +406,7 @@ class Parser:
             if FP_PLACEHOLDER in id:
                 for t in ('float', 'double', 'long double'):
                     self.add_identifier_from_ns(id.replace(FP_PLACEHOLDER, t))
-            else:
+            elif ALIAS_TO_AVOID not in id:
                 self.add_identifier_from_ns(id)
             return
         if t.startswith('[[', cp):      # Attribute.
@@ -712,6 +743,8 @@ def process_synopsis(syn):
 def process_tex_file(tex_file):
     res = []
     for m in SYNOPSIS.finditer(tex_file):
+        if m.group('headername') in EXCLUDED_HEADERS:
+            continue
         symbols = process_synopsis(m.group('code'))
         res += zip(symbols, repeat(m.group('headername')))
     return res
@@ -727,12 +760,11 @@ def print_line(symbol, headername, lang):
 def print_content(std_source_path, lang):
     headers_by_symbol = {}
     for path in sorted(glob.glob(os.path.join(std_source_path, '*.tex'))):
-        if path.endswith('iostreams.tex'):
-            # Skip until <iosfwd> can be handled correctly.
-            continue
         with open(path, 'r') as f:
             for symbol, headername in process_tex_file(f.read()):
                 headers_by_symbol.setdefault(symbol, []).append(headername)
+    for symbol, headername in HANDWRITTEN_MAPPING.items():
+        headers_by_symbol.setdefault(symbol, []).append(headername)
 
     for symbol, headernames in sorted(headers_by_symbol.items()):
         canonical_header = CANONICAL_HEADERS.get(symbol)
