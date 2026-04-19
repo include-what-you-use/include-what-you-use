@@ -99,7 +99,6 @@ DUPLICATED_CLASSES = {
     'std::basic_common_reference<:0, :1, :2, :3>',
     'std::compare_three_way',
     'std::formatter<:0, :1>',
-    'std::hash',
     'std::tm',
     'std::tuple',
 }
@@ -131,6 +130,8 @@ CANONICAL_HEADERS = {
     'std::abs(int)': 'cstdlib',
     'std::abs(long)': 'cstdlib',
     'std::abs(long long)': 'cstdlib',
+
+    'std::hash': 'functional',
 }
 
 # Skip these until <iosfwd> can be handled correctly.
@@ -151,6 +152,15 @@ EXCLUDED_HEADERS = {
 # overloads of 'std::abs' and 'std::div' don't even exist if it coincides with
 # one of the standard integer types.
 ALIAS_TO_AVOID = 'intmax_t'
+
+HANDWRITTEN_MAPPING = (
+# Some namespace-scope symbols are not defined in the corresponding header
+# synopses.
+    ('std::hash', 'bitset'),
+    ('std::hash<std::bitset<:0>>', 'bitset'),
+    ('std::hash', 'thread'),
+    ('std::hash<std::thread::id>', 'thread'),
+)
 
 def contains_unspec_alias(inp):
     for alias in UNSPEC_ALIASES:
@@ -751,6 +761,8 @@ def print_content(std_source_path, lang):
         with open(path, 'r') as f:
             for symbol, headername in process_tex_file(f.read()):
                 headers_by_symbol.setdefault(symbol, []).append(headername)
+    for symbol, headername in HANDWRITTEN_MAPPING:
+        headers_by_symbol.setdefault(symbol, []).append(headername)
 
     for symbol, headernames in sorted(headers_by_symbol.items()):
         canonical_header = CANONICAL_HEADERS.get(symbol)
