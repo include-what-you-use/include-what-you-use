@@ -126,6 +126,7 @@ class OneUse {
 
   string PrintableUseLoc() const;
   const vector<string>& public_headers();  // not const because we fill lazily
+  const vector<string>& canonical_headers();
   bool PublicHeadersContain(const string& elt);
   bool NeedsSuggestedHeader() const;    // not true for fwd-declare uses, e.g.
   int UseLinenum() const;
@@ -144,6 +145,7 @@ class OneUse {
   UseFlags use_flags_;             // flags describing features of the use
   string comment_;                 // If not empty, append to clang warning msg
   vector<string> public_headers_;  // header to #include if dfn hdr is private
+  vector<string> canonical_headers_;
   string suggested_header_;        // header that allows us to satisfy use
   bool ignore_use_;                // set to true if use is discarded
   bool is_iwyu_violation_;         // set to false when we figure out it's not

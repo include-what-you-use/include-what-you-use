@@ -34,10 +34,10 @@ tests/cxx/std_size_t.cc should add these lines:
 #include <cstddef>
 
 tests/cxx/std_size_t.cc should remove these lines:
-- #include <cstdio>  // lines XX-XX
+- #include <stdio.h>  // lines XX-XX
 
 The full include-list for tests/cxx/std_size_t.cc:
-#include <stdio.h>  // for printf
 #include <cstddef>  // for size_t
+#include <cstdio>  // for printf
 
 ***** IWYU_SUMMARY */

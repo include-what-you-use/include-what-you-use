@@ -362,6 +362,8 @@ void OneUse::SetPublicHeaders() {
   }
   if (public_headers_.empty())
     public_headers_.push_back(ConvertToQuotedInclude(decl_filepath()));
+  canonical_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
+      public_headers_[0], GetFilePath(use_loc_));
 }
 
 const vector<string>& OneUse::public_headers() {
@@ -370,6 +372,10 @@ const vector<string>& OneUse::public_headers() {
     CHECK_(!public_headers_.empty() && "Should always have at least one hdr");
   }
   return public_headers_;
+}
+
+const vector<string>& OneUse::canonical_headers() {
+  return canonical_headers_;
 }
 
 bool OneUse::PublicHeadersContain(const string& elt) {
@@ -956,6 +962,15 @@ set<string> CalculateMinimalIncludes(
         use.set_suggested_header(choice);
         desired_headers.insert(use.suggested_header());
         LogIncludeMapping("#include already needed", use);
+      }
+    }
+    for (const string& choice : use.canonical_headers()) {
+      if (use.has_suggested_header())
+        break;
+      if (ContainsKey(direct_includes, choice)) {
+        use.set_suggested_header(choice);
+        desired_headers.insert(use.suggested_header());
+        LogIncludeMapping("#include already present", use);
       }
     }
   }
