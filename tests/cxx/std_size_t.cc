@@ -20,7 +20,9 @@
 #include <cstdio>
 #include <stdio.h>
 
+// IWYU: std::size_t is...*cstddef
 std::size_t f() {
+  // IWYU: size_t is...*cstddef
   const size_t x = 100;
   printf("%zu\n", x);
   return sizeof(int);
@@ -29,11 +31,13 @@ std::size_t f() {
 /**** IWYU_SUMMARY
 
 tests/cxx/std_size_t.cc should add these lines:
+#include <cstddef>
 
 tests/cxx/std_size_t.cc should remove these lines:
 - #include <stdio.h>  // lines XX-XX
 
 The full include-list for tests/cxx/std_size_t.cc:
-#include <cstdio>  // for printf, size_t
+#include <cstddef>  // for size_t
+#include <cstdio>  // for printf
 
 ***** IWYU_SUMMARY */

@@ -12,4 +12,6 @@
 
 #include <relative_exported_mapped_include-i1.h> // IWYU pragma: export
 
+class ClassFromD1 {};
+
 #endif // INCLUDE_WHAT_YOU_USE_TESTS_CXX_RELATIVE_EXPORTED_MAPPED_INCLUDE_D1_H_

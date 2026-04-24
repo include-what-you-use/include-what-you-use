@@ -362,6 +362,8 @@ void OneUse::SetPublicHeaders() {
   }
   if (public_headers_.empty())
     public_headers_.push_back(ConvertToQuotedInclude(decl_filepath()));
+  canonical_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
+      public_headers_[0], GetFilePath(use_loc_));
 }
 
 const vector<string>& OneUse::public_headers() {
@@ -370,6 +372,10 @@ const vector<string>& OneUse::public_headers() {
     CHECK_(!public_headers_.empty() && "Should always have at least one hdr");
   }
   return public_headers_;
+}
+
+const vector<string>& OneUse::canonical_headers() {
+  return canonical_headers_;
 }
 
 bool OneUse::PublicHeadersContain(const string& elt) {
@@ -915,7 +921,6 @@ set<string> CalculateMinimalIncludes(
   // - Includes in direct_includes that are also already in
   //   desired_headers.
   // - Includes in desired_headers.
-  // - Includes in direct_includes.
   // Picking in this order minimizes the number of #includes we add,
   // while allowing us to remove #includes if need be.
   for (OneUse& use : *uses) {
@@ -959,7 +964,7 @@ set<string> CalculateMinimalIncludes(
         LogIncludeMapping("#include already needed", use);
       }
     }
-    for (const string& choice : public_headers) {
+    for (const string& choice : use.canonical_headers()) {
       if (use.has_suggested_header())
         break;
       if (ContainsKey(direct_includes, choice)) {
@@ -973,27 +978,27 @@ set<string> CalculateMinimalIncludes(
   // Step (3): Now we have a set-cover problem: we need to end up with
   // a set of headers, called cover, so that for every i:
   //    intersection(cover, public_headers[i]) != empty_set
-  // We do this greedily: we find the header that's listed the most
-  // often.  Among those, we prefer the one that's listed first in
+  // We do this greedily: we find the header that's listed first in
   // public_headers[i] the most often (each list is in approximate
-  // best-fit order).  Among those, we choose arbitrarily.  We repeat
-  // until we cover all sets.
+  // best-fit order). Among those, we prefer the one that's listed the most
+  // often totally. Among those, we choose arbitrarily.  We repeat until we
+  // cover all sets.
   set<OneUse*> unmapped_uses;
   for (OneUse& use : *uses) {
     if (use.NeedsSuggestedHeader())
       unmapped_uses.insert(&use);
   }
   while (!unmapped_uses.empty()) {
-    map<string, pair<int,int>> header_counts;   // total appearances, 1st's
+    map<string, pair<int, int>> header_counts;  // 1st's, total appearances
     for (OneUse* use : unmapped_uses) {
       CHECK_(!use->has_suggested_header());
       const vector<string>& public_headers = use->public_headers();
       for (const string& choice : public_headers) {
         if (use->has_suggested_header())
           break;
-        ++header_counts[choice].first;  // increment total count
+        ++header_counts[choice].second;  // increment total count
         if (choice == use->public_headers()[0])
-          ++header_counts[choice].second;  // increment first-in-list count
+          ++header_counts[choice].first;  // increment first-in-list count
       }
     }
     pair<string, pair<int, int>> best = *header_counts.begin();

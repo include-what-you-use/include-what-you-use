@@ -17,4 +17,6 @@
 
 #include "indirect.h" // IWYU pragma: export
 
+class ClassFromExportNear {};
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_EXPORT_NEAR_H_

@@ -16,6 +16,8 @@
 // included via the above.
 PrivateClass x;
 
+ClassFromD1 cfd1;
+
 /**** IWYU_SUMMARY
 
 (tests/cxx/relative_include_of_double_export.cc has correct #includes/fwd-decls)

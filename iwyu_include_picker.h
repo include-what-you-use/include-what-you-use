@@ -200,6 +200,9 @@ class IncludePicker {
                                         const string& use_path,
                                         const string& decl_filepath) const;
 
+  vector<string> GetMappedPublicHeaders(const string& quoted_header,
+                                        const string& use_path) const;
+
  private:
   // Private implementation of mapping file parser, which takes
   // mapping file search path to allow recursion that builds up

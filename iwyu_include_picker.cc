@@ -2117,6 +2117,12 @@ vector<string> IncludePicker::GetMappedPublicHeaders(
   return GetCandidateHeadersForFilepathIncludedFrom(decl_filepath, use_path);
 }
 
+vector<string> IncludePicker::GetMappedPublicHeaders(
+    const string& quoted_header, const string& use_path) const {
+  return BestQuotedIncludesForIncluder(
+      GetPublicValues(filepath_include_map_, quoted_header), use_path);
+}
+
 // Parses a YAML/JSON file containing mapping directives of various types:
 //  symbol   - symbol name -> quoted include
 //  include  - private quoted include -> public quoted include
