@@ -11,6 +11,7 @@
 import os
 import sys
 import time
+import json
 import random
 import inspect
 import unittest
@@ -481,6 +482,49 @@ class FindIWYUTests(unittest.TestCase):
         finally:
             if oldval:
                 os.environ['IWYU_BINARY'] = oldval
+
+
+class JsonLoadTolerantTests(unittest.TestCase):
+    def test_valid_json(self):
+        """ Valid JSON is parsed without warning. """
+        text = json.dumps([{"file": "test.cc", "directory": "/tmp"}])
+        fileobj = StringIO(text)
+        result = iwyu_tool.json_load_tolerant(fileobj)
+        self.assertEqual(result, [{"file": "test.cc", "directory": "/tmp"}])
+
+    def test_trailing_comma_in_object(self):
+        """ Trailing comma in object is tolerated. """
+        text = '[{"file": "test.cc", "directory": "/tmp",}]'
+        fileobj = StringIO(text)
+        result = iwyu_tool.json_load_tolerant(fileobj)
+        self.assertEqual(result, [{"file": "test.cc", "directory": "/tmp"}])
+
+    def test_trailing_comma_in_array(self):
+        """ Trailing comma in array is tolerated. """
+        text = '[{"file": "a.cc", "directory": "/tmp"}, {"file": "b.cc", "directory": "/tmp"},]'
+        fileobj = StringIO(text)
+        result = iwyu_tool.json_load_tolerant(fileobj)
+        self.assertEqual(len(result), 2)
+
+    def test_trailing_comma_warning(self, ):
+        """ Trailing commas produce a warning on stderr. """
+        text = '[{"file": "test.cc",}]'
+        fileobj = StringIO(text)
+        stderr_stub = StringIO()
+        old_stderr = iwyu_tool.sys.stderr
+        iwyu_tool.sys.stderr = stderr_stub
+        try:
+            iwyu_tool.json_load_tolerant(fileobj)
+        finally:
+            iwyu_tool.sys.stderr = old_stderr
+        self.assertIn('trailing commas', stderr_stub.getvalue())
+
+    def test_invalid_json_raises(self):
+        """ Non-trailing-comma JSON errors are re-raised. """
+        text = '[{"file": INVALID}]'
+        fileobj = StringIO(text)
+        with self.assertRaises(json.JSONDecodeError):
+            iwyu_tool.json_load_tolerant(fileobj)
 
 
 if __name__ == '__main__':

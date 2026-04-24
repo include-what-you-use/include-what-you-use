@@ -41,6 +41,7 @@ import tempfile
 import subprocess
 
 
+TRAILING_COMMA_RE = re.compile(r',\s*([}\]])')
 CORRECT_RE = re.compile(r'^\((.*?) has correct #includes/fwd-decls\)$')
 SHOULD_ADD_RE = re.compile(r'^(.*?) should add these lines:$')
 ADD_RE = re.compile('^(.*?) +// (.*)$')
@@ -443,6 +444,32 @@ def execute(invocations, verbose, formatter, jobs, max_load_average=0):
     return exit_code
 
 
+def json_load_tolerant(fileobj):
+    """ Load JSON from fileobj, tolerating trailing commas.
+
+    Some build tools generate compile_commands.json with trailing commas, which
+    is technically invalid JSON but accepted by other tools (e.g. clangd). Try
+    strict parsing first, and fall back to stripping trailing commas if that
+    fails.
+    """
+    text = fileobj.read()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Strip trailing commas before ] and } and try again.
+    repaired = TRAILING_COMMA_RE.sub(r'\1', text)
+    if repaired == text:
+        # No trailing commas found; re-raise the original error.
+        json.loads(text)
+
+    print('warning: compilation database has trailing commas, '
+          'which are not valid JSON. Attempting to parse anyway.',
+          file=sys.stderr)
+    return json.loads(repaired)
+
+
 def main(compilation_db_path, source_files, exclude, verbose, formatter, jobs,
          max_load_average, extra_args):
     """ Entry point. """
@@ -460,7 +487,7 @@ def main(compilation_db_path, source_files, exclude, verbose, formatter, jobs,
         # Read compilation db from disk.
         compilation_db_path = os.path.realpath(compilation_db_path)
         with open(compilation_db_path, 'r') as fileobj:
-            compilation_db = json.load(fileobj)
+            compilation_db = json_load_tolerant(fileobj)
     except IOError as why:
         print('error: failed to parse compilation database: %s' % why,
               file=sys.stderr)
