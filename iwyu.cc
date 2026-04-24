@@ -218,6 +218,7 @@ using clang::FriendTemplateDecl;
 using clang::FunctionDecl;
 using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
+using clang::UserDefinedLiteral;
 using clang::FunctionType;
 using clang::LateParsedTemplate;
 using clang::LinkageSpecDecl;
@@ -728,6 +729,17 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     }
     return this->getDerived().HandleFunctionCall(
         func, TypeOfParentIfMethod(expr), expr);
+  }
+
+  bool TraverseUserDefinedLiteral(UserDefinedLiteral* expr) {
+    if (!Base::TraverseUserDefinedLiteral(expr))
+      return false;
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    FunctionDecl* func = expr->getDirectCallee();
+    if (!func)
+      return true;
+    return this->getDerived().HandleFunctionCall(func, nullptr, expr);
   }
 
   bool TraverseCXXMemberCallExpr(CXXMemberCallExpr* expr) {
