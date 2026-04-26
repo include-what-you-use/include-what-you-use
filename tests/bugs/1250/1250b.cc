@@ -22,6 +22,13 @@ void func_template(Template<T>* v) {
     v->end());
 }
 
+void instantiate() {
+  // IWYU: Template is...*1250b-i1.h
+  Template<int> v;
+  // BUG: consume() is reported here.
+  func_template(&v);
+}
+
 // IWYU seems to miss the two calls to begin() and end() in the function
 // template above, so Template is only reported for forward-decl use.
 
