@@ -519,6 +519,21 @@ class JsonLoadTolerantTests(unittest.TestCase):
             iwyu_tool.sys.stderr = old_stderr
         self.assertIn('trailing commas', stderr_stub.getvalue())
 
+    def test_trailing_comma_in_array_and_string(self):
+        """ Trailing comma in string is tolerated. """
+        text = '[{"file": "a.cc", "directory": "/tmp"}, {"file": "b.cc,]", "directory": "/tmp"},]'
+        fileobj = StringIO(text)
+        result = iwyu_tool.json_load_tolerant(fileobj)
+        self.assertEqual(len(result), 2)
+        self.assertEqual("b.cc,]", result[1]["file"])
+
+    def test_trailing_comma_in_object_and_string(self):
+        """ Trailing comma in string is tolerated. """
+        text = '[{"file": "test.cc, }", "directory": "/tmp",}]'
+        fileobj = StringIO(text)
+        result = iwyu_tool.json_load_tolerant(fileobj)
+        self.assertEqual(result, [{"file": "test.cc, }", "directory": "/tmp"}])
+
     def test_invalid_json_raises(self):
         """ Non-trailing-comma JSON errors are re-raised. """
         text = '[{"file": INVALID}]'
