@@ -443,6 +443,68 @@ def execute(invocations, verbose, formatter, jobs, max_load_average=0):
     return exit_code
 
 
+def _strip_trailing_commas(text):
+    """ Strip trailing commas before ] and } outside of JSON strings. """
+    result = []
+    in_string = False
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            result.append(ch)
+            if ch == '\\':
+                # Skip escaped character.
+                i += 1
+                if i < len(text):
+                    result.append(text[i])
+            elif ch == '"':
+                in_string = False
+        elif ch == '"':
+            in_string = True
+            result.append(ch)
+        elif ch == ',':
+            # Look ahead past whitespace for ] or }.
+            j = i + 1
+            while j < len(text) and text[j] in ' \t\r\n':
+                j += 1
+            if j < len(text) and text[j] in '}]':
+                # Skip the trailing comma (but keep the whitespace and
+                # closing bracket for the next iteration).
+                i += 1
+                continue
+            result.append(ch)
+        else:
+            result.append(ch)
+        i += 1
+    return ''.join(result)
+
+
+def json_load_tolerant(fileobj):
+    """ Load JSON from fileobj, tolerating trailing commas.
+
+    Some build tools generate compile_commands.json with trailing commas, which
+    is technically invalid JSON but accepted by other tools (e.g. clangd). Try
+    strict parsing first, and fall back to stripping trailing commas if that
+    fails.
+    """
+    text = fileobj.read()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Strip trailing commas before ] and } and try again.
+    repaired = _strip_trailing_commas(text)
+    if repaired == text:
+        # No trailing commas found; re-raise the original error.
+        json.loads(text)
+
+    print('warning: compilation database has trailing commas, '
+          'which are not valid JSON. Attempting to parse anyway.',
+          file=sys.stderr)
+    return json.loads(repaired)
+
+
 def main(compilation_db_path, source_files, exclude, verbose, formatter, jobs,
          max_load_average, extra_args):
     """ Entry point. """
@@ -460,7 +522,7 @@ def main(compilation_db_path, source_files, exclude, verbose, formatter, jobs,
         # Read compilation db from disk.
         compilation_db_path = os.path.realpath(compilation_db_path)
         with open(compilation_db_path, 'r') as fileobj:
-            compilation_db = json.load(fileobj)
+            compilation_db = json_load_tolerant(fileobj)
     except IOError as why:
         print('error: failed to parse compilation database: %s' % why,
               file=sys.stderr)
