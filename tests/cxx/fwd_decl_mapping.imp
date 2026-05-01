@@ -1,0 +1,18 @@
+[
+  { "symbol": ["MappedToD1", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-d1.h\"", "public"] },
+  { "symbol": ["OnlyFwdDeclUse", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i2.h\"", "public"] },
+  { "symbol": ["FwdDeclAndFullUse", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i3.h\"", "public"] },
+  { "symbol": ["FwdDeclAndFullUse", "full", "\"tests/cxx/fwd_decl_mapping-i4.h\"", "public"] },
+  { "symbol": ["FwdDeclInTwoHeaders1", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i5.h\"", "public"] },
+  { "symbol": ["FwdDeclInTwoHeaders1", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i6.h\"", "public"] },
+  { "symbol": ["FwdDeclInI6", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i6.h\"", "public"] },
+  { "symbol": ["HasIncludeMapping", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i7.h\"", "public"] },
+  { "include": ["\"tests/cxx/fwd_decl_mapping-i7.h\"", "public", "\"tests/cxx/fwd_decl_mapping-i6.h\"", "public"] },
+  { "symbol": ["HasMappingForFullUse", "full", "\"tests/cxx/fwd_decl_mapping-i8.h\"", "public"] },
+  { "symbol": ["HasMappingForFullUse", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i9.h\"", "public"] },
+  { "symbol": ["FwdDeclInTwoHeaders2", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i10.h\"", "public"] },
+  { "symbol": ["FwdDeclInTwoHeaders2", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i11.h\"", "public"] },
+  { "symbol": ["EnumClass1", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i12.h\"", "public"] },
+  { "symbol": ["EnumClass2", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i13.h\"", "public"] },
+  { "symbol": ["EnumClass2", "full", "\"tests/cxx/fwd_decl_mapping-i14.h\"", "public"] },
+]

@@ -278,9 +278,12 @@ string GetShortNameAsString(const NamedDecl* named_decl) {
 }  // namespace internal
 
 // Holds information about a single full or fwd-decl use of a symbol.
-OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
-               SourceLocation decl_loc, OneUse::UseKind use_kind,
-               UseFlags flags, const char* comment)
+OneUse::OneUse(const NamedDecl* decl,
+               SourceLocation use_loc,
+               SourceLocation decl_loc,
+               UseKind use_kind,
+               UseFlags flags,
+               const char* comment)
     : symbol_name_(internal::GetQualifiedNameAsString(decl)),
       short_symbol_name_(internal::GetShortNameAsString(decl)),
       decl_(decl),
@@ -296,7 +299,8 @@ OneUse::OneUse(const NamedDecl* decl, SourceLocation use_loc,
 }
 
 // This constructor always creates a full use.
-OneUse::OneUse(const string& symbol_name, OptionalFileEntryRef dfn_file,
+OneUse::OneUse(const string& symbol_name,
+               OptionalFileEntryRef dfn_file,
                SourceLocation use_loc)
     : symbol_name_(symbol_name),
       short_symbol_name_(symbol_name),
@@ -304,7 +308,7 @@ OneUse::OneUse(const string& symbol_name, OptionalFileEntryRef dfn_file,
       decl_file_(dfn_file),
       decl_filepath_(GetFilePath(dfn_file)),
       use_loc_(use_loc),
-      use_kind_(kFullUse),
+      use_kind_(UseKind::Full),
       use_flags_(UF_None),
       ignore_use_(false),
       is_iwyu_violation_(false) {
@@ -324,7 +328,7 @@ OneUse::OneUse(OptionalFileEntryRef included_file,
       decl_file_(included_file),
       decl_filepath_(GetFilePath(included_file)),
       use_loc_(include_loc),
-      use_kind_(kFullUse),
+      use_kind_(UseKind::Full),
       use_flags_(UF_None),
       ignore_use_(false),
       is_iwyu_violation_(false) {
@@ -333,12 +337,24 @@ OneUse::OneUse(OptionalFileEntryRef included_file,
   suggested_header_ = quoted_include;
 }
 
+bool OneUse::is_full_use() const {
+  return use_kind_ == UseKind::Full;
+}
+
 void OneUse::reset_decl(const NamedDecl* decl) {
   CHECK_(decl_ && "Need existing decl to reset it");
   CHECK_(decl && "Need to reset decl with existing decl");
   decl_ = decl;
   decl_file_ = GetFileEntry(decl);
   decl_filepath_ = GetFilePath(decl);
+}
+
+void OneUse::set_full_use() {
+  use_kind_ = UseKind::Full;
+}
+
+void OneUse::set_forward_declare_use() {
+  use_kind_ = UseKind::FwdDecl;
 }
 
 int OneUse::UseLinenum() const {
@@ -353,6 +369,13 @@ void OneUse::SetPublicHeaders() {
   // We should never need to deal with public headers if we already know
   // who we map to.
   CHECK_(suggested_header_.empty() && "Should not need a public header here");
+
+  if (use_kind_ == UseKind::FwdDecl) {
+    public_headers_ = GlobalIncludePicker().GetCandidateHeadersForSymbolFwdDecl(
+        symbol_name_, GetFilePath(use_loc_));
+    return;
+  }
+
   if (decl_) {
     public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
         decl_, GetFilePath(use_loc_), decl_filepath());
@@ -367,7 +390,8 @@ void OneUse::SetPublicHeaders() {
 const vector<string>& OneUse::public_headers() {
   if (public_headers_.empty()) {
     SetPublicHeaders();
-    CHECK_(!public_headers_.empty() && "Should always have at least one hdr");
+    CHECK_(use_kind_ == UseKind::FwdDecl || !public_headers_.empty())
+        << "Full uses should always have at least one hdr";
   }
   return public_headers_;
 }
@@ -377,8 +401,14 @@ bool OneUse::PublicHeadersContain(const string& elt) {
   return ContainsValue(public_headers(), elt);
 }
 
-bool OneUse::NeedsSuggestedHeader() const {
-  return (!ignore_use() && is_full_use() && suggested_header_.empty());;
+bool OneUse::NeedsSuggestedHeader() {
+  if (ignore_use() || !suggested_header_.empty())
+    return false;
+  if (is_full_use())
+    return true;
+  // If the forward-declarable type has no fwd-decl mappings, public_headers_ is
+  // empty, and no header should be picked for suggestion.
+  return !public_headers().empty();
 }
 
 namespace internal {
@@ -711,7 +741,7 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
     }
 
     symbol_uses_.push_back(OneUse(report_decl, use_loc, report_decl_loc,
-                                  OneUse::kFullUse, flags, comment));
+                                  UseKind::Full, flags, comment));
     LogSymbolUse("Marked full-info use of decl", symbol_uses_.back());
   }
 }
@@ -762,7 +792,7 @@ void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
   // happened here, replace the friend with a real fwd decl.
   decl = GetNonfriendClassRedecl(decl);
   symbol_uses_.push_back(OneUse(decl, use_loc, GetLocation(decl),
-                                OneUse::kForwardDeclareUse, flags, comment));
+                                UseKind::FwdDecl, flags, comment));
   LogSymbolUse("Marked fwd-decl use of decl", symbol_uses_.back());
 }
 
@@ -882,14 +912,15 @@ set<string> CalculateMinimalIncludes(
   // those in private header files that only map to one public file.
   // For every other decl, we store the (decl, public-headers) pair.
   for (OneUse& use : *uses) {
-    // We don't need to add any #includes for non-full-use.
-    if (use.ignore_use() || !use.is_full_use())
+    if (use.ignore_use())
       continue;
     // Special case #1: Some uses come with a suggested header already picked.
     if (use.has_suggested_header()) {
       desired_headers.insert(use.suggested_header());
       continue;
     }
+    if (!use.NeedsSuggestedHeader())
+      continue;
     // Special case #2: if the dfn-file maps to the use-file, then
     // this is a file that the use-file is re-exporting symbols for,
     // and we should keep the #include as-is.
