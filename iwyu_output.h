@@ -46,12 +46,12 @@ using std::vector;
 
 class IwyuPreprocessorInfo;
 
+enum class UseKind;
+
 // This data structure holds information about a single use.  Not all
 // fields will be filled for all uses.
 class OneUse {
  public:
-  enum UseKind { kFullUse, kForwardDeclareUse };
-
   // This constructor is used to track nominal decl uses.
   OneUse(const clang::NamedDecl* decl,
          clang::SourceLocation use_loc,
@@ -92,9 +92,7 @@ class OneUse {
   clang::SourceLocation decl_loc() const {
     return decl_loc_;
   }
-  bool is_full_use() const {
-    return use_kind_ == kFullUse;
-  }
+  bool is_full_use() const;
   UseFlags flags() const {
     return use_flags_;
   }
@@ -118,8 +116,8 @@ class OneUse {
   }
 
   void reset_decl(const clang::NamedDecl* decl);
-  void set_full_use() { use_kind_ = kFullUse; }
-  void set_forward_declare_use() { use_kind_ = kForwardDeclareUse; }
+  void set_full_use();
+  void set_forward_declare_use();
   void set_ignore_use() { ignore_use_ = true; }
   void set_is_iwyu_violation() { is_iwyu_violation_ = true; }
   void set_suggested_header(const string& fh) { suggested_header_ = fh; }
@@ -127,7 +125,7 @@ class OneUse {
   string PrintableUseLoc() const;
   const vector<string>& public_headers();  // not const because we fill lazily
   bool PublicHeadersContain(const string& elt);
-  bool NeedsSuggestedHeader() const;    // not true for fwd-declare uses, e.g.
+  bool NeedsSuggestedHeader();
   int UseLinenum() const;
 
  private:
@@ -140,7 +138,7 @@ class OneUse {
   clang::OptionalFileEntryRef decl_file_;  // file entry where the symbol lives
   string decl_filepath_;           // filepath where the symbol lives
   clang::SourceLocation use_loc_;  // where the symbol is used from
-  UseKind use_kind_;               // kFullUse or kForwardDeclareUse
+  UseKind use_kind_;               // full use or forward-declare use
   UseFlags use_flags_;             // flags describing features of the use
   string comment_;                 // If not empty, append to clang warning msg
   vector<string> public_headers_;  // header to #include if dfn hdr is private

@@ -16,6 +16,7 @@
 #include <map>                          // for map, map<>::mapped_type, etc
 #include <memory>
 #include <numeric>                      // for accumulate
+#include <optional>
 #include <string>                       // for string, basic_string, etc
 #include <system_error>                 // for error_code
 #include <utility>                      // for pair, make_pair
@@ -62,6 +63,7 @@ using llvm::yaml::document_iterator;
 using std::find;
 using std::make_pair;
 using std::map;
+using std::optional;
 using std::pair;
 using std::string;
 using std::unique_ptr;
@@ -1576,6 +1578,14 @@ void WriteMappings(StringRef directive,
   out << "]\n";
 }
 
+static optional<UseKind> ParseUseKind(StringRef use_kind) {
+  if (use_kind == "full" || use_kind == "private")
+    return UseKind::Full;
+  if (use_kind == "fwd-decl")
+    return UseKind::FwdDecl;
+  return {};
+}
+
 }  // anonymous namespace
 
 // Write out all internal mappings to files in dirpath.
@@ -1643,7 +1653,8 @@ void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
 
       // the canonical header is returned first
       for (const Header& header : sym.headers()) {
-        AddSymbolMapping(name, MappedInclude(header.name().str()), kPublic);
+        AddSymbolMapping(name, UseKind::Full,
+                         MappedInclude(header.name().str()), kPublic);
       }
     }
   }
@@ -1660,7 +1671,8 @@ void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
 
       // the canonical header is returned first
       for (const Header& header : sym.headers()) {
-        AddSymbolMapping(name, MappedInclude(header.name().str()), kPublic);
+        AddSymbolMapping(name, UseKind::Full,
+                         MappedInclude(header.name().str()), kPublic);
       }
     }
   }
@@ -1773,9 +1785,14 @@ void IncludePicker::AddIncludeMapping(const string& map_from,
 }
 
 void IncludePicker::AddSymbolMapping(const string& map_from,
+                                     UseKind use_kind,
                                      const MappedInclude& map_to,
                                      IncludeVisibility to_visibility) {
-  symbol_include_map_[map_from].push_back(map_to);
+  if (use_kind == UseKind::Full) {
+    symbol_include_map_[map_from].push_back(map_to);
+  } else {
+    fwd_decl_symbol_map_[map_from].push_back(map_to);
+  }
 
   MarkVisibility(&include_visibility_map_, map_to.quoted_include,
                  to_visibility);
@@ -1794,7 +1811,8 @@ void IncludePicker::AddSymbolMappings(const IncludeMapEntry* entries,
                                       size_t count) {
   for (size_t i = 0; i < count; ++i) {
     const IncludeMapEntry& e = entries[i];
-    AddSymbolMapping(e.map_from, MappedInclude(e.map_to), e.to_visibility);
+    AddSymbolMapping(e.map_from, UseKind::Full, MappedInclude(e.map_to),
+                     e.to_visibility);
   }
 }
 
@@ -1905,10 +1923,11 @@ void IncludePicker::FinalizeAddedIncludes() {
   // If a.h maps to b.h maps to c.h, we'd like an entry from a.h to c.h too.
   MakeMapTransitive(&filepath_include_map_);
   // Now that filepath_include_map_ is transitively closed, it's an
-  // easy task to get the values of symbol_include_map_ closed too.
-  for (IncludeMap::value_type& symbol_include : symbol_include_map_) {
+  // easy task to get the values of symbol maps closed too.
+  for (IncludeMap::value_type& symbol_include : symbol_include_map_)
     ExpandOnce(filepath_include_map_, &symbol_include.second);
-  }
+  for (IncludeMap::value_type& symbol_include : fwd_decl_symbol_map_)
+    ExpandOnce(filepath_include_map_, &symbol_include.second);
 
   has_called_finalize_added_include_lines_ = true;
 
@@ -1916,6 +1935,7 @@ void IncludePicker::FinalizeAddedIncludes() {
   if (ShouldPrint(9)) {
     PrintMappings(filepath_include_map_, "filepath_include_map_");
     PrintMappings(symbol_include_map_, "symbol_include_map_");
+    PrintMappings(fwd_decl_symbol_map_, "fwd_decl_symbol_map_");
   }
 }
 
@@ -1986,6 +2006,13 @@ vector<MappedInclude> IncludePicker::GetCandidateHeadersForSymbol(
     const string& symbol) const {
   CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
   return GetPublicValues(symbol_include_map_, symbol);
+}
+
+vector<string> IncludePicker::GetCandidateHeadersForSymbolFwdDecl(
+    const string& symbol, const string& including_filepath) const {
+  CHECK_(has_called_finalize_added_include_lines_ && "Must finalize includes");
+  return BestQuotedIncludesForIncluder(
+      GetPublicValues(fwd_decl_symbol_map_, symbol), including_filepath);
 }
 
 vector<string> IncludePicker::GetCandidateHeadersForSymbolUsedFrom(
@@ -2196,7 +2223,15 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
           return;
         }
 
-        AddSymbolMapping(mapping[0], MappedInclude(mapping[2]), to_visibility);
+        optional<UseKind> use_kind = ParseUseKind(mapping[1]);
+        if (!use_kind) {
+          json_stream.printError(
+              current_node, "Unknown symbol use kind '" + mapping[1] + "'.");
+          return;
+        }
+
+        AddSymbolMapping(mapping[0], *use_kind, MappedInclude(mapping[2]),
+                         to_visibility);
       } else if (directive == "include") {
         // Include mapping.
         vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
