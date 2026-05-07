@@ -3044,8 +3044,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // end up being the built-in form of the operator.  (Even if the
     // only operator==() we see is in foo.h, we don't need to #include
     // foo.h if the only call to operator== we see is on two integers.)
-    if (!arbitrary_fn_decl || !arbitrary_fn_decl->isOverloadedOperator())
-      ReportDeclUse(CurrentLoc(), first_decl);
+    if (!arbitrary_fn_decl || !arbitrary_fn_decl->isOverloadedOperator()) {
+      ReportDeclUse(CurrentLoc(),
+                    arbitrary_fn_decl ? arbitrary_fn_decl : first_decl);
+    }
     return true;
   }
 

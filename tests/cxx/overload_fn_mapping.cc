@@ -122,6 +122,21 @@ void User() {
   TplFn(arr2);
 }
 
+// Do all template examples again inside an uninstantiated template.
+template<typename T>
+void UserTemplate(T v) {
+  // IWYU: TplFn(:0, :1) is...*-i2.h
+  TplFn(v, v);
+  // IWYU: TplFn(:1, :0 *) is...*-i3.h
+  TplFn(v, &v);
+  // IWYU: Tpl is...*-i1.h
+  // IWYU: TplFn(Tpl<:0>) is...*-i4.h
+  TplFn(Tpl<T>{});
+  T arr2[7];
+  // IWYU: TplFn(:0 (&)[:1]) is...*-i5.h
+  TplFn(arr2);
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/overload_fn_mapping.cc should add these lines:
