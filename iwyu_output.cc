@@ -1566,9 +1566,8 @@ void CalculateIwyuForForwardDeclareUse(
   const NamedDecl* dfn_from_desired_includes = nullptr;
   const NamedDecl* dfn_from_actual_includes = nullptr;
   for (const NamedDecl* dfn : dfns) {
-    vector<string> headers =
-        GlobalIncludePicker().GetCandidateHeadersForFilepathIncludedFrom(
-            GetFilePath(dfn), GetFilePath(use->use_loc()));
+    vector<string> headers = GlobalIncludePicker().GetMappedPublicHeaders(
+        dfn, GetFilePath(use->use_loc()), GetFilePath(dfn));
     for (const string& header : headers) {
       if (ContainsKey(desired_includes, header))
         dfn_from_desired_includes = dfn;

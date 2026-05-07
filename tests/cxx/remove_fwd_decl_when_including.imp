@@ -1,0 +1,3 @@
+[
+  { "symbol": ["HasSymbolMapping", "private", "\"tests/cxx/remove_fwd_decl_when_including-i1.h\"", "public"] },
+]
