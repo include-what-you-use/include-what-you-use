@@ -3015,24 +3015,28 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           ReportDeclUse(CurrentLoc(), decl);
         // No AddProcessedOverloadLoc here: PublicHeaderIntendsToProvide should
         // already work well at the instantiation site.
-      } else if (!expr->requiresADL()) {
-        // Report any of the decls so as to keep the code compilable. If ADL is
-        // to be applied (i.e. the function name is unqualified), it is allowed
-        // to have no declaration.
-        ReportDeclUse(CurrentLoc(), first_decl);
-        // No AddProcessedOverloadLoc here: even first_decl may be different
-        // when scanning different translation units. It's better to
-        // double-report it on template-defn and instantiation sites than not
-        // to report an actually used decl at all.
+        return true;
+      } else if (expr->requiresADL()) {
+        // If ADL is to be applied (i.e. the function name is unqualified), it
+        // is allowed to have no declaration.
+        return true;
       }
-      return true;
     }
 
+    // Report any of the decls so as to keep the code compilable.
+    // No AddProcessedOverloadLoc here: the expr decls may be different when
+    // scanning different translation units. It's better to double-report on
+    // template-defn and instantiation sites than not to report an actually used
+    // decl at all.
     const FunctionDecl* arbitrary_fn_decl = nullptr;
     for (const NamedDecl* decl : expr->decls()) {
-      // Sometimes a UsingShadowDecl comes between us and the 'real' decl.
-      if (const UsingShadowDecl* using_shadow_decl = DynCastFrom(decl))
+      // Sometimes a UsingShadowDecl comes between us and the 'real' decl. Make
+      // sure we report it before resolving.
+      if (const UsingShadowDecl* using_shadow_decl = DynCastFrom(decl)) {
+        ReportDeclUse(CurrentLoc(), decl, nullptr, UF_None,
+                      /*report_using_decl_only = */ true);
         decl = using_shadow_decl->getTargetDecl();
+      }
       if (const FunctionDecl* fn_decl = DynCastFrom(decl)) {
         arbitrary_fn_decl = fn_decl;
         break;
@@ -3047,8 +3051,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // end up being the built-in form of the operator.  (Even if the
     // only operator==() we see is in foo.h, we don't need to #include
     // foo.h if the only call to operator== we see is on two integers.)
-    if (!arbitrary_fn_decl || !arbitrary_fn_decl->isOverloadedOperator())
-      ReportDeclUse(CurrentLoc(), first_decl);
+    if (!arbitrary_fn_decl || !arbitrary_fn_decl->isOverloadedOperator()) {
+      ReportDeclUse(CurrentLoc(),
+                    arbitrary_fn_decl ? arbitrary_fn_decl : first_decl);
+    }
     return true;
   }
 
