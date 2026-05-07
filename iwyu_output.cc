@@ -1565,12 +1565,15 @@ void CalculateIwyuForForwardDeclareUse(
   // fact.  Also if it's defined in one of the actual_includes.
   const NamedDecl* dfn_from_desired_includes = nullptr;
   const NamedDecl* dfn_from_actual_includes = nullptr;
+  string desired_hdr_with_dfn;
   for (const NamedDecl* dfn : dfns) {
     vector<string> headers = GlobalIncludePicker().GetMappedPublicHeaders(
         dfn, GetFilePath(use->use_loc()), GetFilePath(dfn));
     for (const string& header : headers) {
-      if (ContainsKey(desired_includes, header))
+      if (ContainsKey(desired_includes, header)) {
         dfn_from_desired_includes = dfn;
+        desired_hdr_with_dfn = header;
+      }
       if (ContainsKey(actual_includes, header))
         dfn_from_actual_includes = dfn;
     }
@@ -1610,9 +1613,8 @@ void CalculateIwyuForForwardDeclareUse(
              << " (" << use->PrintableUseLoc() << ") is satisfied by dfn in "
              << PrintableLoc(GetLocation(providing_decl)) << "\n";
     // Mark that this use is another reason we want this header.
-    const string file = GetFilePath(providing_decl);
-    const string quoted_hdr = ConvertToQuotedInclude(file);
-    use->set_suggested_header(quoted_hdr);
+    CHECK_(!desired_hdr_with_dfn.empty());
+    use->set_suggested_header(desired_hdr_with_dfn);
   } else if (same_file_decl) {
     providing_decl = same_file_decl;
     VERRS(6) << "Noting fwd-decl use of " << use->symbol_name()

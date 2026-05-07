@@ -15,6 +15,9 @@
 void foo() {
   // IWYU: IndirectClass is...*indirect.h
   IndirectClass ic;
+  // Test that 'IndirectTemplate (ptr only)' is printed in the comment.
+  // IWYU: IndirectTemplate needs a declaration
+  IndirectTemplate<int>* pit;
 }
 
 /**** IWYU_SUMMARY
@@ -26,6 +29,6 @@ tests/cxx/new_header_path_local.cc should remove these lines:
 - #include "direct_near.h"  // lines XX-XX
 
 The full include-list for tests/cxx/new_header_path_local.cc:
-#include "indirect.h"  // for IndirectClass
+#include "indirect.h"  // for IndirectClass, IndirectTemplate (ptr only)
 
 ***** IWYU_SUMMARY */
