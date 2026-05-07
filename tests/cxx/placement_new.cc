@@ -153,7 +153,7 @@ void TaggedNewInTemplate() {
 template <typename T>
 void Reconstruct(T& ref) {
   // IWYU: operator new is...*<new>
-  // IWYU: AddressOf is...*placement_new-i2.h
+  // IWYU: AddressOf(:0 &) is...*placement_new-i2.h
   new (AddressOf(ref)) T();
 }
 
