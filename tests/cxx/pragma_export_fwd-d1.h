@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/cxx/pragma_export_fwd-i1.h"
+#include "tests/cxx/pragma_export_fwd-i2.h"
+
 class FwdDecl3;  // IWYU pragma: export
 
 // IWYU pragma: begin_exports
