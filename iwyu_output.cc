@@ -1229,7 +1229,9 @@ void ProcessForwardDeclare(OneUse* use,
       const auto* decl = cast<NamedDecl>(redecl);
       if (preprocessor_info->ForwardDeclareIsExported(decl)) {
         use->reset_decl(decl);
-        use->set_full_use();
+        use->set_suggested_header(ConvertToQuotedInclude(
+            GetFilePath(decl->getLocation()),
+            MakeAbsolutePath(GetParentPath(GetFilePath(use->use_loc())))));
         break;
       }
     }
@@ -1862,13 +1864,12 @@ void CalculateDesiredIncludesAndForwardDeclares(
     if (use.ignore_use())
       continue;
 
-    if (use.is_full_use()) {
-      CHECK_(use.has_suggested_header() && "Full uses should have #includes");
+    if (use.has_suggested_header()) {
       if (!Contains(*lines, use.suggested_header())) { // must be added
         lines->push_back(OneIncludeOrForwardDeclareLine(
             use.decl_file(), use.suggested_header(), -1));
       }
-    } else if (!use.has_suggested_header()) {
+    } else {
       // Forward-declare uses that are already satisfied by an #include
       // have that as their suggested_header.  For the rest, we need to
       // make sure there's a forward-declare in the current file.
@@ -1934,13 +1935,14 @@ void CalculateDesiredIncludesAndForwardDeclares(
       for (auto it = range.first; it != range.second; ++it) {
         it->second->set_desired();
       }
-    } else if (ContainsKey(include_map, use.suggested_header())) {
-      // If we satisfy a forward-declare use from a file, let the file
-      // know (this is just for logging).
+    } else {
+      // If we satisfy a forward-declare use from a file, let the file know.
       const string symbol_name = use.short_symbol_name();
 
       auto range = include_map.equal_range(use.suggested_header());
+      CHECK_(range.first != range.second);
       for (auto it = range.first; it != range.second; ++it) {
+        it->second->set_desired();
         if (!it->second->HasSymbolUse(symbol_name))
           it->second->AddSymbolUse(symbol_name + " (ptr only)");
       }
