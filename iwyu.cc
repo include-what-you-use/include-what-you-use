@@ -2235,6 +2235,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         if (!lhs_type->isIncompleteArrayType())
           ReportTypeUse(CurrentLoc(), lhs_type, DerefKind::None);
         return true;
+      case TypeTrait::UTT_IsConstantBufferElementCompatible:
       case TypeTrait::UTT_IsIntangibleType:
       case TypeTrait::UTT_IsTypedResourceElementCompatible:
       case TypeTrait::BTT_IsScalarizedLayoutCompatible:
