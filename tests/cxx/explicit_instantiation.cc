@@ -9,7 +9,7 @@
 
 // IWYU_ARGS: -Xiwyu --check_also=tests/cxx/explicit_instantiation-spec-i1.h \
 //            -Xiwyu --check_also=tests/cxx/explicit_instantiation-template.h \
-//            -I .
+//            -I . -Wno-instantiation-after-specialization
 
 #include "tests/cxx/explicit_instantiation-spec-d1.h"
 #include "tests/cxx/explicit_instantiation-template_direct.h"
@@ -128,6 +128,122 @@ extern template class TplWithProvidedDefArg<>;
 // IWYU: IndirectTemplate needs a declaration
 extern template class ClassWithUsingMethod2<IndirectTemplate<int>>;
 
+// Test function template explicit instantiation.
+// IWYU: TplFn() is...*explicit_instantiation-template.h
+extern template void TplFn<int>();
+// One more explicit instantiation declaration.
+// IWYU: TplFn() is...*explicit_instantiation-template.h
+extern template void TplFn<int>();
+// IWYU: TplFn() is...*explicit_instantiation-template.h
+template void TplFn<int>();
+
+// IWYU: ClassWithUsingMethod is...*explicit_instantiation-template.h
+// IWYU: IndirectTemplate needs a declaration
+extern template void ClassWithUsingMethod<IndirectTemplate<float>>::Fn();
+// TODO: IWYU: IndirectTemplate is...*indirect.h
+// IWYU: IndirectTemplate needs a declaration
+// IWYU: ClassWithUsingMethod is...*explicit_instantiation-template.h
+template void ClassWithUsingMethod<IndirectTemplate<float>>::Fn();
+
+// The presence of the explicit specialization should not affect explicit
+// instantiation declarations: effect should be the same whether it is included
+// or not, AFAIU.
+// IWYU: TplFn() is...*explicit_instantiation-template.h
+extern template void TplFn<char>();
+// In the case of explicit instantiation definition, the explicit specialization
+// should be available to suppress instantiation, so as to avoid ODR-violation.
+// IWYU: TplFn() is...*explicit_instantiation-spec-i2.h
+template void TplFn<char>();
+
+template <typename>
+void TplFnWithRedecl();
+
+// An explicit instantiation declaration of a function template doesn't require
+// the template definition. The redeclaration above is sufficient.
+extern template void TplFnWithRedecl<int>();
+// In the case of an explicit instantiation definition, the template definition
+// is required.
+// IWYU: TplFnWithRedecl() is...*explicit_instantiation-template.h
+template void TplFnWithRedecl<int>();
+
+// IWYU: TplFnWithRedecl2() is...*explicit_instantiation-template.h
+extern template void TplFnWithRedecl2<int>();
+// IWYU: TplFnWithRedecl2() is...*explicit_instantiation-template.h
+template void TplFnWithRedecl2<int>();
+
+template <typename>
+void TplFnWithRedecl2();
+
+// Test variable templates.
+// IWYU: var_tpl is...*explicit_instantiation-template.h
+extern template int var_tpl<int>;
+// IWYU: var_tpl is...*explicit_instantiation-template.h
+extern template int var_tpl<int>;
+// IWYU: var_tpl is...*explicit_instantiation-template.h
+template int var_tpl<int>;
+
+// In the case of explicit specializations of variable templates, even explicit
+// instantiation declaration depends on the specialization because the latter
+// may change the variable type to some unrelated to the one of the primary
+// template.
+// IWYU: var_tpl<float> is...*explicit_instantiation-spec-i2.h
+extern template char var_tpl<float>;
+// IWYU: var_tpl<float> is...*explicit_instantiation-spec-i2.h
+template char var_tpl<float>;
+// IWYU: var_tpl<:0 *> is...*explicit_instantiation-spec-i2.h
+extern template double var_tpl<int*>;
+// IWYU: var_tpl<:0 *> is...*explicit_instantiation-spec-i2.h
+template double var_tpl<int*>;
+
+template <typename T>
+extern int var_tpl_with_redecl;
+
+extern template int var_tpl_with_redecl<int>;
+// IWYU: var_tpl_with_redecl is...*explicit_instantiation-template.h
+template int var_tpl_with_redecl<int>;
+
+// IWYU: var_tpl_with_redecl2 is...*explicit_instantiation-template.h
+extern template int var_tpl_with_redecl2<int>;
+// IWYU: var_tpl_with_redecl2 is...*explicit_instantiation-template.h
+template int var_tpl_with_redecl2<int>;
+
+template <typename T>
+extern int var_tpl_with_redecl2;
+
+// IWYU: Host is...*explicit_instantiation-template.h
+extern template void Host<int>::Fn();
+// IWYU: Host is...*explicit_instantiation-template.h
+// IWYU: Host::Fn() is...*explicit_instantiation-nested.h
+template void Host<int>::Fn();
+
+// IWYU: Host is...*explicit_instantiation-template.h
+extern template void Host<int>::StaticFn();
+// IWYU: Host is...*explicit_instantiation-template.h
+// IWYU: Host::StaticFn() is...*explicit_instantiation-nested.h
+template void Host<int>::StaticFn();
+
+// IWYU: Host is...*explicit_instantiation-template.h
+extern template int Host<int>::i;
+// IWYU: Host is...*explicit_instantiation-template.h
+// IWYU: Host::i is...*explicit_instantiation-nested.h
+template int Host<int>::i;
+
+// TODO: reporting '-nested.h' here is rather unwanted.
+// IWYU: Host is...*explicit_instantiation-template.h
+// IWYU: Host::var_tpl is...*explicit_instantiation-nested.h
+extern template int Host<int>::var_tpl<int>;
+// IWYU: Host is...*explicit_instantiation-template.h
+// IWYU: Host::var_tpl is...*explicit_instantiation-nested.h
+template int Host<int>::var_tpl<int>;
+// '-nested.h' is required here because the explicit specialization changes
+// the variable type.
+// IWYU: Host is...*explicit_instantiation-template.h
+// IWYU: Host::var_tpl<:0 *> is...*explicit_instantiation-nested.h
+extern template char Host<int>::var_tpl<int*>;
+// IWYU: Host is...*explicit_instantiation-template.h
+// IWYU: Host::var_tpl<:0 *> is...*explicit_instantiation-nested.h
+template char Host<int>::var_tpl<int*>;
+
 void Fn() {
   // Test that reporting for the out-of-line method is blocked due to
   // the presence of ClassWithUsingMethod2 explicit instantiation declaration
@@ -142,7 +258,9 @@ void Fn() {
 /**** IWYU_SUMMARY
 
 tests/cxx/explicit_instantiation.cc should add these lines:
+#include "tests/cxx/explicit_instantiation-nested.h"
 #include "tests/cxx/explicit_instantiation-spec-i1.h"
+#include "tests/cxx/explicit_instantiation-spec-i2.h"
 #include "tests/cxx/explicit_instantiation-template.h"
 #include "tests/cxx/indirect.h"
 
@@ -151,8 +269,10 @@ tests/cxx/explicit_instantiation.cc should remove these lines:
 - #include "tests/cxx/explicit_instantiation-template_direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/explicit_instantiation.cc:
+#include "tests/cxx/explicit_instantiation-nested.h"  // for Host::Fn, Host::StaticFn, Host::i, Host::var_tpl
 #include "tests/cxx/explicit_instantiation-spec-i1.h"  // for Template
-#include "tests/cxx/explicit_instantiation-template.h"  // for ClassWithMethodUsingPtr, ClassWithUsingMethod, Template, TplWithDefArg, TplWithNotProvidedDefArg, getInt
+#include "tests/cxx/explicit_instantiation-spec-i2.h"  // for TplFn, var_tpl
+#include "tests/cxx/explicit_instantiation-template.h"  // for ClassWithMethodUsingPtr, ClassWithUsingMethod, Host, Template, TplFn, TplFnWithRedecl, TplFnWithRedecl2, TplWithDefArg, TplWithNotProvidedDefArg, getInt, var_tpl, var_tpl_with_redecl, var_tpl_with_redecl2
 #include "tests/cxx/explicit_instantiation-template2.h"  // for ClassWithUsingMethod2, TplWithProvidedDefArg
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 

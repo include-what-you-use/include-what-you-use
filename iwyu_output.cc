@@ -1336,13 +1336,13 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
   // *any* declaration is in the same file, unless the symbol is a
   // class or enum.  (Every other kind of redeclarable symbol, such as
   // functions, have the property that a decl is the same as a
-  // definition from iwyu's point of view.)  We don't bother with
-  // RedeclarableTemplate<> types (FunctionTemplateDecl), since for
-  // those types, iwyu *does* care about the definition vs declaration.
-  // All this is moot for decl uses triggered by definitions, all their redecls
-  // are separately registered as uses so that a definition anchors all its
-  // declarations (UF_RedeclUse case).
-  if (!(use->flags() & UF_RedeclUse) && !is_builtin_function_with_mappings) {
+  // definition from iwyu's point of view.)  All this is moot for decl uses
+  // triggered by definitions, all their redecls are separately registered as
+  // uses so that a definition anchors all its declarations (UF_RedeclUse case).
+  // Also, definition uses triggered by explicit instantiation definitions
+  // should not be suppressed by any redecl (UF_InstantiationPattern case).
+  if (!(use->flags() & (UF_RedeclUse | UF_InstantiationPattern)) &&
+      !is_builtin_function_with_mappings) {
     set<const NamedDecl*> all_redecls;
     if (isa<TagDecl>(use->decl()) || isa<ClassTemplateDecl>(use->decl()))
       all_redecls.insert(use->decl());  // for classes, just consider the dfn

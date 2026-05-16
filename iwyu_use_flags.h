@@ -23,6 +23,8 @@ const UseFlags UF_InCxxMethodBody = 1;
 const UseFlags UF_RedeclUse = 2;
 // Use targets an explicit instantiation.
 const UseFlags UF_ExplicitInstantiation = 4;
+// Primary template definition use by an instantiation.
+const UseFlags UF_InstantiationPattern = 8;
 }
 
 #endif
