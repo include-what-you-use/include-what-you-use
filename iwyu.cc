@@ -210,6 +210,7 @@ using clang::ElaboratedTypeKeyword;
 using clang::EnumConstantDecl;
 using clang::EnumDecl;
 using clang::EnumType;
+using clang::ExplicitInstantiationDecl;
 using clang::Expr;
 using clang::ExprResult;
 using clang::FriendDecl;
@@ -5101,9 +5102,58 @@ class IwyuAstConsumer
       return true;
     if (decl->isExplicitSpecialization())
       ReportDeclUse(CurrentLoc(), decl->getSpecializedTemplate());
-    // TODO(bolshakov): handle explicit instantiations. Looks like clang doesn't
-    // store all of the explicit instantiation redeclarations in the AST.
     return Base::VisitVarTemplateSpecializationDecl(decl);
+  }
+
+  bool VisitExplicitInstantiationDecl(ExplicitInstantiationDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    const NamedDecl* spec = decl->getSpecialization();
+    if (const auto* fn_spec = dyn_cast<FunctionDecl>(spec)) {
+      if (decl->isExternTemplate()) {
+        // Explicit instantiation declarations require only any function
+        // declaration. If it is a class method, a declaration should be already
+        // provided by that class.
+        if (!fn_spec->isCXXClassMember()) {
+          ReportDeclUse(CurrentLoc(),
+                        fn_spec->getPrimaryTemplate()->getTemplatedDecl());
+        }
+      } else {
+        if (fn_spec->getTemplateSpecializationKind() ==
+            clang::TSK_ExplicitSpecialization) {
+          // Explicit instantiation definition doesn't do anything if it refers
+          // to an explicit specialization, so any redeclaration of the latter
+          // goes.
+          ReportDeclUse(CurrentLoc(), fn_spec);
+        } else {
+          // Otherwise, report the instantiation pattern. Another template
+          // redeclaration in the instantiating file is not enough,
+          // so UF_InstantiationPattern is specified.
+          ReportDeclUse(CurrentLoc(), spec, nullptr, UF_InstantiationPattern);
+          // TODO(bolshakov): report required template arguments.
+        }
+      }
+    } else if (const auto* var_tpl_spec =
+                   dyn_cast<VarTemplateSpecializationDecl>(spec)) {
+      if (decl->isExternTemplate()) {
+        // An explicit specialization (if present) should be reported even
+        // in the case of a member variable template because it may alter
+        // the variable type.
+        ReportDeclUse(CurrentLoc(), var_tpl_spec);
+      } else {
+        ReportDeclUse(CurrentLoc(), spec, nullptr, UF_InstantiationPattern);
+        // TODO(bolshakov): report required template arguments.
+      }
+    } else if (const auto* var_spec = dyn_cast<VarDecl>(spec)) {
+      // Static data member of a template class. The type cannot be changed, and
+      // there should not be any redeclaration but the definition.
+      if (!decl->isExternTemplate()) {
+        ReportDeclUse(CurrentLoc(), var_spec);
+        // TODO(bolshakov): report required template arguments.
+      }
+    }
+    // TODO(bolshakov): handle class template and member class instantiations.
+    return Base::VisitExplicitInstantiationDecl(decl);
   }
 
   // Track use of namespace in using directive decl
@@ -5217,8 +5267,6 @@ class IwyuAstConsumer
         ReportDeclUse(CurrentLoc(), tpl_decl);
       }
     }
-    // TODO(bolshakov): handle explicit instantiations. Looks like clang doesn't
-    // store all of the explicit instantiation redeclarations in the AST.
     return Base::VisitFunctionDecl(decl);
   }
 

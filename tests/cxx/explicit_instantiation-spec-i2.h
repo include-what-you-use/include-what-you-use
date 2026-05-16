@@ -1,4 +1,4 @@
-//===--- explicit_instantiation-spec-d1.h - test input file for iwyu ------===//
+//===--- explicit_instantiation-spec-i2.h - test input file for iwyu ------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,5 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/cxx/explicit_instantiation-spec-i1.h"
-#include "tests/cxx/explicit_instantiation-spec-i2.h"
+#include "tests/cxx/explicit_instantiation-template.h"
+
+template <>
+void TplFn<char>();
+
+template <>
+inline char var_tpl<float>;
+
+template <typename T>
+double var_tpl<T*>;

@@ -9,6 +9,7 @@
 #ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_EXPLICIT_INSTANTIATION_TEMPLATE_DIRECT_H_
 #define INCLUDE_WHAT_YOU_USE_TESTS_CXX_EXPLICIT_INSTANTIATION_TEMPLATE_DIRECT_H_
 
+#include "tests/cxx/explicit_instantiation-nested.h"
 #include "tests/cxx/explicit_instantiation-template.h"
 
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_EXPLICIT_INSTANTIATION_TEMPLATE_DIRECT_H_
