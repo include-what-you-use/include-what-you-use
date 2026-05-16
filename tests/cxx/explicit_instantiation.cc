@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -Xiwyu --check_also=tests/cxx/explicit_instantiation-spec.h \
+// IWYU_ARGS: -Xiwyu --check_also=tests/cxx/explicit_instantiation-spec-i1.h \
 //            -Xiwyu --check_also=tests/cxx/explicit_instantiation-template.h \
 //            -I .
 
-#include "tests/cxx/explicit_instantiation-spec.h"
+#include "tests/cxx/explicit_instantiation-spec-d1.h"
 #include "tests/cxx/explicit_instantiation-template_direct.h"
 #include "tests/cxx/explicit_instantiation-template2.h"
 
@@ -47,7 +47,9 @@ template<> class Template<char> {};
 extern template class Template<char>;
 
 // The partial specialization from 'explicit_instantiation-spec.h' is used here.
+// IWYU: Template<:0 *> is...*explicit_instantiation-spec-i1.h
 extern template class Template<int*>;
+// IWYU: Template<:0 *> is...*explicit_instantiation-spec-i1.h
 template class Template<int*>;
 
 // IWYU: Template is...*explicit_instantiation-template.h
@@ -140,14 +142,16 @@ void Fn() {
 /**** IWYU_SUMMARY
 
 tests/cxx/explicit_instantiation.cc should add these lines:
+#include "tests/cxx/explicit_instantiation-spec-i1.h"
 #include "tests/cxx/explicit_instantiation-template.h"
 #include "tests/cxx/indirect.h"
 
 tests/cxx/explicit_instantiation.cc should remove these lines:
+- #include "tests/cxx/explicit_instantiation-spec-d1.h"  // lines XX-XX
 - #include "tests/cxx/explicit_instantiation-template_direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/explicit_instantiation.cc:
-#include "tests/cxx/explicit_instantiation-spec.h"  // for Template
+#include "tests/cxx/explicit_instantiation-spec-i1.h"  // for Template
 #include "tests/cxx/explicit_instantiation-template.h"  // for ClassWithMethodUsingPtr, ClassWithUsingMethod, Template, TplWithDefArg, TplWithNotProvidedDefArg, getInt
 #include "tests/cxx/explicit_instantiation-template2.h"  // for ClassWithUsingMethod2, TplWithProvidedDefArg
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
