@@ -1,0 +1,4 @@
+[
+  { "symbol": ["TplWithMapping::i", "private", "\"tests/cxx/static_data_member-i3.h\"", "public"] },
+  { "symbol": ["PartiallySpecializedTplWithMapping<:0 *>::i", "private", "\"tests/cxx/static_data_member-i4.h\"", "public"] },
+]
