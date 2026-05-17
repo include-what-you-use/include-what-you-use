@@ -166,8 +166,6 @@ using clang::UnresolvedLookupExpr;
 using clang::UsingDirectiveDecl;
 using clang::ValueDecl;
 using clang::VarDecl;
-using clang::VarTemplateDecl;
-using clang::VarTemplatePartialSpecializationDecl;
 using clang::VarTemplateSpecializationDecl;
 using clang::isTemplateInstantiation;
 using llvm::ArrayRef;
@@ -1238,21 +1236,9 @@ const NamedDecl* GetInstantiatedFromDecl(const NamedDecl* decl) {
             record_decl->getTemplateInstantiationPattern()) {
       return pattern;
     }
-  } else if (const auto* tpl_sp_decl =
-                 dyn_cast<VarTemplateSpecializationDecl>(decl)) {
-    // An instantiated variable template.
-    // TODO(bolshakov): getTemplateInstantiationPattern() instead of this code?
-    PointerUnion<VarTemplateDecl*, VarTemplatePartialSpecializationDecl*>
-        instantiated_from = tpl_sp_decl->getInstantiatedFrom();
-    if (const auto* tpl_decl = instantiated_from.dyn_cast<VarTemplateDecl*>()) {
-      // decl is instantiated from a non-specialized template.
-      return tpl_decl;
-    } else if (const auto* partial_spec_decl =
-                   instantiated_from
-                       .dyn_cast<VarTemplatePartialSpecializationDecl*>()) {
-      // decl is instantiated from a template partial specialization.
-      return partial_spec_decl;
-    }
+  } else if (const auto* var_decl = dyn_cast<VarDecl>(decl)) {
+    if (const VarDecl* pattern = var_decl->getTemplateInstantiationPattern())
+      return pattern;
   }
   // decl is not instantiated from a class or a variable template.
   return decl;
