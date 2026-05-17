@@ -125,14 +125,12 @@ class OneUse {
   void set_suggested_header(const string& fh) { suggested_header_ = fh; }
 
   string PrintableUseLoc() const;
-  const vector<string>& public_headers();  // not const because we fill lazily
+  const vector<string>& public_headers() const;
   bool PublicHeadersContain(const string& elt);
   bool NeedsSuggestedHeader() const;    // not true for fwd-declare uses, e.g.
   int UseLinenum() const;
 
  private:
-  void SetPublicHeaders();         // sets based on decl_filepath_
-
   string symbol_name_;             // the symbol being used
   string short_symbol_name_;       // 'short' form of the symbol being used
   const clang::NamedDecl* decl_;   // decl of the symbol, if we know it
@@ -143,7 +141,8 @@ class OneUse {
   UseKind use_kind_;               // kFullUse or kForwardDeclareUse
   UseFlags use_flags_;             // flags describing features of the use
   string comment_;                 // If not empty, append to clang warning msg
-  vector<string> public_headers_;  // header to #include if dfn hdr is private
+  mutable vector<string> public_headers_;  // header to #include if dfn hdr is
+                                           // private (lazily computed).
   string suggested_header_;        // header that allows us to satisfy use
   bool ignore_use_;                // set to true if use is discarded
   bool is_iwyu_violation_;         // set to false when we figure out it's not

@@ -349,26 +349,22 @@ string OneUse::PrintableUseLoc() const {
   return PrintableLoc(use_loc());
 }
 
-void OneUse::SetPublicHeaders() {
-  // We should never need to deal with public headers if we already know
-  // who we map to.
-  CHECK_(suggested_header_.empty() && "Should not need a public header here");
-  if (decl_) {
-    public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
-        decl_, GetFilePath(use_loc_), decl_filepath());
-  } else {
-    public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
-        symbol_name_, GetFilePath(use_loc_), decl_filepath());
-  }
-  if (public_headers_.empty())
-    public_headers_.push_back(ConvertToQuotedInclude(decl_filepath()));
-}
-
-const vector<string>& OneUse::public_headers() {
+const vector<string>& OneUse::public_headers() const {
   if (public_headers_.empty()) {
-    SetPublicHeaders();
-    CHECK_(!public_headers_.empty() && "Should always have at least one hdr");
+    // We should never need to deal with public headers if we already know
+    // who we map to.
+    CHECK_(suggested_header_.empty() && "Should not need a public header here");
+    if (decl_) {
+      public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
+          decl_, GetFilePath(use_loc_), decl_filepath());
+    } else {
+      public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
+          symbol_name_, GetFilePath(use_loc_), decl_filepath());
+    }
+    if (public_headers_.empty())
+      public_headers_.push_back(ConvertToQuotedInclude(decl_filepath()));
   }
+  CHECK_(!public_headers_.empty() && "Should always have at least one hdr");
   return public_headers_;
 }
 
