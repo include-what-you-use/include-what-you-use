@@ -1,0 +1,15 @@
+//===--- 2031.h -----------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef INCLUDED_2031_H
+#define INCLUDED_2031_H
+
+#define BOB "bob"
+
+#endif
