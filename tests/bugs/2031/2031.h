@@ -13,3 +13,9 @@
 #define BOB "bob"
 
 #endif
+
+/**** IWYU_SUMMARY
+
+(tests/bugs/2031/2031.h has correct #includes/fwd-decls)
+
+***** IWYU_SUMMARY */
