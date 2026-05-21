@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 template <typename T>
-int templFunc(T);
+int templFunc();
 
 /**** IWYU_SUMMARY
 

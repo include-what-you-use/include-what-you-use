@@ -13,13 +13,14 @@
 #include "file1.h"
 
 template <typename T>
-int templFunc(T val) {
+int templFunc() {
+  T val;
   return val.x;
 }
 
 // Explicit function template instantiation:
 // https://en.cppreference.com/w/cpp/language/function_template#Explicit_instantiation
-template int templFunc<X>(X val);
+template int templFunc<X>();
 
 /**** IWYU_SUMMARY
 
