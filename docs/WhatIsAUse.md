@@ -144,7 +144,7 @@ it gauges author intent:
 * If you (the typedef author), explicitly provide a forward-declare of the
   underlying type, but do not directly `#include` its definition, then IWYU
   assumes you do not mean to re-export it.
-* Otherwise, IWYU assumes you do not mean to re-export it.
+* Otherwise, IWYU assumes you mean to re-export it.
 
 For example:
 
@@ -155,7 +155,7 @@ For example:
     typedef Bar Typedef2;   // IWYU says you do not intend to re-export Bar
 
     #include "file_including_baz.h"   // does not define Baz itself
-    typedef Baz Typedef3;   // IWYU says you do not intend to re-export Baz
+    typedef Baz Typedef3;   // IWYU says you intend to re-export Baz
 
 If IWYU says you intend to re-export the underlying type, then nobody who uses
 your typedef needs to `#include` the definition of the underlying type.  In
@@ -179,7 +179,7 @@ The same rule applies with the return value in a function declaration:
     Bar Func2();   // IWYU says you do not intend to re-export Bar
 
     #include "file_including_baz.h"
-    Baz Func3();   // IWYU says you do not intend to re-export Baz
+    Baz Func3();   // IWYU says you intend to re-export Baz
 
 (Note that C++ is perfectly happy with a forward-declaration of the return type,
 if the function is just being declared, and not defined.)
@@ -244,7 +244,7 @@ The same rule applies as before:
     void Func2(Foo foo);   // IWYU says you do not intend to re-export Foo
 
     #include "file_including_foo.h"
-    void Func3(Foo foo);   // IWYU says you do not intend to re-export Foo
+    void Func3(Foo foo);   // IWYU says you intend to re-export Foo
 
 As before, if IWYU decides you do not intend to re-export `Foo`, then all
 callers (in this case, `baz.cc`) need to.
