@@ -9,6 +9,8 @@
 
 struct NoAutocastCtor;
 struct NoTrivialCtorDtor;
+struct OuterAggregate1;
 
 using NonProviding = NoAutocastCtor;
 using NoTrivialCtorDtorNonProvidingAlias = NoTrivialCtorDtor;
+using NonProvidingOuterAggregate1 = OuterAggregate1;
