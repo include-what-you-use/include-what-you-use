@@ -5149,7 +5149,10 @@ class IwyuAstConsumer
           // redeclaration in the instantiating file is not enough,
           // so UF_InstantiationPattern is specified.
           ReportDeclUse(CurrentLoc(), spec, nullptr, UF_InstantiationPattern);
-          // TODO(bolshakov): report required template arguments.
+          TemplateInstantiationData data = GetTplInstData(decl);
+          instantiated_template_visitor_.ScanInstantiatedFunction(
+              fn_spec, current_ast_node(), data.resugar_map,
+              data.provided_types);
         }
       }
     } else if (const auto* var_tpl_spec =
@@ -5794,6 +5797,16 @@ class IwyuAstConsumer
         decl, expr,
         [this](const Type* type) { return GetProvidedTypeComponents(type); });
     CollectProvidedByDefaultTplArg(decl->getLocation(), &ret);
+    return ret;
+  }
+
+  TemplateInstantiationData GetTplInstData(
+      const ExplicitInstantiationDecl* decl) const {
+    TemplateInstantiationData ret = GetTplExplicitInstData(
+        decl,
+        [this](const Type* type) { return GetProvidedTypeComponents(type); });
+    CollectProvidedByDefaultTplArg(decl->getSpecialization()->getLocation(),
+                                   &ret);
     return ret;
   }
 

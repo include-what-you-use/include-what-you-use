@@ -97,6 +97,7 @@ using clang::EnterExpressionEvaluationContext;
 using clang::EnumDecl;
 using clang::EnumType;
 using clang::ExplicitCastExpr;
+using clang::ExplicitInstantiationDecl;
 using clang::Expr;
 using clang::ExprResult;
 using clang::ExprValueKind;
@@ -1007,6 +1008,20 @@ static map<const Type*, const Type*> GetTplTypeResugarMapForExplicitTplArgs(
   return retval;
 }
 
+static map<const Type*, const Type*> GetTplTypeResugarMapForExplicitTplArgs(
+    const ExplicitInstantiationDecl* decl) {
+  map<const Type*, const Type*> retval;
+  for (unsigned i = 0, ie = decl->getNumTemplateArgs(); i < ie; ++i) {
+    TemplateArgumentLoc loc = decl->getTemplateArg(i);
+    if (const Type* arg_type = GetTemplateArgAsType(loc.getArgument())) {
+      retval[GetCanonicalType(arg_type)] = arg_type;
+      VERRS(6) << "Adding an explicit template argument type of interest: "
+               << PrintableType(arg_type) << "\n";
+    }
+  }
+  return retval;
+}
+
 // Get the type of an expression while preserving as much type sugar as
 // possible. This was originally designed for use with function argument
 // expressions, and so might not work in a more general context.
@@ -1088,6 +1103,33 @@ static map<const Type*, const Type*> GetDefaultedArgResugarMap(
   return res;
 }
 
+static TemplateInstantiationData GetDeducedTplArgData(
+    const map<const Type*, const Type*>& implicit_tpl_arg_map,
+    const set<const Type*>& fn_param_types,
+    function<set<const Type*>(const Type*)> provided_getter) {
+  TemplateInstantiationData res;
+  for (const Type* type : fn_param_types) {
+    // See if any of the template args in resugar_map are the desugared form
+    // of us.
+    const Type* desugared_type = GetCanonicalType(type);
+    if (ContainsKey(implicit_tpl_arg_map, desugared_type)) {
+      res.resugar_map[desugared_type] = type;
+      if (desugared_type != type) {
+        VERRS(6) << "Remapping template arg of interest: "
+                 << PrintableType(desugared_type) << " -> "
+                 << PrintableType(type) << "\n";
+      }
+    }
+    // TODO(bolshakov): more fine-grained determination of provided types could
+    // e.g. consider only arguments that actually take part in type deduction.
+    // Simply moving the line below into the if-statement body above doesn't
+    // work because 'type' can be just an internal component of a 'typedef'ed
+    // argument.
+    InsertAllInto(provided_getter(type), &res.provided_types);
+  }
+  return res;
+}
+
 void InsertInto(const TemplateInstantiationData& source,
                 TemplateInstantiationData* target) {
   CHECK_(target);
@@ -1098,8 +1140,7 @@ void InsertInto(const TemplateInstantiationData& source,
 TemplateInstantiationData GetTplInstDataForFunction(
     const FunctionDecl* decl, const Expr* calling_expr,
     function<set<const Type*>(const Type*)> provided_getter) {
-  map<const Type*, const Type*> resugar_map;
-  set<const Type*> provided_types;
+  TemplateInstantiationData res;
 
   // If calling_expr is nullptr, then we can't find any explicit template
   // arguments, if they were specified (e.g. 'Fn<int>()'), and we
@@ -1107,10 +1148,10 @@ TemplateInstantiationData GetTplInstDataForFunction(
   // can't resugar at all.  We just have to hope that the types happen
   // to be already sugared, because the actual-type is already canonical.
   if (calling_expr == nullptr) {
-    resugar_map = GetTplTypeResugarMapForFunctionNoCallExpr(decl, 0);
-    resugar_map = ResugarTypeComponents(
-        resugar_map);  // add in resugar_map's decomposition
-    return TemplateInstantiationData{resugar_map, {}};
+    res.resugar_map = GetTplTypeResugarMapForFunctionNoCallExpr(decl, 0);
+    res.resugar_map = ResugarTypeComponents(
+        res.resugar_map);  // add in resugar_map's decomposition
+    return res;
   }
 
   // If calling_expr is a CXXConstructExpr of CXXNewExpr, then it's
@@ -1132,7 +1173,8 @@ TemplateInstantiationData GetTplInstDataForFunction(
     const TemplateArgumentListInfo& explicit_tpl_args =
         GetExplicitTplArgs(callee_expr);
     if (explicit_tpl_args.size() > 0) {
-      resugar_map = GetTplTypeResugarMapForExplicitTplArgs(explicit_tpl_args);
+      res.resugar_map =
+          GetTplTypeResugarMapForExplicitTplArgs(explicit_tpl_args);
       start_of_implicit_args = explicit_tpl_args.size();
     }
   } else {
@@ -1140,13 +1182,14 @@ TemplateInstantiationData GetTplInstDataForFunction(
     const TemplateArgumentListInfo& explicit_tpl_args =
         GetExplicitTplArgs(calling_expr);
     if (explicit_tpl_args.size() > 0) {
-      resugar_map = GetTplTypeResugarMapForExplicitTplArgs(explicit_tpl_args);
-      resugar_map = ResugarTypeComponents(resugar_map);
-      for (const auto [_, sugared_type] : resugar_map)
-        InsertAllInto(provided_getter(sugared_type), &provided_types);
+      res.resugar_map =
+          GetTplTypeResugarMapForExplicitTplArgs(explicit_tpl_args);
+      res.resugar_map = ResugarTypeComponents(res.resugar_map);
+      for (const auto [_, sugared_type] : res.resugar_map)
+        InsertAllInto(provided_getter(sugared_type), &res.provided_types);
     }
-    InsertAllInto(GetDefaultedArgResugarMap(decl), &resugar_map);
-    return TemplateInstantiationData{resugar_map, provided_types};
+    InsertAllInto(GetDefaultedArgResugarMap(decl), &res.resugar_map);
+    return res;
   }
 
   // Now we have to figure out, as best we can, the sugar-mappings for
@@ -1175,41 +1218,24 @@ TemplateInstantiationData GetTplInstDataForFunction(
     InsertAllInto(GetComponentsOfType(argtype), &fn_arg_types);
   }
 
-  for (const Type* type : fn_arg_types) {
-    // See if any of the template args in resugar_map are the desugared form
-    // of us.
-    const Type* desugared_type = GetCanonicalType(type);
-    if (ContainsKey(desugared_types, desugared_type)) {
-      resugar_map[desugared_type] = type;
-      if (desugared_type != type) {
-        VERRS(6) << "Remapping template arg of interest: "
-                 << PrintableType(desugared_type) << " -> "
-                 << PrintableType(type) << "\n";
-      }
-    }
-    // TODO(bolshakov): more fine-grained determination of provided types could
-    // e.g. consider only arguments that actually take part in type deduction.
-    // Simply moving the line below into the if-statement body above doesn't
-    // work because 'type' can be just an internal component of a 'typedef'ed
-    // argument.
-    InsertAllInto(provided_getter(type), &provided_types);
-  }
-
-  InsertAllInto(GetDefaultedArgResugarMap(decl), &resugar_map);
+  InsertInto(
+      GetDeducedTplArgData(desugared_types, fn_arg_types, provided_getter),
+      &res);
+  InsertAllInto(GetDefaultedArgResugarMap(decl), &res.resugar_map);
 
   // Log the types we never mapped.
   for (const auto& types : desugared_types) {
-    if (!ContainsKey(resugar_map, types.first)) {
+    if (!ContainsKey(res.resugar_map, types.first)) {
       VERRS(6) << "Ignoring unseen-in-fn-args template arg of interest: "
                << PrintableType(types.first) << "\n";
     }
   }
 
-  resugar_map = ResugarTypeComponents(
-      resugar_map);  // add in the decomposition of resugar_map
-  for (const auto [_, sugared_type] : resugar_map)
-    InsertAllInto(provided_getter(sugared_type), &provided_types);
-  return TemplateInstantiationData{resugar_map, provided_types};
+  res.resugar_map = ResugarTypeComponents(
+      res.resugar_map);  // add in the decomposition of resugar_map
+  for (const auto [_, sugared_type] : res.resugar_map)
+    InsertAllInto(provided_getter(sugared_type), &res.provided_types);
+  return res;
 }
 
 TemplateInstantiationData GetTplInstDataForVariable(
@@ -1918,6 +1944,41 @@ TemplateInstantiationData GetTplInstDataForClass(
       ResugarTypeComponents(
           result.resugar_map),  // add in the decomposition of retval
       result.provided_types};
+}
+
+TemplateInstantiationData GetTplExplicitInstData(
+    const ExplicitInstantiationDecl* decl,
+    function<set<const Type*>(const Type*)> provided_getter) {
+  TemplateInstantiationData res;
+  res.resugar_map = GetTplTypeResugarMapForExplicitTplArgs(decl);
+  const NamedDecl* spec = decl->getSpecialization();
+  if (const auto* fn_spec = dyn_cast<FunctionDecl>(spec)) {
+    map<const Type*, const Type*> implicit_tpl_arg_map =
+        GetTplTypeResugarMapForFunctionNoCallExpr(
+            fn_spec, /*start_arg=*/decl->getNumTemplateArgs());
+
+    set<const Type*> fn_param_types;
+    const auto* fn_type =
+        decl->getTypeAsWritten()->getType()->getAs<FunctionProtoType>();
+    for (QualType param : fn_type->param_types())
+      InsertAllInto(GetComponentsOfType(param.getTypePtr()), &fn_param_types);
+    InsertInto(GetDeducedTplArgData(implicit_tpl_arg_map, fn_param_types,
+                                    provided_getter),
+               &res);
+
+    InsertAllInto(GetDefaultedArgResugarMap(fn_spec), &res.resugar_map);
+  }
+  // TODO(bolshakov): handle other specialization kinds.
+  if (TypeLoc host_type_loc = decl->getQualifierLoc().getAsTypeLoc()) {
+    const Type* host = host_type_loc.getTypePtr();
+    InsertInto(GetTplInstDataForClassNoComponentTypes(host, provided_getter),
+               &res);
+    InsertAllInto(provided_getter(host), &res.provided_types);
+  }
+  res.resugar_map = ResugarTypeComponents(res.resugar_map);
+  for (const auto [_, sugared_type] : res.resugar_map)
+    InsertAllInto(provided_getter(sugared_type), &res.provided_types);
+  return res;
 }
 
 bool CanBeOpaqueDeclared(const EnumType* type) {

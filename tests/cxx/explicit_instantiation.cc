@@ -140,7 +140,7 @@ template void TplFn<int>();
 // IWYU: ClassWithUsingMethod is...*explicit_instantiation-template.h
 // IWYU: IndirectTemplate needs a declaration
 extern template void ClassWithUsingMethod<IndirectTemplate<float>>::Fn();
-// TODO: IWYU: IndirectTemplate is...*indirect.h
+// IWYU: IndirectTemplate is...*indirect.h
 // IWYU: IndirectTemplate needs a declaration
 // IWYU: ClassWithUsingMethod is...*explicit_instantiation-template.h
 template void ClassWithUsingMethod<IndirectTemplate<float>>::Fn();

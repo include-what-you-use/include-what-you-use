@@ -45,6 +45,7 @@ class ClassTemplateSpecializationDecl;
 class Decl;
 class DeclContext;
 class DeclRefExpr;
+class ExplicitInstantiationDecl;
 class Expr;
 class Sema;
 class Stmt;
@@ -965,6 +966,10 @@ TemplateInstantiationData GetTplInstDataForClass(
 // in the result-map.
 TemplateInstantiationData GetTplInstDataForClassNoComponentTypes(
     const clang::Type* type,
+    std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
+
+TemplateInstantiationData GetTplExplicitInstData(
+    const clang::ExplicitInstantiationDecl* decl,
     std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
 
 // Returns true if, for the given enumeration type, opaque (i.e. forward,
