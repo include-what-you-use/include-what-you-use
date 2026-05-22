@@ -8,3 +8,4 @@
 //===----------------------------------------------------------------------===//
 
 #include "tests/cxx/expl_inst_args-i1.h"
+#include "tests/cxx/expl_inst_args-i2.h"

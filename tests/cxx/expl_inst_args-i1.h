@@ -9,3 +9,9 @@
 
 struct Struct1 {};
 struct Struct2 {};
+struct Struct3 {};
+
+template <typename T = Struct1>
+void body5() {
+  T x;
+}
