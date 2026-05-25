@@ -41,6 +41,11 @@ void FunctionThatTakesMptr(int (Class::*mptr)() const);
 // IWYU: Class needs a declaration
 void FunctionThatTakesMptr(int (ClassTemplate<Class>::*mptr)() const);
 
+template <typename Ret, typename Arg>
+void FuncPtrInTpl() {
+  Ret (*pFunc)(Arg) = nullptr;
+}
+
 
 // Test cases below.
 // Note that we test primarily the diagnostics from IWYU for the individual
@@ -62,6 +67,14 @@ void NonMemberFunctions() {
   // IWYU: Retval is...*funcptrs-i1.h
   // IWYU: FunctionTemplate(Class *) is...*funcptrs-i1.h
   int (*template_fptr)(Class*) = &FunctionTemplate<Retval>;
+
+  // Parameter and return types don't need to be complete.
+  // IWYU: Class needs a declaration
+  // IWYU: Retval needs a declaration
+  Retval (*fptr2)(Class) = nullptr;
+  // IWYU: Class needs a declaration
+  // IWYU: Retval needs a declaration
+  FuncPtrInTpl<Retval, Class>();
 
   // Call with function pointer to function and template instantiation.
   // IWYU: Function(Class *) is...*funcptrs-i1.h

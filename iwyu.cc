@@ -218,6 +218,7 @@ using clang::FriendTemplateDecl;
 using clang::FunctionDecl;
 using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
+using clang::FunctionType;
 using clang::UserDefinedLiteral;
 using clang::FunctionType;
 using clang::InitListExpr;
@@ -3297,6 +3298,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const Type* elem_type = type->getElementType().getTypePtr();
       ReportTypeUse(CurrentLoc(), elem_type, DerefKind::None);
     }
+    return true;
+  }
+
+  bool VisitFunctionType(FunctionType*) {
+    if (!current_ast_node()->template ParentIsA<FunctionDecl>())
+      current_ast_node()->set_in_forward_declare_context(true);
     return true;
   }
 
