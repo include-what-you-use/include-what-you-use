@@ -55,3 +55,11 @@ struct OuterAggregate2 {
 struct OuterAggregateWithRef {
   const InnerAggregate1& inner_ref;
 };
+
+struct I2NonAggregate {
+  I2NonAggregate(int = 0);
+};
+
+struct AggregateWithNonAggregate {
+  I2NonAggregate na;
+};

@@ -187,9 +187,6 @@ void ArgumentTypeProvision() {
   (void)sizeof(decltype_not_provided);
   // IWYU: IndirectClass is...*indirect.h
   ConstructionFromIndirectClass cficnp{decltype_not_provided};
-  // TODO: probably, IndirectClass should not be reported here because it is
-  // provided by AggregateContainingIndirectClass definition.
-  // IWYU: IndirectClass is...*indirect.h
   AggregateContainingIndirectClass acicnp{decltype_not_provided};
 
   Identity<Providing>::Inner::Type p3;

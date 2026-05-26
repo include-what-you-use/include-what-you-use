@@ -2956,6 +2956,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
     ReportIfReferenceVararg(expr->getArgs(), expr->getNumArgs(),
                             expr->getConstructor());
+    // Implicitly-constructed classes inside aggregate initialization should be
+    // skipped because they should be provided by the aggregate.
+    if (current_ast_node()->template ParentIsA<InitListExpr>() &&
+        expr->getBeginLoc() == expr->getEndLoc()) {
+      return true;
+    }
 
     if (IsAutocastExpr(current_ast_node()))
       HandleAutocastOnCallSite(expr);
