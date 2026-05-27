@@ -68,6 +68,7 @@ using std::vector;
 
 enum class RegexDialect;
 struct IncludeMapEntry;
+struct SymbolMapEntry;
 
 enum class UseKind { Full, FwdDecl };
 
@@ -230,7 +231,7 @@ class IncludePicker {
 
   // Adds mappings from sized arrays of IncludeMapEntry.
   void AddIncludeMappings(const IncludeMapEntry* entries, size_t count);
-  void AddSymbolMappings(const IncludeMapEntry* entries, size_t count);
+  void AddSymbolMappings(const SymbolMapEntry* entries, size_t count);
 
   void AddPublicIncludes(const char** includes, size_t count);
 

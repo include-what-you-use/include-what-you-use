@@ -750,9 +750,9 @@ def process_tex_file(tex_file):
 def print_line(symbol, headername, lang):
     escaped = symbol.replace('"', r'\"')
     if lang == 'c++':
-        print(f'{{ "{escaped}", kPrivate, "<{headername}>", kPublic }},')
+        print(f'{{ "{escaped}", UseKind::Full, "<{headername}>", kPublic }},')
     else:
-        print(f'{{ "symbol": ["{escaped}", "private", '
+        print(f'{{ "symbol": ["{escaped}", "full", '
                               f'"<{headername}>", "public"] }},')
 
 def print_content(std_source_path, lang):
