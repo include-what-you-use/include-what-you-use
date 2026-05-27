@@ -1062,10 +1062,10 @@ set<string> CalculateMinimalIncludes(
 //
 // Trimming forward-declare uses (1st pass):
 // A1) If not a class or a templated class, recategorize as a full use.
-// A2) If a templated class with default template params, recategorize
-//     as a full use (forward-declaring in that case is too error-prone).
-// A3) If a symbol in std, recategorize as a full use. The C++ standard forbids
+// A2) If a symbol in std, recategorize as a full use. The C++ standard forbids
 //     declarations in std namespace in user's code, in general.
+// A3) If a templated class with default template params, recategorize
+//     as a full use (forward-declaring in that case is too error-prone).
 // A4) If the file containing the use has a pragma inhibiting the forward
 //     declaration of the symbol, change the use to a full info use in order
 //     to make sure that the compiler can see some declaration of the symbol.
@@ -1169,27 +1169,30 @@ void ProcessForwardDeclare(OneUse* use,
   if (tpl_decl)
     tag_decl = tpl_decl->getTemplatedDecl();
 
-  // (A2) If it has default template parameters, recategorize as a full use.
-  // Do this even if the used decl is a fwd-decl so that IWYU doesn't insert
-  // another fwd-decl specifying the same default argument. But keep the use
-  // kind when the forward-declaration is in the same file so as not to suggest
-  // removing the forward-declaration as unused.
-  if (tpl_decl && HasDefaultTemplateParameters(tpl_decl) &&
-      GetFileEntry(use->use_loc()) != GetFileEntry(use->decl())) {
-    VERRS(6) << "Moving " << use->symbol_name()
-             << " from fwd-decl use to full use: has default template param"
-             << " (" << use->PrintableUseLoc() << ")\n";
-    use->set_full_use();
-    // No return here: (A4) or (A5) may cause us to ignore this decl entirely.
-  }
-
-  // (A3) If it is in namespace std, recategorize as a full use.
+  // (A2) If it is in namespace std, recategorize as a full use.
   // TODO(csilvers): if someone has specialized a class in std, the
   // specialization should be treated as in user-space and
   // forward-declarable.  Check for that case.
   if (StartsWith(use->symbol_name(), "std::")) {
+    if (use->public_headers().empty()) {
+      VERRS(6) << "Moving " << use->symbol_name()
+               << " from fwd-decl use to full use: in namespace std"
+               << " (" << use->PrintableUseLoc() << ")\n";
+      use->set_full_use();
+    }
+    // No return here: (A4) or (A5) may cause us to ignore this decl entirely.
+  }
+  // (A3) If it has default template parameters, recategorize as a full use.
+  // Do this even if the used decl is a fwd-decl so that IWYU doesn't insert
+  // another fwd-decl specifying the same default argument. But keep the use
+  // kind when the forward-declaration is in the same file so as not to suggest
+  // removing the forward-declaration as unused. Uses of fwd-decls from <iosfwd>
+  // should not be recategorized to full uses so that (D1) step works with them,
+  // hence 'else' has been placed here.
+  else if (tpl_decl && HasDefaultTemplateParameters(tpl_decl) &&
+           GetFileEntry(use->use_loc()) != GetFileEntry(use->decl())) {
     VERRS(6) << "Moving " << use->symbol_name()
-             << " from fwd-decl use to full use: in namespace std"
+             << " from fwd-decl use to full use: has default template param"
              << " (" << use->PrintableUseLoc() << ")\n";
     use->set_full_use();
     // No return here: (A4) or (A5) may cause us to ignore this decl entirely.
@@ -1580,8 +1583,11 @@ void CalculateIwyuForForwardDeclareUse(
   vector<const NamedDecl*> dfns;
   // A definition in any of desired headers makes the forward-declaration
   // redundant, but not when the fwd-decl specifies a default template argument.
+  // This doesn't apply to templates from 'std' because the standard guarantees
+  // that both headers with forward-declarations and with definitions should
+  // provide default arguments, if any.
   bool has_def_arg = tpl_decl && HasDefaultTemplateParameters(tpl_decl);
-  if (!has_def_arg) {
+  if (!has_def_arg || StartsWith(use->symbol_name(), "std::")) {
     if (const NamedDecl* dfn = GetTagDefinition(use->decl()))
       dfns.push_back(dfn);
     if (tpl_decl) {

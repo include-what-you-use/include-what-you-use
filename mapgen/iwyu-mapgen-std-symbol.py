@@ -82,10 +82,18 @@ OVERLOADED_FUNCS = {
     'std::islower', 'std::isprint', 'std::ispunct', 'std::isspace',
     'std::isupper', 'std::isxdigit', 'std::log', 'std::log10',
     'std::make_error_code', 'std::make_error_condition', 'std::move',
-    'std::pow', 'std::print', 'std::println', 'std::remove', 'std::sin',
-    'std::sinh', 'std::sqrt', 'std::swap', 'std::tan', 'std::tanh',
-    'std::to_string', 'std::tolower', 'std::toupper', 'std::vprint_nonunicode',
+    'std::pow', 'std::remove', 'std::sin', 'std::sinh', 'std::sqrt',
+    'std::swap', 'std::tan', 'std::tanh', 'std::to_string', 'std::tolower',
+    'std::toupper',
+}
+
+# Some of these functions are mapped in HANDWRITTEN_MAPPING, the other cannot be
+# mapped in a portable way.
+EXCLUDED_FUNCS = {
+    'std::print',
+    'std::println',
     'std::vprint_unicode',
+    'std::vprint_nonunicode',
 }
 
 # Some classes and template specializations are excluded as well.
@@ -120,32 +128,19 @@ QUAL_MAP = dict((
 ))
 
 # For some symbols defined in different headers, a "canonical" header should be
-# placed before others in the mapping so that IWYU "prefers" it.
+# placed before others in the mapping so that IWYU "prefers" it. The meaning of
+# the boolean values is described with found_names below.
 CANONICAL_HEADERS = {
-    'std::mbstate_t': 'cwchar',
-    'std::tuple_element': 'tuple',
-    'std::tuple_size': 'tuple',
-    'std::size_t': 'cstddef',
+    ('std::mbstate_t', False): 'cwchar',
+    ('std::tuple_element', False): 'tuple',
+    ('std::tuple_size', False): 'tuple',
+    ('std::size_t', False): 'cstddef',
 # AFAIU, <cstdlib> should be preferred over <cmath> for these:
-    'std::abs(int)': 'cstdlib',
-    'std::abs(long)': 'cstdlib',
-    'std::abs(long long)': 'cstdlib',
+    ('std::abs(int)', False): 'cstdlib',
+    ('std::abs(long)', False): 'cstdlib',
+    ('std::abs(long long)', False): 'cstdlib',
 
-    'std::hash': 'functional',
-}
-
-# Skip these until <iosfwd> can be handled correctly.
-EXCLUDED_HEADERS = {
-    'iosfwd',
-    'ios',
-    'streambuf',
-    'istream',
-    'ostream',
-    'sstream',
-    'spanstream',
-    'fstream',
-    'syncstream',
-    'print',
+    ('std::hash', False): 'functional',
 }
 
 # The underlying type of this is not specified. Moreover, the corresponding
@@ -160,6 +155,12 @@ HANDWRITTEN_MAPPING = (
     ('std::hash<std::bitset<:0>>', 'bitset'),
     ('std::hash', 'thread'),
     ('std::hash<std::thread::id>', 'thread'),
+    ('std::print(std::basic_ostream<char, std::char_traits<char>> &, std::basic_format_string<char, std::type_identity<:0>::type...>, :0 &&...)',
+      'ostream'),
+    ('std::println(std::basic_ostream<char, std::char_traits<char>> &, std::basic_format_string<char, std::type_identity<:0>::type...>, :0 &&...)',
+      'ostream'),
+    ('std::print', 'print'),
+    ('std::println', 'print'),
 )
 
 def contains_unspec_alias(inp):
@@ -181,23 +182,27 @@ class ValueSaver:
 
 class Parser:
     """ Parses a standard library header synopsis from a LaTeX file and fills in
-        found_names list. This stupid pseudo-C++ parser has been written with
+        found_names map. This stupid pseudo-C++ parser has been written with
         a lot of assumptions about the synopsis syntax. Use carefully and check
         the output!
     """
-    def __init__(self, text):
+    def __init__(self, text, fwd_decl_header):
         self.__text = text
+        self.__fwd_decl_header = fwd_decl_header
         self.__cur_pos = 0
         self.__namespace_stack = []
         # __tpl_params holds parameters while parsing a template declaration.
         self.__tpl_params = []
-        self.found_names = []
+        # found_names is a dictionary that maps symbols to boolean values
+        # indicating whether it is a forward-declaration or not.
+        self.found_names = {}
 
     def parse(self):
         while self.__cur_pos < len(self.__text):
             self.parse_top_level()
-        self.found_names = [name for name in self.found_names if name not in \
-            DUPLICATED_CLASSES]
+        self.found_names = {name: fwd_decl for name, fwd_decl in \
+                            self.found_names.items() if name not in \
+                            DUPLICATED_CLASSES}
 
     def parse_top_level(self):
         self.skip_spaces()
@@ -220,9 +225,9 @@ class Parser:
             self.skip_spaces()
             if t.startswith(NAMESPACE_KWD, self.__cur_pos):
                 return self.act_on_inline_namespace()
-            self.act_on_identifier_or_kwd()
+            self.act_on_identifier_or_kwd(fwd_declarable=False)
         else:
-            self.act_on_identifier_or_kwd()
+            self.act_on_identifier_or_kwd(fwd_declarable=False)
 
     def skip_braced_text(self, opening, closing):
         t = self.__text
@@ -300,7 +305,7 @@ class Parser:
         self.__cur_pos += len(NAMESPACE_KWD)
         with ValueSaver(self.__namespace_stack):
             id = self.read_identifier()
-            self.add_identifier_from_ns(id)
+            self.add_identifier_from_ns(id, fwd_declarable=False)
             self.__namespace_stack.append(id)
             while self.__text.startswith('::', self.__cur_pos):
                 self.__cur_pos += 2  # consume '::'
@@ -310,7 +315,7 @@ class Parser:
                     self.read_identifier()
                     self.skip_spaces()
                     continue
-                self.add_identifier_from_ns(id)
+                self.add_identifier_from_ns(id, fwd_declarable=False)
                 self.__namespace_stack.append(id)
             self.skip_spaces()
 
@@ -366,21 +371,21 @@ class Parser:
             return m.group(1)
         return found_name
 
-    def act_on_identifier_or_kwd(self):
+    def act_on_identifier_or_kwd(self, fwd_declarable):
         self.skip_spaces()
         t = self.__text
         cp = self.__cur_pos
         if t.startswith('.\n', cp):
             # Occurs in <functional>, "placeholders" namespace.
             self.__cur_pos += 1     # Consume the dot.
-            return self.act_on_identifier_or_kwd()
+            return self.act_on_identifier_or_kwd(fwd_declarable)
         if t.startswith(OPERATOR_KWD, cp):
             return self.act_on_operator()
         if t.startswith(TEMPLATE_KWD, cp):
             return self.act_on_template()
         if t.startswith(DECLTYPE_KWD, cp):
             self.skip_decltype()
-            return self.act_on_identifier_or_kwd()
+            return self.act_on_identifier_or_kwd(fwd_declarable=False)
         if t.startswith(USING_KWD, cp):
             self.__cur_pos += len(USING_KWD)
             self.skip_spaces()
@@ -391,9 +396,11 @@ class Parser:
         id = self.read_qualified_id()
         cp = self.__cur_pos
         if t[cp] in '=:;{':         # Variable, class, enum, or type alias.
-            self.add_identifier_from_ns(id)
+            self.add_identifier_from_ns(id, fwd_declarable)
             return self.skip_till_semicolon()
         if t[cp] == '(':            # Function.
+            if self.get_identifier_with_ns(id) in EXCLUDED_FUNCS:
+                return self.skip_function()
             if self.get_identifier_with_ns(id) in OVERLOADED_FUNCS:
                 id += self.parse_fn_parameters()
                 assert '\\' not in id or FP_PLACEHOLDER in id
@@ -403,22 +410,25 @@ class Parser:
 
             if FP_PLACEHOLDER in id:
                 for t in ('float', 'double', 'long double'):
-                    self.add_identifier_from_ns(id.replace(FP_PLACEHOLDER, t))
+                    self.add_identifier_from_ns(id.replace(FP_PLACEHOLDER, t),
+                                                fwd_declarable=False)
             elif ALIAS_TO_AVOID not in id:
-                self.add_identifier_from_ns(id)
+                self.add_identifier_from_ns(id, fwd_declarable=False)
             return
         if t.startswith('[[', cp):      # Attribute.
             self.__cur_pos = t.find(']]', cp + 2) + 2
-            return self.act_on_identifier_or_kwd()
+            return self.act_on_identifier_or_kwd(fwd_declarable)
+        if id in ('class', 'struct', 'union', 'enum'):
+            return self.act_on_identifier_or_kwd(fwd_declarable=True)
         if t[cp].isalpha() or t[cp] == '_' or t[cp] == '@':
             # id was probably a keyword or a type specifier; go on with parsing.
-            return self.act_on_identifier_or_kwd()
+            return self.act_on_identifier_or_kwd(fwd_declarable=False)
         if t[cp] == '*' or t[cp] == '&':
             self.__cur_pos += 1         # Consume ptr or ref.
-            return self.act_on_identifier_or_kwd()
+            return self.act_on_identifier_or_kwd(fwd_declarable=False)
         if t[cp] == '"':                # 'extern "C"' or 'extern "C++"'.
             self.skip_braced_text('"', '"')
-            return self.act_on_identifier_or_kwd()
+            return self.act_on_identifier_or_kwd(fwd_declarable=False)
         assert False
 
     def act_on_operator(self):
@@ -448,7 +458,7 @@ class Parser:
         assert '\\' not in id
         self.skip_fn_body()
         if not contains_unspec_alias(id):
-            self.add_identifier_from_ns(id)
+            self.add_identifier_from_ns(id, fwd_declarable=False)
 
     def act_on_template(self):
         assert self.__text.startswith(TEMPLATE_KWD, self.__cur_pos)
@@ -458,7 +468,7 @@ class Parser:
         self.skip_spaces()
         if self.__text.startswith(REQUIRES_KWD, self.__cur_pos):
             self.skip_requires_clause()
-        self.act_on_identifier_or_kwd()
+        self.act_on_identifier_or_kwd(fwd_declarable=False)
         self.__tpl_params.clear()
 
     def act_on_template_params(self):
@@ -595,7 +605,7 @@ class Parser:
         # Look up from the nearest enclosing namespace.
         for i in range(l):
             id = '::'.join(self.__namespace_stack[: l-i]) + f'::{name}'
-            if self.found_names.count(id):
+            if id in self.found_names:
                 return id
         return name
 
@@ -720,39 +730,46 @@ class Parser:
         self.skip_braced_text('(', ')')
         self.skip_fn_body()
 
-    def add_identifier_from_ns(self, id):
+    def add_identifier_from_ns(self, id, fwd_declarable):
         id = self.get_identifier_with_ns(id)
         if '\\' in id:
             # Avoid names containing TeX commands.
             return
-        if id not in self.found_names:
-            self.found_names.append(id)
+        self.found_names.setdefault(id,
+                                    self.__fwd_decl_header and fwd_declarable)
 
     def get_identifier_with_ns(self, id):
         if self.__namespace_stack:
             id = '::'.join(self.__namespace_stack) + f'::{id}'
         return id
 
-def process_synopsis(syn):
-    p = Parser(syn)
+def process_synopsis(syn, fwd_decl_header):
+    p = Parser(syn, fwd_decl_header)
     p.parse()
     return p.found_names
 
 def process_tex_file(tex_file):
     res = []
     for m in SYNOPSIS.finditer(tex_file):
-        if m.group('headername') in EXCLUDED_HEADERS:
-            continue
-        symbols = process_synopsis(m.group('code'))
-        res += zip(symbols, repeat(m.group('headername')))
+        headername = m.group('headername')
+        fwd_decl_header = headername == 'iosfwd'
+        symbols = process_synopsis(m.group('code'), fwd_decl_header)
+        res += zip(symbols.items(), repeat(headername))
+        # Forward-declaration headers should be preferred even for fully used
+        # redeclarable names (like typedefs) as the cheapest ones.
+        if fwd_decl_header:
+            CANONICAL_HEADERS.update(zip(symbols.items(), repeat(headername)))
     return res
 
-def print_line(symbol, headername, lang):
-    escaped = symbol.replace('"', r'\"')
+def print_line(symbol_and_flag, headername, lang):
+    escaped = symbol_and_flag[0].replace('"', r'\"')
     if lang == 'c++':
-        print(f'{{ "{escaped}", UseKind::Full, "<{headername}>", kPublic }},')
+        use_kind = 'FwdDecl' if symbol_and_flag[1] else 'Full'
+        print(f'{{ "{escaped}", UseKind::{use_kind}, '
+                  f'"<{headername}>", kPublic }},')
     else:
-        print(f'{{ "symbol": ["{escaped}", "full", '
+        use_kind = 'fwd-decl' if symbol_and_flag[1] else 'full'
+        print(f'{{ "symbol": ["{escaped}", "{use_kind}", '
                               f'"<{headername}>", "public"] }},')
 
 def print_content(std_source_path, lang):
@@ -762,15 +779,16 @@ def print_content(std_source_path, lang):
             for symbol, headername in process_tex_file(f.read()):
                 headers_by_symbol.setdefault(symbol, []).append(headername)
     for symbol, headername in HANDWRITTEN_MAPPING:
-        headers_by_symbol.setdefault(symbol, []).append(headername)
+        # Currently, all entries in HANDWRITTEN_MAPPING are for full uses.
+        headers_by_symbol.setdefault((symbol, False), []).append(headername)
 
-    for symbol, headernames in sorted(headers_by_symbol.items()):
-        canonical_header = CANONICAL_HEADERS.get(symbol)
+    for symbol_and_flag, headernames in sorted(headers_by_symbol.items()):
+        canonical_header = CANONICAL_HEADERS.get(symbol_and_flag)
         if canonical_header:
-            print_line(symbol, canonical_header, lang)
+            print_line(symbol_and_flag, canonical_header, lang)
         for headername in sorted(headernames):
             if headername != canonical_header:
-                print_line(symbol, headername, lang)
+                print_line(symbol_and_flag, headername, lang)
 
 def main(std_source_path, lang):
     comment_prefix = '// ' if lang == 'c++' else '# '

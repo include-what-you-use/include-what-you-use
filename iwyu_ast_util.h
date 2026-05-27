@@ -811,6 +811,13 @@ bool IsDefTplArgSpecified(const clang::NamedDecl* tpl_param);
 
 unsigned GetTplParamNumberWithoutPack(const clang::TemplateDecl*);
 
+// I/O stream typedefs should be considered as non-providing even if they are
+// redefined after the underlying template definitions in some implementation.
+// Their canonical header is <iosfwd>, but when used in a context requiring
+// complete type info, the underlying type should be reported, causing
+// suggestion of the corresponding complete definition header.
+bool IsStdNonProvidingTypedef(const clang::TypedefNameDecl* decl);
+
 // --- Utilities for Type.
 
 // See if a given type is a 'real' elaborated type.  (An

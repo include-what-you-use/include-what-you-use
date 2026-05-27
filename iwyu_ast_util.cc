@@ -1570,6 +1570,58 @@ unsigned GetTplParamNumberWithoutPack(const TemplateDecl* tpl) {
   return params->hasParameterPack() ? size - 1 : size;
 }
 
+bool IsStdNonProvidingTypedef(const TypedefNameDecl* decl) {
+  string name = GetWrittenQualifiedNameAsString(decl, /*with_fn_args=*/false);
+  // clang-format off
+  static const set<string> typedefs = {
+    "std::filebuf",
+    "std::fstream",
+    "std::ifstream",
+    "std::ios",
+    "std::iostream",
+    "std::ispanstream",
+    "std::istream",
+    "std::istringstream",
+    "std::ofstream",
+    "std::ospanstream",
+    "std::ostream",
+    "std::ostringstream",
+    "std::osyncstream",
+    "std::spanbuf",
+    "std::spanstream",
+    "std::streambuf",
+    "std::streampos",
+    "std::stringbuf",
+    "std::stringstream",
+    "std::syncbuf",
+    "std::u16streampos",
+    "std::u32streampos",
+    "std::u8streampos",
+    "std::wfilebuf",
+    "std::wfstream",
+    "std::wifstream",
+    "std::wios",
+    "std::wiostream",
+    "std::wispanstream",
+    "std::wistream",
+    "std::wistringstream",
+    "std::wofstream",
+    "std::wospanstream",
+    "std::wostream",
+    "std::wostringstream",
+    "std::wosyncstream",
+    "std::wspanbuf",
+    "std::wspanstream",
+    "std::wstreambuf",
+    "std::wstreampos",
+    "std::wstringbuf",
+    "std::wstringstream",
+    "std::wsyncbuf",
+  };
+  // clang-format on
+  return typedefs.count(name);
+}
+
 // --- Utilities for Type.
 
 bool IsElaboratedTypeSpecifier(const TypeWithKeyword* type) {
