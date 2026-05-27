@@ -72,6 +72,18 @@ void Fn() {
   (void)std::pow(2.0, 3.0);
   // IWYU: std::pow(long double, long double) is...*<cmath>
   (void)std::pow(2.0L, 3.0L);
+
+  // IWYU: std::basic_ostream needs a declaration
+  // IWYU: std::char_traits needs a declaration
+  std::basic_ostream<char, std::char_traits<char>>* os1;
+  // IWYU: std::basic_ostream needs a declaration
+  std::basic_ostream<char>* os2;
+  // IWYU should not attribute this basic_spanstream use to <iosfwd> because
+  // <spanstream> required for the definition is enough.
+  // IWYU: std::basic_spanstream needs a declaration
+  std::basic_spanstream<char>* ss;
+  // IWYU: std::basic_spanstream is...*<spanstream>
+  (void)sizeof(*ss);
 }
 
 /**** IWYU_SUMMARY
@@ -81,6 +93,8 @@ tests/cxx/std_symbol_mapping.cc should add these lines:
 #include <array>
 #include <cmath>
 #include <functional>
+#include <iosfwd>
+#include <spanstream>
 #include <utility>
 #include <valarray>
 
@@ -92,6 +106,8 @@ The full include-list for tests/cxx/std_symbol_mapping.cc:
 #include <array>  // for array, get, operator==
 #include <cmath>  // for pow
 #include <functional>  // for function, swap
+#include <iosfwd>  // for basic_ostream (ptr only), char_traits (ptr only)
+#include <spanstream>  // for basic_spanstream
 #include <utility>  // for get, move, operator==, pair, swap
 #include <valarray>  // for pow, valarray
 

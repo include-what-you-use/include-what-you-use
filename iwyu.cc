@@ -3607,9 +3607,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (!current_ast_node()->template ParentIsA<TypedefNameDecl>()) {
         const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
         const Type* type = typedef_decl->getUnderlyingType().getTypePtr();
-        const set<const Type*>& provided_with_typedef =
-            GetProvidedTypes(type, GetLocation(typedef_decl));
-        InsertAllInto(provided_with_typedef, &blocked_types);
+        if (!IsStdNonProvidingTypedef(typedef_decl)) {
+          const set<const Type*>& provided_with_typedef =
+              GetProvidedTypes(type, GetLocation(typedef_decl));
+          InsertAllInto(provided_with_typedef, &blocked_types);
+        }
         VERRS(6) << "User, not author, of typedef "
                  << typedef_decl->getQualifiedNameAsString()
                  << " owns the underlying type:\n";
