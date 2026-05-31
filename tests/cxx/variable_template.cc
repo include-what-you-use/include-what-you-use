@@ -76,7 +76,7 @@ extern template IndirectClass typed_as_param_expl_inst_decl<IndirectClass>;
 template <typename T>
 T typed_as_param_expl_inst_def;
 
-// TODO: IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass is...*indirect.h
 template IndirectClass typed_as_param_expl_inst_def<IndirectClass>;
 
 template <typename>

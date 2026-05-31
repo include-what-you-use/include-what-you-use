@@ -3424,6 +3424,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // AST node) -- then we're forward-declarable by definition.
         if (IsForwardDecl(parent_decl))
           return true;
+      } else if (const auto* expl_inst =
+                     ast_node->GetParentAs<ExplicitInstantiationDecl>()) {
+        return expl_inst->isExternTemplate();
       }
     }
 

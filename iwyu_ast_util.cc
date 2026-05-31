@@ -1011,7 +1011,7 @@ static map<const Type*, const Type*> GetTplTypeResugarMapForExplicitTplArgs(
 static map<const Type*, const Type*> GetTplTypeResugarMapForExplicitTplArgs(
     const ExplicitInstantiationDecl* decl) {
   map<const Type*, const Type*> retval;
-  for (unsigned i = 0, ie = decl->getNumTemplateArgs(); i < ie; ++i) {
+  for (unsigned i = 0; i < decl->getNumTemplateArgs().value_or(0); ++i) {
     TemplateArgumentLoc loc = decl->getTemplateArg(i);
     if (const Type* arg_type = GetTemplateArgAsType(loc.getArgument())) {
       retval[GetCanonicalType(arg_type)] = arg_type;
@@ -1955,7 +1955,7 @@ TemplateInstantiationData GetTplExplicitInstData(
   if (const auto* fn_spec = dyn_cast<FunctionDecl>(spec)) {
     map<const Type*, const Type*> implicit_tpl_arg_map =
         GetTplTypeResugarMapForFunctionNoCallExpr(
-            fn_spec, /*start_arg=*/decl->getNumTemplateArgs());
+            fn_spec, /*start_arg=*/decl->getNumTemplateArgs().value_or(0));
 
     set<const Type*> fn_param_types;
     const auto* fn_type =
