@@ -4485,6 +4485,8 @@ class InstantiatedTemplateVisitor
       }
     }
     if (decl_as_written) {
+      if (const FunctionDecl* dfn = decl_as_written->getDefinition())
+        decl_as_written = dfn;
       FunctionDecl* const daw = const_cast<FunctionDecl*>(decl_as_written);
       nodes_to_ignore_.AddAll(nodeset_getter.GetNodesBelow(daw));
     }
@@ -4505,7 +4507,8 @@ class InstantiatedTemplateVisitor
     VarDecl* decl_as_written = decl->getTemplateInstantiationPattern();
     if (!decl_as_written)  // TODO(bolshakov): could it be null?
       return true;
-    nodes_to_ignore_.AddAll(nodeset_getter.GetNodesBelow(decl_as_written));
+    nodes_to_ignore_.AddAll(
+        nodeset_getter.GetNodesBelow(decl_as_written->getDefinition()));
 
     // This is not TraverseDecl because clang otherwise skips
     // VarTemplateSpecializationDecl as an implicit instantiation
