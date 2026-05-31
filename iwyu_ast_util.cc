@@ -1263,8 +1263,10 @@ const NamedDecl* GetInstantiatedFromDecl(const NamedDecl* decl) {
       return pattern;
     }
   } else if (const auto* var_decl = dyn_cast<VarDecl>(decl)) {
-    if (const VarDecl* pattern = var_decl->getTemplateInstantiationPattern())
-      return pattern;
+    if (const VarDecl* pattern = var_decl->getTemplateInstantiationPattern()) {
+      if (const VarDecl* defn = pattern->getDefinition())
+        return defn;
+    }
   }
   // decl is not instantiated from a class or a variable template.
   return decl;

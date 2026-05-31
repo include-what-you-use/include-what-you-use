@@ -58,8 +58,14 @@ int both_args_used_def_non_provided = [] {
 }();
 
 template <typename>
+extern int refers_to_fn_in_init;
+
+template <typename>
 // IWYU: GetInt() is...*-i1.h
 int refers_to_fn_in_init = GetInt();
+
+template <typename>
+extern int refers_to_fn_in_init;
 
 template <typename T>
 T typed_as_param_expl_spec;
