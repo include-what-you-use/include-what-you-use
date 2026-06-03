@@ -84,6 +84,43 @@ use this mapping table to combine Clang and IWYU versions correctly:
 > Packaging for other platforms will likely be subtly different.
 
 
+### How to download ###
+
+IWYU is released in source form, both as [GitHub releases][ghrel] and to
+<https://include-what-you-use.org>.
+
+Releases are signed; you can find the public PGP key used to sign at
+<https://include-what-you-use.org/downloads/kim.grasman+iwyu@gmail.com.pub>.
+
+To verify a release archive after download:
+
+* Download and dearmor the public key:
+  ```
+  $ curl https://include-what-you-use.org/downloads/kim.grasman+iwyu@gmail.com.pub |
+      gpg -o iwyu.pub --dearmor -
+  ```
+* Assuming a downloaded 0.24 source archive and associated signature, verify the
+  archive using the dearmored key:
+  ```
+  $ ls -1 0.24.tar.gz*
+  0.24.tar.gz
+  0.24.tar.gz.asc
+
+  $ gpg --no-default-keyring --keyring ./iwyu.pub --verify 0.24.tar.gz.asc 0.24.tar.gz
+  gpg: Signature made Sat 05 Apr 2025 12:06:53 PM CEST
+  gpg:                using EDDSA key ...
+  gpg: Good signature from "Kim Gräsman <kim.grasman@gmail.com>" [ultimate]
+  ```
+
+Each release will also have a tag named as the version number without
+decoration, so for example the 0.24 release will be tagged `0.24`. Cloning the
+Git repo and checking out a tag `X` should give the same snapshot as downloading
+the source archive `X.tar.gz` or `X.zip` (or `include-what-you-use-X.src.tar.gz`
+from include-what-you-use.org).
+
+[ghrel]: https://github.com/include-what-you-use/include-what-you-use/releases
+
+
 ### How to build standalone ###
 
 This build mode assumes you already have compiled LLVM and Clang libraries on
