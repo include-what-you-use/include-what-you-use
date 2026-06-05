@@ -11,4 +11,7 @@ namespace Bar {
   int foo(int x) {
     return x;
   }
+
+  class FullAndFwdDeclUse {};
+  class FwdDeclUse {};
 };

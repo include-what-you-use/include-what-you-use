@@ -1968,7 +1968,9 @@ void CalculateDesiredIncludesAndForwardDeclares(
       }
     } else {
       // If we satisfy a forward-declare use from a file, let the file know.
-      const string symbol_name = use.short_symbol_name();
+      const string symbol_name = GlobalFlags().comments_with_namespace
+                                     ? use.symbol_name()
+                                     : use.short_symbol_name();
 
       auto range = include_map.equal_range(use.suggested_header());
       CHECK_(range.first != range.second);
