@@ -1,4 +1,4 @@
-//===--- utils.h - iwyu test ----------------------------------------------===//
+//===--- macro_location_tpl-i4.h - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef UTILS_H
-#define UTILS_H
+struct Struct;
 
-#include "my_int.h"
-
-template <typename T>
-constexpr int TimesTen(T n) {
-  return MakeMyInt(n) * 10;
-}
-
-#endif  // UTILS_H
+void Fn2(const Struct&);
