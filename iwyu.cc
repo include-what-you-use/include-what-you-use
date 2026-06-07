@@ -4437,10 +4437,21 @@ class InstantiatedTemplateVisitor
       return SourceLocation();   // an invalid source-loc
     for (const ASTNode* ast_node = current_ast_node();
          ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
+      // GetInstantiationLoc returns *macro* expansion location (if any). Macro
+      // definition (spelling) location should not be considered because it
+      // doesn't actually declare anything.
+      OptionalFileEntryRef decl_expansion_file =
+          GetLocFileEntry(GetInstantiationLoc(decl->getLocation()));
       if (preprocessor_info().PublicHeaderIntendsToProvide(
-              GetFileEntry(ast_node->GetLocation()),
-              GetFileEntry(decl->getLocation())))
+              GetLocFileEntry(GetInstantiationLoc(ast_node->GetLocation())),
+              decl_expansion_file)) {
+        return GetInstantiationLoc(ast_node->GetLocation());
+      }
+      if (preprocessor_info().PublicHeaderIntendsToProvide(
+              GetLocFileEntry(GetSpellingLoc(ast_node->GetLocation())),
+              decl_expansion_file)) {
         return ast_node->GetLocation();
+      }
     }
     return SourceLocation();   // an invalid source-loc
   }
@@ -5763,10 +5774,18 @@ class IwyuAstConsumer
       if (!sugared) {  // This designates a default argument.
         if (const NamedDecl* decl =
                 GetDefinitionAsWritten(TypeToDeclAsWritten(canonical))) {
+          // The check for provision is similar to that of
+          // InstantiatedTemplateVisitor::GetLocOfTemplateThatProvides.
+          OptionalFileEntryRef decl_expansion_file =
+              GetLocFileEntry(GetInstantiationLoc(decl->getLocation()));
           if (preprocessor_info().PublicHeaderIntendsToProvide(
-                  GetFileEntry(template_loc),
-                  GetFileEntry(decl->getLocation())))
+                  GetFileEntry(GetInstantiationLoc(template_loc)),
+                  decl_expansion_file) ||
+              preprocessor_info().PublicHeaderIntendsToProvide(
+                  GetFileEntry(GetSpellingLoc(template_loc)),
+                  decl_expansion_file)) {
             data->provided_types.insert(canonical);
+          }
         }
       }
     }

@@ -1,4 +1,4 @@
-//===--- operations.h - iwyu test -----------------------------------------===//
+//===--- macro_location_tpl-d3.h - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPERATIONS_H
-#define OPERATIONS_H
+struct Struct;
 
-#define MULTIPLY_OP() \
-int operator *(MyInt lhs, int rhs) { \
-  return lhs.value * rhs; \
-}
-
-#endif  // OPERATIONS_H
+void Fn3(const Struct&);
