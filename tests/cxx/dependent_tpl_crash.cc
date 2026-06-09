@@ -49,6 +49,15 @@ void TplFn() {
   (void)sizeof(n);
 }
 
+struct DependentFnReturn {
+  template <typename T>
+  static typename T::template NestedTpl<T> GetNestedTpl() {
+    return {};
+  }
+
+  using ThisType = DependentFnReturn;
+};
+
 int main() {
   test<0>();
   Tpl<int> t;

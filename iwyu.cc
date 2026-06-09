@@ -3467,7 +3467,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (const auto* tpl_spec_type =
               dyn_cast<TemplateSpecializationType>(component)) {
         const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
-        if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
+        if (const auto* al_tpl_decl =
+                dyn_cast_or_null<TypeAliasTemplateDecl>(decl)) {
           InsertAllInto(
               GetAliasTemplateProvidedTypes(tpl_spec_type, al_tpl_decl),
               &retval);
