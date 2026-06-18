@@ -1851,6 +1851,7 @@
 { "std::operator\"\"ns(long double)", UseKind::Full, "<chrono>", kPublic },
 { "std::operator\"\"ns(unsigned long long)", UseKind::Full, "<chrono>", kPublic },
 { "std::operator\"\"s", UseKind::Full, "<string>", kPublic },
+{ "std::operator\"\"s()", UseKind::Full, "<chrono>", kPublic },
 { "std::operator\"\"s(long double)", UseKind::Full, "<chrono>", kPublic },
 { "std::operator\"\"s(unsigned long long)", UseKind::Full, "<chrono>", kPublic },
 { "std::operator\"\"sv", UseKind::Full, "<string_view>", kPublic },

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I .
+// IWYU_ARGS: -I . -Wno-user-defined-literals
 
 // Tests handling typedefs provided by more than one standard library header.
 // Because wspanstream is used in the context requiring complete type info, it

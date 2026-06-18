@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I .
+// IWYU_ARGS: -I . -Wno-user-defined-literals
 
 // Tests that symbols from std are by default attributed to their canonical
 // headers (<iosfwd> for std::fstream in a forward-declarable context). For this
