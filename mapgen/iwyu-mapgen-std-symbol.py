@@ -161,6 +161,10 @@ HANDWRITTEN_MAPPING = (
       'ostream'),
     ('std::print', 'print'),
     ('std::println', 'print'),
+# libstdc++ defines a literal operator for seconds as a numeric literal operator
+# template despite the <chrono> header synopsis. This may be standardized later.
+# See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85821.
+    ('std::operator""s()', 'chrono'),
 )
 
 def contains_unspec_alias(inp):

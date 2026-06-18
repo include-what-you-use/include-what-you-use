@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I .
+// IWYU_ARGS: -I . -Wno-user-defined-literals
 
 // Tests the internal IWYU standard library symbol mapping. In particular, tests
 // that the mapping works with types in the fwd-decl context.
@@ -84,6 +84,12 @@ void Fn() {
   std::basic_spanstream<char>* ss;
   // IWYU: std::basic_spanstream is...*<spanstream>
   (void)sizeof(*ss);
+
+  {
+    using namespace std::chrono_literals;
+    // IWYU: operator""s({{.*}}) is...*<chrono>
+    (void)10s;
+  }
 }
 
 /**** IWYU_SUMMARY
@@ -91,6 +97,7 @@ void Fn() {
 tests/cxx/std_symbol_mapping.cc should add these lines:
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <functional>
 #include <iosfwd>
@@ -104,6 +111,7 @@ tests/cxx/std_symbol_mapping.cc should remove these lines:
 The full include-list for tests/cxx/std_symbol_mapping.cc:
 #include <algorithm>  // for move
 #include <array>  // for array, get, operator==
+#include <chrono>  // for operator""s
 #include <cmath>  // for pow
 #include <functional>  // for function, swap
 #include <iosfwd>  // for basic_ostream (ptr only), char_traits (ptr only)

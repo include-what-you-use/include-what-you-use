@@ -86,4 +86,24 @@ using wspanstream = basic_spanstream<wchar_t>;
 template <typename T, typename = char_traits<T>>
 class basic_fstream;
 using fstream = basic_fstream<char>;
+
+using intmax_t = long long;
+
+template <intmax_t, intmax_t = 1>
+class ratio;
+
+namespace chrono {
+template <typename, typename = ratio<1>>
+class duration {};
+
+using seconds = duration<long long>;
+}  // namespace chrono
+
+inline namespace literals {
+inline namespace chrono_literals {
+// This approximately resembles how operator""s is defined in libstdc++.
+template <char...>
+chrono::seconds operator""s();
+}  // namespace chrono_literals
+}  // namespace literals
 }
