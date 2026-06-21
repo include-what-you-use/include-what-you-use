@@ -1204,9 +1204,9 @@ void ProcessForwardDeclare(OneUse* use,
   if (!use->is_full_use()) {
     if (preprocessor_info->ForwardDeclareIsInhibited(
             GetFileEntry(use->use_loc()), use->symbol_name())) {
-      VERRS(6) << "Changing fwd-decl use of " << use->symbol_name()
-               << " (" << use->PrintableUseLoc()
-               << ") to a full-info use: no_forward_declare pragma\n";
+      VERRS(6) << "Moving " << use->symbol_name()
+               << " from fwd-decl use to full use: no_forward_declare pragma"
+               << " (" << use->PrintableUseLoc() << ")\n";
       use->set_full_use();
     }
   }
@@ -1257,7 +1257,7 @@ void ProcessForwardDeclare(OneUse* use,
   }
 
   // (A7) If any arbitrary redeclaration is marked with IWYU pragma: export,
-  // reset use as a full use of this decl to keep its containing file included.
+  // reset use to this decl to keep its containing file included.
   if (!use->is_full_use()) {
     for (const Decl* redecl : use->decl()->redecls()) {
       const auto* decl = cast<NamedDecl>(redecl);
@@ -1266,6 +1266,10 @@ void ProcessForwardDeclare(OneUse* use,
         use->set_suggested_header(ConvertToQuotedInclude(
             GetFilePath(decl->getLocation()),
             MakeAbsolutePath(GetParentPath(GetFilePath(use->use_loc())))));
+        VERRS(6) << "Updating target decl for " << use->symbol_name()
+                 << " fwd-decl use: export pragma"
+                 << " (" << use->PrintableUseLoc() << "), using decl from"
+                 << " " << PrintableLoc(GetLocation(decl)) << "\n";
         break;
       }
     }
@@ -1287,11 +1291,18 @@ void ProcessForwardDeclare(OneUse* use,
         // don't keep another include that is not necessary.
         use->reset_decl(cast<NamedDecl>(decl));
         promote_to_full_use = true;
+        VERRS(6) << "Updating target decl for " << use->symbol_name()
+                 << " fwd-decl use: no_fwd_decls mode"
+                 << " (" << use->PrintableUseLoc() << "), using decl from"
+                 << " " << PrintableLoc(GetLocation(decl)) << "\n";
         break;
       }
     }
 
     if (promote_to_full_use) {
+      VERRS(6) << "Moving " << use->symbol_name()
+               << " from fwd-decl use to full use: no_fwd_decls mode"
+               << " (" << use->PrintableUseLoc() << ")\n";
       use->set_full_use();
     }
   }
@@ -1359,7 +1370,7 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
     // Just change us to a forward-declare use.  Later, we'll decide
     // which forward-declare is the best one to keep.
     VERRS(6) << "Moving " << use->symbol_name()
-             << " from full use to fwd-decl: definition found later in file"
+             << " from full use to fwd-decl use: definition found later in file"
              << " (" << use->PrintableUseLoc() << ")\n";
     use->set_forward_declare_use();
     return;
@@ -1514,6 +1525,9 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
               const NamedDecl* decl = use.decl();
               return decl && (ns_decl != decl) && IsInNamespace(decl, ns_decl);
             })) {
+      VERRS(6) << "Ignoring use of namespace " << use->symbol_name() << " ("
+               << use->PrintableUseLoc() << "):"
+               << " declaration in namespace already used\n";
       use->set_ignore_use();
       return;
     }
@@ -1618,6 +1632,9 @@ void CalculateIwyuForForwardDeclareUse(
     }
     if (IsBeforeInSameFile(dfn, use->use_loc())) {
       // TODO(bolshakov): this looks like a duplicate of A6 step. Deduplicate.
+      VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name() << " ("
+               << use->PrintableUseLoc() << "):"
+               << " dfn already present\n";
       use->set_ignore_use();
       return;
     }
@@ -1638,6 +1655,9 @@ void CalculateIwyuForForwardDeclareUse(
   if (!same_file_decl) {
     for (const NamedDecl* redecl : redecls) {
       if (ContainsKey(associated_includes, GetFileEntry(redecl))) {
+        VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name() << " ("
+                 << use->PrintableUseLoc() << "):"
+                 << " redecl present in associated header\n";
         use->set_ignore_use();
         return;
       }
@@ -1645,34 +1665,39 @@ void CalculateIwyuForForwardDeclareUse(
   }
 
   // (D1) Mark that the fwd-declare is satisfied by dfn in desired include.
-  const NamedDecl* providing_decl = nullptr;
   if (dfn_from_desired_includes) {
-    providing_decl = dfn_from_desired_includes;
-    VERRS(6) << "Noting fwd-decl use of " << use->symbol_name()
-             << " (" << use->PrintableUseLoc() << ") is satisfied by dfn in "
-             << PrintableLoc(GetLocation(providing_decl)) << "\n";
     // Mark that this use is another reason we want this header.
     CHECK_(!desired_hdr_with_dfn.empty());
+    use->reset_decl(dfn_from_desired_includes);
     use->set_suggested_header(desired_hdr_with_dfn);
+    VERRS(6) << "Updating target decl for " << use->symbol_name()
+             << " fwd-decl use: satisfied by desired file"
+             << " (" << use->PrintableUseLoc() << "), using decl from"
+             << " " << PrintableLoc(GetLocation(use->decl())) << "\n";
   } else if (same_file_decl) {
-    providing_decl = same_file_decl;
-    VERRS(6) << "Noting fwd-decl use of " << use->symbol_name()
-             << " (" << use->PrintableUseLoc() << ") is declared at "
-             << PrintableLoc(GetLocation(providing_decl)) << "\n";
-  }
-  if (providing_decl) {
-    // Change decl_ to point to this "better" redecl.
-    use->reset_decl(providing_decl);
+    use->reset_decl(same_file_decl);
+    VERRS(6) << "Updating target decl for " << use->symbol_name()
+             << " fwd-decl use: satisfied by same file"
+             << " (" << use->PrintableUseLoc() << "), using decl from"
+             << " " << PrintableLoc(GetLocation(use->decl())) << "\n";
   }
 
-  // Be sure to store as a TemplateClassDecl if we're a templated
-  // class.
+  // Be sure to store as a ClassTemplateDecl if we're a templated class.
   if (const ClassTemplateSpecializationDecl* spec_decl =
           DynCastFrom(use->decl())) {
     use->reset_decl(spec_decl->getSpecializedTemplate());
+    VERRS(6) << "Updating target decl for " << use->symbol_name()
+             << " fwd-decl use: primary template"
+             << " (" << use->PrintableUseLoc() << "), using decl from"
+             << " " << PrintableLoc(GetLocation(use->decl())) << "\n";
   } else if (const CXXRecordDecl* cxx_decl = DynCastFrom(use->decl())) {
-    if (cxx_decl->getDescribedClassTemplate())
+    if (cxx_decl->getDescribedClassTemplate()) {
       use->reset_decl(cxx_decl->getDescribedClassTemplate());
+      VERRS(6) << "Updating target decl for " << use->symbol_name()
+               << " fwd-decl use: described class template"
+               << " (" << use->PrintableUseLoc() << "), using decl from"
+               << " " << PrintableLoc(GetLocation(use->decl())) << "\n";
+    }
   }
 
   // (D2) Mark iwyu violation unless defined in a current #include.
