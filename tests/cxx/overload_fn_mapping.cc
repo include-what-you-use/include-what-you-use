@@ -122,6 +122,24 @@ void User() {
   TplFn(arr2);
 }
 
+// Do all template examples again inside an uninstantiated template.
+// TODO: note that all uses are reported, but IWYU doesn't know how to
+// distinguish between overloads in uninstantiated contexts, so we fuzzy-match
+// overload and definition filename.
+template <typename T>
+void UserTemplate(T v) {
+  // IWYU: TplFn(...*) is...*-i{{[0-9]}}.h
+  TplFn(v, v);
+  // IWYU: TplFn(...*) is...*-i{{[0-9]}}.h
+  TplFn(v, &v);
+  // IWYU: Tpl is...*-i1.h
+  // IWYU: TplFn(...*) is...*-i{{[0-9]}}.h
+  TplFn(Tpl<T>{});
+  T arr2[7];
+  // IWYU: TplFn(...*) is...*-i{{[0-9]}}.h
+  TplFn(arr2);
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/overload_fn_mapping.cc should add these lines:
