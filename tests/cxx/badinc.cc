@@ -172,6 +172,7 @@ Cc_OnlySpecializedStruct<int>* cc_onlyspecializedstruct_ptr;
 
 // Try a type that only needs a forward-declare because of the language linkage.
 extern "C" struct Cc_C_Struct;
+// IWYU: NULL is...*stddef.h
 struct Cc_C_Struct* cc_c_struct_ptr = NULL;
 
 // The types.
@@ -438,6 +439,7 @@ int H_Class::f(I2_Enum i2_enum) { return 1; }
 /*static*/ int H_Class::static_out_of_line(I2_Enum i2_enum) {
   // IWYU: I1_Class needs a declaration
   I1_Class* i1_class;
+  // IWYU: NULL is...*stddef.h
   i1_class = NULL;
   return 1;
 }
@@ -468,6 +470,7 @@ template<typename FOO>
 FOO H_TemplateClass<FOO>::static_out_of_line(I2_Enum i2_enum) {
   // IWYU: I1_Class needs a declaration
   I1_Class* i1_class;
+  // IWYU: NULL is...*stddef.h
   i1_class = NULL;
   return FOO();
 }
@@ -476,6 +479,7 @@ template<typename FOO>
 int H_TemplateClass<FOO>::H_TplNestedStruct::tplnested(I2_Enum i2_enum) {
   // IWYU: I1_Class needs a declaration
   I1_Class* i1_class;
+  // IWYU: NULL is...*stddef.h
   i1_class = NULL;
   return 1;
 }
@@ -484,6 +488,7 @@ template<typename FOO>
 FOO H_TemplateClass<FOO>::H_TplNestedStruct::static_tplnested(I2_Enum i2_enum) {
   // IWYU: I1_Class needs a declaration
   I1_Class* i1_class;
+  // IWYU: NULL is...*stddef.h
   i1_class = NULL;
   return FOO();
 }
@@ -693,6 +698,7 @@ I1_TemplateClass<I1_Enum> i1_templateclass(I11);
 I1_TemplateClass<int> i1_templateclass2(10);
 // IWYU: I1_Class needs a declaration
 // IWYU: I1_TemplateClass is...*badinc-i1.h
+// IWYU: NULL is...*stddef.h
 I1_TemplateClass<I1_Class*> i1_templateclass3(NULL);
 // We need full type info for i1_templateclass because we never
 // fwd-declare a class with default template parameters.
@@ -718,6 +724,7 @@ I1_TemplateClass<std::vector<I1_Class> >* i1_nested_templateclass_ptr;
 // IWYU: I1_TemplateClass is...*badinc-i1.h
 // IWYU: I1_Class needs a declaration
 // IWYU: std::vector is...*<vector>
+// IWYU: NULL is...*stddef.h
 I1_TemplateClass<std::vector<I1_Class>*> i1_nested_templateclass_ptr2(NULL);
 // IWYU: I1_TemplateSubclass is...*badinc-i1.h
 // IWYU: I1_Class needs a declaration
@@ -742,11 +749,13 @@ I1_TemplateClass<std::vector<I1_Enum> >* i1_nested_templateclass_enum_ptr;
 // IWYU: I1_TemplateClass is...*badinc-i1.h
 // IWYU: I1_Enum is...*badinc-i1.h
 // IWYU: std::vector is...*<vector>
+// IWYU: NULL is...*stddef.h
 I1_TemplateClass<std::vector<I1_Enum>*> i1_nested_templateclass_enum_ptr2(NULL);
 // Note: we have to avoid the most vexing parse, here!
 // IWYU: I1_TemplateClass is...*badinc-i1.h
 I1_TemplateClass<D1_I1_Typedef> i1_tplclass_with_typedef((D1_I1_Typedef()));
 // IWYU: I1_TemplateClass is...*badinc-i1.h
+// IWYU: NULL is...*stddef.h
 I1_TemplateClass<D1_I1_Typedef*> i1_templateclass_with_typedef_ptr(NULL);
 // IWYU: I1_TemplateClass is...*badinc-i1.h
 I1_TemplateClass<D1_Enum> i1_templateclass_d(D11);
@@ -876,6 +885,7 @@ float SimpleFunction(I3_ForwardDeclareClass* a, I3_ForwardDeclareStruct* b)
     throw(I3_ForwardDeclareClass*, I1_Class*) {
   return 1.0;
 }
+// IWYU: NULL is...*stddef.h
 float simple_function = SimpleFunction(NULL, NULL);
 
 // IWYU: I3_ForwardDeclareStruct needs a declaration
@@ -1169,6 +1179,7 @@ int main() {
   i1_template_method_only_class.e(local_i2_class_ptr);
   // IWYU: std::vector is...*<vector>
   // IWYU: I2_Class needs a declaration
+  // IWYU: NULL is...*stddef.h
   std::vector<I2_Class>* i2_class_vector = NULL;
   // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
@@ -1429,6 +1440,7 @@ int main() {
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
+  // IWYU: NULL is...*stddef.h
   I1_const_ptr<I1_Class> local_i1_const_ptr(NULL);
   // Needs I1_const_ptr because it calls its operator*().
   // IWYU: I1_const_ptr is...*badinc-i1.h
@@ -1453,6 +1465,7 @@ int main() {
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
+  // IWYU: NULL is...*stddef.h
   I1_const_ptr<I1_Class> local_i1_const_ptr2(NULL);
   // IWYU: I1_const_ptr is...*badinc-i1.h
   local_i1_const_ptr2 = local_i1_const_ptr;
@@ -1461,9 +1474,11 @@ int main() {
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I1_const_ptr is...*badinc-i1.h
+  // IWYU: NULL is...*stddef.h
   (void)I1_const_ptr<I1_Class>(NULL);
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_const_ptr is...*badinc-i1.h
+  // IWYU: NULL is...*stddef.h
   I1_const_ptr<I1_Class*> local_i1_const_ptrptr(NULL);
   // TODO(csilvers): IWYU: I1_Class needs a declaration
   // IWYU: I1_const_ptr is...*badinc-i1.h
@@ -1596,6 +1611,7 @@ int main() {
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   // IWYU: I1_Enum is...*badinc-i1.h
   // IWYU: I2_Class needs a declaration
+  // IWYU: NULL is...*stddef.h
   I1_TemplateClass<I1_Enum, I2_Class>* local_i1_template_class_for_inl = NULL;
   // IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
   // IWYU: I1_TemplateClass is...*badinc-i1.h
@@ -1700,9 +1716,11 @@ int main() {
 
   // Also test while and if initializers.
   // IWYU: I1_Class needs a declaration
+  // IWYU: NULL is...*stddef.h
   while (I1_Class* i = NULL) {
   }
   // IWYU: I1_Class needs a declaration
+  // IWYU: NULL is...*stddef.h
   if (I1_Class* i = NULL) i = NULL;
 
   // Test some macros, including one we shouldn't mark as in-use.
@@ -1809,7 +1827,6 @@ int main() {
 
 tests/cxx/badinc.cc should add these lines:
 #include <ctype.h>
-#include <stddef.h>
 #include <list>
 #include "tests/cxx/badinc-i1.h"
 class D2_Class;
@@ -1838,7 +1855,6 @@ The full include-list for tests/cxx/badinc.cc:
 #include "tests/cxx/badinc-inl.h"
 #include <ctype.h>  // for isascii
 #include <setjmp.h>
-#include <stddef.h>  // for offsetof
 #include <algorithm>  // for find
 #include <fstream>  // for basic_fstream, fstream
 #include <list>  // for list

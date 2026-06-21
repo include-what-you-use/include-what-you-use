@@ -124,12 +124,14 @@ class OneUse {
 
   string PrintableUseLoc() const;
   const vector<string>& public_headers();  // not const because we fill lazily
+  const vector<string>& canonical_headers();
   bool PublicHeadersContain(const string& elt);
   bool NeedsSuggestedHeader();
   int UseLinenum() const;
 
  private:
   void SetPublicHeaders();         // sets based on decl_filepath_
+  void SetCanonicalHeaders();
 
   string symbol_name_;             // the symbol being used
   string short_symbol_name_;       // 'short' form of the symbol being used
@@ -142,6 +144,7 @@ class OneUse {
   UseFlags use_flags_;             // flags describing features of the use
   string comment_;                 // If not empty, append to clang warning msg
   vector<string> public_headers_;  // header to #include if dfn hdr is private
+  vector<string> canonical_headers_;  // preferred public headers
   string suggested_header_;        // header that allows us to satisfy use
   bool ignore_use_;                // set to true if use is discarded
   bool is_iwyu_violation_;         // set to false when we figure out it's not
