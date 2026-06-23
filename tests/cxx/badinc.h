@@ -11,8 +11,8 @@
 #ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_H_
 #define INCLUDE_WHAT_YOU_USE_TESTS_CXX_BADINC_H_
 
-#include <ctype.h>  // used only in badinc.cc
-#include <errno.h>  // used both here and in badinc.cc
+#include <cctype>  // used only in badinc.cc
+#include <cerrno>  // used both here and in badinc.cc
 #include <math.h>
 #include <queue>    // used only in this .h file, not in any other file.
 #include <string>
@@ -158,7 +158,7 @@ class H_Class {
   void UsedInBadincH() { DefinedInBadincCc(); }
   H_NestedStruct h_nested_struct;
   ~H_Class() {
-    // IWYU: printf(const char *, ...) is...*<stdio.h>
+    // IWYU: printf(const char *, ...) is...*<cstdio>
     printf("%d/%d/%d/%d/%d\n", b(), c(), d(), e(), ee_);
   }
   // IWYU: I2_Enum is...*badinc-i2.h
@@ -331,7 +331,7 @@ template<typename A> int H_TemplateFunction(A a) {
   typedef I2_Class i2_type;
   // IWYU: I2_Class needs a declaration
   I2_Class* i2_class;
-  // IWYU: NULL is...*<stdio.h>
+  // IWYU: NULL is...*<cstdio>
   i2_class = NULL;
   return a == A() ? 1 : 0;
 }
@@ -378,22 +378,22 @@ H_TemplateTemplateClass<H_TemplateClass> h_i2_templatetemlpate_class;
 /**** IWYU_SUMMARY
 
 tests/cxx/badinc.h should add these lines:
-#include <stdio.h>
+#include <cstdio>
 #include <set>
 #include <vector>
 #include "tests/cxx/badinc-i2-inl.h"
 #include "tests/cxx/badinc-i2.h"
 
 tests/cxx/badinc.h should remove these lines:
-- #include <ctype.h>  // lines XX-XX
 - #include <math.h>  // lines XX-XX
+- #include <cctype>  // lines XX-XX
 - #include "tests/cxx/badinc-d2.h"  // lines XX-XX
 - class H_ForwardDeclareClass;  // lines XX-XX
 - template <typename T> class I2_TypedefOnly_Class;  // lines XX-XX
 
 The full include-list for tests/cxx/badinc.h:
-#include <errno.h>  // for errno
-#include <stdio.h>  // for NULL, printf
+#include <cerrno>  // for errno
+#include <cstdio>  // for NULL, printf
 #include <queue>  // for queue
 #include <set>  // for set
 #include <string>  // for basic_string, string

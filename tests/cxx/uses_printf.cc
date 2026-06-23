@@ -12,19 +12,19 @@
 #include "tests/cxx/uses_printf-d1.h"
 
 void hello() {
-  // IWYU: printf(const char *, ...) is...*<stdio.h>
+  // IWYU: printf(const char *, ...) is...*<cstdio>
   printf("Hello, world!\n");
 }
 
 /**** IWYU_SUMMARY
 
 tests/cxx/uses_printf.cc should add these lines:
-#include <stdio.h>
+#include <cstdio>
 
 tests/cxx/uses_printf.cc should remove these lines:
 - #include "tests/cxx/uses_printf-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/uses_printf.cc:
-#include <stdio.h>  // for printf
+#include <cstdio>  // for printf
 
 ***** IWYU_SUMMARY */

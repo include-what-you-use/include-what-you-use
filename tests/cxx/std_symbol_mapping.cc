@@ -90,6 +90,12 @@ void Fn() {
     // IWYU: operator""s({{.*}}) is...*<chrono>
     (void)10s;
   }
+
+  // Test that using int8_t from the global namespace triggers <cstdint>
+  // suggestion, not <cinttypes> suggestion due to stdint.h -> inttypes.h ->
+  // cinttypes mapping.
+  // IWYU: int8_t is...*<cstdint>
+  int8_t int8_t_var;
 }
 
 /**** IWYU_SUMMARY
@@ -99,6 +105,7 @@ tests/cxx/std_symbol_mapping.cc should add these lines:
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <iosfwd>
 #include <spanstream>
@@ -113,6 +120,7 @@ The full include-list for tests/cxx/std_symbol_mapping.cc:
 #include <array>  // for array, get, operator==
 #include <chrono>  // for operator""s
 #include <cmath>  // for pow
+#include <cstdint>  // for int8_t
 #include <functional>  // for function, swap
 #include <iosfwd>  // for basic_ostream (ptr only), char_traits (ptr only)
 #include <spanstream>  // for basic_spanstream

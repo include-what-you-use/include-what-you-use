@@ -30,7 +30,7 @@
 // presence of a PCH.
 #include "tests/cxx/public/pch_in_code.h"
 #include <stdlib.h>  // unused
-#include <stdint.h>  // for int8_t
+#include <cstdint>   // for int8_t
 #include "tests/cxx/indirect.h"
 
 IndirectClass ic;
@@ -47,6 +47,6 @@ tests/cxx/pch_in_code.cc should remove these lines:
 The full include-list for tests/cxx/pch_in_code.cc:
 #include "tests/cxx/pch.h"
 #include "tests/cxx/public/pch_in_code.h"
-#include <stdint.h>  // for int8_t
+#include <cstdint>  // for int8_t
 
 ***** IWYU_SUMMARY */
