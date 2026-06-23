@@ -14,7 +14,6 @@
 #define INCLUDE_WHAT_YOU_USE_IWYU_STRING_UTIL_H_
 
 #include <cctype>
-#include <cstddef>
 #include <ctime>
 #include <string>
 #include <utility>

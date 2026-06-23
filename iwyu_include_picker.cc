@@ -27,6 +27,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "iwyu_ast_util.h"
+#include "iwyu_globals.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
 #include "iwyu_port.h"
@@ -1667,22 +1668,6 @@ void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
   using clang::tooling::stdlib::Lang;
   using clang::tooling::stdlib::Symbol;
 
-  if (cstdlib == CStdLib::Glibc) {
-    AddSymbolMappings(libc_symbol_map, IWYU_ARRAYSIZE(libc_symbol_map));
-    AddIncludeMappings(libc_include_map, IWYU_ARRAYSIZE(libc_include_map));
-  } else if (cstdlib == CStdLib::ClangSymbols) {
-    // Get canonical C standard library mappings from clang tooling
-    for (const Symbol& sym : Symbol::all(Lang::C)) {
-      string name = sym.name().str();
-
-      // the canonical header is returned first
-      for (const Header& header : sym.headers()) {
-        AddSymbolMapping(name, UseKind::Full,
-                         MappedInclude(header.name().str()), kPublic);
-      }
-    }
-  }
-
   if (cxxstdlib == CXXStdLib::Libstdcxx) {
     AddIncludeMappings(libstdcpp_include_map,
                        IWYU_ARRAYSIZE(libstdcpp_include_map));
@@ -1704,8 +1689,10 @@ void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
   if (cxxstdlib != CXXStdLib::None) {
     // Map C headers to associated C++ headers. The standard library
     // mappings shouldn't be mentioning the C headers.
-    AddIncludeMappings(stdlib_c_include_map,
-                       IWYU_ARRAYSIZE(stdlib_c_include_map));
+    if (!GlobalFlags().use_c_headers) {
+      AddIncludeMappings(stdlib_c_include_map,
+                         IWYU_ARRAYSIZE(stdlib_c_include_map));
+    }
     // C++ include mappings to allow different public headers that
     // generally include each other.
     AddIncludeMappings(stdlib_cpp_include_map,
@@ -1719,6 +1706,32 @@ void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
 
     AddPublicIncludes(stdlib_cpp_public_headers,
                       IWYU_ARRAYSIZE(stdlib_cpp_public_headers));
+  }
+
+  // C standard library include mapping should be added after
+  // stdlib_c_include_map so that IWYU prefers mapping <stdint.h> to <cstdint>
+  // rather than to <inttypes.h>/<cinttypes>.
+  if (cstdlib == CStdLib::Glibc) {
+    AddSymbolMappings(libc_symbol_map, IWYU_ARRAYSIZE(libc_symbol_map));
+    AddIncludeMappings(libc_include_map, IWYU_ARRAYSIZE(libc_include_map));
+  } else if (cstdlib == CStdLib::ClangSymbols) {
+    // Get canonical C standard library mappings from clang tooling
+    for (const Symbol& sym : Symbol::all(Lang::C)) {
+      string name = sym.name().str();
+
+      // the canonical header is returned first
+      for (const Header& header : sym.headers()) {
+        AddSymbolMapping(name, UseKind::Full,
+                         MappedInclude(header.name().str()), kPublic);
+      }
+    }
+  }
+
+  // HACK: Mark C standard library headers as private in C++ mode so that
+  // <cname> are suggested instead of <name.h>.
+  if (cxxstdlib != CXXStdLib::None && !GlobalFlags().use_c_headers) {
+    for (const IncludeMapEntry& entry : stdlib_c_include_map)
+      include_visibility_map_.at(entry.map_from) = IncludeVisibility::kPrivate;
   }
 }
 
