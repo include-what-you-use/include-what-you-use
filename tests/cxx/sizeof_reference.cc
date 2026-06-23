@@ -16,7 +16,7 @@
 //   When applied to a reference or a reference type,
 //   the result is the size of the referenced type.
 
-#include <stddef.h>
+#include <cstddef>
 #include "tests/cxx/direct.h"
 
 template <typename T> struct IndirectTemplateStruct {
@@ -129,7 +129,7 @@ tests/cxx/sizeof_reference.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/sizeof_reference.cc:
-#include <stddef.h>  // for size_t
+#include <cstddef>  // for size_t
 #include "tests/cxx/indirect.h"  // for IndirectClass
 
 ***** IWYU_SUMMARY */

@@ -18,6 +18,7 @@
 #include "subdir/indirect_subdir.h" // User header
 #include "quoted_includes_first.h"  // Associated header
 
+// IWYU: EACCES is...*<cerrno>
 static int global_err = EACCES;
 std::exception global_exception;
 IndirectSubDirClass global_var;
@@ -27,13 +28,13 @@ IndirectSubDirClass global_var;
 tests/cxx/quoted_includes_first.cc should add these lines:
 
 tests/cxx/quoted_includes_first.cc should remove these lines:
+- #include <errno.h>  // lines XX-XX
 - #include <list>  // lines XX-XX
 
 The full include-list for tests/cxx/quoted_includes_first.cc:
 #include "tests/cxx/pch.h"
 #include "quoted_includes_first.h"
 #include "subdir/indirect_subdir.h"  // for IndirectSubDirClass
-#include <errno.h>  // for EACCES
 #include <exception>  // for exception
 
 ***** IWYU_SUMMARY */
