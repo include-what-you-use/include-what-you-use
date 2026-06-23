@@ -48,7 +48,7 @@ jobs:
           echo "LLVM_PREFIX=${LLVM_PREFIX}" | tee -a $GITHUB_ENV
 
       - name: Check out branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Work around broken packaging
         run: |
