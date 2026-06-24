@@ -48,7 +48,7 @@ int main() {
     // IWYU: Thrown is...*catch-thrown.h
     throw Thrown();
   } catch (...) {
-    // IWYU: puts(const char *) is...*stdio.h
+    // IWYU: puts(const char *) is...*cstdio
     puts("Unknown exception");
   }
 
@@ -66,7 +66,7 @@ int main() {
 /**** IWYU_SUMMARY
 
 tests/cxx/catch.cc should add these lines:
-#include <stdio.h>
+#include <cstdio>
 #include "tests/cxx/catch-byptr.h"
 #include "tests/cxx/catch-byref.h"
 #include "tests/cxx/catch-byvalue.h"
@@ -80,7 +80,7 @@ tests/cxx/catch.cc should remove these lines:
 - #include "tests/cxx/catch-exceptions.h"  // lines XX-XX
 
 The full include-list for tests/cxx/catch.cc:
-#include <stdio.h>  // for puts
+#include <cstdio>  // for puts
 #include "tests/cxx/catch-byptr.h"  // for CatchByPtr
 #include "tests/cxx/catch-byref.h"  // for CatchByRef
 #include "tests/cxx/catch-byvalue.h"  // for CatchByValue

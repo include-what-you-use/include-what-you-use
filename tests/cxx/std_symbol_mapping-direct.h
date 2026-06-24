@@ -107,3 +107,5 @@ chrono::seconds operator""s();
 }  // namespace chrono_literals
 }  // namespace literals
 }
+
+using int8_t = signed char;

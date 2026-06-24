@@ -112,6 +112,7 @@ struct CommandlineFlags {
   set<string> dbg_flags; // Debug flags.
   set<string> exp_flags;       // Experimental flags.
   RegexDialect regex_dialect;  // Dialect for regular expression processing.
+  bool use_c_headers = false;
 };
 
 const CommandlineFlags& GlobalFlags();

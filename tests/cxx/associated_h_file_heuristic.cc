@@ -16,17 +16,20 @@
 #include <stdio.h>
 #include <time.h>
 
+// IWYU: FILE is...*<cstdio>
 FILE* f = 0;
 
 /**** IWYU_SUMMARY
 
 tests/cxx/associated_h_file_heuristic.cc should add these lines:
+#include <cstdio>
 
 tests/cxx/associated_h_file_heuristic.cc should remove these lines:
+- #include <stdio.h>  // lines XX-XX
 - #include <time.h>  // lines XX-XX
 
 The full include-list for tests/cxx/associated_h_file_heuristic.cc:
 #include "tests/cxx/internal/associated_h_file_heuristic.h"
-#include <stdio.h>  // for FILE
+#include <cstdio>  // for FILE
 
 ***** IWYU_SUMMARY */

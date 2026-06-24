@@ -13,6 +13,7 @@
 #include "subdir/indirect_subdir.h" // User header
 
 inline int GetBaseError() {
+  // IWYU: ENOENT is...*<cerrno>
   return ENOENT;
 }
 
@@ -23,13 +24,15 @@ inline IndirectSubDirClass header_defined_var;
 /**** IWYU_SUMMARY
 
 tests/cxx/quoted_includes_first.h should add these lines:
+#include <cerrno>
 
 tests/cxx/quoted_includes_first.h should remove these lines:
+- #include <errno.h>  // lines XX-XX
 - #include <list>  // lines XX-XX
 
 The full include-list for tests/cxx/quoted_includes_first.h:
 #include "subdir/indirect_subdir.h"  // for IndirectSubDirClass
-#include <errno.h>  // for ENOENT
+#include <cerrno>  // for ENOENT
 #include <exception>  // for exception
 
 ***** IWYU_SUMMARY */

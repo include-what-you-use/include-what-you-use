@@ -11,9 +11,9 @@
 // header declaring the public API for the current source file, e.g. "foo.h" for
 // "foo.cc". Make sure it doesn't consider system headers associated.
 //
-// If it fails, this test will print unwanted IWYU diagnostics from stdint.h.
+// If it fails, this test will print unwanted IWYU diagnostics from cstdint.
 
-#include <stdint.h>
+#include <cstdint>
 
 int foo() {
   return (int32_t)100;

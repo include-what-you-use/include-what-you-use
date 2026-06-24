@@ -14,7 +14,7 @@
 
 #include "check_also-i1.h"
 
-// IWYU: NULL is...*<stddef.h>
+// IWYU: NULL is...*<cstddef>
 int* unused = NULL;   // NULL comes from check_also-i1.h
 
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_CHECK_ALSO_D1_H_
@@ -22,12 +22,12 @@ int* unused = NULL;   // NULL comes from check_also-i1.h
 /**** IWYU_SUMMARY
 
 tests/cxx/check_also-d1.h should add these lines:
-#include <stddef.h>
+#include <cstddef>
 
 tests/cxx/check_also-d1.h should remove these lines:
 - #include "check_also-i1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/check_also-d1.h:
-#include <stddef.h>  // for NULL
+#include <cstddef>  // for NULL
 
 ***** IWYU_SUMMARY */

@@ -132,6 +132,8 @@ static void PrintHelp(const char* extra_msg) {
          "   --experimental=flag[,flag...]: enable experimental features\n"
          "          clang_mappings: use Clang canonical standard library\n"
          "                          mappings instead of internal mappings\n"
+         "   --use_c_headers: suggest C standard library headers in C++ mode\n"
+         "        instead of their C++ counterparts\n"
          "\n"
          "In addition to IWYU-specific options you can specify the following\n"
          "options without -Xiwyu prefix:\n"
@@ -250,6 +252,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
     {"regex", required_argument, nullptr, 'r'},
     {"experimental", required_argument, nullptr, 'p'},
     {"export_mappings", required_argument, nullptr, 'E'},
+    {"use_c_headers", no_argument, nullptr, 'U'},
     {nullptr, 0, nullptr, 0}
   };
   static const char shortopts[] = "v:c:m:d:nr";
@@ -352,6 +355,7 @@ int CommandlineFlags::ParseArgv(int argc, char** argv) {
         exit(EXIT_SUCCESS);
         break;
       }
+      case 'U': use_c_headers = true; break;
       case -1:
         return optind;  // means 'no more input'
       default:
