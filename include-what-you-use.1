@@ -237,12 +237,12 @@ How the header is
 in a source file.
 Quotation marks need to be escaped.
 .TP
-.IB "symbol\fR := " \(dq symbol-name "\(dq, \(dq" visibility \(dq
+.IB "symbol\fR := " \(dq symbol-name "\(dq, \(dq" use-kind \(dq
 Describes a symbol, for example a type, function or macro. The
-.I visibility
-is ignored, by convention
-.B private
-is used.
+.I use-kind
+is either \fBfull\fR (mapping applies only for full uses) or \fBfwd-decl\fR
+(mapping applies only for forward-declare uses). For backward compatibility
+reasons, \fBprivate\fR is accepted as an alias for \fBfull\fR.
 .PP
 Lines starting with
 .B #
