@@ -1,0 +1,42 @@
+[
+  { "symbol": ["Class1", "full", "\"tests/cxx/canonical_replaces_public-i2.h\"", "public"] },
+  { "symbol": ["Class1", "full", "\"tests/cxx/canonical_replaces_public-d1.h\"", "public"] },
+
+  { "symbol": ["Class2", "full", "\"tests/cxx/canonical_replaces_public-i3.h\"", "public"] },
+  { "include": ["\"tests/cxx/canonical_replaces_public-i3.h\"", "public", "\"tests/cxx/canonical_replaces_public-d2.h\"", "public"] },
+
+  { "symbol": ["Class3", "full", "\"tests/cxx/canonical_replaces_public-i4.h\"", "public"] },
+  { "symbol": ["Class4", "full", "\"tests/cxx/canonical_replaces_public-i5.h\"", "public"] },
+  { "symbol": ["Class3", "full", "\"tests/cxx/canonical_replaces_public-i6.h\"", "public"] },
+  { "symbol": ["Class4", "full", "\"tests/cxx/canonical_replaces_public-i6.h\"", "public"] },
+
+  { "symbol": ["Class5", "full", "\"tests/cxx/canonical_replaces_public-i7.h\"", "public"] },
+  { "symbol": ["Class5", "full", "\"tests/cxx/canonical_replaces_public-d3.h\"", "public"] },
+  { "symbol": ["Class6", "full", "\"tests/cxx/canonical_replaces_public-i8.h\"", "public"] },
+  { "include": ["\"tests/cxx/canonical_replaces_public-i8.h\"", "public", "\"tests/cxx/canonical_replaces_public-d3.h\"", "public"] },
+
+  { "symbol": ["Class7", "full", "\"tests/cxx/canonical_replaces_public-i9.h\"", "public"] },
+  { "symbol": ["Class7", "full", "\"tests/cxx/canonical_replaces_public-i10.h\"", "public"] },
+  { "symbol": ["Class8", "full", "\"tests/cxx/canonical_replaces_public-i10.h\"", "public"] },
+  # One more public header for Class8 to avoid the "only candidate" logic.
+  { "symbol": ["Class8", "full", "\"tests/cxx/canonical_replaces_public-i11.h\"", "public"] },
+
+  { "symbol": ["Class9", "full", "\"tests/cxx/canonical_replaces_public-i12.h\"", "public"] },
+  { "symbol": ["Class10", "full", "\"tests/cxx/canonical_replaces_public-i12.h\"", "public"] },
+  { "symbol": ["Class9", "full", "\"tests/cxx/canonical_replaces_public-i13.h\"", "public"] },
+  { "symbol": ["Class10", "full", "\"tests/cxx/canonical_replaces_public-i13.h\"", "public"] },
+  { "symbol": ["Class11", "full", "\"tests/cxx/canonical_replaces_public-i13.h\"", "public"] },
+  # One more public header for Class11 to avoid the "only candidate" logic.
+  { "symbol": ["Class11", "full", "\"tests/cxx/canonical_replaces_public-i14.h\"", "public"] },
+
+  { "symbol": ["Class12", "full", "\"tests/cxx/canonical_replaces_public-i15.h\"", "public"] },
+  { "symbol": ["Class13", "full", "\"tests/cxx/canonical_replaces_public-d4.h\"", "public"] },
+  { "symbol": ["Class13", "full", "\"tests/cxx/canonical_replaces_public-i15.h\"", "public"] },
+
+  { "symbol": ["Class14", "fwd-decl", "\"tests/cxx/canonical_replaces_public-i16.h\"", "public"] },
+  { "include": ["\"tests/cxx/canonical_replaces_public-i16.h\"", "public", "\"tests/cxx/canonical_replaces_public-d5.h\"", "public"] },
+
+  { "symbol": ["Class15", "fwd-decl", "\"tests/cxx/canonical_replaces_public-i17.h\"", "public"] },
+  { "symbol": ["Class16", "fwd-decl", "\"tests/cxx/canonical_replaces_public-d6.h\"", "public"] },
+  { "symbol": ["Class16", "fwd-decl", "\"tests/cxx/canonical_replaces_public-i17.h\"", "public"] },
+]
