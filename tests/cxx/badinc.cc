@@ -137,6 +137,7 @@ using namespace i1_ns2;
 using i1_ns3::i1_int_global3;
 namespace cc_ns_alias = i1_ns4;
 using i1_ns::I1_NamespaceStruct;
+// IWYU: i1_ns::I1_NamespaceTemplateFn is...*tests/cxx/badinc-i1.h
 using i1_ns::I1_NamespaceTemplateFn;
 // TODO(csilvers): mark this using declaration as redundant and remove it?
 // IWYU: i1_ns::I1_UnusedNamespaceStruct needs a declaration
@@ -347,7 +348,7 @@ template<class T,int> class Cc_TemplateSubclass : public H_TemplateTypedef { };
 // Let's test that we detect overloaded functions correctly when all
 // overloads are in the same file, and then when they're in different files.
 template<typename T> void CallOverloadedFunctionSameFile(T t) {
-  // IWYU: I1_OverloadedFunction is...*badinc-i1.h
+  // IWYU: I1_OverloadedFunction(const :0 &) is...*badinc-i1.h
   I1_OverloadedFunction(t);
 }
 
@@ -361,7 +362,7 @@ template<typename T> void CallOverloadWithUsingShadowDecl(T t) {
   // This is only defined in one place, but because we get to it via
   // a using expression, it generates a UsingShadowExpr.  Make sure we
   // "see through" that properly.
-  // IWYU: i1_ns::I1_NamespaceTemplateFn is...*badinc-i1.h
+  // IWYU: i1_ns::I1_NamespaceTemplateFn(:0) is...*badinc-i1.h
   I1_NamespaceTemplateFn(t);
 }
 
