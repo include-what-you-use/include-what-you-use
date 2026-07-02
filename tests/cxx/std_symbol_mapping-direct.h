@@ -106,6 +106,9 @@ template <char...>
 chrono::seconds operator""s();
 }  // namespace chrono_literals
 }  // namespace literals
+
+template <typename>
+class initializer_list {};
 }
 
 using int8_t = signed char;
