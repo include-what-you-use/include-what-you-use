@@ -96,6 +96,11 @@ void Fn() {
   // cinttypes mapping.
   // IWYU: int8_t is...*<cstdint>
   int8_t int8_t_var;
+
+  // It is guaranteed that <algorithm> provides what <initializer_list> should
+  // provide.
+  // IWYU: std::initializer_list is...*<algorithm>
+  std::initializer_list<int> il{};
 }
 
 /**** IWYU_SUMMARY
@@ -116,7 +121,7 @@ tests/cxx/std_symbol_mapping.cc should remove these lines:
 - #include "tests/cxx/std_symbol_mapping-direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/std_symbol_mapping.cc:
-#include <algorithm>  // for move
+#include <algorithm>  // for initializer_list, move
 #include <array>  // for array, get, operator==
 #include <chrono>  // for operator""s
 #include <cmath>  // for pow
