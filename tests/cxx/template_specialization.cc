@@ -13,6 +13,7 @@
 // it to the right location.
 
 #include "tests/cxx/template_specialization-d1.h"
+#include "tests/cxx/template_specialization-d2.h"
 #include "tests/cxx/direct.h"
 
 template<typename T> class Foo;
@@ -48,6 +49,17 @@ template<>
 // IWYU: IndirectClass is...*indirect.h
 struct Specialized<int> : IndirectClass {};
 
+// When a specialization requires a forward-declaration of the primary template,
+// a fwd-decl in the current file should be preferred to one in the
+// otherwise-unused include -d2.h.
+// The type alias is needed to trigger a full-use report because there is no
+// forward-declaration in the alias-defining file. That full use is then
+// recategorized to fwd-decl use because the defn is actually after the alias.
+// IWYU: FwdDeclaredTpl needs a declaration
+// IWYU: FwdDeclaredTpl<1> needs a declaration
+using FwdDeclaredTplSpecAlias = FwdDeclaredTpl<1>;
+// IWYU: FwdDeclaredTpl needs a declaration
+template <> class FwdDeclaredTpl<1> {};
 
 /**** IWYU_SUMMARY
 
@@ -55,16 +67,19 @@ tests/cxx/template_specialization.cc should add these lines:
 #include "tests/cxx/indirect.h"
 #include "tests/cxx/template_specialization-i1.h"
 #include "tests/cxx/template_specialization-i2.h"
+template <int> class FwdDeclaredTpl;
 
 tests/cxx/template_specialization.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 - #include "tests/cxx/template_specialization-d1.h"  // lines XX-XX
+- #include "tests/cxx/template_specialization-d2.h"  // lines XX-XX
 - template <typename T> class Foo;  // lines XX-XX
 
 The full include-list for tests/cxx/template_specialization.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/template_specialization-i1.h"  // for Foo
 #include "tests/cxx/template_specialization-i2.h"  // for Foo
+template <int> class FwdDeclaredTpl;
 template <typename T> struct Specialized;  // lines XX-XX+1
 
 ***** IWYU_SUMMARY */
