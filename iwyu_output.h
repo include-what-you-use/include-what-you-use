@@ -196,7 +196,8 @@ class OneIncludeOrForwardDeclareLine {
   }
 
   bool matches(const clang::NamedDecl* decl) const {
-    return !IsIncludeLine() && (fwd_decl_ == decl);
+    return !IsIncludeLine() &&
+           (fwd_decl_->getCanonicalDecl() == decl->getCanonicalDecl());
   }
 
   void set_present() { is_present_ = true; }
