@@ -4035,6 +4035,10 @@ class InstantiatedTemplateVisitor
                           const Expr* calling_expr) {
     if (const Type* resugared_type = ResugarType(parent_type))
       parent_type = resugared_type;
+    if (callee) {
+      if (FunctionDecl* defn = callee->getDefinition())
+        callee = defn;
+    }
     if (!Base::HandleFunctionCall(callee, parent_type, calling_expr))
       return false;
     return TraverseFunctionIfInstantiatedTpl(callee, parent_type, calling_expr);

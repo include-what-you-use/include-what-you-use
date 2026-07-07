@@ -98,6 +98,7 @@ using clang::EnumDecl;
 using clang::EnumType;
 using clang::ExplicitCastExpr;
 using clang::ExplicitInstantiationDecl;
+using clang::ExplicitInstantiationInfo;
 using clang::Expr;
 using clang::ExprResult;
 using clang::ExprValueKind;
@@ -1324,9 +1325,14 @@ bool IsExplicitInstantiationDefinitionAsWritten(
     const ClassTemplateSpecializationDecl* decl) {
   // When swithing instantiation declaration to definition, clang preserves
   // the 'extern' keyword location info.
-  return decl->getSpecializationKind() ==
-             clang::TSK_ExplicitInstantiationDefinition &&
-         decl->getExternKeywordLoc().isInvalid();
+  if (decl->getSpecializationKind() ==
+      clang::TSK_ExplicitInstantiationDefinition) {
+    if (const ExplicitInstantiationInfo* info =
+            decl->getExplicitInstantiationInfo()) {
+      return info->ExternKeywordLoc.isInvalid();
+    }
+  }
+  return false;
 }
 
 bool IsInInlineNamespace(const Decl* decl) {
