@@ -1331,6 +1331,11 @@ const IncludeMapEntry libcxx_include_map[] = {
     {"<__fwd/set.h>", kPrivate, "<set>", kPublic},
 };
 
+// The compiler-provided C headers have some private/public factoring.
+const IncludeMapEntry clang_builtin_include_map[] = {
+#include "clang_builtin_include_map.inc"  // IWYU pragma: keep
+};
+
 // Returns true if str is a valid quoted filepath pattern (i.e. either
 // a quoted filepath or "@" followed by a regex for matching a quoted
 // filepath).
@@ -1631,6 +1636,7 @@ void ExportInternalMappings(const string& dirpath) {
   WRITE_MAPPINGS_ARRAY("include", stdlib_cpp_include_map);
   WRITE_MAPPINGS_ARRAY("include", libstdcpp_include_map);
   WRITE_MAPPINGS_ARRAY("include", libcxx_include_map);
+  WRITE_MAPPINGS_ARRAY("include", clang_builtin_include_map);
 
   WRITE_MAPPINGS_ARRAY("symbol", libc_symbol_map);
   WRITE_MAPPINGS_ARRAY("symbol", stdlib_cxx_symbol_map);
@@ -1726,6 +1732,11 @@ void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
       }
     }
   }
+
+  // Always add the clang builtin header mappings; they are always used by IWYU,
+  // via Clang.
+  AddIncludeMappings(clang_builtin_include_map,
+                     IWYU_ARRAYSIZE(clang_builtin_include_map));
 
   // HACK: Mark C standard library headers as private in C++ mode so that
   // <cname> are suggested instead of <name.h>.
