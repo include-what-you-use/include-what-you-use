@@ -57,7 +57,6 @@ struct Specialized<int> : IndirectClass {};
 // forward-declaration in the alias-defining file. That full use is then
 // recategorized to fwd-decl use because the defn is actually after the alias.
 // IWYU: FwdDeclaredTpl needs a declaration
-// IWYU: FwdDeclaredTpl<1> needs a declaration
 using FwdDeclaredTplSpecAlias = FwdDeclaredTpl<1>;
 // IWYU: FwdDeclaredTpl needs a declaration
 template <> class FwdDeclaredTpl<1> {};

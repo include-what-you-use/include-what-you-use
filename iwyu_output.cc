@@ -347,6 +347,8 @@ void OneUse::reset_decl(const NamedDecl* decl) {
   decl_ = decl;
   decl_file_ = GetFileEntry(decl);
   decl_filepath_ = GetFilePath(decl);
+  symbol_name_ = internal::GetQualifiedNameAsString(decl);
+  short_symbol_name_ = internal::GetShortNameAsString(decl);
 }
 
 void OneUse::set_full_use() {
