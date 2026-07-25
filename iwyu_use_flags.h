@@ -25,6 +25,9 @@ const UseFlags UF_RedeclUse = 2;
 const UseFlags UF_ExplicitInstantiation = 4;
 // Primary template definition use by an instantiation.
 const UseFlags UF_InstantiationPattern = 8;
+// Preserve the exact default-argument provider without bypassing same-file
+// suppression.
+const UseFlags UF_DefaultArgument = 16;
 }
 
 #endif

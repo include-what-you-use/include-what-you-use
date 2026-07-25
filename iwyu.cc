@@ -718,19 +718,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return false;
     if (CanIgnoreCurrentASTNode())
       return true;
-    FunctionDecl* func = expr->getDirectCallee();
-    if (!func)
-      return true;
-    // If the call makes use of default arguments, select exactly that
-    // redeclaration which specifies the first default argument used.
-    for (unsigned i = 0, ie = expr->getNumArgs(); i < ie; ++i) {
-      if (isa<CXXDefaultArgExpr>(expr->getArg(i))) {
-        func = GetRedeclSpecifyingDefArg(i, func);
-        break;
-      }
-    }
     return this->getDerived().HandleFunctionCall(
-        func, TypeOfParentIfMethod(expr), expr);
+        expr->getDirectCallee(), TypeOfParentIfMethod(expr), expr);
   }
 
   bool TraverseUserDefinedLiteral(UserDefinedLiteral* expr) {
@@ -827,18 +816,6 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     const Type* parent_type = expr->getAllocatedType().getTypePtrOrNull();
     // 'new' calls operator new in addition to the ctor of the new-ed type.
     if (FunctionDecl* operator_new = expr->getOperatorNew()) {
-      // If the placement-new call makes use of default arguments, select
-      // exactly that redecl which specifies the first default argument used.
-      for (unsigned i = 0, ie = expr->getNumPlacementArgs(); i < ie; ++i) {
-        if (isa<CXXDefaultArgExpr>(expr->getPlacementArg(i))) {
-          // The 1st parameter is the size of the allocated type, there is not
-          // any corresponding argument.
-          CHECK_(i + 1 < operator_new->getNumParams());
-          operator_new = GetRedeclSpecifyingDefArg(i + 1, operator_new);
-          break;
-        }
-      }
-
       // If operator new is a method, it must (by the semantics of
       // per-class operator new) be a method on the class we're newing.
       const Type* op_parent = nullptr;
@@ -3172,14 +3149,27 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
 
-    HandleFnReturnOnCallSite(callee, parent_type, calling_expr);
+    FunctionDecl* default_arg_provider =
+        GetUsedDefaultArgumentProvider(callee, calling_expr);
+    const bool is_template_specialization =
+        callee->isFunctionTemplateSpecialization();
+    FunctionDecl* callee_for_use =
+        default_arg_provider && !is_template_specialization
+            ? default_arg_provider
+            : callee;
+
+    HandleFnReturnOnCallSite(callee_for_use, parent_type, calling_expr);
+    if (default_arg_provider && is_template_specialization) {
+      ReportDeclUse(CurrentLoc(), default_arg_provider, nullptr,
+                    UF_DefaultArgument);
+    }
 
     // We may have already been checked in a previous
     // VisitUnresolvedLookupExpr() call.  Don't check again in that case.
     if (IsProcessedOverloadLoc(CurrentLoc()))
       return true;
 
-    ReportDeclUse(CurrentLoc(), callee);
+    ReportDeclUse(CurrentLoc(), callee_for_use);
 
     return true;
   }
@@ -3513,6 +3503,57 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
  private:
   template <typename T> friend class IwyuBaseAstVisitor;
+
+  FunctionDecl* GetUsedDefaultArgumentProvider(FunctionDecl* callee,
+                                               const Expr* calling_expr) {
+    unsigned param_index = callee->getNumParams();
+    // Argument positions do not always match parameter indexes. For example,
+    // member operator calls include the implicit object argument, while a
+    // placement-new argument list omits the implicit allocation-size parameter.
+    // Use the ParmVarDecl as the source of truth.
+    if (const auto* call_expr = dyn_cast_or_null<CallExpr>(calling_expr)) {
+      for (const Expr* arg : call_expr->arguments()) {
+        const auto* default_arg = dyn_cast<CXXDefaultArgExpr>(arg);
+        if (!default_arg)
+          continue;
+
+        param_index = default_arg->getParam()->getFunctionScopeIndex();
+        break;
+      }
+    } else if (const auto* new_expr =
+                   dyn_cast_or_null<CXXNewExpr>(calling_expr)) {
+      for (const Expr* arg : new_expr->placement_arguments()) {
+        const auto* default_arg = dyn_cast<CXXDefaultArgExpr>(arg);
+        if (!default_arg)
+          continue;
+
+        param_index = default_arg->getParam()->getFunctionScopeIndex();
+        break;
+      }
+    }
+
+    if (param_index >= callee->getNumParams())
+      return nullptr;
+
+    if (callee->isFunctionTemplateSpecialization()) {
+      FunctionDecl* pattern = callee->getTemplateInstantiationPattern();
+      if (!pattern)
+        return nullptr;
+
+      // Header patterns already retain their inherited-default providers in
+      // VisitFunctionTemplateDecl. Only source patterns need the call site to
+      // report the provider.
+      if (IsInHeader(pattern))
+        return nullptr;
+
+      CHECK_(param_index < pattern->getNumParams());
+      if (!pattern->getParamDecl(param_index)->hasInheritedDefaultArg())
+        return nullptr;
+      callee = pattern;
+    }
+
+    return GetRedeclSpecifyingDefArg(param_index, callee);
+  }
 
   bool IsProcessedOverloadLoc(SourceLocation loc) const {
     return ContainsKey(visitor_state_->processed_overload_locs, loc);
@@ -5322,6 +5363,30 @@ class IwyuAstConsumer
       }
     }
     return Base::VisitFunctionDecl(decl);
+  }
+
+  bool VisitFunctionTemplateDecl(FunctionTemplateDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+
+    // Default function arguments for function templates can only be specified
+    // in the initial declaration. A header redeclaration with inherited
+    // defaults therefore requires the declaration that provides them.
+    FunctionDecl* function = decl->getTemplatedDecl();
+    if (!IsInHeader(function))
+      return Base::VisitFunctionTemplateDecl(decl);
+
+    for (const ParmVarDecl* param : function->parameters()) {
+      if (!param->hasInheritedDefaultArg())
+        continue;
+
+      const unsigned param_index = param->getFunctionScopeIndex();
+      ReportDeclUse(CurrentLoc(),
+                    GetRedeclSpecifyingDefArg(param_index, function), nullptr,
+                    UF_RedeclUse);
+      break;
+    }
+    return Base::VisitFunctionTemplateDecl(decl);
   }
 
   // Avoid forward-declaration warnings for types which _should_ be already

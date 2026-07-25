@@ -27,6 +27,21 @@ template <typename T>
 void FnTplWithDefArg(int = 0);
 
 template <typename T>
+void FnTplSourceDefault(int = 0);
+
+template <typename T>
+void FnTplSourceExplicit(int = 0);
+
+template <typename T>
+void FnTplSourceUnused(int = 0);
+
+template <typename T>
+void FnTplDefinedInHeader(int = 0);
+
+template <typename T>
 void* operator new(std::size_t, T, int = 0) noexcept;
+
+template <typename T>
+void* operator new(std::size_t, T, short, long = 0) noexcept;
 
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_FN_DEF_ARGS_I2_H_

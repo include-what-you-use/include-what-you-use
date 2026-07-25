@@ -20,6 +20,10 @@ void FnTplWithDefArg<float>(int) {
 }
 
 template <typename T>
+void FnTplDefinedInHeader(int) {
+}
+
+template <typename T>
 void* operator new(std::size_t, T, int) noexcept {
   return nullptr;
 }

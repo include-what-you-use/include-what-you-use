@@ -1,4 +1,4 @@
-//===--- 1942.h - iwyu test -----------------------------------------------===//
+//===--- fn_def_args_tpl_redecl-i1.h - iwyu test --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "f-def_arg.h"
+template <typename T>
+typename T::Internal FnTplDeclOnly(int = 0, int = 0, int = 0);
 
-template <typename>
-void f(int);
-
-/**** IWYU_SUMMARY
-
-(tests/bugs/1942/1942.h has correct #includes/fwd-decls)
-
-***** IWYU_SUMMARY */
+template <typename T>
+void FnTplNotCalled(int = 0);
