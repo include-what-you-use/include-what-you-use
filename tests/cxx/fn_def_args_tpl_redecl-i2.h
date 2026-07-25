@@ -1,4 +1,4 @@
-//===--- 1942.cc - iwyu test ----------------------------------------------===//
+//===--- fn_def_args_tpl_redecl-i2.h - iwyu test --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,16 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_XFAIL
+template <typename T>
+typename T::Internal FnTplDeclOnly(int, int, int);
 
-#include "1942.h"
-
-int main() {
-  f<char>();
-}
-
-/**** IWYU_SUMMARY
-
-(tests/bugs/1942/1942.cc has correct #includes/fwd-decls)
-
-***** IWYU_SUMMARY */
+template <typename T>
+void FnTplNotCalled(int);

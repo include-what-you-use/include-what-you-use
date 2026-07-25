@@ -729,15 +729,16 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
     const NamedDecl* report_decl;
     SourceLocation report_decl_loc;
 
-    if ((flags & (UF_RedeclUse | UF_ExplicitInstantiation)) == 0) {
+    if ((flags &
+         (UF_RedeclUse | UF_ExplicitInstantiation | UF_DefaultArgument)) == 0) {
       // Since we need the full symbol, we need the decl's definition-site too.
       // Also, by default we canonicalize the location, using GetLocation.
       report_decl = GetDefinitionAsWritten(decl);
       report_decl_loc = GetLocation(report_decl);
     } else {
-      // However, if a declaration is used by its own definition or we are
-      // targeting an explicit instantiation, we want to use them as-is and not
-      // try to canonicalize at all.
+      // However, if a declaration is used by its own definition, targets an
+      // explicit instantiation, or provides a used default argument, we want
+      // to use it as-is and not try to canonicalize at all.
       report_decl = decl;
       report_decl_loc = decl->getLocation();
     }
@@ -1388,6 +1389,7 @@ void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
   // uses so that a definition anchors all its declarations (UF_RedeclUse case).
   // Also, definition uses triggered by explicit instantiation definitions
   // should not be suppressed by any redecl (UF_InstantiationPattern case).
+  // Default-argument provider uses intentionally remain subject to this filter.
   if (!(use->flags() & (UF_RedeclUse | UF_InstantiationPattern)) &&
       !is_builtin_function_with_mappings) {
     set<const NamedDecl*> all_redecls;

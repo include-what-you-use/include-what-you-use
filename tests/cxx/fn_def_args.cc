@@ -9,14 +9,35 @@
 
 // IWYU_ARGS: -Xiwyu --check_also="tests/cxx/fn_def_args-d1.h" -I .
 
-// Tests handling function default arguments. In particular, tests that IWYU
-// doesn't report them when analyzing call site.
+// Tests include requirements introduced by function default arguments.
 
 #include "tests/cxx/fn_def_args-d1.h"
 
 // IWYU: FnWithSmearedDefArgs3(int, int, int) is...*-i1.h
 void FnWithSmearedDefArgs3(int = 0, int, int);
 void FnWithDefArg(int);
+
+// Source-file redeclarations do not require their inherited default arguments
+// until a call actually uses one.
+template <typename T>
+void FnTplSourceDefault(int);
+
+template <typename T>
+void FnTplSourceExplicit(int);
+
+template <typename T>
+void FnTplSourceUnused(int);
+
+template <typename T>
+void* operator new(decltype(sizeof(0)), T, short, long) noexcept;
+
+template <typename T>
+void FnTplDefinedInHeader(int);
+
+template <typename T>
+void CallFnTplDefinedInHeader() {
+  FnTplDefinedInHeader<T>();
+}
 
 template <typename T>
 void TplFn() {
@@ -68,10 +89,26 @@ void Fn() {
   FnTplWithDefArg<float>();
   // IWYU: FnTplWithDefArg(int) is...*-i1.h
   FnTplWithDefArg<float>(1);
+
+  // IWYU: FnTplSourceDefault(int) is...*fn_def_args-i2.h
+  FnTplSourceDefault<int>();
+  FnTplSourceExplicit<int>(0);
+  // IWYU: FnTplDefinedInHeader(int) is...*fn_def_args-i2.h
+  FnTplDefinedInHeader<int>();
+  // The dependent call in CallFnTplDefinedInHeader is resolved only when the
+  // wrapper is instantiated, revealing the actual definition and its provider.
+  // IWYU: FnTplDefinedInHeader(int) is...*fn_def_args-i2.h
+  CallFnTplDefinedInHeader<int>();
+
   // IWYU: operator new(unsigned long, :0, int) is...*-i1.h
   new ('a', 1) int;
   // IWYU: operator new(unsigned long, :0, int) is...*-i1.h
   new ('a') int;
+
+  // Use a separate overload to cover a source-file template redeclaration.
+  new ('a', short{}, 1L) int;
+  // IWYU: operator new(unsigned long, :0, short, long) is...*-i2.h
+  new ('a', short{}) int;
 }
 
 /**** IWYU_SUMMARY
@@ -86,7 +123,7 @@ tests/cxx/fn_def_args.cc should remove these lines:
 The full include-list for tests/cxx/fn_def_args.cc:
 #include "tests/cxx/fn_def_args-d1.h"  // for FnWithSmearedDefArgs, Struct, operator new
 #include "tests/cxx/fn_def_args-i1.h"  // for FnTplWithDefArg, FnWithSmearedDefArgs2, FnWithSmearedDefArgs3, operator new
-#include "tests/cxx/fn_def_args-i2.h"  // for FnWithDefArg, FnWithSmearedDefArgs, FnWithSmearedDefArgs2, operator new
+#include "tests/cxx/fn_def_args-i2.h"  // for FnTplDefinedInHeader, FnTplSourceDefault, FnWithDefArg, FnWithSmearedDefArgs, FnWithSmearedDefArgs2, operator new
 #include "tests/cxx/fn_def_args-i3.h"  // for FnWithSmearedDefArgs2
 
 ***** IWYU_SUMMARY */

@@ -1,4 +1,4 @@
-//===--- f-def_arg.h - iwyu test ------------------------------------------===//
+//===--- fn_def_args_tpl_redecl-i3.h - iwyu test --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,5 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-template <typename>
-void f(int = 0);
+struct TemplateArgument {
+  using Internal = int;
+};
