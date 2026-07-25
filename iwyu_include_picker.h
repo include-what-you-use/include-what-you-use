@@ -52,6 +52,7 @@
 #include <vector>                       // for vector
 
 #include "clang/Basic/FileEntry.h"
+#include "clang/Basic/LangOptions.h"
 
 namespace clang {
 class NamedDecl;
@@ -69,12 +70,24 @@ using std::vector;
 enum class RegexDialect;
 struct IncludeMapEntry;
 struct SymbolMapEntry;
+template<class MapType> struct Conditional;
+struct MapCriteria;
 
 enum class UseKind { Full, FwdDecl };
 
 enum IncludeVisibility { kUnusedVisibility, kPublic, kPrivate };
 enum class CStdLib { None, ClangSymbols, Glibc };
 enum class CXXStdLib { None, ClangSymbols, Libstdcxx, Libcxx };
+
+// Describes the current compilation environment. Used for matching
+// criteria.
+struct Environment {
+  clang::Language language;
+  int stdver;
+
+  Environment(clang::Language language, int stdver);
+  bool matches(const MapCriteria& criteria) const;
+};
 
 // Write out all internal mappings to files in dirpath.
 void ExportInternalMappings(const string& dirpath);
@@ -104,7 +117,8 @@ class IncludePicker {
   typedef map<string, IncludeVisibility> VisibilityMap;
 
   IncludePicker(RegexDialect regex_dialect, CStdLib cstdlib,
-                CXXStdLib cxxstdlib);
+                CXXStdLib cxxstdlib,
+                const Environment& env);
 
   // ----- Routines to dynamically modify the include-picker
 
@@ -213,7 +227,8 @@ class IncludePicker {
                            const vector<string>& search_path);
 
   // Adds all hard-coded internal mappings.
-  void AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib);
+  void AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib,
+                           const Environment& env);
 
   // Adds a mapping from a one header to another, typically
   // from a private to a public quoted include.
@@ -232,6 +247,15 @@ class IncludePicker {
   // Adds mappings from sized arrays of IncludeMapEntry.
   void AddIncludeMappings(const IncludeMapEntry* entries, size_t count);
   void AddSymbolMappings(const SymbolMapEntry* entries, size_t count);
+
+  // Conditionally adds mappings from sized arrays if they match the current
+  // Environment.
+  void AddIncludeMappings(const Environment& env,
+                          const Conditional<IncludeMapEntry>* entries,
+                          size_t count);
+  void AddSymbolMappings(const Environment& env,
+                         const Conditional<SymbolMapEntry>* entries,
+                         size_t count);
 
   void AddPublicIncludes(const char** includes, size_t count);
 
