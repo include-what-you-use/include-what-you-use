@@ -1,4 +1,4 @@
-//===--- fn.h - iwyu test -------------------------------------------------===//
+//===--- provided_sugar-using.h - test input file for iwyu ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "direct.h"
+class UsingReturn;
+class UsingArgument;
 
-ns::Ret Fn1(ns::Arg);
-decltype(r) Fn2(decltype(a));
-
-/**** IWYU_SUMMARY
-
-(tests/bugs/1905/fn.h has correct #includes/fwd-decls)
-
-***** IWYU_SUMMARY */
+namespace ns {
+using ::UsingArgument;
+using ::UsingReturn;
+}  // namespace ns

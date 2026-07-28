@@ -1134,6 +1134,83 @@ class AstFlattenerVisitor : public BaseAstVisitor<AstFlattenerVisitor> {
 map<const Decl*, AstFlattenerVisitor::NodeSet>
 AstFlattenerVisitor::nodeset_decl_cache_;
 
+// Return the desugared type if normal AST traversal does not visit it, or
+// nullptr otherwise. Such opaque sugar cannot express provision intent through
+// a forward declaration of the hidden component.
+const Type* GetConcealedDesugaredType(const Type* type) {
+  const Type* desugared_type = Desugar(type);
+  if (desugared_type == type)
+    return nullptr;
+
+  class DesugaredTypeFinder
+      : public RecursiveASTVisitor<DesugaredTypeFinder> {
+   public:
+    bool Find(const Type* root, const Type* target) {
+      target_ = target;
+      TraverseType(QualType(root, 0));
+      return found_;
+    }
+
+    bool TraverseType(QualType type, bool traverse_qualifier = true) {
+      if (type.isNull() || found_)
+        return true;
+
+      // An intermediate sugar node can have the same canonical type as the
+      // target without exposing the target itself.
+      if (type.getTypePtr() == target_) {
+        found_ = true;
+        return true;
+      }
+
+      return Base::TraverseType(type, traverse_qualifier);
+    }
+
+   private:
+    using Base = RecursiveASTVisitor<DesugaredTypeFinder>;
+
+    const Type* target_ = nullptr;
+    bool found_ = false;
+  };
+
+  DesugaredTypeFinder finder;
+  return finder.Find(type, desugared_type) ? nullptr : desugared_type;
+}
+
+// Return all desugared types concealed by sugar anywhere in the written type.
+// This preserves sugar context for nested components such as
+// Tpl<decltype(var)>, where ordinary component enumeration only retains the
+// desugared type.
+set<const Type*> GetConcealedDesugaredTypes(const Type* type) {
+  class ConcealedTypeCollector
+      : public RecursiveASTVisitor<ConcealedTypeCollector> {
+   public:
+    set<const Type*> Collect(const Type* root) {
+      TraverseType(QualType(root, 0));
+      return concealed_types_;
+    }
+
+    bool TraverseType(QualType type, bool traverse_qualifier = true) {
+      if (type.isNull())
+        return true;
+
+      if (const Type* concealed =
+              GetConcealedDesugaredType(type.getTypePtr())) {
+        concealed_types_.insert(GetCanonicalType(concealed));
+      }
+
+      return Base::TraverseType(type, traverse_qualifier);
+    }
+
+   private:
+    using Base = RecursiveASTVisitor<ConcealedTypeCollector>;
+
+    set<const Type*> concealed_types_;
+  };
+
+  ConcealedTypeCollector collector;
+  return collector.Collect(type);
+}
+
 // ----------------------------------------------------------------------
 // --- VisitorState
 // ----------------------------------------------------------------------
@@ -1521,18 +1598,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const auto* method = dyn_cast<CXXMethodDecl>(fn_decl))
       fn_decl = GetFromLeastDerived(method);
 
-    // Collect the non-explicit, one-arg constructor ('autocast') types.
-    set<const Type*> autocast_types;
-    for (FunctionDecl::param_const_iterator param = fn_decl->param_begin();
-         param != fn_decl->param_end(); ++param) {
-      const Type* param_type = GetTypeOf(*param);
-      if (HasImplicitConversionConstructor(param_type)) {
-        const Type* deref_param_type =
-            RemovePointersAndReferencesAsWritten(param_type);
-        autocast_types.insert(Desugar(deref_param_type));
-      }
-    }
-
     // Now look at all the function decls that are visible from the
     // call-location.  A type component is considered as provided if *any*
     // of the function decls provides it.
@@ -1546,7 +1611,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
       if (fn_redecl->isThisDeclarationADefinition() && !IsInHeader(*fn_redecl))
         continue;
-      for (const Type* type : autocast_types) {
+      for (const ParmVarDecl* param : fn_redecl->parameters()) {
+        const Type* param_type = GetTypeOf(param);
+        if (!HasImplicitConversionConstructor(param_type))
+          continue;
+        const Type* type = GetConcealedDesugaredType(param_type)
+                               ? param_type
+                               : RemovePointersAndReferencesAsWritten(
+                                     param_type);
         const set<const Type*> components =
             GetProvidedTypes(type, GetLocation(*fn_redecl));
         retval.insert(components.begin(), components.end());
@@ -3451,9 +3523,56 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return visitor_state_->preprocessor_info;
   }
 
+  bool IsSugaredTypeProvidedByFile(const Type* type,
+                                   SourceLocation use_loc) const {
+    const NamedDecl* decl = TypeToDeclAsWritten(type);
+    const NamedDecl* definition = GetTagDefinition(decl);
+    if (!definition)
+      return false;
+
+    const OptionalFileEntryRef definition_file = GetFileEntry(definition);
+    const OptionalFileEntryRef use_file = GetFileEntry(use_loc);
+    if (!definition_file || !use_file)
+      return false;
+    if (definition_file == use_file)
+      return true;
+
+    const IwyuFileInfo* use_file_info =
+        preprocessor_info().FileInfoFor(use_file);
+    if (!use_file_info)
+      return false;
+
+    return use_file_info->direct_includes_as_fileentries().count(
+               definition_file) ||
+           preprocessor_info().PublicHeaderIntendsToProvide(use_file,
+                                                            definition_file);
+  }
+
+  bool IsTypeDefinedInSameFile(const Type* type,
+                               SourceLocation use_loc) const {
+    const NamedDecl* definition =
+        GetTagDefinition(TypeToDeclAsWritten(type));
+    if (!definition)
+      return false;
+
+    const OptionalFileEntryRef definition_file = GetFileEntry(definition);
+    const OptionalFileEntryRef use_file = GetFileEntry(use_loc);
+    return definition_file && use_file && definition_file == use_file;
+  }
+
   set<const Type*> GetProvidedTypes(const Type* type,
                                     SourceLocation loc) const {
     set<const Type*> retval;
+    const set<const Type*> concealed_sugar_components =
+        GetConcealedDesugaredTypes(type);
+    const Type* provided_sugar_component = nullptr;
+    if (const Type* desugared_type = GetConcealedDesugaredType(type)) {
+      type = desugared_type;
+      if (!IsSugaredTypeProvidedByFile(type, loc))
+        return retval;
+      provided_sugar_component = GetCanonicalType(type);
+    }
+
     for (const Type* component : GetComponentsOfTypeWithoutSubstituted(type)) {
       // TODO(csilvers): if one of the intermediate typedefs
       // #includes the necessary definition of the 'final'
@@ -3476,8 +3595,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         }
       }
       const Type* canonical = GetCanonicalType(component);
-      if (!CodeAuthorWantsJustAForwardDeclare(canonical, loc))
+      if (canonical == provided_sugar_component ||
+          (concealed_sugar_components.count(canonical)
+               ? IsSugaredTypeProvidedByFile(canonical, loc)
+               : !CodeAuthorWantsJustAForwardDeclare(canonical, loc))) {
         retval.insert(canonical);
+      }
     }
     return retval;
   }
@@ -5427,6 +5550,27 @@ class IwyuAstConsumer
 
   // --- Visitors of types derived from Type.
 
+  bool VisitType(Type* type) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (!Base::VisitType(type))
+      return false;
+
+    // VisitUsingType reports both the target and using declaration through its
+    // UsingShadowDecl, so there is no separate underlying type use to report.
+    if (isa<UsingType>(type))
+      return true;
+
+    if (const Type* desugared_type = GetConcealedDesugaredType(type)) {
+      if (IsProvidedSugaredTypeComponent(current_ast_node(), desugared_type) &&
+          !IsTypeDefinedInSameFile(desugared_type,
+                                   current_ast_node()->GetLocation())) {
+        ReportTypeUse(CurrentLoc(), desugared_type, DerefKind::None);
+      }
+    }
+    return true;
+  }
+
   // Avoid reporting any type sugar in an implicit code. It is assumed that
   // TraverseType isn't called for explicitly written types. TraverseTypeLoc
   // uses an additional check.
@@ -5462,14 +5606,16 @@ class IwyuAstConsumer
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    if (CanForwardDeclareType(current_ast_node())) {
+    const Type* underlying_type = Desugar(type);
+    const bool is_provided =
+        IsProvidedSugaredTypeComponent(current_ast_node(), underlying_type);
+    if (CanForwardDeclareType(current_ast_node()) && !is_provided) {
       ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
     } else {
       ReportDeclUse(CurrentLoc(), type->getDecl());
 
       // If UsingType refers to a typedef, report the underlying type of that
       // typedef if needed (which is determined in ReportTypeUse).
-      const Type* underlying_type = type->desugar().getTypePtr();
       if (isa<TypedefType>(underlying_type)) {
         ReportTypeUse(CurrentLoc(), underlying_type, DerefKind::None);
       } else if (IsTemplatizedType(underlying_type)) {
@@ -5886,6 +6032,19 @@ class IwyuAstConsumer
       }
     }
     return pair(false, nullptr);
+  }
+
+  // Type sugar cannot use a forward declaration to express author intent.
+  // Instead, consider the underlying type provided only if the current file
+  // defines it, directly includes its definition, or is mapped to provide it.
+  bool IsProvidedSugaredTypeComponent(const ASTNode* node,
+                                      const Type* type) const {
+    if (!CanForwardDeclareType(node))
+      return false;
+    const bool can_be_provided = CanBeProvidedTypeComponent(node).first;
+    if (!can_be_provided)
+      return false;
+    return IsSugaredTypeProvidedByFile(type, node->GetLocation());
   }
 
   // The function is used to determine if the full type info is needed
