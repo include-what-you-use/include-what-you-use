@@ -1536,6 +1536,7 @@ def _GetNamespaceLevelReorderSpans(file_lines):
 
 
 # These are potential 'kind' arguments to _FirstReorderSpanWith.
+_ALWAYS_FIRST_INCLUDE_KIND = 0    # e.g. #include "config.h", via a flag
 _MAIN_CU_INCLUDE_KIND = 1         # e.g. #include "foo.h" when editing foo.cc
 _C_SYSTEM_INCLUDE_KIND = 2        # e.g. #include <stdio.h>
 _CXX_SYSTEM_INCLUDE_KIND = 3      # e.g. #include <vector>
@@ -1547,11 +1548,12 @@ _EOF_KIND = 7                     # used at eof
 # The span kinds are defined in default sort order, so generate a default
 # identity mapping.
 SORT_ORDER_DEFAULT = {
-  kind: kind for kind in range(_MAIN_CU_INCLUDE_KIND, _EOF_KIND + 1)
+  kind: kind for kind in range(_ALWAYS_FIRST_INCLUDE_KIND, _EOF_KIND + 1)
 }
 
 # In quoted-first mode, we sort all quoted kinds before system kinds.
 SORT_ORDER_QUOTED_FIRST = {
+  _ALWAYS_FIRST_INCLUDE_KIND: 0,
   _MAIN_CU_INCLUDE_KIND: 1,
   _NONSYSTEM_INCLUDE_KIND: 2,
   _PROJECT_INCLUDE_KIND: 3,
@@ -1565,6 +1567,26 @@ def _IsSystemInclude(line_info):
   """Given a line-info, return true iff the line is a <>-style #include."""
   # The key for #includes includes the <> or "", so this is easy. :-)
   return line_info.type == _INCLUDE_RE and line_info.key[0] == '<'
+
+
+def _IsAlwaysFirstInclude(line_info, always_first_includes):
+  """Given a line-info, return true iff its #include is always sorted first.
+
+  Arguments:
+    line_info: a LineInfo structure with .type and .key filled in.
+    always_first_includes: a sequence of #include basenames (as given by
+       the --always_first_include flag) that should always sort before
+       every other #include, in the order they're listed.
+
+  Returns:
+    True if line_info is an #include of one of the always_first_includes
+    basenames, False else.
+  """
+  if not always_first_includes or line_info.type != _INCLUDE_RE:
+    return False
+  # .key includes the surrounding <> or "" of the #include.
+  basename = os.path.basename(line_info.key[1:-1])
+  return basename in always_first_includes
 
 
 def _IsMainCUInclude(line_info, filename):
@@ -1665,13 +1687,16 @@ def _IsSameProject(line_info, edited_file, project):
   return (included_root and edited_root and included_root == edited_root)
 
 
-def _GetLineKind(file_line, filename, separate_project_includes):
+def _GetLineKind(file_line, filename, separate_project_includes,
+                 always_first_includes):
   """Given a file_line + file being edited, return best *_KIND value or None."""
   line_without_coments = _COMMENT_RE.sub('', file_line.line)
   if file_line.deleted:
     return None
   elif _IsMainCUInclude(file_line, filename):
     return _MAIN_CU_INCLUDE_KIND
+  elif _IsAlwaysFirstInclude(file_line, always_first_includes):
+    return _ALWAYS_FIRST_INCLUDE_KIND
   elif _IsSystemInclude(file_line) and '.' in line_without_coments:
     return _C_SYSTEM_INCLUDE_KIND
   elif _IsSystemInclude(file_line):
@@ -1712,6 +1737,7 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
   *before* the using line!
 
   kind is one of the following enums, with examples:
+     _ALWAYS_FIRST_INCLUDE_KIND: #include "a.h", via --always_first_include=a.h
      _MAIN_CU_INCLUDE_KIND:    #include "foo.h" when editing foo.cc
      _C_SYSTEM_INCLUDE_KIND:   #include <stdio.h>
      _CXX_SYSTEM_INCLUDE_KIND: #include <vector>
@@ -1730,15 +1756,18 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
        This is passed to _GetLineKind (are we a main-CU #include?)
     flags: commandline flags, as parsed by argparse.  We use
        flags.separate_project_includes to sort the #includes for the
-       current project separately from other #includes.
+       current project separately from other #includes, and
+       flags.always_first_include to identify #includes that should
+       always sort first.
 
   Returns:
     A pair of line numbers, [start_line, end_line), that is the 'best'
     reorder_span in file_lines for the given kind.
   """
-  assert kind in (_MAIN_CU_INCLUDE_KIND, _C_SYSTEM_INCLUDE_KIND,
-                  _CXX_SYSTEM_INCLUDE_KIND, _NONSYSTEM_INCLUDE_KIND,
-                  _PROJECT_INCLUDE_KIND, _FORWARD_DECLARE_KIND), kind
+  assert kind in (_ALWAYS_FIRST_INCLUDE_KIND, _MAIN_CU_INCLUDE_KIND,
+                  _C_SYSTEM_INCLUDE_KIND, _CXX_SYSTEM_INCLUDE_KIND,
+                  _NONSYSTEM_INCLUDE_KIND, _PROJECT_INCLUDE_KIND,
+                  _FORWARD_DECLARE_KIND), kind
   # Figure out where the first 'contentful' line is (after the first
   # 'good' span, so we skip past header guards and the like).  Basically,
   # the first contentful line is a line not in any reorder span.
@@ -1758,7 +1787,8 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
   for reorder_span in good_reorder_spans:
     for line_number in range(*reorder_span):
       line_kind = _GetLineKind(file_lines[line_number], filename,
-                               flags.separate_project_includes)
+                               flags.separate_project_includes,
+                               flags.always_first_include)
       # Ignore forward-declares that come after 'contentful' code; we
       # never want to insert new forward-declares there.
       if (line_kind == _FORWARD_DECLARE_KIND and
@@ -1773,7 +1803,7 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
     return first_reorder_spans[kind]
 
   # Second choice: last span of the kinds above us:
-  for backup_kind in range(kind - 1, _MAIN_CU_INCLUDE_KIND - 1, -1):
+  for backup_kind in range(kind - 1, _ALWAYS_FIRST_INCLUDE_KIND - 1, -1):
     if backup_kind in last_reorder_spans:
       return last_reorder_spans[backup_kind]
 
@@ -1893,7 +1923,9 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines, flags):
       in, it will be a newly created list.
     flags: commandline flags, as parsed by argparse.  We use
       flags.separate_project_includes to sort the #includes for the
-      current project separately from other #includes.
+      current project separately from other #includes, and
+      flags.always_first_include to identify #includes that should
+      always sort first, in the order given.
 
   Returns:
     A tuple (reorder_span, kind, sort_key, all_lines_as_list)
@@ -1938,7 +1970,16 @@ def _DecoratedMoveSpanLines(iwyu_record, file_lines, move_span_lines, flags):
 
   # Next figure out the kind.
   kind = _GetLineKind(firstline, iwyu_record.filename,
-                      flags.separate_project_includes)
+                      flags.separate_project_includes,
+                      flags.always_first_include)
+
+  # If this #include is one of the --always_first_include basenames,
+  # sort it according to its position in that (user-specified) list,
+  # rather than alphabetically, so multiple always-first #includes keep
+  # the relative order the user asked for.
+  if kind == _ALWAYS_FIRST_INCLUDE_KIND:
+    basename = os.path.basename(firstline.key[1:-1])
+    sort_key = '%04d' % flags.always_first_include.index(basename)
 
   # All we're left to do is the reorder-span we're in.  Hopefully it's easy.
   reorder_span = firstline.reorder_span
@@ -2467,6 +2508,16 @@ def main(argv):
                       default=False,
                       help='When sorting includes, place quoted ones first')
 
+  parser.add_argument('--always_first_include', action='append', default=[],
+                      metavar='INCLUDE_BASENAME[,INCLUDE_BASENAME,...]',
+                      help=('Basename of an #include file, e.g. "config.h",'
+                            ' that should always be sorted before every other'
+                            ' #include, regardless of --reorder or'
+                            ' --quoted_includes_first.  May be given multiple'
+                            ' times, or as a comma-separated list; #includes'
+                            ' are placed first in the order given.  By'
+                            ' default, no #include is treated specially.'))
+
   parser.add_argument('files', nargs='*', metavar='FILES')
 
   flags = parser.parse_args(argv[1:])
@@ -2474,6 +2525,15 @@ def main(argv):
     files_to_modify = set(flags.files)
   else:
     files_to_modify = None
+
+  # Flatten --always_first_include, which may be repeated and/or
+  # comma-separated, into a single ordered list of basenames.
+  flags.always_first_include = [
+      basename.strip()
+      for value in flags.always_first_include
+      for basename in value.split(',')
+      if basename.strip()
+  ]
 
   if (flags.separate_project_includes and
       not flags.separate_project_includes.startswith('<') and  # 'special' vals

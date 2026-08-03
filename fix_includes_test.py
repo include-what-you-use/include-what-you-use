@@ -44,6 +44,7 @@ class FakeFlags(object):
     self.reorder = True
     self.basedir = None
     self.quoted_includes_first = False
+    self.always_first_include = []
 
 
 class FixIncludesBase(unittest.TestCase):
@@ -4514,6 +4515,58 @@ The full include-list for simple:
     self.RegisterFileContents({'simple': infile})
     self.flags.quoted_includes_first = True
     self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
+
+  def testAlwaysFirstInclude(self):
+    # "zconfig.h" and "aplatform.h" are deliberately *not* in alphabetical
+    # order, to verify that --always_first_include preserves the order
+    # given on the commandline rather than sorting alphabetically.
+    infile = """\
+#include <notused.h>  ///-
+#include <foo>  ///-
+#include "zzz.h"  ///-
+#include "aplatform.h"  ///-
+#include "zconfig.h"  ///-
+///+#include "zconfig.h"
+///+#include "aplatform.h"
+///+#include <foo>
+///+#include "zzz.h"
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+simple should add these lines:
+
+simple should remove these lines:
+- #include <notused.h>  // lines 1-1
+
+The full include-list for simple:
+#include <foo>
+#include "zzz.h"
+#include "aplatform.h"
+#include "zconfig.h"
+---
+"""
+    self.RegisterFileContents({'simple': infile})
+    self.flags.always_first_include = ['zconfig.h', 'aplatform.h']
+    self.ProcessAndTest(iwyu_output, expected_num_modified_files=1)
+
+  def testMainAlwaysFirstIncludeFlagParsing(self):
+    """--always_first_include accepts commas and repeats, in given order."""
+    infile = """\
+#include "c.h"
+#include "a.h"
+#include "b.h"
+
+int main() { return 0; }
+"""
+    iwyu_output = "(simple.cc has correct #includes/fwd-decls)\n"
+    self.RegisterFileContents({'simple.cc': infile})
+    fix_includes.sys.stdin = StringIO(iwyu_output)
+    fix_includes.main(['fix_includes', '--sort_only', '--reorder',
+                       '--always_first_include=b.h,a.h', 'simple.cc', '--always_first_include=c.h'])
+    self.assertEqual(['#include "b.h"\n', '#include "a.h"\n', '#include "c.h"\n', '\n',
+                      'int main() { return 0; }\n'],
+                     self.actual_after_contents)
 
   def testMainReturnsZeroWhenNothingToFixDryRun(self):
     """Test that main returns 0 when --dry_run is passed and no fixes needed."""
