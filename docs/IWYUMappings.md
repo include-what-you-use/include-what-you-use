@@ -141,9 +141,7 @@ with the old mapping file format, `private` is acceptable and is handled as
 `full` use kind.
 
 Unlike `include`, `symbol` directives do not support the `@`-prefixed regex
-syntax in the first entry. Track the [following
-bug](https://github.com/include-what-you-use/include-what-you-use/issues/233)
-for updates.
+syntax in the first entry.
 
 #### Overloaded functions ####
 
