@@ -24,15 +24,12 @@ jobs:
       - name: Install prerequisites
         run: |
           wget -O- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm-snapshot.asc
-          sudo add-apt-repository "deb http://apt.llvm.org/noble/ llvm-toolchain-noble$LLVM_TAG main"
+          . /etc/os-release
+          REPO_NAME="deb http://apt.llvm.org/${VERSION_CODENAME} llvm-toolchain-${VERSION_CODENAME} main"
+          sudo add-apt-repository -y "${REPO_NAME}"
           sudo apt update
-          # Remove any base dist LLVM/Clang installations
-          sudo apt remove -y \
-               "libclang*" \
-               "clang*" \
-               "llvm*" \
-               "libc++*"
-          # Reinstall tagged versions
+          LLVM_TAG="${LLVM_TAG:--$(apt-cache search --names-only '^clang-[0-9]+$' | sort -V | tail -1 | cut -f1 -d" " | cut -f2 -d"-" )}"
+          echo "LLVM_TAG=${LLVM_TAG}" >> "$GITHUB_ENV"
           sudo apt install -y \
                ninja-build \
                llvm$LLVM_TAG-dev \
