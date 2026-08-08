@@ -50,7 +50,7 @@ jobs:
       - name: Work around broken packaging
         run: |
           # Disable CMake target checks.
-          # sudo ./iwyu-fixup-llvm-target-checks.bash "$LLVM_PREFIX"
+          sudo ./iwyu-fixup-llvm-target-checks.bash "$LLVM_PREFIX"
 
       - name: Build include-what-you-use with LLVM ${{ env.LLVM_MAJOR }}
         run: |
