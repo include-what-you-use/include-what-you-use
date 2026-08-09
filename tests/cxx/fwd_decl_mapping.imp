@@ -15,4 +15,6 @@
   { "symbol": ["EnumClass1", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i12.h\"", "public"] },
   { "symbol": ["EnumClass2", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i13.h\"", "public"] },
   { "symbol": ["EnumClass2", "full", "\"tests/cxx/fwd_decl_mapping-i14.h\"", "public"] },
+  { "symbol": ["ClassFromInlineNS", "full", "\"tests/cxx/fwd_decl_mapping-i15.h\"", "public"] },
+  { "symbol": ["ClassFromInlineNS", "fwd-decl", "\"tests/cxx/fwd_decl_mapping-i16.h\"", "public"] },
 ]

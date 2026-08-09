@@ -26,3 +26,7 @@ class MappedToD1 {};
 enum class EnumClass1 { A, B, C };
 
 enum class EnumClass2 { A, B, C };
+
+inline namespace inl {
+class ClassFromInlineNS {};
+}  // namespace inl

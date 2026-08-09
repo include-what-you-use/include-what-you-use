@@ -1185,8 +1185,12 @@ void ProcessForwardDeclare(OneUse* use,
     return;
 
   // (A1) If not suitable for forward-declaration, recategorize as a full use.
+  // For classes in inline namespaces, DeclCanBeForwardDeclared returns false,
+  // but if there is a fwd-decl mapping, IWYU should report the mapped public
+  // header, so it should not recategorize the use to a full use.
   string reason;
-  if (!DeclCanBeForwardDeclared(use->decl(), &reason)) {
+  if (!DeclCanBeForwardDeclared(use->decl(), &reason) &&
+      use->public_headers().empty()) {
     VERRS(6) << "Moving " << use->symbol_name()
              << " from fwd-decl use to full use: " << reason << " ("
              << use->PrintableUseLoc() << ")\n";

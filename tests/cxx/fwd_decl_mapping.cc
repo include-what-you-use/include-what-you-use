@@ -47,12 +47,16 @@ EnumClass1 e1;
 // IWYU: EnumClass2 is...*-i14.h
 EnumClass2 e2 = EnumClass2::A;
 
+// IWYU: ClassFromInlineNS needs a declaration
+ClassFromInlineNS* cfins;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/fwd_decl_mapping.cc should add these lines:
 #include "tests/cxx/fwd_decl_mapping-i10.h"
 #include "tests/cxx/fwd_decl_mapping-i12.h"
 #include "tests/cxx/fwd_decl_mapping-i14.h"
+#include "tests/cxx/fwd_decl_mapping-i16.h"
 #include "tests/cxx/fwd_decl_mapping-i2.h"
 #include "tests/cxx/fwd_decl_mapping-i4.h"
 #include "tests/cxx/fwd_decl_mapping-i6.h"
@@ -65,6 +69,7 @@ The full include-list for tests/cxx/fwd_decl_mapping.cc:
 #include "tests/cxx/fwd_decl_mapping-i10.h"  // for FwdDeclInTwoHeaders2 (ptr only)
 #include "tests/cxx/fwd_decl_mapping-i12.h"  // for EnumClass1 (ptr only)
 #include "tests/cxx/fwd_decl_mapping-i14.h"  // for EnumClass2
+#include "tests/cxx/fwd_decl_mapping-i16.h"  // for ClassFromInlineNS (ptr only)
 #include "tests/cxx/fwd_decl_mapping-i2.h"  // for OnlyFwdDeclUse (ptr only)
 #include "tests/cxx/fwd_decl_mapping-i4.h"  // for FwdDeclAndFullUse
 #include "tests/cxx/fwd_decl_mapping-i6.h"  // for FwdDeclInI6 (ptr only), FwdDeclInTwoHeaders1 (ptr only), HasIncludeMapping (ptr only)
