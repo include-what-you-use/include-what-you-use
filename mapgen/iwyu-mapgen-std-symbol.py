@@ -101,12 +101,10 @@ EXCLUDED_FUNCS = {
 # The specializations defined in different headers differ only in C++20
 # constraints, and hence cannot be distinguished in the mapping. The classes are
 # provided by different headers, and some of the headers provide only forward-
-# declarations, therefore some additional consideration is required.
+# declarations, therefore the mapping has been done in HANDWRITTEN_MAPPING.
 DUPLICATED_CLASSES = {
-    'std::allocator',
     'std::atomic',
     'std::basic_common_reference<:0, :1, :2, :3>',
-    'std::compare_three_way',
     'std::formatter<:0, :1>',
     'std::tm',
     'std::tuple',
@@ -152,42 +150,84 @@ ALIAS_TO_AVOID = 'intmax_t'
 HANDWRITTEN_MAPPING = (
 # Some namespace-scope symbols are not defined in the corresponding header
 # synopses.
-    ('std::hash', 'bitset'),
-    ('std::hash<std::bitset<:0>>', 'bitset'),
-    ('std::hash', 'thread'),
-    ('std::hash<std::thread::id>', 'thread'),
+    ('std::hash', False, 'bitset'),
+    ('std::hash<std::bitset<:0>>', False, 'bitset'),
+    ('std::hash', False, 'thread'),
+    ('std::hash<std::thread::id>', False, 'thread'),
     ('std::print(std::basic_ostream<char, std::char_traits<char>> &, std::basic_format_string<char, std::type_identity<:0>::type...>, :0 &&...)',
+      False,
       'ostream'),
     ('std::println(std::basic_ostream<char, std::char_traits<char>> &, std::basic_format_string<char, std::type_identity<:0>::type...>, :0 &&...)',
+      False,
       'ostream'),
-    ('std::print', 'print'),
-    ('std::println', 'print'),
+    ('std::print', False, 'print'),
+    ('std::println', False, 'print'),
 # libstdc++ defines a literal operator for seconds as a numeric literal operator
 # template despite the <chrono> header synopsis. This may be standardized later.
 # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85821.
-    ('std::operator""s()', 'chrono'),
+    ('std::operator""s()', False, 'chrono'),
 
-    ('std::operator>>(std::basic_istream<:0, :1> &, :0 &)', 'istream'),
-    ('std::operator>>(std::basic_istream<char, :0> &, unsigned char &)', 'istream'),
-    ('std::operator>>(std::basic_istream<char, :0> &, signed char &)', 'istream'),
-    ('std::operator>>(std::basic_istream<:0, :1> &, :0 (&)[:2])', 'istream'),
-    ('std::operator>>(std::basic_istream<char, :0> &, unsigned char (&)[:1])', 'istream'),
-    ('std::operator>>(std::basic_istream<char, :0> &, signed char (&)[:1])', 'istream'),
+    ('std::operator>>(std::basic_istream<:0, :1> &, :0 &)', False, 'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, unsigned char &)',
+     False,
+     'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, signed char &)',
+     False,
+    'istream'),
+    ('std::operator>>(std::basic_istream<:0, :1> &, :0 (&)[:2])',
+     False,
+    'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, unsigned char (&)[:1])',
+     False,
+     'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, signed char (&)[:1])',
+     False,
+     'istream'),
 # Pre-C++20 stuff:
-    ('std::operator>>(std::basic_istream<:0, :1> &, :0 *)', 'istream'),
-    ('std::operator>>(std::basic_istream<char, :0> &, unsigned char *)', 'istream'),
-    ('std::operator>>(std::basic_istream<char, :0> &, signed char *)', 'istream'),
+    ('std::operator>>(std::basic_istream<:0, :1> &, :0 *)', False, 'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, unsigned char *)',
+     False,
+     'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, signed char *)',
+     False,
+     'istream'),
 
-    ('std::operator<<(std::basic_ostream<:0, :1> &, :0)', 'ostream'),
-    ('std::operator<<(std::basic_ostream<:0, :1> &, char)', 'ostream'),
-    ('std::operator<<(std::basic_ostream<char, :0> &, char)', 'ostream'),
-    ('std::operator<<(std::basic_ostream<char, :0> &, signed char)', 'ostream'),
-    ('std::operator<<(std::basic_ostream<char, :0> &, unsigned char)', 'ostream'),
-    ('std::operator<<(std::basic_ostream<:0, :1> &, const :0 *)', 'ostream'),
-    ('std::operator<<(std::basic_ostream<:0, :1> &, const char *)', 'ostream'),
-    ('std::operator<<(std::basic_ostream<char, :0> &, const char *)', 'ostream'),
-    ('std::operator<<(std::basic_ostream<char, :0> &, const signed char *)', 'ostream'),
-    ('std::operator<<(std::basic_ostream<char, :0> &, const unsigned char *)', 'ostream'),
+    ('std::operator<<(std::basic_ostream<:0, :1> &, :0)', False, 'ostream'),
+    ('std::operator<<(std::basic_ostream<:0, :1> &, char)', False, 'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, char)', False, 'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, signed char)',
+     False,
+     'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, unsigned char)',
+     False,
+     'ostream'),
+    ('std::operator<<(std::basic_ostream<:0, :1> &, const :0 *)',
+     False,
+     'ostream'),
+    ('std::operator<<(std::basic_ostream<:0, :1> &, const char *)',
+     False,
+     'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, const char *)',
+     False,
+     'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, const signed char *)',
+     False,
+     'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, const unsigned char *)',
+     False,
+     'ostream'),
+
+    ('std::atomic', False, 'atomic'),
+    ('std::atomic', True, 'atomic'),
+    ('std::atomic', True, 'memory'),
+
+    ('std::tm', False, 'ctime'),
+    ('std::tm', True, 'ctime'),
+    ('std::tm', True, 'cwchar'),
+
+    ('std::tuple', False, 'tuple'),
+    ('std::tuple', True, 'tuple'),
+    ('std::tuple', True, 'utility'),
 )
 
 def contains_unspec_alias(inp):
@@ -837,9 +877,8 @@ def print_content(std_source_path, lang):
                 headers_by_symbol.setdefault(symbol, []).append(headername)
             for provided, providing in include_map:
                 providing_header_map.setdefault(provided, []).append(providing)
-    for symbol, headername in HANDWRITTEN_MAPPING:
-        # Currently, all entries in HANDWRITTEN_MAPPING are for full uses.
-        headers_by_symbol.setdefault((symbol, False), []).append(headername)
+    for symbol, flag, headername in HANDWRITTEN_MAPPING:
+        headers_by_symbol.setdefault((symbol, flag), []).append(headername)
 
     make_dict_transitive(providing_header_map)
 
