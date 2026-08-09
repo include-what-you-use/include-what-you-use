@@ -19,15 +19,28 @@
 // IWYU: std::fstream is...*<iosfwd>
 std::fstream* fs;
 
+// <tuple> is the canonical source of std::tuple declaration although <utility>
+// should provide a forward-declaration too.
+// IWYU: std::tuple needs a declaration
+std::tuple<int, char, double>* t;
+
+// The same for 'std::tm': <ctime> is its canonical header and not <cwchar>.
+// IWYU: std::tm needs a declaration
+std::tm* tm1;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/std_symbol_mapping_canonical.cc should add these lines:
+#include <ctime>
 #include <iosfwd>
+#include <tuple>
 
 tests/cxx/std_symbol_mapping_canonical.cc should remove these lines:
 - #include "tests/cxx/std_symbol_mapping-direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/std_symbol_mapping_canonical.cc:
+#include <ctime>  // for tm (ptr only)
 #include <iosfwd>  // for fstream
+#include <tuple>  // for tuple (ptr only)
 
 ***** IWYU_SUMMARY */

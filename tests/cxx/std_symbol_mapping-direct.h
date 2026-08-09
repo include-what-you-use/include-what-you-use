@@ -109,6 +109,13 @@ chrono::seconds operator""s();
 
 template <typename>
 class initializer_list {};
+
+template <typename...>
+class tuple {};
+
+int wprintf(const wchar_t* format, ...);
+
+struct tm;
 }
 
 using int8_t = signed char;

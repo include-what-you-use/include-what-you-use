@@ -384,7 +384,6 @@ const SymbolMapEntry stdlib_cxx_symbol_map[] = {
   // to #include the traits or alloc type ourselves.  The surest way
   // to deal with this is to just say that everyone provides
   // std::allocator.  We can add more here at need.
-  { "std::allocator", UseKind::Full, "<memory>", kPublic },
   { "std::allocator", UseKind::Full, "<string>", kPublic },
   { "std::allocator", UseKind::Full, "<vector>", kPublic },
   { "std::allocator", UseKind::Full, "<map>", kPublic },

@@ -101,6 +101,15 @@ void Fn() {
   // provide.
   // IWYU: std::initializer_list is...*<algorithm>
   std::initializer_list<int> il{};
+
+  // IWYU: std::tuple is...*<tuple>
+  std::tuple<int, char, float> t;
+
+  // IWYU: std::wprintf(const wchar_t *, ...) is...*<cwchar>
+  std::wprintf(L"Test");
+  // <cwchar> already required here provides a (forward-)declaration of tm.
+  // IWYU: std::tm needs a declaration
+  std::tm* tm1;
 }
 
 /**** IWYU_SUMMARY
@@ -111,9 +120,11 @@ tests/cxx/std_symbol_mapping.cc should add these lines:
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cwchar>
 #include <functional>
 #include <iosfwd>
 #include <spanstream>
+#include <tuple>
 #include <utility>
 #include <valarray>
 
@@ -126,9 +137,11 @@ The full include-list for tests/cxx/std_symbol_mapping.cc:
 #include <chrono>  // for operator""s
 #include <cmath>  // for pow
 #include <cstdint>  // for int8_t
+#include <cwchar>  // for tm (ptr only), wprintf
 #include <functional>  // for function, swap
 #include <iosfwd>  // for basic_ostream (ptr only), char_traits (ptr only)
 #include <spanstream>  // for basic_spanstream
+#include <tuple>  // for tuple
 #include <utility>  // for get, move, operator==, pair, swap
 #include <valarray>  // for pow, valarray
 
