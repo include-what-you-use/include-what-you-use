@@ -499,7 +499,22 @@ void InitGlobals(CompilerInstance& compiler, const ToolChain& toolchain) {
   RegexDialect regex_dialect = GlobalFlags().regex_dialect;
   CStdLib cstdlib = DeriveCStdLib();
   CXXStdLib cxxstdlib = DeriveCXXStdLib(compiler, toolchain);
-  include_picker = new IncludePicker(regex_dialect, cstdlib, cxxstdlib);
+
+  clang::Language lang = compiler.getFrontendOpts().DashX.getLanguage();
+  std::optional<uint32_t> version;
+  switch (lang) {
+    case clang::Language::C:
+      version = compiler.getLangOpts().getCLangStd();
+      break;
+    case clang::Language::CXX:
+      version = compiler.getLangOpts().getCPlusPlusLangStd();
+      break;
+    default:
+      break;
+  }
+
+  Environment env(lang, version.value_or(0));
+  include_picker = new IncludePicker(regex_dialect, cstdlib, cxxstdlib, env);
 
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;
@@ -603,8 +618,9 @@ void InitGlobalsAndFlagsForTesting() {
     cxxstdlib = CXXStdLib::ClangSymbols;
   }
 
+  Environment env(clang::Language::CXX, 201710);
   include_picker =
-      new IncludePicker(GlobalFlags().regex_dialect, cstdlib, cxxstdlib);
+      new IncludePicker(GlobalFlags().regex_dialect, cstdlib, cxxstdlib, env);
 
   function_calls_full_use_cache = new FullUseCache;
   class_members_full_use_cache = new FullUseCache;

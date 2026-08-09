@@ -92,10 +92,56 @@ struct SymbolMapEntry {
   IncludeVisibility to_visibility;
 };
 
+// POD to describe criteria under which a mapping applies.
+// Zero values for criteria are assumed to mean "any".
+struct MapCriteria {
+  clang::Language language;
+  int min_stdver;
+  int max_stdver;
+};
+
+// A Conditional is a POD that binds a MapType to a set of critera under which
+// it applies.
+template<class MapType>
+struct Conditional {
+  MapType mapping;
+  MapCriteria criteria;
+};
+
+// Environment implementation
+Environment::Environment(clang::Language language, int stdver)
+    : language(language),
+      stdver(stdver) {
+}
+
+bool Environment::matches(const MapCriteria& criteria) const {
+  if (criteria.language != clang::Language::Unknown &&
+      criteria.language != language)
+    return false;
+  if (criteria.min_stdver != 0 && criteria.min_stdver < stdver)
+    return false;
+  if (criteria.max_stdver != 0 && criteria.max_stdver > stdver)
+    return false;
+  return true;
+}
+
 namespace {
 
 // Listed below are all IWYU's native symbol and include mappings,
 // loosely based on GCC 4.4's libc and libstdc++.
+
+const Conditional<SymbolMapEntry> numeric_limits_symbol_map[] = {
+  // C ranges
+  { { "INFINITY", UseKind::Full, "<math.h>", kPublic }, { clang::Language::C, 199901, 202311 } },
+  { { "INFINITY", UseKind::Full, "<float.h>", kPublic }, { clang::Language::C, 202311, 0 } },
+  { { "NAN", UseKind::Full, "<math.h>", kPublic }, { clang::Language::C, 199901, 202311 } },
+  { { "NAN", UseKind::Full, "<float.h>", kPublic }, { clang::Language::C, 202311, 0 } },
+  // C++ ranges (update when 2026 version numbers come alive)
+  { { "INFINITY", UseKind::Full, "<math.h>", kPublic }, { clang::Language::CXX, 0, 202400 } },
+  { { "INFINITY", UseKind::Full, "<float.h>", kPublic }, { clang::Language::CXX, 202400, 0 } },
+  { { "NAN", UseKind::Full, "<math.h>", kPublic }, { clang::Language::CXX, 0, 202400 } },
+  { { "NAN", UseKind::Full, "<float.h>", kPublic }, { clang::Language::CXX, 202400, 0 } },
+};
 
 // Symbol -> include mappings for GNU libc
 const SymbolMapEntry libc_symbol_map[] = {
@@ -1657,13 +1703,16 @@ bool MappedInclude::HasAbsoluteQuotedInclude() const {
 
 IncludePicker::IncludePicker(RegexDialect regex_dialect,
                              CStdLib cstdlib,
-                             CXXStdLib cxxstdlib)
+                             CXXStdLib cxxstdlib,
+                             const Environment& env)
     : has_called_finalize_added_include_lines_(false),
       regex_dialect(regex_dialect) {
-  AddInternalMappings(cstdlib, cxxstdlib);
+  AddInternalMappings(cstdlib, cxxstdlib, env);
 }
 
-void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
+void IncludePicker::AddInternalMappings(CStdLib cstdlib,
+                                        CXXStdLib cxxstdlib,
+                                        const Environment& env) {
   using clang::tooling::stdlib::Header;
   using clang::tooling::stdlib::Lang;
   using clang::tooling::stdlib::Symbol;
@@ -1726,6 +1775,10 @@ void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
       }
     }
   }
+
+  // Add conditional C numeric-limits symbol mappings
+  AddSymbolMappings(env, numeric_limits_symbol_map,
+                    IWYU_ARRAYSIZE(numeric_limits_symbol_map));
 
   // HACK: Mark C standard library headers as private in C++ mode so that
   // <cname> are suggested instead of <name.h>.
@@ -1850,6 +1903,19 @@ void IncludePicker::AddSymbolMappings(const SymbolMapEntry* entries,
     const SymbolMapEntry& e = entries[i];
     AddSymbolMapping(e.map_from, e.use_kind, MappedInclude(e.map_to),
                      e.to_visibility);
+  }
+}
+
+void IncludePicker::AddSymbolMappings(
+    const Environment& env,
+    const Conditional<SymbolMapEntry>* entries,
+    size_t count) {
+  for (size_t i = 0; i < count; ++i) {
+    const Conditional<SymbolMapEntry>& e = entries[i];
+    if (!env.matches(e.criteria))
+      continue;
+    AddSymbolMapping(e.mapping.map_from, e.mapping.use_kind,
+                     MappedInclude(e.mapping.map_to), e.mapping.to_visibility);
   }
 }
 
