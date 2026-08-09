@@ -166,6 +166,28 @@ HANDWRITTEN_MAPPING = (
 # template despite the <chrono> header synopsis. This may be standardized later.
 # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85821.
     ('std::operator""s()', 'chrono'),
+
+    ('std::operator>>(std::basic_istream<:0, :1> &, :0 &)', 'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, unsigned char &)', 'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, signed char &)', 'istream'),
+    ('std::operator>>(std::basic_istream<:0, :1> &, :0 (&)[:2])', 'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, unsigned char (&)[:1])', 'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, signed char (&)[:1])', 'istream'),
+# Pre-C++20 stuff:
+    ('std::operator>>(std::basic_istream<:0, :1> &, :0 *)', 'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, unsigned char *)', 'istream'),
+    ('std::operator>>(std::basic_istream<char, :0> &, signed char *)', 'istream'),
+
+    ('std::operator<<(std::basic_ostream<:0, :1> &, :0)', 'ostream'),
+    ('std::operator<<(std::basic_ostream<:0, :1> &, char)', 'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, char)', 'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, signed char)', 'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, unsigned char)', 'ostream'),
+    ('std::operator<<(std::basic_ostream<:0, :1> &, const :0 *)', 'ostream'),
+    ('std::operator<<(std::basic_ostream<:0, :1> &, const char *)', 'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, const char *)', 'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, const signed char *)', 'ostream'),
+    ('std::operator<<(std::basic_ostream<char, :0> &, const unsigned char *)', 'ostream'),
 )
 
 def contains_unspec_alias(inp):
