@@ -95,44 +95,28 @@ SourceLocation GetLocation(const Decl* decl) {
   return decl->getLocation();
 }
 
-// Unfortunately member_expr doesn't expose the location of the .  or
-// ->.  If the base is implicit, there is no . or ->, and we just
-// return the member loc.  Otherwise, we have to guess if the entire
-// member-expression (all of 'b.m') is in a macro or not.  We look at
-// getMemberLoc(), the start of the member ('m') , and
-// getBase()->getEndLoc(), the end of the base ('b').  If they're both
-// on the same line of the same file, then the . or -> must be there
-// too, and return that as the location.  Otherwise, we assume that
-// one or the other is in a macro, but the . or -> is not, and use the
-// instantiation (not spelling) location of the macro.
+// If the base is implicit, there is no . or ->, and we just return the member
+// loc.  Otherwise, we return the . or -> operator loc.
 static SourceLocation GetMemberExprLocation(const MemberExpr* member_expr) {
   const SourceLocation member_start = member_expr->getMemberLoc();
   const SourceLocation base_end = member_expr->getBase()->getEndLoc();
+  const SourceLocation operator_loc = member_expr->getOperatorLoc();
 
   if (member_expr->isImplicitAccess() || base_end.isInvalid())
     return member_start;
-  // Weird: member_start can be 'invalid' for calls like bool(x),
-  // where bool() is a class's own operator bool.  Shrug.
-  if (member_start.isInvalid())
+
+  // operator_loc can be 'invalid' for calls like bool(x),
+  // where bool() is a class's own operator bool.
+  if (operator_loc.isInvalid())
     return base_end;
 
-  // If either the base or the member is not a macro, then we consider
-  // the location of this member-expr to be outside the macro.
-  if (!IsInMacro(member_start))
-    return member_start;
-  if (!IsInMacro(base_end))
+  // If the operator is in macro and the base is not, the macro might be
+  // intended to be usable with different classes, so the class type should be
+  // reported at the macro expansion location.
+  if (!IsInMacro(base_end) && IsInMacro(operator_loc))
     return base_end;
 
-  // Now figure out if the base and member are in the same macro.  If
-  // so, we say the whole member-expr is part of that macro.
-  // Otherwise, we just say the member-expr is in the file where the
-  // member and base macros are called.
-  if (GetFileEntry(member_start) == GetFileEntry(base_end) &&
-      GetLineNumber(member_start) == GetLineNumber(base_end)) {
-    return member_start;
-  }
-
-  return GetInstantiationLoc(member_start);
+  return operator_loc;
 }
 
 SourceLocation GetLocation(const Stmt* stmt) {

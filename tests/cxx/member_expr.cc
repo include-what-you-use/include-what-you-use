@@ -18,6 +18,11 @@
 int RefFn(const IndirectClass& ic) {
   // IWYU: IndirectClass is...*indirect.h
   ic.Method();
+  // Test that the use location is the dot location.
+  ic
+      // IWYU: IndirectClass is...*indirect.h
+      .
+      Method();
   // IWYU: IndirectClass is...*indirect.h
   return ic.a;
 }
@@ -49,12 +54,21 @@ void ViaMacro(const IndirectClass& ic) {
   IC.CALL_METHOD;
 
   IC
-      .
       // IWYU: IndirectClass is...*indirect.h
+      .
       CALL_METHOD;
+
+  // The macro is not responsible for the member expr base class here. The base
+  // class may be different.
+  // IWYU: IndirectClass is...*indirect.h
+  ic DOT_METHOD;
 
   // But this member-expr is entirely in the macro, so we don't own it.
   IC_CALL_METHOD;
+  IC_CALL_METHOD_MULTILINE;
+  // IC_DOT is useless without the complete type, so its header should better
+  // provide it.
+  IC_DOT Method();
 }
 
 
@@ -70,6 +84,12 @@ int RefFn(const IndirectTemplate<IndirectClass>& ic) {
   // IWYU: IndirectTemplate is...*indirect.h
   // IWYU: IndirectClass is...*indirect.h
   ic.Method();
+  // Test that the use location is the dot location.
+  ic
+      // IWYU: IndirectTemplate is...*indirect.h
+      // IWYU: IndirectClass is...*indirect.h
+      .
+      Method();
   // IWYU: IndirectTemplate is...*indirect.h
   // IWYU: IndirectClass is...*indirect.h
   return ic.a;
@@ -111,13 +131,23 @@ void ViaMacro(const IndirectTemplate<IndirectClass>& ic) {
   // IWYU: IndirectClass is...*indirect.h
   IC.CALL_METHOD;
 
+  // IWYU: IndirectTemplate is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
   IC.
-      // IWYU: IndirectTemplate is...*indirect.h
-      // IWYU: IndirectClass is...*indirect.h
       CALL_METHOD;
+
+  // The macro is not responsible for the member expr base class here. The base
+  // class may be different.
+  // IWYU: IndirectTemplate is...*indirect.h
+  // IWYU: IndirectClass is...*indirect.h
+  ic DOT_METHOD;
 
   // But this member-expr is entirely in the macro, so we don't own it.
   IC_CALL_METHOD;
+  IC_CALL_METHOD_MULTILINE;
+  // IC_DOT is useless without the complete type, so its header should better
+  // provide it.
+  IC_DOT Method();
 }
 
 // Test type use with member expression inside a template.
@@ -163,6 +193,6 @@ tests/cxx/member_expr.cc should remove these lines:
 
 The full include-list for tests/cxx/member_expr.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
-#include "tests/cxx/member_expr-d1.h"  // for CALL_METHOD, IC, IC_CALL_METHOD
+#include "tests/cxx/member_expr-d1.h"  // for CALL_METHOD, DOT_METHOD, IC, IC_CALL_METHOD, IC_CALL_METHOD_MULTILINE, IC_DOT
 
 ***** IWYU_SUMMARY */
