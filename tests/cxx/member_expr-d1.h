@@ -10,3 +10,7 @@
 #define CALL_METHOD Method()
 #define IC ic
 #define IC_CALL_METHOD  (ic).Method()
+#define IC_CALL_METHOD_MULTILINE (ic). \
+    Method()
+#define DOT_METHOD .Method()
+#define IC_DOT ic.
