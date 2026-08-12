@@ -35,6 +35,7 @@ class Foo {
   // declaration/definition is needed.
   void Bar1() {
     UsedAsPtrInMethod* x;
+    FwdDeclAfterUsage* y;
   }
   void Bar2() {
     UsedFullyInMethod x;
@@ -66,6 +67,7 @@ class Foo {
   class UsedAsPtrMember { };
   struct UsedFullyInMethodNotForwardDeclared { };
   class UsedAsFriend { };
+  class FwdDeclAfterUsage;
 
   UsedFullyInInitializer init_;
   UsedImplicitlyInInitializer implicit_;
@@ -100,6 +102,7 @@ class Outer {
   // declaration/definition is needed.
   void Bar1() {
     UsedAsPtrInMethod<int>* x;
+    FwdDeclAfterUsage<int>* y;
   }
   void Bar2() {
     UsedFullyInMethod<int> x;
@@ -129,6 +132,7 @@ class Outer {
   template<typename T> class UsedAsPtrMember { };
   template<typename T> class UsedFullyInMethodNotForwardDeclared { };
   template<typename T> class UsedAsFriend { };
+  template<typename T> class FwdDeclAfterUsage;
 
   UsedFullyInInitializer<int> init_;
   UsedImplicitlyInInitializer<int> implicit_;
@@ -163,6 +167,7 @@ class Container {
   // declaration/definition is needed.
   void Bar1() {
     UsedAsPtrInMethod* x;
+    FwdDeclAfterUsage* y;
   }
   void Bar2() {
     UsedFullyInMethod x;
@@ -192,6 +197,7 @@ class Container {
   class UsedAsPtrMember { };
   class UsedFullyInMethodNotForwardDeclared { };
   class UsedAsFriend { };
+  class FwdDeclAfterUsage;
 
   UsedFullyInInitializer init_;
   UsedImplicitlyInInitializer implicit_;
@@ -222,17 +228,20 @@ tests/cxx/fwd_decl_nested_class.cc should remove these lines:
 - template <typename T> class Outer::UsedImplicitlyInInitializer;  // lines XX-XX
 
 The full include-list for tests/cxx/fwd_decl_nested_class.cc:
+class Container::FwdDeclAfterUsage;  // lines XX-XX
 class Container::UsedAsFriend;  // lines XX-XX
 class Container::UsedAsPtrArg;  // lines XX-XX
 class Container::UsedAsPtrMember;  // lines XX-XX
 class Container::UsedAsPtrReturn;  // lines XX-XX
 class Container::UsedInTypedef;  // lines XX-XX
+class Foo::FwdDeclAfterUsage;  // lines XX-XX
 class Foo::NoUsageDefinedOutOfLine;  // lines XX-XX
 class Foo::UsedAsFriend;  // lines XX-XX
 class Foo::UsedAsPtrArg;  // lines XX-XX
 class Foo::UsedAsPtrMember;  // lines XX-XX
 class Foo::UsedAsPtrReturn;  // lines XX-XX
 class Foo::UsedInTypedef;  // lines XX-XX
+template <typename T> class Outer::FwdDeclAfterUsage;  // lines XX-XX
 template <typename T> class Outer::NoUsageDefinedOutOfLine;  // lines XX-XX
 template <typename T> class Outer::UsedAsFriend;  // lines XX-XX
 template <typename T> class Outer::UsedAsPtrArg;  // lines XX-XX

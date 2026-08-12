@@ -884,6 +884,11 @@ bool DeclCanBeForwardDeclared(const Decl* decl) {
   return DeclCanBeForwardDeclared(decl, &reason);
 }
 
+bool SameClassDeclUsedInMethod(const Decl* decl, const OneUse& use) {
+  return DeclsAreInSameClass(decl, use.decl()) && !decl->isOutOfLine() &&
+         (use.flags() & UF_InCxxMethodBody);
+}
+
 // Helper to tell whether a forward-declare use is 'preceded' by a
 // declaration inside the same file.  'Preceded' is in quotes, because
 // it's actually ok if the declaration follows the use, inside a
@@ -901,8 +906,7 @@ bool DeclIsVisibleToUseInSameFile(const Decl* decl, const OneUse& use) {
   // method.
   return (IsBeforeInSameFile(decl, use.use_loc()) ||
           GetLocation(decl) == use.use_loc() ||
-          (DeclsAreInSameClass(decl, use.decl()) && !decl->isOutOfLine() &&
-           (use.flags() & UF_InCxxMethodBody)));
+          SameClassDeclUsedInMethod(decl, use));
 }
 
 // This makes a best-effort attempt to find the smallest set of
@@ -1279,17 +1283,19 @@ void ProcessForwardDeclare(OneUse* use,
   // (A6) If a definition exists earlier in this file, discard this use.
   // Note: for the 'earlier' checks, what matters is the *instantiation*
   // location.
-  const set<const NamedDecl*> redecls = GetTagRedecls(tag_decl);
-  for (const NamedDecl* redecl : redecls) {
-    CHECK_(isa<TagDecl>(redecl) && "GetTagRedecls has redecls of wrong type");
-    const SourceLocation defined_loc = GetLocation(redecl);
-    if (cast<TagDecl>(redecl)->isCompleteDefinition() &&
-        DeclIsVisibleToUseInSameFile(redecl, *use)) {
-      VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name() << " ("
-               << use->PrintableUseLoc()
-               << "): dfn is present: " << PrintableLoc(defined_loc) << "\n";
-      use->set_ignore_use();
-      return;
+  if (!(use->flags() & UF_RedeclUse)) {
+    const set<const NamedDecl*> redecls = GetTagRedecls(tag_decl);
+    for (const NamedDecl* redecl : redecls) {
+      CHECK_(isa<TagDecl>(redecl) && "GetTagRedecls has redecls of wrong type");
+      const SourceLocation defined_loc = GetLocation(redecl);
+      if (cast<TagDecl>(redecl)->isCompleteDefinition() &&
+          DeclIsVisibleToUseInSameFile(redecl, *use)) {
+        VERRS(6) << "Ignoring fwd-decl use of " << use->symbol_name() << " ("
+                 << use->PrintableUseLoc()
+                 << "): dfn is present: " << PrintableLoc(defined_loc) << "\n";
+        use->set_ignore_use();
+        return;
+      }
     }
   }
 
@@ -1682,7 +1688,8 @@ void CalculateIwyuForForwardDeclareUse(
   // in the same file as the use (and before it).
   const set<const NamedDecl*>& redecls = GetTagRedecls(tag_decl);
   for (const NamedDecl* redecl : redecls) {
-    if (DeclIsVisibleToUseInSameFile(redecl, *use)) {
+    if (IsBeforeInSameFile(redecl, use->use_loc()) ||
+        SameClassDeclUsedInMethod(redecl, *use)) {
       same_file_decl = redecl;
       break;
     }

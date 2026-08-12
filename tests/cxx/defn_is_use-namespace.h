@@ -13,6 +13,9 @@
 namespace ns1 {
 namespace ns2 {
   void Foo();
+
+  class ClassInNs2;
+  class Class2InNs2;
 }
 }
 

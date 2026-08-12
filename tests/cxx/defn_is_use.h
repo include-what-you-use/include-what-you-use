@@ -1,4 +1,4 @@
-//===--- 1573.cc - iwyu test ----------------------------------------------===//
+//===--- defn_is_use.h - test input file for iwyu -------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,18 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_XFAIL
-
-namespace foo {
-struct Bar;
+namespace ns1::ns2 {
+class Class2InNs2;
 }
 
-struct foo::Bar {
-  void frombulate();
-};
+extern ns1::ns2::Class2InNs2 c2ns2;
 
 /**** IWYU_SUMMARY
 
-(tests/bugs/1573/1573.cc has correct #includes/fwd-decls)
+(tests/cxx/defn_is_use.h has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */
