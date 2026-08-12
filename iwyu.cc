@@ -1600,7 +1600,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // with the warning message that iwyu emits.
   virtual void ReportDeclForwardDeclareUse(SourceLocation used_loc,
                                            const NamedDecl* used_decl,
-                                           const char* comment = nullptr) {
+                                           const char* comment = nullptr,
+                                           UseFlags extra_use_flags = 0) {
     const NamedDecl* target_decl = used_decl;
 
     // Sometimes a shadow decl comes between us and the 'real' decl.
@@ -1614,7 +1615,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreDecl(target_decl))
       return;
 
-    UseFlags use_flags = ComputeUseFlags(current_ast_node());
+    UseFlags use_flags = ComputeUseFlags(current_ast_node()) | extra_use_flags;
 
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
@@ -4035,8 +4036,10 @@ class InstantiatedTemplateVisitor
     }
   }
 
-  void ReportDeclForwardDeclareUse(SourceLocation, const NamedDecl*,
-                                   const char* /*comment*/ = nullptr) override {
+  void ReportDeclForwardDeclareUse(SourceLocation,
+                                   const NamedDecl*,
+                                   const char* /*comment*/ = nullptr,
+                                   UseFlags /*extra_use_flags*/ = 0) override {
     // Forward declarations make sense only when a type is explicitly written.
     // But 'InstantiatedTemplateVisitor' is to traverse implicit template
     // specializations, actually. (Template definitions and explicit
@@ -5141,6 +5144,13 @@ class IwyuAstConsumer
       preprocessor_info().FileInfoFor(CurrentFileEntry())->AddForwardDeclare(
           decl_to_fwd_declare, definitely_keep_fwd_decl);
     }
+    // If class-head-name of the definition has a nested-name-specifier, like
+    // 'class ns::C {};', IWYU should report that a forward-declaration is
+    // required before such definition. At least one should already be present
+    // somewhere, otherwise the code would not compile.
+    if (decl->getQualifier())
+      ReportDeclForwardDeclareUse(CurrentLoc(), decl->getPreviousDecl(),
+                                  nullptr, UF_RedeclUse);
     return Base::VisitTagDecl(decl);
   }
 
