@@ -7,10 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-template <typename>
+template <typename T>
 struct Tpl {
   static int i;
+  static T* fwd_decl_use_in_type;
+  static T full_use_in_type;
+  static int full_use_in_init;
+  template <typename U>
+  static U fully_using_both;
 };
+
+class IndirectClass;
+using TplNonProvidingIC = Tpl<IndirectClass>;
 
 template <typename>
 struct PartiallySpecializedTpl;

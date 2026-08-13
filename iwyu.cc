@@ -5483,11 +5483,20 @@ class IwyuAstConsumer
       if (!IsCallExprFunRef(current_ast_node()))
         ReportDeclUse(CurrentLoc(), expr->getDecl());
     }
-    if (auto* var_decl =
-            dyn_cast<VarTemplateSpecializationDecl>(expr->getDecl())) {
+    if (auto* var_decl = dyn_cast<VarDecl>(expr->getDecl())) {
       if (!IsImplicitInstantiation(var_decl))
         return Base::VisitDeclRefExpr(expr);
-      TemplateInstantiationData data = GetTplInstData(var_decl, expr);
+      TemplateInstantiationData data;
+      if (auto* var_tpl = dyn_cast<VarTemplateSpecializationDecl>(var_decl))
+        data = GetTplInstData(var_tpl, expr);
+      if (expr->getQualifier().getKind() == NestedNameSpecifier::Kind::Type) {
+        const Type* parent_type = expr->getQualifier().getAsType();
+        InsertInto(GetTplInstData(parent_type), &data);
+        InsertAllInto(GetProvidedTypeComponents(parent_type),
+                      &data.provided_types);
+      }
+      if (VarDecl* defn = var_decl->getDefinition())
+        var_decl = defn;
       instantiated_template_visitor_.ScanInstantiatedVariable(
           var_decl, current_ast_node(), data.resugar_map, data.provided_types);
     }
