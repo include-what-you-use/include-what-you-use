@@ -48,23 +48,10 @@ void body3() {
   Ptr p;
   (void)sizeof(*p);
 }
-// TODO: These are misattributed from explicit instantiation definitions.
-// IWYU: Struct1 needs a declaration
-// IWYU: Struct2 needs a declaration
-// IWYU: Struct1 is...*expl_inst_args-i1.h
-// IWYU: Struct2 is...*expl_inst_args-i1.h
 template <typename T> T S<T>::sval = T{}; // (i) template static member dfn
 template <typename T>
-// IWYU: Struct1 needs a declaration
-// IWYU: Struct2 needs a declaration
-// IWYU: Struct1 is...*expl_inst_args-i1.h
-// IWYU: Struct2 is...*expl_inst_args-i1.h
 T* S<T>::fwd_decl_use;
 template <typename T>
-// IWYU: Struct1 needs a declaration
-// IWYU: Struct2 needs a declaration
-// IWYU: Struct1 is...*expl_inst_args-i1.h
-// IWYU: Struct2 is...*expl_inst_args-i1.h
 int S<T>::full_use_in_init = sizeof(T);
 template <typename T>
 template <typename U>

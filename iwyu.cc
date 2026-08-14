@@ -5205,6 +5205,14 @@ class IwyuAstConsumer
     return Base::VisitClassTemplateSpecializationDecl(decl);
   }
 
+  bool TraverseVarDecl(VarDecl* decl) {
+    // Only non-template variables and explicit specializations should be
+    // traversed. InstantiatedTemplateVisitor handles the rest.
+    if (isTemplateInstantiation(decl->getTemplateSpecializationKind()))
+      return true;
+    return Base::TraverseVarDecl(decl);
+  }
+
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
