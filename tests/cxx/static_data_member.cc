@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I . -Xiwyu --mapping_file=tests/cxx/static_data_member.imp
+// IWYU_ARGS: -I . -Xiwyu --mapping_file=tests/cxx/static_data_member.imp \
+//            -Xiwyu --check_also=tests/cxx/*-i1.h
 
 // Tests handling static data members, especially in templates.
 
@@ -17,6 +18,10 @@ void SetI() {
   // IWYU: Tpl is...*-i2.h
   // IWYU: Tpl::i is...*-i1.h
   Tpl<int>::i = 1;
+  // No need to report IndirectClass here.
+  // IWYU: Tpl is...*-i2.h
+  // IWYU: Tpl<char>::i is...*-i1.h
+  Tpl<char>::i = 1;
   // IWYU: PartiallySpecializedTpl<:0 *> is...*-i2.h
   // IWYU: PartiallySpecializedTpl<:0 *>::i is...*-i1.h
   PartiallySpecializedTpl<int*>::i = 1;
@@ -77,7 +82,7 @@ tests/cxx/static_data_member.cc should remove these lines:
 
 The full include-list for tests/cxx/static_data_member.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
-#include "tests/cxx/static_data_member-i1.h"  // for PartiallySpecializedTpl<>::i, Tpl::full_use_in_init, Tpl::full_use_in_type, Tpl::fully_using_both, Tpl::fwd_decl_use_in_type, Tpl::i, TplProvidingIC
+#include "tests/cxx/static_data_member-i1.h"  // for PartiallySpecializedTpl<>::i, Tpl::full_use_in_init, Tpl::full_use_in_type, Tpl::fully_using_both, Tpl::fwd_decl_use_in_type, Tpl::i, Tpl<>::i, TplProvidingIC
 #include "tests/cxx/static_data_member-i2.h"  // for PartiallySpecializedTpl, PartiallySpecializedTplWithMapping, Tpl, TplNonProvidingIC, TplWithMapping
 #include "tests/cxx/static_data_member-i3.h"  // for TplWithMapping::i
 #include "tests/cxx/static_data_member-i4.h"  // for PartiallySpecializedTplWithMapping<>::i
