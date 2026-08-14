@@ -21,9 +21,17 @@
 template <typename T>
 void foo(T x) {}                          // (a) function template
 template <typename T> T bar = T{};        // (b) variable template
+template <typename T>
+T* fwd_decl_use;
+template <typename T>
+int full_use_in_init = sizeof(T);
 template <typename T> struct S {          // (c) class template
   void method(T x) {}                     // (d) member function
   static T sval;                          // (e) static data member
+  static T* fwd_decl_use;
+  static int full_use_in_init;
+  template <typename>
+  static int fully_uses_both_in_init;
   template <typename U> void tmpl(U u) {} // (f) member function template
   struct Inner { T val; };                // (g) nested class
 };
@@ -47,6 +55,24 @@ void body3() {
 // IWYU: Struct2 is...*expl_inst_args-i1.h
 template <typename T> T S<T>::sval = T{}; // (i) template static member dfn
 template <typename T>
+// IWYU: Struct1 needs a declaration
+// IWYU: Struct2 needs a declaration
+// IWYU: Struct1 is...*expl_inst_args-i1.h
+// IWYU: Struct2 is...*expl_inst_args-i1.h
+T* S<T>::fwd_decl_use;
+template <typename T>
+// IWYU: Struct1 needs a declaration
+// IWYU: Struct2 needs a declaration
+// IWYU: Struct1 is...*expl_inst_args-i1.h
+// IWYU: Struct2 is...*expl_inst_args-i1.h
+int S<T>::full_use_in_init = sizeof(T);
+template <typename T>
+template <typename U>
+int S<T>::fully_uses_both_in_init = [] {
+  T t;
+  return sizeof(U);
+}();
+template <typename T>
 struct S2 {
   void method() {
     T t;                                  // (j) template class method body
@@ -66,6 +92,10 @@ using S2Struct3Providing = S2<Struct3>;
 extern template void foo<Struct1>(Struct1);              // (a)
 // IWYU: Struct1 needs a declaration
 extern template Struct1 bar<Struct1>;                    // (b)
+// IWYU: Struct1 needs a declaration
+extern template Struct1* fwd_decl_use<Struct1>;
+// IWYU: Struct1 needs a declaration
+extern template int full_use_in_init<Struct1>;
 // TODO: Language wants complete Struct1 for nested S::Inner.
 // IWYU: Struct1 needs a declaration
 extern template struct S<Struct1>;                       // (c)
@@ -73,6 +103,13 @@ extern template struct S<Struct1>;                       // (c)
 extern template void S<Struct2>::method(Struct2);        // (d)
 // IWYU: Struct2 needs a declaration
 extern template Struct2 S<Struct2>::sval;                // (e) & (i)
+// IWYU: Struct2 needs a declaration
+extern template Struct2* S<Struct2>::fwd_decl_use;
+// IWYU: Struct2 needs a declaration
+extern template int S<Struct2>::full_use_in_init;
+// IWYU: Struct1 needs a declaration
+// IWYU: Struct2 needs a declaration
+extern template int S<Struct1>::fully_uses_both_in_init<Struct2>;
 // IWYU: Struct1 needs a declaration
 // IWYU: Struct2 needs a declaration
 extern template void S<Struct1>::tmpl<Struct2>(Struct2); // (f)
@@ -92,6 +129,11 @@ template void foo<Struct1>(Struct1);              // (a)
 // IWYU: Struct1 is...*expl_inst_args-i1.h
 template Struct1 bar<Struct1>;                    // (b)
 // IWYU: Struct1 needs a declaration
+template Struct1* fwd_decl_use<Struct1>;
+// IWYU: Struct1 needs a declaration
+// IWYU: Struct1 is...*expl_inst_args-i1.h
+template int full_use_in_init<Struct1>;
+// IWYU: Struct1 needs a declaration
 // IWYU: Struct1 is...*expl_inst_args-i1.h
 template struct S<Struct1>;                       // (c)
 // IWYU: Struct2 needs a declaration
@@ -100,6 +142,16 @@ template void S<Struct2>::method(Struct2);        // (d)
 // IWYU: Struct2 needs a declaration
 // IWYU: Struct2 is...*expl_inst_args-i1.h
 template Struct2 S<Struct2>::sval;                // (e) & (i)
+// IWYU: Struct2 needs a declaration
+template Struct2* S<Struct2>::fwd_decl_use;
+// IWYU: Struct2 needs a declaration
+// IWYU: Struct2 is...*expl_inst_args-i1.h
+template int S<Struct2>::full_use_in_init;
+// IWYU: Struct1 needs a declaration
+// IWYU: Struct1 is...*expl_inst_args-i1.h
+// IWYU: Struct2 needs a declaration
+// IWYU: Struct2 is...*expl_inst_args-i1.h
+template int S<Struct1>::fully_uses_both_in_init<Struct2>;
 // IWYU: Struct1 needs a declaration
 // IWYU: Struct2 needs a declaration
 // IWYU: Struct2 is...*expl_inst_args-i1.h

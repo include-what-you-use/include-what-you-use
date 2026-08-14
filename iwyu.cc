@@ -5216,7 +5216,7 @@ class IwyuAstConsumer
   bool VisitExplicitInstantiationDecl(ExplicitInstantiationDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    const NamedDecl* spec = decl->getSpecialization();
+    NamedDecl* spec = decl->getSpecialization();
     if (const auto* fn_spec = dyn_cast<FunctionDecl>(spec)) {
       if (decl->isExternTemplate()) {
         // Explicit instantiation declarations require only any function
@@ -5244,7 +5244,7 @@ class IwyuAstConsumer
               data.provided_types);
         }
       }
-    } else if (const auto* var_tpl_spec =
+    } else if (auto* var_tpl_spec =
                    dyn_cast<VarTemplateSpecializationDecl>(spec)) {
       if (decl->isExternTemplate()) {
         // An explicit specialization (if present) should be reported even
@@ -5253,14 +5253,20 @@ class IwyuAstConsumer
         ReportDeclUse(CurrentLoc(), var_tpl_spec);
       } else {
         ReportDeclUse(CurrentLoc(), spec, nullptr, UF_InstantiationPattern);
-        // TODO(bolshakov): report required template arguments.
+        TemplateInstantiationData data = GetTplInstData(decl);
+        instantiated_template_visitor_.ScanInstantiatedVariable(
+            var_tpl_spec->getDefinition(), current_ast_node(), data.resugar_map,
+            data.provided_types);
       }
-    } else if (const auto* var_spec = dyn_cast<VarDecl>(spec)) {
+    } else if (auto* var_spec = dyn_cast<VarDecl>(spec)) {
       // Static data member of a template class. The type cannot be changed, and
       // there should not be any redeclaration but the definition.
       if (!decl->isExternTemplate()) {
         ReportDeclUse(CurrentLoc(), var_spec);
-        // TODO(bolshakov): report required template arguments.
+        TemplateInstantiationData data = GetTplInstData(decl);
+        instantiated_template_visitor_.ScanInstantiatedVariable(
+            var_spec->getDefinition(), current_ast_node(), data.resugar_map,
+            data.provided_types);
       }
     }
     // TODO(bolshakov): handle class template and member class instantiations.
