@@ -227,6 +227,7 @@ using clang::MemberExpr;
 using clang::MemberPointerType;
 using clang::NamedDecl;
 using clang::NamespaceAliasDecl;
+using clang::NamespaceDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::OpaqueValueExpr;
@@ -5050,6 +5051,26 @@ class IwyuAstConsumer
 
   // --- Visitors of types derived from Decl.
 
+  bool VisitDecl(Decl* decl) {
+    KeepIncludeIfEmbedded();
+    return Base::VisitDecl(decl);
+  }
+
+  bool VisitStmt(Stmt* stmt) {
+    KeepIncludeIfEmbedded();
+    return Base::VisitStmt(stmt);
+  }
+
+  bool VisitType(Type* type) {
+    KeepIncludeIfEmbedded();
+    return Base::VisitType(type);
+  }
+
+  bool VisitTemplateArgumentLoc(const TemplateArgumentLoc& arg) {
+    KeepIncludeIfEmbedded();
+    return Base::VisitTemplateArgumentLoc(arg);
+  }
+
   bool VisitNamespaceAliasDecl(NamespaceAliasDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
@@ -5855,6 +5876,28 @@ class IwyuAstConsumer
   }
 
  private:
+  // This is to keep includes under non-top-level declarations and other AST
+  // nodes, like in this case:
+  //
+  // int arr[] = {
+  // #include "array_items.h"
+  // };
+  void KeepIncludeIfEmbedded() const {
+    const ASTNode* parent = current_ast_node()->parent();
+    if (!parent || parent->IsA<TranslationUnitDecl>() ||
+        parent->IsA<NamespaceDecl>()) {
+      return;
+    }
+    OptionalFileEntryRef current_file =
+        GetFileEntry(GetInstantiationLoc(CurrentLoc()));
+    OptionalFileEntryRef parent_file = GetFileEntry(parent->GetLocation());
+    if (current_file != parent_file) {
+      preprocessor_info()
+          .FileInfoFor(parent_file)
+          ->ReportKnownDesiredFile(current_file);
+    }
+  }
+
   set<const Type*> GetProvidedTypeComponents(const Type* type) const {
     set<const Type*> res;
     const Type* desugared_until_typedef_or_tpl = Desugar(type);

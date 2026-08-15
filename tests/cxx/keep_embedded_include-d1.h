@@ -1,4 +1,4 @@
-//===--- 1743.cc - iwyu test ----------------------------------------------===//
+//===--- keep_embedded_include-d1.h - test input file for iwyu ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_XFAIL
-
-enum Foo {
-#include "enumerators.def"
-};
+Item1 =
+#include "tests/cxx/keep_embedded_include-d3.h"
+,
+Item2,
+Item3
 
 /**** IWYU_SUMMARY
 
-(tests/bugs/1743/1743.cc has correct #includes/fwd-decls)
+(tests/cxx/keep_embedded_include-d1.h has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */
