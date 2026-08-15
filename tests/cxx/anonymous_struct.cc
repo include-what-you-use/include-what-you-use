@@ -7,7 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that anonymous structs, unions, and enums don't cause iwyu problems.
+
+#include "tests/cxx/anonymous_struct.h"
 
 union {
   int x;
@@ -71,6 +75,11 @@ typedef_union tu;
 typedef_struct ts;
 typedef_struct_with_label tswl;
 typedef_enum te;
+
+header_typedef_union htu;
+header_typedef_struct hts;
+header_typedef_struct_with_label htswl;
+header_typedef_enum hte;
 
 // Unnamed struct field should not cause a warning.
 

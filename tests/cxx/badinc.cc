@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -Xiwyu --mapping_file=tests/cxx/badinc.imp -std=gnu++98 -I .
+// IWYU_ARGS: -Xiwyu --mapping_file=tests/cxx/badinc.imp -std=gnu++98 -I . \
+//            -Xiwyu --check_also=tests/cxx/*-d5.h
 
 // This is a unittest for include-what-you-use.
 //
@@ -62,6 +63,7 @@
 #include  "tests/cxx/badinc.h"
 #include   "tests/cxx/badinc-d1.h"
 #include "tests/cxx/badinc-d2.h"
+#include "tests/cxx/badinc-d5.h"
 #include  USED_INC    // testing computed #includes
 #include  <string>    // not sorted properly (before the #include ""'s).
 // The following line is needed, but use a 'keep' pragma anyway.
@@ -177,39 +179,20 @@ struct Cc_C_Struct* cc_c_struct_ptr = NULL;
 
 // The types.
 typedef std::string Cc_string;   // Nobody should use this.
-// IWYU: I1_Class is...*badinc-i1.h
+// IWYU: I1_Class needs a declaration
 typedef I1_Class Cc_typedef;
 // IWYU: kI1ConstInt is...*badinc-i1.h
-// IWYU: I1_Class is...*badinc-i1.h
+// IWYU: I1_Class needs a declaration
 typedef I1_Class Cc_typedef_array[kI1ConstInt];
-// We need the full definition of template types (I1_TemplateClass in
-// this case) since we're re-exporting them.  Note we need a full
-// definition even of I2_Class, since we don't know if clients will be
-// using the no-arg Cc_tpl_typedef ctor, which requires the full
-// definition of I2_Class.
+// We need the full definition of template type I1_TemplateClass
+// since we're making use of the default template argument.
 // IWYU: I1_TemplateClass is...*badinc-i1.h...*#included.
-// IWYU: I1_Class is...*badinc-i1.h
-// IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
+// IWYU: I1_Class needs a declaration
+// IWYU: I2_Class needs a declaration
 typedef I1_TemplateClass<I1_TemplateClass<I1_Class,I2_Class> > Cc_tpl_typedef;
-// TODO(csilvers): it would be nice to be able to take this line out and
-// still have the above tests pass:
-// TODO(bolshakov): figure out how to determine at the use site that a typedef
-// provides not only the types but also the member functions.
-// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
-Cc_tpl_typedef cc_tpl_typedef;
-// IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::I2_Class({{.*}}) is...*badinc-i2-inl.h
-// IWYU: I2_Class::~I2_Class() is...*badinc-i2-inl.h
-// IWYU: I2_Class::InlFileFn({{.*}}) is...*badinc-i2-inl.h
-// IWYU: I2_Class::InlFileTemplateFn({{.*}}) is...*badinc-i2-inl.h
-// IWYU: I2_Class::InlFileStaticFn({{.*}}) is...*badinc-i2-inl.h
+// IWYU: I2_Class needs a declaration
 typedef I2_Class Cc_I2_Class_Typedef;
-// I1_Struct isn't really used by any possible operation with H_TemplateStruct,
-// but '#include' is required as a common rule, as long as I1_Struct
-// isn't forward-declared.
-// IWYU: I1_Struct is...*badinc-i1.h
-// IWYU: OperateOn<I1_Struct> is...*badinc-i1.h
+// IWYU: I1_Struct needs a declaration
 typedef H_TemplateStruct<I1_Struct> Cc_H_TemplateStruct_I1Class_Typedef;
 
 // IWYU: kI1ConstInt is...*badinc-i1.h
@@ -297,8 +280,7 @@ template<I1_Enum E> struct Cc_TemplateStruct<I1_Class, E> { I1_Class i; };
 // IWYU: I1_Class needs a declaration
 // IWYU: I1_Enum is...*badinc-i1.h
 template<> struct Cc_TemplateStruct<I1_Class, I12> { I1_Class* i; };
-// TODO(csilvers): I1_Class is technically forward-declarable.
-// IWYU: I1_Class is...*badinc-i1.h
+// IWYU: I1_Class needs a declaration
 // IWYU: I1_Enum is...*badinc-i1.h
 template<class T = I1_Class, I1_Enum E = I11> class Cc_DeclareOnlyTemplateClass;
 
@@ -945,17 +927,9 @@ template class I1_TemplateClass<I1_ClassPtr>;
 // IWYU: I2_TemplateClass is...*badinc-i2.h
 int i2_tpl_class_a = i2_template_class_with_inl_constructor.a();
 // IWYU: I2_TemplateClass needs a declaration
-// IWYU: I2_TemplateClass is...*badinc-i2.h
-// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}>({{.*}}) is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::InlFileTemplateClassFn({{.*}}) is...*badinc-i2-inl.h
 typedef I2_TemplateClass<int> Cc_typedef_implicit_instantiation;
 // Make sure we can do the same typedef multiple times.
 // IWYU: I2_TemplateClass needs a declaration
-// IWYU: I2_TemplateClass is...*badinc-i2.h
-// IWYU: I2_TemplateClass::I2_TemplateClass<{{.*}}>({{.*}}) is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::~I2_TemplateClass<{{.*}}>() is...*badinc-i2-inl.h
-// IWYU: I2_TemplateClass::InlFileTemplateClassFn({{.*}}) is...*badinc-i2-inl.h
 typedef I2_TemplateClass<int> Cc_typedef_implicit_instantiation2;
 // IWYU: I1_ClassPtr is...*badinc-i1.h
 // IWYU: I1_TemplateClass is...*badinc-i1.h
@@ -1016,10 +990,7 @@ class CC_Class2 {
   struct CC_TemplateStruct2<int> x;
 };
 
-// We require full type info for default template parameters, even
-// when it's not strictly necessary, just to avoid potential trouble.
-// (Users shouldn't have to worry about instantiating default params.)
-// IWYU: I1_Class is...*badinc-i1.h
+// IWYU: I1_Class needs a declaration
 template <class A, class B = I1_Class>
 class CC_TemplateClass {
  public:
@@ -1104,12 +1075,23 @@ int main() {
   fprintf(stdout, "%d", local_cc_struct.a);  // test a global in stdio.h too
   // IWYU: printf({{.*}}) is...*<cstdio>
   printf("%d", local_cc_struct.a);
+  // IWYU: I1_Class is...*badinc-i1.h
   (void)Cc_typedef(4);
-  // Not an iwyu violation, because Cc_typedef is responsible for its members.
+  // Only header-defined typedefs may provide underlying types.
+  // IWYU: I1_Class is...*badinc-i1.h
   Cc_typedef::s();
+  // IWYU: I1_Class is...*badinc-i1.h
   Cc_typedef::I1_Class_int Cc_typedef_int = 0;
+  // IWYU: I1_Class is...*badinc-i1.h
   Cc_typedef::NestedStruct Cc_typedef_struct;
+  // IWYU: I1_Class is...*badinc-i1.h
   Cc_typedef::NestedStruct::NestedStructTypedef Cc_typedef_nested_int = 0;
+  (void)D5_typedef(4);
+  // Not an iwyu violation, because D5_typedef is responsible for its members.
+  D5_typedef::s();
+  D5_typedef::I1_Class_int D5_typedef_int = 0;
+  D5_typedef::NestedStruct D5_typedef_struct;
+  D5_typedef::NestedStruct::NestedStructTypedef D5_typedef_nested_int = 0;
   local_h_class.a();
   // a() returns a FOO, which in this case is I2_Enum.
   local_d1_template_class.a();
@@ -1217,12 +1199,21 @@ int main() {
   I1_TemplateMethodOnlyClass<I2_Class>::tt<I1_TemplateClass>();
   // Try the static calls again, but this time with a typedef tpl arg.
   // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
+  // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I2_Class is...*badinc-i2.h
   I1_TemplateMethodOnlyClass<Cc_typedef>::s(local_i2_class_ptr);
   // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
+  // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I2_Class needs a declaration
   // IWYU: I2_Class is...*badinc-i2.h
   I1_TemplateMethodOnlyClass<Cc_typedef>::s<I2_Class*>(local_i2_class_ptr);
+  // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
+  // IWYU: I2_Class is...*badinc-i2.h
+  I1_TemplateMethodOnlyClass<D5_typedef>::s(local_i2_class_ptr);
+  // IWYU: I1_TemplateMethodOnlyClass is...*badinc-i1.h
+  // IWYU: I2_Class needs a declaration
+  // IWYU: I2_Class is...*badinc-i2.h
+  I1_TemplateMethodOnlyClass<D5_typedef>::s<I2_Class*>(local_i2_class_ptr);
 
   // The result of static_cast depends on the relation between the
   // source and target type, and thus requires the full target type
@@ -1780,13 +1771,24 @@ int main() {
   // IWYU: I1_Class needs a declaration
   I1_TemplateFunction<I1_Class*>(i1_class_ptr);
   // Try again, but with a typedef
+  // IWYU: I1_Class is...*badinc-i1.h
   Cc_typedef cc_typedef;
   // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
+  // IWYU: I1_Class is...*badinc-i1.h
   I1_TemplateFunction(cc_typedef);
   // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
+  // IWYU: I1_Class is...*badinc-i1.h
   I1_TemplateFunction<Cc_typedef>(cc_typedef);
   // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
+  // IWYU: I1_Class is...*badinc-i1.h
   I1_TemplateFunction<Cc_typedef>(i1_class);
+  D5_typedef d5_typedef;
+  // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
+  I1_TemplateFunction(d5_typedef);
+  // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
+  I1_TemplateFunction<D5_typedef>(d5_typedef);
+  // IWYU: I1_TemplateFunction(:0) is...*badinc-i1.h
+  I1_TemplateFunction<D5_typedef>(i1_class);
 
   // IWYU: I1_Class is...*badinc-i1.h
   i1_class.I1_ClassTemplateFunction(&i1_struct);
@@ -1862,6 +1864,7 @@ The full include-list for tests/cxx/badinc.cc:
 #include <typeinfo>  // for type_info
 #include "tests/cxx/badinc-d1.h"  // for D1CopyClassFn, D1Function, D1_Class, D1_CopyClass, D1_Enum, D1_I1_Typedef, D1_StructPtr, D1_Subclass, D1_TemplateClass, D1_TemplateStructWithDefaultParam, MACRO_CALLING_I4_FUNCTION
 #include "tests/cxx/badinc-d4.h"  // for D4_ClassForOperator, operator<<
+#include "tests/cxx/badinc-d5.h"  // for D5_typedef
 #include "tests/cxx/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_ClassPtr, I1_Enum, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns5, kI1ConstInt, operator==
 #include "tests/cxx/badinc2.c"
 class D2_Class;

@@ -7,12 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // There are a few situations where the language allows a type to be
 // forward-declared, but iwyu requires the definition: templates and
 // dependent template types, for instance.  In those cases, we run the
 // risk that iwyu might not realize a forward-declaration is actually
 // needed, if the definition comes after the relevant use.  This tests
 // to make sure iwyu does the right thing in those situations.
+
+#include "tests/cxx/fwd_decl_then_dfn.h"
 
 template<class T> struct Foo;
 template<class T> struct SubFoo : public Foo<T> { };

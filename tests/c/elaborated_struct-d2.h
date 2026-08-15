@@ -9,6 +9,13 @@
 
 typedef struct Struct Typedef;
 
+// Similar to LocalStructAlias.
+typedef struct HeaderStruct HeaderStructAlias;
+struct HeaderStruct {
+  int x;
+  HeaderStructAlias* next;
+};
+
 /**** IWYU_SUMMARY
 
 (tests/c/elaborated_struct-d2.h has correct #includes/fwd-decls)

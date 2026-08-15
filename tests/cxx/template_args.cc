@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I .
+// IWYU_ARGS: -I . -Xiwyu --check_also=tests/cxx/*-d3.h
 
 // Tests unusual and complex use of template arguments, such as
 // function-proto template arguments, for both classes and functions.
@@ -15,11 +15,7 @@
 #include "tests/cxx/direct.h"
 #include "tests/cxx/template_args-d1.h"
 #include "tests/cxx/template_args-d2.h"
-
-// IWYU: IndirectClass is...*indirect.h
-using IndirectClassProviding = IndirectClass;
-
-// ---------------------------------------------------------------
+#include "tests/cxx/template_args-d3.h"
 
 // IWYU: IndirectClass needs a declaration
 char Foo(IndirectClass ic);
@@ -41,8 +37,6 @@ void FunctionProtoClassArguments() {
   FunctionStruct<IndirectClass(char)> f2;
   (void)f2;
 
-  // IWYU: IndirectClass is...*indirect.h
-  using ProvidingFunctionAlias = IndirectClass(IndirectClass);
   FunctionStruct<ProvidingFunctionAlias> f3;
   // IWYU: IndirectClass is...*indirect.h
   FunctionStruct<NonProvidingFunctionAlias1> f4;
@@ -204,24 +198,47 @@ void TestCreateTemporary() {
 
 // ---------------------------------------------------------------
 
-// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass needs a declaration
 typedef IndirectClass LocalClass;
 
 void TestResugaringOfTypedefs() {
+  // IWYU: IndirectClass is...*indirect.h
   FunctionStruct<char(LocalClass&)> f1;
   (void)f1;
 
   LocalClass* lc = 0;
+  // IWYU: IndirectClass is...*indirect.h
   PointerStruct<LocalClass*>::a(lc);
+  // IWYU: IndirectClass is...*indirect.h
   DoublePointerStruct<LocalClass**>::a(&lc);
+  // IWYU: IndirectClass is...*indirect.h
   PointerStruct2<LocalClass>::a(lc);
+  // IWYU: IndirectClass is...*indirect.h
   DoublePointerStruct2<LocalClass>::a(&lc);
 
+  // IWYU: IndirectClass is...*indirect.h
   Outer<Inner<LocalClass> > oi;
   (void)oi;
 
+  // IWYU: IndirectClass is...*indirect.h
   CreateTemporary<LocalClass>::a();
+  // IWYU: IndirectClass is...*indirect.h
   CreateTemporary<int>::b<LocalClass>();
+
+  FunctionStruct<char(IndirectClassProviding&)> f1_icp;
+  (void)f1_icp;
+
+  IndirectClassProviding* icp = 0;
+  PointerStruct<IndirectClassProviding*>::a(icp);
+  DoublePointerStruct<IndirectClassProviding**>::a(&icp);
+  PointerStruct2<IndirectClassProviding>::a(icp);
+  DoublePointerStruct2<IndirectClassProviding>::a(&icp);
+
+  Outer<Inner<IndirectClassProviding>> oi_icp;
+  (void)oi_icp;
+
+  CreateTemporary<IndirectClassProviding>::a();
+  CreateTemporary<int>::b<IndirectClassProviding>();
 }
 
 // ---------------------------------------------------------------
@@ -261,9 +278,6 @@ template <typename T>
 struct TplWithMethodWithoutDef {
   static T GetT();
 };
-
-// IWYU: IndirectClass is...*indirect.h
-using TplWithMethodWithoutDefProviding = TplWithMethodWithoutDef<IndirectClass>;
 
 // IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
@@ -365,7 +379,7 @@ TplStructWithParameterPack2<IndirectClass, IndirectTemplate<int>> tswpp22;
 // IWYU: IndirectClass is...*indirect.h
 TplStructWithParameterPack2<IndirectClass> tswpp23;
 
-// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass needs a declaration
 template <typename T = IndirectClass, typename... Args>
 struct TplStructWithParameterPackAndDefArg : T, Args... {};
 
@@ -387,8 +401,6 @@ TplStructWithParameterPackAndDefArg<IndirectClass> tswppda2;
 // IWYU: IndirectClass needs a declaration
 TplStructWithParameterPackAndDefArg<IndirectClass>* ptswppda2;
 
-// TODO: probably, no need of IndirectClass here, because it is reported
-// at template declaration.
 // IWYU: IndirectClass is...*indirect.h
 TplStructWithParameterPackAndDefArg<> tswppda3;
 
@@ -405,10 +417,6 @@ constexpr auto inner_tpl_size = sizeof(inner_tpl);
 // instantiation scan. The class template uses dereferenced parameter type so
 // that there is no directly corresponding argument type for resugar_map, and
 // the type provision info should be obtained by GetProvidedTypeComponents.
-
-template <int>
-// IWYU: IndirectClass is...*indirect.h
-using ProvidingPtrAlias = IndirectClass*;
 
 template <typename T>
 struct UsingDereferenced {
@@ -477,13 +485,6 @@ struct Derived : Host<IndirectClass> {
   // IWYU: IndirectClass needs a declaration
   using Host<IndirectClass>::NestedNonTemplate;
 };
-
-// IWYU: IndirectClass is...*indirect.h
-using HostProvidingAlias = Host<IndirectClass>;
-
-template <typename>
-// IWYU: IndirectClass is...*indirect.h
-using HostProvidingAliasTpl = Host<IndirectClass>;
 
 using NestedWithClass = Host<Class>::Intermediate1;
 
@@ -632,6 +633,7 @@ The full include-list for tests/cxx/template_args.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 #include "tests/cxx/template_args-d1.h"  // for ProvidingAlias
 #include "tests/cxx/template_args-d2.h"  // for HostNonProvidingAlias, HostNonProvidingAliasTpl, IndirectClassNonProviding, NonProvidingAlias, NonProvidingFunctionAlias1, NonProvidingFunctionAlias2, NonProvidingPtrAlias, TplWithMethodWithoutDefNonProviding
+#include "tests/cxx/template_args-d3.h"  // for HostProvidingAlias, HostProvidingAliasTpl, IndirectClassProviding, ProvidingFunctionAlias, ProvidingPtrAlias, TplWithMethodWithoutDefProviding
 #include "tests/cxx/template_args-i1.h"  // for Class, GetInt, TplHost, TplInI1
 template <typename F> struct FunctionStruct;  // lines XX-XX
 

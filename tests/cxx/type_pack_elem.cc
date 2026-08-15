@@ -12,6 +12,7 @@
 // Tests that __type_pack_element (used in standard library implementations of
 // std::tuple) types are recognized and reported.
 
+#include "tests/cxx/type_pack_elem.h"
 #include "tests/cxx/direct.h"
 
 // IWYU: IndirectClass needs a declaration
@@ -36,9 +37,6 @@ __type_pack_element<0, decltype(IndirectClass::a)>*
     member_expr_ptr;
 
 // Provided types
-// IWYU: IndirectClass is...*indirect.h
-using Providing = IndirectClass;
-
 __type_pack_element<0, Providing>
     type_is_provided_by_arg;
 
@@ -88,12 +86,11 @@ void Tuple1617() {
 /**** IWYU_SUMMARY
 
 tests/cxx/type_pack_elem.cc should add these lines:
-#include "tests/cxx/indirect.h"
 
 tests/cxx/type_pack_elem.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/type_pack_elem.cc:
-#include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/type_pack_elem.h"
 
 ***** IWYU_SUMMARY */

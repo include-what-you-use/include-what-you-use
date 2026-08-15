@@ -44,6 +44,8 @@ typedef DirectStruct2 DoesNotForwardDeclareAndIncludes;
 struct IndirectStruct2;
 typedef IndirectStruct2 DoesEverythingRight;
 
+typedef DoesEverythingRight HeaderDoubleTypedef;
+
 // --- Now do it all again, with templates!
 
 // IWYU: IndirectStruct1 needs a declaration
@@ -95,6 +97,21 @@ typedef IndirectStruct3 IndirectStruct3NonProvidingTypedef;
 struct IndirectStruct4;
 typedef IndirectStruct4 IndirectStruct4NonProvidingTypedef;
 
+// ---
+
+template <typename T1, typename T2>
+struct WithAlias {
+  // IWYU: TplIndirectStruct1 needs a declaration
+  // IWYU: TplIndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h
+  using Type = TplIndirectStruct1<T1>;
+};
+
+inline void TestInstantiationDoesntProvide() {
+  // Test that IWYU should not suggest to provide underlying type of template
+  // internal type alias on instantiation side.
+  // IWYU: TplIndirectStruct1 needs a declaration
+  WithAlias<int, TplIndirectStruct1<int>> wa;
+}
 
 /**** IWYU_SUMMARY
 

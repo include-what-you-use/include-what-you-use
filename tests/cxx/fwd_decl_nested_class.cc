@@ -7,9 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Various tests of the handling of the forward declaration of nested
 // classes. For some uses the forward declaration is needed, for
 // others it isn't.
+
+#include "tests/cxx/fwd_decl_nested_class.h"
 
 template<typename T> void TplFn() { T t; (void)t; }
 
@@ -228,6 +232,7 @@ tests/cxx/fwd_decl_nested_class.cc should remove these lines:
 - template <typename T> class Outer::UsedImplicitlyInInitializer;  // lines XX-XX
 
 The full include-list for tests/cxx/fwd_decl_nested_class.cc:
+#include "tests/cxx/fwd_decl_nested_class.h"
 class Container::FwdDeclAfterUsage;  // lines XX-XX
 class Container::UsedAsFriend;  // lines XX-XX
 class Container::UsedAsPtrArg;  // lines XX-XX
