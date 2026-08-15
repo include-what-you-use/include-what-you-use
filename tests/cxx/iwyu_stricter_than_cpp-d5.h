@@ -12,3 +12,7 @@
 // No forward-declaration of 'IndirectClass' here.
 
 IndirectStruct4::IndirectClassNonProvidingTypedef RetNonProvidingTypedef();
+
+// DirectStruct7 should be used only in LocalTplWithDefaultArgs testing.
+struct DirectStruct7 {};
+struct DirectStruct8 {};

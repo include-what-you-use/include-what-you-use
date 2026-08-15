@@ -7,9 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // Tests that we don't trigger an assertion failure for dependent template
 // aliases. We avoid reporting uses of template names without an underlying
 // template decl to ensure we don't hit this.
+
+#include "tests/cxx/dependent_tpl_crash.h"
 
 template <int value, typename Type>
 struct ClassValueType {};
@@ -61,6 +65,7 @@ struct DependentFnReturn {
 int main() {
   test<0>();
   Tpl<int> t;
+  HeaderTpl<int> ht;
 }
 
 /**** IWYU_SUMMARY

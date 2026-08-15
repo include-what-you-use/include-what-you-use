@@ -85,9 +85,6 @@ template class ClassWithUsingMethod<IndirectClass>;
 template class ClassWithUsingMethod<IndirectTemplate<int>>;
 
 // The template argument is considered to be provided with type alias.
-// IWYU: IndirectTemplate needs a declaration
-// IWYU: IndirectTemplate is...*indirect.h
-typedef IndirectTemplate<char> ProvidingTypedef;
 // IWYU: ClassWithUsingMethod is...*explicit_instantiation-template.h
 template class ClassWithUsingMethod<ProvidingTypedef>;
 
@@ -273,7 +270,7 @@ The full include-list for tests/cxx/explicit_instantiation.cc:
 #include "tests/cxx/explicit_instantiation-spec-i1.h"  // for Template
 #include "tests/cxx/explicit_instantiation-spec-i2.h"  // for TplFn, var_tpl
 #include "tests/cxx/explicit_instantiation-template.h"  // for ClassWithMethodUsingPtr, ClassWithUsingMethod, Host, Template, TplFn, TplFnWithRedecl, TplFnWithRedecl2, TplWithDefArg, TplWithNotProvidedDefArg, getInt, var_tpl, var_tpl_with_redecl, var_tpl_with_redecl2
-#include "tests/cxx/explicit_instantiation-template2.h"  // for ClassWithUsingMethod2, TplWithProvidedDefArg
+#include "tests/cxx/explicit_instantiation-template2.h"  // for ClassWithUsingMethod2, ProvidingTypedef, TplWithProvidedDefArg
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 
 ***** IWYU_SUMMARY */

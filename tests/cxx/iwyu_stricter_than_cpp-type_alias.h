@@ -40,6 +40,8 @@ using DoesNotForwardDeclareAndIncludesAl = DirectStruct2;
 struct IndirectStruct2;
 using DoesEverythingRightAl = IndirectStruct2;
 
+using HeaderDoubleAl = DoesEverythingRightAl;
+
 // --- Now do it all again, with templates!
 
 // IWYU: TplIndirectStruct1 needs a declaration

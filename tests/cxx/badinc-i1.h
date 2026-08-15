@@ -186,6 +186,12 @@ template<class T> class OperateOn;   // forward declare, from badinc.h
 template<> class OperateOn<I1_Struct> { };
 template<class T> class OperateOn<I1_TemplateClass<T> > { };
 
+// This is needed by D5_TemplateStruct.
+template <class T>
+class D5_OperateOn;  // forward declare, from badinc-d5.h
+template <>
+class D5_OperateOn<I1_Struct> {};
+
 typedef I2_Class I1_I2_Class_Typedef;
 typedef I1_Class* I1_ClassPtr;
 

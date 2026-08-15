@@ -68,10 +68,10 @@
 // 20. "no_forward_declare" pragma: cpd19 is used in a forward-declarable
 //      way, but is forward declared anyway even though inhibited.
 // 21. "no_forward_declare" pragma: Test21a is defined after a typedef,
-//     which requires a forward declaration. This case is different because
-//     internally IWYU wants a full-use which it downgrades to a forward-decl.
+//     which requires a forward declaration.
 // 22. "no_forward_declare" pragma: cpd20a and cpd20b are defined inside an
 //     anonymous namespace.
+#include "tests/cxx/comment_pragmas.h"
 #include "tests/cxx/comment_pragmas-d1.h"
 #include "tests/cxx/comment_pragmas-d10.h"
 #include "tests/cxx/comment_pragmas-d11.h"
@@ -192,11 +192,6 @@ CommentPragmasD19* cpd19;
 CommentPragmasD20a* cpd20a;
 Foo::CommentPragmasD20b* cpd20b;
 CommentPragmasD20c* cpd20c;
-// This is a case where IWYU wants the full definition of
-// CommentPragmasTest21a due to the typedef, but then downgrades to
-// requiring a forward declaration since the definition appears later
-// in the same file. This forward declaration is inhibited due to a
-// no_forward_declare pragma at the top of this file.
 typedef CommentPragmasTest21a CommentPragmasTest21b;
 class CommentPragmasTest21a {};
 
@@ -224,6 +219,7 @@ tests/cxx/comment_pragmas.cc should remove these lines:
 - class CommentPragmasTest21a;  // lines XX-XX
 
 The full include-list for tests/cxx/comment_pragmas.cc:
+#include "tests/cxx/comment_pragmas.h"
 #include "some_public_header_file"  // for CommentPragmasD8, CommentPragmasD9
 #include "tests/cxx/comment_pragmas-d11.h"  // for CommentPragmasD11
 #include "tests/cxx/comment_pragmas-d12.h"  // for CommentPragmasD12

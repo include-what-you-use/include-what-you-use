@@ -64,11 +64,6 @@ IndirectWithImplicitCtor indirect
     // IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h
     = 1;
 
-// IWYU: NoAutocastCtor is...*implicit_ctor-i2.h
-using Providing = NoAutocastCtor;
-// IWYU: NoTrivialCtorDtor is...*implicit_ctor-i2.h
-using NoTrivialCtorDtorProvidingAlias = NoTrivialCtorDtor;
-
 // IWYU: NoAutocastCtor needs a declaration
 void FnTakingDirectly(NoAutocastCtor);
 void FnTakingByProvidingAlias(Providing);
@@ -220,7 +215,7 @@ tests/cxx/implicit_ctor.cc should add these lines:
 tests/cxx/implicit_ctor.cc should remove these lines:
 
 The full include-list for tests/cxx/implicit_ctor.cc:
-#include "tests/cxx/implicit_ctor-d1.h"  // for ImplicitCtorFn, ImplicitCtorInPartialFn, ImplicitCtorRefFn, InlineImplicitCtorRefFn, ProvidingOuterAggregate1, TakeMultipleRedeclStruct
+#include "tests/cxx/implicit_ctor-d1.h"  // for ImplicitCtorFn, ImplicitCtorInPartialFn, ImplicitCtorRefFn, InlineImplicitCtorRefFn, NoTrivialCtorDtorProvidingAlias, Providing, ProvidingOuterAggregate1, TakeMultipleRedeclStruct
 #include "tests/cxx/implicit_ctor-d2.h"  // for NoTrivialCtorDtorNonProvidingAlias, NonProviding, NonProvidingOuterAggregate1
 #include "tests/cxx/implicit_ctor-i2.h"  // for AggregateWithNonAggregate, I2NonAggregate, IndirectWithImplicitCtor, InnerAggregate1, InnerAggregate2, NoAutocastCtor, NoTrivialCtorDtor, OuterAggregate1, OuterAggregate2, OuterAggregateWithRef
 
