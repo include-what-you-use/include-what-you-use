@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/cxx/iwyu_stricter_than_cpp-i2.h"
+
 template <typename T1, typename T2>
 struct TplIndirectStruct3 {
   TplIndirectStruct3() = default;
@@ -19,6 +21,9 @@ struct TplIndirectStruct3 {
   static constexpr auto s = sizeof(T1);
   T2* t2;
 };
+
+using TplAllForwardDeclaredFnRetTypeProviding =
+    TplIndirectStruct3<IndirectStruct2, IndirectStruct2>;
 
 template <typename, typename>
 struct TplDirectStruct7;

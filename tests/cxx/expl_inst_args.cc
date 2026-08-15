@@ -66,13 +66,6 @@ struct S2 {
   }
 };
 
-// IWYU: Struct3 is...*expl_inst_args-i1.h
-using Struct3Providing = Struct3;
-// IWYU: Struct3 is...*expl_inst_args-i1.h
-using Struct3ProvidingPtr = Struct3*;
-// IWYU: Struct3 is...*expl_inst_args-i1.h
-using S2Struct3Providing = S2<Struct3>;
-
 // Part 1: add explicit instantiation declarations for these template kinds.
 
 // IWYU: Struct1 needs a declaration
@@ -151,6 +144,7 @@ template void body1<Struct1>();                   // (h)
 // IWYU: Struct2NonProviding is...*expl_inst_args-i2.h
 // IWYU: Struct2 is...*expl_inst_args-i1.h
 template void body1<Struct2NonProviding>();
+// IWYU: Struct3Providing is...*expl_inst_args-i1.h
 template void body1<Struct3Providing>();
 // IWYU: Struct1 needs a declaration
 // IWYU: Struct1 is...*expl_inst_args-i1.h
@@ -158,6 +152,7 @@ template void body2(Struct1*);
 // IWYU: Struct2NonProvidingPtr is...*expl_inst_args-i2.h
 // IWYU: Struct2 is...*expl_inst_args-i1.h
 template void body2(Struct2NonProvidingPtr);
+// IWYU: Struct3ProvidingPtr is...*expl_inst_args-i1.h
 template void body2(Struct3ProvidingPtr);
 // IWYU: Struct1 needs a declaration
 // IWYU: Struct1 is...*expl_inst_args-i1.h
@@ -165,6 +160,7 @@ template void body3<Struct1*>();
 // IWYU: Struct2NonProvidingPtr is...*expl_inst_args-i2.h
 // IWYU: Struct2 is...*expl_inst_args-i1.h
 template void body3<Struct2NonProvidingPtr>();
+// IWYU: Struct3ProvidingPtr is...*expl_inst_args-i1.h
 template void body3<Struct3ProvidingPtr>();
 // body4 doesn't provide its default template argument.
 // IWYU: body4() is...*expl_inst_args-i2.h
@@ -179,6 +175,7 @@ template void S2<Struct1>::method();              // (j)
 // IWYU: Struct2 is...*expl_inst_args-i1.h
 // IWYU: S2Struct2NonProviding is...*expl_inst_args-i2.h
 template void S2Struct2NonProviding::method();
+// IWYU: S2Struct3Providing is...*expl_inst_args-i1.h
 template void S2Struct3Providing::method();
 
 /**** IWYU_SUMMARY
@@ -191,7 +188,7 @@ tests/cxx/expl_inst_args.cc should remove these lines:
 - #include "tests/cxx/expl_inst_args-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/expl_inst_args.cc:
-#include "tests/cxx/expl_inst_args-i1.h"  // for Struct1, Struct2, Struct3, body5
+#include "tests/cxx/expl_inst_args-i1.h"  // for S2Struct3Providing, Struct1, Struct2, Struct3Providing, Struct3ProvidingPtr, body5
 #include "tests/cxx/expl_inst_args-i2.h"  // for S2Struct2NonProviding, Struct2NonProviding, Struct2NonProvidingPtr, body4
 
 ***** IWYU_SUMMARY */
