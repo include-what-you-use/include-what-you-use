@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-d2.h" -Wno-sizeof-pointer-div \
+// IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-d2.h" \
+//            -Xiwyu --check_also="tests/cxx/*-d5.h" -Wno-sizeof-pointer-div \
 //            -I .
 
 // Tests a few common types of macro uses to make sure we correctly
@@ -16,6 +17,7 @@
 // expansions when the macro is written in a to-ignore file.
 
 #include "tests/cxx/macro_location.h"
+#include "tests/cxx/macro_location-d5.h"
 #include "tests/cxx/macro_location-inet.h"
 
 struct A {
@@ -40,6 +42,13 @@ int my_htons(int x) {
 
 /**** IWYU_SUMMARY
 
-(tests/cxx/macro_location.cc has correct #includes/fwd-decls)
+tests/cxx/macro_location.cc should add these lines:
+
+tests/cxx/macro_location.cc should remove these lines:
+- #include "tests/cxx/macro_location-d5.h"  // lines XX-XX
+
+The full include-list for tests/cxx/macro_location.cc:
+#include "tests/cxx/macro_location.h"
+#include "tests/cxx/macro_location-inet.h"  // for iwyu_htons
 
 ***** IWYU_SUMMARY */
