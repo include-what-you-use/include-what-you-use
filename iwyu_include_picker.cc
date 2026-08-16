@@ -369,7 +369,7 @@ const SymbolMapEntry libc_symbol_map[] = {
 };
 
 const SymbolMapEntry stdlib_cxx_symbol_map[] = {
-#include "std_symbol_map.inc"  // IWYU pragma: keep
+#include "std_symbol_map.inc"
 
   // Common kludges for C++ standard libraries
 
@@ -1332,7 +1332,7 @@ const IncludeMapEntry libcxx_include_map[] = {
 
 // The compiler-provided C headers have some private/public factoring.
 const IncludeMapEntry clang_builtin_include_map[] = {
-#include "clang_builtin_include_map.inc"  // IWYU pragma: keep
+#include "clang_builtin_include_map.inc"
 };
 
 // Returns true if str is a valid quoted filepath pattern (i.e. either
