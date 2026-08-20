@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_DEFAULT_TPL_ARG_D2_H_
+#define INCLUDE_WHAT_YOU_USE_TESTS_CXX_DEFAULT_TPL_ARG_D2_H_
+
 #include "tests/cxx/default_tpl_arg-d1.h"
 #include "tests/cxx/indirect.h"
 
@@ -69,6 +72,13 @@ template <typename T>
 class TplProvidingDefArg4 {
   T t;
 };
+
+template <typename T = IndirectClass>
+class TplProvidingDefArg5 {
+  T t;
+};
+
+#endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_DEFAULT_TPL_ARG_D2_H_
 
 /**** IWYU_SUMMARY
 
