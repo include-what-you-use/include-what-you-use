@@ -14,3 +14,6 @@ class NsClass { };
 }
 
 template<typename T, typename U=ns::NsClass> class IndirectTplClass { };
+
+typedef IndirectClass ProvidingTypedef;
+typedef IndirectClass* ProvidingPtrTypedef;

@@ -28,3 +28,5 @@ template <typename T = IndirectClass>
 class TplWithProvidedDefArg {
   T t;
 };
+
+typedef IndirectTemplate<char> ProvidingTypedef;

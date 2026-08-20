@@ -3473,6 +3473,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           continue;
         }
       }
+      // Source file declarations should not provide more than actually needed.
+      if (!IsInHeader(loc))
+        continue;
       const Type* canonical = GetCanonicalType(component);
       if (!CodeAuthorWantsJustAForwardDeclare(canonical, loc))
         retval.insert(canonical);
@@ -5337,7 +5340,9 @@ class IwyuAstConsumer
   // This is called from Traverse*() because Visit*()
   // can't call HandleFunctionCall().
   bool HandleAliasedClassMethods(TypedefNameDecl* decl) {
-    if (CanIgnoreCurrentASTNode())
+    // If a typedef is defined in a source file (as opposed to headers), it is
+    // already known how it is used. Providing more than needed makes no sense.
+    if (CanIgnoreCurrentASTNode() || !IsInHeader(decl))
       return true;
 
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
@@ -5920,6 +5925,11 @@ class IwyuAstConsumer
 
   void CollectProvidedByDefaultTplArg(SourceLocation template_loc,
                                       TemplateInstantiationData* data) const {
+    // Only declarations in headers can provide. In source files, it is already
+    // known how the template is used, hence default arguments should be
+    // reported at instantiation sites if actually needed.
+    if (!IsInHeader(template_loc))
+      return;
     for (auto [canonical, sugared] : data->resugar_map) {
       if (!sugared) {  // This designates a default argument.
         if (const NamedDecl* decl =
@@ -6000,15 +6010,18 @@ class IwyuAstConsumer
 
   pair<bool, const char*> CanBeProvidedTypeComponent(
       const ASTNode* node) const {
+    // No point in author-intent analysis in source files or for builtins.
+    if (!IsInHeader(node->GetLocation()))
+      return pair(false, nullptr);
+
     if (node->HasAncestorOfType<TypedefNameDecl>() ||
         node->HasAncestorOfType<TemplateTypeParmDecl>()) {
       return pair(true, nullptr);
     }
 
     if (const FunctionDecl* decl = node->GetAncestorAs<FunctionDecl>()) {
-      // No point in author-intent analysis of function definitions
-      // in source files, or for builtins, or for friend declarations.
-      if (!IsInHeader(decl) || IsFriendDecl(decl))
+      // No point in author-intent analysis for friend function declarations.
+      if (IsFriendDecl(decl))
         return pair(false, nullptr);
       if (const auto* method = dyn_cast<CXXMethodDecl>(decl)) {
         // Only the primary (least derived) declaration can provide types.

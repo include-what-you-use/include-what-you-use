@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// IWYU_ARGS: -I .
+
 // This tests a bug I had that was causing a class to get explicitly
 // instantiated twice.  iwyu explicitly instantiates typedefed
 // classes, but it's supposed to have a check that avoids doing it
@@ -14,6 +16,8 @@
 // before: the instantiated visitor and the normal visitor were each
 // keeping separate values.  Hence this test tests two typedefs of the
 // same thing: one in a template and one outside it.
+
+#include "tests/cxx/avoids_double_specialization.h"
 
 template<class T> struct Foo {
   static int statici;

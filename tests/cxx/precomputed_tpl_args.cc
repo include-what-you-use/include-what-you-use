@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <bitset>
+#include "tests/cxx/precomputed_tpl_args.h"
 #include "tests/cxx/precomputed_tpl_args-d1.h"
 
 template <typename T> struct Identity {
@@ -139,6 +140,7 @@ tests/cxx/precomputed_tpl_args.cc should add these lines:
 tests/cxx/precomputed_tpl_args.cc should remove these lines:
 
 The full include-list for tests/cxx/precomputed_tpl_args.cc:
+#include "tests/cxx/precomputed_tpl_args.h"
 #include <bitset>  // for bitset
 #include <forward_list>  // for forward_list
 #include <list>  // for list

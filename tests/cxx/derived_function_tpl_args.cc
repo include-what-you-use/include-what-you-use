@@ -74,21 +74,41 @@ int main() {
   FnWithForwardingReference(ic_ptr);
 
   // Now try again, but with a typedef.
-  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
+  // IWYU: IndirectClass needs a declaration
   typedef IndirectClass LocalClass;
-  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
+  // IWYU: IndirectClass needs a declaration
   typedef IndirectClass* LocalClassPtr;
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   LocalClass lc;
   LocalClass* lc_ptr = 0;
   LocalClassPtr lc_ptr2 = 0;
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   Fn(lc);
   Fn(lc_ptr);
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   FnWithPtr(lc_ptr);
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   FnWithPtr(lc_ptr2);
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   FnWithReference(lc);
   FnWithReference(lc_ptr);
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   FnWithForwardingReference(lc);
   FnWithForwardingReference(lc_ptr);
+  // IWYU: ProvidingTypedef is...*derived_function_tpl_args-i1.h
+  ProvidingTypedef pt;
+  // IWYU: ProvidingTypedef is...*derived_function_tpl_args-i1.h
+  ProvidingTypedef* pt_ptr = 0;
+  // IWYU: ProvidingPtrTypedef is...*derived_function_tpl_args-i1.h
+  ProvidingPtrTypedef pt_ptr2 = 0;
+  Fn(pt);
+  Fn(pt_ptr);
+  FnWithPtr(pt_ptr);
+  FnWithPtr(pt_ptr2);
+  FnWithReference(pt);
+  FnWithReference(pt_ptr);
+  FnWithForwardingReference(pt);
+  FnWithForwardingReference(pt_ptr);
 
   // And try again, but with namespaces.  This makes sure we don't
   // get tripped up by ElaboratedType's.
@@ -151,8 +171,14 @@ int main() {
   FnWithForwardingReference(itc2_ptr);
 
   // If we specify explicit template args, those should override everything.
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   FnWithPtr<LocalClass>(ic_ptr);
+  // IWYU: IndirectClass is...*derived_function_tpl_args-i1.h
   FnWithReference<LocalClass>(ic);
+  // IWYU: ProvidingTypedef is...*derived_function_tpl_args-i1.h
+  FnWithPtr<ProvidingTypedef>(ic_ptr);
+  // IWYU: ProvidingTypedef is...*derived_function_tpl_args-i1.h
+  FnWithReference<ProvidingTypedef>(ic);
 }
 
 /**** IWYU_SUMMARY
@@ -164,6 +190,6 @@ tests/cxx/derived_function_tpl_args.cc should remove these lines:
 - #include "tests/cxx/derived_function_tpl_args-d1.h"  // lines XX-XX
 
 The full include-list for tests/cxx/derived_function_tpl_args.cc:
-#include "tests/cxx/derived_function_tpl_args-i1.h"  // for IndirectClass, IndirectTplClass, NsClass
+#include "tests/cxx/derived_function_tpl_args-i1.h"  // for IndirectClass, IndirectTplClass, NsClass, ProvidingPtrTypedef, ProvidingTypedef
 
 ***** IWYU_SUMMARY */
