@@ -14,6 +14,7 @@
 
 #include "tests/cxx/default_tpl_arg-d1.h"
 #include "tests/cxx/default_tpl_arg-d2.h"
+#include "tests/cxx/default_tpl_arg-d3.h"
 #include "tests/cxx/direct.h"
 
 // IWYU: UninstantiatedTpl needs a declaration
@@ -275,6 +276,8 @@ void Fn() {
   // argument doesn't provide it (but the template definition does).
   // IWYU: TplProvidingDefArg4 is...*default_tpl_arg-i1.h
   TplProvidingDefArg4<> tpda41;
+
+  TplProvidingDefArg5Alias tpda5a;
 }
 
 /**** IWYU_SUMMARY
@@ -294,6 +297,7 @@ tests/cxx/default_tpl_arg.cc should remove these lines:
 
 The full include-list for tests/cxx/default_tpl_arg.cc:
 #include "tests/cxx/default_tpl_arg-d2.h"  // for AliasTpl5, DerivedFromProvidedDefArg, DerivedTplProvidingDefArg, FnWithProvidedDefaultTplArg, FnWithProvidedDefaultTplArgAndDefaultCallArg1, FnWithProvidedDefaultTplArgAndDefaultCallArg2, FnWithProvidedDefaultTplArgAndDefaultCallArg3, GetClassTpl2Ref, TplProvidingDefArg, TplProvidingDefArg2, TplProvidingDefArg3, TplProvidingDefArg4
+#include "tests/cxx/default_tpl_arg-d3.h"  // for TplProvidingDefArg5Alias
 #include "tests/cxx/default_tpl_arg-i1.h"  // for AliasTpl1, AliasTpl2, AliasTpl3, AliasTpl4, AliasTpl7, ClassTpl, ClassTpl2, ClassTplNoDefinition, ClassTplWithDefinition, ClassTplWithDefinition2, FnWithNonProvidedDefaultTplArg, FnWithNonProvidedDefaultTplArgAndDefaultCallArg, NonProvidingAlias, SomeTpl, SpecializedClassTpl, TplProvidingDefArg4, UninstantiatedTpl, VarTpl
 #include "tests/cxx/default_tpl_arg-i2.h"  // for AliasTpl7, ClassTpl2, ClassTplWithDefinition2, ClassTplWithDefinition3, ClassTplWithDefinition7
 #include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate

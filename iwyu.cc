@@ -5949,8 +5949,12 @@ class IwyuAstConsumer
     // Couldn't files containing other declarations (like primary template
     // redeclarations or explicit specializations or instantiations) provide
     // definitions for default args?
-    if (const Decl* defn = GetDefinitionAsWritten(TypeToDeclAsWritten(type)))
+    // 'type' may be a typedef, so GetCanonicalType is needed to get
+    // the class template.
+    if (const Decl* defn = GetDefinitionAsWritten(
+            TypeToDeclAsWritten(GetCanonicalType(type)))) {
       CollectProvidedByDefaultTplArg(defn->getLocation(), &ret);
+    }
     return ret;
   }
 
