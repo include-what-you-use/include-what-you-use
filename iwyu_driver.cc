@@ -149,9 +149,10 @@ void ExpandArgsFromBuf(const char *Arg,
     }
 
     if (*P == '\\') {
-      ++P;
-      if (*P != '\0')
+      if (P[1] != '\0') {
+        ++P;
         CurArg.push_back(*P);
+      }
       continue;
     }
     CurArg.push_back(*P);
