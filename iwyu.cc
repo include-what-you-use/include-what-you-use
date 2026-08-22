@@ -125,7 +125,10 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/BuiltinTraits.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/Lexer.h"
+#include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Sema.h"
 #include "iwyu_ast_util.h"
@@ -220,9 +223,12 @@ using clang::FunctionDecl;
 using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
 using clang::FunctionType;
+using clang::IdentifierInfo;
 using clang::InitListExpr;
 using clang::LateParsedTemplate;
+using clang::Lexer;
 using clang::LinkageSpecDecl;
+using clang::MacroInfo;
 using clang::MemberExpr;
 using clang::MemberPointerType;
 using clang::NamedDecl;
@@ -264,6 +270,7 @@ using clang::TemplateParameterList;
 using clang::TemplateSpecializationType;
 using clang::TemplateSpecializationTypeLoc;
 using clang::TemplateTypeParmDecl;
+using clang::Token;
 using clang::TranslationUnitDecl;
 using clang::Type;
 using clang::TypeAliasDecl;
@@ -314,6 +321,41 @@ bool CanIgnoreLocation(SourceLocation loc) {
   // ignore symbols used outside foo.{h,cc} + check_also
   return (!ShouldReportIWYUViolationsFor(file_entry) &&
           !ShouldReportIWYUViolationsFor(file_entry_after_macro_expansion));
+}
+
+// Returns true if the replacement list of the macro that 'use_loc' -- a
+// macro ID -- is an expansion of contains no identifier tokens at all,
+// i.e. the macro's entire body is made of literals and/or punctuation
+// (e.g. '#define BOB "bob"', '#define N (1+2)').  A macro like that
+// can't be "naming" any decl, by definition: it doesn't reference
+// *anything* by name, so any decl use that resolves to it (typically an
+// implicit conversion or destructor call applied to the macro's
+// expansion at the call site) must be a side effect of the expansion
+// context, not something the macro author wrote.
+//
+// This deliberately stops short of checking whether the macro mentions
+// the *specific* decl being used: a macro can legitimately be
+// responsible for a type without ever spelling its name, e.g. by
+// dereferencing a pointer ('#define GET(n) (*(table + n))') or calling
+// one of its members ('#define CALL (obj).Method()') -- both need the
+// pointee/object's complete type, but neither macro spells that type's
+// name anywhere. Once a macro references *any* identifier, we fall back
+// to the existing (spelling-biased) heuristics rather than guessing.
+bool MacroBodyHasNoIdentifiers(SourceLocation use_loc, Preprocessor& pp) {
+  const SourceManager& sm = pp.getSourceManager();
+  StringRef macro_name =
+      Lexer::getImmediateMacroName(use_loc, sm, pp.getLangOpts());
+  if (macro_name.empty())
+    return false;
+  IdentifierInfo* macro_id = pp.getIdentifierInfo(macro_name);
+  const MacroInfo* macro_info = macro_id ? pp.getMacroInfo(macro_id) : nullptr;
+  if (!macro_info)
+    return false;
+  for (const Token& token : macro_info->tokens()) {
+    if (token.is(clang::tok::identifier))
+      return false;
+  }
+  return true;
 }
 
 }  // anonymous namespace
@@ -1376,6 +1418,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     //    location.
     // 2) If the macro definition file forward-declares the used decl, that's a
     //    hint that it wants the expansion location to take responsibility.
+    // 3) If the macro's entire body is literals/punctuation -- no
+    //    identifiers at all -- it can't be "naming" anything, so whatever
+    //    produced the need for decl (e.g. an autocast conversion or an
+    //    implicit destructor call applied to a value the macro merely
+    //    expands to, as in '#define GREETING "hi"' passed to a function
+    //    taking std::string) must be a side effect of the macro's
+    //    expansion context instead.  Attribute responsibility to the
+    //    expansion location.
     //
     // Otherwise, the spelling loc is responsible.
     const char* side;
@@ -1391,6 +1441,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       side = "expansion";
     } else if (fwd_decl != nullptr) {
       VERRS(5) << "Found a hint decl in macro definition file\n";
+      use_loc = expansion_loc;
+      side = "expansion";
+    } else if (MacroBodyHasNoIdentifiers(use_loc,
+                                        compiler()->getPreprocessor())) {
+      VERRS(5) << "Macro body has no identifiers at all; can't be a "
+                  "reference authored by the macro, use expansion location "
+                  "instead\n";
       use_loc = expansion_loc;
       side = "expansion";
     } else {
