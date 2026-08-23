@@ -842,8 +842,8 @@ const clang::Type* GetCanonicalType(const clang::Type* type);
 // Use Desugar to walk down the AST skipping type sugar nodes until a non-sugar
 // node is found, much like Type::getUnqualifiedDesugaredType.
 // IWYU has a slightly more liberal notion of sugar than Clang does:
-// typedefs, using types and template specializations are not considered sugar,
-// because they need to be respected in IWYU analysis.
+// typedefs and template specializations are not considered sugar because they
+// need to be respected in IWYU analysis.
 const clang::Type* Desugar(const clang::Type* type);
 
 // A 'component' of a type is a type beneath it in the AST tree.
