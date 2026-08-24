@@ -125,6 +125,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/BuiltinTraits.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Sema.h"
@@ -149,13 +150,7 @@
 // IWYU pragma: no_include "clang/AST/Redeclarable.h"
 // IWYU pragma: no_include "clang/AST/StmtIterator.h"
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
-// IWYU pragma: no_include "clang/Lex/PPCallbacks.h"
 // IWYU pragma: no_include "llvm/ADT/iterator.h"
-// IWYU pragma: begin_keep
-namespace clang {
-class PPCallbacks;
-}  // namespace clang
-// IWYU pragma: end_keep
 
 namespace clang {
 class FriendDecl;
