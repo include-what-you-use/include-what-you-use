@@ -1,0 +1,23 @@
+//===--- associated_mapping_custom.inline - test input file for iwyu ------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+// Uses IndirectClass, provided by the header this file belongs to, without
+// #including "tests/cxx/indirect.h" itself and without #including that
+// header back.
+
+inline void CustomInlineClass::InlinedMethod() {
+  IndirectClass local;
+  local.Method();
+}
+
+/**** IWYU_SUMMARY
+
+(tests/cxx/associated_mapping_custom.inline has correct #includes/fwd-decls)
+
+***** IWYU_SUMMARY */

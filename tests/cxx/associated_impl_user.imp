@@ -1,0 +1,4 @@
+# Declares that foo.inline holds foo.h's inline definitions.
+[
+  { "associated_impl": ['@"(.*)\.inline"', '"\1.h"'] },
+]

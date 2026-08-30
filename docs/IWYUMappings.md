@@ -49,6 +49,7 @@ Directives can be one of the literal strings:
 
 * `include`
 * `symbol`
+* `associated_impl`
 * `ref`
 
 and data varies between the directives, see below.
@@ -194,6 +195,81 @@ of templates being members of other templates.
 
 At present, only class and variable template specializations are supported, not
 function template ones.
+
+
+### Associated-impl mappings ###
+
+The `associated_impl` directive does not describe where a symbol comes from;
+it describes which files IWYU should analyze *together*.
+
+IWYU already analyzes `foo.cc` together with `foo.h` -- `foo.h` is `foo.cc`'s
+*associated header*, and `foo.cc` may freely use anything `foo.h` #includes
+without repeating those #includes itself. Some projects use the mirror-image
+convention: `foo.h` #includes a separate file part-way through its body to hold
+the inline definitions that must stay visible to every includer.
+
+    component/component.h:
+      #include "component/thing.h"
+
+      struct Foo {
+        void Bar();
+        Thing thing;
+      };
+
+      #include "component/component.icc"
+
+    component/component.icc:
+      inline void Foo::Bar() {
+        Thing local;
+      }
+
+`component.icc` is only ever compiled as part of `component.h`, so it should be
+allowed to use `Thing` without #including `component/thing.h` again. Declare
+that with:
+
+    [
+      { "associated_impl": ['@"(.*)\.icc"', '"\1.h"'] }
+    ]
+
+Data for the directive is a two-element array, `[from, to]`: the *from* entry is
+a quoted include or an `@`-prefixed regex matching the implementation file, and
+the *to* entry is the quoted include of its associated header. Capture groups
+from the regex can be referenced in the *to* entry, exactly as for `include`
+mappings (`\1` in the default LLVM regex dialect, `$1` with
+`--regex=ecmascript`). Quotes and angle brackets are interchangeable here: the
+directive only identifies files, so IWYU ignores which delimiter is used.
+
+Because the rule is about paths rather than extensions, any local convention can
+be expressed:
+
+    [
+      { "associated_impl": ['@"(.*)\.inline"', '"\1.h"'] },
+      { "associated_impl": ['@"(.*)_impl\.h"', '"\1.h"'] },
+      { "associated_impl": ['@"(.*)/detail/(.*)\.hpp"', '"\1/\2.hpp"'] }
+    ]
+
+A rule applies only where the two files really meet: the *from* file has to be
+`#include`d by the file the *to* entry names. Unlike `foo.cc`, the
+implementation file is not asked to `#include` its own header -- the header
+already #includes it -- but an `#include` that is there anyway is left alone.
+
+The implementation file is also private to its header, as if it had
+`// IWYU pragma: private, include "foo.h"`: a file that uses what `foo.icc`
+defines is told to `#include "foo.h"`, never `foo.icc` itself. This only
+happens where `foo.h` does `#include` `foo.icc`, so a file that `#include`s
+`foo.icc` without `foo.h` doing so is not affected.
+
+The relation is one-way. If a mapping file declares both `a` associated with `b`
+and `b` associated with `a`, IWYU keeps whichever direction it encounters first
+and ignores the other; without that, the two files' analyses would depend on
+each other.
+
+`IWYU pragma: associated` names the very same relation for a single `#include`
+directive: a file, and its associated header. What it cannot do is describe this
+convention, because the pragma has to sit on an `#include` of the associated
+header -- here the header #includes the implementation file, not the other way
+round, so the pragma would have to go inside the implementation file, on an
+`#include` that exists only to carry it. See [IWYUPragmas](IWYUPragmas.md).
 
 
 ### Mapping refs ###

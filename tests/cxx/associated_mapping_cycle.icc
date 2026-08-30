@@ -1,0 +1,18 @@
+//===--- associated_mapping_cycle.icc - test input file for iwyu ----------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+// Deliberately not include-guarded: the .h #including it back must really
+// enter it a second time, which is what would close the cycle.
+#include "tests/cxx/associated_mapping_cycle.h"  // IWYU pragma: keep
+
+/**** IWYU_SUMMARY
+
+(tests/cxx/associated_mapping_cycle.icc has correct #includes/fwd-decls)
+
+***** IWYU_SUMMARY */

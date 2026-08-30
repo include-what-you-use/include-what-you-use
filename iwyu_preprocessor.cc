@@ -865,6 +865,64 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
              << GetFilePath(new_file) << "\n";
     AddGlobToReportIWYUViolationsFor(GetFilePath(new_file));
   }
+
+  // Some projects split inline definitions that must live in a header (so
+  // they're visible to every includer) into a separate file -- e.g. foo.h
+  // #includes foo.icc/foo.inl partway through its body.  Such a file is
+  // conceptually part of foo.h's public interface, so an
+  // 'associated_impl' mapping-file directive can name foo.h as its
+  // associated header, and it then inherits foo.h's #includes instead of
+  // having to repeat them.  Note that the file gaining an associated header
+  // is the includee here, where for foo.cc/foo.h it is the includer.
+  OptionalFileEntryRef const includer = GetFileEntry(include_loc);
+  if (includer && new_file && new_file != includer) {
+    const string includee_path = GetFilePath(new_file);
+    const string includer_path = GetFilePath(includer);
+    const string quoted_includer = ConvertToQuotedInclude(includer_path);
+    const string quoted_includee = ConvertToQuotedInclude(includee_path);
+    if (GlobalIncludePicker().IsAssociatedHeaderOf(quoted_includer,
+                                                   quoted_includee)) {
+      IwyuFileInfo* includee_info = GetFromFileInfoMap(new_file);
+      IwyuFileInfo* includer_info = GetFromFileInfoMap(includer);
+      // Association must stay a one-way relation.  Two files that are each
+      // other's associated header make their associated-header calculations
+      // mutually dependent, which trips the
+      // desired_includes_have_been_calculated_ check in iwyu_output.  A
+      // mapping file can express both directions, so refuse the second one.
+      if (includer_info->HasAssociatedHeader(includee_info)) {
+        VERRS(4) << "Not marking " << includer_path
+                 << " as associated header of " << includee_path
+                 << ": would create a cycle.\n";
+      } else {
+        // foo.h already #includes foo.icc textually, so there is no reason
+        // to also require foo.icc to spell out an #include of foo.h.
+        includee_info->AddAssociatedHeader(includer_info,
+                                           /*require_include=*/false);
+        // Users of what foo.icc defines should #include foo.h, never foo.icc
+        // itself: treat it as if it had 'IWYU pragma: private, include
+        // "foo.h"'.  This only happens where foo.h does #include foo.icc, so
+        // a file that #includes foo.icc without foo.h doing so is unaffected.
+        MutableGlobalIncludePicker()->AddMapping(
+            quoted_includee, MappedInclude(quoted_includer));
+        MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_includee);
+        VERRS(4) << "Marked " << includer_path << " as associated header of "
+                 << includee_path << " (associated_impl mapping).\n";
+        AddGlobToReportIWYUViolationsFor(includer_path);
+        // Report on the includee whenever the main file's own associated
+        // header includes it, just as that header itself is reported on.
+        if (GetFromFileInfoMap(main_file_)->HasAssociatedHeader(includer_info))
+          AddGlobToReportIWYUViolationsFor(includee_path);
+        // The includer has already been entered, so the glob above comes too
+        // late to add it to files_to_report_iwyu_violations_for_.  Add it
+        // directly when the includee will be reported: analyzing the includee
+        // reads the includer's desired includes, which are only calculated
+        // for reported files.
+        if (ShouldReportIWYUViolationsFor(new_file))
+          files_to_report_iwyu_violations_for_.insert(includer);
+      }
+    }
+  }
+
   if (ShouldReportIWYUViolationsFor(new_file)) {
     files_to_report_iwyu_violations_for_.insert(new_file);
   }
