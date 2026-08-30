@@ -1,0 +1,5 @@
+# The inline-implementation file uses a ".inline" extension, a convention
+# IWYU knows nothing about.  Naming it here is all it takes.
+[
+  { "associated_header": ['@"(.*)\.inline"', '"\1.h"'] },
+]

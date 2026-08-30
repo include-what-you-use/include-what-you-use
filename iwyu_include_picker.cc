@@ -1888,6 +1888,34 @@ void IncludePicker::AddFriendRegex(const string& includee_filepath,
   friend_to_headers_map_["@" + quoted_friend_regex].insert(includee_filepath);
 }
 
+void IncludePicker::AddAssociatedHeaderMapping(
+    const string& quoted_filepath_pattern,
+    const string& quoted_associated_header) {
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  CHECK_(IsQuotedFilepathPattern(quoted_filepath_pattern) &&
+         "Associated-header mapping keys must be quoted includes or "
+         "@-regexes");
+  associated_header_mappings_.push_back(
+      {quoted_filepath_pattern, quoted_associated_header});
+}
+
+bool IncludePicker::IsAssociatedHeaderOf(const string& quoted_header,
+                                         const string& quoted_file) const {
+  for (const auto& [pattern, mapped_header] : associated_header_mappings_) {
+    if (StartsWith(pattern, "@")) {
+      const string regex = pattern.substr(1);
+      if (RegexMatch(regex_dialect, quoted_file, regex) &&
+          RegexReplace(regex_dialect, quoted_file, regex, mapped_header) ==
+              quoted_header) {
+        return true;
+      }
+    } else if (pattern == quoted_file && mapped_header == quoted_header) {
+      return true;
+    }
+  }
+  return false;
+}
+
 namespace {
 
 // Given a map keyed by quoted filepath patterns, return a vector
@@ -2329,6 +2357,33 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
             from_visibility,
             MappedInclude(mapping[2]),
             to_visibility);
+      } else if (directive == "associated_header") {
+        // Associated-header mapping.
+        vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
+        if (mapping.size() != 2) {
+          json_stream.printError(current_node,
+              "Associated-header mapping expects a value on the form "
+              "'[from, to]'.");
+          return;
+        }
+
+        if (!IsQuotedFilepathPattern(mapping[0])) {
+          json_stream.printError(
+              current_node,
+              "Expected from-entry to be quoted filepath or @regex, but was '" +
+                  mapping[0] + "'");
+          return;
+        }
+
+        if (!IsQuotedInclude(mapping[1])) {
+          json_stream.printError(
+              current_node,
+              "Expected to-entry to be quoted include, but was '" + mapping[1] +
+                  "'");
+          return;
+        }
+
+        AddAssociatedHeaderMapping(mapping[0], mapping[1]);
       } else if (directive == "ref") {
         // Mapping ref.
         string ref_file = GetScalarValue(mapping_item_node.getValue());

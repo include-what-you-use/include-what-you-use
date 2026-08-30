@@ -233,6 +233,12 @@ associated header with `IWYU pragma: associated`:
 You can mark multiple `#include` directives as associated and they will all be
 considered as such.
 
+The pragma has to sit on an `#include` of the associated header, which rules out
+the mirror-image convention: a header that keeps its inline definitions in a
+separate file and `#include`s *that*. The `associated_header` mapping directive
+in [IWYUMappings](IWYUMappings.md) expresses the same relation without needing
+an `#include` to hang off.
+
 
 ## IWYU pragma: always_keep ##
 
