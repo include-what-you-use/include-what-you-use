@@ -1899,8 +1899,50 @@ void IncludePicker::AddAssociatedHeaderMapping(
       {quoted_filepath_pattern, quoted_associated_header});
 }
 
+namespace {
+
+// The inline-implementation extensions IWYU recognizes without being told:
+// a foo.icc/foo.inl/foo.ipp/foo.tcc #included by a foo.h next to it is
+// almost always that header's inline definitions, and expressing it in a
+// mapping file every time is busywork.  Any other convention still needs an
+// 'associated' mapping directive.
+const char* const kInlineImplementationExtensions[] = {".icc", ".inl", ".ipp",
+                                                       ".tcc"};
+
+bool HasInlineImplementationExtension(StringRef quoted_include) {
+  for (const char* ext : kInlineImplementationExtensions) {
+    if (quoted_include.ends_with(string(ext) + "\""))
+      return true;
+  }
+  return false;
+}
+
+// True if the built-in rule makes quoted_header the associated header of
+// quoted_file.  Only quoted (i.e. "" rather than <>) includes take part,
+// which keeps the standard library's own .tcc files
+// (<bits/locale_classes.tcc> and friends) out of it.
+bool IsBuiltinAssociatedHeaderOf(const string& quoted_header,
+                                 const string& quoted_file) {
+  if (!StartsWith(quoted_header, "\"") || !StartsWith(quoted_file, "\""))
+    return false;
+  // Only in this direction, so the rule can never fire for both files of a
+  // pair and make them each other's associated header.
+  if (!HasInlineImplementationExtension(quoted_file) ||
+      HasInlineImplementationExtension(quoted_header))
+    return false;
+  // Strip the surrounding quotes before asking for canonical names;
+  // GetCanonicalName() works on plain paths.
+  const string file_path = quoted_file.substr(1, quoted_file.size() - 2);
+  const string header_path = quoted_header.substr(1, quoted_header.size() - 2);
+  return GetCanonicalName(file_path) == GetCanonicalName(header_path);
+}
+
+}  // anonymous namespace
+
 bool IncludePicker::IsAssociatedHeaderOf(const string& quoted_header,
                                          const string& quoted_file) const {
+  if (IsBuiltinAssociatedHeaderOf(quoted_header, quoted_file))
+    return true;
   for (const auto& [pattern, mapped_header] : associated_header_mappings_) {
     if (StartsWith(pattern, "@")) {
       const string regex = pattern.substr(1);

@@ -224,8 +224,13 @@ the inline definitions that must stay visible to every includer.
       }
 
 `component.icc` is only ever compiled as part of `component.h`, so it should be
-allowed to use `Thing` without #including `component/thing.h` again. Declare
-that with:
+allowed to use `Thing` without #including `component/thing.h` again.
+
+The four most common extensions for such files -- `.icc`, `.inl`, `.ipp` and
+`.tcc` -- are recognized without any configuration, as long as the two files
+share a stem and the implementation file is quote-included. The example above
+therefore works out of the box. Spelling the same rule explicitly looks like
+this:
 
     [
       { "associated_header": ['@"(.*)\.icc"', '"\1.h"'] }
