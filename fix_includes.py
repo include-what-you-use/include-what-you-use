@@ -2209,6 +2209,8 @@ def FixFileLines(iwyu_record, file_lines, flags, fileinfo):
   def key(decorated_span):
     reorder_span, kind, sort_key, all_lines = decorated_span
     kind_key = GetLineSortOrdinal(kind, flags.quoted_includes_first)
+    if flags.case_insensitive:
+      sort_key = sort_key.lower()
     if flags.reorder:
       return reorder_span, kind_key, sort_key, all_lines
     else:
@@ -2462,6 +2464,9 @@ def main(argv):
   parser.add_argument('--noreorder', action='store_false', dest='reorder',
                       help=('Do not re-order lines relative to other similar '
                             'lines.'))
+  parser.add_argument('--case_insensitive', action='store_true', default=False,
+                      help=('Sort #includes ignoring case, so that "apple.h" '
+                            'sorts before "Banana.h" instead of after it.'))
 
   parser.add_argument('-s', '--sort_only', action='store_true',
                       help=('Just sort #includes of files listed on cmdline;'
