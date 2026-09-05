@@ -45,6 +45,7 @@ class FakeFlags(object):
     self.basedir = None
     self.quoted_includes_first = False
     self.always_first_include = []
+    self.case_insensitive = False
 
 
 class FixIncludesBase(unittest.TestCase):
@@ -3810,6 +3811,37 @@ int main() { return 0; }
     self.assertListEqual(expected_output.splitlines(True),
                          self.actual_after_contents)
     self.assertEqual(2, num_files_modified)
+
+  def testSortingCaseInsensitive(self):
+    """Tests --case_insensitive, and that sorting is case-sensitive without it."""
+    infile = """\
+#include "Banana.h"
+#include "date.h"
+#include "apple.h"
+#include "Cherry.h"
+"""
+    case_sensitive_output = """\
+#include "Banana.h"
+#include "Cherry.h"
+#include "apple.h"
+#include "date.h"
+"""
+    case_insensitive_output = """\
+#include "apple.h"
+#include "Banana.h"
+#include "Cherry.h"
+#include "date.h"
+"""
+    self.RegisterFileContents({'sort': infile})
+    fix_includes.SortIncludesInFiles(['sort'], self.flags)
+    self.assertListEqual(case_sensitive_output.splitlines(True),
+                         self.actual_after_contents)
+
+    self.actual_after_contents = []
+    self.flags.case_insensitive = True
+    fix_includes.SortIncludesInFiles(['sort'], self.flags)
+    self.assertListEqual(case_insensitive_output.splitlines(True),
+                         self.actual_after_contents)
 
   def testSortingIncludesAlreadySorted(self):
     """Tests sorting includes only, when includes are already sorted."""
