@@ -46,12 +46,12 @@ def TestIwyuOnRelevantFiles(filename):
   (all_but_extension, extension) = os.path.splitext(filename)
   (dirname, basename) = os.path.split(all_but_extension)
   # Generate diagnostics on all foo-* files (well, not other
-  # foo-*.cc files, which is not kosher but is legal), in addition
-  # to foo.h (if present) and foo.cc.
+  # foo-*.cc files, which is not kosher but is legal), in addition to
+  # foo.cc and every sibling sharing its stem (foo.h, foo.inc, ...).
   all_files = (glob.glob('%s-*' % all_but_extension) +
                glob.glob('%s/*/%s-*' % (dirname, basename)) +
-               glob.glob('%s.h' % all_but_extension) +
-               glob.glob('%s/*/%s.h' % (dirname, basename)))
+               glob.glob('%s.*' % all_but_extension) +
+               glob.glob('%s/*/%s.*' % (dirname, basename)))
 
   files_to_check = [f for f in all_files if not f.endswith(extension)]
   files_to_check.append(filename)
