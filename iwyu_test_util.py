@@ -585,6 +585,27 @@ def _GetLaunchArguments(cc_file):
   return shlex.split(args)
 
 
+def _CollectFilesToCheck(cpp_files_to_check, actual_summaries):
+  """Returns the files to read expectations from.
+
+  IWYU summarizes the main file, its associated headers and everything matched
+  by --check_also, so the summary output is the authority on what was checked.
+  The caller's candidates need not cover that set -- they are collected by
+  globbing for the test's stem, which misses e.g. a --check_also target with a
+  different name or extension -- so take their union.
+  """
+  files_to_check = set(cpp_files_to_check)
+  for filename in actual_summaries.keys():
+    # Only files in the test tree can carry expectations.  IWYU also reports on
+    # library headers (--check_also='*' matches those too), and prints paths
+    # that need not resolve from the test runner's working directory.
+    if os.path.isabs(filename) or not os.path.isfile(filename):
+      continue
+    files_to_check.add(filename)
+
+  return sorted(files_to_check)
+
+
 def _ParsePrerequisites(cc_file):
   """ Parses test prerequisites out of cc_file. """
   prerequisites = []
@@ -669,6 +690,8 @@ def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
     cc_file: The name of the file to test, relative to the current dir.
     cpp_files_to_check: A list of filenames for the files
               to check the diagnostics on, relative to the current dir.
+              Files IWYU reports on are checked whether or not they are
+              listed here; see _CollectFilesToCheck().
     verbose: Whether to display verbose output.
   """
   # Parse and check IWYU_{REQUIRES,UNSUPPORTED}
@@ -704,17 +727,19 @@ def TestIwyuOnRelativeFile(cc_file, cpp_files_to_check, verbose=False):
       _GetExpectedNoLocDiagnosticRegexes(cc_file),
       _GetActualNoLocDiagnostics(output))
 
+  actual_summaries = _GetActualSummaries(output)
+  files_to_check = _CollectFilesToCheck(cpp_files_to_check, actual_summaries)
+
   # Check IWYU diagnostics
   expected_diagnostics = _GetMatchingLines(
-      _EXPECTED_DIAGNOSTICS_RE, cpp_files_to_check)
+      _EXPECTED_DIAGNOSTICS_RE, files_to_check)
   failures += _CompareExpectedAndActualDiagnostics(
       _GetExpectedDiagnosticRegexes(expected_diagnostics),
       _GetActualDiagnostics(output))
 
   # Also figure out if the end-of-parsing suggestions match up.
   failures += _CompareExpectedAndActualSummaries(
-      _GetExpectedSummaries(cpp_files_to_check),
-      _GetActualSummaries(output))
+      _GetExpectedSummaries(files_to_check), actual_summaries)
 
   if failures:
     raise AssertionError(''.join(failures))
