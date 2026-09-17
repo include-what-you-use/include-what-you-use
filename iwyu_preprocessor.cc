@@ -335,6 +335,13 @@ void IwyuPreprocessorInfo::HandlePragmaComment(SourceRange comment_range) {
     return;
   }
 
+  if (MatchOneToken(tokens, "associated_impl", 1, begin_loc)) {
+    if (associated_impl_pragma_location_.isInvalid()) {
+      associated_impl_pragma_location_ = begin_loc;
+    }
+    return;
+  }
+
   if (MatchOneToken(tokens, "always_keep", 1, begin_loc)) {
     always_keep_files_.insert(this_file_entry);
     ERRSYM(this_file_entry)
@@ -870,25 +877,33 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   // they're visible to every includer) into a separate file -- e.g. foo.h
   // #includes foo.icc/foo.inl partway through its body.  Such a file is
   // conceptually part of foo.h's public interface, so an
-  // 'associated_impl' mapping-file directive can name foo.h as its
-  // associated header, and it then inherits foo.h's #includes instead of
-  // having to repeat them.  Note that the file gaining an associated header
-  // is the includee here, where for foo.cc/foo.h it is the includer.
+  // 'associated_impl' mapping-file directive names foo.h as its associated
+  // header for a whole naming convention, and the 'associated_impl' pragma
+  // names it for one #include.  Either way foo.icc then inherits foo.h's
+  // #includes instead of repeating them.  Note that the file gaining an
+  // associated header is the includee here, where for foo.cc/foo.h it is the
+  // includer.
   OptionalFileEntryRef const includer = GetFileEntry(include_loc);
   if (includer && new_file && new_file != includer) {
     const string includee_path = GetFilePath(new_file);
     const string includer_path = GetFilePath(includer);
+    const bool by_pragma =
+        associated_impl_pragma_location_.isValid() &&
+        GetFileEntry(associated_impl_pragma_location_) == includer;
+    if (by_pragma)
+      associated_impl_pragma_location_ = SourceLocation();
     const string quoted_includer = ConvertToQuotedInclude(includer_path);
     const string quoted_includee = ConvertToQuotedInclude(includee_path);
-    if (GlobalIncludePicker().IsAssociatedHeaderOf(quoted_includer,
-                                                   quoted_includee)) {
+    if (by_pragma || GlobalIncludePicker().IsAssociatedHeaderOf(
+                         quoted_includer, quoted_includee)) {
       IwyuFileInfo* includee_info = GetFromFileInfoMap(new_file);
       IwyuFileInfo* includer_info = GetFromFileInfoMap(includer);
       // Association must stay a one-way relation.  Two files that are each
       // other's associated header make their associated-header calculations
       // mutually dependent, which trips the
       // desired_includes_have_been_calculated_ check in iwyu_output.  A
-      // mapping file can express both directions, so refuse the second one.
+      // mapping file or a pair of pragmas can express both directions, so
+      // refuse the second one.
       if (includer_info->HasAssociatedHeader(includee_info)) {
         VERRS(4) << "Not marking " << includer_path
                  << " as associated header of " << includee_path
@@ -906,7 +921,9 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
             quoted_includee, MappedInclude(quoted_includer));
         MutableGlobalIncludePicker()->MarkIncludeAsPrivate(quoted_includee);
         VERRS(4) << "Marked " << includer_path << " as associated header of "
-                 << includee_path << " (associated_impl mapping).\n";
+                 << includee_path
+                 << (by_pragma ? " due to associated_impl pragma.\n"
+                               : " (associated_impl mapping).\n");
         AddGlobToReportIWYUViolationsFor(includer_path);
         // Report on the includee whenever the main file's own associated
         // header includes it, just as that header itself is reported on.
