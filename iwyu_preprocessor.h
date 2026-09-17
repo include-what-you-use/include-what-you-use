@@ -356,6 +356,10 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // "associated" pragma.
   clang::SourceLocation associated_pragma_location_;
 
+  // Likewise for the current open "associated_impl" pragma, which marks the
+  // file being #included as this file's inline-implementation file.
+  clang::SourceLocation associated_impl_pragma_location_;
+
   // Filename spelling location in the last encountered inclusion directive.
   // Should be used only in FileChanged_EnterFile, FileSkipped when
   // corresponding callback is caused by inclusion directive.  Don't use in

@@ -262,12 +262,10 @@ and `b` associated with `a`, IWYU keeps whichever direction it encounters first
 and ignores the other; without that, the two files' analyses would depend on
 each other.
 
-`IWYU pragma: associated` names the very same relation for a single `#include`
-directive: a file, and its associated header. What it cannot do is describe this
-convention, because the pragma has to sit on an `#include` of the associated
-header -- here the header #includes the implementation file, not the other way
-round, so the pragma would have to go inside the implementation file, on an
-`#include` that exists only to carry it. See [IWYUPragmas](IWYUPragmas.md).
+`IWYU pragma: associated_impl` states the same relation for a single
+`#include`, and is the better choice for a one-off. This directive is for the
+case where a whole project follows the convention, so that the rule can be
+written once instead of once per header. See [IWYUPragmas](IWYUPragmas.md).
 
 
 ### Mapping refs ###
