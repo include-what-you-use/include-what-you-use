@@ -5163,11 +5163,15 @@ class IwyuAstConsumer
     }
     // If class-head-name of the definition has a nested-name-specifier, like
     // 'class ns::C {};', IWYU should report that a forward-declaration is
-    // required before such definition. At least one should already be present
-    // somewhere, otherwise the code would not compile.
-    if (decl->getQualifier())
-      ReportDeclForwardDeclareUse(CurrentLoc(), decl->getPreviousDecl(),
-                                  nullptr, UF_RedeclUse);
+    // required before such definition.
+    if (decl->getQualifier()) {
+      const TagDecl* prev = decl->getPreviousDecl();
+      // For class template specializations, there may be no previous
+      // declaration. Fwd-decl uses of their primary templates are reported from
+      // VisitClassTemplateSpecializationDecl.
+      if (prev)
+        ReportDeclForwardDeclareUse(CurrentLoc(), prev, nullptr, UF_RedeclUse);
+    }
     return Base::VisitTagDecl(decl);
   }
 
