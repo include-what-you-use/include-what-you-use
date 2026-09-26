@@ -1903,6 +1903,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_HLSLMatrixTruncation:
         break;
 
+      // Ignore Clang/GCC vector extension conversions
+      case clang::CK_VectorSplat:
+        break;
+
       // Ignore non-ptr-to-ptr casts.
       case clang::CK_ArrayToPointerDecay:
       case clang::CK_BooleanToSignedIntegral:
@@ -1949,7 +1953,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       case clang::CK_CopyAndAutoreleaseBlockObject:
       case clang::CK_CPointerToObjCPointerCast:
       case clang::CK_ObjCObjectLValueCast:
-      case clang::CK_VectorSplat:
         CHECK_UNREACHABLE_(
             "TODO(csilvers): for objc and clang lang extensions");
         break;
