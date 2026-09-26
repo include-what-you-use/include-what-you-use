@@ -2218,6 +2218,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // if HLSL is supported.
         return true;
       case TypeTrait::BTT_IsSame:
+      case TypeTrait::BTT_TypeOrder:
         return true;
       case TypeTrait::BTT_IsAssignable:
       case TypeTrait::BTT_IsNothrowAssignable:
