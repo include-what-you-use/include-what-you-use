@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Token.h"
 #include "iwyu_ast_util.h"
@@ -39,6 +40,7 @@ using clang::CharSourceRange;
 using clang::FileEntryRef;
 using clang::FileID;
 using clang::IdentifierInfo;
+using clang::Lexer;
 using clang::MacroArgs;
 using clang::MacroDefinition;
 using clang::MacroDirective;
@@ -47,6 +49,7 @@ using clang::Module;
 using clang::NamedDecl;
 using clang::OptionalFileEntryRef;
 using clang::Preprocessor;
+using clang::SourceManager;
 using clang::SourceLocation;
 using clang::SourceRange;
 using clang::SrcMgr::CharacteristicKind;
@@ -87,18 +90,6 @@ string NormalizeNamespaces(string symbol) {
 }
 
 }  // namespace
-
-//------------------------------------------------------------
-// Utilities for examining source files.
-
-// For a particular #include line that include_loc points to,
-// returns the include as written by the user, including <> or "".
-// This works even for computed #includes ('#include MACRO'): we
-// point to the string the macro expands to.
-// Simplifying wrapper around the iwyu_lexer function.
-static string GetIncludeNameAsWritten(SourceLocation include_loc) {
-  return GetIncludeNameAsWritten(include_loc, DefaultDataGetter());
-}
 
 //------------------------------------------------------------
 // Utilities on macros.
@@ -458,8 +449,10 @@ void IwyuPreprocessorInfo::InsertIntoFileInfoMap(
 // that iwyu should never recommend removing the #include.  For
 // instance, if it has an IWYU pragma saying to keep it.
 void IwyuPreprocessorInfo::MaybeProtectInclude(
-    SourceLocation includer_loc, OptionalFileEntryRef includee,
-    const string& include_name_as_written) {
+    CharSourceRange include_range,
+    const string& include_name_as_written,
+    OptionalFileEntryRef includee) {
+  SourceLocation includer_loc = include_range.getBegin();
   OptionalFileEntryRef includer = GetFileEntry(includer_loc);
   if (IsSpecialFileOrStdin(includer))
     return;
@@ -469,6 +462,8 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
   // TODO(dsturtevant): As written "// // IWYU pragma: keep" is incorrectly
   // interpreted as a pragma. Maybe do "keep" and "export" pragma handling
   // in HandleComment?
+  // TODO: These pragmas will not be detected correctly on spliced include
+  // lines.
   if (LineHasText(includer_loc, "// IWYU pragma: keep") ||
       LineHasText(includer_loc, "/* IWYU pragma: keep") ||
       HasOpenBeginKeep(includer)) {
@@ -569,15 +564,16 @@ void IwyuPreprocessorInfo::FinalizeProtectedIncludes() {
 // We also tell this #include to the include-picker, which may
 // use it to fine-tune its include-picking algorithms.
 void IwyuPreprocessorInfo::AddDirectInclude(
-    SourceLocation includer_loc, OptionalFileEntryRef includee,
-    const string& include_name_as_written) {
+    CharSourceRange include_range,
+    const string& include_name_as_written,
+    OptionalFileEntryRef includee) {
   if (IsSpecialFileOrStdin(includee))
     return;
 
   // For files we're going to be reporting IWYU errors for, we need
   // both forms of the includee to be specified.  For other files, we
   // don't care as much.
-  OptionalFileEntryRef includer = GetFileEntry(includer_loc);
+  OptionalFileEntryRef includer = GetFileEntry(include_range.getBegin());
   if (ShouldReportIWYUViolationsFor(includer)) {
     CHECK_(includee != nullptr);
     CHECK_(!include_name_as_written.empty());
@@ -585,7 +581,9 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   ++num_includes_seen_[includer];
 
   GetFromFileInfoMap(includer)->AddInclude(
-      includee, include_name_as_written, GetLineNumber(includer_loc));
+      includee, include_name_as_written,
+      GetLineNumber(include_range.getBegin()),
+      GetLineNumber(include_range.getEnd()));
   // Make sure the includee has a file-info-map entry too.
   InsertIntoFileInfoMap(includee, include_name_as_written);
 
@@ -658,7 +656,7 @@ void IwyuPreprocessorInfo::AddDirectInclude(
   MutableGlobalIncludePicker()->AddDirectInclude(
       GetFilePath(includer), GetFilePath(includee), include_name_as_written);
 
-  MaybeProtectInclude(includer_loc, includee, include_name_as_written);
+  MaybeProtectInclude(include_range, include_name_as_written, includee);
 
   ERRSYM(includer) << "Added an #include: " << GetFilePath(includer)
                    << " -> " << include_name_as_written << "\n";
@@ -775,7 +773,19 @@ void IwyuPreprocessorInfo::InclusionDirective(SourceLocation hash_loc,
                                               const Module* suggested_module,
                                               bool module_imported,
                                               CharacteristicKind file_type) {
-  include_filename_loc_ = filename_range.getBegin();
+  // Build a range encompassing the as-written source range covering the entire
+  // #include directive. This will be used later for diagnostics/replacements.
+  // There are three cases here:
+  // - a normal single-line include without macros
+  // - a line-spliced include where the directive spans several lines
+  // - a computed include where the filename range is (partially) inside a macro
+  SourceManager& sm = preprocessor_.getSourceManager();
+  SourceRange file_char_range(sm.getFileLoc(hash_loc),
+                              sm.getFileLoc(filename_range.getEnd()));
+  last_include_range_ =
+      Lexer::makeFileCharRange(CharSourceRange::getTokenRange(file_char_range),
+                               sm, preprocessor_.getLangOpts());
+  last_quoted_include_ = AddQuotes(filename, is_angled);
 }
 
 void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
@@ -807,17 +817,15 @@ void IwyuPreprocessorInfo::FileChanged(SourceLocation loc,
 void IwyuPreprocessorInfo::FileSkipped(const FileEntryRef& file,
                                        const Token& filename,
                                        CharacteristicKind file_type) {
-  CHECK_(include_filename_loc_.isValid() &&
+  CHECK_(!last_quoted_include_.empty() &&
          "Must skip file only for actual inclusion directive");
-  const string include_name_as_written =
-      GetIncludeNameAsWritten(include_filename_loc_);
   const SourceLocation include_loc =
       GetInstantiationLoc(filename.getLocation());
   ERRSYM(GetFileEntry(include_loc))
-      << "[ (#include)  ] " << include_name_as_written << " ("
-      << GetFilePath(file) << ")\n";
+      << "[ (#include)  ] " << last_quoted_include_ << " (" << GetFilePath(file)
+      << ")\n";
 
-  AddDirectInclude(include_loc, file, include_name_as_written);
+  AddDirectInclude(last_include_range_, last_quoted_include_, file);
   if (ShouldReportIWYUViolationsFor(file)) {
     files_to_report_iwyu_violations_for_.insert(file);
   }
@@ -830,24 +838,22 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   // include of the file that file_beginning is in.
   const SourceLocation include_loc = GlobalSourceManager()->getIncludeLoc(
       GlobalSourceManager()->getFileID(file_beginning));
-  string include_name_as_written;
   if (!IsInSpecialFile(include_loc)) {
-    CHECK_(include_filename_loc_.isValid() &&
+    CHECK_(!last_quoted_include_.empty() &&
            "Include from not built-in file must have inclusion directive");
-    include_name_as_written = GetIncludeNameAsWritten(include_filename_loc_);
   }
   ERRSYM(GetFileEntry(include_loc))
-      << "[ #include    ] " << include_name_as_written << " ("
+      << "[ #include    ] " << last_quoted_include_ << " ("
       << GetFilePath(file_beginning) << ")\n";
 
   OptionalFileEntryRef const new_file = GetFileEntry(file_beginning);
   if (new_file)
-    AddDirectInclude(include_loc, new_file, include_name_as_written);
+    AddDirectInclude(last_include_range_, last_quoted_include_, new_file);
 
   if (IsSpecialFile(new_file))
     return;
 
-  ProcessHeadernameDirectivesInFile(include_name_as_written, file_beginning);
+  ProcessHeadernameDirectivesInFile(last_quoted_include_, file_beginning);
 
   // The first non-special file entered is the main file.
   if (main_file_ == nullptr)
@@ -897,6 +903,10 @@ void IwyuPreprocessorInfo::FileChanged_ExitToFile(
          "begin_keep without an end_keep");
     begin_keep_location_stack_.pop();
   }
+
+  // Reset the last-include metadata.
+  last_quoted_include_.clear();
+  last_include_range_ = CharSourceRange();
 }
 
 void IwyuPreprocessorInfo::FileChanged_RenameFile(SourceLocation new_file) {

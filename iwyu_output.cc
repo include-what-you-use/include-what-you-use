@@ -598,11 +598,13 @@ OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
 }
 
 OneIncludeOrForwardDeclareLine::OneIncludeOrForwardDeclareLine(
-    OptionalFileEntryRef included_file, const string& quoted_include,
-    int linenum)
+    OptionalFileEntryRef included_file,
+    const string& quoted_include,
+    int start_linenum,
+    int end_linenum)
     : line_("#include " + quoted_include),
-      start_linenum_(linenum),
-      end_linenum_(linenum),
+      start_linenum_(start_linenum),
+      end_linenum_(end_linenum),
       quoted_include_(quoted_include),
       included_file_(included_file) {
 }
@@ -646,9 +648,11 @@ void IwyuFileInfo::AddAssociatedHeader(const IwyuFileInfo* other) {
 }
 
 void IwyuFileInfo::AddInclude(OptionalFileEntryRef includee,
-                              const string& quoted_includee, int linenumber) {
+                              const string& quoted_includee,
+                              int start_linenum,
+                              int end_linenum) {
   OneIncludeOrForwardDeclareLine new_include(includee, quoted_includee,
-                                             linenumber);
+                                             start_linenum, end_linenum);
   new_include.set_present();
 
   // It's possible for the same #include to be seen multiple times
@@ -657,9 +661,9 @@ void IwyuFileInfo::AddInclude(OptionalFileEntryRef includee,
   // TODO(csilvers): could rewrite this so it's constant-time.
   for (const OneIncludeOrForwardDeclareLine& line : lines_) {
     if (line.LineNumbersMatch(new_include)) {
-      VERRS(6) << "Ignoring repeated include: "
-               << GetFilePath(file_) << ":" << linenumber
-               << " -> " << GetFilePath(includee) << "\n";
+      VERRS(6) << "Ignoring repeated include: " << GetFilePath(file_) << ":"
+               << start_linenum << "-" << end_linenum << " -> "
+               << GetFilePath(includee) << "\n";
       return;
     }
   }
@@ -668,9 +672,8 @@ void IwyuFileInfo::AddInclude(OptionalFileEntryRef includee,
   // Store in a few other ways as well.
   direct_includes_as_fileentries_.insert(includee);
   direct_includes_.insert(quoted_includee);
-  VERRS(6) << "Found include: "
-           << GetFilePath(file_) << ":" << linenumber
-           << " -> " << GetFilePath(includee) << "\n";
+  VERRS(6) << "Found include: " << GetFilePath(file_) << ":" << start_linenum
+           << "-" << end_linenum << " -> " << GetFilePath(includee) << "\n";
 }
 
 void IwyuFileInfo::AddForwardDeclare(const NamedDecl* fwd_decl,
@@ -1974,7 +1977,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
     if (use.has_suggested_header()) {
       if (!Contains(*lines, use.suggested_header())) { // must be added
         lines->push_back(OneIncludeOrForwardDeclareLine(
-            use.decl_file(), use.suggested_header(), -1));
+            use.decl_file(), use.suggested_header(), -1, -1));
       }
     } else {
       // Forward-declare uses that are already satisfied by an #include

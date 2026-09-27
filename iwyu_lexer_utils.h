@@ -63,15 +63,6 @@ clang::SourceLocation GetLocationAfter(
     clang::SourceLocation start_loc, const string& needle,
     const CharacterDataGetterInterface& data_getter);
 
-// Returns the include-name as written, including <>'s and ""'s.
-// Resolved computed includes first, so given
-//    #define INC  <stdio.h>
-//    #include INC
-// If include_loc points to the second INC, we'll return '<stdio.h>'.
-string GetIncludeNameAsWritten(
-    clang::SourceLocation include_loc,
-    const CharacterDataGetterInterface& data_getter);
-
 // Get the text of a given token.
 string GetTokenText(const clang::Token& token,
                     const CharacterDataGetterInterface& data_getter);
