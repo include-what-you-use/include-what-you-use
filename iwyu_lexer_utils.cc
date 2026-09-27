@@ -68,24 +68,6 @@ SourceLocation GetLocationAfter(
   return start_loc.getLocWithOffset(needle_loc - data + needle.length());
 }
 
-string GetIncludeNameAsWritten(
-    SourceLocation include_loc,
-    const CharacterDataGetterInterface& data_getter) {
-  const string data = GetSourceTextUntilEndOfLine(include_loc, data_getter).str();
-  if (data.empty())
-    return data;
-  string::size_type endpos = string::npos;
-  if (data[0] == '<') {
-    endpos = data.find('>', 1);
-  } else if (data[0] == '"') {
-    endpos = data.find('"', 1);
-  } else {
-    CHECK_UNREACHABLE_("Unexpected token being #included");
-  }
-  CHECK_(endpos != string::npos && "No end-character found for #include");
-  return data.substr(0, endpos+1);
-}
-
 // Get the text of a given token.
 string GetTokenText(const Token& token,
                     const CharacterDataGetterInterface& data_getter) {

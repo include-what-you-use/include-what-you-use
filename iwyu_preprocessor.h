@@ -246,14 +246,14 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
 
   // Helper for AddDirectInclude.  Checks if we should protect the
   // #include from iwyu removal.
-  void MaybeProtectInclude(clang::SourceLocation includer_loc,
-                           clang::OptionalFileEntryRef includee,
-                           const string& include_name_as_written);
+  void MaybeProtectInclude(clang::CharSourceRange include_range,
+                           const string& include_name_as_written,
+                           clang::OptionalFileEntryRef includee);
 
   // Called whenever an #include is seen in the preprocessor output.
-  void AddDirectInclude(clang::SourceLocation includer_loc,
-                        clang::OptionalFileEntryRef includee,
-                        const string& include_name_as_written);
+  void AddDirectInclude(clang::CharSourceRange include_range,
+                        const string& include_name_as_written,
+                        clang::OptionalFileEntryRef includee);
 
   // Determine if the comment is a pragma, and if so, process it.
   void HandlePragmaComment(clang::SourceRange comment_range);
@@ -356,12 +356,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // "associated" pragma.
   clang::SourceLocation associated_pragma_location_;
 
-  // Filename spelling location in the last encountered inclusion directive.
-  // Should be used only in FileChanged_EnterFile, FileSkipped when
-  // corresponding callback is caused by inclusion directive.  Don't use in
-  // other places because it is unclear which inclusion directive filename
-  // location corresponds to.
-  clang::SourceLocation include_filename_loc_;
+  // Keeps track of the last seen quoted include (post-expansion) and source
+  // range (pre-expansion). Can be used only in the FileChanged_EnterFile,
+  // FileSkipped callbacks, which are always preceded by InclusionDirective.
+  std::string last_quoted_include_;
+  clang::CharSourceRange last_include_range_;
 
   // Keeps track of which files have the "always_keep" pragma, so they can be
   // marked as such for all includers.
