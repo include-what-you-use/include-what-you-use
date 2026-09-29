@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // IWYU_ARGS: -Xiwyu --check_also=tests/cxx/*-d1.h \
-//            -Xiwyu --check_also=tests/cxx/*-d2.h -I .
+//            -Xiwyu --check_also=tests/cxx/*-d2.h -I . -std=c++20
 
 // Tests that IWYU keeps includes inside declarations.
 
@@ -37,6 +37,17 @@ Tpl<
 #include "tests/cxx/keep_embedded_include-d5.h"
     >
     t;
+
+template <typename>
+concept Concept = true;
+
+// clang-format off
+bool req_expr_result = requires {
+  { 1 } ->
+#include "tests/cxx/keep_embedded_include-d6.h"
+      ;
+};
+// clang-format on
 
 /**** IWYU_SUMMARY
 
