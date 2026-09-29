@@ -5895,9 +5895,10 @@ class IwyuAstConsumer
     }
     OptionalFileEntryRef current_file =
         GetFileEntry(GetInstantiationLoc(CurrentLoc()));
-    OptionalFileEntryRef parent_file =
-        GetFileEntry(GetInstantiationLoc(parent->GetLocation()));
-    if (current_file != parent_file) {
+    OptionalFileEntryRef parent_file = {};
+    for (; !parent_file && parent; parent = parent->parent())
+      parent_file = GetFileEntry(GetInstantiationLoc(parent->GetLocation()));
+    if (current_file != parent_file && parent_file) {
       preprocessor_info()
           .FileInfoFor(parent_file)
           ->ReportKnownDesiredFile(current_file);
