@@ -187,7 +187,12 @@ This builds all of LLVM, Clang and IWYU in a single tree.
 
 Install targets are added so that `iwyu` can also be added to `LLVM_DISTRIBUTION_COMPONENTS`
 to build and install an [LLVM Distribution](https://llvm.org/docs/BuildingADistribution.html)
-that contains a subset of the LLVM components.
+that contains a subset of the LLVM components. For example,
+
+```
+$ cmake -GNinja -DLLVM_DISTRIBUTION_COMPONENTS=clang;iwyu ...
+$ ninja -C path/to/build install-distribution
+```
 
 
 ### How to install ###
