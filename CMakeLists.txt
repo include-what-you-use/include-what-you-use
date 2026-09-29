@@ -356,11 +356,13 @@ if (UNIX)
   )
 endif()
 
-# support adding iwyu to LLVM_DISTRIBUTION_COMPONENTS
-add_llvm_install_targets(install-iwyu
-  DEPENDS include-what-you-use
-  COMPONENT iwyu
-)
+if (NOT iwyu_standalone_build)
+  # support adding iwyu to LLVM_DISTRIBUTION_COMPONENTS
+  add_llvm_install_targets(install-iwyu
+    DEPENDS include-what-you-use
+    COMPONENT iwyu
+  )
+endif()  
 
 find_package(Python3 COMPONENTS Interpreter)
 if (Python3_Interpreter_FOUND)
