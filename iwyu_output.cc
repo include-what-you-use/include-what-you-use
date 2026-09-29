@@ -639,10 +639,13 @@ IwyuFileInfo::IwyuFileInfo(OptionalFileEntryRef this_file,
       desired_includes_have_been_calculated_(false) {
 }
 
-void IwyuFileInfo::AddAssociatedHeader(const IwyuFileInfo* other) {
+void IwyuFileInfo::AddAssociatedHeader(const IwyuFileInfo* other,
+                                       bool require_include) {
   VERRS(6) << "Adding " << GetFilePath(other->file_)
            << " as associated header for " << GetFilePath(file_) << "\n";
   associated_headers_.insert(other);
+  if (!require_include)
+    associated_headers_not_requiring_include_.insert(other);
 }
 
 void IwyuFileInfo::AddInclude(OptionalFileEntryRef includee,
@@ -1852,7 +1855,16 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // (C1) Compute the direct includes of 'associated' files.
   set<string> associated_direct_includes;
   for (const IwyuFileInfo* associated : associated_headers_) {
-    ReportIncludeFileUse(associated->file_, associated->quoted_file_);
+    // Reporting an associated header as used both keeps an existing #include
+    // of it and asks for one when it's missing.  For associations that don't
+    // require the #include (foo.icc/foo.h), only report the use when the
+    // #include is actually present, so that a redundant-but-harmless
+    // #include is left alone without one being demanded from the files that
+    // don't have it.
+    if (!ContainsKey(associated_headers_not_requiring_include_, associated) ||
+        ContainsKey(direct_includes(), associated->quoted_file_)) {
+      ReportIncludeFileUse(associated->file_, associated->quoted_file_);
+    }
     InsertAllInto(associated->direct_includes(), &associated_direct_includes);
   }
   // The 'effective' direct includes are defined to be the current

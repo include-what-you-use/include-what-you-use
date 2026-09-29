@@ -1,0 +1,5 @@
+# Declares that foo.icc is an inline-implementation file belonging to foo.h,
+# so it is analyzed as part of foo.h's component.
+[
+  { "associated_header": ['@"(.*)\.icc"', '"\1.h"'] },
+]

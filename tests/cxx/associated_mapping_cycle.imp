@@ -1,0 +1,8 @@
+# Deliberately contradictory: foo.icc is declared to belong to foo.h *and*
+# foo.h to belong to foo.icc.  IWYU must apply only whichever direction it
+# sees first and ignore the other; two files that are each other's
+# associated header crash the analysis.
+[
+  { "associated_header": ['@"(.*)\.icc"', '"\1.h"'] },
+  { "associated_header": ['@"(.*)\.h"', '"\1.icc"'] },
+]

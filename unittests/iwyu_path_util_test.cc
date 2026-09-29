@@ -26,6 +26,10 @@ TEST(GetCanonicalName, StripsKnownSuffixes) {
   EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.cc"));
   EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.h"));
   EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo-inl.h"));
+  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.inl"));
+  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.icc"));
+  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.ipp"));
+  EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo.tcc"));
   EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo_unittest.cc"));
   EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo_regtest.cc"));
   EXPECT_EQ("my/path/foo", GetCanonicalName("my/path/foo_test.cc"));

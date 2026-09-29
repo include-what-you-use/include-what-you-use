@@ -1888,6 +1888,76 @@ void IncludePicker::AddFriendRegex(const string& includee_filepath,
   friend_to_headers_map_["@" + quoted_friend_regex].insert(includee_filepath);
 }
 
+void IncludePicker::AddAssociatedHeaderMapping(
+    const string& quoted_filepath_pattern,
+    const string& quoted_associated_header) {
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  CHECK_(IsQuotedFilepathPattern(quoted_filepath_pattern) &&
+         "Associated-header mapping keys must be quoted includes or "
+         "@-regexes");
+  associated_header_mappings_.push_back(
+      {quoted_filepath_pattern, quoted_associated_header});
+}
+
+namespace {
+
+// The inline-implementation extensions IWYU recognizes without being told:
+// a foo.icc/foo.inl/foo.ipp/foo.tcc #included by a foo.h next to it is
+// almost always that header's inline definitions, and expressing it in a
+// mapping file every time is busywork.  Any other convention still needs an
+// 'associated' mapping directive.
+const char* const kInlineImplementationExtensions[] = {".icc", ".inl", ".ipp",
+                                                       ".tcc"};
+
+bool HasInlineImplementationExtension(StringRef quoted_include) {
+  for (const char* ext : kInlineImplementationExtensions) {
+    if (quoted_include.ends_with(string(ext) + "\""))
+      return true;
+  }
+  return false;
+}
+
+// True if the built-in rule makes quoted_header the associated header of
+// quoted_file.  Only quoted (i.e. "" rather than <>) includes take part,
+// which keeps the standard library's own .tcc files
+// (<bits/locale_classes.tcc> and friends) out of it.
+bool IsBuiltinAssociatedHeaderOf(const string& quoted_header,
+                                 const string& quoted_file) {
+  if (!StartsWith(quoted_header, "\"") || !StartsWith(quoted_file, "\""))
+    return false;
+  // Only in this direction, so the rule can never fire for both files of a
+  // pair and make them each other's associated header.
+  if (!HasInlineImplementationExtension(quoted_file) ||
+      HasInlineImplementationExtension(quoted_header))
+    return false;
+  // Strip the surrounding quotes before asking for canonical names;
+  // GetCanonicalName() works on plain paths.
+  const string file_path = quoted_file.substr(1, quoted_file.size() - 2);
+  const string header_path = quoted_header.substr(1, quoted_header.size() - 2);
+  return GetCanonicalName(file_path) == GetCanonicalName(header_path);
+}
+
+}  // anonymous namespace
+
+bool IncludePicker::IsAssociatedHeaderOf(const string& quoted_header,
+                                         const string& quoted_file) const {
+  if (IsBuiltinAssociatedHeaderOf(quoted_header, quoted_file))
+    return true;
+  for (const auto& [pattern, mapped_header] : associated_header_mappings_) {
+    if (StartsWith(pattern, "@")) {
+      const string regex = pattern.substr(1);
+      if (RegexMatch(regex_dialect, quoted_file, regex) &&
+          RegexReplace(regex_dialect, quoted_file, regex, mapped_header) ==
+              quoted_header) {
+        return true;
+      }
+    } else if (pattern == quoted_file && mapped_header == quoted_header) {
+      return true;
+    }
+  }
+  return false;
+}
+
 namespace {
 
 // Given a map keyed by quoted filepath patterns, return a vector
@@ -2329,6 +2399,33 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
             from_visibility,
             MappedInclude(mapping[2]),
             to_visibility);
+      } else if (directive == "associated_header") {
+        // Associated-header mapping.
+        vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
+        if (mapping.size() != 2) {
+          json_stream.printError(current_node,
+              "Associated-header mapping expects a value on the form "
+              "'[from, to]'.");
+          return;
+        }
+
+        if (!IsQuotedFilepathPattern(mapping[0])) {
+          json_stream.printError(
+              current_node,
+              "Expected from-entry to be quoted filepath or @regex, but was '" +
+                  mapping[0] + "'");
+          return;
+        }
+
+        if (!IsQuotedInclude(mapping[1])) {
+          json_stream.printError(
+              current_node,
+              "Expected to-entry to be quoted include, but was '" + mapping[1] +
+                  "'");
+          return;
+        }
+
+        AddAssociatedHeaderMapping(mapping[0], mapping[1]);
       } else if (directive == "ref") {
         // Mapping ref.
         string ref_file = GetScalarValue(mapping_item_node.getValue());
