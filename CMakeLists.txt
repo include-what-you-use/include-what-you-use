@@ -330,11 +330,13 @@ include(GNUInstallDirs)
 install(TARGETS
   include-what-you-use
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  COMPONENT iwyu
 )
 install(PROGRAMS
   fix_includes.py
   iwyu_tool.py
   DESTINATION ${CMAKE_INSTALL_BINDIR}
+  COMPONENT iwyu
 )
 
 # Install mapping files.
@@ -342,6 +344,7 @@ file(GLOB mapping_files *.imp)
 install(FILES
   ${mapping_files}
   DESTINATION ${CMAKE_INSTALL_DATADIR}/include-what-you-use
+  COMPONENT iwyu
 )
 
 # Install man page on Unix-like systems.
@@ -349,8 +352,17 @@ if (UNIX)
   install(FILES
     include-what-you-use.1
     DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
+    COMPONENT iwyu
   )
 endif()
+
+if (NOT iwyu_standalone_build)
+  # support adding iwyu to LLVM_DISTRIBUTION_COMPONENTS
+  add_llvm_install_targets(install-iwyu
+    DEPENDS include-what-you-use
+    COMPONENT iwyu
+  )
+endif()  
 
 find_package(Python3 COMPONENTS Interpreter)
 if (Python3_Interpreter_FOUND)
