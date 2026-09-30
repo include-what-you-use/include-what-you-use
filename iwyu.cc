@@ -4157,6 +4157,9 @@ class InstantiatedTemplateVisitor
 
   bool TraverseTemplateSpecializationType(TemplateSpecializationType* type,
                                           bool traverse_qualifier) {
+    // A scan has one caller location, so revisiting the same specialization
+    // through another AST path cannot produce additional uses.
+    if (!traversed_specialization_types_.insert(type).second) return true;
     if (!Base::TraverseTemplateSpecializationType(type, traverse_qualifier))
       return false;
     return TraverseTemplateSpecializationTypeHelper(type);
@@ -4468,6 +4471,7 @@ class InstantiatedTemplateVisitor
     caller_ast_node_ = nullptr;
     resugar_map_.clear();
     traversed_decls_.clear();
+    traversed_specialization_types_.clear();
     nodes_to_ignore_.clear();
     cache_storers_.clear();
   }
@@ -4807,6 +4811,9 @@ class InstantiatedTemplateVisitor
 
   // Used to avoid recursion in the *Helper() methods.
   set<const Decl*> traversed_decls_;
+
+  // Used to avoid repeated work while scanning an instantiated template.
+  set<const TemplateSpecializationType*> traversed_specialization_types_;
 
   AstFlattenerVisitor::NodeSet nodes_to_ignore_;
 
