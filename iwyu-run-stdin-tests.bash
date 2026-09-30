@@ -24,8 +24,9 @@ fi
 
 run_iwyu() {
     local input="$1"
-    echo ">>> Running $iwyu -I . -xc++ - < $input:"
-    "$iwyu" -I . -xc++ - < "$input"
+    extra_args=$(sed -n 's|^// IWYU_ARGS: \(.*\)|\1|p' "$input")
+    echo ">>> Running $iwyu $extra_args -xc++ - < $input:"
+    "$iwyu" $extra_args -xc++ - < "$input"
 }
 
 # Always run from root
