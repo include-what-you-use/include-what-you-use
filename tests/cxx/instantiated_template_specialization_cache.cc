@@ -7,24 +7,39 @@
 //
 //===----------------------------------------------------------------------===//
 
-// A template instantiation can reach the same specialization through
-// independent AST paths. IWYU must analyze it once without changing the
-// include analysis for either use.
-template <class T>
-struct Property {
-  using type = T;
-};
+// IWYU_ARGS: -I . -std=c++11
 
-template <class T>
-struct UsesPropertyTwice {
-  typename Property<T>::type first;
-  typename Property<T>::type second;
-};
+#include "tests/cxx/direct.h"
+#include "tests/cxx/instantiated_template_specialization_cache-direct.h"
 
-UsesPropertyTwice<int> instance;
+// Nested aliases reach the same specialization through independent paths.
+// Indirect includes make missing uses visible in the diagnostics.
+// IWYU: Holder is...*instantiated_template_specialization_cache-indirect.h
+// IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectClass needs a declaration
+Holder<IndirectClass> instance;
+
+// A separate caller must retain its uses even after the first scan.
+void AnotherCaller() {
+  // IWYU: Holder is...*instantiated_template_specialization_cache-indirect.h
+  // IWYU: IndirectClass is...*indirect.h
+  // IWYU: IndirectClass needs a declaration
+  Holder<IndirectClass> local;
+  (void)local;
+}
 
 /**** IWYU_SUMMARY
 
-(tests/cxx/instantiated_template_specialization_cache.cc has correct #includes/fwd-decls)
+tests/cxx/instantiated_template_specialization_cache.cc should add these lines:
+#include "tests/cxx/indirect.h"
+#include "tests/cxx/instantiated_template_specialization_cache-indirect.h"
+
+tests/cxx/instantiated_template_specialization_cache.cc should remove these lines:
+- #include "tests/cxx/direct.h"  // lines XX-XX
+- #include "tests/cxx/instantiated_template_specialization_cache-direct.h"  // lines XX-XX
+
+The full include-list for tests/cxx/instantiated_template_specialization_cache.cc:
+#include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/instantiated_template_specialization_cache-indirect.h"  // for Holder
 
 ***** IWYU_SUMMARY */

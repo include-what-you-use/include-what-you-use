@@ -4159,6 +4159,8 @@ class InstantiatedTemplateVisitor
                                           bool traverse_qualifier) {
     // A scan has one caller location, so revisiting the same specialization
     // through another AST path cannot produce additional uses.
+    // Class-member caches are checked after recursive template-argument
+    // traversal, so they cannot prevent repeated work along these paths.
     if (!traversed_specialization_types_.insert(type).second) return true;
     if (!Base::TraverseTemplateSpecializationType(type, traverse_qualifier))
       return false;
