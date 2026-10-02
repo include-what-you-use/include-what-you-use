@@ -53,9 +53,12 @@ void TplFn() {
   (void)sizeof(n);
 }
 
+template <class... Args>
+struct tuple_like {};
+
 struct DependentFnReturn {
   template <typename T>
-  static typename T::template NestedTpl<T> GetNestedTpl() {
+  static tuple_like<typename T::template NestedTpl<T>> GetNestedTpl() {
     return {};
   }
 

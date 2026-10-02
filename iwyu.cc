@@ -5921,7 +5921,7 @@ class IwyuAstConsumer
                    dyn_cast_or_null<TemplateSpecializationType>(
                        desugared_until_typedef_or_tpl)) {
       const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec);
-      if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl))
+      if (const auto* al_tpl_decl = dyn_cast_or_null<TypeAliasTemplateDecl>(decl))
         res = GetAliasTemplateProvidedTypes(tpl_spec, al_tpl_decl);
     }
     InsertAllInto(GetProvidedByTplArg(desugared_until_typedef_or_tpl), &res);
