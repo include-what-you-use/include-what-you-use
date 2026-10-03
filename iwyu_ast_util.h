@@ -51,6 +51,7 @@ class Sema;
 class Stmt;
 class TemplateDecl;
 class TemplateName;
+class TypeAliasTemplateDecl;
 class VarTemplateSpecializationDecl;
 }  // namespace clang
 
@@ -1117,6 +1118,11 @@ bool IsDeclaredInsideFunction(const clang::Decl* decl);
 
 // Returns true if decl is partially inside a macro.
 bool IsDeclaredInsideMacro(const clang::Decl* decl);
+
+// Returns the TypeAliasTemplateDecl of the template specialization type if one
+// is available, otherwise nullptr.
+const clang::TypeAliasTemplateDecl* GetAsTypeAliasTemplateDecl(
+    const clang::TemplateSpecializationType* type);
 
 }  // namespace include_what_you_use
 

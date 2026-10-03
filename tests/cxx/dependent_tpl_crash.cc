@@ -62,6 +62,18 @@ struct DependentFnReturn {
   using ThisType = DependentFnReturn;
 };
 
+template <class... Args>
+struct tuple_like {};
+
+struct DependentFnReturnWithPack {
+  template <typename T>
+  static tuple_like<typename T::template NestedTpl<T>> GetNestedTpl() {
+    return {};
+  }
+
+  using ThisType = DependentFnReturnWithPack;
+};
+
 int main() {
   test<0>();
   Tpl<int> t;
