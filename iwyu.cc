@@ -3462,12 +3462,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
       if (const auto* tpl_spec_type =
               dyn_cast<TemplateSpecializationType>(component)) {
-        const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec_type);
-        if (const auto* al_tpl_decl =
-                dyn_cast_or_null<TypeAliasTemplateDecl>(decl)) {
-          InsertAllInto(
-              GetAliasTemplateProvidedTypes(tpl_spec_type, al_tpl_decl),
-              &retval);
+        if (const TypeAliasTemplateDecl* decl =
+                GetAsTypeAliasTemplateDecl(tpl_spec_type)) {
+          InsertAllInto(GetAliasTemplateProvidedTypes(tpl_spec_type, decl),
+                        &retval);
           continue;
         }
       }
@@ -3674,16 +3672,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const auto* template_spec_type =
             type->getAs<TemplateSpecializationType>()) {
       if (template_spec_type->isTypeAlias()) {
-        const Type* type = template_spec_type->getAliasedType().getTypePtr();
-        const NamedDecl* decl = TypeToDeclAsWritten(template_spec_type);
-        if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl)) {
-          InsertAllInto(
-              GetAliasTemplateProvidedTypes(template_spec_type, al_tpl_decl),
-              &blocked_types);
+        if (const TypeAliasTemplateDecl* decl =
+                GetAsTypeAliasTemplateDecl(template_spec_type)) {
+          InsertAllInto(GetAliasTemplateProvidedTypes(template_spec_type, decl),
+                        &blocked_types);
         }
         // Builtin templates like __type_pack_element<0, Class*> are marked as
         // type alias substitutions, but have no associated alias template
         // decl, so report either way.
+        const Type* type = template_spec_type->getAliasedType().getTypePtr();
         ReportTypeUseInternal(used_loc, type, blocked_types, deref_kind);
         return;
       }
@@ -5920,9 +5917,10 @@ class IwyuAstConsumer
     } else if (const auto* tpl_spec =
                    dyn_cast_or_null<TemplateSpecializationType>(
                        desugared_until_typedef_or_tpl)) {
-      const NamedDecl* decl = TypeToDeclAsWritten(tpl_spec);
-      if (const auto* al_tpl_decl = dyn_cast<TypeAliasTemplateDecl>(decl))
-        res = GetAliasTemplateProvidedTypes(tpl_spec, al_tpl_decl);
+      if (const TypeAliasTemplateDecl* decl =
+              GetAsTypeAliasTemplateDecl(tpl_spec)) {
+        res = GetAliasTemplateProvidedTypes(tpl_spec, decl);
+      }
     }
     InsertAllInto(GetProvidedByTplArg(desugared_until_typedef_or_tpl), &res);
     return res;

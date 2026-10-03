@@ -54,12 +54,25 @@ void TplFn() {
 }
 
 struct DependentFnReturn {
+  // The return type is fully dependent.
   template <typename T>
   static typename T::template NestedTpl<T> GetNestedTpl() {
     return {};
   }
 
   using ThisType = DependentFnReturn;
+};
+
+template <class T>
+struct RetTpl {};
+
+struct FnReturnWithDependentTplArg {
+  // The template name (RetTpl) is non-dependent, but the overall type remains
+  // dependent due to its dependent argument.
+  template <typename T>
+  static RetTpl<typename T::template NestedTpl<T>> Get() {
+    return {};
+  }
 };
 
 int main() {
