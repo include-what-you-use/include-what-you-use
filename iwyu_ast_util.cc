@@ -2432,4 +2432,20 @@ bool IsDeclaredInsideMacro(const Decl* decl) {
   return range.getBegin().isMacroID() || range.getEnd().isMacroID();
 }
 
+const TypeAliasTemplateDecl* GetAsTypeAliasTemplateDecl(
+    const TemplateSpecializationType* type) {
+  // Note TypeToDeclAsWritten returns null for dependent types such as Nested
+  // below:
+  //
+  //   template<class T>
+  //   struct X {
+  //     static typename T::template Nested<T> val;
+  //   };
+  //
+  // This function silently propagates the null for such types, ideally we
+  // should do deeper analysis.
+  const NamedDecl* decl = TypeToDeclAsWritten(type);
+  return dyn_cast_or_null<TypeAliasTemplateDecl>(decl);
+}
+
 }  // namespace include_what_you_use
