@@ -73,6 +73,7 @@ void Fn() {
   // IWYU: std::pow(long double, long double) is...*<cmath>
   (void)std::pow(2.0L, 3.0L);
 
+  // IWYU should report <iosfwd> for basic_ostream and not <streambuf>.
   // IWYU: std::basic_ostream needs a declaration
   // IWYU: std::char_traits needs a declaration
   std::basic_ostream<char, std::char_traits<char>>* os1;
@@ -84,6 +85,9 @@ void Fn() {
   std::basic_spanstream<char>* ss;
   // IWYU: std::basic_spanstream is...*<spanstream>
   (void)sizeof(*ss);
+  // IWYU: std::basic_streambuf needs a declaration
+  // IWYU: std::basic_streambuf is...*<streambuf>
+  (void)sizeof(std::basic_streambuf<char>);
 
   {
     using namespace std::chrono_literals;
@@ -124,6 +128,7 @@ tests/cxx/std_symbol_mapping.cc should add these lines:
 #include <functional>
 #include <iosfwd>
 #include <spanstream>
+#include <streambuf>
 #include <tuple>
 #include <utility>
 #include <valarray>
@@ -141,6 +146,7 @@ The full include-list for tests/cxx/std_symbol_mapping.cc:
 #include <functional>  // for function, swap
 #include <iosfwd>  // for basic_ostream (ptr only), char_traits (ptr only)
 #include <spanstream>  // for basic_spanstream
+#include <streambuf>  // for basic_streambuf
 #include <tuple>  // for tuple
 #include <utility>  // for get, move, operator==, pair, swap
 #include <valarray>  // for pow, valarray

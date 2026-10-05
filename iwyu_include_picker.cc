@@ -791,11 +791,9 @@ const IncludeMapEntry stdlib_cpp_include_map[] = {
   // #including each other (eg <iostream> #includes <istream>).  We
   // are pretty forgiving: if a user specifies any public header, we
   // generally don't require the others.
-  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && egrep '^ *# *include <(istream|ostream|iostream|fstream|sstream|streambuf|ios|iosfwd)>' *stream* ios | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ and print qq@    { "<$2>", kPublic, "<$1>", kPublic },@' | sort -u )
+  // ( cd /usr/crosstool/v12/gcc-4.3.1-glibc-2.3.6-grte/x86_64-unknown-linux-gnu/x86_64-unknown-linux-gnu/include/c++/4.3.1 && egrep '^ *# *include <(istream|ostream|iostream|fstream|sstream|streambuf|ios)>' *stream* ios | perl -nle 'm/^([^:]+).*[<"]([^>"]+)[>"]/ and print qq@    { "<$2>", kPublic, "<$1>", kPublic },@' | sort -u )
   { "<ios>", kPublic, "<istream>", kPublic },
   { "<ios>", kPublic, "<ostream>", kPublic },
-  { "<iosfwd>", kPublic, "<ios>", kPublic },
-  { "<iosfwd>", kPublic, "<streambuf>", kPublic },
   { "<istream>", kPublic, "<fstream>", kPublic },
   { "<istream>", kPublic, "<iostream>", kPublic },
   { "<istream>", kPublic, "<sstream>", kPublic },
