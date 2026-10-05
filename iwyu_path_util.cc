@@ -221,11 +221,13 @@ bool IsQuotedInclude(StringRef s) {
   return (s.front() == '"' && s.back() == '"');
 }
 
-string AddQuotes(string include_name, bool angled) {
-  if (angled) {
-      return "<" + include_name + ">";
-  }
-  return "\"" + include_name + "\"";
+string AddQuotes(StringRef include_name, bool angled) {
+  string res;
+  res.reserve(include_name.size() + 2);
+  res.push_back(angled ? '<' : '"');
+  res.append(include_name);
+  res.push_back(angled ? '>' : '"');
+  return res;
 }
 
 bool IsSpecialFilename(StringRef name) {
