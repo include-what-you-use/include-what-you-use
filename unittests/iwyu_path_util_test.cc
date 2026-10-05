@@ -71,5 +71,27 @@ TEST(IsQuotedHeaderFilename, Basic) {
   EXPECT_FALSE(IsQuotedHeaderFilename("<source.cpp>"));
 }
 
+TEST(AddQuotes, Basic) {
+  // AddQuotes doesn't fail if the include-name is empty.
+  EXPECT_EQ("\"\"", AddQuotes("", false));
+  EXPECT_EQ("<>", AddQuotes("", true));
+
+  // AddQuotes doesn't fail if the include-name is already quoted.
+  EXPECT_EQ("\"\"q.h\"\"", AddQuotes("\"q.h\"", false));
+  EXPECT_EQ("<\"q.h\">", AddQuotes("\"q.h\"", true));
+
+  // Naked filename.
+  EXPECT_EQ("\"hdr.h\"", AddQuotes("hdr.h", false));
+  EXPECT_EQ("<hdr.h>", AddQuotes("hdr.h", true));
+
+  // Relative paths.
+  EXPECT_EQ("\"a/b/c.h\"", AddQuotes("a/b/c.h", false));
+  EXPECT_EQ("<a/b/c.h>", AddQuotes("a/b/c.h", true));
+
+  // Relative paths with mixed slash styles.
+  EXPECT_EQ("\"a\\b/c.h\"", AddQuotes("a\\b/c.h", false));
+  EXPECT_EQ("<a\\b/c.h>", AddQuotes("a\\b/c.h", true));
+}
+
 }  // namespace
 }  // namespace include_what_you_use

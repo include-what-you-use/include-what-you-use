@@ -90,7 +90,7 @@ bool IsQuotedInclude(StringRef s);
 // Returns include name enclosed in double quotes or angle quotes, depending on
 // the angled flag. An include name is the unquoted relative name that would be
 // used on an include line, e.g. lib/mytype.h or stdio.h.
-string AddQuotes(string include_name, bool angled);
+string AddQuotes(StringRef include_name, bool angled);
 
 // Returns true if argument is one of the special filenames used by Clang for
 // implicit buffers ("<built-in>", "<command-line>", etc).
