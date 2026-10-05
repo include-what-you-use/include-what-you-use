@@ -71,6 +71,9 @@ template <>
 struct char_traits<char> {};
 
 template <typename T, typename = char_traits<T>>
+class basic_streambuf {};
+
+template <typename T, typename = char_traits<T>>
 class basic_ostream;
 template <typename, typename>
 class basic_ostream {};
