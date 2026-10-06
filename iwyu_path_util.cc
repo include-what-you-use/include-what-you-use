@@ -104,7 +104,10 @@ string GetCanonicalName(string file_path) {
       || StripRight(&file_path, ".hpp")
       || StripRight(&file_path, ".hxx")
       || StripRight(&file_path, ".hh")
-      || StripRight(&file_path, ".inl");
+      || StripRight(&file_path, ".inl")
+      || StripRight(&file_path, ".icc")
+      || StripRight(&file_path, ".ipp")
+      || StripRight(&file_path, ".tcc");
   if (!stripped_ext) {
     for (const char* source_extension : source_extensions) {
       if (StripRight(&file_path, source_extension))

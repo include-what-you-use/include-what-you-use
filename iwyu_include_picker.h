@@ -136,6 +136,21 @@ class IncludePicker {
   void AddFriendRegex(const string& includee_filepath,
                       const string& quoted_friend_regex);
 
+  // Add this to say "the associated header of a file whose quoted-include
+  // matches quoted_filepath_pattern is the header quoted_associated_header
+  // expands to".  The pattern may be a plain quoted-include or an
+  // @-prefixed regex, in which case capture groups may be referenced from
+  // quoted_associated_header (e.g. '@"(.*)\.icc"' -> '"\1.h"').
+  void AddAssociatedHeaderMapping(const string& quoted_filepath_pattern,
+                                  const string& quoted_associated_header);
+
+  // Returns true if quoted_header is the associated header of quoted_file.
+  // Unlike the other mapping queries this one is answered during
+  // preprocessing, so it evaluates the patterns on the spot rather than
+  // relying on FinalizeAddedIncludes().
+  bool IsAssociatedHeaderOf(const string& quoted_header,
+                            const string& quoted_file) const;
+
   // Call this after iwyu preprocessing is done.  No more calls to
   // AddDirectInclude() or AddMapping() are allowed after this.
   void FinalizeAddedIncludes();
@@ -318,6 +333,14 @@ class IncludePicker {
   // friend_to_headers_map_["foo/bar/x.cc"] will be augmented with the
   // contents of friend_to_headers_map_["@\"foo/bar/.*\""].
   map<string, set<string>> friend_to_headers_map_;
+
+  // 'associated_header' mapping-file directives, in the order they were
+  // read: (quoted filepath pattern of the implementation file,
+  // quoted-include template of the header it belongs to).  Kept as a plain
+  // list rather than a map because the keys are patterns that must be
+  // evaluated against a specific pair of files -- see
+  // IsAssociatedHeaderOf().
+  vector<pair<string, string>> associated_header_mappings_;
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;

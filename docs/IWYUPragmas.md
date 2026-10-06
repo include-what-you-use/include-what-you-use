@@ -233,6 +233,44 @@ associated header with `IWYU pragma: associated`:
 You can mark multiple `#include` directives as associated and they will all be
 considered as such.
 
+## IWYU pragma: associated_impl ##
+
+Some headers keep their inline definitions in a separate file, and `#include`
+that file themselves -- `foo.h` ends with `#include "foo.icc"`. That file is only
+ever compiled as part of `foo.h`, so it should be able to use whatever `foo.h`
+provides. `IWYU pragma: associated` cannot say this, because it has to sit on an
+`#include` of the associated header, and here the `#include` goes the other way.
+
+Mark the `#include` of the implementation file instead:
+
+    component/component.h:
+      #include "component/thing.h"
+
+      struct Foo {
+        void Bar();
+        Thing thing;
+      };
+
+      #include "component/component.icc"  // IWYU pragma: associated_impl
+
+    component/component.icc:
+      inline void Foo::Bar() {
+        Thing local;
+      }
+
+`component.icc` may now use `Thing` without `#include`ing `component/thing.h`
+again, and IWYU does not ask it to `#include "component/component.h"` either --
+that header already `#include`s it.
+
+The relation is one-way. If `foo.h` marks `foo.icc` and `foo.icc` marks `foo.h`
+in turn, IWYU keeps whichever it sees first; without that the two files' analyses
+would depend on each other.
+
+When a whole project follows such a naming convention, the `associated_header`
+mapping directive in [IWYUMappings](IWYUMappings.md) states the same relation
+once, instead of once per header.
+
+
 
 ## IWYU pragma: always_keep ##
 

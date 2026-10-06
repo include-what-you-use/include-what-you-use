@@ -49,6 +49,7 @@ Directives can be one of the literal strings:
 
 * `include`
 * `symbol`
+* `associated_header`
 * `ref`
 
 and data varies between the directives, see below.
@@ -194,6 +195,77 @@ of templates being members of other templates.
 
 At present, only class and variable template specializations are supported, not
 function template ones.
+
+
+### Associated-header mappings ###
+
+The `associated_header` directive does not describe where a symbol comes from;
+it describes which files IWYU should analyze *together*.
+
+IWYU already analyzes `foo.cc` together with `foo.h` -- `foo.h` is `foo.cc`'s
+*associated header*, and `foo.cc` may freely use anything `foo.h` #includes
+without repeating those #includes itself. Some projects use the mirror-image
+convention: `foo.h` #includes a separate file part-way through its body to hold
+the inline definitions that must stay visible to every includer.
+
+    component/component.h:
+      #include "component/thing.h"
+
+      struct Foo {
+        void Bar();
+        Thing thing;
+      };
+
+      #include "component/component.icc"
+
+    component/component.icc:
+      inline void Foo::Bar() {
+        Thing local;
+      }
+
+`component.icc` is only ever compiled as part of `component.h`, so it should be
+allowed to use `Thing` without #including `component/thing.h` again.
+
+The four most common extensions for such files -- `.icc`, `.inl`, `.ipp` and
+`.tcc` -- are recognized without any configuration, as long as the two files
+share a stem and the implementation file is quote-included. The example above
+therefore works out of the box. Spelling the same rule explicitly looks like
+this:
+
+    [
+      { "associated_header": ['@"(.*)\.icc"', '"\1.h"'] }
+    ]
+
+Data for the directive is a two-element array, `[from, to]`: the *from* entry is
+a quoted include or an `@`-prefixed regex matching the implementation file, and
+the *to* entry is the quoted include of its associated header. Capture groups
+from the regex can be referenced in the *to* entry, exactly as for `include`
+mappings (`\1` in the default LLVM regex dialect, `$1` with
+`--regex=ecmascript`).
+
+Because the rule is about paths rather than extensions, any local convention can
+be expressed:
+
+    [
+      { "associated_header": ['@"(.*)\.inline"', '"\1.h"'] },
+      { "associated_header": ['@"(.*)_impl\.h"', '"\1.h"'] },
+      { "associated_header": ['@"(.*)/detail/(.*)\.hpp"', '"\1/\2.hpp"'] }
+    ]
+
+A rule applies only where the two files really meet: the *from* file has to be
+`#include`d by the file the *to* entry names. Unlike `foo.cc`, the
+implementation file is not asked to `#include` its own header -- the header
+already #includes it -- but an `#include` that is there anyway is left alone.
+
+The relation is one-way. If a mapping file declares both `a` associated with `b`
+and `b` associated with `a`, IWYU keeps whichever direction it encounters first
+and ignores the other; without that, the two files' analyses would depend on
+each other.
+
+`IWYU pragma: associated_impl` states the same relation for a single
+`#include`, and is the better choice for a one-off. This directive is for the
+case where a whole project follows the convention, so that the rule can be
+written once instead of once per header. See [IWYUPragmas](IWYUPragmas.md).
 
 
 ### Mapping refs ###
