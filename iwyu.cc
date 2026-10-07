@@ -189,6 +189,7 @@ using clang::CXXOperatorCallExpr;
 using clang::CXXRecordDecl;
 using clang::CXXRewrittenBinaryOperator;
 using clang::CXXTemporaryObjectExpr;
+using clang::CXXThisExpr;
 using clang::CXXTypeidExpr;
 using clang::CallExpr;
 using clang::CastExpr;
@@ -1641,6 +1642,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     ReportTypeUseInternal(used_loc, type, blocked_types_, deref_kind);
   }
 
+  // Called when a cast or member access needs the given type complete.
+  // ReportTypeUse already reports the type itself; inside a template
+  // instantiation, InstantiatedTemplateVisitor overrides this to also report
+  // template arguments that a specialization such as Box<T> holds.
+  virtual void ReportTplSpecFullUse(const Type* /*type*/) {
+  }
+
   void ReportTypesUse(SourceLocation used_loc, const set<const Type*>& types) {
     for (const Type* type : types)
       ReportTypeUse(used_loc, type, DerefKind::None);
@@ -2004,8 +2012,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         break;
     }
 
-    for (const Type* type : required_full_types)
+    for (const Type* type : required_full_types) {
       ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefsAndPtr);
+      ReportTplSpecFullUse(type);
+    }
 
     return true;
   }
@@ -2032,6 +2042,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // TODO(csilvers): fix when we can determine what the macro-text
     // is responsible for and what we're responsible for.
     ReportTypeUse(CurrentLoc(), base_type, DerefKind::RemoveRefsAndPtr);
+    // The class of 'this' is already being analyzed.
+    if (!isa<CXXThisExpr>(base_expr))
+      ReportTplSpecFullUse(base_type);
     return true;
   }
 
@@ -4074,6 +4087,22 @@ class InstantiatedTemplateVisitor
         storer->NoteReportedType(type);
     }
     Base::ReportTypeUse(caller_loc(), type, DerefKind::None);
+  }
+
+  // A cast to Box<T>* or a member access through one needs Box<T> complete,
+  // and so any member holding T by value. ReportTypeUse ignores Box<T>
+  // because it is not itself a template argument, so look through it the way
+  // sizeof(Box<T>) does in TraverseUnaryExprOrTypeTraitExpr.
+  void ReportTplSpecFullUse(const Type* type) override {
+    if (!type)
+      return;
+    if (type->isReferenceType() || type->isPointerType())
+      type = type->getPointeeType().getTypePtr();
+    type = ResugarType(type);
+    if (!CanIgnoreType(type) || CanIgnoreType(type, IgnoreKind::ForExpansion) ||
+        !IsTemplatizedType(type))
+      return;
+    TraverseDataAndTypeMembersOfClassHelper(type);
   }
 
   //------------------------------------------------------------
