@@ -1750,13 +1750,13 @@ void IncludePicker::MarkVisibility(VisibilityMap* map,
                                    IncludeVisibility visibility) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
-  // insert() leaves any old value alone, and only inserts if the key is new.
-  map->insert(make_pair(key, visibility));
-  CHECK_((*map)[key] == visibility)
-      << " Same file seen with two different visibilities: "
-      << key
-      << " Old vis: " << (*map)[key]
-      << " New vis: " << visibility;
+  auto result = map->insert(make_pair(key, visibility));
+  if (!result.second && result.first->second != visibility) {
+    // Same file seen with two different visibilities; keep the more public one.
+    if (visibility < result.first->second) {
+      result.first->second = visibility;
+    }
+  }
 }
 
 // AddDirectInclude lets us use some hard-coded rules to add filepath
