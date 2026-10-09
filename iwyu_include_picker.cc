@@ -1748,13 +1748,19 @@ void IncludePicker::MarkVisibility(VisibilityMap* map,
                                    IncludeVisibility visibility) {
   CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
 
-  // insert() leaves any old value alone, and only inserts if the key is new.
-  map->insert(make_pair(key, visibility));
-  CHECK_((*map)[key] == visibility)
-      << " Same file seen with two different visibilities: "
-      << key
-      << " Old vis: " << (*map)[key]
-      << " New vis: " << visibility;
+  auto result = map->insert(make_pair(key, visibility));
+  if (!result.second && result.first->second != visibility) {
+    // Same file seen with two different visibilities. Mappings are added in
+    // order (internal mappings first, then --mapping_file in command-line
+    // order) and the last one wins. Warn, since the earlier mapping is now
+    // ineffective.
+    VERRS(0) << "warning: header " << key
+             << " has conflicting visibilities ("
+             << YAMLQuoted(result.first->second) << " vs "
+             << YAMLQuoted(visibility) << "); using "
+             << YAMLQuoted(visibility) << "\n";
+    result.first->second = visibility;
+  }
 }
 
 // AddDirectInclude lets us use some hard-coded rules to add filepath
