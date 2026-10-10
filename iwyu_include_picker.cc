@@ -12,6 +12,7 @@
 #include <algorithm>                    // for find
 #include <cstddef>                      // for size_t
 #include <ctime>                        // for time
+#include <functional>                   // for function
 // not hash_map: it's not as portable and needs hash<string>.
 #include <map>                          // for map, map<>::mapped_type, etc
 #include <memory>
@@ -23,7 +24,9 @@
 #include <utility>                      // for pair, make_pair
 #include <vector>                       // for vector, vector<>::iterator
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "iwyu_ast_util.h"
@@ -48,8 +51,13 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 
+using clang::Decl;
+using clang::DeclContext;
+using clang::LinkageSpecDecl;
 using clang::NamedDecl;
+using clang::NamespaceDecl;
 using clang::OptionalFileEntryRef;
+using clang::SourceLocation;
 using llvm::MemoryBuffer;
 using llvm::SourceMgr;
 using llvm::StringRef;
@@ -1886,6 +1894,90 @@ void IncludePicker::AddFriendRegex(const string& includee_filepath,
   friend_to_headers_map_["@" + quoted_friend_regex].insert(includee_filepath);
 }
 
+void IncludePicker::AddMacroDefinedByIncluderMapping(
+    const string& quoted_includee,
+    const string& quoted_includer,
+    const vector<pair<int, int>>& dependent_lines) {
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  vector<pair<int, int>>& lines =
+      macro_dependent_lines_[quoted_includee][quoted_includer];
+  lines.insert(lines.end(), dependent_lines.begin(), dependent_lines.end());
+}
+
+namespace {
+
+// Returns true if fn returns true for any range in lines_by_includer.
+template <typename Fn>
+bool AnyMacroDependentRange(
+    const map<string, vector<pair<int, int>>>& lines_by_includer, Fn fn) {
+  for (const auto& [includer, ranges] : lines_by_includer) {
+    for (const pair<int, int>& range : ranges) {
+      if (fn(range))
+        return true;
+    }
+  }
+  return false;
+}
+
+}  // anonymous namespace
+
+bool IncludePicker::IsIndependentOfIncluderMacros(const string& quoted_include,
+                                                  int first_line,
+                                                  int last_line) const {
+  const map<string, vector<pair<int, int>>>* lines_by_includer =
+      FindInMap(&macro_dependent_lines_, quoted_include);
+  if (lines_by_includer == nullptr || first_line < 0 ||
+      last_line < first_line) {
+    return false;
+  }
+  auto overlaps = [&](const pair<int, int>& range) {
+    return range.first <= last_line && first_line <= range.second;
+  };
+  return !AnyMacroDependentRange(*lines_by_includer, overlaps);
+}
+
+bool IncludePicker::IncluderMacrosChangeDeclarations(
+    const string& quoted_include,
+    OptionalFileEntryRef file,
+    const Decl* any_decl) const {
+  if (const bool* cached =
+          FindInMap(&includer_macros_change_declarations_, quoted_include)) {
+    return *cached;
+  }
+  const map<string, vector<pair<int, int>>>* lines_by_includer =
+      FindInMap(&macro_dependent_lines_, quoted_include);
+  bool changes = false;
+  if (lines_by_includer != nullptr) {
+    // Declarations in a file are at namespace scope, possibly inside
+    // namespaces or linkage specifications opened in that file.
+    std::function<void(const DeclContext*)> visit =
+        [&](const DeclContext* context) {
+          for (const Decl* decl : context->decls()) {
+            if (changes)
+              return;
+            const SourceLocation begin =
+                GetInstantiationLoc(decl->getBeginLoc());
+            if (GetFileEntry(begin) != file)
+              continue;
+            if (llvm::isa<NamespaceDecl, LinkageSpecDecl>(decl)) {
+              visit(llvm::cast<DeclContext>(decl));
+              continue;
+            }
+            const int first_line = GetLineNumber(begin);
+            const int last_line =
+                GetLineNumber(GetInstantiationLoc(decl->getEndLoc()));
+            auto starts_inside = [&](const pair<int, int>& range) {
+              return first_line < range.first && range.first <= last_line;
+            };
+            changes = AnyMacroDependentRange(*lines_by_includer, starts_inside);
+          }
+        };
+    visit(any_decl->getASTContext().getTranslationUnitDecl());
+  }
+  includer_macros_change_declarations_[quoted_include] = changes;
+  return changes;
+}
+
 namespace {
 
 // Given a map keyed by quoted filepath patterns, return a vector
@@ -2186,6 +2278,18 @@ vector<string> IncludePicker::GetMappedPublicHeaders(
       GetWrittenQualifiedNameAsString(decl, /*with_fn_args=*/false), use_path);
   if (!symbol_headers.empty())
     return symbol_headers;
+  // A file mapped to an includer because it uses a macro the includer
+  // defines still provides the declarations that do not depend on it.
+  const string quoted_decl_file = ConvertToQuotedInclude(decl_filepath);
+  if (IsIndependentOfIncluderMacros(
+          quoted_decl_file,
+          GetLineNumber(GetInstantiationLoc(decl->getBeginLoc())),
+          GetLineNumber(GetInstantiationLoc(decl->getEndLoc()))) &&
+      !IncluderMacrosChangeDeclarations(quoted_decl_file, GetFileEntry(decl),
+                                        decl)) {
+    return BestQuotedIncludesForIncluder(
+        {MappedInclude(quoted_decl_file, decl_filepath)}, use_path);
+  }
   return GetCandidateHeadersForFilepathIncludedFrom(decl_filepath, use_path);
 }
 

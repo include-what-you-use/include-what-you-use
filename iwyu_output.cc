@@ -781,6 +781,38 @@ void IwyuFileInfo::ReportDefinedMacroUse(OptionalFileEntryRef used_in) {
   macro_users_.insert(used_in);
 }
 
+void IwyuFileInfo::ReportUseOfMacroDefinedIn(OptionalFileEntryRef dfn_file,
+                                             SourceLocation use_loc) {
+  macro_use_lines_by_dfn_file_[dfn_file].insert(GetLineNumber(use_loc));
+}
+
+void IwyuFileInfo::AddConditionalBlock(
+    int first_line,
+    int last_line,
+    const vector<pair<int, int>>& directive_lines) {
+  conditional_blocks_.push_back({first_line, last_line, directive_lines});
+}
+
+vector<pair<int, int>> IwyuFileInfo::MacroDependentLines(
+    OptionalFileEntryRef dfn_file) const {
+  vector<pair<int, int>> dependent_lines;
+  const set<int>* use_lines =
+      FindInMap(&macro_use_lines_by_dfn_file_, dfn_file);
+  if (use_lines == nullptr)
+    return dependent_lines;
+  for (int use_line : *use_lines) {
+    pair<int, int> lines(use_line, use_line);
+    for (const ConditionalBlock& block : conditional_blocks_) {
+      for (const pair<int, int>& directive : block.directive_lines) {
+        if (directive.first <= use_line && use_line <= directive.second)
+          lines = {block.first_line, block.last_line};
+      }
+    }
+    dependent_lines.push_back(lines);
+  }
+  return dependent_lines;
+}
+
 void IwyuFileInfo::ReportIncludeFileUse(OptionalFileEntryRef included_file,
                                         const string& quoted_include,
                                         SourceLocation include_loc) {
@@ -2400,6 +2432,14 @@ void IwyuFileInfo::HandlePreprocessingDone() {
         MutableGlobalIncludePicker()->AddMapping(
             private_include, MappedInclude(quoted_file_, GetFilePath(file_)));
         MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
+        // Declarations in the includee that do not depend on the macro
+        // are still provided by the includee itself.
+        const IwyuFileInfo* includee_info =
+            preprocessor_info_->FileInfoFor(macro_use_includee);
+        MutableGlobalIncludePicker()->AddMacroDefinedByIncluderMapping(
+            private_include, ConvertToQuotedInclude(GetFilePath(file_)),
+            includee_info ? includee_info->MacroDependentLines(file_)
+                          : vector<pair<int, int>>());
       }
     }
   }
