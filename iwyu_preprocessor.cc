@@ -736,6 +736,47 @@ void IwyuPreprocessorInfo::MacroDefined(const Token& id,
   }
 }
 
+void IwyuPreprocessorInfo::AddConditionalDirective(SourceLocation if_loc,
+                                                   SourceRange directive) {
+  conditional_directive_lines_[if_loc].push_back(
+      {GetLineNumber(directive.getBegin()), GetLineNumber(directive.getEnd())});
+}
+
+void IwyuPreprocessorInfo::If(SourceLocation loc,
+                              SourceRange condition_range,
+                              ConditionValueKind /*condition_value*/) {
+  AddConditionalDirective(loc, SourceRange(loc, condition_range.getEnd()));
+}
+
+void IwyuPreprocessorInfo::Elif(SourceLocation loc,
+                                SourceRange condition_range,
+                                ConditionValueKind /*condition_value*/,
+                                SourceLocation if_loc) {
+  AddConditionalDirective(if_loc, SourceRange(loc, condition_range.getEnd()));
+}
+
+void IwyuPreprocessorInfo::Else(SourceLocation loc, SourceLocation if_loc) {
+  AddConditionalDirective(if_loc, SourceRange(loc, loc));
+}
+
+void IwyuPreprocessorInfo::Endif(SourceLocation loc, SourceLocation if_loc) {
+  // #ifdef and #ifndef, and conditionals nested in skipped blocks, report
+  // no condition range; their directive is the #if line itself.
+  vector<pair<int, int>> directive_lines;
+  auto it = conditional_directive_lines_.find(if_loc);
+  if (it != conditional_directive_lines_.end()) {
+    directive_lines = std::move(it->second);
+    conditional_directive_lines_.erase(it);
+  }
+  OptionalFileEntryRef file = GetFileEntry(if_loc);
+  if (!file)
+    return;
+  const int if_line = GetLineNumber(if_loc);
+  directive_lines.push_back({if_line, if_line});
+  GetFromFileInfoMap(file)->AddConditionalBlock(if_line, GetLineNumber(loc),
+                                                directive_lines);
+}
+
 void IwyuPreprocessorInfo::Ifdef(SourceLocation loc, const Token& id,
                                  const MacroDefinition& definition) {
   ERRSYM(GetFileEntry(id.getLocation()))
@@ -938,6 +979,10 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
   }
   OptionalFileEntryRef defined_in = GetFileEntry(dfn_location);
   GetFromFileInfoMap(defined_in)->ReportDefinedMacroUse(used_in);
+  if (used_in) {
+    GetFromFileInfoMap(used_in)->ReportUseOfMacroDefinedIn(defined_in,
+                                                           usage_location);
+  }
 }
 
 //------------------------------------------------------------

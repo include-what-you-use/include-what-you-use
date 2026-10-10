@@ -1,0 +1,3 @@
+[
+  { "include": ["\"tests/cxx/macro_defined_by_includer_mapped-i3.h\"", "private", "\"tests/cxx/macro_defined_by_includer_mapped-d3.h\"", "public"] }
+]

@@ -20,6 +20,7 @@
 #include <map>                          // for map
 #include <set>                          // for set
 #include <string>                       // for string, operator<
+#include <utility>                      // for pair
 #include <vector>                       // for vector
 
 #include "clang/AST/Decl.h"
@@ -40,6 +41,7 @@ class UsingDecl;
 namespace include_what_you_use {
 
 using std::map;
+using std::pair;
 using std::set;
 using std::string;
 using std::vector;
@@ -310,6 +312,23 @@ class IwyuFileInfo {
   // Called when somebody uses a macro defined in this file.
   void ReportDefinedMacroUse(clang::OptionalFileEntryRef used_in);
 
+  // Called when a macro defined in dfn_file is used in this file.
+  void ReportUseOfMacroDefinedIn(clang::OptionalFileEntryRef dfn_file,
+                                 clang::SourceLocation use_loc);
+
+  // Called at the #endif of a conditional block in this file.  The block
+  // spans lines [first_line, last_line], and its #if, #elif and #else
+  // directives span the lines in directive_lines.
+  void AddConditionalBlock(int first_line,
+                           int last_line,
+                           const vector<pair<int, int>>& directive_lines);
+
+  // Returns the line ranges of this file that depend on macros defined in
+  // dfn_file: each line using one, widened to the whole conditional block
+  // if the line is a directive of that block.
+  vector<pair<int, int>> MacroDependentLines(
+      clang::OptionalFileEntryRef dfn_file) const;
+
   // We only allow forward-declaring of decls, not arbitrary symbols.
   void ReportForwardDeclareUse(clang::SourceLocation use_loc,
                                const clang::NamedDecl* decl,
@@ -432,6 +451,17 @@ class IwyuFileInfo {
 
   // Holds files using macros defined in this file.
   set<clang::OptionalFileEntryRef> macro_users_;
+
+  // Lines of this file that use a macro, by the file defining the macro.
+  map<clang::OptionalFileEntryRef, set<int>> macro_use_lines_by_dfn_file_;
+
+  // Conditional blocks in this file, from AddConditionalBlock().
+  struct ConditionalBlock {
+    int first_line;
+    int last_line;
+    vector<pair<int, int>> directive_lines;
+  };
+  vector<ConditionalBlock> conditional_blocks_;
 
   // What we will recommend the #includes to be.
   set<string> desired_includes_;
