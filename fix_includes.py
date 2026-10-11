@@ -792,8 +792,8 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
                              % (iwyu_record.filename, line_number))
     elif file_lines[line_number].type not in (_INCLUDE_RE,
                                               _FORWARD_DECLARE_RE):
-      raise FixIncludesError('iwyu line number %s:%d (%s) is not'
-                             ' an #include or forward declare'
+      raise FixIncludesError('iwyu line number %s:%d (%s) is not an'
+                             ' #include or forward declare'
                              % (iwyu_record.filename, line_number,
                                 file_lines[line_number].line))
 
