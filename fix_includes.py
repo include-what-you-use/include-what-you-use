@@ -712,33 +712,61 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
   seen_types = set()
   in_c_style_comment = False
   in_allman_or_mixed_namespace = False
+  line_buffer = []
+
+  def set_type(line_info, type_):
+    """ Sets the type of line_info to type_. For spliced lines, sets the type
+    also for all preceding, buffered lines (they can only be classified when we
+    see the last one).
+    """
+    for buffered_line_info in line_buffer:
+      buffered_line_info.type = type_
+    line_info.type = type_
+
+  def build_logical_line(line_info):
+    """ Rejoins spliced lines from line buffer, removing \ continuation chars.
+    """
+    text_lines = [li.line.rstrip("\\\r\n") for li in line_buffer]
+    return "".join(text_lines) + line_info.line
+
   for line_info in file_lines:
-    if line_info.line is None:
+    # Fast track for empty lines.
+    if not line_info.line:
       line_info.type = None
-    elif _C_COMMENT_START_RE.match(line_info.line):
+      continue
+
+    # Spliced lines are buffered.
+    if line_info.line.rstrip().endswith('\\'):
+      line_buffer.append(line_info)
+      continue
+
+    # All other lines can form a logical line (potentially with their spliced
+    # precedents).
+    logical_line = build_logical_line(line_info)
+    if _C_COMMENT_START_RE.match(logical_line):
       # Note: _C_COMMENT_START_RE only matches a comment at the start
       # of a line.  Comments in the middle of a line are ignored.
       # This can cause problems with multi-line comments that start
       # in the middle of the line, but that's hopefully quite rare.
       # TODO(csilvers): check for that case.
-      m = _C_COMMENT_END_RE.match(line_info.line)
+      m = _C_COMMENT_END_RE.match(logical_line)
       if not m:             # comment continues onto future lines
-        line_info.type = _COMMENT_LINE_RE
+        set_type(line_info, _COMMENT_LINE_RE)
         in_c_style_comment = True
       elif not m.group(1):  # comment extends across entire line (only)
-        line_info.type = _COMMENT_LINE_RE
+        set_type(line_info, _COMMENT_LINE_RE)
       else:                 # comment takes only part of line, treat as content
         # TODO(csilvers): this mis-diagnoses lines like '/*comment*/class Foo;'
-        line_info.type = None
-    elif in_c_style_comment and _C_COMMENT_END_RE.match(line_info.line):
-      line_info.type = _COMMENT_LINE_RE
+        set_type(line_info, None)
+    elif in_c_style_comment and _C_COMMENT_END_RE.match(logical_line):
+      set_type(line_info, _COMMENT_LINE_RE)
       in_c_style_comment = False
     elif in_c_style_comment:
-      line_info.type = _COMMENT_LINE_RE
+      set_type(line_info, _COMMENT_LINE_RE)
     elif (in_allman_or_mixed_namespace and
-          _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE.match(line_info.line)):
+          _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE.match(logical_line)):
       in_allman_or_mixed_namespace = False
-      line_info.type = _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE
+      set_type(line_info, _NAMESPACE_CONTINUE_ALLMAN_MIXED_RE)
     else:
       for type_re in _LINE_TYPES:
         # header-guard-define-re has a two-part decision criterion: it
@@ -747,9 +775,9 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
         # and fix it up later in _MarkHeaderGuardIfPresent().
         if type_re in (_HEADER_GUARD_DEFINE_RE,):
           continue
-        m = type_re.match(line_info.line)
+        m = type_re.match(logical_line)
         if m:
-          line_info.type = type_re
+          set_type(line_info, type_re)
           if type_re == _INCLUDE_RE:
             line_info.key = m.group(1)   # get the 'key' for the #include.
           elif type_re in (_NAMESPACE_START_ALLMAN_RE,
@@ -758,8 +786,10 @@ def _CalculateLineTypesAndKeys(file_lines, iwyu_record):
             in_allman_or_mixed_namespace = True
           break
       else:    # for/else
-        line_info.type = None   # means we didn't match any re
+        set_type(line_info, None)   # means we didn't match any re
 
+
+    line_buffer.clear()
     line_info.is_first_line_of_this_type = (line_info.type not in seen_types)
     seen_types.add(line_info.type)
 

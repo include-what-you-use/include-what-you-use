@@ -3021,6 +3021,27 @@ The full include-list for remove_duplicate_includes:
     self.RegisterFileContents({'remove_duplicate_includes': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testRemoveSplicedInclude(self):
+    """Tests we remove a spliced #include if IWYU reports its line numbers."""
+    infile = """\
+#inc\\///-
+lu\\///-
+de <notused.h>///-
+
+int main() { return 0; }
+"""
+    iwyu_output = """\
+remove_spliced_includes should add these lines:
+
+remove_spliced_includes should remove these lines:
+- #include <notused.h>  // lines 1-3
+
+The full include-list for remove_spliced_includes:
+---
+"""
+    self.RegisterFileContents({'remove_spliced_includes': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testRemoveDuplicateForwardDeclarations(self):
     """Tests we uniquify if an #include is in there twice."""
     infile = """\
