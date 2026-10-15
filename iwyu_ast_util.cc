@@ -360,12 +360,13 @@ bool ASTNode::FillLocationIfKnown(SourceLocation* loc) const {
 // --- Utilities for ASTNode.
 
 bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
-  // If we're a destructor, we're definitely part of a method body;
-  // destructors don't have any other parts to them.  This case is
-  // triggered when we see implicit destruction of member vars.
-  if (ast_node && ast_node->IsA<CXXDestructorDecl>())
-    return true;
   for (; ast_node != nullptr; ast_node = ast_node->parent()) {
+    // Anything inside a destructor is part of a method body; destructors
+    // don't have any other parts to them.  This is triggered by implicit
+    // destruction of member vars, including uses reported while scanning
+    // a member's destructor instantiated from here.
+    if (ast_node->IsA<CXXDestructorDecl>())
+      return true;
     // If we're a constructor, check if we're part of the
     // initializers, which also count as 'the body' of the method.
     if (const CXXConstructorDecl* ctor =
