@@ -23,7 +23,7 @@
 #include "iwyu_ast_util.h"
 #include "iwyu_globals.h"
 #include "iwyu_include_picker.h"
-#include "iwyu_lexer_utils.h"
+#include "iwyu_lexer_util.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_path_util.h"

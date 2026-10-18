@@ -31,7 +31,7 @@
 #include "iwyu_cache.h"
 #include "iwyu_getopt.h"
 #include "iwyu_include_picker.h"
-#include "iwyu_lexer_utils.h"
+#include "iwyu_lexer_util.h"
 #include "iwyu_location_util.h"
 #include "iwyu_path_util.h"
 #include "iwyu_port.h"  // for CHECK_, etc

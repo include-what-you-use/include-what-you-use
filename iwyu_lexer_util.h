@@ -1,4 +1,4 @@
-//===--- iwyu_lexer_utils.h - clang-lexer utilities for iwyu --------------===//
+//===--- iwyu_lexer_util.h - clang-lexer utilities for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
-#define INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
+#ifndef INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTIL_H_
+#define INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTIL_H_
 
 #include <string>                       // for string
 
@@ -76,4 +76,4 @@ clang::tok::TokenKind GetNextMacroTokenKind(
 
 }  // namespace include_what_you_use
 
-#endif  // INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTILS_H_
+#endif  // INCLUDE_WHAT_YOU_USE_IWYU_LEXER_UTIL_H_

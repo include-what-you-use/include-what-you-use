@@ -150,7 +150,7 @@ add_library(iwyu
   iwyu_getopt.cc
   iwyu_globals.cc
   iwyu_include_picker.cc
-  iwyu_lexer_utils.cc
+  iwyu_lexer_util.cc
   iwyu_location_util.cc
   iwyu_output.cc
   iwyu_path_util.cc
@@ -295,7 +295,7 @@ endif(IWYU_USE_SYSTEM_GTEST)
 
 # Add unittest target.
 add_llvm_executable(iwyu-unittests
-  unittests/iwyu_lexer_utils_test.cc
+  unittests/iwyu_lexer_util_test.cc
   unittests/iwyu_path_util_test.cc
   unittests/iwyu_regex_test.cc
   unittests/iwyu_stl_util_test.cc
