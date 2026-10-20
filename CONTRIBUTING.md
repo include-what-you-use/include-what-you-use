@@ -4,16 +4,15 @@
 
 We welcome patches and rely on your contributions to make IWYU smarter.
 
-Coding and testing guidelines are available in the [IWYU Coding
-Style](docs/IWYUStyle.md) guide.
+Coding and testing guidelines are available in the [IWYU style][iwyu-style]
+guide.
 
-Use GitHub's [pull request
-system](https://github.com/include-what-you-use/include-what-you-use/pulls) to
-submit change requests to the `include-what-you-use/include-what-you-use` repo.
+Use [GitHub PRs][github-pr] to submit change requests to the
+`include-what-you-use` repo. We only take patches for the `master` branch.
 
-It's usually a good idea to run ideas by the [IWYU mailing
-list](https://groups.google.com/g/include-what-you-use) to get general agreement
-on directions before you start hacking.
+It's usually a good idea to run ideas by the [IWYU mailing list][iwyu-mail] or
+the [issue tracker][github-issues] to get general agreement on directions before
+you start hacking.
 
 ## Running the tests ##
 
@@ -120,3 +119,8 @@ a brief guide through the codebase:
   `getopt(_long)` implementation for Windows.
 * `fix_includes.py`: the helper script that edits a file based on the IWYU
   recommendations.
+
+[iwyu-style]: ./docs/IWYUStyle.md
+[github-pr]: https://github.com/include-what-you-use/include-what-you-use/pulls
+[github-issues]: https://github.com/include-what-you-use/include-what-you-use/issues
+[iwyu-mail]: https://groups.google.com/g/include-what-you-use
