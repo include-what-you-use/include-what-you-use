@@ -38,6 +38,12 @@ class IncludePicker;
 class SourceManagerCharacterDataGetter;
 enum class RegexDialect;
 
+enum class NoFwdDecls {
+  Disabled,
+  Everywhere,
+  SourcesOnly
+};
+
 // To set up the global state you need to parse options with OptionsParser when
 // main starts and to call InitGlobals after the clang infrastructure is set up.
 // The rest of this file is accessors to the data structures set up by these two
@@ -104,7 +110,7 @@ struct CommandlineFlags {
   bool no_comments;   // Disable 'why' comments. No short option.
   bool update_comments; // Force 'why' comments. No short option.
   bool comments_with_namespace; // Show namespace in 'why' comments.
-  bool no_fwd_decls;  // Disable forward declarations.
+  NoFwdDecls no_fwd_decls;  // Forward declaration policy.
   bool quoted_includes_first; // Place quoted includes first in sort order.
   bool cxx17ns; // -C: C++17 nested namespace syntax
   int exit_code_error;   // Exit with this code for iwyu violations.
