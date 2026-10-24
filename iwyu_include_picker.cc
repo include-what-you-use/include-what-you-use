@@ -1886,6 +1886,53 @@ void IncludePicker::AddFriendRegex(const string& includee_filepath,
   friend_to_headers_map_["@" + quoted_friend_regex].insert(includee_filepath);
 }
 
+void IncludePicker::AddAssociatedImplMapping(
+    const string& quoted_filepath_pattern,
+    const string& quoted_associated_header) {
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  CHECK_(IsQuotedFilepathPattern(quoted_filepath_pattern) &&
+         "Associated-impl mapping keys must be quoted includes or "
+         "@-regexes");
+  associated_impl_mappings_.push_back(
+      {quoted_filepath_pattern, quoted_associated_header});
+}
+
+namespace {
+
+// Drops the "" or <> around a quoted include, or around the body of an
+// @-regex.
+string WithoutDelimiters(const string& quoted) {
+  if (quoted.size() >= 2 &&
+      ((quoted.front() == '"' && quoted.back() == '"') ||
+       (quoted.front() == '<' && quoted.back() == '>')))
+    return quoted.substr(1, quoted.size() - 2);
+  return quoted;
+}
+
+}  // anonymous namespace
+
+bool IncludePicker::IsAssociatedHeaderOf(const string& quoted_header,
+                                         const string& quoted_file) const {
+  // IWYU picks the delimiters of a quoted include from the kind of search
+  // path the file is found through, not from how the project #includes it.
+  // They carry no meaning here, so compare without them.
+  const string header = WithoutDelimiters(quoted_header);
+  const string file = WithoutDelimiters(quoted_file);
+  for (const auto& [pattern, mapped_header] : associated_impl_mappings_) {
+    const string to = WithoutDelimiters(mapped_header);
+    if (StartsWith(pattern, "@")) {
+      const string regex = WithoutDelimiters(pattern.substr(1));
+      if (RegexMatch(regex_dialect, file, regex) &&
+          RegexReplace(regex_dialect, file, regex, to) == header) {
+        return true;
+      }
+    } else if (WithoutDelimiters(pattern) == file && to == header) {
+      return true;
+    }
+  }
+  return false;
+}
+
 namespace {
 
 // Given a map keyed by quoted filepath patterns, return a vector
@@ -2327,6 +2374,33 @@ void IncludePicker::AddMappingsFromFile(const string& filename,
             from_visibility,
             MappedInclude(mapping[2]),
             to_visibility);
+      } else if (directive == "associated_impl") {
+        // Associated-impl mapping.
+        vector<string> mapping = GetSequenceValue(mapping_item_node.getValue());
+        if (mapping.size() != 2) {
+          json_stream.printError(current_node,
+              "Associated-impl mapping expects a value on the form "
+              "'[from, to]'.");
+          return;
+        }
+
+        if (!IsQuotedFilepathPattern(mapping[0])) {
+          json_stream.printError(
+              current_node,
+              "Expected from-entry to be quoted filepath or @regex, but was '" +
+                  mapping[0] + "'");
+          return;
+        }
+
+        if (!IsQuotedInclude(mapping[1])) {
+          json_stream.printError(
+              current_node,
+              "Expected to-entry to be quoted include, but was '" + mapping[1] +
+                  "'");
+          return;
+        }
+
+        AddAssociatedImplMapping(mapping[0], mapping[1]);
       } else if (directive == "ref") {
         // Mapping ref.
         string ref_file = GetScalarValue(mapping_item_node.getValue());
