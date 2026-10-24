@@ -105,6 +105,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -200,6 +201,7 @@ using clang::ConstantArrayType;
 using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
+using clang::DeclarationNameInfo;
 using clang::DecltypeType;
 using clang::DeducedTemplateSpecializationType;
 using clang::ElaboratedTypeKeyword;
@@ -534,6 +536,16 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     if (!this->getDerived().VisitTemplateArgumentLoc(argloc))
       return false;
     return Base::TraverseTemplateArgumentLoc(argloc);
+  }
+
+  // The name of a constructor or destructor declaration only names its own
+  // class, so it is never a use of anything.  Names in expressions, such as
+  // an explicit destructor call through an alias, are still traversed.
+  bool TraverseDeclarationNameInfo(DeclarationNameInfo name_info) {
+    if (current_ast_node_ && (current_ast_node_->IsA<CXXConstructorDecl>() ||
+                              current_ast_node_->IsA<CXXDestructorDecl>()))
+      return true;
+    return Base::TraverseDeclarationNameInfo(name_info);
   }
 
   // We have a few Visit methods that RecursiveASTVisitor does not. Provide
