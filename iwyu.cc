@@ -2087,7 +2087,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // If the term expression is pointer-typed we need the full types for
       // pointer arithmetic.
       const Type* type = GetTypeOf(term);
-      if (type->isPointerType()) {
+      if (type->isPointerType() || type->isArrayType()) {
         ReportTypeUse(GetLocation(term), type, DerefKind::RemoveRefsAndPtr);
       }
     }
@@ -3710,7 +3710,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     if (const auto* array_type = dyn_cast<ArrayType>(type)) {
       const Type* elem = array_type->getElementType().getTypePtr();
-      return ReportTypeUseInternal(used_loc, elem, blocked_types, deref_kind);
+      // Getting to array element type is equivalent to dereferencing a pointer.
+      // There are no arrays of references, so the new deref_kind is "none".
+      return ReportTypeUseInternal(used_loc, elem, blocked_types,
+                                   DerefKind::None);
     }
 
     // Map private types like __normal_iterator to their public counterpart.

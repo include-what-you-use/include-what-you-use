@@ -85,10 +85,15 @@ void IncompleteArrayTypeParamFn(IndirectClass param[]) {
   (void)sizeof(extern_array);
   // IWYU: IndirectClass is...*indirect.h
   (void)extern_array[1];
+  // IWYU: IndirectClass is...*indirect.h
+  (void)(extern_array + 1);
+  // IWYU: IndirectClass is...*indirect.h
+  (void)(extern_multidim_array + 1);
 
   // IWYU: IndirectClass needs a declaration
   IndirectClass* pointer_array[5];
   (void)pointer_array[1];
+  (void)(pointer_array + 1);
   (void)sizeof(pointer_array);
 
   // IWYU: IndirectClass needs a declaration
