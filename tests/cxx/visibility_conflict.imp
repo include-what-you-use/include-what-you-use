@@ -1,0 +1,7 @@
+# Mapping file for visibility_conflict test.
+# Two mappings assign conflicting visibilities to the same header.
+# This should not crash; the more public visibility should win.
+[
+  { "include": ["\"tests/cxx/visibility_conflict-i1.h\"", "private", "\"tests/cxx/visibility_conflict-d1.h\"", "public"] },
+  { "include": ["\"tests/cxx/visibility_conflict-d1.h\"", "private", "\"tests/cxx/visibility_conflict-d1.h\"", "public"] }
+]
