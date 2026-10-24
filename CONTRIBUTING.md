@@ -86,39 +86,44 @@ The codebase is strewn with TODOs of known problems, and also language
 constructs that aren't adequately tested yet.  So there's plenty to do!  Here's
 a brief guide through the codebase:
 
-* `iwyu.cc`: the main file, it includes the logic for deciding when a symbol has
+* `iwyu_main.cc`: the entrypoint containing `main()`.
+* `iwyu_driver.{h,cc}`: responsible for creating and configuring a Clang
+  compiler from command-line arguments.
+* `iwyu.{h,cc}`: the main file, it includes the logic for deciding when a symbol has
   been 'used', and whether it's a full use (definition required) or
   forward-declare use (only a declaration required).  It also includes the logic
   for following uses through template instantiations.
-* `iwyu_driver.cc`: responsible for creating and configuring a Clang compiler
-  from command-line arguments.
-* `iwyu_output.cc`: the file that translates from 'uses' into IWYU violations.
-  This has the logic for deciding if a use is covered by an existing `#include`
-  (or is a built-in).  It also, as the name suggests, prints the IWYU output.
-* `iwyu_preprocessor.cc`: handles the preprocessor directives, the `#includes`
-  and `#ifdefs`, to construct the existing include-tree.  This is obviously
-  essential for include-what-you-use analysis.  This file also handles the IWYU
-  pragma-comments.
-* `iwyu_include_picker.cc`: this finds canonical `#includes`, handling
+* `iwyu_output.{h,cc}`: the file that translates from 'uses' into IWYU
+  violations.  This has the logic for deciding if a use is covered by an
+  existing `#include` (or is a built-in).  It also, as the name suggests, prints
+  the IWYU output.
+* `iwyu_preprocessor.{h,cc}`: handles the preprocessor directives, the
+  `#includes` and `#ifdefs`, to construct the existing include-tree.  This is
+  obviously essential for include-what-you-use analysis.  This file also handles
+  the IWYU pragma-comments.
+* `iwyu_include_picker.{h,cc}`: this finds canonical `#includes`, handling
   private->public mappings (like `bits/stl_vector.h` -> `vector`) and symbols
   with multiple possible #includes (like `NULL`). Additional mappings are
   maintained in a set of .imp files separately, for easier
   per-platform/-toolchain customization.
-* `iwyu_cache.cc`: holds the cache of instantiated templates (may hold other
+* `iwyu_cache.{h,cc}`: holds the cache of instantiated templates (may hold other
   cached info later).  This is data that is expensive to compute and may be used
   more than once.
-* `iwyu_globals.cc`: holds various global variables.  We used to think globals
-  were bad, until we saw how much having this file simplified the code...
-* `iwyu_*_util(s).h` and `.cc`: utility functions of various types.  The most
-  interesting, perhaps, is `iwyu_ast_util.h`, which has routines that make it
-  easier to navigate and analyze the clang AST.  There are also some STL
+* `iwyu_globals.{h,cc}`: holds various global variables.  We used to think
+  globals were bad, until we saw how much having this file simplified the
+  code...
+* `iwyu_*_util.{h,cc}`: utility functions of various types.  The most
+  interesting, perhaps, is `iwyu_ast_util.{h,cc}`, which has routines that make
+  it easier to navigate and analyze the clang AST.  There are also some STL
   helpers, string helpers, filesystem helpers, etc.
-* `iwyu_verrs.cc`: debug logging for IWYU.
-* `port.h`: shim header for various non-portable constructs.
-* `iwyu_getopt.cc`: portability shim for GNU `getopt(_long)`. Custom
+* `iwyu_verrs.{h,cc}`: debug logging for IWYU.
+* `iwyu_port.{h,cc}`: shim header for various non-portable constructs.
+* `iwyu_getopt.{h,cc}`: portability shim for GNU `getopt(_long)`. Custom
   `getopt(_long)` implementation for Windows.
+* `iwyu_regex.{h,cc}`: shim header for regex dialects.
 * `fix_includes.py`: the helper script that edits a file based on the IWYU
   recommendations.
+* `iwyu_tool.py`: a driver script to run IWYU from a Clang compilation database.
 
 [iwyu-style]: ./docs/IWYUStyle.md
 [github-pr]: https://github.com/include-what-you-use/include-what-you-use/pulls
