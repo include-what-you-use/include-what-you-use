@@ -207,6 +207,7 @@ using clang::ElaboratedTypeKeyword;
 using clang::EnumConstantDecl;
 using clang::EnumDecl;
 using clang::EnumType;
+using clang::ExplicitCastExpr;
 using clang::ExplicitInstantiationDecl;
 using clang::Expr;
 using clang::ExprResult;
@@ -756,8 +757,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
     // first one that's a class, and associate the function with that.
     if (!parent_type) {
       if (const Expr* first_argument = GetFirstClassArgument(expr))
-        parent_type = GetTypeOf(first_argument->IgnoreImpCasts());
-      // TODO(bolshakov): IgnoreParenImpCasts instead of IgnoreImpCasts?
+        parent_type = GetTypeOf(first_argument);
     }
     return this->getDerived().HandleFunctionCall(expr->getDirectCallee(),
                                                  parent_type, expr);
@@ -1870,7 +1870,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
     const Type* from_type = GetTypeOf(expr->getSubExprAsWritten());
-    const Type* to_type = GetTypeOf(expr);
+    const Type* to_type = [expr] {
+      if (const auto* expl_cast_expr = dyn_cast<ExplicitCastExpr>(expr))
+        return expl_cast_expr->getTypeAsWritten().getTypePtr();
+      return expr->getType().getTypePtr();
+    }();
 
     // If this cast requires a user-defined conversion of the from-type, look up
     // its return type so we can see through up/down-casts via such conversions.
@@ -2031,7 +2035,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    const Expr* base_expr = expr->getBase()->IgnoreParenImpCasts();
+    const Expr* base_expr = expr->getBase();
     const Type* base_type = GetTypeOf(base_expr);
     CHECK_(base_type && "Member's base does not have a type?");
     // Technically, we should say the type is being used at the
@@ -2060,7 +2064,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (expr->isImplicitAccess())
       return true;
 
-    const Expr* base_expr = expr->getBase()->IgnoreParenImpCasts();
+    const Expr* base_expr = expr->getBase();
     const Type* base_type = GetTypeOf(base_expr);
     CHECK_(base_type && "Member's base does not have a type?");
     if (base_type->isDependentType())
@@ -2885,7 +2889,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     if (const Expr* owner_expr = GetFirstClassArgument(expr)) {
-      const Type* owner_type = GetTypeOf(owner_expr->IgnoreParenImpCasts());
+      const Type* owner_type = GetTypeOf(owner_expr);
       // Note we report the type use is the location of owner_expr
       // (the 'a' in 'a << b' or the 'MACRO' in 'MACRO << b'), rather
       // than our location (which is the '<<').  That way, we properly
@@ -2902,7 +2906,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    const Expr* delete_arg = expr->getArgument()->IgnoreParenImpCasts();
+    const Expr* delete_arg = expr->getArgument();
     // We always delete a pointer, so do one dereference to get the
     // actual type being deleted.
     const Type* delete_ptr_type = GetTypeOf(delete_arg);
@@ -5900,8 +5904,7 @@ class IwyuAstConsumer
     CHECK_(expr);
     const Type* type = GetCanonicalType(GetTypeOf(expr));
     if (expr->getConstructor()->isCopyOrMoveConstructor()) {
-      const Type* source_type =
-          GetTypeOf(expr->getArg(0)->IgnoreParenImpCasts());
+      const Type* source_type = GetTypeOf(expr->getArg(0));
       if (GetProvidedTypeComponents(source_type).count(type))
         return true;
     }
