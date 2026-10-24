@@ -13,6 +13,8 @@
 using ProvidingPtrAlias = Indirect*;
 // IWYU: Indirect is...*ptr_ref_aliases-i2.h
 using ProvidingRefAlias = Indirect&;
+// IWYU: Indirect is...*ptr_ref_aliases-i2.h
+using ProvidingRefPtrAlias = Indirect*&;
 
 // IWYU: IndirectTpl needs a declaration
 // IWYU: Indirect is...*ptr_ref_aliases-i2.h

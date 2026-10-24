@@ -38,6 +38,9 @@ extern ProvidingTplRefAlias tpl_ref_provided;
 TplWithProvidedDefArgPtrAlias tpl_ptr_provided_def_arg;
 extern TplWithProvidedDefArgRefAlias tpl_ref_provided_def_arg;
 
+extern NonProvidingRefPtrAlias ref_ptr_nonprovided;
+extern ProvidingRefPtrAlias ref_ptr_provided;
+
 struct Base {
   virtual IndirectBase* RetPtr1();
   virtual IndirectBase& RetRef1();
@@ -78,6 +81,10 @@ void Fn() {
   tpl_ref_nonprovided.UseT();
   tpl_ptr_provided->UseT();
   tpl_ref_provided.UseT();
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  // IWYU: IndirectTpl is...*ptr_ref_aliases-i2.h
+  (tpl_ref_nonprovided).UseT();
+  (tpl_ref_provided).UseT();
 
   try {
     // IWYU: Indirect is...*ptr_ref_aliases-i2.h
@@ -95,6 +102,11 @@ void Fn() {
     ;
   for (auto i : ref_provided)
     ;
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  for (auto i : (ref_nonprovided))
+    ;
+  for (auto i : (ref_provided))
+    ;
 
   IndirectBase* pB = nullptr;
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
@@ -103,10 +115,19 @@ void Fn() {
   (void)static_cast<NonProvidingRefAlias>(*pB);
   (void)static_cast<ProvidingPtrAlias>(pB);
   (void)static_cast<ProvidingRefAlias>(*pB);
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  (void)static_cast<IndirectBase&>((ref_nonprovided));
+  (void)static_cast<IndirectBase&>((ref_provided));
 
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   (void)ptr_nonprovided[1];
   (void)ptr_provided[1];
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  (void)ref_ptr_nonprovided[1];
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  (void)(ref_ptr_nonprovided)[1];
+  (void)ref_ptr_provided[1];
+  (void)(ref_ptr_provided)[1];
 
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   (void)(ptr_nonprovided + 1);
@@ -115,6 +136,10 @@ void Fn() {
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   ref_nonprovided << 1;
   ref_provided << 1;
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  // IWYU: IndirectTpl is...*ptr_ref_aliases-i2.h
+  (void)(-(tpl_ref_nonprovided));
+  (void)(-(tpl_ref_provided));
 
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   delete ptr_nonprovided;
@@ -130,6 +155,9 @@ void Fn() {
   (void)sizeof(VarArgFn(ref_nonprovided));
   (void)sizeof(VarArgFn(ptr_provided));
   (void)sizeof(VarArgFn(ref_provided));
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  (void)sizeof(VarArgFn((ref_nonprovided)));
+  (void)sizeof(VarArgFn((ref_provided)));
 
   const std::type_info& type_info1 = typeid(NonProvidingPtrAlias);
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
@@ -139,6 +167,8 @@ void Fn() {
 
   decltype(ptr_nonprovided) dpn;
   decltype(ref_nonprovided) drn = GetRef();
+
+  (void)sizeof(static_cast<ProvidingRefAlias>(*pB));
 }
 
 namespace ns {
@@ -212,7 +242,7 @@ tests/cxx/ptr_ref_aliases.cc should remove these lines:
 The full include-list for tests/cxx/ptr_ref_aliases.cc:
 #include <typeinfo>  // for type_info
 #include "tests/cxx/ptr_ref_aliases-d1.h"  // for NonProvidingDoublePtrAlias, NonProvidingDoubleRefAlias, NonProvidingDoubleRefPtrAlias, NonProvidingPtrAlias, NonProvidingRefAlias, NonProvidingRefPtrAlias, NonProvidingTplPtrAlias, NonProvidingTplRefAlias
-#include "tests/cxx/ptr_ref_aliases-d2.h"  // for ProvidingPtrAlias, ProvidingRefAlias, ProvidingTplPtrAlias, ProvidingTplRefAlias, TplWithProvidedDefArgPtrAlias, TplWithProvidedDefArgRefAlias
+#include "tests/cxx/ptr_ref_aliases-d2.h"  // for ProvidingPtrAlias, ProvidingRefAlias, ProvidingRefPtrAlias, ProvidingTplPtrAlias, ProvidingTplRefAlias, TplWithProvidedDefArgPtrAlias, TplWithProvidedDefArgRefAlias
 #include "tests/cxx/ptr_ref_aliases-i2.h"  // for Indirect, IndirectTpl
 struct IndirectBase;
 

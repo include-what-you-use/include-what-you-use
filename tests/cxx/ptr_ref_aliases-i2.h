@@ -25,6 +25,10 @@ struct IndirectTpl {
     T t;
   }
   T GetT();
+  IndirectTpl& operator-() {
+    T t;
+    return *this;
+  }
 };
 
 template <typename T = Indirect>
