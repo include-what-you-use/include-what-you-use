@@ -10,6 +10,11 @@ guide.
 Use [GitHub PRs][github-pr] to submit change requests to the
 `include-what-you-use` repo. We only take patches for the `master` branch.
 
+Please annotate commits with agent-generated code with a `Co-authored-by:` Git
+trailer. Use the form suggested by the agent itself to include which model was
+used. This helps guide reviewers and provides some basis for statistics on
+contributions.
+
 It's usually a good idea to run ideas by the [IWYU mailing list][iwyu-mail] or
 the [issue tracker][github-issues] to get general agreement on directions before
 you start hacking.
