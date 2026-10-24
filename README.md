@@ -78,6 +78,7 @@ use this mapping table to combine Clang and IWYU versions correctly:
 > <https://apt.llvm.org>, you'll need the following packages installed:
 >
 > * `llvm-<version>-dev`
+> * `libmlir-<version>-dev`
 > * `libclang-<version>-dev`
 > * `clang-<version>`
 >

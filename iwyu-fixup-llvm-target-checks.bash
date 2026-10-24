@@ -56,4 +56,5 @@ sed \
     -i".$TIMESTAMP" \
     -e '/^list(APPEND _\(IMPORT_CHECK_FILES_FOR\|cmake_import_check_files_for\)_/ {s|^|#|}' \
     $LLVM_PREFIX/lib/cmake/llvm/LLVMExports-*.cmake \
-    $LLVM_PREFIX/lib/cmake/clang/ClangTargets-*.cmake
+    $LLVM_PREFIX/lib/cmake/clang/ClangTargets-*.cmake \
+    $LLVM_PREFIX/lib/cmake/mlir/MLIRTargets-*.cmake
