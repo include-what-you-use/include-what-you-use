@@ -92,6 +92,7 @@
 #include <cstdlib>                      // for atoi, exit
 #include <map>                          // for map, swap, etc
 #include <memory>                       // for unique_ptr
+#include <optional>                     // for optional
 #include <set>                          // for set, set<>::iterator, swap
 #include <string>                       // for string, operator+, etc
 #include <utility>                      // for pair
@@ -290,6 +291,7 @@ using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
 using std::map;
+using std::optional;
 using std::set;
 using std::string;
 using std::swap;
@@ -5718,12 +5720,14 @@ class IwyuAstConsumer
     }
 
     if (!InImplicitCode(current_ast_node())) {
-      size_t num_written_args = type->template_arguments().size();
-      if (num_written_args < GetTplParamNumberWithoutPack(tpl)) {
+      const optional<unsigned> num_written_args =
+          GetNumWrittenTplArgs(type->template_arguments());
+      if (num_written_args &&
+          *num_written_args < GetTplParamNumberWithoutPack(tpl)) {
         // If the type as-written makes use of default arguments, select exactly
         // that redeclaration which specifies the first default argument used.
         ReportDeclForwardDeclareUse(
-            CurrentLoc(), GetRedeclSpecifyingDefArg(num_written_args, tpl));
+            CurrentLoc(), GetRedeclSpecifyingDefArg(*num_written_args, tpl));
       } else if (can_fwd_decl || type->isTypeAlias()) {
         // TODO: instead of GetIndependentRedecl call, figure out how to print
         // a fwd-decl without default arguments if there isn't any.

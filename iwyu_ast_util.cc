@@ -183,6 +183,7 @@ using llvm::raw_string_ostream;
 using llvm::to_underlying;
 using llvm::zip_equal;
 using std::function;
+using std::optional;
 using std::pair;
 using std::regex;
 using std::regex_replace;
@@ -1568,6 +1569,13 @@ unsigned GetTplParamNumberWithoutPack(const TemplateDecl* tpl) {
   unsigned size = params->size();
   CHECK_(size > 0);
   return params->hasParameterPack() ? size - 1 : size;
+}
+
+optional<unsigned> GetNumWrittenTplArgs(ArrayRef<TemplateArgument> args) {
+  if (any_of(args,
+             [](const TemplateArgument& arg) { return arg.isPackExpansion(); }))
+    return std::nullopt;
+  return args.size();
 }
 
 bool IsStdNonProvidingTypedef(const TypedefNameDecl* decl) {

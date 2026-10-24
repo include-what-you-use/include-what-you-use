@@ -812,6 +812,12 @@ bool IsDefTplArgSpecified(const clang::NamedDecl* tpl_param);
 
 unsigned GetTplParamNumberWithoutPack(const clang::TemplateDecl*);
 
+// Returns the number of template arguments in the given written argument
+// list, or nullopt if the list contains a pack expansion, which can stand for
+// any number of them.
+std::optional<unsigned> GetNumWrittenTplArgs(
+    llvm::ArrayRef<clang::TemplateArgument> args);
+
 // I/O stream typedefs should be considered as non-providing even if they are
 // redefined after the underlying template definitions in some implementation.
 // Their canonical header is <iosfwd>, but when used in a context requiring
