@@ -22,6 +22,11 @@ template<typename T> void TestTemplateCastBug(CastsClass* foo) {
   (void)static_cast<T*>(foo);
 }
 
+// IWYU: CastsSubclass needs a declaration
+using CastsSubclassMemPtr = int CastsSubclass::*;
+// IWYU: CastsSubclass needs a declaration
+using CastsSubclassNonProviding = CastsSubclass;
+
 int main() {
   // IWYU: CastsClass needs a declaration
   CastsClass* cc = 0;
@@ -36,6 +41,38 @@ int main() {
   // IWYU: CastsI2Derived is...*casts-i2.h
   // IWYU: CastsI3Convertible is...*casts-i3.h
   (void)static_cast<CastsI2Base*>(ci3);
+
+  // IWYU: CastsClass needs a declaration
+  int CastsClass::* cc_memptr = nullptr;
+  // IWYU: CastsSubclass needs a declaration
+  // IWYU: CastsSubclass is...*casts-i1.h
+  int CastsSubclass::* csc_memptr = cc_memptr;
+  // IWYU: CastsSubclass is...*casts-i1.h
+  csc_memptr = cc_memptr;
+  // IWYU: CastsClass needs a declaration
+  // IWYU: CastsSubclass is...*casts-i1.h
+  (void)static_cast<int CastsClass::*>(csc_memptr);
+
+  // Test handling member pointer type behind a (non-providing) alias.
+  CastsSubclassMemPtr csc_memptr_aliased = nullptr;
+  // IWYU: CastsSubclass is...*casts-i1.h
+  csc_memptr_aliased = cc_memptr;
+  // IWYU: CastsClass needs a declaration
+  // IWYU: CastsSubclass is...*casts-i1.h
+  (void)static_cast<int CastsClass::*>(csc_memptr_aliased);
+
+  // Test handling member pointer types with aliased qualifiers.
+  // IWYU: CastsSubclassProviding is...*casts-i1.h
+  int CastsSubclassProviding::* csc_memptr_aliased_qual_p = cc_memptr;
+  csc_memptr_aliased_qual_p = cc_memptr;
+  // IWYU: CastsClass needs a declaration
+  (void)static_cast<int CastsClass::*>(csc_memptr_aliased_qual_p);
+  int CastsSubclassNonProviding::* csc_memptr_aliased_qual_np = nullptr;
+  // IWYU: CastsSubclass is...*casts-i1.h
+  csc_memptr_aliased_qual_np = cc_memptr;
+  // IWYU: CastsClass needs a declaration
+  // IWYU: CastsSubclass is...*casts-i1.h
+  (void)static_cast<int CastsClass::*>(csc_memptr_aliased_qual_np);
 }
 
 
@@ -52,7 +89,7 @@ tests/cxx/casts.cc should remove these lines:
 - #include "tests/cxx/casts-d3.h"  // lines XX-XX
 
 The full include-list for tests/cxx/casts.cc:
-#include "tests/cxx/casts-i1.h"  // for CastsClass (ptr only), CastsSubclass
+#include "tests/cxx/casts-i1.h"  // for CastsClass (ptr only), CastsSubclass, CastsSubclassProviding
 #include "tests/cxx/casts-i2.h"  // for CastsI2Base (ptr only), CastsI2Derived
 #include "tests/cxx/casts-i3.h"  // for CastsI3Convertible
 

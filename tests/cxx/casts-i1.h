@@ -12,3 +12,5 @@
 class CastsClass { };
 
 class CastsSubclass : public CastsClass { };
+
+using CastsSubclassProviding = CastsSubclass;
