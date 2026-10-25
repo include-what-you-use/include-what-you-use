@@ -1978,13 +1978,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
       // Kinds that cast up or down an inheritance hierarchy.
       case clang::CK_BaseToDerived:
-      case clang::CK_BaseToDerivedMemberPointer:
         // Just 'to' type is enough: full type for derived gets base type too.
         required_full_types.push_back(to_type);
         break;
       case clang::CK_DerivedToBase:
       case clang::CK_UncheckedDerivedToBase:
-      case clang::CK_DerivedToBaseMemberPointer:
         // Just 'from' type is enough: full type for derived gets base type too.
         required_full_types.push_back(from_type);
 
@@ -2003,6 +2001,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         required_full_types.push_back(from_type);
         required_full_types.push_back(to_type);
         break;
+      case clang::CK_DerivedToBaseMemberPointer: {
+        const auto* der_mp_type = from_type->castAs<MemberPointerType>();
+        // TODO(bolshakov): IWYU should probably detect types provided by
+        // member pointer type aliases.
+        required_full_types.push_back(der_mp_type->getQualifier().getAsType());
+        break;
+      }
+      case clang::CK_BaseToDerivedMemberPointer: {
+        const auto* der_mp_type = to_type->castAs<MemberPointerType>();
+        required_full_types.push_back(der_mp_type->getQualifier().getAsType());
+        break;
+      }
     }
 
     for (const Type* type : required_full_types)
