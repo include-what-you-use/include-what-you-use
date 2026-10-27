@@ -4131,7 +4131,9 @@ class InstantiatedTemplateVisitor
                                          const Expr* /*calling_expr*/) {
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
-    if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type))
+    const Type* deref_type =
+        parent_type ? RemovePointersAndReferences(parent_type) : nullptr;
+    if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(deref_type))
       return true;
     return TraverseExpandedTemplateFunctionHelper(callee);
   }
@@ -5824,13 +5826,16 @@ class IwyuAstConsumer
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
 
-    if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type))
+    const Type* deref_type =
+        parent_type ? RemovePointersAndReferences(parent_type) : nullptr;
+
+    if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(deref_type))
       return true;
 
     TemplateInstantiationData data = GetTplInstData(callee, calling_expr);
 
     if (parent_type) {  // means we're a method of a class
-      InsertInto(GetTplInstData(parent_type), &data);
+      InsertInto(GetTplInstData(deref_type), &data);
       InsertAllInto(GetProvidedTypeComponents(parent_type),
                     &data.provided_types);
     }
@@ -5883,7 +5888,8 @@ class IwyuAstConsumer
                                        const Expr* calling_expr) {
     set<const Type*> ret = GetTplInstData(callee, calling_expr).provided_types;
     if (parent_type) {
-      InsertAllInto(GetTplInstData(parent_type).provided_types, &ret);
+      const Type* deref_type = RemovePointersAndReferences(parent_type);
+      InsertAllInto(GetTplInstData(deref_type).provided_types, &ret);
       InsertAllInto(GetProvidedTypeComponents(parent_type), &ret);
     }
     return ret;

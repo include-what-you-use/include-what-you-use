@@ -19,4 +19,17 @@ struct Indirect : IndirectBase {
   Indirect& operator<<(int);
 };
 
+template <typename T>
+struct IndirectTpl {
+  void UseT() {
+    T t;
+  }
+  T GetT();
+};
+
+template <typename T = Indirect>
+struct TplWithProvidedDefArg {
+  T GetT();
+};
+
 #endif  // INCLUDE_WHAT_YOU_USE_TESTS_CXX_PTR_REF_ALIASES_I2_H_
