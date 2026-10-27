@@ -23,6 +23,23 @@ __gnu_cxx::SystemClass* bar = 0;
 typedef int __system_type;
 notsys_ns::TplClass<__system_type>* baz = 0;
 
+// Test that IWYU doesn't crash on remapping __normal_iterator to template
+// specialization reference type when handling the outer template instantiation.
+
+template <typename T>
+class Tpl {
+  T t;
+};
+
+namespace __gnu_cxx {
+template <typename, typename>
+class __normal_iterator {};
+}  // namespace __gnu_cxx
+
+Tpl<int> var_for_tpl_int_instantiation;
+
+Tpl<__gnu_cxx::__normal_iterator<char*, Tpl<int>&>> t;
+
 // The summary is where all the action is on this test. Only std::StdClass
 // should be not replaceable by a forward-declare, because only it is
 // exposing a symbol in the std namespace.

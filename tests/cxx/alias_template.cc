@@ -112,6 +112,13 @@ HeaderUsingArgInternals<IndirectClass> header_aliased_int;
 HeaderUsingArgInternals<IndirectClass>* header_p_int = nullptr;
 
 template <typename T>
+using UsingArgInternalsRef = decltype(T::a)&;
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+extern UsingArgInternalsRef<IndirectClass> aliased_int_ref;
+
+template <typename T>
 struct TplWithUsingArgInternals {
   UsingArgInternals<T>* p = nullptr;
 };

@@ -29,6 +29,15 @@ NonProvidingRefAlias ref_nonprovided = GetRef();
 ProvidingPtrAlias ptr_provided = GetPtr();
 ProvidingRefAlias ref_provided = GetRef();
 
+NonProvidingTplPtrAlias tpl_ptr_nonprovided;
+extern NonProvidingTplRefAlias tpl_ref_nonprovided;
+
+ProvidingTplPtrAlias tpl_ptr_provided;
+extern ProvidingTplRefAlias tpl_ref_provided;
+
+TplWithProvidedDefArgPtrAlias tpl_ptr_provided_def_arg;
+extern TplWithProvidedDefArgRefAlias tpl_ref_provided_def_arg;
+
 struct Base {
   virtual IndirectBase* RetPtr1();
   virtual IndirectBase& RetRef1();
@@ -61,6 +70,14 @@ void Fn() {
   ref_nonprovided.Method();
   ptr_provided->Method();
   ref_provided.Method();
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  // IWYU: IndirectTpl is...*ptr_ref_aliases-i2.h
+  tpl_ptr_nonprovided->UseT();
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  // IWYU: IndirectTpl is...*ptr_ref_aliases-i2.h
+  tpl_ref_nonprovided.UseT();
+  tpl_ptr_provided->UseT();
+  tpl_ref_provided.UseT();
 
   try {
     // IWYU: Indirect is...*ptr_ref_aliases-i2.h
@@ -137,6 +154,22 @@ ns::NonProvidingRefAlias ref_nonprovided_with_using = GetRef();
 ns::ProvidingPtrAlias ptr_provided_with_using = GetPtr();
 ns::ProvidingRefAlias ref_provided_with_using = GetRef();
 
+template <typename T>
+struct TplWithAlias {
+  using PtrAlias = T*;
+  using RefAlias = T&;
+
+  PtrAlias itp;
+  static RefAlias itr;
+
+  void UseThroughPtr() {
+    itp->UseT();
+  }
+  void UseThroughRef() {
+    itr.UseT();
+  }
+};
+
 void TestSomeComplexIndirectionCases() {
   // IWYU: Indirect is...*ptr_ref_aliases-i2.h
   (void)sizeof(NonProvidingDoubleRefAlias);
@@ -147,6 +180,24 @@ void TestSomeComplexIndirectionCases() {
   (void)ptr_ref[1];
   NonProvidingDoublePtrAlias ptr_ptr = nullptr;
   (void)ptr_ptr[1];
+
+  // IWYU: IndirectTpl needs a declaration
+  // IWYU: Indirect needs a declaration
+  TplWithAlias<IndirectTpl<Indirect>> twa;
+  // IWYU: IndirectTpl is...*ptr_ref_aliases-i2.h
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  twa.UseThroughPtr();
+  // IWYU: IndirectTpl is...*ptr_ref_aliases-i2.h
+  // IWYU: Indirect is...*ptr_ref_aliases-i2.h
+  twa.UseThroughRef();
+
+  // The return type here is the provided default argument, so it should not be
+  // reported.
+  tpl_ptr_provided_def_arg->GetT();
+  tpl_ref_provided_def_arg.GetT();
+  // The same with a template argument provided by an alias.
+  tpl_ptr_provided->GetT();
+  tpl_ref_provided.GetT();
 }
 
 /**** IWYU_SUMMARY
@@ -160,9 +211,9 @@ tests/cxx/ptr_ref_aliases.cc should remove these lines:
 
 The full include-list for tests/cxx/ptr_ref_aliases.cc:
 #include <typeinfo>  // for type_info
-#include "tests/cxx/ptr_ref_aliases-d1.h"  // for NonProvidingDoublePtrAlias, NonProvidingDoubleRefAlias, NonProvidingDoubleRefPtrAlias, NonProvidingPtrAlias, NonProvidingRefAlias, NonProvidingRefPtrAlias
-#include "tests/cxx/ptr_ref_aliases-d2.h"  // for ProvidingPtrAlias, ProvidingRefAlias
-#include "tests/cxx/ptr_ref_aliases-i2.h"  // for Indirect
+#include "tests/cxx/ptr_ref_aliases-d1.h"  // for NonProvidingDoublePtrAlias, NonProvidingDoubleRefAlias, NonProvidingDoubleRefPtrAlias, NonProvidingPtrAlias, NonProvidingRefAlias, NonProvidingRefPtrAlias, NonProvidingTplPtrAlias, NonProvidingTplRefAlias
+#include "tests/cxx/ptr_ref_aliases-d2.h"  // for ProvidingPtrAlias, ProvidingRefAlias, ProvidingTplPtrAlias, ProvidingTplRefAlias, TplWithProvidedDefArgPtrAlias, TplWithProvidedDefArgRefAlias
+#include "tests/cxx/ptr_ref_aliases-i2.h"  // for Indirect, IndirectTpl
 struct IndirectBase;
 
 ***** IWYU_SUMMARY */

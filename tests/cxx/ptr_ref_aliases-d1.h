@@ -11,6 +11,9 @@
 
 struct Indirect;
 
+template <typename>
+struct IndirectTpl;
+
 using NonProvidingPtrAlias = Indirect*;
 using NonProvidingRefAlias = Indirect&;
 
@@ -18,6 +21,9 @@ using NonProvidingDoubleRefAlias = NonProvidingRefAlias&;
 using NonProvidingDoublePtrAlias = NonProvidingPtrAlias*;
 using NonProvidingRefPtrAlias = NonProvidingPtrAlias&;
 using NonProvidingDoubleRefPtrAlias = NonProvidingRefPtrAlias&;
+
+using NonProvidingTplPtrAlias = IndirectTpl<Indirect>*;
+using NonProvidingTplRefAlias = IndirectTpl<Indirect>&;
 
 /**** IWYU_SUMMARY
 
@@ -28,5 +34,6 @@ tests/cxx/ptr_ref_aliases-d1.h should remove these lines:
 
 The full include-list for tests/cxx/ptr_ref_aliases-d1.h:
 struct Indirect;  // lines XX-XX
+template <typename> struct IndirectTpl;  // lines XX-XX+1
 
 ***** IWYU_SUMMARY */
