@@ -1777,17 +1777,15 @@ void IncludePicker::AddDirectInclude(const string& includer_filepath,
   const pair<string, string> key(includer_filepath, includee_filepath);
   includer_and_includee_to_include_as_written_[key] = quoted_include_as_written;
 
-  // Mark the clang fake-file "<built-in>" as private, so we never try
-  // to map anything to it.
-  if (includer_filepath == "<built-in>")
-    MarkIncludeAsPrivate("\"<built-in>\"");
-
   // Automatically mark files in foo/internal/bar as private, and map them.
   // Then say that everyone else in foo/.* is a friend, who is allowed to
   // include the otherwise-private header.
+  // Skip this when the includer is a clang special file like <built-in>,
+  // which includes the main file: a mapping to it can't be #included.
   const size_t internal_pos = quoted_includee.find("internal/");
   if (internal_pos != string::npos &&
-      (internal_pos == 0 || quoted_includee[internal_pos - 1] == '/')) {
+      (internal_pos == 0 || quoted_includee[internal_pos - 1] == '/') &&
+      !IsSpecialFilenameOrStdin(includer_filepath)) {
     MarkIncludeAsPrivate(quoted_includee);
     // The second argument here is a regex for matching a quoted
     // filepath.  We get the opening quote from quoted_includee, and
