@@ -7,5 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/cxx/macro_location-i2.h"
 #include "tests/cxx/macro_location-i3.h"
 #include "tests/cxx/macro_location-i4.h"

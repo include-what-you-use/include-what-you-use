@@ -10,3 +10,11 @@
 #define DECLARE_FRIEND(cls)  friend class cls
 
 class Foo {};
+
+class Bar {};
+
+void OrigName();
+
+struct ImplicitConvStruct {
+  ImplicitConvStruct(int);
+};

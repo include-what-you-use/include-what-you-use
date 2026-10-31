@@ -10,3 +10,7 @@
 class ConcatClass {};
 
 class ConcatFwdDeclClass {};
+
+namespace ns {
+void ConcatFn1();
+}
