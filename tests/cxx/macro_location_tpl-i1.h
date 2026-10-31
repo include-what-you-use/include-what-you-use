@@ -10,26 +10,18 @@
 #ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_MACRO_LOCATION_TPL_I1_H_
 #define INCLUDE_WHAT_YOU_USE_TESTS_CXX_MACRO_LOCATION_TPL_I1_H_
 
-// Forward-declare the primary templates as a signal that specialization uses
-// belong in the expansion location.
-template <typename>
-void expansion_template();
-
-template <typename>
-class ExpansionTemplate;
+#include "tests/cxx/macro_location_tpl-i5.h"
 
 // expansion_template should be attributed to expansion loc.
 #define FUNC_TEMPLATE_SPEC_EXPANSION expansion_template<int>()
 
-// spelling_template should be attributed to this file, because there's no
-// forward-declare hint.
+// spelling_template should be attributed to this file.
 #define FUNC_TEMPLATE_SPEC_SPELLING spelling_template<int>();
 
 // ExpansionTemplate should be attributed to expansion loc.
 #define CLASS_TEMPLATE_SPEC_EXPANSION ExpansionTemplate<int>().method();
 
-// SpellingTemplate should be attributed to this file, because there's no
-// forward-declare hint.
+// SpellingTemplate should be attributed to this file.
 #define CLASS_TEMPLATE_SPEC_SPELLING SpellingTemplate<int>().method();
 
 template <typename>

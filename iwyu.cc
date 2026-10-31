@@ -1333,40 +1333,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     OptionalFileEntryRef macro_def_file = GetLocFileEntry(spelling_loc);
     VERRS(5) << "Macro is defined in '" << GetFilePath(macro_def_file) << "'\n";
 
-    const NamedDecl* fwd_decl = nullptr;
-    for (const NamedDecl* redecl : GetTagRedecls(decl)) {
-      if (GetFileEntry(redecl) == macro_def_file && IsForwardDecl(redecl)) {
-        VERRS(5) << "Found fwd-decl hint at "
-                 << PrintableLoc(GetLocation(redecl)) << "\n";
-        fwd_decl = redecl;
-        break;
-      }
-    }
+    const NamedDecl* defn = decl;
+    if (const auto* tag_decl = dyn_cast<TagDecl>(decl))
+      defn = tag_decl->getDefinitionOrSelf();
 
-    if (!fwd_decl) {
-      if (const auto* func_decl = dyn_cast<FunctionDecl>(decl)) {
-        if (const FunctionTemplateDecl* ft_decl =
-                func_decl->getPrimaryTemplate()) {
-          VERRS(5) << "No fwd-decl found, looking for function template decl\n";
-          for (const NamedDecl* redecl : ft_decl->redecls()) {
-            if (GetFileEntry(redecl) == macro_def_file) {
-              VERRS(5) << "Found function template at "
-                       << PrintableLoc(GetLocation(redecl)) << "\n";
-              fwd_decl = redecl;
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (fwd_decl) {
-      // Make sure we keep that forward-declaration, even if it's probably
-      // unused in this file.
-      IwyuFileInfo* file_info = preprocessor_info().FileInfoFor(macro_def_file);
-      file_info->ReportForwardDeclareUse(
-          spelling_loc, fwd_decl, ComputeUseFlags(current_ast_node()), nullptr);
-    }
+    SourceLocation defn_loc = sm->getExpansionLoc(GetLocation(defn));
+    OptionalFileEntryRef defn_file = GetFileEntry(defn_loc);
 
     // Resolve the best use location based on our current knowledge.
     //
@@ -1388,13 +1360,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                   "command line), use expansion location instead\n";
       use_loc = expansion_loc;
       side = "expansion";
-    } else if (fwd_decl != nullptr) {
-      VERRS(5) << "Found a hint decl in macro definition file\n";
-      use_loc = expansion_loc;
-      side = "expansion";
-    } else {
+    } else if ((defn_file != macro_def_file &&
+                preprocessor_info().FileTransitivelyIncludes(macro_def_file,
+                                                             defn_file)) ||
+               IsBeforeInSameFile(defn_loc, spelling_loc)) {
       use_loc = spelling_loc;
       side = "spelling";
+    } else {
+      use_loc = expansion_loc;
+      side = "expansion";
     }
 
     VERRS(4) << "Attributing use of '" << PrintableDecl(decl) << "' to " << side
