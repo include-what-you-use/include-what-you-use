@@ -357,7 +357,15 @@ class IwyuFileInfo {
   // The meat of iwyu: compare the actual includes and forward-declares
   // against the symbol uses, and report which uses are iwyu violations.
   // Reports violations on errs(), and returns the number of violations.
+  // The associated headers must have been calculated first.
   size_t CalculateAndReportIwyuViolations();
+
+  set<clang::OptionalFileEntryRef> AssociatedFileEntries() const {
+    set<clang::OptionalFileEntryRef> associated_file_entries;
+    for (const IwyuFileInfo* associated : associated_headers_)
+      associated_file_entries.insert(associated->file_);
+    return associated_file_entries;
+  }
 
   // Returns how this file #includes 'includee', such as "foo.h" or
   // <foo.h>, or an empty string if it doesn't #include it directly.
@@ -375,13 +383,6 @@ class IwyuFileInfo {
     for (const IwyuFileInfo* associated : associated_headers_)
       associated_quoted_includes.insert(associated->quoted_file_);
     return associated_quoted_includes;
-  }
-
-  set<clang::OptionalFileEntryRef> AssociatedFileEntries() const {
-    set<clang::OptionalFileEntryRef> associated_file_entries;
-    for (const IwyuFileInfo* associated : associated_headers_)
-      associated_file_entries.insert(associated->file_);
-    return associated_file_entries;
   }
 
   set<string> AssociatedDesiredIncludes() const {
