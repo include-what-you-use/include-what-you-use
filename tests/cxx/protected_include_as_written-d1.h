@@ -1,4 +1,4 @@
-//===--- 1569.cc - iwyu test ----------------------------------------------===//
+//===--- protected_include_as_written-d1.h - test input file for iwyu -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_XFAIL
-
-// The export pragma should protect this #include.
-#include "f1.h"    // IWYU pragma: export
+#include "protected_include_as_written-i1.h"  // IWYU pragma: export
+#include "protected_include_as_written-i2.h"
 
 /**** IWYU_SUMMARY
 
-(tests/bugs/1569/1569.cc has correct #includes/fwd-decls)
+(tests/cxx/protected_include_as_written-d1.h has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */

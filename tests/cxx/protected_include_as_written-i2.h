@@ -1,4 +1,4 @@
-//===--- f1.h - iwyu test -------------------------------------------------===//
+//===--- protected_include_as_written-i2.h - test input file for iwyu -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef F1_H
-#define F1_H
+// IWYU pragma: always_keep
 
-// empty
-
-#endif // F1_H
+class ProtectedKept {};
