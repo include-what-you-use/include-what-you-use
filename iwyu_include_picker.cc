@@ -1817,6 +1817,12 @@ void IncludePicker::AddMapping(const string& map_from,
   filepath_include_map_[map_from].push_back(map_to);
 }
 
+void IncludePicker::AddImplementationFileMapping(const MappedInclude& impl,
+                                                 const MappedInclude& header) {
+  CHECK_(!has_called_finalize_added_include_lines_ && "Can't mutate anymore");
+  implementation_file_mappings_.emplace_back(impl, header);
+}
+
 void IncludePicker::AddIncludeMapping(const string& map_from,
                                       IncludeVisibility from_visibility,
                                       const MappedInclude& map_to,
@@ -1962,6 +1968,18 @@ void IncludePicker::FinalizeAddedIncludes() {
   // The map keys may be regular expressions.
   // Match those to seen #includes now.
   ExpandRegexes();
+
+  // Now that regexes have given their visibility to the files they match,
+  // map the implementation files that don't have one to their header.
+  for (const auto& [impl, header] : implementation_file_mappings_) {
+    if (GetVisibility(impl) != kUnusedVisibility) {
+      VERRS(4) << "Not marking " << impl.quoted_include << " as private to "
+               << header.quoted_include << ": it already has a visibility.\n";
+      continue;
+    }
+    AddMapping(impl.quoted_include, header);
+    MarkIncludeAsPrivate(impl.quoted_include);
+  }
 
   // If a.h maps to b.h maps to c.h, we'd like an entry from a.h to c.h too.
   MakeMapTransitive(&filepath_include_map_);

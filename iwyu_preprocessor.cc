@@ -691,7 +691,8 @@ void IwyuPreprocessorInfo::MacroExpands(const Token& macro_use_token,
 void IwyuPreprocessorInfo::MacroDefined(const Token& id,
                                         const MacroDirective* directive) {
   OptionalFileEntryRef macro_file = GetFileEntry(id);
-  if (!ShouldReportIWYUViolationsFor(macro_file)) {
+  if (!ShouldReportIWYUViolationsFor(macro_file) &&
+      !ContainsKey(files_to_record_macro_uses_for_, macro_file)) {
     return;
   }
 
@@ -829,6 +830,10 @@ void IwyuPreprocessorInfo::FileSkipped(const FileEntryRef& file,
   if (ShouldReportIWYUViolationsFor(file)) {
     files_to_report_iwyu_violations_for_.insert(file);
   }
+  MaybeAddImplementationFileCandidate(
+      GetFileEntry(include_loc), file,
+      GlobalSourceManager()->isInSystemHeader(include_loc),
+      clang::SrcMgr::isSystem(file_type));
 }
 
 // Called when a file is #included.
@@ -868,6 +873,10 @@ void IwyuPreprocessorInfo::FileChanged_EnterFile(
   if (ShouldReportIWYUViolationsFor(new_file)) {
     files_to_report_iwyu_violations_for_.insert(new_file);
   }
+  MaybeAddImplementationFileCandidate(
+      GetFileEntry(include_loc), new_file,
+      GlobalSourceManager()->isInSystemHeader(include_loc),
+      GlobalSourceManager()->isInSystemHeader(file_beginning));
 
   // Mark is_prefix_header.
   CHECK_(new_file && "is_prefix_header is applicable to usual files only");
@@ -919,6 +928,92 @@ void IwyuPreprocessorInfo::FileChanged_SystemHeaderPragma(SourceLocation loc) {
 }
 
 //------------------------------------------------------------
+// Implementation files.
+
+void IwyuPreprocessorInfo::MaybeAddImplementationFileCandidate(
+    OptionalFileEntryRef includer, OptionalFileEntryRef includee,
+    bool includer_is_system, bool includee_is_system) {
+  if (!includer || !includee || includer == includee ||
+      IsSpecialFile(includer) || IsSpecialFile(includee))
+    return;
+  includers_[includee].insert(includer);
+  // An implementation file is #included by a header, so not by the main
+  // file.  When IWYU runs on a header, that header is the main file: its
+  // implementation files are not detected.
+  if (includer == main_file_)
+    return;
+  // Don't look into the system headers that a project header #includes.
+  if (includee_is_system && !includer_is_system)
+    return;
+  implementation_file_candidates_[includee].insert(includer);
+  // If includee is detected, it will be reported on with the header of
+  // includer.  Record its macro uses in case it is: detection only happens
+  // after preprocessing.
+  if (ShouldReportIWYUViolationsFor(includer) ||
+      ContainsKey(files_to_record_macro_uses_for_, includer))
+    files_to_record_macro_uses_for_.insert(includee);
+}
+
+const set<OptionalFileEntryRef>*
+IwyuPreprocessorInfo::ImplementationFileIncluders(
+    OptionalFileEntryRef file) const {
+  return FindInMap(&implementation_file_candidates_, file);
+}
+
+bool IwyuPreprocessorInfo::IsIncludedOnlyBy(
+    OptionalFileEntryRef file, OptionalFileEntryRef includer) const {
+  const set<OptionalFileEntryRef>* includers = FindInMap(&includers_, file);
+  return includers != nullptr && includers->size() == 1 &&
+         *includers->begin() == includer;
+}
+
+void IwyuPreprocessorInfo::AddImplementationFile(
+    OptionalFileEntryRef impl, OptionalFileEntryRef header,
+    OptionalFileEntryRef includer) {
+  CHECK_(transitive_include_map_.empty() &&
+         "Must be called before HandlePreprocessingDone()");
+  // includer needs its #include of impl, whatever impl's visibility.
+  IwyuFileInfo* includer_info = GetFromFileInfoMap(includer);
+  includer_info->ReportIncludeFileUse(
+      impl, includer_info->QuotedIncludeAsWritten(impl));
+  ERRSYM(includer) << "Marked dep: " << GetFilePath(includer)
+                   << " needs to keep " << GetFilePath(impl)
+                   << " (reason: implementation file)\n";
+
+  // Users of what impl defines should #include header, never impl itself:
+  // treat impl as if it had 'IWYU pragma: private, include "header"', unless
+  // a pragma or a mapping file gives it a visibility.
+  MutableGlobalIncludePicker()->AddImplementationFileMapping(
+      MappedInclude(ConvertToQuotedInclude(GetFilePath(impl)),
+                    GetFilePath(impl)),
+      MappedInclude(ConvertToQuotedInclude(GetFilePath(header)),
+                    GetFilePath(header)));
+
+  // The rest only matters if we report on header.
+  if (!ShouldReportIWYUViolationsFor(header))
+    return;
+  IwyuFileInfo* impl_info = GetFromFileInfoMap(impl);
+  IwyuFileInfo* header_info = GetFromFileInfoMap(header);
+  if (header_info->HasAssociatedHeader(impl_info)) {
+    VERRS(4) << "Not marking " << GetFilePath(header)
+             << " as associated header of " << GetFilePath(impl)
+             << ": would create a cycle.\n";
+    return;
+  }
+  // impl may use what header #includes, without #including header itself.
+  // Likewise for includer, if it is another implementation file of header.
+  impl_info->AddAssociatedHeader(header_info, /*require_include=*/false);
+  VERRS(4) << "Marked " << GetFilePath(header) << " as associated header of "
+           << GetFilePath(impl) << " (implementation file).\n";
+  if (includer != header)
+    impl_info->AddAssociatedHeader(includer_info, /*require_include=*/false);
+
+  // Report on impl together with header.
+  AddGlobToReportIWYUViolationsFor(GetFilePath(impl));
+  files_to_report_iwyu_violations_for_.insert(impl);
+}
+
+//------------------------------------------------------------
 // Iwyu checkers.
 
 // Checks whether it's OK to use the given macro defined in file defined_in.
@@ -929,7 +1024,8 @@ void IwyuPreprocessorInfo::ReportMacroUse(const string& name,
   if (IsInSpecialFile(dfn_location))
     return;
   OptionalFileEntryRef used_in = GetFileEntry(usage_location);
-  if (ShouldReportIWYUViolationsFor(used_in)) {
+  if (ShouldReportIWYUViolationsFor(used_in) ||
+      ContainsKey(files_to_record_macro_uses_for_, used_in)) {
     // ignore symbols used outside foo.{h,cc}
 
     // TODO(csilvers): this isn't really a symbol use -- it may be ok
