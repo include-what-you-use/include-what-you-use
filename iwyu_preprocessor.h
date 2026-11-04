@@ -96,6 +96,29 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // The client *must* call this from the beginning of HandleTranslationUnit()
   void HandlePreprocessingDone();
 
+  // Some projects put the inline definitions of a header (foo.h) in a
+  // separate implementation file (foo.icc) that foo.h #includes.  IWYU
+  // detects such files: see DetectImplementationFiles() in iwyu.cc.
+
+  // Returns the files that #include 'file' and of which 'file' can be an
+  // implementation file, or nullptr if there are none.  The main file and
+  // the project files #including a system header are not among them.
+  const set<clang::OptionalFileEntryRef>* ImplementationFileIncluders(
+      clang::OptionalFileEntryRef file) const;
+
+  // Returns true if 'includer' is the only file that #includes 'file'.
+  bool IsIncludedOnlyBy(clang::OptionalFileEntryRef file,
+                        clang::OptionalFileEntryRef includer) const;
+
+  // Marks 'impl' as an implementation file of 'header', #included by
+  // 'includer': 'header' itself, or another implementation file of it.
+  // 'impl' is private to 'header'.  If we report on 'header', 'impl' is
+  // reported on too, and may use what 'header' #includes.  Must be called
+  // before HandlePreprocessingDone().
+  void AddImplementationFile(clang::OptionalFileEntryRef impl,
+                             clang::OptionalFileEntryRef header,
+                             clang::OptionalFileEntryRef includer);
+
   // More direct ways of getting at this information
   clang::OptionalFileEntryRef main_file() const {
     return main_file_;
@@ -225,6 +248,13 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                      clang::SourceRange comment_range) override;
 
  private:
+  // Records that 'includer' #includes 'includee', which may make
+  // 'includee' a possible implementation file of 'includer'.
+  void MaybeAddImplementationFileCandidate(
+      clang::OptionalFileEntryRef includer,
+      clang::OptionalFileEntryRef includee, bool includer_is_system,
+      bool includee_is_system);
+
   // Returns true if includee is considered part of the main
   // compilation unit.  We always generate warnings for violations in
   // files are part of the main compilation unit.
@@ -295,6 +325,21 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // main_file_ and its associated .h and -inl.h files, if they exist.
   // But users can add to it via the --check_also flag.
   set<clang::OptionalFileEntryRef> files_to_report_iwyu_violations_for_;
+
+  // Maps each file to the files that #include it.
+  map<clang::OptionalFileEntryRef, set<clang::OptionalFileEntryRef>>
+      includers_;
+
+  // Maps each file that could be an implementation file to the files it
+  // could be an implementation file of: see ImplementationFileIncluders().
+  map<clang::OptionalFileEntryRef, set<clang::OptionalFileEntryRef>>
+      implementation_file_candidates_;
+
+  // The files among those that are #included by a header we report on, or
+  // by one of these files.  If they are detected as implementation files,
+  // we report on them too, but detection only happens after preprocessing:
+  // so their macro uses are recorded anyway.
+  set<clang::OptionalFileEntryRef> files_to_record_macro_uses_for_;
 
   // This maps from the include-name as written in the program
   // (including <>'s or ""'s) to the FileEntry we loaded for that

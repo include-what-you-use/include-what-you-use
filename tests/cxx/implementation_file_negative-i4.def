@@ -1,4 +1,4 @@
-//===--- f1.h - iwyu test -------------------------------------------------===//
+//===--- implementation_file_negative-i4.def - test input file for iwyu ---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef F1_H
-#define F1_H
-
-// empty
-
-#endif // F1_H
+// An X-macro file: it only uses a macro defined by its includer.
+NEG_COLOR(NegRed)
+NEG_COLOR(NegGreen)

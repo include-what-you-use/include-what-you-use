@@ -1,4 +1,4 @@
-//===--- 1569.cc - iwyu test ----------------------------------------------===//
+//===--- associated_pragma_order-i1.h - test input file for iwyu ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_XFAIL
+#include "tests/cxx/indirect.h"
 
-// The export pragma should protect this #include.
-#include "f1.h"    // IWYU pragma: export
+inline int UseI1() {
+  IndirectClass local;
+  return local.a;
+}
 
 /**** IWYU_SUMMARY
 
-(tests/bugs/1569/1569.cc has correct #includes/fwd-decls)
+(tests/cxx/associated_pragma_order-i1.h has correct #includes/fwd-decls)
 
 ***** IWYU_SUMMARY */

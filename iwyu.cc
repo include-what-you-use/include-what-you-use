@@ -90,6 +90,7 @@
 
 #include <cstdio>
 #include <cstdlib>                      // for atoi, exit
+#include <functional>                   // for function
 #include <map>                          // for map, swap, etc
 #include <memory>                       // for unique_ptr
 #include <optional>                     // for optional
@@ -4915,11 +4916,15 @@ class IwyuAstConsumer
 
   // Called once at the end of the compilation.
   void HandleTranslationUnit(ASTContext& context) override {  // NOLINT
+    TranslationUnitDecl* tu_decl = context.getTranslationUnitDecl();
+
+    // This must come before HandlePreprocessingDone, which freezes the
+    // include mappings.
+    DetectImplementationFiles(tu_decl);
+
     // TODO(csilvers): automatically detect preprocessing is done, somehow.
     const_cast<IwyuPreprocessorInfo*>(&preprocessor_info())->
         HandlePreprocessingDone();
-
-    TranslationUnitDecl* tu_decl = context.getTranslationUnitDecl();
 
     // Sema::TUScope is reset after parsing, but Sema::getCurScope still points
     // to the translation unit decl scope. TUScope is required for lookup in
@@ -4964,16 +4969,27 @@ class IwyuAstConsumer
 
     // We have to calculate the .h files before the .cc file, since
     // the .cc file inherits #includes from the .h files, and we
-    // need to figure out what those #includes are going to be.
+    // need to figure out what those #includes are going to be.  Likewise,
+    // a header inherits from its own associated headers, and an
+    // implementation file from its header.
     size_t num_edits = 0;
     OptionalFileEntryRef const main_file = preprocessor_info().main_file();
-    for (OptionalFileEntryRef file : *files_to_report_iwyu_violations_for) {
-      if (file == main_file)
-        continue;
-      CHECK_(preprocessor_info().FileInfoFor(file));
-      num_edits += preprocessor_info().FileInfoFor(file)
-          ->CalculateAndReportIwyuViolations();
-    }
+    set<OptionalFileEntryRef> calculated_files;
+    std::function<void(OptionalFileEntryRef)> calculate =
+        [&](OptionalFileEntryRef file) {
+          if (file == main_file || !calculated_files.insert(file).second)
+            return;
+          IwyuFileInfo* file_info = preprocessor_info().FileInfoFor(file);
+          CHECK_(file_info);
+          for (OptionalFileEntryRef associated :
+               file_info->AssociatedFileEntries()) {
+            if (ContainsKey(*files_to_report_iwyu_violations_for, associated))
+              calculate(associated);
+          }
+          num_edits += file_info->CalculateAndReportIwyuViolations();
+        };
+    for (OptionalFileEntryRef file : *files_to_report_iwyu_violations_for)
+      calculate(file);
     CHECK_(preprocessor_info().FileInfoFor(main_file));
     num_edits += preprocessor_info().FileInfoFor(main_file)
         ->CalculateAndReportIwyuViolations();
@@ -5011,6 +5027,160 @@ class IwyuAstConsumer
       // template body.
       LateParsedTemplate* lpt = sema.LateParsedTemplateMap[fd].get();
       sema.LateTemplateParser(sema.OpaqueParser, *lpt);
+    }
+  }
+
+  // Some projects put the inline definitions of a header (foo.h) in a
+  // separate file (foo.icc), which foo.h #includes.  Such a file defines
+  // what its includer declares, which an ordinary header can't do: it would
+  // have to #include its includer.  So a file is an implementation file of
+  // the header that #includes it if it has a definition that completes a
+  // declaration made in that header: of a function, of a variable, or of a
+  // class declared in a class.  Definitions completing a declaration made
+  // in an implementation file's header count too, for an implementation
+  // file split into several files (foo.h -> foo.icc -> foo_detail.icc).
+  //
+  // A file is an ordinary header, and is not detected, if it defines a
+  // class or an enum at namespace scope, or if another file #includes it
+  // too: then it may well define a few functions of its includer, but it
+  // has a life of its own.  Other redeclarations don't count either: a
+  // header may well forward-declare a class and then #include the header
+  // defining it.
+  //
+  // Only declarations at namespace scope are considered: that's where such
+  // definitions are.  A declaration produced by a macro counts where the
+  // macro is expanded, not where the macro is defined.
+
+  // What DetectImplementationFiles() learns about a possible
+  // implementation file.
+  struct ImplementationFileEvidence {
+    // The file that #included the file where its declarations are.
+    OptionalFileEntryRef includer;
+    // Maps each file with a declaration that a definition in this file
+    // completes to the locations of that definition and that declaration.
+    map<OptionalFileEntryRef, pair<SourceLocation, SourceLocation>>
+        completed_in;
+    // True if the file defines its own class or enum, or if its
+    // declarations come from several inclusions by different headers.
+    bool ruled_out = false;
+  };
+
+  static bool CompletesADeclaration(const Decl* decl) {
+    if (decl->getPreviousDecl() == nullptr)
+      return false;
+    if (const auto* tpl_decl = dyn_cast<TemplateDecl>(decl))
+      decl = tpl_decl->getTemplatedDecl();
+    if (decl == nullptr)
+      return false;
+    if (const auto* fn_decl = dyn_cast<FunctionDecl>(decl))
+      return fn_decl->isThisDeclarationADefinition();
+    if (const auto* var_decl = dyn_cast<VarDecl>(decl))
+      return var_decl->isThisDeclarationADefinition() == VarDecl::Definition;
+    if (const auto* tag_decl = dyn_cast<TagDecl>(decl)) {
+      return tag_decl->isThisDeclarationADefinition() &&
+             isa<RecordDecl>(tag_decl->getDeclContext());
+    }
+    return false;
+  }
+
+  // Returns true if decl defines a class or an enum at namespace scope,
+  // other than a specialization of a template declared elsewhere.
+  static bool DefinesNamespaceScopeType(const Decl* decl) {
+    if (const auto* tpl_decl = dyn_cast<clang::ClassTemplateDecl>(decl))
+      decl = tpl_decl->getTemplatedDecl();
+    const auto* tag_decl = dyn_cast_or_null<TagDecl>(decl);
+    return tag_decl != nullptr && tag_decl->isThisDeclarationADefinition() &&
+           !isa<RecordDecl>(tag_decl->getDeclContext()) &&
+           !isa<ClassTemplateSpecializationDecl>(tag_decl);
+  }
+
+  void CollectImplementationFileEvidence(
+      const DeclContext* decl_context,
+      map<OptionalFileEntryRef, ImplementationFileEvidence>* evidence) {
+    const SourceManager& source_manager = *GlobalSourceManager();
+    for (const Decl* decl : decl_context->decls()) {
+      if (isa<NamespaceDecl, LinkageSpecDecl, clang::ExportDecl>(decl)) {
+        CollectImplementationFileEvidence(cast<DeclContext>(decl), evidence);
+        continue;
+      }
+      if (decl->isImplicit())
+        continue;
+      const bool defines_type = DefinesNamespaceScopeType(decl);
+      if (!defines_type && !CompletesADeclaration(decl))
+        continue;
+      const SourceLocation loc = GetInstantiationLoc(decl->getLocation());
+      OptionalFileEntryRef file = GetFileEntry(loc);
+      const set<OptionalFileEntryRef>* includers =
+          preprocessor_info().ImplementationFileIncluders(file);
+      if (includers == nullptr)
+        continue;
+      // The header that #included the file this time.
+      OptionalFileEntryRef includer = GetFileEntry(
+          source_manager.getIncludeLoc(source_manager.getFileID(loc)));
+      if (!ContainsKey(*includers, includer))
+        continue;
+      ImplementationFileEvidence& file_evidence = (*evidence)[file];
+      if (file_evidence.includer && file_evidence.includer != includer)
+        file_evidence.ruled_out = true;
+      file_evidence.includer = includer;
+      if (defines_type) {
+        file_evidence.ruled_out = true;
+        continue;
+      }
+      for (const Decl* prev = decl->getPreviousDecl(); prev != nullptr;
+           prev = prev->getPreviousDecl()) {
+        file_evidence.completed_in.emplace(
+            GetFileEntry(GetInstantiationLoc(prev->getLocation())),
+            pair(decl->getLocation(), prev->getLocation()));
+      }
+    }
+  }
+
+  void DetectImplementationFiles(const TranslationUnitDecl* tu_decl) {
+    map<OptionalFileEntryRef, ImplementationFileEvidence> evidence;
+    CollectImplementationFileEvidence(tu_decl, &evidence);
+
+    // Maps each implementation file to its header.  A file #included by an
+    // implementation file may be an implementation file of the same
+    // header: repeat until no file is added.
+    map<OptionalFileEntryRef, OptionalFileEntryRef> header_of;
+    vector<OptionalFileEntryRef> detected;
+    bool added = true;
+    while (added) {
+      added = false;
+      for (const auto& [file, file_evidence] : evidence) {
+        if (file_evidence.ruled_out || ContainsKey(header_of, file) ||
+            !preprocessor_info().IsIncludedOnlyBy(file,
+                                                  file_evidence.includer))
+          continue;
+        const OptionalFileEntryRef header = GetOrDefault(
+            header_of, file_evidence.includer, file_evidence.includer);
+        auto completed = file_evidence.completed_in.find(header);
+        if (completed == file_evidence.completed_in.end())
+          completed = file_evidence.completed_in.find(file_evidence.includer);
+        if (completed == file_evidence.completed_in.end())
+          continue;
+        VERRS(4) << "Detected implementation file " << GetFilePath(file)
+                 << " of " << GetFilePath(header) << ": "
+                 << PrintableLoc(completed->second.first) << " defines "
+                 << PrintableLoc(completed->second.second) << "\n";
+        header_of[file] = header;
+        detected.push_back(file);
+        added = true;
+      }
+    }
+
+    IwyuPreprocessorInfo* mutable_preprocessor_info =
+        const_cast<IwyuPreprocessorInfo*>(&preprocessor_info());
+    for (OptionalFileEntryRef file : detected) {
+      // The includer may have been detected after this file.
+      OptionalFileEntryRef header = header_of.at(file);
+      for (size_t i = 0; i < detected.size() && ContainsKey(header_of, header);
+           ++i) {
+        header = header_of.at(header);
+      }
+      mutable_preprocessor_info->AddImplementationFile(
+          file, header, evidence.at(file).includer);
     }
   }
 
