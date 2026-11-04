@@ -1,4 +1,4 @@
-//===--- shadow.h - iwyu test ---------------------------------------------===//
+//===--- macro_location_tpl-i5.h - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,4 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define call_orig call_shadow
+template <typename>
+void spelling_template() = delete;
+template <>
+void spelling_template<int>();
+
+template <typename>
+struct SpellingTemplate {
+  void method() {
+  }
+};

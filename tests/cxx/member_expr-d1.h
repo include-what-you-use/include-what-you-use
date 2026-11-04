@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "tests/cxx/direct.h"
+
 #define CALL_METHOD Method()
 #define IC ic
 #define IC_CALL_METHOD  (ic).Method()
