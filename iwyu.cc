@@ -106,6 +106,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -201,6 +202,7 @@ using clang::ConstantArrayType;
 using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
+using clang::DeclarationNameInfo;
 using clang::DecltypeType;
 using clang::DeducedTemplateSpecializationType;
 using clang::ElaboratedTypeKeyword;
@@ -3235,6 +3237,17 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // They should already be handled at the function declaration site,
     // not at the call site.
     return true;
+  }
+
+  // The name of a constructor or destructor declaration only names its own
+  // class, so it is never a use of anything.  Names in expressions, such as
+  // an explicit destructor call through an alias, are still traversed.
+  bool TraverseDeclarationNameInfo(DeclarationNameInfo name_info) {
+    const ASTNode* node = current_ast_node();
+    if (node &&
+        (node->IsA<CXXConstructorDecl>() || node->IsA<CXXDestructorDecl>()))
+      return true;
+    return Base::TraverseDeclarationNameInfo(name_info);
   }
 
   //------------------------------------------------------------
