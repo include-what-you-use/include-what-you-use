@@ -384,6 +384,15 @@ bool IsNodeInsideCXXMethodBody(const ASTNode* ast_node) {
         return true;
       }
     }
+    // The body of a friend function defined in its class is complete-class
+    // context too, like a method body.
+    if (const FunctionDecl* fn_decl = ast_node->GetParentAs<FunctionDecl>()) {
+      if (fn_decl->getFriendObjectKind() != Decl::FOK_None &&
+          fn_decl->getLexicalDeclContext()->isRecord() &&
+          ast_node->ContentIs(fn_decl->getBody())) {
+        return true;
+      }
+    }
   }
   return false;
 }
