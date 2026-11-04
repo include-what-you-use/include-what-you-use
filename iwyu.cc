@@ -1309,6 +1309,20 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return type;
   }
 
+  // Whether a use spelled in a macro body, and attributed to that spelling, is
+  // of a decl defined later in the same file.  The file needs nothing for its
+  // own decl, and the macro body is compiled where the macro is expanded, so
+  // where the decl sits relative to the body says nothing about whether it is
+  // complete at the use.
+  bool IsMacroBodyUseOfLaterDecl(SourceLocation orig_loc,
+                                 SourceLocation used_loc,
+                                 const NamedDecl* decl) const {
+    return orig_loc.isMacroID() &&
+           used_loc == GlobalSourceManager()->getSpellingLoc(orig_loc) &&
+           GetFileEntry(decl) == GetFileEntry(used_loc) &&
+           !IsBeforeInSameFile(decl, used_loc);
+  }
+
   // Get the canonical use location for a (location, decl) pair.
   // Decide whether the file expanding the macro or the file defining the macro
   // should be held responsible for a use.
@@ -1568,10 +1582,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     UseFlags use_flags = ComputeUseFlags(current_ast_node()) | extra_use_flags;
 
     // Canonicalize the use location and report the use.
+    const SourceLocation orig_loc = used_loc;
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     OptionalFileEntryRef used_in = GetFileEntry(used_loc);
 
-    if (!report_using_decl_only) {
+    if (!report_using_decl_only &&
+        !IsMacroBodyUseOfLaterDecl(orig_loc, used_loc, target_decl)) {
       preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
           used_loc, target_decl, use_flags, comment);
     }
@@ -1616,9 +1632,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     UseFlags use_flags = ComputeUseFlags(current_ast_node()) | extra_use_flags;
 
     // Canonicalize the use location and report the use.
+    const SourceLocation orig_loc = used_loc;
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     OptionalFileEntryRef used_in = GetFileEntry(used_loc);
-    if (!blocked_for_fwd_decl_.count(target_decl->getCanonicalDecl())) {
+    if (!blocked_for_fwd_decl_.count(target_decl->getCanonicalDecl()) &&
+        !IsMacroBodyUseOfLaterDecl(orig_loc, used_loc, target_decl)) {
       preprocessor_info().FileInfoFor(used_in)->ReportForwardDeclareUse(
           used_loc, target_decl, use_flags, comment);
     }
