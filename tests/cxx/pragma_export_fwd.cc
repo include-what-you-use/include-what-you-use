@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I .
+// IWYU_ARGS: -I . -Xiwyu --check_also=tests/cxx/*-d2.h
 
 #include "tests/cxx/pragma_export_fwd.h"
+#include <tests/cxx/pragma_export_fwd-d2.h>
 
 // Uses do not trigger warnings as they are already provided for.
 void a(const FwdDecl1&);
@@ -25,6 +26,10 @@ void d(const FwdDecl4*);
 // IWYU: FullAndFwdDeclUse is...*-i1.h
 FullAndFwdDeclUse full_use, *fwd_decl_use;
 
+// IWYU should not replace angle brackets with quotes in #include <*-d2.h>.
+// IWYU: FwdDecl5 needs a declaration
+void e(const FwdDecl5*);
+
 /**** IWYU_SUMMARY
 
 tests/cxx/pragma_export_fwd.cc should add these lines:
@@ -35,6 +40,7 @@ tests/cxx/pragma_export_fwd.cc should remove these lines:
 
 The full include-list for tests/cxx/pragma_export_fwd.cc:
 #include "tests/cxx/pragma_export_fwd.h"
+#include <tests/cxx/pragma_export_fwd-d2.h>  // for FwdDecl5 (ptr only)
 #include "tests/cxx/pragma_export_fwd-d1.h"  // for FwdDecl3 (ptr only), FwdDecl4 (ptr only)
 #include "tests/cxx/pragma_export_fwd-i1.h"  // for FullAndFwdDeclUse
 

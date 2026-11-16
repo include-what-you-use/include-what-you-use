@@ -1308,10 +1308,15 @@ void ProcessForwardDeclare(OneUse* use,
     for (const Decl* redecl : use->decl()->redecls()) {
       const auto* decl = cast<NamedDecl>(redecl);
       if (preprocessor_info->ForwardDeclareIsExported(decl)) {
+        OptionalFileEntryRef decl_file = GetFileEntry(decl);
+        OptionalFileEntryRef use_file = GetFileEntry(use->use_loc());
+        if (decl_file == use_file)
+          break;
         use->reset_decl(decl);
-        use->set_suggested_header(ConvertToQuotedInclude(
-            GetFilePath(decl->getLocation()),
-            MakeAbsolutePath(GetParentPath(GetFilePath(use->use_loc())))));
+        vector<string> headers =
+            GlobalIncludePicker().GetCandidateHeadersForFilepathIncludedFrom(
+                GetFilePath(decl_file), GetFilePath(use_file));
+        use->set_suggested_header(headers.at(0));
         VERRS(6) << "Updating target decl for " << use->symbol_name()
                  << " fwd-decl use: export pragma"
                  << " (" << use->PrintableUseLoc() << "), using decl from"
