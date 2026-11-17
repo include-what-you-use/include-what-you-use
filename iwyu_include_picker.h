@@ -54,6 +54,7 @@
 #include "clang/Basic/FileEntry.h"
 
 namespace clang {
+class Decl;
 class NamedDecl;
 }
 
@@ -128,6 +129,16 @@ class IncludePicker {
   // a "private" include.  If possible, we use the include-picker
   // mappings to map such includes to public (not-private) includes.
   void MarkPathAsPrivate(const string& path);
+
+  // Records that quoted_includee is mapped to quoted_includer because it
+  // uses a macro that quoted_includer defines before including it.  Each
+  // [first, last] range in dependent_lines is a part of quoted_includee
+  // that depends on such a macro: a line using it, or the whole
+  // conditional block whose condition does.
+  void AddMacroDefinedByIncluderMapping(
+      const string& quoted_includee,
+      const string& quoted_includer,
+      const vector<pair<int, int>>& dependent_lines);
 
   // Add this to say that "any file whose name matches the
   // friend_regex is allowed to include includee_filepath".  The regex
@@ -257,6 +268,23 @@ class IncludePicker {
       const MappedInclude&,
       IncludeVisibility default_value = kUnusedVisibility) const;
 
+  // Returns true if quoted_include is mapped to an includer only because
+  // it uses a macro that includer defines, and lines [first_line,
+  // last_line] of it do not depend on any such macro.  Declarations
+  // there are provided by quoted_include itself.
+  bool IsIndependentOfIncluderMacros(const string& quoted_include,
+                                     int first_line,
+                                     int last_line) const;
+
+  // Returns true if a line range that depends on an includer's macro
+  // starts inside a declaration in 'file' (quoted_include), e.g. members
+  // that exist only if the macro is defined.  The macro then changes what
+  // that header's existing declarations mean, so none of them are
+  // independent of it.  Cached per file.
+  bool IncluderMacrosChangeDeclarations(const string& quoted_include,
+                                        clang::OptionalFileEntryRef file,
+                                        const clang::Decl* any_decl) const;
+
   // For the given key, return the vector of values associated with
   // that key, or an empty vector if the key does not exist in the
   // map, filtering out private files.
@@ -318,6 +346,14 @@ class IncludePicker {
   // friend_to_headers_map_["foo/bar/x.cc"] will be augmented with the
   // contents of friend_to_headers_map_["@\"foo/bar/.*\""].
   map<string, set<string>> friend_to_headers_map_;
+
+  // Includee -> includer that defines a macro the includee uses -> lines
+  // of the includee that depend on such macros, from
+  // AddMacroDefinedByIncluderMapping().
+  map<string, map<string, vector<pair<int, int>>>> macro_dependent_lines_;
+
+  // Cache for IncluderMacrosChangeDeclarations().
+  mutable map<string, bool> includer_macros_change_declarations_;
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;
