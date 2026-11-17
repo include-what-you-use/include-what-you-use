@@ -272,7 +272,26 @@ class IwyuFileInfo {
   // associated headers.  Examples: vector has bits/stl_vector.h as an
   // associated header; foo.cc has foo.h and foo-inl.h as associated
   // headers.
-  void AddAssociatedHeader(const IwyuFileInfo* other);
+  //
+  // By default, this file is also required to explicitly #include
+  // 'other' (iwyu will suggest adding it if it's missing).  Pass
+  // require_include=false for the (unusual) case where 'other' should
+  // be treated as an associated provider of #includes without forcing
+  // this file to spell out the #include itself -- e.g. an inline-
+  // implementation file (foo.icc) that's associated with its header
+  // (foo.h) the 'wrong way round': foo.h already #includes foo.icc, so
+  // there's no reason to also require foo.icc to #include foo.h.  An
+  // #include that is already there is still left alone, though; it's
+  // redundant, not wrong.
+  void AddAssociatedHeader(const IwyuFileInfo* other,
+                           bool require_include = true);
+
+  // Returns true if 'other' has been registered as an associated header
+  // of this file.  Used to avoid making two files each other's associated
+  // header: see IwyuPreprocessorInfo::AddImplementationFile.
+  bool HasAssociatedHeader(const IwyuFileInfo* other) const {
+    return associated_headers_.find(other) != associated_headers_.end();
+  }
 
   // Use these to register an iwyu declaration: either an #include,
   // a forward-declaration or a using-declaration.
@@ -357,7 +376,19 @@ class IwyuFileInfo {
   // The meat of iwyu: compare the actual includes and forward-declares
   // against the symbol uses, and report which uses are iwyu violations.
   // Reports violations on errs(), and returns the number of violations.
+  // The associated headers must have been calculated first.
   size_t CalculateAndReportIwyuViolations();
+
+  set<clang::OptionalFileEntryRef> AssociatedFileEntries() const {
+    set<clang::OptionalFileEntryRef> associated_file_entries;
+    for (const IwyuFileInfo* associated : associated_headers_)
+      associated_file_entries.insert(associated->file_);
+    return associated_file_entries;
+  }
+
+  // Returns how this file #includes 'includee', such as "foo.h" or
+  // <foo.h>, or an empty string if it doesn't #include it directly.
+  string QuotedIncludeAsWritten(clang::OptionalFileEntryRef includee) const;
 
  private:
   const set<string>& desired_includes() const {
@@ -371,13 +402,6 @@ class IwyuFileInfo {
     for (const IwyuFileInfo* associated : associated_headers_)
       associated_quoted_includes.insert(associated->quoted_file_);
     return associated_quoted_includes;
-  }
-
-  set<clang::OptionalFileEntryRef> AssociatedFileEntries() const {
-    set<clang::OptionalFileEntryRef> associated_file_entries;
-    for (const IwyuFileInfo* associated : associated_headers_)
-      associated_file_entries.insert(associated->file_);
-    return associated_file_entries;
   }
 
   set<string> AssociatedDesiredIncludes() const {
@@ -413,6 +437,10 @@ class IwyuFileInfo {
   // this file is foo.cc, associated_headers_ are the IwyuFileInfo's for
   // foo.h and foo-inl.h, if present.
   set<const IwyuFileInfo*> associated_headers_;
+
+  // The subset of associated_headers_ for which we do *not* require this
+  // file to explicitly #include the header (see AddAssociatedHeader).
+  set<const IwyuFileInfo*> associated_headers_not_requiring_include_;
 
   // Holds all the uses that are reported.
   vector<OneUse> symbol_uses_;

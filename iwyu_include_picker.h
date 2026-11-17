@@ -119,6 +119,13 @@ class IncludePicker {
   // map_from should be a quoted include.
   void AddMapping(const string& map_from, const MappedInclude& map_to);
 
+  // Add this to say that 'impl' is an implementation file of 'header'.
+  // When the includes are finalized, 'impl' is made private to 'header',
+  // as if it had "IWYU pragma: private, include <header>", unless a
+  // mapping or a pragma gives it a visibility.
+  void AddImplementationFileMapping(const MappedInclude& impl,
+                                    const MappedInclude& header);
+
   // Indicate that the given quoted include should be considered
   // a "private" include.  If possible, we use the include-picker
   // mappings to map such includes to public (not-private) includes.
@@ -318,6 +325,10 @@ class IncludePicker {
   // friend_to_headers_map_["foo/bar/x.cc"] will be augmented with the
   // contents of friend_to_headers_map_["@\"foo/bar/.*\""].
   map<string, set<string>> friend_to_headers_map_;
+
+  // The implementation files and their headers: see
+  // AddImplementationFileMapping().
+  vector<pair<MappedInclude, MappedInclude>> implementation_file_mappings_;
 
   // Make sure we don't do any non-const operations after finalizing.
   bool has_called_finalize_added_include_lines_;
