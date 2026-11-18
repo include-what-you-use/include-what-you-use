@@ -14,6 +14,7 @@
 
 // IWYU_ARGS: -I .
 
+#include "tests/cxx/direct.h"
 #include "tests/cxx/macro_location_tpl-d2.h"
 #include "tests/cxx/macro_location_tpl-d1.h"
 #include "tests/cxx/macro_location_tpl-d3.h"
@@ -71,18 +72,25 @@ void use_macro_with_template_spec() {
   UseProvidedDefArg2<>();
 
   UseProvidedDefArg3<>();
+
+  // IWYU: IndirectClass needs a declaration
+  // IWYU: IndirectClass is...*indirect.h
+  MACRO_STRUCT_TMP_DOT_USE_T<IndirectClass>();
 }
 
 /**** IWYU_SUMMARY
 
 tests/cxx/macro_location_tpl.cc should add these lines:
+#include "tests/cxx/indirect.h"
 #include "tests/cxx/macro_location_tpl-i1.h"
 #include "tests/cxx/macro_location_tpl-i2.h"
 
 tests/cxx/macro_location_tpl.cc should remove these lines:
+- #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/macro_location_tpl.cc:
-#include "tests/cxx/macro_location_tpl-d1.h"  // for CallFn2WithProvidingMacro, DEFINE_CALL_FN3, UseProvidedDefArg3, UseProvidedFn1Taking
+#include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/macro_location_tpl-d1.h"  // for CallFn2WithProvidingMacro, DEFINE_CALL_FN3, MACRO_STRUCT_TMP_DOT_USE_T, UseProvidedDefArg3, UseProvidedFn1Taking
 #include "tests/cxx/macro_location_tpl-d2.h"  // for ExpansionTemplate, expansion_template
 #include "tests/cxx/macro_location_tpl-d3.h"  // for Fn3
 #include "tests/cxx/macro_location_tpl-i1.h"  // for CLASS_TEMPLATE_SPEC_EXPANSION, CLASS_TEMPLATE_SPEC_SPELLING, FUNC_TEMPLATE_SPEC_EXPANSION, FUNC_TEMPLATE_SPEC_SPELLING, Struct, UseNonProvidedDefArg1, UseSpecializedTpl

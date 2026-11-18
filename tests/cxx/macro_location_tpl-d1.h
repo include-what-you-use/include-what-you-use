@@ -31,3 +31,12 @@ void CallFn2WithProvidingMacro(T t) {
   }
 
 DEFINE_USE_PROVIDED_DEF_ARG_3
+
+struct MacroStructWithTplFn {
+  template <typename T>
+  void UseT() {
+    T t;
+  }
+};
+
+#define MACRO_STRUCT_TMP_DOT_USE_T MacroStructWithTplFn().UseT
