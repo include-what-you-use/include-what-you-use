@@ -17,6 +17,7 @@
 #define INCLUDE_WHAT_YOU_USE_IWYU_OUTPUT_H_
 
 #include <cstddef>
+#include <cstdint>                      // for uint64_t
 #include <map>                          // for map
 #include <set>                          // for set
 #include <string>                       // for string, operator<
@@ -44,9 +45,28 @@ using std::set;
 using std::string;
 using std::vector;
 
+class IwyuFileInfo;
 class IwyuPreprocessorInfo;
 
 enum class UseKind;
+
+// Use weights saturate rather than wrap around (and say so, once).
+uint64_t AddUseWeights(uint64_t a, uint64_t b);
+uint64_t MultiplyUseWeights(uint64_t a, uint64_t b);
+
+// Is told about the uses reported to any IwyuFileInfo (by the
+// ReportFullSymbolUse and ReportForwardDeclareUse methods), so that it can
+// have them repeated by IwyuFileInfo::ReportUseAgain instead of redoing
+// the work that reported them.
+class UseReportListener {
+ public:
+  virtual ~UseReportListener() = default;
+  // 'index' identifies the use among the uses of 'file'.
+  virtual void UseReported(IwyuFileInfo* file, size_t index) = 0;
+};
+
+// Sets the listener for all uses reported from now on, or none if nullptr.
+void SetUseReportListener(UseReportListener* listener);
 
 // This data structure holds information about a single use.  Not all
 // fields will be filled for all uses.
@@ -108,6 +128,10 @@ class OneUse {
   bool has_suggested_header() const {
     return !suggested_header_.empty();
   }
+  // How many identical reports of this use there were.
+  uint64_t weight() const {
+    return weight_;
+  }
 
   const string& suggested_header() const {
     CHECK_(has_suggested_header() && "Must assign suggested_header first");
@@ -121,6 +145,9 @@ class OneUse {
   void set_ignore_use() { ignore_use_ = true; }
   void set_is_iwyu_violation() { is_iwyu_violation_ = true; }
   void set_suggested_header(const string& fh) { suggested_header_ = fh; }
+  void set_weight(uint64_t weight) {
+    weight_ = weight;
+  }
 
   string PrintableUseLoc() const;
   const vector<string>& public_headers();  // not const because we fill lazily
@@ -148,6 +175,7 @@ class OneUse {
   string suggested_header_;        // header that allows us to satisfy use
   bool ignore_use_;                // set to true if use is discarded
   bool is_iwyu_violation_;         // set to false when we figure out it's not
+  uint64_t weight_ = 1;
 };
 
 class OneIncludeOrForwardDeclareLine {
@@ -173,7 +201,7 @@ class OneIncludeOrForwardDeclareLine {
   bool is_elaborated_type() const {
     return is_elaborated_type_;
   }
-  const map<string, int>& symbol_counts() const {
+  const map<string, uint64_t>& symbol_counts() const {
     return symbol_counts_;
   }
 
@@ -210,7 +238,7 @@ class OneIncludeOrForwardDeclareLine {
   void clear_desired() { is_desired_ = false; }
   void clear_line_numbers() { start_linenum_ = end_linenum_ = -1; }
   // Another symbol we're using that's defined in this file.
-  void AddSymbolUse(const string& symbol_name);
+  void AddSymbolUse(const string& symbol_name, uint64_t count = 1);
   bool HasSymbolUse(const string& symbol_name) const;
 
   bool LineNumbersMatch(const OneIncludeOrForwardDeclareLine& that) const {
@@ -225,7 +253,8 @@ class OneIncludeOrForwardDeclareLine {
   bool is_desired_ = false;          // IWYU will recommend this line
   bool is_present_ = false;          // line was present before the IWYU run
   bool is_elaborated_type_ = false;  // Fwd-decl introduced by elaborated type
-  map<string, int> symbol_counts_;   // how many times we referenced each symbol
+  map<string, uint64_t> symbol_counts_;  // how many times we referenced each
+                                         // symbol
   // Only either two following members are set for includes
   string quoted_include_;  // quoted file name we're including
   clang::OptionalFileEntryRef included_file_;  // the file we're including
@@ -319,6 +348,10 @@ class IwyuFileInfo {
                                const clang::NamedDecl* decl,
                                UseFlags flags, const char* comment);
 
+  // Has the same effect as making the report of the use at 'index' (see
+  // UseReportListener) 'weight' more times, now.
+  void ReportUseAgain(size_t index, uint64_t weight);
+
   // Called whenever a NamedDecl is accessed through a UsingDecl.
   // ie: using std::swap; swap(a, b);
   void ReportUsingDeclUse(clang::SourceLocation use_loc,
@@ -388,6 +421,9 @@ class IwyuFileInfo {
     return associated_desired_includes;
   }
 
+  // Records a reported use, and tells the use report listener.
+  void AddReportedUse(OneUse use, const char* log_prefix);
+
   // Populates uses with full data, including is_iwyu_violation_.
   void CalculateIwyuViolations(vector<OneUse>* uses);
   // Uses uses to emit warning messages (at high enough verbosity).
@@ -416,6 +452,10 @@ class IwyuFileInfo {
 
   // Holds all the uses that are reported.
   vector<OneUse> symbol_uses_;
+
+  // The uses repeated by ReportUseAgain since the last newly reported use,
+  // by the index of the use they repeat.
+  map<size_t, size_t> repeated_uses_;
 
   // Holds all the lines (#include and fwd-declare) that are reported.
   vector<OneIncludeOrForwardDeclareLine> lines_;
@@ -449,6 +489,8 @@ bool IsDirectlyIncluded(const clang::NamedDecl*, const IwyuFileInfo& includer);
 // Helpers for testing.
 
 namespace internal {
+
+vector<string> GetSymbolsSortedByFrequency(const map<string, uint64_t>& counts);
 
 class FakeNamedDecl : public clang::NamedDecl {
  public:
