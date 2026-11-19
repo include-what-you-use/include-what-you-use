@@ -622,6 +622,32 @@ string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl,
   return retval;
 }
 
+bool HasWrittenQualifiedNameIn(const NamedDecl* named_decl,
+                               const set<string>& names) {
+  // The written name of a decl with an identifier ends with "::" and that
+  // identifier when it is qualified and isn't an explicit specialization
+  // (whose name ends with template arguments). Checking that first is much
+  // cheaper than printing the qualifier, which for a member of a class
+  // template specialization includes the template arguments, whose spelling
+  // may be exponentially long in their nesting depth.
+  if (const IdentifierInfo* identifier = named_decl->getIdentifier()) {
+    const string suffix = "::" + identifier->getName().str();
+    if (llvm::none_of(names, [&suffix](const string& name) {
+          return StringRef(name).ends_with(suffix);
+        })) {
+      return false;
+    }
+  }
+  // An enclosing specialization is printed with its template arguments.
+  for (const DeclContext* ctx = named_decl->getDeclContext(); ctx;
+       ctx = ctx->getParent()) {
+    if (isa<ClassTemplateSpecializationDecl>(ctx))
+      return false;
+  }
+  return names.count(
+      GetWrittenQualifiedNameAsString(named_decl, /*with_fn_args=*/false));
+}
+
 // --- Utilities for Template Arguments.
 
 // If the TemplateArgument is a type (and not an expression such as
@@ -1590,7 +1616,6 @@ optional<unsigned> GetNumWrittenTplArgs(ArrayRef<TemplateArgument> args) {
 }
 
 bool IsStdNonProvidingTypedef(const TypedefNameDecl* decl) {
-  string name = GetWrittenQualifiedNameAsString(decl, /*with_fn_args=*/false);
   // clang-format off
   static const set<string> typedefs = {
     "std::filebuf",
@@ -1638,7 +1663,7 @@ bool IsStdNonProvidingTypedef(const TypedefNameDecl* decl) {
     "std::wsyncbuf",
   };
   // clang-format on
-  return typedefs.count(name);
+  return HasWrittenQualifiedNameIn(decl, typedefs);
 }
 
 // --- Utilities for Type.

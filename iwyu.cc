@@ -1202,9 +1202,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const ClassTemplateSpecializationDecl* tpl_decl = DynCastFrom(decl);
     if (!tpl_decl)
       return false;
-    const string actual_name =
-        GetWrittenQualifiedNameAsString(tpl_decl, /*with_fn_args=*/false);
-    if (name != actual_name)
+    if (!HasWrittenQualifiedNameIn(tpl_decl, {name}))
       return false;
     const TemplateArgumentList& tpl_args = tpl_decl->getTemplateArgs();
     if (tpl_args.size() != num_args)
