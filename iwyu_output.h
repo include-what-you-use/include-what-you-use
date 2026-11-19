@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <map>                          // for map
+#include <optional>                     // for optional
 #include <set>                          // for set
 #include <string>                       // for string, operator<
 #include <vector>                       // for vector
@@ -71,9 +72,7 @@ class OneUse {
          const string& quoted_include,
          clang::SourceLocation include_loc);
 
-  const string& symbol_name() const {
-    return symbol_name_;
-  }
+  const string& symbol_name() const;
   const string& short_symbol_name() const {
     return short_symbol_name_;
   }
@@ -133,7 +132,11 @@ class OneUse {
   void SetPublicHeaders();         // sets based on decl_filepath_
   void SetCanonicalHeaders();
 
-  string symbol_name_;             // the symbol being used
+  // The symbol being used. For a decl, it is computed only when needed: the
+  // name of a member of a class template specialization includes the
+  // template arguments, whose spelling may be exponentially long in their
+  // nesting depth.
+  mutable std::optional<string> symbol_name_;
   string short_symbol_name_;       // 'short' form of the symbol being used
   const clang::NamedDecl* decl_;   // decl of the symbol, if we know it
   clang::SourceLocation decl_loc_;     // where the decl is attributed to live
