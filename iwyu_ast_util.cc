@@ -675,6 +675,7 @@ class SugaredTypeEnumerator
   // We can add more entry points as needed.
   set<const Type*> Enumerate(const Type* type) {
     seen_types_.clear();
+    traversed_types_.clear();
     if (!type)
       return seen_types_;
     TraverseType(QualType(type, 0));
@@ -683,6 +684,7 @@ class SugaredTypeEnumerator
 
   set<const Type*> Enumerate(const TemplateArgument& tpl_arg) {
     seen_types_.clear();
+    traversed_types_.clear();
     TraverseTemplateArgument(tpl_arg);
     return seen_types_;
   }
@@ -714,6 +716,13 @@ class SugaredTypeEnumerator
 
     const Type* desugared = DesugarAliasTypes(desugared_until_alias_or_tpl);
 
+    // Alias template arguments are reachable through every substitution of
+    // the corresponding parameter, so the type graph is a DAG whose unfolding
+    // may be exponential in its size. Traversing the same subtree again can't
+    // add anything to the (unordered) result.
+    if (!traversed_types_.insert({desugared, traverse_qualifier}).second)
+      return true;
+
     // Add desugared type components, if any. Don't add two types with the same
     // canonical type.
     // TODO(bolshakov): it doesn't always work properly. For example, both A and
@@ -723,6 +732,7 @@ class SugaredTypeEnumerator
   }
 
   set<const Type*> seen_types_;
+  set<pair<const Type*, bool>> traversed_types_;
 };
 
 class TypeEnumeratorWithoutSubstituted
@@ -731,6 +741,7 @@ class TypeEnumeratorWithoutSubstituted
   // --- Public interface
   set<const Type*> Enumerate(const Type* type) {
     seen_types_.clear();
+    traversed_types_.clear();
     if (!type)
       return seen_types_;
     TraverseType(QualType(type, 0));
@@ -770,10 +781,18 @@ class TypeEnumeratorWithoutSubstituted
 
     seen_types_.insert(Desugar(type));
 
+    // A type may be reachable along many paths (e.g. through several
+    // arguments of nested templates), and traversing it again can't add
+    // anything to the (unordered) result.
+    if (!traversed_types_.insert({qual_type.getTypePtr(), traverse_qualifier})
+             .second)
+      return true;
+
     return Base::TraverseType(qual_type, traverse_qualifier);
   }
 
   set<const Type*> seen_types_;
+  set<pair<const Type*, bool>> traversed_types_;
 };
 
 class CanonicalTypeEnumerator
@@ -782,6 +801,7 @@ class CanonicalTypeEnumerator
   // --- Public interface
   set<const Type*> Enumerate(const Type* type) {
     seen_types_.clear();
+    traversed_types_.clear();
     if (!type)
       return seen_types_;
     TraverseType(QualType(type, 0));
@@ -811,11 +831,15 @@ class CanonicalTypeEnumerator
     seen_types_.insert(GetCanonicalType(type));
 
     const Type* desugared = DesugarAliasTypes(type);
+    // As in SugaredTypeEnumerator, revisiting a subtree adds nothing.
+    if (!traversed_types_.insert({desugared, traverse_qualifier}).second)
+      return true;
     // Add desugared type components.
     return Base::TraverseType(QualType(desugared, 0), traverse_qualifier);
   }
 
   set<const Type*> seen_types_;
+  set<pair<const Type*, bool>> traversed_types_;
 };
 
 // A 'component' of a type is a type beneath it in the AST tree.
@@ -1740,23 +1764,36 @@ bool IsTemplatizedType(const Type* type) {
   return false;
 }
 
-bool InvolvesTypeForWhich(const Type* type, function<bool(const Type*)> pred) {
+static bool InvolvesTypeForWhich(const Type* type,
+                                 const function<bool(const Type*)>& pred,
+                                 set<const Type*>* visited) {
   type = Desugar(type);
   if (pred(type))
     return true;
   const Decl* decl = TypeToDeclAsWritten(type);
   if (const auto* cts_decl =
           dyn_cast_or_null<ClassTemplateSpecializationDecl>(decl)) {
+    // The same specialization may be an argument of many specializations,
+    // e.g. Pair<Pair<A, A>, Pair<A, A>>. The search stops at the first match,
+    // so the arguments of a type seen before are known not to involve
+    // a matching type.
+    if (!visited->insert(type).second)
+      return false;
     const TemplateArgumentList& tpl_args = cts_decl->getTemplateArgs();
     for (const TemplateArgument& tpl_arg : tpl_args.asArray()) {
       if (const Type* arg_type = GetTemplateArgAsType(tpl_arg)) {
-        if (InvolvesTypeForWhich(arg_type, pred)) {
+        if (InvolvesTypeForWhich(arg_type, pred, visited)) {
           return true;
         }
       }
     }
   }
   return false;
+}
+
+bool InvolvesTypeForWhich(const Type* type, function<bool(const Type*)> pred) {
+  set<const Type*> visited;
+  return InvolvesTypeForWhich(type, pred, &visited);
 }
 
 bool IsPointerOrReferenceAsWritten(const Type* type) {
