@@ -9,10 +9,11 @@
 
 // IWYU_ARGS: -I .
 
-// Tests that every spelling of a type in a template argument is considered
-// for providing it, even when the type behind the spelling has been seen in
-// the argument already. Both typedefs below name the same type node, but only
-// the one from a header provides Payload.
+// Checks that collecting a new spelling precedes pruning repeated descent.
+// Both typedefs name Payload, but only the header-defined typedef provides it.
+// Instantiating Holder needs Payload complete; losing ProvidedPayload's
+// providing information would incorrectly require the payload header here.
+// This is a correctness test, not a performance test.
 
 #include "tests/cxx/type_enumerator_sugar-provider.h"
 #include "tests/cxx/type_enumerator_sugar-tpl.h"
