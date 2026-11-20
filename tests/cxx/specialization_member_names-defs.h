@@ -1,4 +1,4 @@
-//===--- deep_specialization_member_names-defs.h - test input -------------===//
+//===--- specialization_member_names-defs.h - test input ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
