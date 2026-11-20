@@ -716,10 +716,9 @@ class SugaredTypeEnumerator
 
     const Type* desugared = DesugarAliasTypes(desugared_until_alias_or_tpl);
 
-    // Alias template arguments are reachable through every substitution of
-    // the corresponding parameter, so the type graph is a DAG whose unfolding
-    // may be exponential in its size. Traversing the same subtree again can't
-    // add anything to the (unordered) result.
+    // Nested template arguments can reach a shared subtree along exponentially
+    // many paths. Revisiting it with the same qualifier traversal cannot add
+    // anything to the result set.
     if (!traversed_types_.insert({desugared, traverse_qualifier}).second)
       return true;
 
@@ -781,9 +780,9 @@ class TypeEnumeratorWithoutSubstituted
 
     seen_types_.insert(Desugar(type));
 
-    // A type may be reachable along many paths (e.g. through several
-    // arguments of nested templates), and traversing it again can't add
-    // anything to the (unordered) result.
+    // Nested template arguments can reach a shared subtree along exponentially
+    // many paths. Revisiting it with the same qualifier traversal cannot add
+    // anything to the result set.
     if (!traversed_types_.insert({qual_type.getTypePtr(), traverse_qualifier})
              .second)
       return true;
@@ -831,7 +830,9 @@ class CanonicalTypeEnumerator
     seen_types_.insert(GetCanonicalType(type));
 
     const Type* desugared = DesugarAliasTypes(type);
-    // As in SugaredTypeEnumerator, revisiting a subtree adds nothing.
+    // Nested template arguments can reach a shared subtree along exponentially
+    // many paths. Revisiting it with the same qualifier traversal cannot add
+    // anything to the result set.
     if (!traversed_types_.insert({desugared, traverse_qualifier}).second)
       return true;
     // Add desugared type components.
