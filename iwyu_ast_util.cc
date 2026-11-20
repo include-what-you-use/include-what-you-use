@@ -624,12 +624,13 @@ string GetWrittenQualifiedNameAsString(const NamedDecl* named_decl,
 
 bool HasWrittenQualifiedNameIn(const NamedDecl* named_decl,
                                const set<string>& names) {
-  // The written name of a decl with an identifier ends with "::" and that
-  // identifier when it is qualified and isn't an explicit specialization
-  // (whose name ends with template arguments). Checking that first is much
-  // cheaper than printing the qualifier, which for a member of a class
-  // template specialization includes the template arguments, whose spelling
-  // may be exponentially long in their nesting depth.
+  CHECK_(llvm::all_of(names, [](const string& name) {
+    return StringRef(name).contains("::");
+  })) << "Names must be qualified";
+  // Matching an identifier suffix is necessary but not sufficient: explicit
+  // specializations also print template arguments. Reject obvious mismatches
+  // before printing potentially exponentially long template qualifiers, then
+  // retain the exact comparison below.
   if (const IdentifierInfo* identifier = named_decl->getIdentifier()) {
     const string suffix = "::" + identifier->getName().str();
     if (llvm::none_of(names, [&suffix](const string& name) {

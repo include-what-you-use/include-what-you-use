@@ -132,10 +132,9 @@ class OneUse {
   void SetPublicHeaders();         // sets based on decl_filepath_
   void SetCanonicalHeaders();
 
-  // The symbol being used. For a decl, it is computed only when needed: the
-  // name of a member of a class template specialization includes the
-  // template arguments, whose spelling may be exponentially long in their
-  // nesting depth.
+  // Many uses are discarded before header mapping. Defer their qualified
+  // names, which can expand exponentially for nested template specializations,
+  // unless a surviving use or a diagnostic actually needs the spelling.
   mutable std::optional<string> symbol_name_;
   string short_symbol_name_;       // 'short' form of the symbol being used
   const clang::NamedDecl* decl_;   // decl of the symbol, if we know it

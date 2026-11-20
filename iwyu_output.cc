@@ -337,8 +337,10 @@ OneUse::OneUse(OptionalFileEntryRef included_file,
 }
 
 const string& OneUse::symbol_name() const {
-  if (!symbol_name_)
+  if (!symbol_name_) {
+    CHECK_(decl_ && "An uncached symbol name requires a declaration");
     symbol_name_ = internal::GetQualifiedNameAsString(decl_);
+  }
   return *symbol_name_;
 }
 
