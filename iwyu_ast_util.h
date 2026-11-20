@@ -533,6 +533,11 @@ void PrintStmt(const clang::Stmt* stmt);
 string GetWrittenQualifiedNameAsString(const clang::NamedDecl* named_decl,
                                        bool with_fn_args);
 
+// Returns whether GetWrittenQualifiedNameAsString(named_decl, false) is one of
+// the names, all of which must be qualified and without template arguments.
+bool HasWrittenQualifiedNameIn(const clang::NamedDecl* named_decl,
+                               const set<string>& names);
+
 // --- Type conversion utilities.
 
 namespace internal {

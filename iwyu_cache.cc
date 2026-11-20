@@ -17,7 +17,6 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/LangOptions.h"
 #include "iwyu_ast_util.h"
-#include "iwyu_stl_util.h"
 
 using clang::ClassTemplateSpecializationDecl;
 using clang::LangOptions;
@@ -72,8 +71,7 @@ map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
   const NamedDecl* tpl_decl = TypeToDeclAsWritten(type);
   if (!tpl_decl)  // This probably means that the template name is dependent.
     return map<const Type*, const Type*>();
-  if (!ContainsKey(fulluse_types, GetWrittenQualifiedNameAsString(
-                                      tpl_decl, /*with_fn_args=*/false)))
+  if (!HasWrittenQualifiedNameIn(tpl_decl, fulluse_types))
     return map<const Type*, const Type*>();
 
   // The code below doesn't handle template-template args/etc.  None
