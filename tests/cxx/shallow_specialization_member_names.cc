@@ -1,4 +1,4 @@
-//===--- shallow_specialization_member_names.cc - test input ------------===//
+//===--- shallow_specialization_member_names.cc - test input --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
