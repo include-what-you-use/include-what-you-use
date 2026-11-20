@@ -740,7 +740,6 @@ class TypeEnumeratorWithoutSubstituted
   // --- Public interface
   set<const Type*> Enumerate(const Type* type) {
     seen_types_.clear();
-    traversed_types_.clear();
     if (!type)
       return seen_types_;
     TraverseType(QualType(type, 0));
@@ -780,15 +779,10 @@ class TypeEnumeratorWithoutSubstituted
 
     seen_types_.insert(Desugar(type));
 
-    if (!traversed_types_.insert({qual_type.getTypePtr(), traverse_qualifier})
-             .second)
-      return true;
-
     return Base::TraverseType(qual_type, traverse_qualifier);
   }
 
   set<const Type*> seen_types_;
-  set<pair<const Type*, bool>> traversed_types_;
 };
 
 class CanonicalTypeEnumerator
