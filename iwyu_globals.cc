@@ -39,7 +39,6 @@
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "iwyu_version.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 
 using clang::CompilerInstance;

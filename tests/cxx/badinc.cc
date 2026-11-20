@@ -1349,7 +1349,6 @@ int main() {
   (void)(i1_union.a->a);
   // IWYU: I1_Class is...*badinc-i1.h
   I1_Class::s();
-  // IWYU: I2_Struct is...*badinc-i2.h
   // IWYU: I2_Function({{.*}}) is...*badinc-i2.h
   (void)(I2_Function(local_i2_class_ptr).b);
   // IWYU: I2_Class is...*badinc-i2.h
@@ -1726,7 +1725,6 @@ int main() {
   // Test if and while.
   // IWYU: I1_Function({{.*}}) is...*badinc-i1.h
   if (I1_Function(0)) {        // returns an I1Enum
-    // IWYU: I2_Struct is...*badinc-i2.h
     // IWYU: I2_Function({{.*}}) is...*badinc-i2.h
     while (I2_Function(0)) ;   // returns a I2_Struct, converted to a bool
   }
