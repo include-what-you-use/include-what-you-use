@@ -37,7 +37,6 @@
 #include "iwyu_string_util.h"
 #include "iwyu_verrs.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 
 namespace include_what_you_use {

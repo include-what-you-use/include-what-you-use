@@ -149,7 +149,6 @@
 
 // TODO: Clean out pragmas as IWYU improves.
 // IWYU pragma: no_include "clang/AST/Redeclarable.h"
-// IWYU pragma: no_include "clang/AST/StmtIterator.h"
 // IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
 // IWYU pragma: no_include "llvm/ADT/iterator.h"
 
@@ -168,6 +167,7 @@ namespace include_what_you_use {
 // $ grep "using clang":: iwyu.cc | cut -b14- | tr -d ";" | while read t; do grep -q "[^:]$t" iwyu.cc || echo $t; done
 using clang::ASTConsumer;
 using clang::ASTContext;
+using clang::AbstractConditionalOperator;
 using clang::ArraySubscriptExpr;
 using clang::ArrayType;
 using clang::Attr;
@@ -274,6 +274,7 @@ using clang::TypedefDecl;
 using clang::TypedefNameDecl;
 using clang::TypedefType;
 using clang::UnaryExprOrTypeTraitExpr;
+using clang::UnaryOperator;
 using clang::UnresolvedLookupExpr;
 using clang::UnresolvedMemberExpr;
 using clang::UnresolvedSet;
@@ -1539,6 +1540,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const Type* return_type = providing_decl->getReturnType().getTypePtr();
     if (isa<AutoType>(return_type))
       return {GetCanonicalType(return_type)};
+    if (return_type->isPointerOrReferenceType())
+      return set<const Type*>{};
     return GetProvidedTypes(return_type, GetLocation(providing_decl));
   }
 
@@ -1846,12 +1849,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    if (const Type* type = GetTypeOf(stmt->getRangeInit())) {
-      ReportTypeUse(CurrentLoc(), type, DerefKind::RemoveRefs);
+    ReportExprUse(CurrentLoc(), stmt->getRangeInit(), DerefKind::RemoveRefs);
 
-      // TODO: We should probably find a way to require inclusion of any
-      // argument-dependent begin/end declarations.
-    }
+    // TODO: We should probably find a way to require inclusion of any
+    // argument-dependent begin/end declarations.
 
     return true;
   }
@@ -1872,12 +1873,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   bool VisitCastExpr(CastExpr* expr) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    const Type* from_type = GetTypeOf(expr->getSubExprAsWritten());
+    const Expr* sub_expr = expr->getSubExprAsWritten();
+    const Type* from_type = GetTypeOf(sub_expr);
     const Type* to_type = [expr] {
       if (const auto* expl_cast_expr = dyn_cast<ExplicitCastExpr>(expr))
         return expl_cast_expr->getTypeAsWritten().getTypePtr();
       return expr->getType().getTypePtr();
     }();
+    ValueSaver<set<const Type*>> blocked_types_guard =
+        ScopedAdditionalBlockedTypes(GetProvidedByExpr(sub_expr));
 
     // If this cast requires a user-defined conversion of the from-type, look up
     // its return type so we can see through up/down-casts via such conversions.
@@ -2039,8 +2043,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     const Expr* base_expr = expr->getBase();
-    const Type* base_type = GetTypeOf(base_expr);
-    CHECK_(base_type && "Member's base does not have a type?");
     // Technically, we should say the type is being used at the
     // location of base_expr.  That may be a different file than us in
     // cases like MACRO.b().  However, while one can imagine
@@ -2051,7 +2053,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // that's responsible for its type or not, we just assume it is.
     // TODO(csilvers): fix when we can determine what the macro-text
     // is responsible for and what we're responsible for.
-    ReportTypeUse(CurrentLoc(), base_type, DerefKind::RemoveRefsAndPtr);
+    ReportExprUse(CurrentLoc(), base_expr, DerefKind::RemoveRefsAndPtr);
     return true;
   }
 
@@ -2068,11 +2070,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     const Expr* base_expr = expr->getBase();
-    const Type* base_type = GetTypeOf(base_expr);
-    CHECK_(base_type && "Member's base does not have a type?");
-    if (base_type->isDependentType())
+    if (base_expr->isTypeDependent())
       return true;
-    ReportTypeUse(CurrentLoc(), base_type, DerefKind::RemoveRefsAndPtr);
+    ReportExprUse(CurrentLoc(), base_expr, DerefKind::RemoveRefsAndPtr);
     return true;
   }
 
@@ -2082,8 +2082,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    ReportTypeUse(CurrentLoc(), GetTypeOf(expr->getLHS()),
-                  DerefKind::RemoveRefsAndPtr);
+    ReportExprUse(CurrentLoc(), expr->getLHS(), DerefKind::RemoveRefsAndPtr);
     return true;
   }
 
@@ -2107,7 +2106,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // pointer arithmetic.
       const Type* type = GetTypeOf(term);
       if (type->isPointerType() || type->isArrayType()) {
-        ReportTypeUse(GetLocation(term), type, DerefKind::RemoveRefsAndPtr);
+        ReportExprUse(GetLocation(term), term, DerefKind::RemoveRefsAndPtr);
       }
     }
 
@@ -2876,8 +2875,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const Expr* arg_expr = expr->getArgumentExpr()->IgnoreParenImpCasts();
       // This reports even if the expr ends up not being a reference, but
       // that's ok (if potentially redundant).
-      ReportTypeUse(GetLocation(arg_expr), GetTypeOf(arg_expr),
-                    DerefKind::RemoveRefs);
+      ReportExprUse(GetLocation(arg_expr), arg_expr, DerefKind::RemoveRefs);
     }
     return true;
   }
@@ -2892,12 +2890,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     if (const Expr* owner_expr = GetFirstClassArgument(expr)) {
-      const Type* owner_type = GetTypeOf(owner_expr);
       // Note we report the type use is the location of owner_expr
       // (the 'a' in 'a << b' or the 'MACRO' in 'MACRO << b'), rather
       // than our location (which is the '<<').  That way, we properly
       // situate the owner when it's a macro.
-      ReportTypeUse(GetLocation(owner_expr), owner_type, DerefKind::RemoveRefs);
+      ReportExprUse(GetLocation(owner_expr), owner_expr, DerefKind::RemoveRefs);
     }
     return true;
   }
@@ -2913,6 +2910,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // We always delete a pointer, so do one dereference to get the
     // actual type being deleted.
     const Type* delete_ptr_type = GetTypeOf(delete_arg);
+    // TODO(bolshakov): ReportExprUse? But currently, functions don't provide
+    // returned pointers.
     ReportTypeUse(CurrentLoc(), delete_ptr_type, DerefKind::RemoveRefsAndPtr);
 
     return true;
@@ -3530,6 +3529,61 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return res;
   }
 
+  // If expr refers to a function call (probably, indirectly), this should
+  // give provided return types of that function. Besides, if expr involves
+  // a derived-to-base conversion, VisitCastExpr should report the derived type,
+  // and the derived type assuredly provides its bases.
+  set<const Type*> GetProvidedByExpr(const Expr* expr) const {
+    if (const auto* cast_expr = dyn_cast<CastExpr>(expr)) {
+      if (cast_expr->getCastKind() == clang::CK_DerivedToBase)
+        return {GetCanonicalType(cast_expr->getType().getTypePtr())};
+    }
+    expr = expr->IgnoreParenImpCasts();
+    if (const auto* call_expr = dyn_cast<CallExpr>(expr)) {
+      if (const FunctionDecl* callee = call_expr->getDirectCallee()) {
+        return Union(static_cast<const Derived*>(this)->GetProvidedByTplArg(
+                         callee, TypeOfParentIfMethod(call_expr), call_expr),
+                     GetProvidedTypesForFnReturn(callee));
+      }
+    } else if (const auto* decl_ref_expr = dyn_cast<DeclRefExpr>(expr)) {
+      if (const auto* var_decl = dyn_cast<VarDecl>(decl_ref_expr->getDecl())) {
+        // If the type is explicitly written in the variable declaration,
+        // don't consider the initializer.
+        if (!var_decl->getType()->getContainedDeducedType())
+          return set<const Type*>{};
+        // If the variable is in another header, the code should better not
+        // depend on how it is defined.
+        if (GetFileEntry(var_decl) != GetFileEntry(decl_ref_expr))
+          return set<const Type*>{};
+        return GetProvidedByExpr(var_decl->getInit());
+      }
+    } else if (const auto* cond = dyn_cast<AbstractConditionalOperator>(expr)) {
+      return Union(GetProvidedByExpr(cond->getTrueExpr()),
+                   GetProvidedByExpr(cond->getFalseExpr()));
+    } else if (const auto* unary = dyn_cast<UnaryOperator>(expr)) {
+      return GetProvidedByExpr(unary->getSubExpr());
+    } else if (const auto* binary = dyn_cast<BinaryOperator>(expr)) {
+      if (binary->isCommaOp())
+        return GetProvidedByExpr(binary->getRHS());
+      return Union(GetProvidedByExpr(binary->getRHS()),
+                   GetProvidedByExpr(binary->getLHS()));
+    } else if (const auto* subscript = dyn_cast<ArraySubscriptExpr>(expr)) {
+      return GetProvidedByExpr(subscript->getBase());
+    } else if (const auto* opaque = dyn_cast<OpaqueValueExpr>(expr)) {
+      // Appears in BinaryConditionalOperator (GNU ?: extension) at least.
+      return GetProvidedByExpr(opaque->getSourceExpr());
+    } else if (const auto* bind_temp = dyn_cast<CXXBindTemporaryExpr>(expr)) {
+      // Appears when the function return type has a non-trivial destructor.
+      return GetProvidedByExpr(bind_temp->getSubExpr());
+    } else if (const auto* construct = dyn_cast<CXXConstructExpr>(expr)) {
+      // This handles implicit construction cases.
+      if (construct->getNumArgs() == 1) {
+        return GetProvidedByExpr(construct->getArg(0));
+      }
+    }
+    return set<const Type*>{};
+  }
+
   template <typename... Sets>
   ValueSaver<set<const Type*>> ScopedAdditionalBlockedTypes(
       Sets&&... additional_blocked_types) {
@@ -3755,6 +3809,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       VERRS(6) << "(For type " << PrintableType(type) << "):\n";
       IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl);
     }
+  }
+
+  void ReportExprUse(SourceLocation used_loc,
+                     const Expr* expr,
+                     DerefKind deref_kind) {
+    ValueSaver<set<const Type*>> blocked_types_guard =
+        ScopedAdditionalBlockedTypes(GetProvidedByExpr(expr));
+    ReportTypeUse(used_loc, GetTypeOf(expr), deref_kind);
   }
 
   void ReportWrittenTypeAlias(const Type* type) {
@@ -4495,7 +4557,7 @@ class InstantiatedTemplateVisitor
 
   set<const Type*> GetProvidedByTplArg(const FunctionDecl*,
                                        const Type*,
-                                       const Expr*) {
+                                       const Expr*) const {
     return set<const Type*>{};
   }
 
@@ -5892,7 +5954,7 @@ class IwyuAstConsumer
 
   set<const Type*> GetProvidedByTplArg(const FunctionDecl* callee,
                                        const Type* parent_type,
-                                       const Expr* calling_expr) {
+                                       const Expr* calling_expr) const {
     set<const Type*> ret = GetTplInstData(callee, calling_expr).provided_types;
     if (parent_type) {
       const Type* deref_type = RemovePointersAndReferences(parent_type);
@@ -5909,6 +5971,8 @@ class IwyuAstConsumer
     if (expr->getConstructor()->isCopyOrMoveConstructor()) {
       const Type* source_type = GetTypeOf(expr->getArg(0));
       if (GetProvidedTypeComponents(source_type).count(type))
+        return true;
+      if (GetProvidedByExpr(expr->getArg(0)).count(type))
         return true;
     }
 

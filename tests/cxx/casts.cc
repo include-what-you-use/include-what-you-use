@@ -73,6 +73,13 @@ int main() {
   // IWYU: CastsClass needs a declaration
   // IWYU: CastsSubclass is...*casts-i1.h
   (void)static_cast<int CastsClass::*>(csc_memptr_aliased_qual_np);
+
+  // IWYU: CastsSubclass needs a declaration
+  extern CastsSubclass csc;
+  // The type of sizeof subexpression is CastsClass, but CastsSubclass already
+  // provides it.
+  // IWYU: CastsSubclass is...*casts-i1.h
+  (void)sizeof(true ? *cc : csc);
 }
 
 
