@@ -395,4 +395,10 @@ if (Python3_Interpreter_FOUND)
     COMMAND ${Python3_EXECUTABLE} iwyu_tool_test.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   )
+  add_test(NAME iwyu_provider_cache_test
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/unittests/iwyu_provider_cache_test.py
+      $<TARGET_FILE:include-what-you-use>
+  )
+  set_tests_properties(iwyu_provider_cache_test PROPERTIES TIMEOUT 25)
 endif()
