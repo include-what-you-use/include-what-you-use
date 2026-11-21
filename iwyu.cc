@@ -5927,6 +5927,29 @@ class IwyuAstConsumer
   }
 
  private:
+  // Independent queries need fresh results because Sema may change the AST.
+  // Nested scopes reuse the active cache; only its owner clears it on exit.
+  class ProvidedTypeComponentsCacheScope {
+   public:
+    explicit ProvidedTypeComponentsCacheScope(const IwyuAstConsumer* consumer)
+        : consumer_(consumer) {
+      if (!consumer_->provided_type_components_cache_)
+        consumer_->provided_type_components_cache_ = &cache_;
+    }
+    ~ProvidedTypeComponentsCacheScope() {
+      if (consumer_->provided_type_components_cache_ == &cache_)
+        consumer_->provided_type_components_cache_ = nullptr;
+    }
+    ProvidedTypeComponentsCacheScope(const ProvidedTypeComponentsCacheScope&) =
+        delete;
+    ProvidedTypeComponentsCacheScope& operator=(
+        const ProvidedTypeComponentsCacheScope&) = delete;
+
+   private:
+    const IwyuAstConsumer* consumer_;
+    map<const Type*, set<const Type*>> cache_;
+  };
+
   // This is to keep includes under non-top-level declarations and other AST
   // nodes, like in this case:
   //
@@ -5952,8 +5975,14 @@ class IwyuAstConsumer
   }
 
   set<const Type*> GetProvidedTypeComponents(const Type* type) const {
-    set<const Type*> res;
+    ProvidedTypeComponentsCacheScope cache_scope(this);
     const Type* desugared_until_typedef_or_tpl = Desugar(type);
+    if (const set<const Type*>* cached =
+            FindInMap(provided_type_components_cache_,
+                      desugared_until_typedef_or_tpl)) {
+      return *cached;
+    }
+    set<const Type*> res;
     if (const auto* typedef_type =
             dyn_cast_or_null<TypedefType>(desugared_until_typedef_or_tpl)) {
       const TypedefNameDecl* decl = typedef_type->getDecl();
@@ -5968,6 +5997,8 @@ class IwyuAstConsumer
       }
     }
     InsertAllInto(GetProvidedByTplArg(desugared_until_typedef_or_tpl), &res);
+    provided_type_components_cache_->insert_or_assign(
+        desugared_until_typedef_or_tpl, res);
     return res;
   }
 
@@ -6000,6 +6031,7 @@ class IwyuAstConsumer
   }
 
   TemplateInstantiationData GetTplInstData(const Type* type) const {
+    ProvidedTypeComponentsCacheScope cache_scope(this);
     TemplateInstantiationData ret = GetTplInstDataForClass(
         type,
         [this](const Type* type) { return GetProvidedTypeComponents(type); });
@@ -6115,6 +6147,16 @@ class IwyuAstConsumer
 
   // Class we call to handle instantiated template functions and classes.
   InstantiatedTemplateVisitor instantiated_template_visitor_;
+
+  // Provided types of a template specialization include those of the
+  // components of its arguments, which in turn include those of their
+  // arguments, and so on. With nested aliases, the same component is reached
+  // along exponentially many paths, so the results are shared. Only within
+  // one outermost computation, though: Sema may still change the AST between
+  // computations (e.g. by instantiating a template), whereas nothing changes
+  // during one.
+  mutable map<const Type*, set<const Type*>>* provided_type_components_cache_ =
+      nullptr;
 };  // class IwyuAstConsumer
 
 // IWYU frontend action impl.
