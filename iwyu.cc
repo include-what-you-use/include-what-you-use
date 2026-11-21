@@ -5927,6 +5927,29 @@ class IwyuAstConsumer
   }
 
  private:
+  // Independent queries need fresh results because Sema may change the AST.
+  // Nested scopes reuse the active cache; only its owner clears it on exit.
+  class ProvidedTypeComponentsCacheScope {
+   public:
+    explicit ProvidedTypeComponentsCacheScope(const IwyuAstConsumer* consumer)
+        : consumer_(consumer) {
+      if (!consumer_->provided_type_components_cache_)
+        consumer_->provided_type_components_cache_ = &cache_;
+    }
+    ~ProvidedTypeComponentsCacheScope() {
+      if (consumer_->provided_type_components_cache_ == &cache_)
+        consumer_->provided_type_components_cache_ = nullptr;
+    }
+    ProvidedTypeComponentsCacheScope(const ProvidedTypeComponentsCacheScope&) =
+        delete;
+    ProvidedTypeComponentsCacheScope& operator=(
+        const ProvidedTypeComponentsCacheScope&) = delete;
+
+   private:
+    const IwyuAstConsumer* consumer_;
+    map<const Type*, set<const Type*>> cache_;
+  };
+
   // This is to keep includes under non-top-level declarations and other AST
   // nodes, like in this case:
   //
@@ -5952,8 +5975,8 @@ class IwyuAstConsumer
   }
 
   set<const Type*> GetProvidedTypeComponents(const Type* type) const {
-    const Type* desugared_until_typedef_or_tpl = Desugar(type);
     ProvidedTypeComponentsCacheScope cache_scope(this);
+    const Type* desugared_until_typedef_or_tpl = Desugar(type);
     if (const set<const Type*>* cached =
             FindInMap(provided_type_components_cache_,
                       desugared_until_typedef_or_tpl)) {
@@ -5974,7 +5997,8 @@ class IwyuAstConsumer
       }
     }
     InsertAllInto(GetProvidedByTplArg(desugared_until_typedef_or_tpl), &res);
-    (*provided_type_components_cache_)[desugared_until_typedef_or_tpl] = res;
+    provided_type_components_cache_->insert_or_assign(
+        desugared_until_typedef_or_tpl, res);
     return res;
   }
 
@@ -6120,29 +6144,6 @@ class IwyuAstConsumer
     }
     return pair(false, nullptr);
   }
-
-  // Makes GetProvidedTypeComponents results shared until the outermost scope
-  // ends.
-  class ProvidedTypeComponentsCacheScope {
-   public:
-    explicit ProvidedTypeComponentsCacheScope(const IwyuAstConsumer* consumer)
-        : consumer_(consumer) {
-      if (!consumer_->provided_type_components_cache_)
-        consumer_->provided_type_components_cache_ = &cache_;
-    }
-    ~ProvidedTypeComponentsCacheScope() {
-      if (consumer_->provided_type_components_cache_ == &cache_)
-        consumer_->provided_type_components_cache_ = nullptr;
-    }
-    ProvidedTypeComponentsCacheScope(const ProvidedTypeComponentsCacheScope&) =
-        delete;
-    ProvidedTypeComponentsCacheScope& operator=(
-        const ProvidedTypeComponentsCacheScope&) = delete;
-
-   private:
-    const IwyuAstConsumer* consumer_;
-    map<const Type*, set<const Type*>> cache_;
-  };
 
   // Class we call to handle instantiated template functions and classes.
   InstantiatedTemplateVisitor instantiated_template_visitor_;
