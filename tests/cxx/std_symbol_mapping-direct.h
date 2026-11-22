@@ -70,6 +70,15 @@ struct char_traits;
 template <>
 struct char_traits<char> {};
 
+template <typename>
+class allocator;
+
+template <typename T, typename = char_traits<T>, typename = allocator<T>>
+class basic_string {};
+
+template <typename T, typename Traits, typename Allocator>
+bool operator==(const basic_string<T, Traits, Allocator>&, const T*);
+
 template <typename T, typename = char_traits<T>>
 class basic_streambuf {};
 
@@ -119,6 +128,11 @@ class tuple {};
 int wprintf(const wchar_t* format, ...);
 
 struct tm;
+
+class locale {
+ public:
+  basic_string<char> name() const;
+};
 }
 
 using int8_t = signed char;

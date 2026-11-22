@@ -1,4 +1,4 @@
-//===--- foo.h - iwyu test ------------------------------------------------===//
+//===--- provided_functions-i1.h - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,6 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-struct Foo {
-  friend bool operator==(Foo const&, Foo const&);
-};
+#include "tests/cxx/provided_functions-i2.h"
+
+void DifferentFileFunction(Indirect);

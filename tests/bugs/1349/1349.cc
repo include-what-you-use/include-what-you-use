@@ -8,16 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 // IWYU_XFAIL
-#include <iostream>
-
 #include "vector.h"
 
 int main() {
   Vector<int> v{1, 2, 3};
 
-  for (int x : v) {
-    std::cout << x << std::endl;
-  }
+  (void)v.begin();
 }
 
 /**** IWYU_SUMMARY
