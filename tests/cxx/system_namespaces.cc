@@ -15,6 +15,7 @@
 #include "tests/cxx/system_namespaces-d1.h"
 #include "tests/cxx/system_namespaces-d2.h"
 #include "tests/cxx/system_namespaces-d3.h"
+#include "tests/cxx/system_namespaces-d4.h"
 
 std::StdClass* foo = 0;
 
@@ -31,16 +32,20 @@ class Tpl {
   T t;
 };
 
-namespace __gnu_cxx {
-template <typename, typename>
-class __normal_iterator {};
-}  // namespace __gnu_cxx
-
 Tpl<int> var_for_tpl_int_instantiation;
 
 Tpl<__gnu_cxx::__normal_iterator<char*, Tpl<int>&>> t;
 
-// The summary is where all the action is on this test. Only std::StdClass
+// Test that operators of the provided __normal_iterator are not remapped
+// to std::array.
+void TestIterator() {
+  ArrayDerived ad;
+  // IWYU should not suggest <array> here.
+  for (int i : ad)
+    ;
+}
+
+// Besides ArrayDerived which is fully used, only std::StdClass
 // should be not replaceable by a forward-declare, because only it is
 // exposing a symbol in the std namespace.
 
@@ -56,6 +61,7 @@ tests/cxx/system_namespaces.cc should remove these lines:
 
 The full include-list for tests/cxx/system_namespaces.cc:
 #include "tests/cxx/system_namespaces-d1.h"  // for StdClass
+#include "tests/cxx/system_namespaces-d4.h"  // for ArrayDerived, __normal_iterator (ptr only)
 namespace __gnu_cxx { class SystemClass; }
 namespace notsys_ns { template <typename T> class TplClass; }
 

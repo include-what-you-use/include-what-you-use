@@ -133,6 +133,7 @@
 #include "iwyu_ast_util.h"
 #include "iwyu_cache.h"
 #include "iwyu_globals.h"
+#include "iwyu_include_picker.h"
 #include "iwyu_location_util.h"
 #include "iwyu_output.h"
 #include "iwyu_port.h"  // for CHECK_
@@ -146,11 +147,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
-
-// TODO: Clean out pragmas as IWYU improves.
-// IWYU pragma: no_include "clang/AST/Redeclarable.h"
-// IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
-// IWYU pragma: no_include "llvm/ADT/iterator.h"
 
 namespace clang {
 class FriendDecl;
@@ -3215,7 +3211,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (IsProcessedOverloadLoc(CurrentLoc()))
       return true;
 
-    ReportDeclUse(CurrentLoc(), callee_for_use);
+    // If any of the argument types is provided and defined in the same file as
+    // the callee, the latter can be considered as a part of the "external
+    // interface" of the provided type, so it should not be reported too.
+    if (!IsFunctionProvidedByArgument(callee_for_use, calling_expr))
+      ReportDeclUse(CurrentLoc(), callee_for_use);
 
     return true;
   }
@@ -3526,6 +3526,28 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     set<const Type*> res = GetProvidedTypes(type->getAliasedType().getTypePtr(),
                                             GetLocation(al_decl));
     RemoveAllFrom(GetCanonicalArgComponents(type), &res);
+    return res;
+  }
+
+  set<const Type*> GetProvidedTypeComponents(const Type* type) const {
+    set<const Type*> res;
+    const Type* desugared_until_typedef_or_tpl = Desugar(type);
+    if (const auto* typedef_type =
+            dyn_cast_or_null<TypedefType>(desugared_until_typedef_or_tpl)) {
+      const TypedefNameDecl* decl = typedef_type->getDecl();
+      res = GetProvidedTypes(decl->getUnderlyingType().getTypePtr(),
+                             GetLocation(decl));
+    } else if (const auto* tpl_spec =
+                   dyn_cast_or_null<TemplateSpecializationType>(
+                       desugared_until_typedef_or_tpl)) {
+      if (const TypeAliasTemplateDecl* decl =
+              GetAsTypeAliasTemplateDecl(tpl_spec)) {
+        res = GetAliasTemplateProvidedTypes(tpl_spec, decl);
+      }
+    }
+    InsertAllInto(static_cast<const Derived*>(this)->GetProvidedByTplArg(
+                      desugared_until_typedef_or_tpl),
+                  &res);
     return res;
   }
 
@@ -3876,6 +3898,40 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (this->getDerived().SourceOrTargetTypeIsProvided(current_ast_node()))
       return;
     ReportTypeUse(CurrentLoc(), expr->getType().getTypePtr(), DerefKind::None);
+  }
+
+  bool IsFunctionProvidedByArgument(const FunctionDecl* callee,
+                                    const Expr* calling_expr) const {
+    // GetDefinitionAsWritten here is mainly to get the template pattern from
+    // an instantiated function so as to have placeholders (:N) instead of
+    // substituted template arguments in 'name'.
+    const NamedDecl* defn = GetDefinitionAsWritten(callee);
+    string name = GetWrittenQualifiedNameAsString(defn, /*with_fn_args=*/true);
+    // If the function has an explicit mapping, it should rather be reported
+    // because the fact that it is declared in the same header as its argument
+    // type may be just an implementation detail. See
+    // https://discourse.llvm.org/t/should-stacktrace-provide-string/89605.
+    if (!GlobalIncludePicker().GetCandidateHeadersForSymbol(name).empty())
+      return false;
+    if (const auto* call_expr = dyn_cast_or_null<CallExpr>(calling_expr)) {
+      OptionalFileEntryRef fn_file = GetFileEntry(defn);
+      for (const Expr* arg : call_expr->arguments()) {
+        // Probably, all the argument type components should be enumerated, but
+        // I (bolshakov) decided to be conservative and to consider only the
+        // dereferenced canonical type. Expression type is always dereferenced.
+        const Type* canonical = GetCanonicalType(arg->getType().getTypePtr());
+        if (GetFileEntry(TypeToDeclAsWritten(canonical)) != fn_file)
+          continue;
+        if (blocked_types_.count(canonical))
+          return true;
+        if (GetProvidedByExpr(arg).count(canonical))
+          return true;
+        const Type* arg_type = RemoveReferenceAsWritten(GetTypeOf(arg));
+        if (GetProvidedTypeComponents(arg_type).count(canonical))
+          return true;
+      }
+    }
+    return false;
   }
 
   // Do not add any variables here!  If you do, they will not be shared
@@ -4549,7 +4605,7 @@ class InstantiatedTemplateVisitor
     TraverseDataAndTypeMembersOfClassHelper(type);
   }
 
-  set<const Type*> GetProvidedByTplArg(const Type*) {
+  set<const Type*> GetProvidedByTplArg(const Type*) const {
     // Already inside template instantiation analysis. Types provided
     // by template arguments should be in 'blocked_types_' set.
     return set<const Type*>{};
@@ -6019,26 +6075,6 @@ class IwyuAstConsumer
           .FileInfoFor(parent_file)
           ->ReportKnownDesiredFile(current_file);
     }
-  }
-
-  set<const Type*> GetProvidedTypeComponents(const Type* type) const {
-    set<const Type*> res;
-    const Type* desugared_until_typedef_or_tpl = Desugar(type);
-    if (const auto* typedef_type =
-            dyn_cast_or_null<TypedefType>(desugared_until_typedef_or_tpl)) {
-      const TypedefNameDecl* decl = typedef_type->getDecl();
-      res = GetProvidedTypes(decl->getUnderlyingType().getTypePtr(),
-                             GetLocation(decl));
-    } else if (const auto* tpl_spec =
-                   dyn_cast_or_null<TemplateSpecializationType>(
-                       desugared_until_typedef_or_tpl)) {
-      if (const TypeAliasTemplateDecl* decl =
-              GetAsTypeAliasTemplateDecl(tpl_spec)) {
-        res = GetAliasTemplateProvidedTypes(tpl_spec, decl);
-      }
-    }
-    InsertAllInto(GetProvidedByTplArg(desugared_until_typedef_or_tpl), &res);
-    return res;
   }
 
   void CollectProvidedByDefaultTplArg(SourceLocation template_loc,

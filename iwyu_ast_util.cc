@@ -61,7 +61,6 @@
 #include "llvm/Support/Casting.h"
 
 // TODO: Clean out pragmas as IWYU improves.
-// IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
 // IWYU pragma: no_include <tuple>
 
 using clang::ASTContext;
@@ -1659,6 +1658,11 @@ const Type* GetTypeOf(const Expr* expr) {
     return decl_ref_expr->getDecl()->getType().getTypePtr();
   if (const auto* cast_expr = dyn_cast<ExplicitCastExpr>(expr))
     return cast_expr->getTypeAsWritten().getTypePtr();
+  if (const auto* construct = dyn_cast<CXXConstructExpr>(expr)) {
+    // Handling of implicit construction.
+    if (construct->getNumArgs() == 1)
+      return GetTypeOf(construct->getArg(0));
+  }
   return expr->getType().getTypePtr();
 }
 

@@ -29,9 +29,6 @@
 #include "iwyu_stl_util.h"
 #include "iwyu_use_flags.h"
 
-// TODO: Clean out pragmas as IWYU improves.
-// IWYU pragma: no_include "clang/Basic/CustomizableOptional.h"
-
 namespace clang {
 class TagTypeLoc;
 class UsingDecl;

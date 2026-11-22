@@ -1309,7 +1309,6 @@ int main() {
 
   // User-defined casts need the full from-type (to call its operator totype()).
   // IWYU: I2_Class is...*badinc-i2.h
-  // IWYU: I2_UnionFunction({{.*}}) is...*badinc-i2.h
   I2_UnionFunction(*local_i2_class_ptr);
 
   // Even dereferencing doesn't require the full type.
@@ -1673,9 +1672,7 @@ int main() {
   std::vector<float>::const_iterator float_it = float_vector.begin();
   // IWYU: std::vector is...*<vector>
   const std::vector<float>::const_iterator float_constit = float_vector.begin();
-  // IWYU: std::vector is...*<vector>
   (void)(float_it == float_constit);
-  // IWYU: std::vector is...*<vector>
   (void)(float_constit == float_it);
   // IWYU: std::vector is...*<vector>
   std::vector<float>::const_iterator float_forit;
@@ -1693,7 +1690,6 @@ int main() {
            float_reverse_it = float_vector.rbegin();
        // IWYU: std::vector is...*<vector>
        float_reverse_it != float_vector.rbegin();
-       // IWYU: std::vector is...*<vector>
        ++float_reverse_it) ;
   // IWYU: std::vector is...*<vector>
   for (std::vector<float>::const_reverse_iterator
@@ -1701,7 +1697,6 @@ int main() {
            float_const_reverse_it = float_vector.rbegin();
        // IWYU: std::vector is...*<vector>
        float_const_reverse_it != float_vector.rend();
-       // IWYU: std::vector is...*<vector>
        ++float_const_reverse_it) ;
 
   // Also test while and if initializers.

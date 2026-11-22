@@ -114,6 +114,15 @@ void Fn() {
   // <cwchar> already required here provides a (forward-)declaration of tm.
   // IWYU: std::tm needs a declaration
   std::tm* tm1;
+
+  // IWYU: std::locale is...*<locale>
+  std::locale loc;
+  // Even if std::string is provided by <locale>, IWYU should report <string>
+  // for non-member operator==. See
+  // https://discourse.llvm.org/t/should-stacktrace-provide-string/89605.
+  // IWYU: std::locale is...*<locale>
+  // IWYU: std::operator==({{.*}}) is...*<string>
+  (void)(loc.name() == "C");
 }
 
 /**** IWYU_SUMMARY
@@ -127,8 +136,10 @@ tests/cxx/std_symbol_mapping.cc should add these lines:
 #include <cwchar>
 #include <functional>
 #include <iosfwd>
+#include <locale>
 #include <spanstream>
 #include <streambuf>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <valarray>
@@ -144,9 +155,11 @@ The full include-list for tests/cxx/std_symbol_mapping.cc:
 #include <cstdint>  // for int8_t
 #include <cwchar>  // for tm (ptr only), wprintf
 #include <functional>  // for function, swap
-#include <iosfwd>  // for basic_ostream (ptr only), char_traits (ptr only)
+#include <iosfwd>  // for basic_ostream (ptr only)
+#include <locale>  // for locale
 #include <spanstream>  // for basic_spanstream
 #include <streambuf>  // for basic_streambuf
+#include <string>  // for char_traits (ptr only), operator==
 #include <tuple>  // for tuple
 #include <utility>  // for get, move, operator==, pair, swap
 #include <valarray>  // for pow, valarray
