@@ -50,7 +50,9 @@ class IwyuPreprocessorInfo;
 
 enum class UseKind;
 
-// Use weights saturate rather than wrap around (and say so, once).
+// Use weights saturate rather than wrap around (and say so, once). Counts
+// beyond the limit can become equal, leaving ties to the usual header or
+// symbol-name ordering rather than their unrepresentable true frequencies.
 uint64_t AddUseWeights(uint64_t a, uint64_t b);
 uint64_t MultiplyUseWeights(uint64_t a, uint64_t b);
 
@@ -146,6 +148,7 @@ class OneUse {
   void set_is_iwyu_violation() { is_iwyu_violation_ = true; }
   void set_suggested_header(const string& fh) { suggested_header_ = fh; }
   void set_weight(uint64_t weight) {
+    CHECK_(weight > 0 && "Use weight must be positive");
     weight_ = weight;
   }
 
@@ -157,6 +160,9 @@ class OneUse {
   int UseLinenum() const;
 
  private:
+  friend class IwyuFileInfo;
+  friend class IwyuOutputTestPeer;
+
   void SetPublicHeaders();         // sets based on decl_filepath_
   void SetCanonicalHeaders();
 
@@ -175,6 +181,7 @@ class OneUse {
   string suggested_header_;        // header that allows us to satisfy use
   bool ignore_use_;                // set to true if use is discarded
   bool is_iwyu_violation_;         // set to false when we figure out it's not
+  bool can_repeat_ = false;
   uint64_t weight_ = 1;
 };
 
@@ -349,7 +356,9 @@ class IwyuFileInfo {
                                UseFlags flags, const char* comment);
 
   // Has the same effect as making the report of the use at 'index' (see
-  // UseReportListener) 'weight' more times, now.
+  // UseReportListener) 'weight' more times, now. Weight must be positive;
+  // index must identify an original listener-reported use before header
+  // selection, not a macro, include-file use or an already repeated entry.
   void ReportUseAgain(size_t index, uint64_t weight);
 
   // Called whenever a NamedDecl is accessed through a UsingDecl.
@@ -393,6 +402,8 @@ class IwyuFileInfo {
   size_t CalculateAndReportIwyuViolations();
 
  private:
+  friend class IwyuOutputTestPeer;
+
   const set<string>& desired_includes() const {
     CHECK_(desired_includes_have_been_calculated_ &&
            "Must calculate desired includes before calling desired_includes()");
@@ -421,7 +432,9 @@ class IwyuFileInfo {
     return associated_desired_includes;
   }
 
-  // Records a reported use, and tells the use report listener.
+  void AppendUse(OneUse use, bool is_repeat = false);
+
+  // Only these reports are eligible to be repeated by a listener.
   void AddReportedUse(OneUse use, const char* log_prefix);
 
   // Populates uses with full data, including is_iwyu_violation_.
@@ -450,7 +463,7 @@ class IwyuFileInfo {
   // foo.h and foo-inl.h, if present.
   set<const IwyuFileInfo*> associated_headers_;
 
-  // Holds all the uses that are reported.
+  // AppendUse maintains repeat-window boundaries whenever this grows.
   vector<OneUse> symbol_uses_;
 
   // The uses repeated by ReportUseAgain since the last newly reported use,

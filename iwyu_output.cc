@@ -87,8 +87,9 @@ uint64_t WarnIfSaturated(uint64_t weight, bool saturated) {
   static bool warned = false;
   if (saturated && !warned) {
     warned = true;
-    VERRS(1) << "warning: a use was reported more than 2^64-1 times; header "
-                "choices are made as if it had been reported that often\n";
+    VERRS(1) << "warning: a use-frequency count exceeded 2^64-1; counts are "
+                "saturated, so header choices and comment ordering may "
+                "contain ties\n";
   }
   return weight;
 }
@@ -817,8 +818,7 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
 void IwyuFileInfo::ReportMacroUse(SourceLocation use_loc,
                                   SourceLocation dfn_loc,
                                   const string& symbol) {
-  symbol_uses_.push_back(OneUse(symbol, GetFileEntry(dfn_loc), use_loc));
-  repeated_uses_.clear();
+  AppendUse(OneUse(symbol, GetFileEntry(dfn_loc), use_loc));
   LogSymbolUse("Marked full-info use of macro", symbol_uses_.back());
 }
 
@@ -829,8 +829,7 @@ void IwyuFileInfo::ReportDefinedMacroUse(OptionalFileEntryRef used_in) {
 void IwyuFileInfo::ReportIncludeFileUse(OptionalFileEntryRef included_file,
                                         const string& quoted_include,
                                         SourceLocation include_loc) {
-  symbol_uses_.push_back(OneUse(included_file, quoted_include, include_loc));
-  repeated_uses_.clear();
+  AppendUse(OneUse(included_file, quoted_include, include_loc));
   LogIncludeFileUse("Marked use of include-file", symbol_uses_.back());
 }
 
@@ -859,15 +858,29 @@ void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
                  "Marked fwd-decl use of decl");
 }
 
-void IwyuFileInfo::AddReportedUse(OneUse use, const char* log_prefix) {
+void IwyuFileInfo::AppendUse(OneUse use, bool is_repeat) {
+  // A new report may change later header choices, so it ends the interval in
+  // which repeats can share an entry. Repeated entries extend that interval.
+  if (!is_repeat)
+    repeated_uses_.clear();
   symbol_uses_.push_back(std::move(use));
-  repeated_uses_.clear();
+}
+
+void IwyuFileInfo::AddReportedUse(OneUse use, const char* log_prefix) {
+  use.can_repeat_ = true;
+  AppendUse(std::move(use));
   LogSymbolUse(log_prefix, symbol_uses_.back());
   if (use_report_listener)
     use_report_listener->UseReported(this, symbol_uses_.size() - 1);
 }
 
 void IwyuFileInfo::ReportUseAgain(size_t index, uint64_t weight) {
+  CHECK_(weight > 0 && "Repeated-use weight must be positive");
+  CHECK_(index < symbol_uses_.size() && "Invalid reported-use index");
+  CHECK_(symbol_uses_[index].can_repeat_ &&
+         "Only original listener-reported uses can be repeated");
+  CHECK_(!symbol_uses_[index].has_suggested_header() &&
+         "Cannot repeat a use after header selection");
   // Which header a use gets may depend on the uses before it, but a repeated
   // use doesn't change that for later ones: the identical use before it did
   // all that already. So all repeats since the last newly reported use get
@@ -877,7 +890,8 @@ void IwyuFileInfo::ReportUseAgain(size_t index, uint64_t weight) {
   if (is_new) {
     OneUse use = symbol_uses_[index];
     use.set_weight(weight);
-    symbol_uses_.push_back(std::move(use));
+    use.can_repeat_ = false;
+    AppendUse(std::move(use), /*is_repeat=*/true);
   } else {
     OneUse& use = symbol_uses_[it->second];
     use.set_weight(AddUseWeights(use.weight(), weight));
@@ -1145,6 +1159,8 @@ set<string> CalculateMinimalIncludes(
         ++it;
       }
     }
+    CHECK_(!header_counts.empty() &&
+           "No canonical header candidates for unmapped uses");
     pair<string, pair<uint64_t, uint64_t>> best = *header_counts.begin();
     for (const auto& header_count : header_counts) {
       // Use pair<>'s operator> to order for us.
