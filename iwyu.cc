@@ -171,6 +171,7 @@ using clang::ASTContext;
 using clang::ArraySubscriptExpr;
 using clang::ArrayType;
 using clang::Attr;
+using clang::AutoType;
 using clang::AutoTypeLoc;
 using clang::BinaryOperator;
 using clang::BinaryOperatorKind;
@@ -1536,6 +1537,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const auto* method = dyn_cast<CXXMethodDecl>(decl))
       providing_decl = GetFromLeastDerived(method);
     const Type* return_type = providing_decl->getReturnType().getTypePtr();
+    if (isa<AutoType>(return_type))
+      return {GetCanonicalType(return_type)};
     return GetProvidedTypes(return_type, GetLocation(providing_decl));
   }
 
