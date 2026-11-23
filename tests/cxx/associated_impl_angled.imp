@@ -1,0 +1,4 @@
+# Same as associated_impl_discovery.imp, written with angle brackets.
+[
+  { "associated_impl": ['@<(.*)-impl\.inline>', '<\1.h>'] },
+]
