@@ -132,9 +132,9 @@ class OneUse {
   void SetPublicHeaders();         // sets based on decl_filepath_
   void SetCanonicalHeaders();
 
-  // Many uses are discarded before header mapping. Defer their qualified
-  // names, which can expand exponentially for nested template specializations,
-  // unless a surviving use or a diagnostic actually needs the spelling.
+  // Some full uses are discarded before header selection, avoiding qualified
+  // names that can expand exponentially for nested template specializations.
+  // Forward-declaration processing and verbose diagnostics still need names.
   mutable std::optional<string> symbol_name_;
   string short_symbol_name_;       // 'short' form of the symbol being used
   const clang::NamedDecl* decl_;   // decl of the symbol, if we know it
