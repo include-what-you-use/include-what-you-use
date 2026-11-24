@@ -525,6 +525,10 @@ void IwyuPreprocessorInfo::MaybeProtectInclude(
 void IwyuPreprocessorInfo::FinalizeProtectedIncludes() {
   for (auto& entry : iwyu_file_info_map_) {
     OptionalFileEntryRef includer_file = entry.first;
+    // <built-in> #includes the main file and the -include files, without
+    // a spelling.  It is never reported, so there is nothing to protect.
+    if (IsSpecialFile(includer_file))
+      continue;
     IwyuFileInfo& includer = entry.second;
     const string includer_path = GetFilePath(includer_file);
 
@@ -533,17 +537,17 @@ void IwyuPreprocessorInfo::FinalizeProtectedIncludes() {
       const string includee_path = GetFilePath(include);
       if (GlobalIncludePicker().HasMapping(includee_path, includer_path)) {
         // If includer re-exports includee, that counts as a "use" of it, so
-        // protect the include.
+        // protect the include, as it is written.
         includer.ReportIncludeFileUse(include,
-                                      ConvertToQuotedInclude(includee_path));
+                                      includer.QuotedIncludeAsWritten(include));
         ERRSYM(includer_file)
             << "Marked dep: " << includer_path << " needs to keep "
             << includee_path << " (reason: re-exports)\n";
       } else if (always_keep_files_.count(include) > 0) {
         // Includee itself contains an "always_keep" pragma that protects it
-        // from removal in all includers.
+        // from removal in all includers, as it is written.
         includer.ReportIncludeFileUse(include,
-                                      ConvertToQuotedInclude(includee_path));
+                                      includer.QuotedIncludeAsWritten(include));
         includer.ReportKnownDesiredFile(include);
         ERRSYM(includer_file)
             << "Marked dep: " << includer_path << " needs to keep "
