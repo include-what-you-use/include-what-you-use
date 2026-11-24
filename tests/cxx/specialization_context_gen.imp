@@ -1,0 +1,8 @@
+[
+  { "symbol": ["Helper", "private", "\"tests/cxx/specialization_context_gen-a.h\"", "public"] },
+  { "symbol": ["Helper", "private", "\"tests/cxx/specialization_context_gen-b.h\"", "public"] },
+  { "symbol": ["W1", "private", "\"tests/cxx/specialization_context_gen-b.h\"", "public"] },
+  { "symbol": ["W1", "private", "\"tests/cxx/specialization_context_gen-c.h\"", "public"] },
+  { "symbol": ["W2", "private", "\"tests/cxx/specialization_context_gen-c.h\"", "public"] },
+  { "symbol": ["W2", "private", "\"tests/cxx/specialization_context_gen-a.h\"", "public"] }
+]

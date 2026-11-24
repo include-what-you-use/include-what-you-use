@@ -1,0 +1,8 @@
+[
+  { "symbol": ["Color", "private", "\"tests/cxx/specialization_context_func-a.h\"", "public"] },
+  { "symbol": ["Color", "private", "\"tests/cxx/specialization_context_func-b.h\"", "public"] },
+  { "symbol": ["W1", "private", "\"tests/cxx/specialization_context_func-b.h\"", "public"] },
+  { "symbol": ["W1", "private", "\"tests/cxx/specialization_context_func-c.h\"", "public"] },
+  { "symbol": ["W2", "private", "\"tests/cxx/specialization_context_func-c.h\"", "public"] },
+  { "symbol": ["W2", "private", "\"tests/cxx/specialization_context_func-a.h\"", "public"] }
+]

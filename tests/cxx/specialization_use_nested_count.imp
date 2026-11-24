@@ -1,0 +1,6 @@
+[
+  { "symbol": ["Box", "private", "\"tests/cxx/specialization_use_nested_count-i.h\"", "public"] },
+  { "symbol": ["Box", "private", "\"tests/cxx/specialization_use_nested_count-j.h\"", "public"] },
+  { "symbol": ["W", "private", "\"tests/cxx/specialization_use_nested_count-j.h\"", "public"] },
+  { "symbol": ["W", "private", "\"tests/cxx/specialization_use_nested_count-i.h\"", "public"] }
+]
