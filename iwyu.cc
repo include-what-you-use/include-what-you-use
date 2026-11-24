@@ -88,6 +88,7 @@
 //     #include bar.h, unless it already does so.
 #include "iwyu.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>                      // for atoi, exit
 #include <map>                          // for map, swap, etc
@@ -95,6 +96,7 @@
 #include <optional>                     // for optional
 #include <set>                          // for set, set<>::iterator, swap
 #include <string>                       // for string, operator+, etc
+#include <tuple>                        // for tie
 #include <utility>                      // for pair
 #include <vector>                       // for vector, swap
 
@@ -210,6 +212,7 @@ using clang::EnumType;
 using clang::ExplicitInstantiationDecl;
 using clang::Expr;
 using clang::ExprResult;
+using clang::FileEntry;
 using clang::FriendDecl;
 using clang::FriendTemplateDecl;
 using clang::FunctionDecl;
@@ -1397,10 +1400,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       side = "spelling";
     }
 
-    VERRS(4) << "Attributing use of '" << PrintableDecl(decl) << "' to " << side
-             << " location at " << PrintableLoc(use_loc) << "\n";
+    if (ShouldPrint(4)) {
+      this->getDerived().LogUseMessage("Attributing use of '" +
+                                       PrintableDecl(decl) + "' to " + side +
+                                       " location at " + PrintableLoc(use_loc));
+    }
 
     return use_loc;
+  }
+
+  // Prints a message about a use that is being reported.  Subclasses that
+  // repeat reports have to repeat these too.
+  void LogUseMessage(const string& message) {
+    errs() << message << "\n";
   }
 
   // There are a few situations where iwyu is more restrictive than
@@ -3849,13 +3861,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 // TODO(csilvers): move this to its own file?
 
 class InstantiatedTemplateVisitor
-    : public IwyuBaseAstVisitor<InstantiatedTemplateVisitor> {
+    : public IwyuBaseAstVisitor<InstantiatedTemplateVisitor>,
+      public UseReportListener {
  public:
   typedef IwyuBaseAstVisitor<InstantiatedTemplateVisitor> Base;
 
   InstantiatedTemplateVisitor(VisitorState* visitor_state)
       : Base(visitor_state) {
     Clear();
+    SetUseReportListener(this);
+  }
+
+  ~InstantiatedTemplateVisitor() override {
+    SetUseReportListener(nullptr);
   }
 
   //------------------------------------------------------------
@@ -4193,9 +4211,22 @@ class InstantiatedTemplateVisitor
 
   bool TraverseTemplateSpecializationType(TemplateSpecializationType* type,
                                           bool traverse_qualifier) {
-    if (!Base::TraverseTemplateSpecializationType(type, traverse_qualifier))
-      return false;
-    return TraverseTemplateSpecializationTypeHelper(type);
+    const SpecializationContext context =
+        GetSpecializationContext(type, traverse_qualifier);
+    vector<int>& recordings = recordings_of_specialization_[context];
+    // The first traversals are complete by now: TraverseType() doesn't
+    // traverse a type again while it is on the AST stack.
+    if (const int recording = FindRecordingWithSameProviders(recordings);
+        recording >= 0) {
+      ReportAgain(recording);
+      return true;
+    }
+    recordings.push_back(StartRecording());
+    const bool result =
+        Base::TraverseTemplateSpecializationType(type, traverse_qualifier) &&
+        TraverseTemplateSpecializationTypeHelper(type);
+    FinishRecording();
+    return result;
   }
 
   bool TraverseTemplateSpecializationTypeLoc(
@@ -4270,6 +4301,7 @@ class InstantiatedTemplateVisitor
         if (ContainsKey(traversed_decls_, decl))
           return;  // avoid recursion & repetition
         traversed_decls_.insert(decl);
+        const ValueSaver<int> decl_traversal = EnterDeclTraversal();
 
         VERRS(6) << "Recursively traversing " << PrintableDecl(cts_decl)
                  << " which was full-used and does not involve a known"
@@ -4498,14 +4530,163 @@ class InstantiatedTemplateVisitor
     return false;
   }
 
+  void LogUseMessage(const string& message) {
+    Base::LogUseMessage(message);
+    RecordReport({nullptr, 0, message});
+  }
+
+  // --- Implements UseReportListener.
+
+  void UseReported(IwyuFileInfo* file, size_t index) override {
+    RecordReport({file, index, string()});
+  }
+
  private:
+  // What a provider lookup decides: ReportDeclUse() reports a use unless a
+  // template in another file than the caller's provides the decl, and
+  // explicit instantiations are reported unless any template provides.
+  enum class ProviderOutcome : unsigned char { kNone, kCallerFile, kOtherFile };
+
+  // A reported use (see UseReportListener), or a message about one.
+  struct RecordedReport {
+    IwyuFileInfo* file;  // nullptr for a message
+    size_t use_index;
+    string message;
+  };
+
+  // The reports made during the first traversal of a specialization type,
+  // outside of class, function and variable traversals, in order.
+  // Those of nested specialization types are included by reference.
+  struct Recording {
+    struct Item {
+      int index;  // into recorded_reports_, or recordings_
+      bool is_recording;
+      uint64_t count;  // of consecutive repetitions
+    };
+    vector<Item> items;
+    std::optional<vector<pair<int, uint64_t>>> weighted_reports;
+    // The outcomes of the lookups, here or in nested recordings, that depend
+    // on provider candidates above the type, by decl file.
+    map<const FileEntry*, pair<OptionalFileEntryRef, ProviderOutcome>>
+        provider_dependencies;
+  };
+
+  struct ActiveRecording {
+    int recording;
+    int decl_traversal_depth;  // when it started
+    const ASTNode* type_node;
+  };
+
   // Clears the state of the visitor.
   void Clear() {
     caller_ast_node_ = nullptr;
     resugar_map_.clear();
     traversed_decls_.clear();
+    recordings_of_specialization_.clear();
+    recorded_reports_.clear();
+    recordings_.clear();
     nodes_to_ignore_.clear();
     cache_storers_.clear();
+  }
+
+  // Reports (or messages about them) made while the returned object lives
+  // belong to the traversal of a class, function or variable, which happens
+  // only once per scan (see traversed_decls_).
+  ValueSaver<int> EnterDeclTraversal() {
+    return ValueSaver<int>(&decl_traversal_depth_, decl_traversal_depth_ + 1);
+  }
+
+  int StartRecording() {
+    const int recording = recordings_.size();
+    recordings_.emplace_back();
+    active_recordings_.push_back(
+        {recording, decl_traversal_depth_, current_ast_node()});
+    return recording;
+  }
+
+  void FinishRecording() {
+    const int recording = active_recordings_.back().recording;
+    active_recordings_.pop_back();
+    if (!recordings_[recording].items.empty())
+      Record({recording, /*is_recording=*/true, 1});
+  }
+
+  // Whether a revisit of the innermost specialization type being traversed
+  // for the first time would repeat what is reported now.
+  bool IsRecording() const {
+    return !active_recordings_.empty() &&
+           active_recordings_.back().decl_traversal_depth ==
+               decl_traversal_depth_;
+  }
+
+  void Record(Recording::Item item) {
+    if (!IsRecording())
+      return;
+    vector<Recording::Item>& items =
+        recordings_[active_recordings_.back().recording].items;
+    if (item.is_recording && !items.empty() && items.back().is_recording &&
+        items.back().index == item.index) {
+      items.back().count = AddUseWeights(items.back().count, item.count);
+      return;
+    }
+    items.push_back(item);
+  }
+
+  void RecordReport(RecordedReport report) {
+    if (!IsRecording())
+      return;
+    Record({static_cast<int>(recorded_reports_.size()),
+            /*is_recording=*/false, 1});
+    recorded_reports_.push_back(std::move(report));
+  }
+
+  // Has the same effect as revisiting the specialization type whose first
+  // traversal made the recording.
+  void ReportAgain(int recording) {
+    if (recordings_[recording].items.empty())
+      return;
+    Record({recording, /*is_recording=*/true, 1});
+    for (const auto& [report, weight] : GetWeightedReports(recording)) {
+      const RecordedReport& recorded = recorded_reports_[report];
+      if (recorded.file) {
+        recorded.file->ReportUseAgain(recorded.use_index, weight);
+      } else {
+        errs() << recorded.message;
+        if (weight > 1)
+          errs() << " [x" << weight << "]";
+        errs() << "\n";
+      }
+    }
+  }
+
+  // Returns the reports of a recording, with those of nested recordings
+  // expanded, as how often each is made, in the order they are first made.
+  const vector<pair<int, uint64_t>>& GetWeightedReports(int recording_index) {
+    Recording& recording = recordings_[recording_index];
+    if (recording.weighted_reports)
+      return *recording.weighted_reports;
+    vector<pair<int, uint64_t>> weighted_reports;
+    map<int, size_t> position_of_report;
+    auto add = [&](int report, uint64_t weight) {
+      const auto [it, is_new] =
+          position_of_report.try_emplace(report, weighted_reports.size());
+      if (is_new) {
+        weighted_reports.emplace_back(report, weight);
+      } else {
+        uint64_t& total = weighted_reports[it->second].second;
+        total = AddUseWeights(total, weight);
+      }
+    };
+    for (const Recording::Item& item : recording.items) {
+      if (!item.is_recording) {
+        add(item.index, item.count);
+        continue;
+      }
+      for (const auto& [report, weight] : GetWeightedReports(item.index))
+        add(report, MultiplyUseWeights(weight, item.count));
+    }
+    recording.weighted_reports = std::move(weighted_reports);
+    return *recording.weighted_reports;
   }
 
   // If we see the instantiated template using a type or decl (such as
@@ -4522,31 +4703,196 @@ class InstantiatedTemplateVisitor
   // "foo.h" and has a scoped_ptr<Foo>; we say the templated class
   // provides Foo, even though it's scoped_ptr.h that's actually
   // trying to call Foo::Foo and Foo::~Foo.
-  SourceLocation GetLocOfTemplateThatProvides(const NamedDecl* decl) const {
+  SourceLocation GetLocOfTemplateThatProvides(const NamedDecl* decl) {
     if (!decl)
       return SourceLocation();   // an invalid source-loc
-    for (const ASTNode* ast_node = current_ast_node();
-         ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
-      // GetInstantiationLoc returns *macro* expansion location (if any). Macro
-      // definition (spelling) location should not be considered because it
-      // doesn't actually declare anything.
-      OptionalFileEntryRef decl_expansion_file =
-          GetLocFileEntry(GetInstantiationLoc(decl->getLocation()));
-      if (preprocessor_info().PublicHeaderIntendsToProvide(
-              GetLocFileEntry(GetInstantiationLoc(ast_node->GetLocation())),
-              decl_expansion_file)) {
-        return GetInstantiationLoc(ast_node->GetLocation());
-      }
-      if (preprocessor_info().PublicHeaderIntendsToProvide(
-              GetLocFileEntry(GetSpellingLoc(ast_node->GetLocation())),
-              decl_expansion_file)) {
-        return ast_node->GetLocation();
-      }
-    }
-    return SourceLocation();   // an invalid source-loc
+    // GetInstantiationLoc returns *macro* expansion location (if any). Macro
+    // definition (spelling) location should not be considered because it
+    // doesn't actually declare anything.
+    const OptionalFileEntryRef decl_expansion_file =
+        GetLocFileEntry(GetInstantiationLoc(decl->getLocation()));
+    const ProviderLookup lookup =
+        FindProvider(current_ast_node(), decl_expansion_file);
+    NoteProviderDependency(current_ast_node(), lookup.source,
+                           decl_expansion_file, GetProviderOutcome(lookup.loc));
+    return lookup.loc;
   }
 
-  bool IsProvidedByTemplate(const NamedDecl* decl) const {
+  ProviderOutcome GetProviderOutcome(SourceLocation provider_loc) const {
+    if (!provider_loc.isValid())
+      return ProviderOutcome::kNone;
+    return GetFileEntry(provider_loc) == GetFileEntry(caller_loc())
+               ? ProviderOutcome::kCallerFile
+               : ProviderOutcome::kOtherFile;
+  }
+
+  struct ProviderLookup {
+    SourceLocation loc;  // invalid if no candidate provides
+    // The node with a location of its own that the providing candidate's
+    // location comes from, or the caller's node if none below it has one.
+    // Null if no candidate provides.
+    const ASTNode* source = nullptr;
+  };
+
+  static bool HasOwnLocation(const ASTNode* node) {
+    return node->IsA<Decl>() || node->IsA<Stmt>() || node->IsA<TypeLoc>() ||
+           node->IsA<NestedNameSpecifierLoc>() ||
+           node->IsA<TemplateArgumentLoc>();
+  }
+
+  // Tests the candidate provider files from ast_node up to the caller.
+  ProviderLookup FindProvider(const ASTNode* ast_node,
+                              OptionalFileEntryRef decl_file) const {
+    while (ast_node != caller_ast_node_) {
+      const SourceLocation loc = ast_node->GetLocation();
+      const SourceLocation expansion_loc = GetInstantiationLoc(loc);
+      std::optional<SourceLocation> provider_loc;
+      if (preprocessor_info().PublicHeaderIntendsToProvide(
+              GetLocFileEntry(expansion_loc), decl_file)) {
+        provider_loc = expansion_loc;
+      } else if (preprocessor_info().PublicHeaderIntendsToProvide(
+                     GetLocFileEntry(GetSpellingLoc(loc)), decl_file)) {
+        provider_loc = loc;
+      }
+      // GetLocation searches for the nearest ancestor with its own location,
+      // so the nodes in between would all be the same candidate.  Skipping
+      // them also keeps a lookup linear in the depth of long type-only
+      // chains.
+      const ASTNode* source = ast_node;
+      const ASTNode* next = ast_node->parent();
+      if (!HasOwnLocation(ast_node)) {
+        while (next != caller_ast_node_ && !HasOwnLocation(next))
+          next = next->parent();
+        source = next;
+      }
+      if (provider_loc)
+        return {*provider_loc, source};
+      ast_node = next;
+    }
+    return {};
+  }
+
+  // A lookup from below a specialization type that its first traversal
+  // records finds the same provider on a revisit if a candidate below the
+  // type provides.  Otherwise its outcome depends on the candidates above the
+  // type, and only on decl_file: the revisit has to agree on it.
+  void NoteProviderDependency(const ASTNode* ast_node,
+                              const ASTNode* provider_source,
+                              OptionalFileEntryRef decl_file,
+                              ProviderOutcome outcome) {
+    // The types of the active recordings are on the AST stack, innermost
+    // first.
+    size_t pending = active_recordings_.size();
+    for (; pending > 0 && ast_node != nullptr && ast_node != provider_source;
+         ast_node = ast_node->parent()) {
+      const ActiveRecording& active = active_recordings_[pending - 1];
+      if (ast_node != active.type_node)
+        continue;
+      --pending;
+      // Revisits skip class, function and variable traversals.
+      if (active.decl_traversal_depth != decl_traversal_depth_)
+        continue;
+      auto& dependencies = recordings_[active.recording].provider_dependencies;
+      dependencies.try_emplace(RawFileEntry(decl_file), decl_file, outcome);
+    }
+  }
+
+  // Returns the recording of a first traversal in an equal context whose
+  // provider lookups would all have the same outcomes now, or -1.
+  int FindRecordingWithSameProviders(const vector<int>& recordings) {
+    const ASTNode* ast_node = current_ast_node();
+    map<const FileEntry*, ProviderLookup> lookups;
+    auto lookup = [&](OptionalFileEntryRef decl_file) -> const ProviderLookup& {
+      auto [it, inserted] = lookups.try_emplace(RawFileEntry(decl_file));
+      if (inserted)
+        it->second = FindProvider(ast_node, decl_file);
+      return it->second;
+    };
+    for (int recording : recordings) {
+      const auto& dependencies = recordings_[recording].provider_dependencies;
+      const bool same_providers =
+          llvm::all_of(dependencies, [&](const auto& dependency) {
+            const auto& [decl_file, outcome] = dependency.second;
+            return GetProviderOutcome(lookup(decl_file).loc) == outcome;
+          });
+      if (!same_providers)
+        continue;
+      // Enclosing recordings depend on what the skipped lookups find.
+      for (const auto& [raw_file, dependency] : dependencies) {
+        const auto& [decl_file, outcome] = dependency;
+        NoteProviderDependency(ast_node, lookups[raw_file].source, decl_file,
+                               outcome);
+      }
+      return recording;
+    }
+    return -1;
+  }
+
+  // Everything outside the subtree of a specialization type that its
+  // traversal reads.  Two traversals with equal contexts make the same
+  // reports, except that the later one skips the classes, functions and
+  // variables the earlier one already traversed.
+  struct SpecializationContext {
+    const Type* type;
+    bool traverse_qualifier;
+    // How the type itself is used.  The parent matters only for kinds that
+    // the visit of the type inspects (exception specs, typedefs).
+    bool in_forward_declare_context;
+    bool can_forward_declare;
+    const void* inspected_parent;
+    // What visits below the type read from further up the AST stack: the
+    // flags of each use, the call an autocast belongs to, and the function
+    // that __func__ names.  Provider candidates are left out: they differ
+    // along exponentially many paths when the template is in the caller's
+    // file, though few lookups' outcomes differ (see
+    // FindRecordingWithSameProviders).
+    UseFlags use_flags;
+    const CallExpr* enclosing_call;
+    const FunctionDecl* enclosing_function;
+    // Within one class, function or variable traversal, the cache storers
+    // and blocked types stay the same, and so does the AST stack above the
+    // visited type structure.  Ignored nodes can only be extended in place.
+    int traversal_scope;
+    int ignore_generation;
+
+    bool operator<(const SpecializationContext& other) const {
+      return std::tie(type, traverse_qualifier, in_forward_declare_context,
+                      can_forward_declare, inspected_parent, use_flags,
+                      enclosing_call, enclosing_function, traversal_scope,
+                      ignore_generation) <
+             std::tie(other.type, other.traverse_qualifier,
+                      other.in_forward_declare_context,
+                      other.can_forward_declare, other.inspected_parent,
+                      other.use_flags, other.enclosing_call,
+                      other.enclosing_function, other.traversal_scope,
+                      other.ignore_generation);
+    }
+  };
+
+  SpecializationContext GetSpecializationContext(const Type* type,
+                                                 bool traverse_qualifier) {
+    const ASTNode* ast_node = current_ast_node();
+    const void* inspected_parent = nullptr;
+    if (const auto* fn_type = ast_node->GetParentAs<FunctionProtoType>())
+      inspected_parent = fn_type;
+    else if (const auto* fn_decl = ast_node->GetParentAs<FunctionDecl>())
+      inspected_parent = fn_decl;
+    else if (const auto* typedef_decl =
+                 ast_node->GetParentAs<TypedefNameDecl>())
+      inspected_parent = typedef_decl;
+    return {type,
+            traverse_qualifier,
+            ast_node->in_forward_declare_context(),
+            CanForwardDeclareType(ast_node),
+            inspected_parent,
+            ComputeUseFlags(ast_node),
+            ast_node->GetAncestorAs<CallExpr>(),
+            ast_node->GetAncestorAs<FunctionDecl>(),
+            traversal_scope_,
+            ignore_generation_};
+  }
+
+  bool IsProvidedByTemplate(const NamedDecl* decl) {
     return GetLocOfTemplateThatProvides(decl).isValid();
   }
 
@@ -4568,6 +4914,7 @@ class InstantiatedTemplateVisitor
     if (!fn_decl || ContainsKey(traversed_decls_, fn_decl))
       return true;   // avoid recursion and repetition
     traversed_decls_.insert(fn_decl);
+    const ValueSaver<int> decl_traversal = EnterDeclTraversal();
 
     // If we have cached the reporting done for this decl before,
     // report again (but with the new caller_loc this time).
@@ -4580,6 +4927,7 @@ class InstantiatedTemplateVisitor
     // calls, below, end up in the cache for fn_decl.
     CacheStoringScope css(&cache_storers_, FunctionCallsFullUseCache(),
                           fn_decl, resugar_map_);
+    ValueSaver<int> scope(&traversal_scope_, ++num_traversal_scopes_);
 
     // We want to ignore all nodes that are the same in this
     // instantiated function as they are in the uninstantiated version
@@ -4615,12 +4963,16 @@ class InstantiatedTemplateVisitor
     // TODO(bolshakov): is this really needed? BaseAstVisitor::Traverse* methods
     // already have protection from recursion.
     traversed_decls_.insert(decl);
+    const ValueSaver<int> decl_traversal = EnterDeclTraversal();
 
     AstFlattenerVisitor nodeset_getter(compiler());
     // This gets to the decl for the (uninstantiated) template-as-written:
     VarDecl* decl_as_written = decl->getTemplateInstantiationPattern();
     if (!decl_as_written)  // TODO(bolshakov): could it be null?
       return true;
+    ValueSaver<int> scope(&traversal_scope_, ++num_traversal_scopes_);
+    // Unlike for functions, this outlives the traversal.
+    ++ignore_generation_;
     nodes_to_ignore_.AddAll(
         nodeset_getter.GetNodesBelow(decl_as_written->getDefinition()));
 
@@ -4682,6 +5034,7 @@ class InstantiatedTemplateVisitor
     if (ContainsKey(traversed_decls_, class_decl))
       return true;   // avoid recursion & repetition
     traversed_decls_.insert(class_decl);
+    const ValueSaver<int> decl_traversal = EnterDeclTraversal();
 
     if (ReplayClassMemberUsesFromPrecomputedList(type))
       return true;
@@ -4708,6 +5061,7 @@ class InstantiatedTemplateVisitor
     // calls, below, end up in the cache for class_decl.
     CacheStoringScope css(&cache_storers_, ClassMembersFullUseCache(),
                           class_decl, resugar_map_);
+    ValueSaver<int> scope(&traversal_scope_, ++num_traversal_scopes_);
 
     for (DeclContext::decl_iterator it = class_decl->decls_begin();
          it != class_decl->decls_end(); ++it) {
@@ -4843,6 +5197,31 @@ class InstantiatedTemplateVisitor
 
   // Used to avoid recursion in the *Helper() methods.
   set<const Decl*> traversed_decls_;
+
+  // Nested alias templates reach the same specialization type along
+  // exponentially many AST paths.  A revisit in an equal context would
+  // repeat what the first traversal reported, except within the classes,
+  // functions and variables that the first one traversed.  So instead, the
+  // reports recorded during the first traversal are repeated, with how often
+  // they were made: that decides between alternative headers.
+  // A context may have several first traversals, which differ in what
+  // their provider lookups find.
+  map<SpecializationContext, vector<int>> recordings_of_specialization_;
+  vector<RecordedReport> recorded_reports_;
+  vector<Recording> recordings_;
+
+  // The specialization types being traversed for the first time, innermost
+  // last.
+  vector<ActiveRecording> active_recordings_;
+  // The number of class, function and variable traversals in progress.
+  int decl_traversal_depth_ = 0;
+
+  // Identifies the innermost class, function or variable traversal.
+  int traversal_scope_ = 0;
+  int num_traversal_scopes_ = 0;
+
+  // Counts in-place extensions of nodes_to_ignore_.
+  int ignore_generation_ = 0;
 
   AstFlattenerVisitor::NodeSet nodes_to_ignore_;
 
