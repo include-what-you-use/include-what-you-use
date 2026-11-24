@@ -11,6 +11,7 @@
 
 // Tests the precomputed template-arg-use list in iwyu_cache.cc.
 
+#include <cstddef>
 #include <forward_list>
 #include <list>
 #include <vector>
@@ -85,6 +86,16 @@ TemplatedClass<IndirectClass> tc_ic;
 // IWYU: SpecializationClass is...*precomputed_tpl_args-i1.h
 TemplatedClass<SpecializationClass> tc_sc;
 
+// Unordered containers need a hash function that can be invoked on the key
+// type, and std::hash<IndirectClass> is disabled. Newer standard libraries
+// (e.g. libstdc++ 15) check this when the container class is instantiated.
+struct AnyHash {
+  template <typename T>
+  std::size_t operator()(const T&) const {
+    return 0;
+  }
+};
+
 void Fn() {
   // Since C++17, full contained type isn't needed for std::vector, std::list,
   // and std::forward_list instantiations.
@@ -108,18 +119,35 @@ void Fn() {
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
   (void)sizeof(std::multimap<IndirectClass, int>);
+  // IWYU: HashableClass needs a declaration
+  // IWYU: HashableClass is...*precomputed_tpl_args-i1.h
+  // IWYU: std::hash<HashableClass> is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::unordered_set<HashableClass>);
+  // IWYU: HashableClass needs a declaration
+  // IWYU: HashableClass is...*precomputed_tpl_args-i1.h
+  // IWYU: std::hash<HashableClass> is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::unordered_multiset<HashableClass>);
+  // IWYU: HashableClass needs a declaration
+  // IWYU: HashableClass is...*precomputed_tpl_args-i1.h
+  // IWYU: std::hash<HashableClass> is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::unordered_map<HashableClass, int>);
+  // IWYU: HashableClass needs a declaration
+  // IWYU: HashableClass is...*precomputed_tpl_args-i1.h
+  // IWYU: std::hash<HashableClass> is...*precomputed_tpl_args-i1.h
+  (void)sizeof(std::unordered_multimap<HashableClass, int>);
+  // The same with an explicit hasher, for a key type without std::hash.
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
-  (void)sizeof(std::unordered_set<IndirectClass>);
+  (void)sizeof(std::unordered_set<IndirectClass, AnyHash>);
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
-  (void)sizeof(std::unordered_multiset<IndirectClass>);
+  (void)sizeof(std::unordered_multiset<IndirectClass, AnyHash>);
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
-  (void)sizeof(std::unordered_map<IndirectClass, int>);
+  (void)sizeof(std::unordered_map<IndirectClass, int, AnyHash>);
   // IWYU: IndirectClass needs a declaration
   // IWYU: IndirectClass is...*precomputed_tpl_args-i1.h
-  (void)sizeof(std::unordered_multimap<IndirectClass, int>);
+  (void)sizeof(std::unordered_multimap<IndirectClass, int, AnyHash>);
 
   // Full type is required for, e.g., destroying sequence containers.
   // IWYU: IndirectClass needs a declaration
@@ -142,6 +170,7 @@ tests/cxx/precomputed_tpl_args.cc should remove these lines:
 The full include-list for tests/cxx/precomputed_tpl_args.cc:
 #include "tests/cxx/precomputed_tpl_args.h"
 #include <bitset>  // for bitset
+#include <cstddef>  // for size_t
 #include <forward_list>  // for forward_list
 #include <list>  // for list
 #include <map>  // for map, multimap
@@ -150,6 +179,6 @@ The full include-list for tests/cxx/precomputed_tpl_args.cc:
 #include <unordered_set>  // for unordered_multiset, unordered_set
 #include <vector>  // for vector
 #include "tests/cxx/precomputed_tpl_args-d1.h"  // for D1SpecializationClass, less
-#include "tests/cxx/precomputed_tpl_args-i1.h"  // for IndirectClass, SpecializationClass, less
+#include "tests/cxx/precomputed_tpl_args-i1.h"  // for HashableClass, IndirectClass, SpecializationClass, hash, less
 
 ***** IWYU_SUMMARY */
