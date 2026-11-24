@@ -903,7 +903,6 @@ const TagDecl* GetTagDefinition(const Decl* decl) {
           ClassTemplatePartialSpecializationDecl*>()) {
         // decl would be instantiated from a template partial
         // specialization.
-        CHECK_(partial_spec_decl->hasDefinition());
         return partial_spec_decl->getDefinition();
       } else if (const ClassTemplateDecl* tpl_decl =
                  specialized_decl.dyn_cast<ClassTemplateDecl*>()) {

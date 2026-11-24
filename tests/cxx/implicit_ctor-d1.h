@@ -61,6 +61,16 @@ using Providing = NoAutocastCtor;
 // IWYU: NoTrivialCtorDtor is...*implicit_ctor-i2.h
 using NoTrivialCtorDtorProvidingAlias = NoTrivialCtorDtor;
 
+// Test that IWYU doesn't crash trying to find an "autocast" constructor
+// in a partial specialization without definition.
+
+template <typename>
+class UndefinedPartialSpec;
+template <typename T>
+class UndefinedPartialSpec<T*>;
+
+void TakeUndefinedPartialSpec(const UndefinedPartialSpec<int*>&);
+
 /**** IWYU_SUMMARY
 
 tests/cxx/implicit_ctor-d1.h should add these lines:
@@ -70,9 +80,11 @@ class IndirectClass;
 tests/cxx/implicit_ctor-d1.h should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 - #include "tests/cxx/implicit_ctor-i1.h"  // lines XX-XX
+- class UndefinedPartialSpec;  // lines XX-XX+1
 
 The full include-list for tests/cxx/implicit_ctor-d1.h:
 #include "tests/cxx/implicit_ctor-i2.h"  // for ImplicitCtorInPartial, IndirectWithImplicitCtor, MultipleRedeclStruct, NoAutocastCtor, NoTrivialCtorDtor, OuterAggregate1
 class IndirectClass;
+template <typename> class UndefinedPartialSpec;  // lines XX-XX+1
 
 ***** IWYU_SUMMARY */
