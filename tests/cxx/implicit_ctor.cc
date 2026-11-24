@@ -111,6 +111,10 @@ void TestNonAutocastConstruction(const NoAutocastCtor& par) {
   // Test that IWYU finds the definition among redeclarations which contains
   // the implicit ctor and doesn't require the complete type here.
   TakeMultipleRedeclStruct(1);
+
+  // IWYU: UndefinedPartialSpec needs a declaration
+  extern UndefinedPartialSpec<int*> ups;
+  TakeUndefinedPartialSpec(ups);
 }
 
 struct NonAggregate {
@@ -211,12 +215,14 @@ void TestAggregateInit(const OuterAggregate1& par) {
 
 tests/cxx/implicit_ctor.cc should add these lines:
 #include "tests/cxx/implicit_ctor-i2.h"
+template <typename> class UndefinedPartialSpec;
 
 tests/cxx/implicit_ctor.cc should remove these lines:
 
 The full include-list for tests/cxx/implicit_ctor.cc:
-#include "tests/cxx/implicit_ctor-d1.h"  // for ImplicitCtorFn, ImplicitCtorInPartialFn, ImplicitCtorRefFn, InlineImplicitCtorRefFn, NoTrivialCtorDtorProvidingAlias, Providing, ProvidingOuterAggregate1, TakeMultipleRedeclStruct
+#include "tests/cxx/implicit_ctor-d1.h"  // for ImplicitCtorFn, ImplicitCtorInPartialFn, ImplicitCtorRefFn, InlineImplicitCtorRefFn, NoTrivialCtorDtorProvidingAlias, Providing, ProvidingOuterAggregate1, TakeMultipleRedeclStruct, TakeUndefinedPartialSpec
 #include "tests/cxx/implicit_ctor-d2.h"  // for NoTrivialCtorDtorNonProvidingAlias, NonProviding, NonProvidingOuterAggregate1
 #include "tests/cxx/implicit_ctor-i2.h"  // for AggregateWithNonAggregate, I2NonAggregate, IndirectWithImplicitCtor, InnerAggregate1, InnerAggregate2, NoAutocastCtor, NoTrivialCtorDtor, OuterAggregate1, OuterAggregate2, OuterAggregateWithRef
+template <typename> class UndefinedPartialSpec;
 
 ***** IWYU_SUMMARY */
