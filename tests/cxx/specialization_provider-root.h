@@ -19,18 +19,13 @@ struct Root {
   Both<L, R, Box<T>> value;
 };
 
-// Repeated descendants exercise reuse below another class traversal.
+// Repeated aliases exercise reuse through multiple paths to the same type.
 template <class T>
 using Twice = Sink<T, T>;
 
 template <template <class> class L, template <class> class R, class T>
 struct RepeatedRoot {
   Twice<Both<L, R, Box<T>>> value;
-};
-
-template <template <class> class L, template <class> class R, class T>
-struct Outer {
-  RepeatedRoot<L, R, T> root;
 };
 
 template <template <class> class L, template <class> class R, class T>
