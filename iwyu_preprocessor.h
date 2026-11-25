@@ -64,6 +64,7 @@
 #include <set>                          // for set
 #include <stack>                        // for stack
 #include <string>                       // for string
+#include <utility>                      // for pair
 #include <vector>                       // for vector
 
 #include "clang/Basic/FileEntry.h"
@@ -80,6 +81,7 @@ class NamedDecl;
 namespace include_what_you_use {
 
 using std::map;
+using std::pair;
 using std::set;
 using std::stack;
 using std::string;
@@ -188,11 +190,17 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
                const clang::MacroDefinition& definition,
                clang::SourceRange range) override;
 
-  // Not needed for iwyu:
-  // virtual void If();
-  // virtual void Elif();
-  // virtual void Else();
-  // virtual void Endif();
+  // These record the extent of conditional blocks, so that IwyuFileInfo can
+  // tell which lines depend on a macro used in a condition.
+  void If(clang::SourceLocation loc,
+          clang::SourceRange condition_range,
+          ConditionValueKind condition_value) override;
+  void Elif(clang::SourceLocation loc,
+            clang::SourceRange condition_range,
+            ConditionValueKind condition_value,
+            clang::SourceLocation if_loc) override;
+  void Else(clang::SourceLocation loc, clang::SourceLocation if_loc) override;
+  void Endif(clang::SourceLocation loc, clang::SourceLocation if_loc) override;
 
   void InclusionDirective(clang::SourceLocation hash_loc,
                           const clang::Token& include_token,
@@ -243,6 +251,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // from the file-path for 'file'.
   // TODO(csilvers): see if, in practice, all uses in here are just 'get's.
   IwyuFileInfo* GetFromFileInfoMap(clang::OptionalFileEntryRef file);
+
+  // Records the line span of a directive of the conditional block that
+  // starts at if_loc.
+  void AddConditionalDirective(clang::SourceLocation if_loc,
+                               clang::SourceRange directive);
 
   // Helper for AddDirectInclude.  Checks if we should protect the
   // #include from iwyu removal.
@@ -331,6 +344,11 @@ class IwyuPreprocessorInfo : public clang::PPCallbacks,
   // file is directed *not* to forward-declare via the
   // "no_forward_declare" pragma.
   map<clang::OptionalFileEntryRef, set<string>> no_forward_declare_map_;
+
+  // Line spans of the #if, #elif and #else directives of each open
+  // conditional block, keyed by the location of its #if.
+  map<clang::SourceLocation, vector<pair<int, int>>>
+      conditional_directive_lines_;
 
   // For processing pragmas. It is the current stack of open
   // "begin_exports".  There should be at most one item in this stack
