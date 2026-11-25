@@ -9,7 +9,7 @@
 
 // IWYU_ARGS: -I . -std=c++11
 
-#include "tests/cxx/specialization_cache_scope-direct.h"
+#include "tests/cxx/specialization_provider-direct.h"
 
 // Member<Payload> and Member<Payload*> share one alias expansion, and each
 // stores the uses found in it in its own class-member cache entry.
@@ -32,7 +32,7 @@ tests/cxx/specialization_cache_scope.cc should add these lines:
 #include "tests/cxx/specialization_provider-payload.h"
 
 tests/cxx/specialization_cache_scope.cc should remove these lines:
-- #include "tests/cxx/specialization_cache_scope-direct.h"  // lines XX-XX
+- #include "tests/cxx/specialization_provider-direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/specialization_cache_scope.cc:
 #include "tests/cxx/specialization_cache_scope-defs.h"  // for Holder, Reuser

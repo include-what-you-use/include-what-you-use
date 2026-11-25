@@ -10,7 +10,6 @@
 #pragma once
 
 #include "tests/cxx/specialization_provider-inst.h"
-#include "tests/cxx/specialization_provider-macro.h"
 
 template <class T>
 using Provided = ArgumentThenQualifier<T, T::template Nested>;

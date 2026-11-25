@@ -9,6 +9,6 @@
 
 #pragma once
 
+#include "tests/cxx/specialization_cache_scope-defs.h"
 #include "tests/cxx/specialization_provider-provided.h"
 #include "tests/cxx/specialization_provider-nonprovided.h"
-#include "tests/cxx/specialization_provider-root.h"
