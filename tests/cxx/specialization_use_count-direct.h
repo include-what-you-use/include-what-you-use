@@ -10,4 +10,8 @@
 #pragma once
 
 #include "tests/cxx/specialization_use_count-root.h"
-#include "tests/cxx/specialization_use_count-payload.h"
+#include "tests/cxx/specialization_provider-payload.h"
+
+struct T {};
+struct U {};
+struct V {};

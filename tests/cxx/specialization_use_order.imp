@@ -1,6 +1,0 @@
-[
-  { "symbol": ["Box", "private", "\"tests/cxx/specialization_use_order-a.h\"", "public"] },
-  { "symbol": ["Box", "private", "\"tests/cxx/specialization_use_order-b.h\"", "public"] },
-  { "symbol": ["Crate", "private", "\"tests/cxx/specialization_use_order-a.h\"", "public"] },
-  { "symbol": ["Crate", "private", "\"tests/cxx/specialization_use_order-c.h\"", "public"] }
-]

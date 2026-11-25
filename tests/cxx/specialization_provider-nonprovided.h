@@ -10,6 +10,9 @@
 #pragma once
 
 #include "tests/cxx/specialization_provider-defs.h"
+#include "tests/cxx/specialization_provider-macro.h"
 
 template <class T>
 using NonProvided = ArgumentThenQualifier<T, T::template Nested>;
+
+DEFINE_QUALIFIER(NonProvidedByMacro)

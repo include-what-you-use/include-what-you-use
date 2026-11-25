@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "tests/cxx/specialization_cache_scope-payload.h"
+#include "tests/cxx/specialization_provider-payload.h"
 
 template <class L, class R>
 struct Pair {};

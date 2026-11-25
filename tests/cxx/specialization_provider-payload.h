@@ -9,4 +9,4 @@
 
 #pragma once
 
-struct Payload {};
+struct Payload { using type = int; };

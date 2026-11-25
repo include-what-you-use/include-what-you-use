@@ -1,4 +1,4 @@
-//===--- specialization_provider_known_argument.cc - test input -----------===//
+//===--- specialization_provider_nested.cc - test input -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,39 +11,33 @@
 
 #include "tests/cxx/specialization_provider-direct.h"
 
-// A written Box argument independently requires its declaration and explicit
-// instantiation, even when provider-dependent traversal skips a reported use.
-// This is an output control: the lost ordinary use requires instrumentation
-// to distinguish because the independent use preserves the final includes.
-// IWYU: Both is...*specialization_provider-root.h
-// IWYU: Box is...*specialization_provider-defs.h
-// IWYU: Box is...*specialization_provider-inst.h
-// IWYU: Payload is...*specialization_provider-payload.h
-// IWYU: Provided is...*specialization_provider-provided.h
+// A class reached from another class must retain the unprovided descendant's
+// explicit-instantiation requirement when its shared specialization is reused.
 // IWYU: NonProvided is...*specialization_provider-nonprovided.h
-// IWYU: Box needs a declaration
+// IWYU: Box is...*specialization_provider-inst.h
+// IWYU: Outer is...*specialization_provider-root.h
+// IWYU: Payload is...*specialization_provider-payload.h
 // IWYU: Payload needs a declaration
-int instance = sizeof(Both<Provided, NonProvided, Box<Payload>>);
+// IWYU: Provided is...*specialization_provider-provided.h
+Outer<Provided, NonProvided, Payload> instance;
 
 /**** IWYU_SUMMARY
 
-tests/cxx/specialization_provider_known_argument.cc should add these lines:
-#include "tests/cxx/specialization_provider-defs.h"
+tests/cxx/specialization_provider_nested.cc should add these lines:
 #include "tests/cxx/specialization_provider-inst.h"
 #include "tests/cxx/specialization_provider-nonprovided.h"
 #include "tests/cxx/specialization_provider-payload.h"
 #include "tests/cxx/specialization_provider-provided.h"
 #include "tests/cxx/specialization_provider-root.h"
 
-tests/cxx/specialization_provider_known_argument.cc should remove these lines:
+tests/cxx/specialization_provider_nested.cc should remove these lines:
 - #include "tests/cxx/specialization_provider-direct.h"  // lines XX-XX
 
-The full include-list for tests/cxx/specialization_provider_known_argument.cc:
-#include "tests/cxx/specialization_provider-defs.h"  // for Box
+The full include-list for tests/cxx/specialization_provider_nested.cc:
 #include "tests/cxx/specialization_provider-inst.h"  // for Box
 #include "tests/cxx/specialization_provider-nonprovided.h"  // for NonProvided
 #include "tests/cxx/specialization_provider-payload.h"  // for Payload
 #include "tests/cxx/specialization_provider-provided.h"  // for Provided
-#include "tests/cxx/specialization_provider-root.h"  // for Both
+#include "tests/cxx/specialization_provider-root.h"  // for Outer
 
 ***** IWYU_SUMMARY */

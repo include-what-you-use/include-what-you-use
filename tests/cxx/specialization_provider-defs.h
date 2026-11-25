@@ -9,7 +9,10 @@
 
 #pragma once
 
-template <class...> struct Sink {};
+// Wrappers can themselves become qualifier arguments in nested aliases.
+template <class...> struct Sink {
+  template <class> struct Nested {};
+};
 
 template <class T> struct Box {
   T value;
@@ -17,4 +20,6 @@ template <class T> struct Box {
 };
 
 template <class T, template <class> class N>
-struct ArgumentThenQualifier {};
+struct ArgumentThenQualifier {
+  template <class> struct Nested {};
+};

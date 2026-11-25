@@ -1,8 +1,0 @@
-[
-  { "symbol": ["Conv", "private", "\"tests/cxx/specialization_context_call-a.h\"", "public"] },
-  { "symbol": ["Conv", "private", "\"tests/cxx/specialization_context_call-b.h\"", "public"] },
-  { "symbol": ["W1", "private", "\"tests/cxx/specialization_context_call-b.h\"", "public"] },
-  { "symbol": ["W1", "private", "\"tests/cxx/specialization_context_call-c.h\"", "public"] },
-  { "symbol": ["W2", "private", "\"tests/cxx/specialization_context_call-c.h\"", "public"] },
-  { "symbol": ["W2", "private", "\"tests/cxx/specialization_context_call-a.h\"", "public"] }
-]

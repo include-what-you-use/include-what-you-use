@@ -1,6 +1,0 @@
-[
-  { "symbol": ["Payload", "private", "\"tests/cxx/specialization_use_member_count-i.h\"", "public"] },
-  { "symbol": ["Payload", "private", "\"tests/cxx/specialization_use_member_count-j.h\"", "public"] },
-  { "symbol": ["W", "private", "\"tests/cxx/specialization_use_member_count-j.h\"", "public"] },
-  { "symbol": ["W", "private", "\"tests/cxx/specialization_use_member_count-i.h\"", "public"] }
-]

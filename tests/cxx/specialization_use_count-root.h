@@ -9,16 +9,14 @@
 
 #pragma once
 
-#include "tests/cxx/specialization_use_count-provided.h"
-#include "tests/cxx/specialization_use_count-nonprovided.h"
+#include "tests/cxx/specialization_provider-provided.h"
+#include "tests/cxx/specialization_provider-nonprovided.h"
 
 template <class T>
-using Both = Sink<P<T>, NP<T>>;
+using CountBoth = Sink<Provided<T>, NonProvided<T>>;
 
-// Reaches Box<Payload> as a qualifier through NP once for every path through
-// the nested aliases, which IWYU reports as a use of its explicit
-// instantiation each time.
+// Redundant alias paths must not amplify the explicit-instantiation use.
 template <class T>
 struct Holder {
-  Both<Both<Both<Box<T>>>> value;
+  CountBoth<CountBoth<CountBoth<Box<T>>>> value;
 };
