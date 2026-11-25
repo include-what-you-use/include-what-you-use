@@ -96,47 +96,23 @@ namespace {
 // Listed below are all IWYU's native symbol and include mappings,
 // loosely based on GCC 4.4's libc and libstdc++.
 
-// Symbol -> include mappings for GNU libc
-const SymbolMapEntry libc_symbol_map[] = {
+const SymbolMapEntry posix_symbol_map[] = {
   // For library symbols that can be defined in more than one header
   // file, maps from symbol-name to legitimate header files.
-  // This list was generated via
-  // grep -R '__.*_defined' /usr/include | perl -nle 'm,/usr/include/([^:]*):#\s*\S+ __(.*)_defined, and print qq@    { "$2", kPublic, "<$1>", kPublic },@' | sort -u
-  // I ignored all entries that only appeared once on the list (eg uint32_t).
-  // I then added in NULL, which according to [diff.null] C.2.2.3, can
-  // be defined in <clocale>, <cstddef>, <cstdio>, <cstdlib>,
-  // <cstring>, <ctime>, or <cwchar>.  We also allow their C
-  // equivalents.
-  // In each case, I ordered them so <sys/types.h> was first, if it was
-  // an option for this type.  That's the preferred #include all else
-  // equal.
   { "_POSIX_VDISABLE", UseKind::Full, "<unistd.h>", kPublic },
-  { "abort", UseKind::Full, "<stdlib.h>", kPublic },
   { "aiocb", UseKind::Full, "<aio.h>", kPublic },
   { "blkcnt_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "blksize_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "cc_t", UseKind::Full, "<termios.h>", kPublic },
-  { "clock_t", UseKind::Full, "<time.h>", kPublic },
-  { "clock_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "clockid_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "ctermid", UseKind::Full, "<stdio.h>", kPublic },
-  { "daddr_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "dev_t", UseKind::Full, "<sys/types.h>", kPublic },
-  { "div_t", UseKind::Full, "<stdlib.h>", kPublic },
-  { "double_t", UseKind::Full, "<math.h>", kPublic },
-  { "error_t", UseKind::Full, "<errno.h>", kPublic },
-  { "error_t", UseKind::Full, "<argp.h>", kPublic },
-  { "error_t", UseKind::Full, "<argz.h>", kPublic },
   { "FD_CLR", UseKind::Full, "<sys/select.h>", kPublic },
   { "FD_ISSET", UseKind::Full, "<sys/select.h>", kPublic },
   { "FD_SET", UseKind::Full, "<sys/select.h>", kPublic },
   { "fd_set", UseKind::Full, "<sys/select.h>", kPublic },
   { "FD_SETSIZE", UseKind::Full, "<sys/select.h>", kPublic },
   { "FD_ZERO", UseKind::Full, "<sys/select.h>", kPublic },
-  { "fenv_t", UseKind::Full, "<fenv.h>", kPublic },
-  { "fexcept_t", UseKind::Full, "<fenv.h>", kPublic },
-  { "FILE", UseKind::Full, "<stdio.h>", kPublic },
-  { "float_t", UseKind::Full, "<math.h>", kPublic },
   { "fsblkcnt_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "fsfilcnt_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "getopt", UseKind::Full, "<unistd.h>", kPublic },
@@ -146,47 +122,12 @@ const SymbolMapEntry libc_symbol_map[] = {
   { "in_addr_t", UseKind::Full, "<netinet/in.h>", kPublic },
   { "in_port_t", UseKind::Full, "<netinet/in.h>", kPublic },
   { "id_t", UseKind::Full, "<sys/types.h>", kPublic },
-  { "imaxdiv_t", UseKind::Full, "<inttypes.h>", kPublic },
-  { "intmax_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uintmax_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "ino64_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "ino_t", UseKind::Full, "<sys/types.h>", kPublic },
-  { "int8_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int16_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int32_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int64_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int_fast8_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int_fast16_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int_fast32_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int_fast64_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int_least8_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int_least16_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int_least32_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "int_least64_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint8_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint16_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint32_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint64_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint_fast8_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint_fast16_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint_fast32_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint_fast64_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint_least8_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint_least16_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint_least32_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uint_least64_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "intptr_t", UseKind::Full, "<stdint.h>", kPublic },
-  { "uintptr_t", UseKind::Full, "<stdint.h>", kPublic },
   { "iovec", UseKind::Full, "<sys/uio.h>", kPublic },
   { "itimerspec", UseKind::Full, "<time.h>", kPublic },
   { "key_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "L_ctermid", UseKind::Full, "<stdio.h>", kPublic },
-  { "lconv", UseKind::Full, "<locale.h>", kPublic },
-  { "ldiv_t", UseKind::Full, "<stdlib.h>", kPublic },
-  { "lldiv_t", UseKind::Full, "<stdlib.h>", kPublic },
   { "locale_t", UseKind::Full, "<locale.h>", kPublic },
-  { "max_align_t", UseKind::Full, "<stddef.h>", kPublic },
-  { "mbstate_t", UseKind::Full, "<wchar.h>", kPublic },
   { "mcontext_t", UseKind::Full, "<ucontext.h>", kPublic },
   { "mode_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "nl_item", UseKind::Full, "<nl_types.h>", kPublic },
@@ -203,7 +144,6 @@ const SymbolMapEntry libc_symbol_map[] = {
   { "optopt", UseKind::Full, "<unistd.h>", kPublic },
   { "pid_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "posix_memalign", UseKind::Full, "<stdlib.h>", kPublic },
-  { "printf", UseKind::Full, "<stdio.h>", kPublic },
   { "pthread_attr_t", UseKind::Full, "<pthread.h>", kPublic },
   { "pthread_cond_t", UseKind::Full, "<pthread.h>", kPublic },
   { "pthread_condattr_t", UseKind::Full, "<pthread.h>", kPublic },
@@ -214,7 +154,6 @@ const SymbolMapEntry libc_symbol_map[] = {
   { "pthread_rwlock_t", UseKind::Full, "<pthread.h>", kPublic },
   { "pthread_rwlockattr_t", UseKind::Full, "<pthread.h>", kPublic },
   { "pthread_t", UseKind::Full, "<pthread.h>", kPublic },
-  { "ptrdiff_t", UseKind::Full, "<stddef.h>", kPublic },
   { "regex_t", UseKind::Full, "<regex.h>", kPublic },
   { "regmatch_t", UseKind::Full, "<regex.h>", kPublic },
   { "regoff_t", UseKind::Full, "<regex.h>", kPublic },
@@ -245,10 +184,7 @@ const SymbolMapEntry libc_symbol_map[] = {
   { "SCHED_FIFO", UseKind::Full, "<sched.h>", kPublic },
   { "SCHED_OTHER", UseKind::Full, "<sched.h>", kPublic },
   { "SCHED_RR", UseKind::Full, "<sched.h>", kPublic },
-  { "SEEK_CUR", UseKind::Full, "<stdio.h>", kPublic },
-  { "SEEK_END", UseKind::Full, "<stdio.h>", kPublic },
-  { "SEEK_SET", UseKind::Full, "<stdio.h>", kPublic },
-  { "sig_atomic_t", UseKind::Full, "<signal.h>", kPublic },
+  { "SIGCHLD", UseKind::Full, "<signal.h>", kPublic },
   { "sigevent", UseKind::Full, "<signal.h>", kPublic },
   { "siginfo_t", UseKind::Full, "<signal.h>", kPublic },
   { "sigset_t", UseKind::Full, "<signal.h>", kPublic },
@@ -259,23 +195,93 @@ const SymbolMapEntry libc_symbol_map[] = {
   { "stack_t", UseKind::Full, "<signal.h>", kPublic },
   { "stat", UseKind::Full, "<sys/stat.h>", kPublic },
   { "suseconds_t", UseKind::Full, "<sys/types.h>", kPublic },
-  { "time_t", UseKind::Full, "<time.h>", kPublic },
-  { "time_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "timer_t", UseKind::Full, "<sys/types.h>", kPublic },
-  { "timespec", UseKind::Full, "<time.h>", kPublic },
   { "timeval", UseKind::Full, "<sys/time.h>", kPublic },  // 'canonical' location for timeval
   { "timeval", UseKind::Full, "<sys/resource.h>", kPublic },
   { "timeval", UseKind::Full, "<sys/select.h>", kPublic },
   { "timeval", UseKind::Full, "<utmpx.h>", kPublic },
-  { "tm", UseKind::Full, "<time.h>", kPublic },
-  { "u_char", UseKind::Full, "<sys/types.h>", kPublic },
   { "ucontext_t", UseKind::Full, "<ucontext.h>", kPublic },
   { "uid_t", UseKind::Full, "<sys/types.h>", kPublic },
   { "useconds_t", UseKind::Full, "<sys/types.h>", kPublic },
+  { "winsize", UseKind::Full, "<termios.h>", kPublic },
+};
+
+// Symbol -> include mappings for GNU libc
+const SymbolMapEntry libc_symbol_map[] = {
+  // For library symbols that can be defined in more than one header
+  // file, maps from symbol-name to legitimate header files.
+  // This list was generated via
+  // grep -R '__.*_defined' /usr/include | perl -nle 'm,/usr/include/([^:]*):#\s*\S+ __(.*)_defined, and print qq@    { "$2", kPublic, "<$1>", kPublic },@' | sort -u
+  // I ignored all entries that only appeared once on the list (eg uint32_t).
+  // I then added in NULL, which according to [diff.null] C.2.2.3, can
+  // be defined in <clocale>, <cstddef>, <cstdio>, <cstdlib>,
+  // <cstring>, <ctime>, or <cwchar>.  We also allow their C
+  // equivalents.
+  // In each case, I ordered them so <sys/types.h> was first, if it was
+  // an option for this type.  That's the preferred #include all else
+  // equal.
+  { "abort", UseKind::Full, "<stdlib.h>", kPublic },
+  { "clock_t", UseKind::Full, "<time.h>", kPublic },
+  { "clock_t", UseKind::Full, "<sys/types.h>", kPublic },
+  { "daddr_t", UseKind::Full, "<sys/types.h>", kPublic },
+  { "div_t", UseKind::Full, "<stdlib.h>", kPublic },
+  { "double_t", UseKind::Full, "<math.h>", kPublic },
+  { "error_t", UseKind::Full, "<errno.h>", kPublic },
+  { "error_t", UseKind::Full, "<argp.h>", kPublic },
+  { "error_t", UseKind::Full, "<argz.h>", kPublic },
+  { "fenv_t", UseKind::Full, "<fenv.h>", kPublic },
+  { "fexcept_t", UseKind::Full, "<fenv.h>", kPublic },
+  { "FILE", UseKind::Full, "<stdio.h>", kPublic },
+  { "float_t", UseKind::Full, "<math.h>", kPublic },
+  { "imaxdiv_t", UseKind::Full, "<inttypes.h>", kPublic },
+  { "intmax_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uintmax_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "ino64_t", UseKind::Full, "<sys/types.h>", kPublic },
+  { "int8_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int16_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int32_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int64_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int_fast8_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int_fast16_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int_fast32_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int_fast64_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int_least8_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int_least16_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int_least32_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "int_least64_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint8_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint16_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint32_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint64_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint_fast8_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint_fast16_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint_fast32_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint_fast64_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint_least8_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint_least16_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint_least32_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uint_least64_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "intptr_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "uintptr_t", UseKind::Full, "<stdint.h>", kPublic },
+  { "lconv", UseKind::Full, "<locale.h>", kPublic },
+  { "ldiv_t", UseKind::Full, "<stdlib.h>", kPublic },
+  { "lldiv_t", UseKind::Full, "<stdlib.h>", kPublic },
+  { "max_align_t", UseKind::Full, "<stddef.h>", kPublic },
+  { "mbstate_t", UseKind::Full, "<wchar.h>", kPublic },
+  { "printf", UseKind::Full, "<stdio.h>", kPublic },
+  { "ptrdiff_t", UseKind::Full, "<stddef.h>", kPublic },
+  { "SEEK_CUR", UseKind::Full, "<stdio.h>", kPublic },
+  { "SEEK_END", UseKind::Full, "<stdio.h>", kPublic },
+  { "SEEK_SET", UseKind::Full, "<stdio.h>", kPublic },
+  { "sig_atomic_t", UseKind::Full, "<signal.h>", kPublic },
+  { "time_t", UseKind::Full, "<time.h>", kPublic },
+  { "time_t", UseKind::Full, "<sys/types.h>", kPublic },
+  { "timespec", UseKind::Full, "<time.h>", kPublic },
+  { "tm", UseKind::Full, "<time.h>", kPublic },
+  { "u_char", UseKind::Full, "<sys/types.h>", kPublic },
   { "wchar_t", UseKind::Full, "<stddef.h>", kPublic },
   { "wctrans_t", UseKind::Full, "<wctype.h>", kPublic },
   { "wctype_t", UseKind::Full, "<wctype.h>", kPublic },
-  { "winsize", UseKind::Full, "<termios.h>", kPublic },
   { "wint_t", UseKind::Full, "<wchar.h>", kPublic },
   // It is unspecified if the cname headers provide ::size_t.
   // <locale.h> is the one header which defines NULL but not size_t.
@@ -292,7 +298,6 @@ const SymbolMapEntry libc_symbol_map[] = {
   // doesn't discover them.  Until I figure out a better way, I just
   // add them in by hand as I discover them.
   { "EOF", UseKind::Full, "<stdio.h>", kPublic },
-  { "FILE", UseKind::Full, "<stdio.h>", kPublic },
   { "IBSHIFT", UseKind::Full, "<asm/termbits.h>", kPublic },
   { "MAP_POPULATE", UseKind::Full, "<sys/mman.h>", kPublic },
   { "MAP_POPULATE", UseKind::Full, "<linux/mman.h>", kPublic },
@@ -301,7 +306,6 @@ const SymbolMapEntry libc_symbol_map[] = {
   { "MAXHOSTNAMELEN", UseKind::Full, "<sys/param.h>", kPublic },
   { "MAXHOSTNAMELEN", UseKind::Full, "<protocols/timed.h>", kPublic },
   { "SIGABRT", UseKind::Full, "<signal.h>", kPublic },
-  { "SIGCHLD", UseKind::Full, "<signal.h>", kPublic },
   { "va_arg", UseKind::Full, "<stdarg.h>", kPublic },
   { "va_copy", UseKind::Full, "<stdarg.h>", kPublic },
   { "va_end", UseKind::Full, "<stdarg.h>", kPublic },
@@ -1634,6 +1638,7 @@ void ExportInternalMappings(const string& dirpath) {
   WRITE_MAPPINGS_ARRAY("include", libcxx_include_map);
   WRITE_MAPPINGS_ARRAY("include", clang_builtin_include_map);
 
+  WRITE_MAPPINGS_ARRAY("symbol", posix_symbol_map);
   WRITE_MAPPINGS_ARRAY("symbol", libc_symbol_map);
   WRITE_MAPPINGS_ARRAY("symbol", stdlib_cxx_symbol_map);
 
@@ -1713,6 +1718,7 @@ void IncludePicker::AddInternalMappings(CStdLib cstdlib, CXXStdLib cxxstdlib) {
   // C standard library include mapping should be added after
   // stdlib_c_include_map so that IWYU prefers mapping <stdint.h> to <cstdint>
   // rather than to <inttypes.h>/<cinttypes>.
+  AddSymbolMappings(posix_symbol_map, IWYU_ARRAYSIZE(posix_symbol_map));
   if (cstdlib == CStdLib::Glibc) {
     AddSymbolMappings(libc_symbol_map, IWYU_ARRAYSIZE(libc_symbol_map));
     AddIncludeMappings(libc_include_map, IWYU_ARRAYSIZE(libc_include_map));

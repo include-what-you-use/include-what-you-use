@@ -251,6 +251,7 @@ the customized ones using something like:
 
     $ include-what-you-use \
         -Xiwyu --no_internal_mappings \
+        -Xiwyu --mapping_file=./mappings/posix_symbol_map.imp \
         -Xiwyu --mapping_file=./mappings/libc_include_map.imp \
         -Xiwyu --mapping_file=./mappings/libc_symbol_map.imp \
         ... \
