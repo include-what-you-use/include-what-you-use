@@ -6022,8 +6022,13 @@ class IwyuAstConsumer
   }
 
   set<const Type*> GetProvidedTypeComponents(const Type* type) const {
-    set<const Type*> res;
     const Type* desugared_until_typedef_or_tpl = Desugar(type);
+    if (const set<const Type*>* cached =
+            FindInMap(&provided_type_components_cache_,
+                      desugared_until_typedef_or_tpl)) {
+      return *cached;
+    }
+    set<const Type*> res;
     if (const auto* typedef_type =
             dyn_cast_or_null<TypedefType>(desugared_until_typedef_or_tpl)) {
       const TypedefNameDecl* decl = typedef_type->getDecl();
@@ -6038,6 +6043,8 @@ class IwyuAstConsumer
       }
     }
     InsertAllInto(GetProvidedByTplArg(desugared_until_typedef_or_tpl), &res);
+    provided_type_components_cache_.insert_or_assign(
+        desugared_until_typedef_or_tpl, res);
     return res;
   }
 
@@ -6185,6 +6192,14 @@ class IwyuAstConsumer
 
   // Class we call to handle instantiated template functions and classes.
   InstantiatedTemplateVisitor instantiated_template_visitor_;
+
+  // Provided types of a template specialization include those of the
+  // components of its arguments, which in turn include those of their
+  // arguments, and so on. With nested aliases, the same component is reached
+  // along exponentially many paths, so share completed results across the
+  // translation unit. The consumer owns the cache to keep its raw type keys
+  // tied to the AST they belong to.
+  mutable map<const Type*, set<const Type*>> provided_type_components_cache_;
 };  // class IwyuAstConsumer
 
 // IWYU frontend action impl.
