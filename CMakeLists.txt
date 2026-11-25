@@ -296,7 +296,6 @@ endif(IWYU_USE_SYSTEM_GTEST)
 # Add unittest target.
 add_llvm_executable(iwyu-unittests
   unittests/iwyu_lexer_util_test.cc
-  unittests/iwyu_output_weights_test.cc
   unittests/iwyu_path_util_test.cc
   unittests/iwyu_regex_test.cc
   unittests/iwyu_stl_util_test.cc

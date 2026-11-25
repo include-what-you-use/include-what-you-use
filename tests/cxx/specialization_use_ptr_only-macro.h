@@ -32,7 +32,7 @@ tests/cxx/specialization_use_ptr_only-macro.h should remove these lines:
 - struct Plain;  // lines XX-XX
 
 The full include-list for tests/cxx/specialization_use_ptr_only-macro.h:
-#include "tests/cxx/specialization_use_ptr_only-plain.h"  // for Plain (ptr only)
+#include "tests/cxx/specialization_use_ptr_only-plain.h"  // for Other, Plain (pt...
 #include "tests/cxx/specialization_use_ptr_only-root.h"  // for Holder
 
 ***** IWYU_SUMMARY */
