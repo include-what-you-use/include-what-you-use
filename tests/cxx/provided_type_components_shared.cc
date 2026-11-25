@@ -19,12 +19,14 @@ struct Holder {
 // Sharing descendants must not erase the provision carried by an alias.
 Holder<ProvidedPayload> provided;
 
-// A separate spelling must not inherit the alias's provision. This checks
-// reporting semantics, not invalidation after Sema changes an already-queried
-// type; constructing such an intervening instantiation is a coverage gap.
+// A separate spelling must not inherit the alias's provision from the cache.
 // IWYU: Payload is...*provided_type_components_shared-payload.h
 // IWYU: Payload needs a declaration
 Holder<Duplicate<Duplicate<Duplicate<Payload>>>> ordinary;
+
+// An intervening query with a different spelling must not change the cached
+// provision when the original alias is used again.
+Holder<ProvidedPayload> provided_again;
 
 /**** IWYU_SUMMARY
 
