@@ -10,14 +10,13 @@
 // IWYU_ARGS: -I . -std=c++17 \
 //            -Xiwyu --mapping_file=tests/cxx/specialization_provider_dependency.imp
 
-// Tests that a specialization type that IWYU reaches through many paths
-// counts as used along exactly the paths on which no enclosing template
-// provides it.  Whether a path through Holder's nested aliases goes through
-// the alias in "-provided.h" decides whether Box<Payload> is reported there,
-// also for specialization types that only contain Box<Payload> further down.
-// Box and T each map to "-i.h" and "-j.h" in opposite order, and IWYU picks
-// the header listed first by the most uses.  T is used 30 times, so counting
-// Box (25 uses) on a path where "-provided.h" provides it would pick "-i.h".
+// Exercise providing and non-providing paths to Box<Payload>, including
+// specializations that contain it only in descendants. An unprovided path
+// still requires its explicit-instantiation header.
+// Box and T have opposite mapped-header preferences. The independently
+// written uses of T should determine the choice without alias-path count
+// amplification. This checks recommendations, not exact report counts or
+// nested provider-dependency propagation in isolation.
 
 #include "tests/cxx/specialization_use_count-direct.h"
 #include "tests/cxx/specialization_use_count-other-private.h"

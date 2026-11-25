@@ -12,9 +12,9 @@
 #include "tests/cxx/specialization_use_alternating-aliases.h"
 #include "tests/cxx/specialization_use_alternating-inst.h"
 
-// Alpha sorts first alphabetically, but the repeated specialization reports
-// must make both Box symbols more frequent in the include's comment.
-// Summary matching sorts comment names; weighted ordering is also unit-tested.
+// Skipping redundant alias paths must not drop distinct symbols from the
+// include comment. Summary matching ignores symbol order, so this checks
+// presence rather than frequency-based ordering.
 Alpha ordinary;
 // IWYU: Payload needs a declaration
 Holder<Payload> object;
