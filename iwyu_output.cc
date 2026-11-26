@@ -38,6 +38,7 @@
 #include "iwyu_verrs.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace include_what_you_use {
 
@@ -74,6 +75,41 @@ using std::pair;
 using std::sort;
 using std::to_string;
 using std::vector;
+
+namespace {
+
+UseReportListener* use_report_listener = nullptr;
+
+uint64_t WarnIfSaturated(uint64_t weight, bool saturated) {
+  // So many reports could never have been made one at a time, so capping
+  // only affects input that couldn't be analyzed otherwise. Still, say so.
+  static bool warned = false;
+  if (saturated && !warned) {
+    warned = true;
+    VERRS(1) << "warning: a use-frequency count exceeded 2^64-1; counts are "
+                "saturated, so header choices and comment ordering may "
+                "contain ties\n";
+  }
+  return weight;
+}
+
+}  // namespace
+
+uint64_t AddUseWeights(uint64_t a, uint64_t b) {
+  bool saturated = false;
+  const uint64_t sum = llvm::SaturatingAdd(a, b, &saturated);
+  return WarnIfSaturated(sum, saturated);
+}
+
+uint64_t MultiplyUseWeights(uint64_t a, uint64_t b) {
+  bool saturated = false;
+  const uint64_t product = llvm::SaturatingMultiply(a, b, &saturated);
+  return WarnIfSaturated(product, saturated);
+}
+
+void SetUseReportListener(UseReportListener* listener) {
+  use_report_listener = listener;
+}
 
 namespace internal {
 
@@ -613,8 +649,10 @@ bool OneIncludeOrForwardDeclareLine::HasSymbolUse(const string& symbol_name)
   return ContainsKey(symbol_counts_, symbol_name);
 }
 
-void OneIncludeOrForwardDeclareLine::AddSymbolUse(const string& symbol_name) {
-  ++symbol_counts_[symbol_name];
+void OneIncludeOrForwardDeclareLine::AddSymbolUse(const string& symbol_name,
+                                                  uint64_t count) {
+  uint64_t& symbol_count = symbol_counts_[symbol_name];
+  symbol_count = AddUseWeights(symbol_count, count);
 }
 
 bool OneIncludeOrForwardDeclareLine::IsIncludeLine() const {
@@ -713,7 +751,9 @@ void IwyuFileInfo::AddUsingDecl(const UsingDecl* using_decl) {
            << internal::GetQualifiedNameAsString(using_decl) << "\n";
 }
 
-static void LogSymbolUse(const string& prefix, const OneUse& use) {
+static void LogSymbolUse(const string& prefix,
+                         const OneUse& use,
+                         uint64_t weight = 1) {
   string decl_loc;
   string printable_ptr;
   if (use.decl()) {
@@ -722,9 +762,11 @@ static void LogSymbolUse(const string& prefix, const OneUse& use) {
   } else {
     decl_loc = use.decl_filepath();
   }
-  VERRS(6) << prefix << " " << printable_ptr << use.symbol_name()
-           << " (from " << decl_loc << ")"
-           << " at " << use.PrintableUseLoc() << "\n";
+  const string weight_suffix =
+      weight > 1 ? " [x" + to_string(weight) + "]" : string();
+  VERRS(6) << prefix << " " << printable_ptr << use.symbol_name() << " (from "
+           << decl_loc << ")"
+           << " at " << use.PrintableUseLoc() << weight_suffix << "\n";
 }
 
 static void LogIncludeFileUse(const string& prefix, const OneUse& use) {
@@ -759,23 +801,23 @@ void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
       report_decl_loc = decl->getLocation();
     }
 
-    symbol_uses_.push_back(OneUse(report_decl, use_loc, report_decl_loc,
-                                  UseKind::Full, flags, comment));
-    LogSymbolUse("Marked full-info use of decl", symbol_uses_.back());
+    AddReportedUse(OneUse(report_decl, use_loc, report_decl_loc, UseKind::Full,
+                          flags, comment),
+                   "Marked full-info use of decl");
   }
 }
 
 void IwyuFileInfo::ReportFullSymbolUse(SourceLocation use_loc,
                                        OptionalFileEntryRef dfn_file,
                                        const string& symbol) {
-  symbol_uses_.push_back(OneUse(symbol, dfn_file, use_loc));
-  LogSymbolUse("Marked full-info use of symbol", symbol_uses_.back());
+  AddReportedUse(OneUse(symbol, dfn_file, use_loc),
+                 "Marked full-info use of symbol");
 }
 
 void IwyuFileInfo::ReportMacroUse(SourceLocation use_loc,
                                   SourceLocation dfn_loc,
                                   const string& symbol) {
-  symbol_uses_.push_back(OneUse(symbol, GetFileEntry(dfn_loc), use_loc));
+  AppendUse(OneUse(symbol, GetFileEntry(dfn_loc), use_loc));
   LogSymbolUse("Marked full-info use of macro", symbol_uses_.back());
 }
 
@@ -786,7 +828,7 @@ void IwyuFileInfo::ReportDefinedMacroUse(OptionalFileEntryRef used_in) {
 void IwyuFileInfo::ReportIncludeFileUse(OptionalFileEntryRef included_file,
                                         const string& quoted_include,
                                         SourceLocation include_loc) {
-  symbol_uses_.push_back(OneUse(included_file, quoted_include, include_loc));
+  AppendUse(OneUse(included_file, quoted_include, include_loc));
   LogIncludeFileUse("Marked use of include-file", symbol_uses_.back());
 }
 
@@ -810,9 +852,56 @@ void IwyuFileInfo::ReportForwardDeclareUse(SourceLocation use_loc,
   // combines friend decls with true forward-declare decls.  If that
   // happened here, replace the friend with a real fwd decl.
   decl = GetNonfriendClassRedecl(decl);
-  symbol_uses_.push_back(OneUse(decl, use_loc, GetLocation(decl),
-                                UseKind::FwdDecl, flags, comment));
-  LogSymbolUse("Marked fwd-decl use of decl", symbol_uses_.back());
+  AddReportedUse(OneUse(decl, use_loc, GetLocation(decl), UseKind::FwdDecl,
+                        flags, comment),
+                 "Marked fwd-decl use of decl");
+}
+
+void IwyuFileInfo::AppendUse(OneUse use, bool is_repeat) {
+  // A new report may change later header choices, so it ends the interval in
+  // which repeats can share an entry. Repeated entries extend that interval.
+  if (!is_repeat)
+    repeated_uses_.clear();
+  symbol_uses_.push_back(std::move(use));
+}
+
+void IwyuFileInfo::AddReportedUse(OneUse use, const char* log_prefix) {
+  use.can_repeat_ = true;
+  AppendUse(std::move(use));
+  LogSymbolUse(log_prefix, symbol_uses_.back());
+  if (use_report_listener)
+    use_report_listener->UseReported(this, symbol_uses_.size() - 1);
+}
+
+void IwyuFileInfo::ReportUseAgain(size_t index, uint64_t weight) {
+  CHECK_(weight > 0 && "Repeated-use weight must be positive");
+  CHECK_(index < symbol_uses_.size() && "Invalid reported-use index");
+  CHECK_(symbol_uses_[index].can_repeat_ &&
+         "Only original listener-reported uses can be repeated");
+  CHECK_(!symbol_uses_[index].has_suggested_header() &&
+         "Cannot repeat a use after header selection");
+  // Which header a use gets may depend on the uses before it, but a repeated
+  // use doesn't change that for later ones: the identical use before it did
+  // all that already. So all repeats since the last newly reported use get
+  // the same header, and can share an entry.
+  const auto [it, is_new] =
+      repeated_uses_.try_emplace(index, symbol_uses_.size());
+  if (is_new) {
+    OneUse use = symbol_uses_[index];
+    use.set_weight(weight);
+    use.can_repeat_ = false;
+    AppendUse(std::move(use), /*is_repeat=*/true);
+  } else {
+    OneUse& use = symbol_uses_[it->second];
+    use.set_weight(AddUseWeights(use.weight(), weight));
+  }
+  if (ShouldPrint(6)) {
+    const OneUse& use = symbol_uses_[index];
+    LogSymbolUse(!use.decl()         ? "Marked full-info use of symbol"
+                 : use.is_full_use() ? "Marked full-info use of decl"
+                                     : "Marked fwd-decl use of decl",
+                 use, weight);
+  }
 }
 
 void IwyuFileInfo::ReportUsingDeclUse(SourceLocation use_loc,
@@ -1044,16 +1133,19 @@ set<string> CalculateMinimalIncludes(
       unmapped_uses.insert(&use);
   }
   while (!unmapped_uses.empty()) {
-    map<string, pair<int,int>> header_counts;   // total appearances, 1st's
+    // Total appearances, 1st's, counting each use as often as it was
+    // reported.
+    map<string, pair<uint64_t, uint64_t>> header_counts;
     for (OneUse* use : unmapped_uses) {
       CHECK_(!use->has_suggested_header());
       const vector<string>& public_headers = use->public_headers();
       for (const string& choice : public_headers) {
         if (use->has_suggested_header())
           break;
-        ++header_counts[choice].first;  // increment total count
+        pair<uint64_t, uint64_t>& counts = header_counts[choice];
+        counts.first = AddUseWeights(counts.first, use->weight());
         if (choice == use->public_headers()[0])
-          ++header_counts[choice].second;  // increment first-in-list count
+          counts.second = AddUseWeights(counts.second, use->weight());
       }
     }
     // IWYU should not suggest headers which aren't canonical for at least one
@@ -1066,7 +1158,9 @@ set<string> CalculateMinimalIncludes(
         ++it;
       }
     }
-    pair<string, pair<int, int>> best = *header_counts.begin();
+    CHECK_(!header_counts.empty() &&
+           "No canonical header candidates for unmapped uses");
+    pair<string, pair<uint64_t, uint64_t>> best = *header_counts.begin();
     for (const auto& header_count : header_counts) {
       // Use pair<>'s operator> to order for us.
       if (header_count.second > best.second)
@@ -2027,9 +2121,9 @@ void CalculateDesiredIncludesAndForwardDeclares(
       for (auto it = range.first; it != range.second; ++it) {
         it->second->set_desired();
         if (GlobalFlags().comments_with_namespace) {
-          it->second->AddSymbolUse(use.symbol_name());
+          it->second->AddSymbolUse(use.symbol_name(), use.weight());
         } else {
-          it->second->AddSymbolUse(use.short_symbol_name());
+          it->second->AddSymbolUse(use.short_symbol_name(), use.weight());
         }
       }
     }
@@ -2060,7 +2154,7 @@ void CalculateDesiredIncludesAndForwardDeclares(
       for (auto it = range.first; it != range.second; ++it) {
         it->second->set_desired();
         if (!it->second->HasSymbolUse(symbol_name))
-          it->second->AddSymbolUse(symbol_name + " (ptr only)");
+          it->second->AddSymbolUse(symbol_name + " (ptr only)", use.weight());
       }
     }
   }
@@ -2152,8 +2246,8 @@ void CleanupPrefixHeaderIncludes(
 // Used by GetSymbolsSortedByFrequency().
 class CountGt {
  public:
-  bool operator()(const pair<string, int>& a,
-                  const pair<string, int>& b) const {
+  bool operator()(const pair<string, uint64_t>& a,
+                  const pair<string, uint64_t>& b) const {
     if (a.second != b.second)
       return a.second > b.second;   // sort by decreasing count
     return a.first < b.first;       // within a count, sort alphabetically
@@ -2165,12 +2259,12 @@ class CountGt {
 // We also can take a vector of forward-declared symbols used by this
 // file.  For all symbols in this vector but not in m, we add them to
 // the end of the output as well, with a "(ptr only)" suffix.
-vector<string> GetSymbolsSortedByFrequency(const map<string, int>& m) {
-  vector<pair<string, int>> count_vector(m.begin(), m.end());
+vector<string> GetSymbolsSortedByFrequency(const map<string, uint64_t>& m) {
+  vector<pair<string, uint64_t>> count_vector(m.begin(), m.end());
   sort(count_vector.begin(), count_vector.end(), CountGt());
 
   vector<string> retval;
-  for (const pair<string, int>& count : count_vector)
+  for (const pair<string, uint64_t>& count : count_vector)
     retval.push_back(count.first);
   return retval;
 }
