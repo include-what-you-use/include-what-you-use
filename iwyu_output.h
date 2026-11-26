@@ -356,6 +356,10 @@ class IwyuFileInfo {
   // Reports violations on errs(), and returns the number of violations.
   size_t CalculateAndReportIwyuViolations();
 
+  // Returns how this file #includes 'includee', such as "foo.h" or
+  // <foo.h>.  'includee' must be a direct #include of this file.
+  string QuotedIncludeAsWritten(clang::OptionalFileEntryRef includee) const;
+
  private:
   const set<string>& desired_includes() const {
     CHECK_(desired_includes_have_been_calculated_ &&

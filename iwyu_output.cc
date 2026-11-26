@@ -675,6 +675,15 @@ void IwyuFileInfo::AddInclude(OptionalFileEntryRef includee,
            << "-" << end_linenum << " -> " << GetFilePath(includee) << "\n";
 }
 
+string IwyuFileInfo::QuotedIncludeAsWritten(
+    OptionalFileEntryRef includee) const {
+  for (const OneIncludeOrForwardDeclareLine& line : lines_) {
+    if (line.IsIncludeLine() && line.included_file() == includee)
+      return line.quoted_include();
+  }
+  CHECK_UNREACHABLE_("Not a direct #include of this file");
+}
+
 void IwyuFileInfo::AddForwardDeclare(const NamedDecl* fwd_decl,
                                      bool definitely_keep_fwd_decl) {
   CHECK_(fwd_decl && "forward_declare_decl unexpectedly nullptr");

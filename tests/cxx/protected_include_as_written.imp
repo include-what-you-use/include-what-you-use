@@ -1,0 +1,4 @@
+# Header mappings for IWYU tests.
+[
+  { "include": ["\"tests/cxx/protected_include_as_written-i3.h\"", "private", "\"tests/cxx/protected_include_as_written-d1.h\"", "public"] }
+]
