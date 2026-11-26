@@ -1,0 +1,24 @@
+//===--- implementation_file-detail.icc - test input file for iwyu --------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+// #included by implementation_file-impl.icc, but defines what
+// implementation_file.h declares.  Uses IndirectClass without #including
+// indirect.h, and a macro of -i1.h without #including it: the files that
+// #include this one do.
+
+inline void ImplFileClass::DetailMethod() {
+  IndirectClass local;
+  local.a = IMPL_FILE_TWICE(1);
+}
+
+/**** IWYU_SUMMARY
+
+(tests/cxx/implementation_file-detail.icc has correct #includes/fwd-decls)
+
+***** IWYU_SUMMARY */

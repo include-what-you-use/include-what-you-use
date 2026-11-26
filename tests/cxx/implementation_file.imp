@@ -1,0 +1,6 @@
+# Maps implementation_file-d3.inl with a regex.  Its implementation file
+# detection must not override this mapping.
+[
+  { "include": ['@"tests/cxx/implementation_file-d3\.inl"', "private",
+                '"tests/cxx/implementation_file-d3-all.h"', "public"] }
+]

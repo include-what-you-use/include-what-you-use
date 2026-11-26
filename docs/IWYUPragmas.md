@@ -233,6 +233,50 @@ associated header with `IWYU pragma: associated`:
 You can mark multiple `#include` directives as associated and they will all be
 considered as such.
 
+IWYU also detects implementation files automatically, with no pragma.  Some
+projects keep the inline or template definitions of a header in a separate
+file, which the header `#include`s itself:
+
+    component/foo.h:
+      #include "component/bar.h"
+
+      struct Foo {
+        Bar Get();
+      };
+
+      #include "component/foo.icc"
+
+    component/foo.icc:
+      inline Bar Foo::Get() {
+        return Bar();
+      }
+
+A file `#include`d by a header is an implementation file of that header if it
+has a definition that completes a declaration made in the header: of a function,
+of a variable, or of a class declared in a class.  No file name or extension is
+involved.  A file `#include`d by an implementation file is an implementation
+file of the same header if it completes a declaration made in that header or in
+the implementation file.
+
+A file is an ordinary header, not an implementation file, if it defines a class
+or an enum of its own at namespace scope, or if another file `#include`s it too.
+
+An implementation file is:
+
+* analyzed together with its header, when IWYU reports on the header;
+* allowed to use what the header `#include`s, without `#include`ing it again;
+* private to the header: users of what it defines are told to `#include` the
+  header, never the implementation file, as if it had
+  `// IWYU pragma: private, include "component/foo.h"`.  A file that already has
+  a visibility, given by a pragma or a mapping file, keeps it.
+
+The header's `#include` of the implementation file is kept as written.
+
+Detection works one translation unit at a time.  An implementation file is not
+detected when IWYU runs on its header itself, or when the source file
+`#include`s it directly.  In the first case, mark the header's `#include` with
+`IWYU pragma: keep`.
+
 
 ## IWYU pragma: always_keep ##
 
