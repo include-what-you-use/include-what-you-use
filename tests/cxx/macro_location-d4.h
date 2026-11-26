@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This file contains negative cases for the forward-declares used for
+// This file used to contain negative cases for the forward-declares used for
 // use-attribution hints when expanding macros.
 
 #include "tests/cxx/macro_location-i5.h" // for UNNAMED_TYPE_IN_MACRO

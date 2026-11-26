@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This file contains negative cases for the forward-declares used for
+// This file used to contain negative cases for the forward-declares used for
 // use-attribution hints when expanding macros.
 
 // An unnamed type inside a macro should not be seen by IWYU in files expanding

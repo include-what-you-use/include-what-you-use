@@ -9,7 +9,7 @@
 
 // IWYU_ARGS: -Xiwyu --check_also="tests/cxx/*-d2.h" \
 //            -Xiwyu --check_also="tests/cxx/*-d5.h" -Wno-sizeof-pointer-div \
-//            -I .
+//            -Xiwyu --mapping_file=tests/cxx/macro_location.imp -I .
 
 // Tests a few common types of macro uses to make sure we correctly
 // identify what symbols belong to the macro author, and what symbols
@@ -38,6 +38,25 @@ class ToBeDeclaredLater2 { };
 // macro_location suite.
 int my_htons(int x) {
   return iwyu_htons(x);
+}
+
+// IWYU should not suggest forward-declaring MacroDefinedStruct.
+#define DEFINE_STRUCT_AND_VAR   \
+  struct MacroDefinedStruct {}; \
+  struct MacroDefinedStruct mds;
+
+DEFINE_STRUCT_AND_VAR
+
+AnimalArrays::Animal AnimalArrays::array2[] = {ANIMALS};
+
+// IWYU: ImplicitConvStruct needs a declaration
+void TakeImplicitConvStruct(ImplicitConvStruct);
+
+void Test() {
+  // IWYU: ImplicitConvStruct is...*macro_location-i3.h
+  TakeImplicitConvStruct(ONE);
+  // IWYU: ImplicitConvStruct is...*macro_location-i3.h
+  TakeImplicitConvStruct(GET_INT);
 }
 
 /**** IWYU_SUMMARY
