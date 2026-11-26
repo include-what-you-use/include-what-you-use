@@ -2404,8 +2404,13 @@ void IwyuFileInfo::HandlePreprocessingDone() {
         VERRS(8) << "Adding dynamic mapping for reverse macro dependency: "
                  << "(" << GetFilePath(macro_use_includee) << ") -> ("
                  << GetFilePath(file_) << ")\n";
+        // Map to the name IWYU gets from the search path, like
+        // private_include.  quoted_file_ is how this file was first
+        // #included, maybe relative to the directory of its includer.
+        const string public_include =
+            ConvertToQuotedInclude(GetFilePath(file_));
         MutableGlobalIncludePicker()->AddMapping(
-            private_include, MappedInclude(quoted_file_, GetFilePath(file_)));
+            private_include, MappedInclude(public_include, GetFilePath(file_)));
         MutableGlobalIncludePicker()->MarkIncludeAsPrivate(private_include);
       }
     }
