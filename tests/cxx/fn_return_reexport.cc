@@ -53,6 +53,26 @@ void CallOverloadedMethod(T t) {
   provided.OverloadedMethod(t);
 }
 
+template <typename T1, typename T2>
+void UseFirst(T1 t1, T2) {
+  t1.Method();
+}
+
+template <typename T1, typename T2>
+void UseSecond(T1, T2 t2) {
+  t2.Method();
+}
+
+template <typename T>
+T TakeByValueAndReturnBack(T t) {
+  return t;
+}
+
+template <typename T>
+T TakeByRefAndReturnBack(const T& t) {
+  return t;
+}
+
 void Test() {
   // There is no need to report IndirectClass here: it should be available
   // at the point of GetDeducedIndirectClass() and get_indirect_class_lambda
@@ -181,6 +201,11 @@ void Test() {
   IndirectClassIterator ici;
   // IWYU should not report IndirectClass because it is provided by the alias.
   ici->Method();
+
+  UseFirst(provided, non_provided);
+  UseSecond(non_provided, provided);
+  TakeByValueAndReturnBack(provided).Method();
+  TakeByRefAndReturnBack(provided).Method();
 }
 
 /**** IWYU_SUMMARY

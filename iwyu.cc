@@ -6143,6 +6143,11 @@ class IwyuAstConsumer
         decl, calling_expr,
         [this](const Type* type) { return GetProvidedTypeComponents(type); });
     CollectProvidedByDefaultTplArg(decl->getLocation(), &ret);
+
+    if (const auto* call_expr = dyn_cast_or_null<CallExpr>(calling_expr)) {
+      for (const Expr* arg : call_expr->arguments())
+        InsertAllInto(GetProvidedByExpr(arg), &ret.provided_types);
+    }
     return ret;
   }
 

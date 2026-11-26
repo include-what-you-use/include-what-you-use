@@ -27,6 +27,11 @@ bool Compare(const T& lhs, const T& rhs) {
 }
 
 template <typename T>
+bool Compare2(const T& lhs, const T& rhs) {
+  return lhs == rhs;
+}
+
+template <typename T>
 bool CompareWith(T t) {
   ProvidingAlias i;
   return i == t;
@@ -90,10 +95,11 @@ void Test() {
   // IWYU: operator==(const Indirect &, const Indirect &) is...*-i2.h
   // IWYU: Indirect is...*-i2.h
   Compare(non_provided_by_fn, non_provided_by_fn);
-  // TODO: fix this.
+  // TODO: fix this. IWYU reports operator== just because it is cached
+  // on the previous scan of the instantiated Compare.
   // IWYU: operator==(const Indirect &, const Indirect &) is...*-i2.h
-  // IWYU: Indirect is...*-i2.h
   Compare(provided_by_fn, provided_by_fn);
+  Compare2(provided_by_fn, provided_by_fn);
   // IWYU: Indirect is...*-i2.h
   // IWYU: operator==(const Indirect &, const Indirect &) is...*-i2.h
   Compare(non_provided_by_alias, non_provided_by_alias);
