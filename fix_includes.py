@@ -1742,6 +1742,75 @@ def _GetLineKind(file_line, filename, separate_project_includes,
     return None
 
 
+# Line types that do not count as code when deciding where a new
+# forward-declare may go.
+_NON_CODE_LINE_TYPES = (_BLANK_LINE_RE, _COMMENT_LINE_RE,
+                        _HEADER_GUARD_RE, _HEADER_GUARD_DEFINE_RE,
+                        _PRAGMA_ONCE_LINE_RE,
+                        _IF_RE, _ELSE_RE, _ENDIF_RE,
+                        _PRAGMA_PUSH_LINE_RE, _PRAGMA_POP_LINE_RE)
+
+
+def _ForwardDeclareReorderSpans(file_lines, good_reorder_spans):
+  """Returns the subset of good_reorder_spans a forward-declare may go in.
+
+  A new forward-declare must come before the code that needs it.  When
+  there is no forward-declare span yet, _FirstReorderSpanWith falls back
+  on an #include span, which may be after all the code: headers often end
+  with an #include of their template definitions, e.g.
+  '#include "foo_impl.tpp"'.  A forward-declare added there is useless
+  and iwyu asks for it again on the next run.
+
+  So, in a header file that has a span after all its code, keep only the
+  spans that end before the first code line.  If none remain,
+  _FirstReorderSpanWith inserts right after the header guard.  (Spans
+  between code lines are not safe either: they may be inside an enum,
+  class or extern "C" body.)
+
+  A file is a header if it has #pragma once or a header guard.  The
+  insertion after the header guard skips the line after the guard,
+  assuming it is the guard's #define; if it is not a one-line #define
+  (e.g. a whole-file '#ifdef __cplusplus' was taken for the guard), the
+  spans are returned unchanged.  They are also returned unchanged for
+  other files, files with no code, and files with no span after the
+  code.
+
+  Arguments:
+    file_lines: an array of LineInfo objects with .type and
+       .reorder_span filled in.
+    good_reorder_spans: a sorted list of reorder_spans to consider.
+
+  Returns:
+    A sorted list of [start_line, end_line) reorder_spans.
+  """
+  is_header = False
+  for line_number, line_info in enumerate(file_lines):
+    if line_info.deleted:
+      continue
+    if line_info.type == _PRAGMA_ONCE_LINE_RE:
+      is_header = True
+    elif line_info.type == _HEADER_GUARD_RE:
+      # A header guard always has an #endif after it, so this is in range.
+      next_line = file_lines[line_number + 1]
+      if (next_line.type != _HEADER_GUARD_DEFINE_RE or
+          next_line.line.rstrip().endswith('\\')):
+        return good_reorder_spans
+      is_header = True
+  if not is_header:
+    return good_reorder_spans
+
+  code_lines = [line_number
+                for (line_number, line_info) in enumerate(file_lines)
+                if (not line_info.deleted and
+                    line_info.reorder_span is None and
+                    line_info.type not in _NON_CODE_LINE_TYPES)]
+  if not code_lines:
+    return good_reorder_spans
+  if all(span[1] <= code_lines[-1] for span in good_reorder_spans):
+    return good_reorder_spans
+  return [span for span in good_reorder_spans if span[1] <= code_lines[0]]
+
+
 def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
                           flags):
   """Returns [start_line,end_line) of 1st reorder_span with a line of kind kind.
@@ -1764,7 +1833,9 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
      using Foo::Bar;
      class Bang;
   We want to make sure to put 'namespace Foo { class Bar; }'
-  *before* the using line!
+  *before* the using line!  Likewise, a forward-declare never goes in
+  an #include span that comes after all the code of a header file (see
+  _ForwardDeclareReorderSpans).
 
   kind is one of the following enums, with examples:
      _ALWAYS_FIRST_INCLUDE_KIND: #include "a.h", via --always_first_include=a.h
@@ -1798,6 +1869,10 @@ def _FirstReorderSpanWith(file_lines, good_reorder_spans, kind, filename,
                   _C_SYSTEM_INCLUDE_KIND, _CXX_SYSTEM_INCLUDE_KIND,
                   _NONSYSTEM_INCLUDE_KIND, _PROJECT_INCLUDE_KIND,
                   _FORWARD_DECLARE_KIND), kind
+  if kind == _FORWARD_DECLARE_KIND:
+    good_reorder_spans = _ForwardDeclareReorderSpans(file_lines,
+                                                     good_reorder_spans)
+
   # Figure out where the first 'contentful' line is (after the first
   # 'good' span, so we skip past header guards and the like).  Basically,
   # the first contentful line is a line not in any reorder span.
