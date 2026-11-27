@@ -2398,6 +2398,445 @@ class Foo;
     self.RegisterFileContents({'comments_at_end_of_file': infile})
     self.ProcessAndTest(iwyu_output)
 
+  def testAddForwardDeclareNotAfterTrailingInclude(self):
+    """Tests a new forward-declare doesn't go after all the code.
+
+    Headers often #include their template definitions at the end.  A
+    forward-declare added next to that #include would be useless, and
+    removed again by the next iwyu run.
+    """
+    infile = """\
+#ifndef FOO_H_
+#define FOO_H_
+
+#include "bar.h"
+///+
+///+class Baz;
+
+class Foo {
+  void f(const Baz&);
+};
+
+#include "foo_impl.tpp"
+
+#endif  // FOO_H_
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include "bar.h"
+#include "foo_impl.tpp"
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareWhenOnlyTrailingInclude(self):
+    """Tests a new forward-declare goes after the header guard.
+
+    The only #include is after all the code, so it's not a good place.
+    """
+    infile = """\
+#ifndef FOO_H_
+#define FOO_H_
+///+
+///+class Baz;
+
+class Foo {
+  void f(const Baz&);
+};
+
+#include "foo_impl.tpp"
+
+#endif  // FOO_H_
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include "foo_impl.tpp"
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareWhenOnlyTrailingIncludePragmaOnce(self):
+    """Tests a new forward-declare goes after #pragma once.
+
+    Like testAddForwardDeclareWhenOnlyTrailingInclude, with #pragma once.
+    """
+    infile = """\
+#pragma once
+///+
+///+class Baz;
+
+class Foo {
+  void f(const Baz&);
+};
+
+#include "foo_impl.tpp"
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include "foo_impl.tpp"
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareWithIfdefIncludeAndTrailingInclude(self):
+    """Tests a new forward-declare goes neither in an #ifdef nor at the end.
+
+    The #include before the code is inside an #ifdef, so it's not a
+    top-level span, and the trailing #include is after all the code.
+    """
+    infile = """\
+#ifndef FOO_H_
+#define FOO_H_
+
+///+class Baz;
+#ifdef HAVE_BAR
+#include "bar.h"
+#endif
+
+class Foo {
+  void f(const Baz&);
+};
+
+#include "foo_impl.tpp"
+
+#endif  // FOO_H_
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include "bar.h"
+#include "foo_impl.tpp"
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareReplacingIncludeWithTrailingInclude(self):
+    """Tests a forward-declare replacing an #include goes before the code.
+
+    It must not go next to the #include after all the code.
+    """
+    infile = """\
+#ifndef FOO_H_
+#define FOO_H_
+
+#include "baz.h"  ///-
+///+class Baz;
+
+class Foo {
+  void f(const Baz&);
+};
+
+#include "foo_impl.tpp"
+
+#endif  // FOO_H_
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+- #include "baz.h"  // lines 4-4
+
+The full include-list for foo.h:
+#include "foo_impl.tpp"
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareToHeaderWithOnlyIncludes(self):
+    """Tests a header with no code still gets forward-declares at the end."""
+    infile = """\
+#ifndef FOO_H_
+#define FOO_H_
+
+#include "bar.h"
+#include "foo_impl.tpp"
+///+
+///+class Baz;
+
+#endif  // FOO_H_
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include "bar.h"
+#include "foo_impl.tpp"
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareWithCodeBetweenIncludesInNonHeader(self):
+    """Tests forward-declare placement is unchanged in non-header files."""
+    infile = """\
+#include "foo.h"
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+///+
+///+class Baz;
+
+void f(Baz* b);
+"""
+    iwyu_output = """\
+foo.cc should add these lines:
+class Baz;
+
+foo.cc should remove these lines:
+
+The full include-list for foo.cc:
+#include "foo.h"
+#include <windows.h>
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.cc': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareWithWholeFileIfdefAndTrailingInclude(self):
+    """Tests a whole-file #ifdef is not taken for a header guard.
+
+    Without a #define after it, the file keeps the old placement, rather
+    than getting a forward-declare after the '#ifdef', inside the class.
+    """
+    infile = """\
+#ifdef __linux__
+class Foo {
+  void f(const Baz&);
+};
+
+#include "foo_impl.tpp"
+///+
+///+class Baz;
+#endif
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include "foo_impl.tpp"
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareWithPragmaOnceAndWholeFileIfdef(self):
+    """Like testAddForwardDeclareWithWholeFileIfdefAndTrailingInclude.
+
+    #pragma once makes it a header, but the whole-file #ifdef still must
+    not be skipped like a header guard: that would put the forward-declare
+    between 'template <typename T>' and 'class Foo'.
+    """
+    infile = """\
+#pragma once
+#ifdef __cplusplus
+template <typename T>
+class Foo {
+  void f(const Baz&);
+};
+
+#include "foo_impl.tpp"
+///+
+///+class Baz;
+#endif
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include "foo_impl.tpp"
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareWithGuardDefineNotOnNextLine(self):
+    """Tests a forward-declare never goes between #ifndef and its #define."""
+    infile = """\
+#ifndef FOO_H_
+#pragma once
+#define FOO_H_
+
+class Foo {
+  void f(const Baz&);
+};
+
+#include "foo_impl.tpp"
+///+
+///+class Baz;
+
+#endif  // FOO_H_
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include "foo_impl.tpp"
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareNotInEnumBodyWithTrailingInclude(self):
+    """Tests a forward-declare doesn't go in an #include inside braces.
+
+    The span of '#include "colors.def"' looks top-level, but it is inside
+    an enum body, after the first code line.
+    """
+    infile = """\
+#ifndef FOO_H_
+#define FOO_H_
+///+
+///+class Baz;
+
+enum Color {
+#include "colors.def"
+};
+
+class Foo {
+  void f(const Baz&, Color);
+};
+
+#include "foo_impl.tpp"
+
+#endif  // FOO_H_
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include "colors.def"  // lines 5-5
+#include "foo_impl.tpp"  // lines 12-12
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddForwardDeclareNotInClassBodyWithTrailingInclude(self):
+    """Like testAddForwardDeclareNotInEnumBodyWithTrailingInclude."""
+    infile = """\
+#ifndef FOO_H_
+#define FOO_H_
+
+#include "bar.h"
+///+
+///+class Baz;
+
+class Foo {
+#include "foo_members.inc"
+
+  void f(const Baz&);
+};
+
+#include "foo_impl.tpp"
+
+#endif  // FOO_H_
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+class Baz;
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include "bar.h"  // lines 4-4
+#include "foo_impl.tpp"  // lines 12-12
+#include "foo_members.inc"  // lines 7-7
+class Baz;
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
+  def testAddIncludeWithTrailingIncludeIsUnchanged(self):
+    """Tests the forward-declare placement doesn't apply to #includes.
+
+    This pins down the current behaviour, which has the same problem as
+    forward-declares had: the closest #include kind is the trailing
+    "foo_impl.tpp", so "baz.h" goes after the code that needs it rather
+    than in the <vector> span.  If #include placement gets fixed too,
+    update this test.
+    """
+    infile = """\
+#ifndef FOO_H_
+#define FOO_H_
+
+#include <vector>
+
+class Foo {
+  Baz b;
+};
+
+///+#include "baz.h"
+#include "foo_impl.tpp"
+
+#endif  // FOO_H_
+"""
+    iwyu_output = """\
+foo.h should add these lines:
+#include "baz.h"
+
+foo.h should remove these lines:
+
+The full include-list for foo.h:
+#include <vector>  // lines 4-4
+#include "baz.h"
+#include "foo_impl.tpp"  // lines 10-10
+---
+"""
+    self.RegisterFileContents({'foo.h': infile})
+    self.ProcessAndTest(iwyu_output)
+
   def testAddSystemIncludeToFileWithoutAny(self):
     """Tests we add a system #include to a non-sys location when needed."""
     infile = """\
