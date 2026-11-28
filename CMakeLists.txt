@@ -296,6 +296,7 @@ endif(IWYU_USE_SYSTEM_GTEST)
 # Add unittest target.
 add_llvm_executable(iwyu-unittests
   unittests/iwyu_lexer_util_test.cc
+  unittests/iwyu_name_util_test.cc
   unittests/iwyu_path_util_test.cc
   unittests/iwyu_regex_test.cc
   unittests/iwyu_stl_util_test.cc
@@ -312,6 +313,10 @@ target_link_libraries(iwyu-unittests PRIVATE
   iwyu
   iwyu-gtest
 )
+
+if (NOT IWYU_LINK_CLANG_DYLIB)
+  target_link_libraries(iwyu-unittests PRIVATE clangTooling)
+endif()
 
 enable_testing()
 add_test(NAME iwyu-unittests

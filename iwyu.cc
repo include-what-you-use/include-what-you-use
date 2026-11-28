@@ -1193,16 +1193,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // Helper for MapPrivateDeclToPublicDecl.  Returns true if the decl
   // is a template specialization whose (written qualified) name matches
   // the given name, has the given number of template arguments, and
-  // whose specified tpl argument is a type.
+  // whose specified tpl argument is a type. The name must be qualified
+  // (contain "::") and must not include template arguments, as required by
+  // HasWrittenQualifiedNameIn.
   bool DeclIsTemplateWithNameAndNumArgsAndTypeArg(
       const Decl* decl, const string& name,
       size_t num_args, size_t type_arg_idx) const {
     const ClassTemplateSpecializationDecl* tpl_decl = DynCastFrom(decl);
     if (!tpl_decl)
       return false;
-    const string actual_name =
-        GetWrittenQualifiedNameAsString(tpl_decl, /*with_fn_args=*/false);
-    if (name != actual_name)
+    if (!HasWrittenQualifiedNameIn(tpl_decl, {name}))
       return false;
     const TemplateArgumentList& tpl_args = tpl_decl->getTemplateArgs();
     if (tpl_args.size() != num_args)

@@ -283,8 +283,7 @@ OneUse::OneUse(const NamedDecl* decl,
                UseKind use_kind,
                UseFlags flags,
                const char* comment)
-    : symbol_name_(internal::GetQualifiedNameAsString(decl)),
-      short_symbol_name_(internal::GetShortNameAsString(decl)),
+    : short_symbol_name_(internal::GetShortNameAsString(decl)),
       decl_(decl),
       decl_loc_(GetInstantiationLoc(decl_loc)),
       decl_file_(GetFileEntry(decl_loc_)),
@@ -321,7 +320,7 @@ OneUse::OneUse(const string& symbol_name,
 OneUse::OneUse(OptionalFileEntryRef included_file,
                const string& quoted_include,
                clang::SourceLocation include_loc)
-    : symbol_name_(),
+    : symbol_name_(string()),
       short_symbol_name_(),
       decl_(nullptr),
       decl_file_(included_file),
@@ -336,6 +335,14 @@ OneUse::OneUse(OptionalFileEntryRef included_file,
   suggested_header_ = quoted_include;
 }
 
+const string& OneUse::symbol_name() const {
+  if (!symbol_name_) {
+    CHECK_(decl_ && "An uncached symbol name requires a declaration");
+    symbol_name_ = internal::GetQualifiedNameAsString(decl_);
+  }
+  return *symbol_name_;
+}
+
 bool OneUse::is_full_use() const {
   return use_kind_ == UseKind::Full;
 }
@@ -346,7 +353,7 @@ void OneUse::reset_decl(const NamedDecl* decl) {
   decl_ = decl;
   decl_file_ = GetFileEntry(decl);
   decl_filepath_ = GetFilePath(decl);
-  symbol_name_ = internal::GetQualifiedNameAsString(decl);
+  symbol_name_.reset();
   short_symbol_name_ = internal::GetShortNameAsString(decl);
 }
 
@@ -373,7 +380,7 @@ void OneUse::SetPublicHeaders() {
 
   if (use_kind_ == UseKind::FwdDecl) {
     public_headers_ = GlobalIncludePicker().GetCandidateHeadersForSymbolFwdDecl(
-        symbol_name_, GetFilePath(use_loc_));
+        symbol_name(), GetFilePath(use_loc_));
     SetCanonicalHeaders();
     return;
   }
@@ -383,7 +390,7 @@ void OneUse::SetPublicHeaders() {
         decl_, GetFilePath(use_loc_), decl_filepath());
   } else {
     public_headers_ = GlobalIncludePicker().GetMappedPublicHeaders(
-        symbol_name_, GetFilePath(use_loc_), decl_filepath());
+        symbol_name(), GetFilePath(use_loc_), decl_filepath());
   }
   if (public_headers_.empty())
     public_headers_.push_back(ConvertToQuotedInclude(decl_filepath()));
