@@ -31,6 +31,13 @@ int value_item(const Iterable& items) {
   return 0;
 }
 
+template <typename T>
+void TplFn(const T& range) {
+  for (auto i : range) {
+    // Test that IWYU doesn't crash here.
+    (void)i;
+  }
+}
 
 /**** IWYU_SUMMARY
 

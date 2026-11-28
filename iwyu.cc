@@ -3577,7 +3577,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // depend on how it is defined.
         if (GetFileEntry(var_decl) != GetFileEntry(decl_ref_expr))
           return set<const Type*>{};
-        return GetProvidedByExpr(var_decl->getInit());
+        // Initializer may be null at dependent range-based-for loop variable.
+        if (const Expr* initializer = var_decl->getInit())
+          return GetProvidedByExpr(initializer);
       }
     } else if (const auto* cond = dyn_cast<AbstractConditionalOperator>(expr)) {
       return Union(GetProvidedByExpr(cond->getTrueExpr()),
